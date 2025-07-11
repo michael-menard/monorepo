@@ -1,0 +1,88 @@
+service: lego-projects-ui
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  environment:
+    NODE_ENV: ${self:provider.stage}
+  tags:
+    Project: lego-projects
+    Service: ui
+
+plugins:
+  - serverless-s3-sync
+
+custom:
+  s3Sync:
+    - bucketName: ${self:service}-${self:provider.stage}-assets
+      localDir: dist
+      deleteRemoved: true
+      acl: public-read
+      followSymlinks: false
+      defaultContentType: text/html
+      params:
+        - index.html:
+            CacheControl: 'no-cache, no-store, must-revalidate'
+        - '*.js':
+            CacheControl: 'public, max-age=31536000'
+        - '*.css':
+            CacheControl: 'public, max-age=31536000'
+        - '*.woff':
+            CacheControl: 'public, max-age=31536000'
+        - '*.woff2':
+            CacheControl: 'public, max-age=31536000'
+        - '*.png':
+            CacheControl: 'public, max-age=31536000'
+        - '*.jpg':
+            CacheControl: 'public, max-age=31536000'
+        - '*.svg':
+            CacheControl: 'public, max-age=31536000'
+        - '*.ico':
+            CacheControl: 'public, max-age=31536000'
+
+resources:
+  Resources:
+    S3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${self:provider.stage}-assets
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, HEAD]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+
+    S3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref S3Bucket
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: !Sub '${S3Bucket}/*'
+
+  Outputs:
+    S3BucketName:
+      Description: Name of S3 bucket to hold website content
+      Value: !Ref S3Bucket
+      Export:
+        Name: ${self:service}-${self:provider.stage}-S3BucketName
+
+    WebsiteURL:
+      Description: URL for website hosted on S3
+      Value: !Sub 'https://${S3Bucket}.s3-website-${AWS::Region}.amazonaws.com'
+      Export:
+        Name: ${self:service}-${self:provider.stage}-WebsiteURL 

@@ -15,9 +15,6 @@
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-navigation-menu": "^1.2.13",
-    "@react-constructs/ui": "workspace:*",
-    "@react-constructs/ui-auth": "workspace:*",
-    "@react-constructs/utils": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.525.0",
@@ -29,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
+    "@shadcn/ui": "^0.0.4",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.3",
