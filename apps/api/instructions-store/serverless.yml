@@ -1,0 +1,173 @@
+# yaml-language-server: $schema=https://json.schemastore.org/serverless
+service: file-upload-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    FILES_TABLE: ${self:service}-files-${self:provider.stage}
+    UPLOADS_BUCKET: ${self:service}-uploads-${self:provider.stage}
+    APPSYNC_API_ID: !Ref FileUploadAPI
+
+plugins:
+  - serverless-appsync-plugin
+  - serverless-offline
+
+custom:
+  appsync:
+    name: ${self:service}-api-${self:provider.stage}
+    authentication:
+      type: API_KEY
+      config:
+        apiKeyExpiration: 365
+    dataSources:
+      - type: AMAZON_DYNAMODB
+        name: FilesTable
+        config:
+          tableName: ${self:provider.environment.FILES_TABLE}
+          serviceRoleArn: !GetAtt FilesTableRole.Arn
+      - type: AWS_LAMBDA
+        name: FileUploadFunction
+        config:
+          lambda:
+            lambdaArn: !GetAtt FileUploadFunction.Arn
+            lambdaRegion: ${self:provider.region}
+    mappingTemplates:
+      - type: Query
+        field: getFile
+        dataSource: FilesTable
+        request: false
+        response: false
+      - type: Query
+        field: listFiles
+        dataSource: FilesTable
+        request: false
+        response: false
+      - type: Mutation
+        field: uploadFile
+        dataSource: FileUploadFunction
+        request: false
+        response: false
+      - type: Mutation
+        field: deleteFile
+        dataSource: FileUploadFunction
+        request: false
+        response: false
+    schema: schema.graphql
+
+functions:
+  fileUpload:
+    handler: src/handlers/fileUpload.handler
+    events:
+      - appsync:
+          dataSource: FileUploadFunction
+    environment:
+      FILES_TABLE: ${self:provider.environment.FILES_TABLE}
+      UPLOADS_BUCKET: ${self:provider.environment.UPLOADS_BUCKET}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+        Resource: !GetAtt FilesTable.Arn
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+          - s3:PutObject
+          - s3:DeleteObject
+          - s3:PutObjectAcl
+        Resource: 
+          - !Sub "${UploadsBucket}/*"
+          - !GetAtt UploadsBucket.Arn
+
+resources:
+  Resources:
+    FilesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.FILES_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIdIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    UploadsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.UPLOADS_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, PUT, POST, DELETE]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+
+    FilesTableRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSAppSyncPushToCloudWatchLogs
+        Policies:
+          - PolicyName: DynamoDBAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:Query
+                    - dynamodb:Scan
+                  Resource: !GetAtt FilesTable.Arn
+
+  Outputs:
+    GraphQLApiId:
+      Description: AppSync API ID
+      Value: !Ref FileUploadAPI
+    GraphQLApiUrl:
+      Description: AppSync API URL
+      Value: !GetAtt FileUploadAPI.GraphQLUrl
+    FilesTableName:
+      Description: DynamoDB Files Table Name
+      Value: !Ref FilesTable
+    UploadsBucketName:
+      Description: S3 Uploads Bucket Name
+      Value: !Ref UploadsBucket 

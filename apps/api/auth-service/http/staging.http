@@ -1,0 +1,329 @@
+### Auth Service - Staging Environment
+### Base URL: https://staging-api-id.execute-api.region.amazonaws.com/staging/auth
+
+### Environment Variables
+@baseUrl = https://staging-api-id.execute-api.region.amazonaws.com/staging/auth
+@contentType = application/json
+
+### Test Data for Staging
+@testEmail = staging-test@example.com
+@testPassword = StagingPassword123!
+@testName = Staging Test User
+
+### Staging Environment Health Check
+GET {{baseUrl}}/health
+
+###
+
+### Staging User Registration
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}",
+  "name": "{{testName}}"
+}
+
+###
+
+### Staging Login
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### Staging Password Reset Request
+POST {{baseUrl}}/reset-password
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}"
+}
+
+###
+
+### Staging Environment Tests
+
+### Test with Staging Headers
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+X-Environment: staging
+X-Debug: true
+
+{
+  "email": "staging-debug@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Debug User"
+}
+
+###
+
+### Test Staging Error Handling
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email-staging",
+  "password": "weak"
+}
+
+###
+
+### Staging Performance Test
+GET {{baseUrl}}/health
+
+###
+
+### Staging Security Tests
+
+### Test Staging Rate Limiting
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-rate-1@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Rate Test 1"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-rate-2@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Rate Test 2"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-rate-3@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Rate Test 3"
+}
+
+###
+
+### Staging Integration Test Flow
+
+### 1. Register Staging User
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-integration@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Integration User"
+}
+
+###
+
+### 2. Login Staging User
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-integration@example.com",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### 3. Test Staging Logout
+POST {{baseUrl}}/logout
+Content-Type: {{contentType}}
+Authorization: Bearer your-staging-access-token-here
+
+###
+
+### Staging Edge Cases
+
+### Very Long Staging Email
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "very-long-staging-email-address-that-tests-validation-limits@very-long-staging-domain-name.example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Long Email Test"
+}
+
+###
+
+### Staging Special Characters
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-special@example.com",
+  "password": "{{testPassword}}",
+  "name": "José María O'Connor-Smith (Staging)"
+}
+
+###
+
+### Staging CORS Test
+OPTIONS {{baseUrl}}/signup
+Origin: https://staging.your-domain.com
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type
+
+###
+
+### Staging Error Scenarios
+
+### Malformed JSON in Staging
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-test@example.com",
+  "password": "password",
+  "name": "Staging Test User"
+  // Missing closing brace for staging testing
+
+###
+
+### Wrong Content-Type in Staging
+POST {{baseUrl}}/signup
+Content-Type: text/plain
+
+email=staging-test@example.com&password=password&name=Staging Test User
+
+###
+
+### Empty Request Body in Staging
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+###
+
+### Staging Load Testing
+
+### Staging Load Test (Multiple Requests)
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-load-1@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Load Test 1"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-load-2@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Load Test 2"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-load-3@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Load Test 3"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-load-4@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Load Test 4"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "staging-load-5@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Load Test 5"
+}
+
+###
+
+### Staging Security Headers Test
+GET {{baseUrl}}/health
+
+###
+
+### Staging SSL/TLS Test
+# Test with HTTPS only
+GET {{baseUrl}}/health
+
+###
+
+### Staging Documentation Examples
+
+### Expected Staging Signup Response
+# {
+#   "success": true,
+#   "message": "User registered successfully",
+#   "data": {
+#     "user": {
+#       "id": "staging-user-id",
+#       "email": "staging-test@example.com",
+#       "name": "Staging Test User",
+#       "createdAt": "2024-01-01T00:00:00.000Z",
+#       "environment": "staging"
+#     }
+#   }
+# }
+
+### Expected Staging Login Response
+# {
+#   "success": true,
+#   "message": "Login successful",
+#   "data": {
+#     "user": {
+#       "id": "staging-user-id",
+#       "email": "staging-test@example.com",
+#       "name": "Staging Test User"
+#     },
+#     "tokens": {
+#       "accessToken": "staging-jwt-access-token",
+#       "refreshToken": "staging-jwt-refresh-token",
+#       "expiresIn": 3600
+#     },
+#     "environment": "staging"
+#   }
+# }
+
+### Staging Error Response Example
+# {
+#   "success": false,
+#   "message": "Validation failed",
+#   "errors": [
+#     {
+#       "field": "email",
+#       "message": "Email is required"
+#     }
+#   ],
+#   "environment": "staging"
+# } 

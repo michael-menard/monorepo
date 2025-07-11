@@ -1,0 +1,227 @@
+service: auth-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    USERS_TABLE: ${self:service}-users-${self:provider.stage}
+    JWT_SECRET: ${ssm:/auth-service/${self:provider.stage}/jwt-secret}
+    SALT_ROUNDS: '12'
+    SESSION_TTL: '86400' # 24 hours in seconds
+    MAX_LOGIN_ATTEMPTS: ${env:MAX_LOGIN_ATTEMPTS, '5'}
+    LOCKOUT_DURATION: ${env:LOCKOUT_DURATION, '900000'}
+    PASSWORD_RESET_EXPIRY: ${env:PASSWORD_RESET_EXPIRY, '3600000'}
+    CORS_ORIGINS: ${env:CORS_ORIGINS, '*'}
+    NODE_ENV: ${env:NODE_ENV, 'production'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: !GetAtt UsersTable.Arn
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+            - ssm:PutParameter
+          Resource: 
+            - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/auth-service/${self:provider.stage}/*"
+
+functions:
+  signup:
+    handler: dist/handlers/auth.signup
+    events:
+      - httpApi:
+          path: /auth/signup
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      SALT_ROUNDS: ${self:provider.environment.SALT_ROUNDS}
+      MAX_LOGIN_ATTEMPTS: ${self:provider.environment.MAX_LOGIN_ATTEMPTS}
+      LOCKOUT_DURATION: ${self:provider.environment.LOCKOUT_DURATION}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  login:
+    handler: dist/handlers/auth.login
+    events:
+      - httpApi:
+          path: /auth/login
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      MAX_LOGIN_ATTEMPTS: ${self:provider.environment.MAX_LOGIN_ATTEMPTS}
+      LOCKOUT_DURATION: ${self:provider.environment.LOCKOUT_DURATION}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  logout:
+    handler: dist/handlers/auth.logout
+    events:
+      - httpApi:
+          path: /auth/logout
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  verifyToken:
+    handler: dist/handlers/auth.verifyToken
+    events:
+      - httpApi:
+          path: /auth/verify
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  refreshToken:
+    handler: dist/handlers/auth.refreshToken
+    events:
+      - httpApi:
+          path: /auth/refresh
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  changePassword:
+    handler: dist/handlers/auth.changePassword
+    events:
+      - httpApi:
+          path: /auth/change-password
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      SALT_ROUNDS: ${self:provider.environment.SALT_ROUNDS}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  forgotPassword:
+    handler: dist/handlers/auth.forgotPassword
+    events:
+      - httpApi:
+          path: /auth/forgot-password
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+  resetPassword:
+    handler: dist/handlers/auth.resetPassword
+    events:
+      - httpApi:
+          path: /auth/reset-password
+          method: POST
+          cors:
+            allowedOrigins: ['*']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token']
+            allowedMethods: ['POST', 'OPTIONS']
+            allowCredentials: false
+    environment:
+      USERS_TABLE: ${self:provider.environment.USERS_TABLE}
+      JWT_SECRET: ${self:provider.environment.JWT_SECRET}
+      SALT_ROUNDS: ${self:provider.environment.SALT_ROUNDS}
+      CORS_ORIGINS: ${self:provider.environment.CORS_ORIGINS}
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USERS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+          - AttributeName: resetToken
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: ResetTokenIndex
+            KeySchema:
+              - AttributeName: resetToken
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    JWTSecret:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /auth-service/${self:provider.stage}/jwt-secret
+        Type: SecureString
+        Value: !Sub '{{resolve:secretsmanager:${self:service}-jwt-secret-${self:provider.stage}:SecretString:jwt-secret}}'
+        Description: JWT Secret for authentication service
+
+  Outputs:
+    ApiGatewayUrl:
+      Description: API Gateway URL
+      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+    UsersTableName:
+      Description: DynamoDB Users Table Name
+      Value: !Ref UsersTable 

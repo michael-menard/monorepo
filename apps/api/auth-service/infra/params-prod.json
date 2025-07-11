@@ -1,0 +1,12 @@
+{
+  "Parameters": {
+    "Environment": "prod",
+    "ProjectName": "auth-service",
+    "GitHubOwner": "your-github-username",
+    "GitHubRepo": "react-constructs",
+    "GitHubBranch": "main",
+    "GitHubToken": "your-github-token",
+    "ArtifactBucketName": "auth-service-artifacts-prod",
+    "NotificationEmail": "prod-team@yourcompany.com"
+  }
+} 

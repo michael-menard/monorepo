@@ -1,0 +1,473 @@
+### Auth Service API Documentation
+### Base URL: https://your-api-id.execute-api.region.amazonaws.com/dev/auth
+
+### Environment Variables
+@baseUrl = https://your-api-id.execute-api.region.amazonaws.com/dev/auth
+@contentType = application/json
+
+### Test Data
+@testEmail = test@example.com
+@testPassword = SecurePassword123!
+@testName = John Doe
+
+### Token Variables (replace with actual tokens after login)
+@accessToken = your-access-token-here
+@refreshToken = your-refresh-token-here
+@resetToken = your-reset-token-here
+
+### 1. Health Check
+# Check if the service is running
+GET {{baseUrl}}/health
+Content-Type: {{contentType}}
+
+###
+
+### 2. User Registration (Signup)
+# Register a new user
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}",
+  "name": "{{testName}}"
+}
+
+###
+
+### 2.1. Signup with Invalid Data
+# Test validation - missing email
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "password": "{{testPassword}}",
+  "name": "{{testName}}"
+}
+
+###
+
+### 2.2. Signup with Weak Password
+# Test password validation
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "weak@example.com",
+  "password": "123",
+  "name": "{{testName}}"
+}
+
+###
+
+### 2.3. Signup with Invalid Email
+# Test email validation
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email",
+  "password": "{{testPassword}}",
+  "name": "{{testName}}"
+}
+
+###
+
+### 3. User Authentication (Login)
+# Login with valid credentials
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### 3.1. Login with Invalid Credentials
+# Test failed login
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+### 3.2. Login with Non-existent User
+# Test login with unregistered email
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "nonexistent@example.com",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### 4. Token Refresh
+# Refresh access token using HTTP-only refresh token cookie
+POST {{baseUrl}}/refresh
+Content-Type: {{contentType}}
+# The refresh token is now sent as an HTTP-only cookie set by the server after login.
+# Do not include Authorization header. Ensure your HTTP client/browser sends cookies.
+
+###
+
+### 4.1. Refresh with Invalid Token
+# Test refresh with invalid/expired HTTP-only cookie
+POST {{baseUrl}}/refresh
+Content-Type: {{contentType}}
+# The refresh token is sent as an HTTP-only cookie. To test invalid, clear cookies or use an expired one.
+
+###
+
+### 5. User Logout
+# Logout user and invalidate tokens using HTTP-only cookies
+POST {{baseUrl}}/logout
+Content-Type: {{contentType}}
+# The access/refresh tokens are sent as HTTP-only cookies. Do not include Authorization header.
+# Ensure your HTTP client/browser sends cookies set by the login endpoint.
+
+###
+
+### 5.1. Logout without Token
+# Test logout without authentication cookies
+POST {{baseUrl}}/logout
+Content-Type: {{contentType}}
+# No cookies sent. Should return unauthorized or similar error.
+
+###
+
+### 6. Password Reset Request
+# Request password reset email
+POST {{baseUrl}}/reset-password
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}"
+}
+
+###
+
+### 6.1. Password Reset for Non-existent User
+# Test reset request for unregistered email
+POST {{baseUrl}}/reset-password
+Content-Type: {{contentType}}
+
+{
+  "email": "nonexistent@example.com"
+}
+
+###
+
+### 7. Password Reset Confirmation
+# Confirm password reset with token
+POST {{baseUrl}}/confirm-reset
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "NewSecurePassword123!"
+}
+
+###
+
+### 7.1. Confirm Reset with Invalid Token
+# Test reset confirmation with invalid token
+POST {{baseUrl}}/confirm-reset
+Content-Type: {{contentType}}
+
+{
+  "token": "invalid-reset-token",
+  "newPassword": "NewSecurePassword123!"
+}
+
+###
+
+### 7.2. Confirm Reset with Weak Password
+# Test password validation in reset
+POST {{baseUrl}}/confirm-reset
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "123"
+}
+
+###
+
+### 8. Rate Limiting Tests
+# Test rate limiting by making multiple requests quickly
+
+### 8.1. Multiple Signup Requests
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "rate-test-1@example.com",
+  "password": "{{testPassword}}",
+  "name": "Rate Test 1"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "rate-test-2@example.com",
+  "password": "{{testPassword}}",
+  "name": "Rate Test 2"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "rate-test-3@example.com",
+  "password": "{{testPassword}}",
+  "name": "Rate Test 3"
+}
+
+###
+
+### 9. Security Header Tests
+# Test CORS and security headers
+OPTIONS {{baseUrl}}/signup
+Origin: https://example.com
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type
+
+###
+
+### 10. Error Handling Tests
+# Test various error scenarios
+
+### 10.1. Malformed JSON
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password",
+  "name": "Test User"
+  // Missing closing brace
+
+###
+
+### 10.2. Wrong Content-Type
+POST {{baseUrl}}/signup
+Content-Type: text/plain
+
+email=test@example.com&password=password&name=Test User
+
+###
+
+### 10.3. Empty Request Body
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+###
+
+### 11. Performance Tests
+# Test response times and performance
+
+### 11.1. Health Check Performance
+GET {{baseUrl}}/health
+
+###
+
+### 11.2. Login Performance
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### 12. Environment-Specific Tests
+
+### 12.1. Development Environment
+# Test with dev-specific configurations
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+X-Environment: dev
+
+{
+  "email": "dev-test@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Test User"
+}
+
+###
+
+### 12.2. Staging Environment
+# Test with staging-specific configurations
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+X-Environment: staging
+
+{
+  "email": "staging-test@example.com",
+  "password": "{{testPassword}}",
+  "name": "Staging Test User"
+}
+
+###
+
+### 13. Integration Tests
+# Test complete user lifecycle
+
+### 13.1. Complete User Flow
+# 1. Register user
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "integration-test@example.com",
+  "password": "{{testPassword}}",
+  "name": "Integration Test User"
+}
+
+###
+
+# 2. Login with registered user
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "integration-test@example.com",
+  "password": "{{testPassword}}"
+}
+
+###
+
+# 3. Refresh token
+POST {{baseUrl}}/refresh
+Content-Type: {{contentType}}
+# The refresh token is sent as an HTTP-only cookie. Do not include Authorization header.
+
+###
+
+# 4. Logout
+POST {{baseUrl}}/logout
+Content-Type: {{contentType}}
+# The access/refresh tokens are sent as HTTP-only cookies. Do not include Authorization header.
+
+###
+
+### 14. Edge Cases
+
+### 14.1. Very Long Email
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "very-long-email-address-that-exceeds-normal-limits-and-tests-the-validation-logic@very-long-domain-name-that-also-exceeds-normal-limits.example.com",
+  "password": "{{testPassword}}",
+  "name": "Long Email Test"
+}
+
+###
+
+### 14.2. Very Long Password
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "long-password@example.com",
+  "password": "ThisIsAVeryLongPasswordThatExceedsNormalLimitsAndTestsTheValidationLogicForMaximumPasswordLengthRequirements",
+  "name": "Long Password Test"
+}
+
+###
+
+### 14.3. Special Characters in Name
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "special-chars@example.com",
+  "password": "{{testPassword}}",
+  "name": "José María O'Connor-Smith (Jr.)"
+}
+
+###
+
+### 15. Load Testing Preparation
+# These endpoints can be used for load testing
+
+### 15.1. Health Check for Load Testing
+GET {{baseUrl}}/health
+
+###
+
+### 15.2. Login for Load Testing
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "load-test@example.com",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### 16. Documentation Examples
+
+### 16.1. Successful Signup Response
+# Expected response:
+# {
+#   "success": true,
+#   "message": "User registered successfully",
+#   "data": {
+#     "user": {
+#       "id": "user-id",
+#       "email": "test@example.com",
+#       "name": "John Doe",
+#       "createdAt": "2024-01-01T00:00:00.000Z"
+#     }
+#   }
+# }
+
+### 16.2. Successful Login Response
+# Expected response:
+# {
+#   "success": true,
+#   "message": "Login successful",
+#   "data": {
+#     "user": {
+#       "id": "user-id",
+#       "email": "test@example.com",
+#       "name": "John Doe"
+#     },
+#     "tokens": {
+#       "accessToken": "jwt-access-token",
+#       "refreshToken": "jwt-refresh-token",
+#       "expiresIn": 3600
+#     }
+#   }
+# }
+
+### 16.3. Error Response Example
+# Expected error response:
+# {
+#   "success": false,
+#   "message": "Validation failed",
+#   "errors": [
+#     {
+#       "field": "email",
+#       "message": "Email is required"
+#     }
+#   ]
+# } 

@@ -1,0 +1,12 @@
+{
+  "Parameters": {
+    "Environment": "dev",
+    "ProjectName": "auth-service",
+    "GitHubOwner": "your-github-username",
+    "GitHubRepo": "react-constructs",
+    "GitHubBranch": "develop",
+    "GitHubToken": "your-github-token",
+    "ArtifactBucketName": "auth-service-artifacts-dev",
+    "NotificationEmail": "dev-team@yourcompany.com"
+  }
+} 

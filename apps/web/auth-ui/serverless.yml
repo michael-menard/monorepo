@@ -1,0 +1,170 @@
+service: auth-ui
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    NODE_ENV: ${env:NODE_ENV, 'production'}
+    REACT_APP_API_URL: ${env:REACT_APP_API_URL, ''}
+    REACT_APP_AUTH_SERVICE_URL: ${env:REACT_APP_AUTH_SERVICE_URL, ''}
+
+plugins:
+  - serverless-s3-sync
+  - serverless-cloudfront-invalidate
+
+custom:
+  s3Sync:
+    - bucketName: ${self:service}-${self:provider.stage}
+      localDir: build/
+      deleteRemoved: true
+      params:
+        - index.html:
+            CacheControl: 'no-cache, no-store, must-revalidate'
+        - static/**/*:
+            CacheControl: 'public, max-age=31536000, immutable'
+        - asset-manifest.json:
+            CacheControl: 'no-cache, no-store, must-revalidate'
+        - favicon.ico:
+            CacheControl: 'public, max-age=31536000'
+        - manifest.json:
+            CacheControl: 'public, max-age=31536000'
+        - robots.txt:
+            CacheControl: 'public, max-age=31536000'
+  
+  cloudfrontInvalidate:
+    distributionIdKey: CloudFrontDistributionId
+    items:
+      - "/*"
+
+functions:
+  # Optional: Add API Gateway function if you need server-side functionality
+  # api:
+  #   handler: src/api.handler
+  #   events:
+  #     - httpApi:
+  #         path: /api/{proxy+}
+  #         method: ANY
+
+resources:
+  Resources:
+    # S3 Bucket for hosting static files
+    WebsiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${self:provider.stage}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, HEAD]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+
+    # S3 Bucket Policy to allow public read access
+    WebsiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref WebsiteBucket
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: !Sub '${WebsiteBucket}/*'
+
+    # CloudFront Distribution
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+              Id: S3Origin
+              S3OriginConfig:
+                OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
+          Enabled: true
+          DefaultRootObject: index.html
+          DefaultCacheBehavior:
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            MinTTL: 0
+            DefaultTTL: 86400
+            MaxTTL: 31536000
+          # Handle SPA routing - redirect 404s to index.html
+          CustomErrorResponses:
+            - ErrorCode: 404
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+            - ErrorCode: 403
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+          PriceClass: PriceClass_100
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+
+    # CloudFront Origin Access Identity
+    CloudFrontOriginAccessIdentity:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: !Sub 'OAI for ${self:service}-${self:provider.stage}'
+
+    # IAM Role for CloudFormation to manage CloudFront
+    CloudFrontRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: cloudformation.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/CloudFrontFullAccess
+
+  Outputs:
+    WebsiteBucketName:
+      Description: Name of S3 bucket to hold website content
+      Value: !Ref WebsiteBucket
+      Export:
+        Name: !Sub '${self:service}-${self:provider.stage}-bucket-name'
+
+    CloudFrontDistributionId:
+      Description: ID of CloudFront distribution
+      Value: !Ref CloudFrontDistribution
+      Export:
+        Name: !Sub '${self:service}-${self:provider.stage}-distribution-id'
+
+    CloudFrontDomainName:
+      Description: Domain name of CloudFront distribution
+      Value: !GetAtt CloudFrontDistribution.DomainName
+      Export:
+        Name: !Sub '${self:service}-${self:provider.stage}-domain-name'
+
+    WebsiteURL:
+      Description: URL for website hosted on CloudFront
+      Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+      Export:
+        Name: !Sub '${self:service}-${self:provider.stage}-website-url' 

@@ -1,0 +1,64 @@
+type File {
+  id: ID!
+  name: String!
+  size: Int!
+  type: String!
+  url: String!
+  userId: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  status: FileStatus!
+  progress: Int
+  error: String
+}
+
+enum FileStatus {
+  PENDING
+  UPLOADING
+  COMPLETED
+  FAILED
+  DELETED
+}
+
+type FileUploadResponse {
+  file: File!
+  presignedUrl: String!
+  expiresAt: AWSDateTime!
+}
+
+type FileDeleteResponse {
+  success: Boolean!
+  message: String!
+}
+
+input UploadFileInput {
+  name: String!
+  size: Int!
+  type: String!
+  userId: String!
+}
+
+input DeleteFileInput {
+  id: ID!
+  userId: String!
+}
+
+type Query {
+  getFile(id: ID!): File
+  listFiles(userId: String!, limit: Int, nextToken: String): FileConnection
+}
+
+type Mutation {
+  uploadFile(input: UploadFileInput!): FileUploadResponse!
+  deleteFile(input: DeleteFileInput!): FileDeleteResponse!
+}
+
+type FileConnection {
+  items: [File!]!
+  nextToken: String
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+} 

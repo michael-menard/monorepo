@@ -1,0 +1,303 @@
+### Auth Service - Development Environment
+### Base URL: https://dev-api-id.execute-api.region.amazonaws.com/dev/auth
+
+### Environment Variables
+@baseUrl = https://dev-api-id.execute-api.region.amazonaws.com/dev/auth
+@contentType = application/json
+
+### Test Data for Development
+@testEmail = dev-test@example.com
+@testPassword = DevPassword123!
+@testName = Dev Test User
+
+### Development Environment Health Check
+GET {{baseUrl}}/health
+
+###
+
+### Development User Registration
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}",
+  "name": "{{testName}}"
+}
+
+###
+
+### Development Login
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### Development Password Reset Request
+POST {{baseUrl}}/reset-password
+Content-Type: {{contentType}}
+
+{
+  "email": "{{testEmail}}"
+}
+
+###
+
+### Development Environment Tests
+
+### Test with Development Headers
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+X-Environment: dev
+X-Debug: true
+
+{
+  "email": "dev-debug@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Debug User"
+}
+
+###
+
+### Test Development Error Handling
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email-dev",
+  "password": "weak"
+}
+
+###
+
+### Development Performance Test
+GET {{baseUrl}}/health
+
+###
+
+### Development Load Test (Multiple Requests)
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-load-1@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Load Test 1"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-load-2@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Load Test 2"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-load-3@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Load Test 3"
+}
+
+###
+
+### Development Integration Test Flow
+
+### 1. Register Development User
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-integration@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Integration User"
+}
+
+###
+
+### 2. Login Development User
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-integration@example.com",
+  "password": "{{testPassword}}"
+}
+
+###
+
+### 3. Test Development Logout
+POST {{baseUrl}}/logout
+Content-Type: {{contentType}}
+Authorization: Bearer your-access-token-here
+
+###
+
+### Development Edge Cases
+
+### Very Long Development Email
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "very-long-development-email-address-that-tests-validation-limits@very-long-development-domain-name.example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Long Email Test"
+}
+
+###
+
+### Development Special Characters
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-special@example.com",
+  "password": "{{testPassword}}",
+  "name": "José María O'Connor-Smith (Dev)"
+}
+
+###
+
+### Development CORS Test
+OPTIONS {{baseUrl}}/signup
+Origin: http://localhost:3000
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type
+
+###
+
+### Development Error Scenarios
+
+### Malformed JSON in Development
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-test@example.com",
+  "password": "password",
+  "name": "Dev Test User"
+  // Missing closing brace for development testing
+
+###
+
+### Wrong Content-Type in Development
+POST {{baseUrl}}/signup
+Content-Type: text/plain
+
+email=dev-test@example.com&password=password&name=Dev Test User
+
+###
+
+### Empty Request Body in Development
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+###
+
+### Development Security Tests
+
+### Test Development Rate Limiting
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-rate-1@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Rate Test 1"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-rate-2@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Rate Test 2"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-rate-3@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Rate Test 3"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-rate-4@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Rate Test 4"
+}
+
+###
+
+POST {{baseUrl}}/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "dev-rate-5@example.com",
+  "password": "{{testPassword}}",
+  "name": "Dev Rate Test 5"
+}
+
+###
+
+### Development Documentation Examples
+
+### Expected Development Signup Response
+# {
+#   "success": true,
+#   "message": "User registered successfully",
+#   "data": {
+#     "user": {
+#       "id": "dev-user-id",
+#       "email": "dev-test@example.com",
+#       "name": "Dev Test User",
+#       "createdAt": "2024-01-01T00:00:00.000Z",
+#       "environment": "dev"
+#     }
+#   }
+# }
+
+### Expected Development Login Response
+# {
+#   "success": true,
+#   "message": "Login successful",
+#   "data": {
+#     "user": {
+#       "id": "dev-user-id",
+#       "email": "dev-test@example.com",
+#       "name": "Dev Test User"
+#     },
+#     "tokens": {
+#       "accessToken": "dev-jwt-access-token",
+#       "refreshToken": "dev-jwt-refresh-token",
+#       "expiresIn": 3600
+#     },
+#     "environment": "dev"
+#   }
+# } 

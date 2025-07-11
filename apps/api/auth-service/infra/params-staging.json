@@ -1,0 +1,12 @@
+{
+  "Parameters": {
+    "Environment": "staging",
+    "ProjectName": "auth-service",
+    "GitHubOwner": "your-github-username",
+    "GitHubRepo": "react-constructs",
+    "GitHubBranch": "staging",
+    "GitHubToken": "your-github-token",
+    "ArtifactBucketName": "auth-service-artifacts-staging",
+    "NotificationEmail": "staging-team@yourcompany.com"
+  }
+} 
