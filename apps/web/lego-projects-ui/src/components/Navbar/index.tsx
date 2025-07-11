@@ -1,100 +1,92 @@
 import * as React from "react"
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu"
+import { Bell, MessageCircle, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useAppSelector } from "@/store/hooks"
 
 export function Navbar() {
+  const { isAuthenticated, user } = useAppSelector((state) => state.user);
+
   return (
     <div className="flex items-center justify-between w-full">
-      <NavigationMenu>
-        <NavigationMenuList>
-          <NavigationMenuItem>
-            <NavigationMenuLink className={navigationMenuTriggerStyle()} href="/">
-              Home
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuTrigger>Products</NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-[.75fr_1fr]">
-                <li className="row-span-3">
-                  <NavigationMenuLink asChild>
-                    <a
-                      className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                      href="/"
-                    >
-                      <div className="mb-2 mt-4 text-lg font-medium">
-                        Featured
-                      </div>
-                      <p className="text-sm leading-tight text-muted-foreground">
-                        Beautifully designed components built with Radix UI and Tailwind CSS.
-                      </p>
-                    </a>
-                  </NavigationMenuLink>
-                </li>
-                <ListItem href="/docs" title="Introduction">
-                  Re-usable components built using Radix UI and Tailwind CSS.
-                </ListItem>
-                <ListItem href="/docs/installation" title="Installation">
-                  How to install dependencies and structure your app.
-                </ListItem>
-                <ListItem href="/docs/primitives/typography" title="Typography">
-                  Styles for headings, paragraphs, lists...etc
-                </ListItem>
-              </ul>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink className={navigationMenuTriggerStyle()} href="/about">
-              About
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink className={navigationMenuTriggerStyle()} href="/contact">
-              Contact
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-        </NavigationMenuList>
-      </NavigationMenu>
-      
-      <Avatar className="h-8 w-8">
-        <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-        <AvatarFallback>U</AvatarFallback>
-      </Avatar>
+      {/* Logo */}
+      <div className="flex items-center">
+        <h1 className="text-xl font-bold text-indigo-700">Lego Projects</h1>
+      </div>
+
+      {/* Navigation Links - Only show for authenticated users */}
+      {isAuthenticated && (
+        <nav className="flex items-center space-x-6">
+          <a href="/instructions" className="text-gray-700 hover:text-indigo-700 font-medium">
+            Instructions
+          </a>
+          <a href="/inspiration" className="text-gray-700 hover:text-indigo-700 font-medium">
+            Inspiration
+          </a>
+          <a href="/profile" className="text-gray-700 hover:text-indigo-700 font-medium">
+            Profile
+          </a>
+        </nav>
+      )}
+
+      {/* Right side - Avatar/Notifications for authenticated, Login/Signup for unauthenticated */}
+      <div className="flex items-center space-x-4">
+        {isAuthenticated ? (
+          <>
+            {/* Notifications */}
+            <button className="p-2 text-gray-600 hover:text-indigo-700 transition-colors">
+              <Bell className="h-5 w-5" />
+            </button>
+            
+            {/* Messages */}
+            <button className="p-2 text-gray-600 hover:text-indigo-700 transition-colors">
+              <MessageCircle className="h-5 w-5" />
+            </button>
+            
+            {/* User Avatar with Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="https://github.com/shadcn.png" alt={user?.name || "User"} />
+                    <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        ) : (
+          /* Unauthenticated - Show Login/Signup links */
+          <div className="flex items-center space-x-4">
+            <a href="/auth/login" className="text-gray-700 hover:text-indigo-700 font-medium">
+              Login
+            </a>
+            <a href="/auth/signup" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+              Sign Up
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   )
-}
-
-const ListItem = React.forwardRef<
-  React.ElementRef<"a">,
-  React.ComponentPropsWithoutRef<"a">
->(({ className, title, children, ...props }, ref) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <a
-          ref={ref}
-          className={cn(
-            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-            className
-          )}
-          {...props}
-        >
-          <div className="text-sm font-medium leading-none">{title}</div>
-          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-            {children}
-          </p>
-        </a>
-      </NavigationMenuLink>
-    </li>
-  )
-})
-ListItem.displayName = "ListItem" 
+} 
