@@ -1,0 +1,67 @@
+### Sign up
+
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "kenny McCormick",
+  "email": "mlmmayhem@gmail.com",
+  "password": "secret"
+}
+
+### Verify Email
+
+POST {{baseUrl}}{{authPath}}/verify-email
+Content-Type: application/json
+
+{
+  "code": "1006591"
+}
+
+### Invalid Login
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "e10@mail.com",
+  "password": "wrong secret"
+}
+
+### Valid Login
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "e10@mail.com",
+  "password": "secret"
+}
+
+### Forgot Password Request
+
+POST {{baseUrl}}{{authPath}}/forgot-password
+Content-Type: application/json
+
+{
+  "email": "mlmmayhem@gmail.com"
+}
+
+
+### Password Reset
+@token =123
+
+POST {{baseUrl}}{{authPath}}/reset-password/{{token}}
+Content-Type: application/json
+
+{
+  "password": "new secret"
+}
+
+### Logout
+POST {{baseUrl}}{{authPath}}/log-out
+Content-Type: application/json
+
+### Check Auth
+
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+
