@@ -1,0 +1,49 @@
+{
+  "name": "@repo/auth-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rm -rf node_modules package-lock.json",
+    "reinstall": "npm run clean && npm install",
+    "simple": "tsx backend/index.ts",
+    "killport": "chmod +x killport.sh && ./killport.sh",
+    "reset": "npm run killport 5000 && npm run killport 5001 && npm run dev",
+    "troubleshoot": "node troubleshoot.js",
+    "check-types": "tsc --noEmit",
+    "debug-server": "node server-debug.js",
+    "lint": "eslint . --max-warnings 0",
+    "diagnose": "node startup-check.js"
+  },
+  "dependencies": {
+    "@repo/shared-utils": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@repo/eslint-config": "workspace:*",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.3",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mailtrap": "^4.1.0",
+    "mongoose": "^8.15.1",
+    "zod": "^3.25.62"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^24.0.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.1",
+    "typescript": "5.8.3",
+    "eslint": "^9.30.0"
+  }
+}
