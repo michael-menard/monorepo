@@ -1,6 +1,7 @@
 import express from 'express';
+import { Router } from "express";
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Test routes
 router.get('/hello', (req, res) => {

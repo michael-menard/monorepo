@@ -2,6 +2,7 @@
   "name": "@repo/auth-service-frontend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -10,16 +11,20 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/shared-utils": "workspace:*",
+    "@react-constructs/utils": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-router-dom": "^6.28.0",
+    "axios": "^1.7.9",
     "framer-motion": "^12.23.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.5.4",
-    "lucide-react": "^0.468.0"
+    "lucide-react": "^0.468.0",
+    "react-hot-toast": "^2.4.1",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

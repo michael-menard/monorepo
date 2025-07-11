@@ -1,7 +1,7 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, Router } from 'express';
 import os from 'os';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // System info endpoint
 router.get('/system', (req: Request, res: Response) => {
