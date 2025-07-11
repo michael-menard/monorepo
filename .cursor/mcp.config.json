@@ -1,0 +1,49 @@
+{
+  "servers": [
+    {
+      "name": "OpenAI GPT-4",
+      "url": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-4"
+    },
+    {
+      "name": "OpenAI GPT-3.5 Turbo",
+      "url": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-3.5-turbo"
+    },
+    {
+      "name": "Anthropic Claude 3 Opus",
+      "url": "https://api.anthropic.com/v1/messages",
+      "model": "claude-3-opus-20240229"
+    },
+    {
+      "name": "Anthropic Claude 3 Sonnet",
+      "url": "https://api.anthropic.com/v1/messages",
+      "model": "claude-3-sonnet-20240229"
+    },
+    {
+      "name": "Anthropic Claude 3 Haiku",
+      "url": "https://api.anthropic.com/v1/messages",
+      "model": "claude-3-haiku-20240307"
+    },
+    {
+      "name": "Google Gemini 1.5 Pro",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+      "model": "gemini-1.5-pro"
+    },
+    {
+      "name": "Mistral Large",
+      "url": "https://api.mistral.ai/v1/chat/completions",
+      "model": "mistral-large-latest"
+    },
+    {
+      "name": "Mistral Medium",
+      "url": "https://api.mistral.ai/v1/chat/completions",
+      "model": "mistral-medium-latest"
+    },
+    {
+      "name": "Mistral Small",
+      "url": "https://api.mistral.ai/v1/chat/completions",
+      "model": "mistral-small-latest"
+    }
+  ]
+} 

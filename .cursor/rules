@@ -1,0 +1,84 @@
+# Cursor Rules for React Constructs Monorepo
+
+## Project Structure
+- This is a monorepo using pnpm workspaces
+- Apps are in `apps/` directory
+- Shared packages are in `packages/` directory
+- Each app/package should be self-contained with its own package.json
+
+## Code Style & Standards
+- Use TypeScript for all new code
+- Use Tailwind CSS for styling (prefer default classes over arbitrary values)
+- Use functional components with hooks
+- Prefer concise code fixes and brief explanations
+- Follow React best practices and modern patterns
+
+## File Organization
+- Components should be in their own directory as index files
+- Include related CSS, utils, and test files inside component directories
+- Use PascalCase for component files
+- Use camelCase for utility files
+
+## Authentication & Security
+- Store access tokens in HTTP-only cookies as a project-wide best practice
+- Use Redux Toolkit for state management
+- Implement proper route protection for authenticated routes
+- Follow security best practices for user data
+
+## Testing
+- Use pnpm to run tests without the watch flag
+- Write tests for components and utilities
+- Use Vitest for testing framework
+
+## Deployment
+- Use AWS CodeBuild and AWS CodePipeline for deployment pipelines
+- Frontend apps deploy as static sites to S3
+- Backend services use serverless.yml for AWS Lambda deployment
+
+## UI/UX Guidelines
+- Use default Tailwind CSS classes instead of overriding with arbitrary values
+- Prefer Tailwind CSS classes over inline style attributes
+- Create beautiful and modern UI with best UX practices
+- Use shadcn/ui components when available
+
+## Monorepo Best Practices
+- Keep apps and packages loosely coupled
+- Use workspace dependencies (`workspace:*`) for internal packages
+- Each app should be deployable independently
+- Share common utilities through packages
+
+## API Integration
+- Backend logic should be in `apps/api/` directory
+- Frontend UI should be in `apps/web/` directory
+- Use proper separation between frontend and backend
+- Implement proper error handling and loading states
+
+## Development Workflow
+- Use pnpm for package management
+- Follow the established directory structure
+- Keep components and pages in their own directories
+- Maintain clear separation between different modules/features
+
+## Error Handling
+- Implement proper error boundaries
+- Use try-catch blocks for async operations
+- Provide meaningful error messages to users
+- Log errors appropriately for debugging
+
+## Performance
+- Use React.memo for expensive components
+- Implement proper loading states
+- Optimize bundle size with code splitting
+- Use lazy loading for routes
+
+## Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA labels
+- Ensure keyboard navigation works
+- Test with screen readers
+
+## Documentation
+- Write clear README files for each app/package
+- Document API endpoints
+- Include setup and deployment instructions
+- Keep documentation up to date 
