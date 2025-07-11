@@ -1,15 +1,10 @@
 import React from 'react'
+import { LoginComponent } from '@react-constructs/ui-auth'
 
 export default function Login() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-md">
-        <iframe 
-          src="/auth-ui" 
-          className="w-full h-[600px] border-0 rounded-lg shadow-lg"
-          title="Login"
-        />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <LoginComponent />
     </div>
   )
 }
