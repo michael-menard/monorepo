@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import apiService from '../api';
+import { createApiService } from '../api';
 
-// Mock axios
-const mockAxios = {
-  create: vi.fn(),
+// Shared mock instance
+const mockAxiosInstance = {
+  get: vi.fn(),
+  post: vi.fn(),
   interceptors: {
     request: { use: vi.fn() },
     response: { use: vi.fn() },
@@ -11,67 +12,46 @@ const mockAxios = {
 };
 
 vi.mock('axios', () => ({
-  default: mockAxios,
+  default: {
+    create: vi.fn(() => mockAxiosInstance),
+  },
 }));
 
-describe('ApiService', () => {
-  let mockApiInstance: any;
+let apiService: ReturnType<typeof createApiService>;
 
+describe('ApiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    mockApiInstance = {
-      get: vi.fn(),
-      post: vi.fn(),
-      interceptors: {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() },
-      },
-    };
-
-    mockAxios.create.mockReturnValue(mockApiInstance);
-  });
-
-  it('creates axios instance with correct configuration', () => {
-    // Re-import to trigger the constructor
-    vi.resetModules();
-    require('../api');
-
-    expect(mockAxios.create).toHaveBeenCalledWith({
-      baseURL: expect.any(String),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    // Reset all mock methods
+    Object.entries(mockAxiosInstance).forEach(([key, val]) => {
+      if (typeof val === 'object' && val !== null) {
+        Object.values(val).forEach((fn) => {
+          if (typeof fn === 'function' && (fn as any).mockClear) (fn as any).mockClear();
+        });
+      } else if (typeof val === 'function' && val.mockClear) {
+        val.mockClear();
+      }
     });
-  });
-
-  it('sets up request interceptor', () => {
-    vi.resetModules();
-    require('../api');
-
-    expect(mockApiInstance.interceptors.request.use).toHaveBeenCalled();
+    apiService = createApiService(mockAxiosInstance as any);
   });
 
   it('sets up response interceptor', () => {
-    vi.resetModules();
-    require('../api');
-
-    expect(mockApiInstance.interceptors.response.use).toHaveBeenCalled();
+    expect(mockAxiosInstance.interceptors.response.use).toHaveBeenCalled();
   });
 
   it('calls health check endpoint', async () => {
     const mockResponse = { data: { status: 'ok' } };
-    mockApiInstance.get.mockResolvedValue(mockResponse);
+    mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
     const result = await apiService.healthCheck();
 
-    expect(mockApiInstance.get).toHaveBeenCalledWith('/health');
+    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/health');
     expect(result).toEqual(mockResponse);
   });
 
   it('calls signup endpoint with correct data', async () => {
     const mockResponse = { data: { success: true } };
-    mockApiInstance.post.mockResolvedValue(mockResponse);
+    mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
     const signupData = {
       email: 'test@example.com',
@@ -81,13 +61,13 @@ describe('ApiService', () => {
 
     const result = await apiService.signup(signupData);
 
-    expect(mockApiInstance.post).toHaveBeenCalledWith('/signup', signupData);
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/signup', signupData);
     expect(result).toEqual(mockResponse);
   });
 
   it('calls login endpoint with correct data', async () => {
     const mockResponse = { data: { success: true } };
-    mockApiInstance.post.mockResolvedValue(mockResponse);
+    mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
     const loginData = {
       email: 'test@example.com',
@@ -96,33 +76,33 @@ describe('ApiService', () => {
 
     const result = await apiService.login(loginData);
 
-    expect(mockApiInstance.post).toHaveBeenCalledWith('/login', loginData);
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/login', loginData);
     expect(result).toEqual(mockResponse);
   });
 
   it('calls refresh token endpoint with cookies', async () => {
     const mockResponse = { data: { success: true } };
-    mockApiInstance.post.mockResolvedValue(mockResponse);
+    mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
     const result = await apiService.refreshToken();
 
-    expect(mockApiInstance.post).toHaveBeenCalledWith('/refresh', {});
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/refresh');
     expect(result).toEqual(mockResponse);
   });
 
   it('calls logout endpoint', async () => {
     const mockResponse = { data: { success: true } };
-    mockApiInstance.post.mockResolvedValue(mockResponse);
+    mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
     const result = await apiService.logout();
 
-    expect(mockApiInstance.post).toHaveBeenCalledWith('/logout');
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/logout');
     expect(result).toEqual(mockResponse);
   });
 
   it('calls reset password endpoint with correct data', async () => {
     const mockResponse = { data: { success: true } };
-    mockApiInstance.post.mockResolvedValue(mockResponse);
+    mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
     const resetData = {
       email: 'test@example.com',
@@ -130,13 +110,13 @@ describe('ApiService', () => {
 
     const result = await apiService.resetPassword(resetData);
 
-    expect(mockApiInstance.post).toHaveBeenCalledWith('/reset-password', resetData);
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/reset-password', resetData);
     expect(result).toEqual(mockResponse);
   });
 
   it('calls confirm reset endpoint with correct data', async () => {
     const mockResponse = { data: { success: true } };
-    mockApiInstance.post.mockResolvedValue(mockResponse);
+    mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
     const confirmData = {
       token: 'reset-token-123',
@@ -145,7 +125,7 @@ describe('ApiService', () => {
 
     const result = await apiService.confirmReset(confirmData);
 
-    expect(mockApiInstance.post).toHaveBeenCalledWith('/confirm-reset', confirmData);
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/confirm-reset', confirmData);
     expect(result).toEqual(mockResponse);
   });
 

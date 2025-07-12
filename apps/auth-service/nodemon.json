@@ -1,6 +1,0 @@
-{
-  "watch": ["backend"],
-  "ext": "ts",
-  "exec": "tsx backend/index.ts",
-  "ignore": ["frontend/**", "dist/**", "node_modules/**"]
-}

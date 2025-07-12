@@ -8,11 +8,11 @@ import {
   AuthError 
 } from '../types/auth';
 
-class ApiService {
+export class ApiService {
   private api: AxiosInstance;
 
-  constructor() {
-    this.api = axios.create({
+  constructor(apiInstance?: AxiosInstance) {
+    this.api = apiInstance || axios.create({
       baseURL: process.env.REACT_APP_API_URL || 'https://your-api-id.execute-api.region.amazonaws.com/dev/auth',
       headers: {
         'Content-Type': 'application/json',
@@ -32,7 +32,6 @@ class ApiService {
           try {
             // Try to refresh the token using the refresh token cookie
             const response = await this.refreshToken();
-            
             // If refresh successful, retry the original request
             return this.api(originalRequest);
           } catch (refreshError) {
@@ -94,5 +93,6 @@ class ApiService {
   }
 }
 
-export const apiService = new ApiService();
-export default apiService; 
+export function createApiService(apiInstance?: AxiosInstance) {
+  return new ApiService(apiInstance);
+} 

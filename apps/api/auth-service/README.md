@@ -1,307 +1,265 @@
-# Authentication Service
+# 🔐 Auth Service
 
-A secure, production-ready authentication service built with AWS Lambda, DynamoDB, and API Gateway. Implements industry-standard security practices including password hashing, JWT tokens, rate limiting, and account lockout protection.
+A comprehensive authentication service built with Express.js, MongoDB, and React, now integrated into the turborepo monorepo structure.
 
-## 🔒 Security Features
+## 🏗️ Project Structure
 
-### Password Security
-- **bcrypt hashing** with configurable salt rounds (default: 12)
-- **Strong password requirements**: 8-128 characters with uppercase, lowercase, numbers, and special characters
-- **Never stores plain text passwords**
-- **Password change** with current password verification
-
-### Account Protection
-- **Rate limiting** on signup and login attempts
-- **Account lockout** after 5 failed login attempts (15-minute lockout)
-- **IP-based rate limiting** to prevent brute force attacks
-- **Secure token management** with access and refresh tokens
-
-### JWT Token Security
-- **Short-lived access tokens** (1 hour)
-- **Long-lived refresh tokens** (7 days)
-- **Token type validation** (access vs refresh)
-- **Secure token verification**
-
-### Password Reset
-- **Secure reset tokens** with expiration (1 hour)
-- **Email-based reset flow**
-- **Token validation and cleanup**
-
-## 🏗️ Architecture
-
-- **API Gateway**: RESTful API endpoints
-- **Lambda Functions**: Serverless authentication logic
-- **DynamoDB**: User data storage with indexes
-- **SSM Parameter Store**: Secure JWT secret storage
-- **CORS Support**: Cross-origin request handling
-
-## 📋 API Endpoints
-
-### Authentication
-- `POST /auth/signup` - User registration
-- `POST /auth/login` - User login
-- `POST /auth/logout` - User logout
-- `POST /auth/verify` - Token verification
-- `POST /auth/refresh` - Token refresh
-
-### Password Management
-- `POST /auth/change-password` - Change password
-- `POST /auth/forgot-password` - Request password reset
-- `POST /auth/reset-password` - Reset password with token
+```
+apps/auth-service/
+├── backend/                 # Express.js API server
+│   ├── controllers/        # Route controllers
+│   ├── middleware/         # Express middleware
+│   ├── models/            # MongoDB models
+│   ├── routes/            # API routes
+│   ├── utils/             # Utility functions
+│   ├── db/                # Database connection
+│   └── index.ts           # Server entry point
+├── frontend/              # React frontend
+│   ├── src/               # React source code
+│   ├── public/            # Static assets
+│   └── package.json       # Frontend dependencies
+├── package.json           # Backend dependencies
+├── tsconfig.json          # TypeScript config
+└── .env.example          # Environment variables template
+```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- AWS CLI configured
 - Node.js 18+
-- Serverless Framework
+- MongoDB (local or cloud)
+- pnpm (recommended package manager)
 
 ### Installation
+
+1. **Install dependencies from the root:**
+   ```bash
+   pnpm install
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Start the development servers:**
+
+   **Backend only:**
+   ```bash
+   pnpm --filter @repo/auth-service dev
+   ```
+
+   **Frontend only:**
+   ```bash
+   pnpm --filter @repo/auth-service-frontend dev
+   ```
+
+   **Both backend and frontend:**
+   ```bash
+   pnpm dev
+   ```
+
+## 🔧 Development
+
+### Backend Development
+- **Port:** 5000 (default)
+- **Hot reload:** Enabled with nodemon
+- **TypeScript:** Full type checking
+- **ESLint:** Code linting
+
+### Frontend Development
+- **Port:** 5173 (default)
+- **Vite:** Fast development server
+- **React:** Latest version with hooks
+- **Tailwind CSS:** Utility-first styling
+
+### Available Scripts
+
+**Backend:**
 ```bash
-cd auth-service
-npm install
+pnpm --filter @repo/auth-service dev          # Start development server
+pnpm --filter @repo/auth-service build        # Build for production
+pnpm --filter @repo/auth-service start        # Start production server
+pnpm --filter @repo/auth-service lint         # Run ESLint
+pnpm --filter @repo/auth-service check-types  # TypeScript type checking
 ```
 
-### Deploy
+**Frontend:**
 ```bash
-npm run deploy
+pnpm --filter @repo/auth-service-frontend dev     # Start development server
+pnpm --filter @repo/auth-service-frontend build   # Build for production
+pnpm --filter @repo/auth-service-frontend preview # Preview production build
+pnpm --filter @repo/auth-service-frontend lint    # Run ESLint
 ```
 
-### Local Development
-```bash
-npm run offline
-```
+## 🔐 Authentication Features
 
-## 📝 API Usage Examples
+### Backend API Endpoints
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/forgot-password` - Password reset request
+- `POST /api/auth/reset-password` - Password reset
+- `GET /api/auth/verify-email` - Email verification
 
-### Sign Up
-```bash
-curl -X POST https://your-api-gateway-url/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!",
-    "firstName": "John",
-    "lastName": "Doe"
-  }'
-```
+### Security Features
+- **JWT Tokens:** Access and refresh tokens
+- **Password Hashing:** bcrypt with 12 salt rounds
+- **CORS Protection:** Configurable origins
+- **Helmet:** Security headers
+- **Rate Limiting:** API request throttling
+- **Input Validation:** Zod schema validation
+- **Email Verification:** Mailtrap integration
 
-**Response:**
-```json
-{
-  "message": "User created successfully",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "emailVerified": false
-  },
-  "tokens": {
-    "accessToken": "jwt-token",
-    "refreshToken": "refresh-token",
-    "expiresIn": 3600
-  }
-}
-```
+## 🗄️ Database
 
-### Login
-```bash
-curl -X POST https://your-api-gateway-url/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!"
-  }'
-```
+### MongoDB Models
+- **User:** Authentication and profile data
+- **Session:** User session management
+- **EmailVerification:** Email verification tokens
 
-### Verify Token
-```bash
-curl -X POST https://your-api-gateway-url/auth/verify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "your-access-token"
-  }'
-```
+### Database Connection
+The service uses Mongoose ODM with automatic connection management and error handling.
 
-### Change Password
-```bash
-curl -X POST https://your-api-gateway-url/auth/change-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "currentPassword": "SecurePass123!",
-    "newPassword": "NewSecurePass456!",
-    "token": "your-access-token"
-  }'
-```
+## 📧 Email Integration
 
-### Forgot Password
-```bash
-curl -X POST https://your-api-gateway-url/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com"
-  }'
-```
+### Mailtrap Configuration
+- **Development:** Uses Mailtrap for email testing
+- **Production:** Configurable SMTP settings
+- **Templates:** Pre-built email templates
 
-### Reset Password
-```bash
-curl -X POST https://your-api-gateway-url/auth/reset-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "resetToken": "reset-token-from-email",
-    "newPassword": "NewSecurePass456!"
-  }'
-```
+### Email Features
+- Welcome emails
+- Password reset emails
+- Email verification
+- Account notifications
 
-## 🔧 Configuration
+## 🔒 Security Configuration
 
 ### Environment Variables
-- `USERS_TABLE`: DynamoDB table name
-- `JWT_SECRET`: Secret for JWT signing (stored in SSM)
-- `SALT_ROUNDS`: bcrypt salt rounds (default: 12)
-- `SESSION_TTL`: Session timeout in seconds (default: 86400)
+```bash
+# Server
+PORT=5000
+NODE_ENV=development
 
-### Security Settings
-- **Password Requirements**: 8-128 characters with complexity
-- **Rate Limiting**: 5 signup attempts per 5 minutes, 10 login attempts per 5 minutes
-- **Account Lockout**: 5 failed attempts = 15-minute lockout
-- **Token Expiry**: Access tokens (1 hour), Refresh tokens (7 days)
-- **Reset Token Expiry**: 1 hour
+# Database
+MONGODB_URI=mongodb://localhost:27017/auth-service
 
-## 🗄️ Database Schema
+# JWT
+JWT_SECRET=your-super-secret-jwt-key
+JWT_REFRESH_SECRET=your-super-secret-refresh-key
 
-### Users Table
-```json
-{
-  "id": "string (UUID)",
-  "email": "string (lowercase)",
-  "password": "string (bcrypt hash)",
-  "firstName": "string",
-  "lastName": "string",
-  "createdAt": "string (ISO date)",
-  "updatedAt": "string (ISO date)",
-  "emailVerified": "boolean",
-  "loginAttempts": "number",
-  "lockedUntil": "string (ISO date) or null",
-  "lastLoginAt": "string (ISO date) or null",
-  "resetToken": "string or null",
-  "resetTokenExpiry": "string (ISO date) or null"
-}
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# Email
+MAILTRAP_TOKEN=your-mailtrap-token
+MAILTRAP_INBOX_ID=your-mailtrap-inbox-id
 ```
-
-### Indexes
-- **Primary Key**: `id`
-- **Email Index**: `email` (for login lookups)
-- **Reset Token Index**: `resetToken` (for password reset)
-
-## 🛡️ Security Best Practices Implemented
-
-### Password Security
-- ✅ bcrypt hashing with salt
-- ✅ Strong password requirements
-- ✅ Never store plain text passwords
-- ✅ Password change with verification
-
-### Account Protection
-- ✅ Rate limiting on authentication endpoints
-- ✅ Account lockout after failed attempts
-- ✅ IP-based rate limiting
-- ✅ Secure session management
-
-### Token Security
-- ✅ JWT with short expiry
-- ✅ Refresh token rotation
-- ✅ Token type validation
-- ✅ Secure token storage
-
-### Data Protection
-- ✅ Input validation and sanitization
-- ✅ CORS configuration
-- ✅ Error handling without information leakage
-- ✅ Secure parameter storage in SSM
-
-### Operational Security
-- ✅ Least privilege IAM roles
-- ✅ Secure environment variables
-- ✅ Audit logging
-- ✅ Secure headers
 
 ## 🧪 Testing
 
-Run tests:
+### Backend Testing
 ```bash
-npm test
+# Run tests
+pnpm --filter @repo/auth-service test
+
+# Run tests with coverage
+pnpm --filter @repo/auth-service test:coverage
 ```
 
-Run tests in watch mode:
+### Frontend Testing
 ```bash
-npm run test:watch
+# Run tests
+pnpm --filter @repo/auth-service-frontend test
+
+# Run tests with UI
+pnpm --filter @repo/auth-service-frontend test:ui
 ```
 
-## 📊 Monitoring
+## 🚀 Deployment
 
-### CloudWatch Metrics
-- Lambda function invocations and errors
-- API Gateway request/response metrics
-- DynamoDB read/write capacity
+### Backend Deployment
+1. Build the application:
+   ```bash
+   pnpm --filter @repo/auth-service build
+   ```
 
-### Logs
-- Lambda function logs in CloudWatch
-- API Gateway access logs
-- DynamoDB audit logs
+2. Start the production server:
+   ```bash
+   pnpm --filter @repo/auth-service start
+   ```
 
-## 🔄 Integration with File Upload Service
+### Frontend Deployment
+1. Build the application:
+   ```bash
+   pnpm --filter @repo/auth-service-frontend build
+   ```
 
-To integrate with the file upload service:
+2. Serve the built files from a web server.
 
-1. **Add user authentication** to file upload endpoints
-2. **Use JWT tokens** for authorization
-3. **Associate files with user IDs**
-4. **Implement user-based file access control**
+## 🔧 Troubleshooting
 
-Example integration:
-```javascript
-// In file upload handler
-const decoded = verifyToken(event.headers.Authorization);
-if (!decoded) {
-  return createErrorResponse(401, 'Unauthorized');
+### Common Issues
+
+**MongoDB Connection:**
+- Ensure MongoDB is running
+- Check connection string in `.env`
+- Verify network connectivity
+
+**CORS Errors:**
+- Check `ALLOWED_ORIGINS` in `.env`
+- Ensure frontend URL is included
+
+**JWT Issues:**
+- Verify `JWT_SECRET` is set
+- Check token expiration settings
+
+### Debug Mode
+```bash
+# Enable debug logging
+NODE_ENV=development DEBUG=* pnpm --filter @repo/auth-service dev
+```
+
+## 📚 API Documentation
+
+### Authentication Flow
+1. **Register:** `POST /api/auth/register`
+2. **Login:** `POST /api/auth/login`
+3. **Access Protected Routes:** Include `Authorization: Bearer <token>`
+4. **Refresh Token:** `POST /api/auth/refresh`
+5. **Logout:** `POST /api/auth/logout`
+
+### Request/Response Examples
+
+**Registration:**
+```json
+POST /api/auth/register
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!",
+  "name": "John Doe"
 }
-
-const userId = decoded.userId;
-// Associate file with user
-const fileData = {
-  ...fileData,
-  userId
-};
 ```
 
-## 🚨 Production Considerations
+**Login:**
+```json
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!"
+}
+```
 
-### Email Integration
-- Replace console.log with SES for password reset emails
-- Implement email verification flow
-- Add email templates
+## 🤝 Contributing
 
-### Enhanced Security
-- Implement token blacklisting for logout
-- Add MFA support
-- Implement session management
-- Add audit logging
+1. Follow the monorepo structure
+2. Use shared utilities from `@repo/shared-utils`
+3. Follow TypeScript and ESLint configurations
+4. Test your changes thoroughly
 
-### Performance
-- Use Redis for rate limiting in production
-- Implement connection pooling
-- Add caching for user data
+## 📄 License
 
-### Monitoring
-- Set up CloudWatch alarms
-- Implement health checks
-- Add performance monitoring
-
-## 📚 Additional Resources
-
-- [AWS Lambda Security Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/security-best-practices.html)
-- [JWT Security Best Practices](https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/)
-- [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) 
+This project is part of the turborepo monorepo and follows the same licensing terms.

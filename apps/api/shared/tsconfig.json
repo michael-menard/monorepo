@@ -2,8 +2,8 @@
   "extends": "../../../packages/shared/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": "src"
   },
-  "include": ["**/*"],
-  "exclude": ["node_modules", "dist", "frontend"]
-}
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+} 
