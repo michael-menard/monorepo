@@ -1,8 +1,8 @@
-import { ReactNode } from 'react';
+import React from 'react';
 import FloatingShape from '../FloatingShape';
 
 interface AuthLayoutProps {
-  children: ReactNode;
+  children: any;
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {

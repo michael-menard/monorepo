@@ -1,16 +1,16 @@
 import { motion } from "framer-motion";
 import Input from "../../components/Input";
 import { Mail, Loader } from "lucide-react";
-import { useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 const EmailVerificationPage = () => {
-	const [code, setCode] = useState("");
+	const [code, setCode] = (React as any).useState("");
 	const navigate = useNavigate();
 	const { verifyEmail, isLoading, error } = useAuth();
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: any) => {
 		e.preventDefault();
 		
 		try {
@@ -43,7 +43,7 @@ const EmailVerificationPage = () => {
 						type='text'
 						placeholder='Verification Code'
 						value={code}
-						onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value)}
+						onChange={(e: any) => setCode(e.target.value)}
 					/>
 
 					{error && <p className='text-red-500 font-semibold mt-2'>{error}</p>}

@@ -6,7 +6,7 @@ import { loginSchema, type LoginFormData } from './schema';
 import Input from '../Input';
 import { Button } from '../ui/button';
 
-export const LoginComponent: React.FC = () => {
+export const LoginComponent = () => {
   const { login, isLoading, error, clearError } = useAuth();
 
   const {
