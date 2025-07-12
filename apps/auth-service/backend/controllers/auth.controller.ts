@@ -2,13 +2,13 @@ import { Request, Response } from "express";
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 
-import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
+import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
 import {
 	sendPasswordResetEmail,
 	sendResetSuccessEmail,
 	sendVerificationEmail,
 	sendWelcomeEmail,
-} from "../mailtrap/emails.js";
+} from "../mailtrap/emails";
 import { User } from "../models/User";
 
 export const signup = async (req: Request, res: Response) => {
