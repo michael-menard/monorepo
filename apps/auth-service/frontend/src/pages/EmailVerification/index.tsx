@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useAuthStore } from "../store/auth.store";
+import { useAuthStore } from "../../store/auth.store";
 import toast from "react-hot-toast";
 
 const EmailVerificationPage = () => {
@@ -22,9 +22,9 @@ const EmailVerificationPage = () => {
 			}
 			setCode(newCode);
 
-			// Focus on the last non-empty input or the first empty one
-			    const lastFilledIndex = newCode.lastIndexOf(newCode.find(digit => digit !== "") || "");
-			const focusIndex = lastFilledIndex < 5 ? lastFilledIndex + 1 : 5;
+			// Focus on the next empty input after the last filled one
+			const firstEmptyIndex = newCode.findIndex(digit => digit === "");
+			const focusIndex = firstEmptyIndex === -1 ? 5 : firstEmptyIndex;
 			inputRefs.current[focusIndex].focus();
 		} else {
 			newCode[index] = value;

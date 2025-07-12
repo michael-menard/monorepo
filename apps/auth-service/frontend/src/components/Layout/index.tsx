@@ -1,5 +1,5 @@
 import React from 'react';
-import FloatingShape from './FloatingShape';
+import FloatingShape from '../FloatingShape';
 
 interface LayoutProps {
   children: React.ReactNode;

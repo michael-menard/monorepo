@@ -35,6 +35,12 @@ const FloatingShape = ({ color, size, top, left, delay, speed = 'medium' }: Floa
         delay
       }}
       aria-hidden="true"
+      data-color={color}
+      data-size={size}
+      data-top={top}
+      data-left={left}
+      data-delay={delay}
+      data-speed={speed}
     />
   )
 }

@@ -75,6 +75,7 @@ const PasswordStrengthMeter = ({ password }: PasswordStrengthMeterProps) => {
           <div
             className={`h-2 rounded-full transition-all duration-300 ${getColor(strength)}`}
             style={{ width: `${(strength / 5) * 100}%` }}
+            data-testid="strength-bar"
           />
         </div>
         <span className="text-sm text-gray-400">{getStrengthText(strength)}</span>

@@ -47,7 +47,7 @@ function App() {
 
 	if (isCheckingAuth) return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex items-center justify-center">
-			<div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+			<div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white" data-testid="loading-spinner"></div>
 		</div>
 	);
 
