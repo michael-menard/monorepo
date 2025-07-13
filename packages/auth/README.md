@@ -41,7 +41,7 @@ function App() {
 ### 2. Use the Auth Hook
 
 ```tsx
-import { useAuth } from '@repo/web-auth';
+import { useAuth } from '@repo/auth';
 
 function LoginForm() {
   const { login, isLoading, error, user } = useAuth();
@@ -138,7 +138,7 @@ interface User {
 ### Authentication Flow
 
 ```tsx
-import { useAuth } from '@repo/web-auth';
+import { useAuth } from '@repo/auth';
 
 function AuthApp() {
   const { user, isAuthenticated, isLoading, checkAuth } = useAuth();
@@ -159,7 +159,7 @@ function AuthApp() {
 ### Login Form
 
 ```tsx
-import { useAuth } from '@repo/web-auth';
+import { useAuth } from '@repo/auth';
 
 function LoginForm() {
   const { login, isLoading, error, clearError } = useAuth();
@@ -206,7 +206,7 @@ function LoginForm() {
 ### Signup Form
 
 ```tsx
-import { useAuth } from '@repo/web-auth';
+import { useAuth } from '@repo/auth';
 
 function SignupForm() {
   const { signup, isLoading, error } = useAuth();
@@ -262,7 +262,7 @@ function SignupForm() {
 ### Password Reset
 
 ```tsx
-import { useAuth } from '@repo/web-auth';
+import { useAuth } from '@repo/auth';
 
 function ForgotPasswordForm() {
   const { forgotPassword, isLoading, message, error } = useAuth();
@@ -301,7 +301,7 @@ function ForgotPasswordForm() {
 ### Protected Route Component
 
 ```tsx
-import { useAuth } from '@repo/web-auth';
+import { useAuth } from '@repo/auth';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isCheckingAuth } = useAuth();
@@ -332,7 +332,7 @@ import {
   RedirectAuthenticatedUser,
   AuthLayout,
   AuthApp
-} from '@repo/web-auth';
+} from '@repo/auth';
 
 function MyComponent() {
   return (
@@ -353,7 +353,7 @@ For a complete authentication app, use the `AuthApp` component:
 ```tsx
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
-import { store, AuthApp } from '@repo/web-auth';
+import { store, AuthApp } from '@repo/auth';
 
 function App() {
   return (
@@ -375,7 +375,7 @@ import {
   ProtectedRoute, 
   RedirectAuthenticatedUser,
   AuthLayout 
-} from '@repo/web-auth';
+} from '@repo/auth';
 
 function CustomAuthApp() {
   return (
@@ -449,7 +449,7 @@ pnpm test
 If you're migrating from a Zustand-based auth store:
 
 1. **Replace Zustand store** with this Redux Toolkit implementation
-2. **Update imports** from local store to `@repo/web-auth`
+2. **Update imports** from local store to `@repo/auth`
 3. **Wrap your app** with the Redux Provider
 4. **Use the `useAuth` hook** instead of Zustand's `useAuthStore`
 

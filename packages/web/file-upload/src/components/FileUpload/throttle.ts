@@ -29,12 +29,11 @@ export class UploadThrottle {
   // Add upload to queue and process if possible
   async addToQueue<T>(
     uploadFn: () => Promise<T>,
-    onProgress?: (progress: number) => void,
+    _onProgress?: (progress: number) => void,
     onRetry?: (attempt: number, error: Error) => void
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const wrappedUpload = async (): Promise<void> => {
-        let lastAttempt = 0;
         
         for (let attempt = 1; attempt <= this.config.maxRetries + 1; attempt++) {
           try {
@@ -42,7 +41,6 @@ export class UploadThrottle {
             resolve(result);
             return;
           } catch (error) {
-            lastAttempt = attempt;
             
             if (attempt <= this.config.maxRetries) {
               const delay = this.config.retryDelay * Math.pow(this.config.backoffMultiplier, attempt - 1);

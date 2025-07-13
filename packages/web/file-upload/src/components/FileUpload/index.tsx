@@ -9,12 +9,10 @@ import { FileList } from './FileList';
 import { CompletedFileItem } from './CompletedFileItem';
 import type { FileWithProgress } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { validateFiles, validateFile, generateSecureFileId, sanitizeFileName, SECURITY_CONFIG } from './security';
+import { validateFiles, generateSecureFileId, sanitizeFileName, SECURITY_CONFIG } from './security';
 import { UploadThrottle, DEFAULT_THROTTLE_CONFIG } from './throttle';
 import type { UploadStatus, RetryInfo } from './types';
-import { Upload, X, CheckCircle, AlertCircle, Clock, RefreshCw } from 'lucide-react';
-import { FileItem } from './FileItem';
-import { Card } from '../ui/card';
+import { Clock, RefreshCw } from 'lucide-react';
 
 export function FileUpload() {
   const [files, setFiles] = useState<FileWithProgress[]>([]);
@@ -23,7 +21,7 @@ export function FileUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     activeUploads: 0,
     queueLength: 0,
@@ -163,8 +161,8 @@ export function FileUpload() {
             });
             return response.data; // Assuming axios returns data on success
           },
-          (progress) => {
-            setUploadProgress(prev => ({ ...prev, [fileWithProgress.id]: progress }));
+          (_progress) => {
+            // Progress tracking removed - not used in current implementation
           },
           (attempt, error) => {
             setRetryInfo({

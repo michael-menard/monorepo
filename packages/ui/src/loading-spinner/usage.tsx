@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { LoadingSpinner, PulseSpinner, DotsSpinner } from './loading-spinner'
+import { LoadingSpinner, PulseSpinner, DotsSpinner } from './index'
 
 // Example usage in a real application
 export const LoadingExample = () => {

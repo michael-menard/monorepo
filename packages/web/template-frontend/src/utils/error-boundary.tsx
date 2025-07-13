@@ -1,8 +1,8 @@
 import React from 'react';
-import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from 'react-error-boundary';
+import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from 'react-error-boundary';
 
 // Error fallback component
-const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) => {
+const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
@@ -61,10 +61,10 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
 };
 
 // Error boundary with logging
-const ErrorBoundaryWithLogging: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const handleError = (error: Error, errorInfo: { componentStack: string }) => {
+const ErrorBoundaryWithLogging = ({ children }: { children: React.ReactNode }) => {
+  const handleError = (error: Error, info: any) => {
     // Log error to your logging service
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error('Error caught by boundary:', error, info);
     
     // You can send to your logging service here
     // logError(error, 'ErrorBoundary');
@@ -72,14 +72,14 @@ const ErrorBoundaryWithLogging: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <ReactErrorBoundary
-      FallbackComponent={ErrorFallback}
+      FallbackComponent={ErrorFallback as any}
       onError={handleError}
       onReset={() => {
         // Reset the state of your app here
         window.location.reload();
       }}
     >
-      {children}
+      {children as any}
     </ReactErrorBoundary>
   );
 };
@@ -95,9 +95,9 @@ export const withErrorBoundary = <P extends object>(
   Component: React.ComponentType<P>,
   fallback?: React.ComponentType<FallbackProps>
 ) => {
-  const WrappedComponent: React.FC<P> = (props) => (
+  const WrappedComponent = (props: P) => (
     <ReactErrorBoundary
-      FallbackComponent={fallback || ErrorFallback}
+      FallbackComponent={(fallback || ErrorFallback) as any}
       onError={(error, errorInfo) => {
         console.error('Component error:', error, errorInfo);
       }}

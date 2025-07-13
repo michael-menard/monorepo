@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
-interface ExampleState {
+export interface ExampleState {
   count: number
   isLoading: boolean
   error: string | null

@@ -16,7 +16,7 @@ A reusable login form component that provides a clean, accessible login interfac
 ### Basic Usage
 
 ```tsx
-import { LoginComponent } from '@repo/web-auth'
+import { LoginComponent } from '@repo/auth'
 
 function LoginPage() {
   return (
@@ -30,7 +30,7 @@ function LoginPage() {
 ### With Custom Layout
 
 ```tsx
-import { LoginComponent } from '@repo/web-auth'
+import { LoginComponent } from '@repo/auth'
 
 function LoginPage() {
   return (
@@ -150,7 +150,7 @@ The component renders a standard HTML form. To handle form submission, you can:
 ### Option 1: Add onSubmit handler
 
 ```tsx
-import { LoginComponent } from '@repo/web-auth'
+import { LoginComponent } from '@repo/auth'
 
 function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
@@ -177,7 +177,7 @@ function LoginPage() {
 
 ```tsx
 import { useRef } from 'react'
-import { LoginComponent } from '@repo/web-auth'
+import { LoginComponent } from '@repo/auth'
 
 function LoginPage() {
   const formRef = useRef<HTMLFormElement>(null)

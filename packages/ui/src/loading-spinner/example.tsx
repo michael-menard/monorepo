@@ -1,5 +1,5 @@
 import React from 'react'
-import { LoadingSpinner, PulseSpinner, DotsSpinner } from './loading-spinner'
+import { LoadingSpinner, PulseSpinner, DotsSpinner } from './index'
 
 export const LoadingSpinnerExamples = () => {
   return (

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
 // CSRF token management
 class CSRFManager {
@@ -46,7 +46,7 @@ const createSecureAxiosInstance = (baseURL?: string): AxiosInstance => {
 
   // Request interceptor for CSRF token
   instance.interceptors.request.use(
-    (config: AxiosRequestConfig) => {
+    (config: InternalAxiosRequestConfig) => {
       const token = csrfManager.getToken();
       if (token) {
         config.headers = config.headers || {};
@@ -54,10 +54,7 @@ const createSecureAxiosInstance = (baseURL?: string): AxiosInstance => {
       }
       
       // Add security headers to all requests
-      config.headers = {
-        ...config.headers,
-        ...securityHeaders,
-      };
+      Object.assign(config.headers, securityHeaders);
 
       return config;
     },
@@ -100,4 +97,4 @@ export const createAxiosInstance = createSecureAxiosInstance;
 export { CSRFManager };
 
 // Export types
-export type { AxiosInstance, AxiosRequestConfig, AxiosResponse }; 
+export type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse }; 
