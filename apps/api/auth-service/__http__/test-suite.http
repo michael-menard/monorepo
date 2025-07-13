@@ -1,0 +1,324 @@
+### Comprehensive Test Suite - Auth Service
+
+### 1. Health Check
+GET {{baseUrl}}{{authPath}}/health
+
+# Expected Response:
+# {
+#   "status": "ok"
+# }
+
+### 2. User Registration Flow
+# Step 1: Register new user
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "testuser@example.com",
+  "password": "TestPassword123!"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "User created successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "Test User",
+#     "email": "testuser@example.com",
+#     "isVerified": false
+#   }
+# }
+
+# Step 2: Try to register same user (should fail)
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "testuser@example.com",
+  "password": "TestPassword123!"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "User already exists"
+# }
+
+### 3. Login Flow
+# Step 1: Login with valid credentials
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "TestPassword123!"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Logged in successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "Test User",
+#     "email": "testuser@example.com",
+#     "isVerified": true
+#   }
+# }
+
+# Step 2: Login with wrong password
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "WrongPassword123!"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+# Step 3: Login with non-existent user
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "nonexistent@example.com",
+  "password": "TestPassword123!"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+### 4. Email Verification Flow
+# Step 1: Verify email with valid code
+POST {{baseUrl}}{{authPath}}/verify-email
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Email verified successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "Test User",
+#     "email": "testuser@example.com",
+#     "isVerified": true
+#   }
+# }
+
+# Step 2: Verify email with invalid code
+POST {{baseUrl}}{{authPath}}/verify-email
+Content-Type: application/json
+
+{
+  "code": "000000"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired verification code"
+# }
+
+### 5. Password Reset Flow
+# Step 1: Request password reset
+POST {{baseUrl}}{{authPath}}/forgot-password
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Password reset link sent to your email"
+# }
+
+# Step 2: Reset password with valid token
+POST {{baseUrl}}{{authPath}}/reset-password/valid-reset-token
+Content-Type: application/json
+
+{
+  "password": "NewTestPassword123!"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Password reset successful"
+# }
+
+# Step 3: Reset password with invalid token
+POST {{baseUrl}}{{authPath}}/reset-password/invalid-token
+Content-Type: application/json
+
+{
+  "password": "NewTestPassword123!"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired reset token"
+# }
+
+### 6. Authentication Check Flow
+# Step 1: Check auth with valid token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+Cookie: token=valid-jwt-token
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "Test User",
+#     "email": "testuser@example.com",
+#     "isVerified": true
+#   }
+# }
+
+# Step 2: Check auth without token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Not authorized, no token"
+# }
+
+# Step 3: Check auth with invalid token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+Cookie: token=invalid-jwt-token
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Not authorized, token failed"
+# }
+
+### 7. Logout Flow
+# Step 1: Logout user
+POST {{baseUrl}}{{authPath}}/log-out
+Content-Type: application/json
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Logged out successfully"
+# }
+
+### 8. Edge Cases and Error Scenarios
+# Invalid JSON payload
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "TestPassword123!",
+  "extraField": "should be ignored"
+}
+
+# Expected Response (Success - extra fields ignored):
+# {
+#   "success": true,
+#   "message": "User created successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "Test User",
+#     "email": "test@example.com",
+#     "isVerified": false
+#   }
+# }
+
+# Missing required fields
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+# Invalid email format
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email-format",
+  "password": "TestPassword123!"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+# Weak password
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+# Empty request body
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+# Malformed JSON
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "TestPassword123!",
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# } 

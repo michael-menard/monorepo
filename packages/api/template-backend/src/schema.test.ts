@@ -31,8 +31,8 @@ describe('GraphQL Schema', () => {
     const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
     
     expect(schemaContent).toContain('type Query');
-    expect(schemaContent).toContain('users: [User!]!');
-    expect(schemaContent).toContain('user(id: ID!): User');
+    expect(schemaContent).toContain('listUsers: [User!]!');
+    expect(schemaContent).toContain('getUser(id: ID!): User');
   });
 
   it('should contain Mutation type definition', () => {

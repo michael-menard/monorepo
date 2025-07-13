@@ -1,0 +1,260 @@
+### Error Testing - Auth Service Edge Cases
+
+### Sign up - Missing Required Fields
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+### Sign up - Invalid Email Format
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "password": "password123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+### Sign up - Weak Password
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+### Sign up - Empty Name
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+### Login - Missing Email
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "password": "password123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+### Login - Missing Password
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+### Login - Empty Credentials
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "",
+  "password": ""
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+### Verify Email - Missing Code
+POST {{baseUrl}}{{authPath}}/verify-email
+Content-Type: application/json
+
+{}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired verification code"
+# }
+
+### Verify Email - Empty Code
+POST {{baseUrl}}{{authPath}}/verify-email
+Content-Type: application/json
+
+{
+  "code": ""
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired verification code"
+# }
+
+### Verify Email - Invalid Code Format
+POST {{baseUrl}}{{authPath}}/verify-email
+Content-Type: application/json
+
+{
+  "code": "abc123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired verification code"
+# }
+
+### Forgot Password - Missing Email
+POST {{baseUrl}}{{authPath}}/forgot-password
+Content-Type: application/json
+
+{}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "User not found"
+# }
+
+### Forgot Password - Invalid Email Format
+POST {{baseUrl}}{{authPath}}/forgot-password
+Content-Type: application/json
+
+{
+  "email": "not-an-email"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "User not found"
+# }
+
+### Password Reset - Missing Password
+POST {{baseUrl}}{{authPath}}/reset-password/valid-token
+Content-Type: application/json
+
+{}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired reset token"
+# }
+
+### Password Reset - Weak Password
+POST {{baseUrl}}{{authPath}}/reset-password/valid-token
+Content-Type: application/json
+
+{
+  "password": "123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired reset token"
+# }
+
+### Password Reset - Missing Token
+POST {{baseUrl}}{{authPath}}/reset-password/
+Content-Type: application/json
+
+{
+  "password": "newPassword123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired reset token"
+# }
+
+### Check Auth - Malformed Token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+Cookie: token=malformed.jwt.token
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Not authorized, token failed"
+# }
+
+### Check Auth - Expired Token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjMiLCJpYXQiOjE2MzQ1Njc4NzQsImV4cCI6MTYzNDU2Nzg3NH0.expired
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Not authorized, token failed"
+# }
+
+### Invalid Content-Type
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: text/plain
+
+This is not JSON
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+### Missing Content-Type
+POST {{baseUrl}}{{authPath}}/login
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# } 

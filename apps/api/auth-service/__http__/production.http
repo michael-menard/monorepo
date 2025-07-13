@@ -1,0 +1,56 @@
+### Production Environment - Auth Service Tests
+
+### Health Check
+GET https://myapp.com/api/auth/health
+
+### Sign up - Production User
+POST https://myapp.com/api/auth/sign-up
+Content-Type: application/json
+
+{
+  "name": "Production User",
+  "email": "user@myapp.com",
+  "password": "secureProductionPassword123"
+}
+
+### Login - Production User
+POST https://myapp.com/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@myapp.com",
+  "password": "secureProductionPassword123"
+}
+
+### Verify Email - Production Code
+POST https://myapp.com/api/auth/verify-email
+Content-Type: application/json
+
+{
+  "code": "987654"
+}
+
+### Forgot Password - Production User
+POST https://myapp.com/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@myapp.com"
+}
+
+### Password Reset - Production Token
+POST https://myapp.com/api/auth/reset-password/production-reset-token
+Content-Type: application/json
+
+{
+  "password": "newSecureProductionPassword123"
+}
+
+### Logout
+POST https://myapp.com/api/auth/log-out
+Content-Type: application/json
+
+### Check Auth - Production Token
+GET https://myapp.com/api/auth/check-auth
+Content-Type: application/json
+Cookie: token=production-jwt-token 

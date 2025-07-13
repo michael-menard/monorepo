@@ -1,67 +1,250 @@
-### Sign up
+### Health Check
+GET {{baseUrl}}{{authPath}}/health
 
+# Expected Response:
+# {
+#   "status": "ok"
+# }
+
+### Sign up
 POST {{baseUrl}}{{authPath}}/sign-up
 Content-Type: application/json
 
 {
-  "name": "kenny McCormick",
-  "email": "mlmmayhem@gmail.com",
-  "password": "secret"
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "password": "securePassword123"
 }
 
-### Verify Email
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "User created successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "John Doe",
+#     "email": "john.doe@example.com",
+#     "isVerified": false
+#   }
+# }
 
+### Sign up - Invalid Data
+POST {{baseUrl}}{{authPath}}/sign-up
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "invalid-email",
+  "password": "123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "All fields are required"
+# }
+
+### Login - Valid Credentials
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "securePassword123"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Logged in successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "John Doe",
+#     "email": "john.doe@example.com",
+#     "isVerified": true
+#   }
+# }
+
+### Login - Invalid Credentials
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "nonexistent@example.com",
+  "password": "wrongpassword"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+### Login - Invalid Email Format
+POST {{baseUrl}}{{authPath}}/login
+Content-Type: application/json
+
+{
+  "email": "invalid-email-format",
+  "password": "password123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid credentials"
+# }
+
+### Verify Email
 POST {{baseUrl}}{{authPath}}/verify-email
 Content-Type: application/json
 
 {
-  "code": "1006591"
+  "code": "123456"
 }
 
-### Invalid Login
-POST {{baseUrl}}{{authPath}}/login
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Email verified successfully",
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "John Doe",
+#     "email": "john.doe@example.com",
+#     "isVerified": true
+#   }
+# }
+
+### Verify Email - Invalid Code
+POST {{baseUrl}}{{authPath}}/verify-email
 Content-Type: application/json
 
 {
-  "email": "e10@mail.com",
-  "password": "wrong secret"
+  "code": "000000"
 }
 
-### Valid Login
-POST {{baseUrl}}{{authPath}}/login
-Content-Type: application/json
-
-{
-  "email": "e10@mail.com",
-  "password": "secret"
-}
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired verification code"
+# }
 
 ### Forgot Password Request
-
 POST {{baseUrl}}{{authPath}}/forgot-password
 Content-Type: application/json
 
 {
-  "email": "mlmmayhem@gmail.com"
+  "email": "john.doe@example.com"
 }
 
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Password reset link sent to your email"
+# }
 
-### Password Reset
-@token =123
-
-POST {{baseUrl}}{{authPath}}/reset-password/{{token}}
+### Forgot Password - User Not Found
+POST {{baseUrl}}{{authPath}}/forgot-password
 Content-Type: application/json
 
 {
-  "password": "new secret"
+  "email": "nonexistent@example.com"
 }
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "User not found"
+# }
+
+### Password Reset - Valid Token
+@resetToken = valid-reset-token-123
+
+POST {{baseUrl}}{{authPath}}/reset-password/{{resetToken}}
+Content-Type: application/json
+
+{
+  "password": "newSecurePassword123"
+}
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Password reset successful"
+# }
+
+### Password Reset - Invalid Token
+POST {{baseUrl}}{{authPath}}/reset-password/invalid-token
+Content-Type: application/json
+
+{
+  "password": "newSecurePassword123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired reset token"
+# }
+
+### Password Reset - Expired Token
+POST {{baseUrl}}{{authPath}}/reset-password/expired-token
+Content-Type: application/json
+
+{
+  "password": "newSecurePassword123"
+}
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Invalid or expired reset token"
+# }
 
 ### Logout
 POST {{baseUrl}}{{authPath}}/log-out
 Content-Type: application/json
 
-### Check Auth
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "message": "Logged out successfully"
+# }
 
+### Check Auth - With Valid Token
 GET {{baseUrl}}{{authPath}}/check-auth
 Content-Type: application/json
+Cookie: token=valid-jwt-token
+
+# Expected Response (Success):
+# {
+#   "success": true,
+#   "user": {
+#     "_id": "507f1f77bcf86cd799439011",
+#     "name": "John Doe",
+#     "email": "john.doe@example.com",
+#     "isVerified": true
+#   }
+# }
+
+### Check Auth - Without Token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Not authorized, no token"
+# }
+
+### Check Auth - Invalid Token
+GET {{baseUrl}}{{authPath}}/check-auth
+Content-Type: application/json
+Cookie: token=invalid-jwt-token
+
+# Expected Response (Error):
+# {
+#   "success": false,
+#   "message": "Not authorized, token failed"
+# }
 

@@ -1,0 +1,56 @@
+### Development Environment - Auth Service Tests
+
+### Health Check
+GET http://localhost:9000/api/auth/health
+
+### Sign up - Test User
+POST http://localhost:9000/api/auth/sign-up
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "testPassword123"
+}
+
+### Login - Test User
+POST http://localhost:9000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "testPassword123"
+}
+
+### Verify Email - Test Code
+POST http://localhost:9000/api/auth/verify-email
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+### Forgot Password - Test User
+POST http://localhost:9000/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### Password Reset - Test Token
+POST http://localhost:9000/api/auth/reset-password/test-reset-token
+Content-Type: application/json
+
+{
+  "password": "newTestPassword123"
+}
+
+### Logout
+POST http://localhost:9000/api/auth/log-out
+Content-Type: application/json
+
+### Check Auth - Test Token
+GET http://localhost:9000/api/auth/check-auth
+Content-Type: application/json
+Cookie: token=test-jwt-token 

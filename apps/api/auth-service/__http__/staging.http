@@ -1,0 +1,56 @@
+### Staging Environment - Auth Service Tests
+
+### Health Check
+GET https://staging.myapp.com/api/auth/health
+
+### Sign up - Staging User
+POST https://staging.myapp.com/api/auth/sign-up
+Content-Type: application/json
+
+{
+  "name": "Staging User",
+  "email": "staging@example.com",
+  "password": "stagingPassword123"
+}
+
+### Login - Staging User
+POST https://staging.myapp.com/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "staging@example.com",
+  "password": "stagingPassword123"
+}
+
+### Verify Email - Staging Code
+POST https://staging.myapp.com/api/auth/verify-email
+Content-Type: application/json
+
+{
+  "code": "654321"
+}
+
+### Forgot Password - Staging User
+POST https://staging.myapp.com/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "staging@example.com"
+}
+
+### Password Reset - Staging Token
+POST https://staging.myapp.com/api/auth/reset-password/staging-reset-token
+Content-Type: application/json
+
+{
+  "password": "newStagingPassword123"
+}
+
+### Logout
+POST https://staging.myapp.com/api/auth/log-out
+Content-Type: application/json
+
+### Check Auth - Staging Token
+GET https://staging.myapp.com/api/auth/check-auth
+Content-Type: application/json
+Cookie: token=staging-jwt-token 

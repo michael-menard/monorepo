@@ -60,7 +60,7 @@ export const verifyToken = async (token: string) => {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
     return payload
-  } catch (error) {
+  } catch {
     throw new Error('Invalid token')
   }
 }
@@ -83,6 +83,7 @@ export const generateSessionId = (): string => {
 
 // Sanitize user data for response
 export const sanitizeUser = (user: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...sanitizedUser } = user
   return sanitizedUser
 }

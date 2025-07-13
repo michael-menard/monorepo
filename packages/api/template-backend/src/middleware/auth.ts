@@ -32,7 +32,7 @@ export const authenticateToken = async (
     const payload = await verifyToken(token)
     req.user = payload as any
     next()
-  } catch (error) {
+  } catch {
     res.status(403).json({ message: 'Invalid or expired token' })
   }
 }
@@ -51,7 +51,7 @@ export const optionalAuth = async (
       req.user = payload as any
     }
     next()
-  } catch (error) {
+  } catch {
     // Continue without authentication
     next()
   }
@@ -98,7 +98,7 @@ export const validateRefreshToken = async (
 
     req.user = payload as any
     next()
-  } catch (error) {
+  } catch {
     res.status(403).json({ message: 'Invalid or expired refresh token' })
   }
 } 
