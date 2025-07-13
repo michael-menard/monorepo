@@ -8,7 +8,17 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "sync-deps": "node scripts/sync-dependencies.js"
+    "sync-deps": "node scripts/sync-dependencies.js",
+    "auth:db:up": "cd apps/api/auth-service && docker-compose up -d",
+    "auth:db:down": "cd apps/api/auth-service && docker-compose down",
+    "auth:db:logs": "cd apps/api/auth-service && docker-compose logs -f",
+    "auth:backend": "cd apps/api/auth-service && pnpm dev",
+    "auth:ui": "cd apps/web/auth-ui-example && pnpm dev",
+    "auth:dev": "concurrently \"pnpm auth:db:up\" \"pnpm auth:backend\" \"pnpm auth:ui\"",
+    "auth:stop": "pnpm auth:db:down",
+    "auth:start": "./scripts/start-auth-dev.sh",
+    "auth:stop-all": "./scripts/stop-auth-dev.sh",
+    "auth:test-setup": "./scripts/test-auth-setup.sh"
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -27,7 +37,8 @@
     "@types/react-dom": "^19.1.0",
     "tailwindcss": "^3.4.17",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49"
+    "postcss": "^8.4.49",
+    "concurrently": "^9.1.0"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
