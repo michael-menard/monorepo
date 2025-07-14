@@ -1,18 +1,38 @@
-import { Navigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
-import { useAppSelector } from '@/store/hooks';
+import { useAuthState } from '@/store/hooks';
+import { Navigate, useLocation } from 'react-router-dom';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
+  children: React.ReactNode;
+  requireVerification?: boolean; // Optional: require email verification
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated } = useAppSelector((state) => state.user);
-  
-  if (!isAuthenticated) {
-    // Redirect to login page with the current location as the return URL
-    return <Navigate to="/auth/login" replace state={{ from: window.location.pathname }} />;
+export function ProtectedRoute({ children, requireVerification = true }: ProtectedRouteProps) {
+  const { isAuthenticated, user, isCheckingAuth } = useAuthState();
+  const location = useLocation();
+
+  // Show loading while checking auth status
+  if (isCheckingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
-  
+
+  // Not authenticated - redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+  }
+
+  // Check if user is verified (if verification is required)
+  if (requireVerification && user) {
+    const isVerified = user.isVerified || user.emailVerified;
+    
+    if (!isVerified) {
+      return <Navigate to="/auth/email-verification" state={{ from: location }} replace />;
+    }
+  }
+
+  // User is authenticated and verified (if required) - render protected content
   return <>{children}</>;
 } 

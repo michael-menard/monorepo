@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import Input from "../Input";
 import { Mail } from "lucide-react";
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 const ForgotPassword = () => {

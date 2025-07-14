@@ -1,4 +1,5 @@
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion } from 'framer-motion';
+import type { HTMLMotionProps } from 'framer-motion';
 
 interface FloatingShapeProps {
   color: string;
@@ -35,17 +36,16 @@ const FloatingShape = ({ color, size, top, left, delay, speed = 'medium' }: Floa
       delay
     },
     'aria-hidden': 'true',
-    'data-color': color,
-    'data-size': size,
-    'data-top': top,
-    'data-left': left,
-    'data-delay': delay,
-    'data-speed': speed
   };
 
   return (
-    <motion.div {...motionProps} />
-  )
+    <motion.div
+      {...motionProps}
+      data-color={color}
+      data-size={size}
+      data-top={top}
+    />
+  );
 }
 
 export default FloatingShape; 

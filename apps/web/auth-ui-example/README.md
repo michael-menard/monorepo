@@ -1,69 +1,62 @@
-# React + TypeScript + Vite
+# Auth UI Example
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is an example application demonstrating how to use the `@repo/auth` package in a real React application.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Complete authentication flow demonstration
+- All auth pages and components from the auth package
+- Redux integration
+- React Router setup
+- Tailwind CSS styling
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. Start the development server:
+   ```bash
+   pnpm dev
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+3. Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Available Routes
+
+- `/` - Home page
+- `/login` - Login page
+- `/signup` - Signup page
+- `/forgot-password` - Forgot password page
+- `/reset-password/:token` - Reset password page
+- `/verify-email` - Email verification page
+- `/dashboard` - Dashboard page (protected)
+
+## Testing
+
+Run the test suite:
+
+```bash
+pnpm test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Building
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Build the app for production:
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm build
 ```
+
+## Integration with Auth Package
+
+This example shows how to:
+
+1. Import and use auth components from `@repo/auth`
+2. Set up Redux store with auth reducer
+3. Configure React Router with auth routes
+4. Handle authentication state and navigation
+
+The auth package provides reusable components that can be integrated into any React application following this pattern. 

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Navbar } from '@/components/Navbar';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,13 +12,11 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
         </div>
       </header>
       {/* Main content */}
-      <main className="flex-1">
+      <main className="flex-1 px-4 py-8">
         {children}
       </main>
       {/* Footer */}
-      <footer className="bg-white border-t py-4 text-center text-xs text-gray-400">
-        &copy; {new Date().getFullYear()} Lego Projects. All rights reserved.
-      </footer>
+      <Footer />
     </div>
   );
 } 

@@ -1,4 +1,20 @@
+import { useState } from 'react';
+import { useForgotPasswordMutation } from '@/services/authApi';
+
 export default function ForgotPassword() {
+  const [email, setEmail] = useState('');
+  const [forgotPassword, { isLoading, error, isSuccess }] = useForgotPasswordMutation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await forgotPassword({ email }).unwrap();
+      // Optionally show success
+    } catch (err) {
+      // Error handled by RTK Query
+    }
+  };
+
   return (
     <div className="forgot-password-page">
       <div className="text-center">
@@ -10,7 +26,7 @@ export default function ForgotPassword() {
         </p>
       </div>
       
-      <form className="mt-8 space-y-6">
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit} aria-busy={isLoading}>
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email address
@@ -23,6 +39,9 @@ export default function ForgotPassword() {
             required
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             placeholder="Enter your email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            disabled={isLoading}
           />
         </div>
 
@@ -30,10 +49,19 @@ export default function ForgotPassword() {
           <button
             type="submit"
             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={isLoading}
+            aria-busy={isLoading}
           >
-            Send reset link
+            {isLoading ? 'Sending...' : 'Send reset link'}
           </button>
         </div>
+
+        {error && (
+          <div className="text-red-600 text-sm text-center" role="alert">{(error as any).data?.message || 'Request failed'}</div>
+        )}
+        {isSuccess && (
+          <div className="text-green-600 text-sm text-center" role="status">Reset link sent!</div>
+        )}
 
         <div className="text-center">
           <p className="text-sm text-gray-600">

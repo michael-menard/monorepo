@@ -5,7 +5,11 @@ export const UserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   name: z.string(),
+  avatarUrl: z.string().url().optional(),
+  emailVerified: z.boolean().optional(),
+  isVerified: z.boolean().optional(),
   createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export const AuthTokensSchema = z.object({
@@ -57,10 +61,12 @@ export const AuthStateSchema = z.object({
   tokens: AuthTokensSchema.nullable(),
   isAuthenticated: z.boolean(),
   isLoading: z.boolean(),
+  isCheckingAuth: z.boolean().optional(),
   error: z.string().nullable(),
+  message: z.string().nullable().optional(),
 });
 
-// TypeScript interfaces (for backward compatibility)
+// TypeScript interfaces (single source of truth)
 export interface User extends z.infer<typeof UserSchema> {}
 export interface AuthTokens extends z.infer<typeof AuthTokensSchema> {}
 export interface AuthResponse extends z.infer<typeof AuthResponseSchema> {}

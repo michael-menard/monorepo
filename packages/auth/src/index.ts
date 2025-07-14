@@ -7,6 +7,13 @@ export { default as LoadingSpinner } from './components/LoadingSpinner';
 export { default as PasswordStrength } from './components/PasswordStrength';
 export { default as FloatingShape } from './components/FloatingShape';
 
+// Auth Components
+export { default as Login } from './components/Login';
+export { default as Signup } from './components/Signup';
+export { default as ForgotPassword } from './components/ForgotPassword';
+export { default as ResetPassword } from './components/ResetPassword';
+export { default as EmailVerification } from './components/EmailVerification';
+
 // Hooks
 export { useAuth } from './hooks/useAuth';
 
@@ -15,7 +22,7 @@ export { default as authReducer } from './store/authSlice';
 export type { RootState } from './store/store';
 
 // Types
-export type { User, AuthState } from './types/auth';
+export type { User, AuthState, AuthTokens } from './types/auth';
 
 // Utils
 export * from './utils/date'; 

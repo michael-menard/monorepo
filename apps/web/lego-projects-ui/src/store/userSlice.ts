@@ -1,18 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: string;
-}
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+import type { User, AuthTokens } from '@repo/auth';
 
 interface UserState {
   user: User | null;

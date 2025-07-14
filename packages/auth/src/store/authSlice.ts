@@ -1,35 +1,19 @@
-import { createSlice, createAsyncThunk, PayloadAction, Slice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction, Slice } from '@reduxjs/toolkit';
+import type { User, AuthState } from '../types/auth';
 import axios from 'axios';
 
 const API_URL = process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api/auth' : '/api/auth';
 
 axios.defaults.withCredentials = true;
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified?: boolean;
-  isVerified?: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  error: string | null;
-  isLoading: boolean;
-  isCheckingAuth: boolean;
-  message: string | null;
-}
-
 const initialState: AuthState = {
   user: null,
+  tokens: null,
   isAuthenticated: false,
-  error: null,
   isLoading: false,
   isCheckingAuth: true,
+  error: null,
   message: null,
 };
 

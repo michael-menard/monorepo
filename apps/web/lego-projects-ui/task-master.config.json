@@ -1,0 +1,21 @@
+{
+  "project_name": "App Layout Implementation",
+  "version": "1.0",
+  "description": "Mobile-first React web application with shared layout, authentication flow, and responsive design",
+  "prd_file": "prds/app_layout_prd.md",
+  "output_file": "tasks/app_layout_tasks.md",
+  "task_categories": [
+    "Layout & Navigation",
+    "Authentication Integration", 
+    "Responsive Design",
+    "Accessibility",
+    "State Management",
+    "UI Components",
+    "Testing & Polish"
+  ],
+  "priority_levels": ["High", "Medium", "Low"],
+  "dependencies": {
+    "packages": ["@repo/auth", "@repo/ui"],
+    "external": ["react-router-dom", "framer-motion", "@reduxjs/toolkit", "react-redux"]
+  }
+} 

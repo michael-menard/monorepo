@@ -1,47 +1,70 @@
 {
-  "name": "react-constructs",
-  "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types",
-    "test": "turbo run test",
-    "sync-deps": "node scripts/sync-dependencies.js",
-    "auth:db:up": "cd apps/api/auth-service && docker-compose up -d",
-    "auth:db:down": "cd apps/api/auth-service && docker-compose down",
-    "auth:db:logs": "cd apps/api/auth-service && docker-compose logs -f",
-    "auth:backend": "cd apps/api/auth-service && pnpm dev",
-    "auth:ui": "cd apps/web/auth-ui-example && pnpm dev",
-    "auth:dev": "concurrently \"pnpm auth:db:up\" \"pnpm auth:backend\" \"pnpm auth:ui\"",
-    "auth:stop": "pnpm auth:db:down",
-    "auth:start": "./scripts/start-auth-dev.sh",
-    "auth:stop-all": "./scripts/stop-auth-dev.sh",
-    "auth:test-setup": "./scripts/test-auth-setup.sh"
-  },
-  "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "framer-motion": "^12.23.3",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.4",
-    "lucide-react": "^0.468.0"
-  },
-  "devDependencies": {
-    "prettier": "^3.6.2",
-    "turbo": "^2.5.4",
-    "typescript": "5.8.3",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "tailwindcss": "^3.4.17",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "concurrently": "^9.1.0"
-  },
-  "packageManager": "pnpm@9.0.0",
-  "engines": {
-    "node": ">=18"
-  }
+	"name": "react-constructs",
+	"private": true,
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev",
+		"lint": "turbo run lint",
+		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
+		"check-types": "turbo run check-types",
+		"test": "turbo run test",
+		"sync-deps": "node scripts/sync-dependencies.js",
+		"auth:db:up": "cd apps/api/auth-service && docker-compose up -d",
+		"auth:db:down": "cd apps/api/auth-service && docker-compose down",
+		"auth:db:logs": "cd apps/api/auth-service && docker-compose logs -f",
+		"auth:backend": "cd apps/api/auth-service && pnpm dev",
+		"auth:ui": "cd apps/web/auth-ui-example && pnpm dev",
+		"auth:dev": "concurrently \"pnpm auth:db:up\" \"pnpm auth:backend\" \"pnpm auth:ui\"",
+		"auth:stop": "pnpm auth:db:down",
+		"auth:start": "./scripts/start-auth-dev.sh",
+		"auth:stop-all": "./scripts/stop-auth-dev.sh",
+		"auth:test-setup": "./scripts/test-auth-setup.sh"
+	},
+	"dependencies": {
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"framer-motion": "^12.23.3",
+		"class-variance-authority": "^0.7.0",
+		"clsx": "^2.1.1",
+		"tailwind-merge": "^2.5.4",
+		"lucide-react": "^0.468.0",
+		"@radix-ui/react-label": "^2.0.2",
+		"@radix-ui/react-slot": "^1.0.2",
+		"@radix-ui/react-toast": "^1.1.5",
+		"@radix-ui/react-dialog": "^1.1.2",
+		"@radix-ui/react-separator": "^1.0.3",
+		"react-hook-form": "^7.50.0",
+		"@hookform/resolvers": "^3.3.4",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"prettier": "^3.6.2",
+		"turbo": "^2.5.4",
+		"typescript": "5.8.3",
+		"@types/react": "^19.1.0",
+		"@types/react-dom": "^19.1.0",
+		"tailwindcss": "^3.4.17",
+		"autoprefixer": "^10.4.20",
+		"postcss": "^8.4.49",
+		"concurrently": "^9.1.0",
+		"vite": "^5.2.10",
+		"@vitejs/plugin-react-swc": "^3.6.0"
+	},
+	"packageManager": "pnpm@9.0.0",
+	"engines": {
+		"node": ">=18"
+	},
+	"exports": {
+		"./*": "./src/*.tsx",
+		"./input": "./src/input.tsx",
+		"./label": "./src/label.tsx",
+		"./form": "./src/form.tsx",
+		"./toast": "./src/toast.tsx",
+		"./dialog": "./src/dialog.tsx",
+		"./separator": "./src/separator.tsx",
+		"./button": "./src/button.tsx",
+		"./card": "./src/card.tsx",
+		"./code": "./src/code.tsx",
+		"./loading-spinner": "./src/loading-spinner/index.tsx"
+	}
 }
