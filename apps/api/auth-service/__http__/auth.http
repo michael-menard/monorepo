@@ -248,3 +248,39 @@ Cookie: token=invalid-jwt-token
 #   "message": "Not authorized, token failed"
 # }
 
+# Resend Verification Email - Success
+POST http://localhost:3000/api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "unverified@example.com"
+}
+
+###
+# Resend Verification Email - Already Verified
+POST http://localhost:3000/api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "verified@example.com"
+}
+
+###
+# Resend Verification Email - User Not Found
+POST http://localhost:3000/api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "nouser@example.com"
+}
+
+###
+# Resend Verification Email - Missing Email
+POST http://localhost:3000/api/auth/resend-verification
+Content-Type: application/json
+
+{
+}
+
+###
+

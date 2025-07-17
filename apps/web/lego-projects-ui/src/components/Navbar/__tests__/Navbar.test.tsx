@@ -1,15 +1,15 @@
 // Mock useAuthState at the very top before any imports
 import { vi } from 'vitest'
+import type { User } from '@repo/auth';
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import userSlice from '../../../store/userSlice'
 import Navbar from '../index'
 
 interface AuthState {
-  user: any;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -18,7 +18,6 @@ describe('Navbar', () => {
   const createMockStore = (authState: AuthState) => {
     return configureStore({
       reducer: {
-        user: userSlice,
         auth: (state = authState) => state
       },
       preloadedState: {
@@ -72,7 +71,9 @@ describe('Navbar', () => {
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
-        avatarUrl: 'https://example.com/avatar.jpg'
+        avatarUrl: 'https://example.com/avatar.jpg',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z'
       },
       isAuthenticated: true,
       isLoading: false

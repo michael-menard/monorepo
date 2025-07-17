@@ -1,26 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
+import { Mail, Lock } from 'lucide-react';
 import { useLoginMutation } from '@/services/authApi';
+import { LoginRequestSchema } from '@repo/auth';
+import type { LoginRequest } from '@repo/auth';
+import { Input } from '@repo/auth';
 import SocialLogin from '@/components/SocialLogin';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const [login, { isLoading, error, isSuccess }] = useLoginMutation();
-  const [socialError, setSocialError] = useState<string | null>(null);
 
   // Get the intended destination from location state
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<LoginRequest>({
+    resolver: zodResolver(LoginRequestSchema),
+    mode: 'onBlur',
+  });
+
+  const onSubmit = async (data: LoginRequest) => {
     try {
-      await login({ email, password }).unwrap();
+      await login(data).unwrap();
       // Success will be handled by useEffect
     } catch {
-      // Error handled by RTK Query
+      // Set form error if login fails
+      setError('root', {
+        type: 'manual',
+        message: 'Invalid email or password',
+      });
     }
   };
 
@@ -31,113 +48,121 @@ export default function Login() {
     }
   }, [isSuccess, navigate, from]);
 
-  const handleSocialLoginSuccess = () => {
-    setSocialError(null);
-    // Redirect to intended page after successful social login
+  const handleForgotPassword = () => {
+    navigate('/auth/forgot-password');
+  };
+
+  const handleSignUp = () => {
+    navigate('/auth/signup');
+  };
+
+  const handleSocialSuccess = () => {
     navigate(from, { replace: true });
   };
 
-  const handleSocialLoginError = (error: string) => {
-    setSocialError(error);
+  const handleSocialError = (error: string) => {
+    setError('root', {
+      type: 'manual',
+      message: error,
+    });
   };
 
   return (
-    <div className="login-page">
-      <div className="text-center">
-        <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-          Sign in to your account
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className='max-w-md w-full bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden'
+    >
+      <div className='p-8'>
+        <h2 className='text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text'>
+          Welcome Back
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Welcome back to Lego Projects
-        </p>
-      </div>
-      
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit} aria-busy={isLoading}>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Enter your email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Enter your password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between">
-          <div className="text-sm">
-            <a href="/auth/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Forgot your password?
-            </a>
-          </div>
-        </div>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Input
+            icon={Mail as React.ComponentType<{ className?: string }>}
+            type='email'
+            placeholder='Email Address'
+            {...register('email')}
+            aria-invalid={errors.email ? 'true' : 'false'}
+            aria-describedby={errors.email ? 'email-error' : undefined}
+          />
+          {errors.email && (
+            <p id="email-error" className='text-red-500 font-semibold mt-2' role='alert'>
+              {errors.email.message}
+            </p>
+          )}
 
-        <div>
-          <button
-            type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          <Input
+            icon={Lock as React.ComponentType<{ className?: string }>}
+            type='password'
+            placeholder='Password'
+            {...register('password')}
+            aria-invalid={errors.password ? 'true' : 'false'}
+            aria-describedby={errors.password ? 'password-error' : undefined}
+          />
+          {errors.password && (
+            <p id="password-error" className='text-red-500 font-semibold mt-2' role='alert'>
+              {errors.password.message}
+            </p>
+          )}
+
+          <div className='flex items-center mb-6'>
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className='text-sm text-green-400 hover:underline'
+            >
+              Forgot password?
+            </button>
+          </div>
+
+          {errors.root && (
+            <p className='text-red-500 font-semibold mb-2' role='alert'>
+              {errors.root.message}
+            </p>
+          )}
+
+          {error && (
+            <p className='text-red-500 font-semibold mb-2' role='alert'>
+              {error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data 
+                ? String(error.data.message) 
+                : 'Login failed'}
+            </p>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className='w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+            type='submit'
             disabled={isLoading}
             aria-busy={isLoading}
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </button>
-        </div>
+            {isLoading ? (
+              <div data-testid="loader-icon" className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+            ) : (
+              'Login'
+            )}
+          </motion.button>
+        </form>
 
-        {error && (
-          <div className="text-red-600 text-sm text-center" role="alert">
-            {error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data 
-              ? String(error.data.message) 
-              : 'Login failed'}
-          </div>
-        )}
-        {socialError && (
-          <div className="text-red-600 text-sm text-center" role="alert">{socialError}</div>
-        )}
-        {isSuccess && (
-          <div className="text-green-600 text-sm text-center" role="status">Login successful!</div>
-        )}
-
+        {/* Social Login */}
         <SocialLogin 
-          onSuccess={handleSocialLoginSuccess}
-          onError={handleSocialLoginError}
+          onSuccess={handleSocialSuccess}
+          onError={handleSocialError}
+          className="mt-6"
         />
-
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <a href="/auth/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Sign up
-            </a>
-          </p>
-        </div>
-      </form>
-    </div>
+      </div>
+      <div className='px-8 py-4 bg-gray-900 bg-opacity-50 flex justify-center'>
+        <p className='text-sm text-gray-400'>
+          Don't have an account?{' '}
+          <button onClick={handleSignUp} className='text-green-400 hover:underline'>
+            Sign up
+          </button>
+        </p>
+      </div>
+    </motion.div>
   );
 } 

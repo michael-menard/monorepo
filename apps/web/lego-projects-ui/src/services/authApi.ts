@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { User } from '@repo/auth';
+import type { AuthResponse } from '@repo/auth';
 
-// Types moved from authService.ts
+// Local types that extend or complement the shared types
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -12,23 +12,6 @@ export interface SignupData {
   password: string;
   firstName: string;
   lastName: string;
-}
-
-export interface AuthResponse {
-  status: string;
-  Status: number;
-  message: string;
-  data?: {
-    user?: User;
-    token?: string;
-    refreshToken?: string;
-  };
-}
-
-export interface AuthError {
-  status: string;
-  Status: number;
-  message: string;
 }
 
 export const AuthErrorType = {
@@ -42,7 +25,7 @@ export const AuthErrorType = {
 export const authApi = createApi({
   reducerPath: 'authApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_AUTH_API_URL || 'http://localhost:3001',
+    baseUrl: import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5000/api/auth',
     credentials: 'include', // for HTTP-only cookies
   }),
   endpoints: (builder) => ({
@@ -101,6 +84,8 @@ export const authApi = createApi({
     }),
   }),
 });
+
+console.log('authApi endpoints at module load:', Object.keys(authApi.endpoints));
 
 export const {
   useLoginMutation,

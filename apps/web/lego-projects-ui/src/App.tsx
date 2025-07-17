@@ -5,6 +5,8 @@ import { router } from './routes'
 import { store } from './store'
 import { useAuthRefresh } from './hooks/useAuthRefresh'
 import { useEffect } from 'react'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { Toaster } from './components/ui/toaster'
 
 // Component to handle token refresh on app load
 function AuthRefreshHandler() {
@@ -21,8 +23,11 @@ function AuthRefreshHandler() {
 function App() {
   return (
     <Provider store={store}>
-      <AuthRefreshHandler />
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <AuthRefreshHandler />
+        <RouterProvider router={router} />
+        <Toaster />
+      </ErrorBoundary>
     </Provider>
   )
 }

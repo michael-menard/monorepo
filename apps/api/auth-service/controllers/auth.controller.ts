@@ -95,11 +95,14 @@ export const login = async (req: Request, res: Response) => {
 	try {
 		const user = await User.findOne({ email });
 		if (!user) {
-			return res.status(400).json({ success: false, message: "Invalid credentials" });
+			return res.status(400).json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" });
 		}
 		const isPasswordValid = await bcryptjs.compare(password, user.password);
 		if (!isPasswordValid) {
-			return res.status(400).json({ success: false, message: "Invalid credentials" });
+			return res.status(400).json({ success: false, message: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+		}
+		if (!user.isVerified) {
+			return res.status(403).json({ success: false, message: "Email not verified", code: "EMAIL_NOT_VERIFIED" });
 		}
 
 		generateTokenAndSetCookie(res, user._id);
@@ -117,7 +120,7 @@ export const login = async (req: Request, res: Response) => {
 		});
 	} catch (error) {
 		console.log("Error in login ", error);
-		res.status(400).json({ success: false, message: (error as any).message });
+		res.status(400).json({ success: false, message: (error as any).message, code: "LOGIN_ERROR" });
 	}
 };
 
@@ -207,4 +210,30 @@ export const checkAuth = async (req: Request, res: Response) => {
 		console.log("Error in checkAuth ", error);
 		res.status(400).json({ success: false, message: (error as any).message });
 	}
+};
+
+export const resendVerification = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required", code: "EMAIL_REQUIRED" });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found", code: "USER_NOT_FOUND" });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: "User already verified", code: "ALREADY_VERIFIED" });
+    }
+    // Generate new verification code
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await user.save();
+    await sendVerificationEmail(user.email, verificationToken);
+    res.status(200).json({ success: true, message: "Verification email resent" });
+  } catch (error) {
+    console.log("Error in resendVerification ", error);
+    res.status(500).json({ success: false, message: (error as any).message, code: "RESEND_VERIFICATION_ERROR" });
+  }
 };

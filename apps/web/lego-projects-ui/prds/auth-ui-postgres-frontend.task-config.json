@@ -1,0 +1,91 @@
+{
+  "name": "auth-ui-postgres-frontend",
+  "description": "Update the Auth UI package to support PostgreSQL backend schema and response structure.",
+  "input_file": "packages/auth/prds/auth_ui_postgresql_frontend_prd.md",
+  "output_dir": "packages/auth/tasks/frontend",
+  "task_categories": [
+    "schema-update",
+    "api-integration",
+    "redux-store",
+    "form-validation",
+    "component-update",
+    "testing"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day"
+  ],
+  "dependencies": false,
+  "acceptance_criteria": true,
+  "technical_details": true,
+  "include_test_cases": true,
+  "include_edge_cases": true,
+  "output_format": "md",
+  "group_tasks_by": "category",
+  "testing": {
+    "test_runner": "vitest",
+    "test_command": "pnpm run test",
+    "mocks_required": true,
+    "mocking_strategy": "stub-client-and-api",
+    "mocking_libraries": [
+      "vi.mock",
+      "msw",
+      "@testing-library/react",
+      "vitest-axe"
+    ],
+    "required_imports": [
+      "import { describe, it, expect, vi } from 'vitest'",
+      "import { render, screen } from '@testing-library/react'",
+      "import userEvent from '@testing-library/user-event'",
+      "import { axe, toHaveNoViolations } from 'vitest-axe'"
+    ],
+    "component_testing": true,
+    "dom_environment": "jsdom"
+  },
+  "npm_packages": {
+    "required": [
+      "react",
+      "react-dom",
+      "react-hook-form",
+      "zod",
+      "axios",
+      "js-cookie",
+      "tailwindcss",
+      "@reduxjs/toolkit",
+      "react-redux"
+    ],
+    "dev_only": [
+      "typescript",
+      "vitest",
+      "@types/react",
+      "@types/react-dom",
+      "eslint",
+      "prettier"
+    ]
+  },
+  "app_structure": {
+    "type": "standalone",
+    "framework": "react",
+    "entry_point": "src/main.tsx",
+    "components_folder": "src/components/auth",
+    "modals_folder": "src/components/modals",
+    "hooks_folder": "src/hooks",
+    "forms_folder": "src/forms"
+  },
+  "zod_schemas": [
+    {
+      "name": "UserSchema",
+      "schema": "z.object({ id: z.string(), email: z.string().email(), name: z.string(), is_verified: z.boolean(), last_login: z.string().nullable(), created_at: z.string(), updated_at: z.string() })"
+    },
+    {
+      "name": "AuthResponseSchema",
+      "schema": "z.object({ success: z.boolean(), message: z.string(), user: UserSchema })"
+    }
+  ]
+}

@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, RefreshCw, ArrowLeft } from 'lucide-react';
-import { useVerifyEmailMutation } from '@/services/authApi';
-import Input from '@repo/auth/src/components/Input';
-
+import { useVerifyEmailMutation, useForgotPasswordMutation } from '@/services/authApi';
+import { Input } from '@repo/auth';
 
 interface EmailVerificationProps {
   email?: string; // Optional email prop for better UX
@@ -14,9 +13,11 @@ export default function EmailVerification({ email: propEmail }: EmailVerificatio
   const [code, setCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showResendMessage, setShowResendMessage] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [verifyEmail, { isLoading, error, isSuccess }] = useVerifyEmailMutation();
+  const [resendEmail, { isLoading: isResending }] = useForgotPasswordMutation();
 
   // Get email from props or navigation state
   const email = propEmail || (location.state as { email?: string })?.email;
@@ -42,13 +43,20 @@ export default function EmailVerification({ email: propEmail }: EmailVerificatio
   };
 
   const handleResendEmail = async () => {
-    // TODO: Implement when backend supports resend verification
-    // For now, just show a message and start cooldown
-    setResendCooldown(30); // 30 second cooldown
-    setShowResendMessage(true);
+    if (!email || resendCooldown > 0) return;
     
-    // Hide message after 5 seconds
-    setTimeout(() => setShowResendMessage(false), 5000);
+    try {
+      setResendError(null);
+      await resendEmail({ email }).unwrap();
+      setResendCooldown(30); // 30 second cooldown
+      setShowResendMessage(true);
+      
+      // Hide message after 5 seconds
+      setTimeout(() => setShowResendMessage(false), 5000);
+    } catch (err) {
+      setResendError('Failed to resend verification email. Please try again.');
+      console.error('Resend error:', err);
+    }
   };
 
   const handleBackToLogin = () => {
@@ -111,7 +119,7 @@ export default function EmailVerification({ email: propEmail }: EmailVerificatio
             </label>
             <Input
               id='verification-code'
-              icon={Mail as any}
+              icon={Mail as React.ComponentType<{ className?: string }>}
               type='text'
               placeholder='Enter verification code'
               value={code}
@@ -167,7 +175,21 @@ export default function EmailVerification({ email: propEmail }: EmailVerificatio
               role='status'
             >
               <p className='text-blue-400 text-sm font-medium'>
-                Resend functionality coming soon! Please check your email or contact support.
+                Verification email sent! Please check your inbox.
+              </p>
+            </motion.div>
+          )}
+
+          {/* Resend Error */}
+          {resendError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className='p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg'
+              role='alert'
+            >
+              <p className='text-red-400 text-sm font-medium'>
+                {resendError}
               </p>
             </motion.div>
           )}
@@ -198,23 +220,30 @@ export default function EmailVerification({ email: propEmail }: EmailVerificatio
               Didn't receive the code?
             </p>
             
-            <motion.button
+            <button
+              type='button'
               onClick={handleResendEmail}
-              disabled={resendCooldown > 0}
-              className='w-full py-2 px-4 border border-gray-600 text-gray-300 rounded-lg hover:border-gray-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              disabled={!email || resendCooldown > 0 || isResending}
+              className='inline-flex items-center px-4 py-2 text-sm font-medium text-green-400 hover:text-green-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors'
+              aria-describedby={resendCooldown > 0 ? 'resend-cooldown' : undefined}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${resendCooldown > 0 ? 'animate-spin' : ''}`} />
-              {resendCooldown > 0 
-                ? `Resend in ${resendCooldown}s` 
-                : 'Resend Email'
+              <RefreshCw 
+                size={16} 
+                className={`mr-2 ${isResending ? 'animate-spin' : ''}`} 
+              />
+              {isResending 
+                ? 'Sending...' 
+                : resendCooldown > 0 
+                  ? `Resend in ${resendCooldown}s` 
+                  : 'Resend Code'
               }
-            </motion.button>
+            </button>
             
-            <p className='text-xs text-gray-500 mt-2'>
-              Check your spam folder if you don't see the email
-            </p>
+            {resendCooldown > 0 && (
+              <p id='resend-cooldown' className='text-xs text-gray-500 mt-1'>
+                Please wait before requesting another code
+              </p>
+            )}
           </div>
         </div>
       </div>

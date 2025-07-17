@@ -1,0 +1,149 @@
+{
+  "name": "user-wishlist-backend",
+  "description": "Generate tasks for the backend implementation of the User Wishlist Page feature.",
+  "input_file": "packages/wishlist/prds/user_wishlist_backend_prd.md",
+  "output_dir": "packages/wishlist/tasks/backend",
+  "task_categories": [
+    "api",
+    "database",
+    "file-validation",
+    "auth",
+    "reordering",
+    "testing"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day",
+    "2-3 days"
+  ],
+  "dependencies": false,
+  "acceptance_criteria": true,
+  "technical_details": true,
+  "include_test_cases": true,
+  "include_edge_cases": true,
+  "output_format": "md",
+  "group_tasks_by": "category",
+  "infra": {
+    "required": true,
+    "resources": [
+      "local-postgres",
+      "aws-s3"
+    ],
+    "provisioning_tool": "serverless",
+    "deployment_strategy": "local-postgres-dev + aws-prod",
+    "env_targets": [
+      "local",
+      "dev",
+      "prod"
+    ],
+    "naming_conventions": {
+      "prefix": "lego",
+      "separator": "-"
+    },
+    "local_dev": {
+      "use_docker": true,
+      "postgres_container": {
+        "image": "postgres:15",
+        "ports": [
+          "5432:5432"
+        ],
+        "volumes": [
+          "./data/postgres:/var/lib/postgresql/data"
+        ],
+        "environment": {
+          "POSTGRES_USER": "lego",
+          "POSTGRES_PASSWORD": "lego",
+          "POSTGRES_DB": "wishlist"
+        }
+      }
+    }
+  },
+  "npm_packages": {
+    "required": [
+      "zod",
+      "cors",
+      "helmet",
+      "uuid",
+      "bcryptjs",
+      "winston",
+      "express-rate-limit",
+      "dotenv"
+    ],
+    "dev_only": [
+      "typescript",
+      "vitest",
+      "supertest",
+      "@types/node",
+      "@types/express",
+      "ts-node",
+      "nodemon",
+      "eslint",
+      "prettier",
+      "eslint-plugin-prettier",
+      "eslint-config-prettier"
+    ]
+  },
+  "testing": {
+    "test_runner": "vitest",
+    "test_command": "pnpm run test",
+    "mocks_required": true,
+    "mocking_strategy": "stub-db-and-api",
+    "mocking_libraries": [
+      "vi.mock",
+      "msw",
+      "supertest"
+    ],
+    "required_imports": [
+      "import { describe, it, expect, vi } from 'vitest'",
+      "import request from 'supertest'"
+    ]
+  },
+  "app_structure": {
+    "type": "standalone",
+    "framework": "express",
+    "entry_point": "src/index.ts",
+    "routes_folder": "src/routes",
+    "controllers_folder": "src/controllers",
+    "middleware_folder": "src/middleware"
+  },
+  "data_objects": [
+    {
+      "name": "WishlistItem",
+      "description": "Represents a build the user wants to track in their wishlist.",
+      "fields": {
+        "id": "UUID",
+        "user_id": "UUID",
+        "title": "string",
+        "description": "string",
+        "product_link": "URL",
+        "image_url": "string",
+        "sort_order": "integer"
+      },
+      "required_fields": [
+        "id",
+        "user_id",
+        "title",
+        "sort_order"
+      ],
+      "optional_fields": [
+        "description",
+        "product_link",
+        "image_url"
+      ],
+      "storage": "PostgreSQL",
+      "exposed_in_api": true,
+      "validations": {
+        "title": "non-empty string",
+        "product_link": "valid URL",
+        "image_url": "must be image file extension",
+        "sort_order": ">= 0"
+      }
+    }
+  ]
+}

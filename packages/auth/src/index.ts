@@ -19,10 +19,14 @@ export { useAuth } from './hooks/useAuth';
 
 // Store
 export { default as authReducer } from './store/authSlice';
+export { logout } from './store/authSlice';
 export type { RootState } from './store/store';
 
 // Types
-export type { User, AuthState, AuthTokens } from './types/auth';
+export type { User, AuthState, AuthTokens, AuthResponse, AuthError, LoginRequest, SignupRequest, ResetPasswordRequest, ConfirmResetRequest } from './types/auth';
+
+// Zod Schemas
+export { SignupRequestSchema, LoginRequestSchema, ResetPasswordRequestSchema, ConfirmResetRequestSchema } from './types/auth';
 
 // Utils
 export * from './utils/date'; 

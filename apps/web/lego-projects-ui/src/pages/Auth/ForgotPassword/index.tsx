@@ -1,77 +1,107 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
+import { Mail } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useForgotPasswordMutation } from '@/services/authApi';
+import { ResetPasswordRequestSchema } from '@repo/auth';
+import type { ResetPasswordRequest } from '@repo/auth';
+import { Input } from '@repo/auth';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
   const [forgotPassword, { isLoading, error, isSuccess }] = useForgotPasswordMutation();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordRequest>({
+    resolver: zodResolver(ResetPasswordRequestSchema),
+    mode: 'onBlur',
+  });
+
+  const onSubmit = async (data: ResetPasswordRequest) => {
     try {
-      await forgotPassword({ email }).unwrap();
+      await forgotPassword(data).unwrap();
       // Optionally show success
-    } catch (err) {
+    } catch {
       // Error handled by RTK Query
     }
   };
 
+  const handleBackToLogin = () => {
+    navigate('/auth/login');
+  };
+
   return (
-    <div className="forgot-password-page">
-      <div className="text-center">
-        <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className='max-w-md w-full bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden'
+    >
+      <div className='p-8'>
+        <h2 className='text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text'>
           Reset your password
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className='text-gray-300 text-center mb-6'>
           Enter your email address and we'll send you a link to reset your password
         </p>
-      </div>
-      
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit} aria-busy={isLoading}>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email address
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Enter your email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            disabled={isLoading}
+        
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Input
+            icon={Mail as React.ComponentType<{ className?: string }>}
+            type='email'
+            placeholder='Email Address'
+            {...register('email')}
+            aria-invalid={errors.email ? 'true' : 'false'}
+            aria-describedby={errors.email ? 'email-error' : undefined}
           />
-        </div>
+          {errors.email && (
+            <p id="email-error" className='text-red-500 font-semibold mt-2' role='alert'>
+              {errors.email.message}
+            </p>
+          )}
 
-        <div>
-          <button
-            type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          {error && (
+            <p className='text-red-500 font-semibold mt-2' role='alert'>
+              {error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data 
+                ? String(error.data.message) 
+                : 'Request failed'}
+            </p>
+          )}
+
+          {isSuccess && (
+            <p className='text-green-500 font-semibold mt-2' role='status'>
+              Reset link sent! Please check your email.
+            </p>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className='w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+            type='submit'
             disabled={isLoading}
             aria-busy={isLoading}
           >
-            {isLoading ? 'Sending...' : 'Send reset link'}
+            {isLoading ? (
+              <div data-testid="loader-icon" className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+            ) : (
+              'Send reset link'
+            )}
+          </motion.button>
+        </form>
+      </div>
+      <div className='px-8 py-4 bg-gray-900 bg-opacity-50 flex justify-center'>
+        <p className='text-sm text-gray-400'>
+          Remember your password?{' '}
+          <button onClick={handleBackToLogin} className='text-green-400 hover:underline'>
+            Sign in
           </button>
-        </div>
-
-        {error && (
-          <div className="text-red-600 text-sm text-center" role="alert">{(error as any).data?.message || 'Request failed'}</div>
-        )}
-        {isSuccess && (
-          <div className="text-green-600 text-sm text-center" role="status">Reset link sent!</div>
-        )}
-
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Remember your password?{' '}
-            <a href="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Sign in
-            </a>
-          </p>
-        </div>
-      </form>
-    </div>
+        </p>
+      </div>
+    </motion.div>
   );
 } 

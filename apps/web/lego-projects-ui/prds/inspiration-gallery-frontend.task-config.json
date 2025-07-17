@@ -1,0 +1,106 @@
+{
+  "name": "inspiration-gallery-frontend",
+  "description": "Generate tasks for the frontend implementation of the Inspiration Gallery feature.",
+  "input_file": "packages/gallery/prds/inspiration_gallery_frontend_prd.md",
+  "output_dir": "packages/gallery/tasks/frontend",
+  "task_categories": [
+    "layout",
+    "component-logic",
+    "form-validation",
+    "image-upload",
+    "animation",
+    "accessibility",
+    "testing"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day",
+    "2-3 days"
+  ],
+  "dependencies": false,
+  "acceptance_criteria": true,
+  "technical_details": true,
+  "include_test_cases": true,
+  "include_edge_cases": true,
+  "output_format": "md",
+  "group_tasks_by": "category",
+  "testing": {
+    "test_runner": "vitest",
+    "test_command": "pnpm run test",
+    "mocks_required": true,
+    "mocking_strategy": "stub-client-and-api",
+    "mocking_libraries": [
+      "vi.mock",
+      "msw",
+      "@testing-library/react",
+      "vitest-axe"
+    ],
+    "required_imports": [
+      "import { describe, it, expect, vi } from 'vitest'",
+      "import { render, screen } from '@testing-library/react'",
+      "import userEvent from '@testing-library/user-event'",
+      "import { axe, toHaveNoViolations } from 'vitest-axe'"
+    ],
+    "component_testing": true,
+    "dom_environment": "jsdom",
+    "accessibility_tests": {
+      "enabled": true,
+      "library": "vitest-axe",
+      "test_all_components": true,
+      "assertion": "expect(await axe(container)).toHaveNoViolations();"
+    }
+  },
+  "npm_packages": {
+    "required": [
+      "react",
+      "react-dom",
+      "react-hook-form",
+      "zod",
+      "framer-motion",
+      "helmet",
+      "tailwindcss",
+      "shadcn-ui",
+      "winston",
+      ""
+    ],
+    "dev_only": [
+      "typescript",
+      "vitest",
+      "supertest",
+      "@types/node",
+      "@types/react",
+      "@types/react-dom",
+      "ts-node",
+      "nodemon",
+      "eslint",
+      "prettier",
+      "eslint-plugin-prettier",
+      "eslint-config-prettier"
+    ]
+  },
+  "app_structure": {
+    "type": "standalone",
+    "framework": "react",
+    "entry_point": "src/main.tsx",
+    "components_folder": "src/components/gallery",
+    "modals_folder": "src/components/modals",
+    "hooks_folder": "src/hooks",
+    "forms_folder": "src/forms"
+  },
+  "zod_schemas": [
+    {
+      "name": "GalleryImageFormSchema",
+      "schema": "z.object({\n  title: z.string().min(1, \"Title is required\"),\n  description: z.string().optional(),\n  tags: z.array(z.string()).optional(),\n  album_id: z.string().uuid().optional()\n})"
+    },
+    {
+      "name": "AlbumFormSchema",
+      "schema": "z.object({\n  title: z.string().min(1, \"Album title is required\"),\n  description: z.string().optional()\n})"
+    }
+  ]
+}

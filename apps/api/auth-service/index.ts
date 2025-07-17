@@ -101,3 +101,4 @@ process.on('unhandledRejection', (error) => {
 
 // Start the server
 startServer();
+export { app };

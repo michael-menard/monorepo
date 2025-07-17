@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import bcryptjs from 'bcryptjs';
-import { signup, login, logout, verifyEmail, forgotPassword, resetPassword, checkAuth } from '../controllers/auth.controller';
+import { signup, login, logout, verifyEmail, forgotPassword, resetPassword, checkAuth, resendVerification } from '../controllers/auth.controller';
 import { User } from '../models/User';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { sendPasswordResetEmail } from '../mailtrap/emails';
@@ -181,6 +181,30 @@ describe('Auth Controller', () => {
         success: false,
         message: 'Invalid credentials'
       });
+    });
+
+    it('should return 403 and EMAIL_NOT_VERIFIED code if user email is not verified', async () => {
+      // Arrange: create a user with isVerified: false
+      const user = await User.create({
+        email: 'unverified@example.com',
+        password: await bcryptjs.hash('password123', 10),
+        name: 'Unverified User',
+        isVerified: false,
+      });
+
+      // Act: attempt to login
+      const res = await login(mockRequest as Request, mockResponse as Response);
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'Email not verified'
+      });
+
+      // Cleanup
+      await User.deleteOne({ email: 'unverified@example.com' });
     });
   });
 
@@ -374,6 +398,53 @@ describe('Auth Controller', () => {
         success: false,
         message: 'User not found'
       });
+    });
+  });
+
+  describe('resendVerification', () => {
+    it('should resend verification email if user is not verified', async () => {
+      const mockUser = {
+        email: 'notverified@example.com',
+        isVerified: false,
+        save: vi.fn().mockResolvedValue(true),
+        toObject: () => ({ email: 'notverified@example.com', isVerified: false })
+      };
+      (User.findOne as any).mockResolvedValue(mockUser);
+      const req = { body: { email: 'notverified@example.com' } } as Request;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
+      await resendVerification(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, message: 'Verification email resent' });
+    });
+
+    it('should return error if user is already verified', async () => {
+      const mockUser = {
+        email: 'verified@example.com',
+        isVerified: true,
+      };
+      (User.findOne as any).mockResolvedValue(mockUser);
+      const req = { body: { email: 'verified@example.com' } } as Request;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
+      await resendVerification(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'User already verified', code: 'ALREADY_VERIFIED' });
+    });
+
+    it('should return error if user is not found', async () => {
+      (User.findOne as any).mockResolvedValue(null);
+      const req = { body: { email: 'nouser@example.com' } } as Request;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
+      await resendVerification(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'User not found', code: 'USER_NOT_FOUND' });
+    });
+
+    it('should return error if email is missing', async () => {
+      const req = { body: {} } as Request;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
+      await resendVerification(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Email is required', code: 'EMAIL_REQUIRED' });
     });
   });
 }); 

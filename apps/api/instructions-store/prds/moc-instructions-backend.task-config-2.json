@@ -1,0 +1,69 @@
+{
+  "name": "moc-instructions-backend",
+  "description": "Generate tasks for the backend implementation of the MOC Instructions Library.",
+  "input_file": "packages/moc/prds/moc_instructions_backend_prd.md",
+  "output_dir": "packages/moc/tasks/backend",
+  "task_categories": [
+    "api",
+    "elasticsearch",
+    "file-storage",
+    "access-control",
+    "database",
+    "testing"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day",
+    "2-3 days"
+  ],
+  "dependencies": true,
+  "acceptance_criteria": true,
+  "technical_details": true,
+  "include_test_cases": true,
+  "include_edge_cases": true,
+  "output_format": "md",
+  "group_tasks_by": "category",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/mocs",
+      "description": "Create new MOC with metadata"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/mocs/:id",
+      "description": "Update metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mocs/:id/files",
+      "description": "Upload files"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/mocs/:id/files/:fileId",
+      "description": "Delete file"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mocs/search",
+      "description": "Search via Elasticsearch"
+    }
+  ],
+  "zod_schemas": [
+    {
+      "name": "MocInstructionSchema",
+      "schema": "z.object({\n  id: z.string().uuid(),\n  user_id: z.string().uuid(),\n  title: z.string().min(1),\n  description: z.string().optional(),\n  tags: z.array(z.string()).optional(),\n  thumbnail_url: z.string().url().optional(),\n  instruction_file_url: z.string().url(),\n  parts_list_files: z.array(z.string().url()).optional(),\n  gallery_image_ids: z.array(z.string().uuid()).optional()\n})"
+    },
+    {
+      "name": "FileUploadMetadataSchema",
+      "schema": "z.object({\n  id: z.string().uuid(),\n  moc_id: z.string().uuid(),\n  file_type: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery']),\n  file_url: z.string().url(),\n  original_filename: z.string()\n})"
+    }
+  ]
+}

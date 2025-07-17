@@ -1,0 +1,146 @@
+{
+  "name": "profile-page-backend",
+  "description": "Generate tasks for the backend implementation of the Profile Page feature.",
+  "input_file": "packages/profile/prds/profile_page_backend_prd.md",
+  "output_dir": "packages/profile/tasks/backend",
+  "task_categories": [
+    "api",
+    "avatar-upload",
+    "auth",
+    "file-validation",
+    "testing"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day",
+    "2-3 days"
+  ],
+  "dependencies": false,
+  "acceptance_criteria": true,
+  "technical_details": true,
+  "include_test_cases": true,
+  "include_edge_cases": true,
+  "output_format": "md",
+  "group_tasks_by": "category",
+  "infra": {
+    "required": true,
+    "resources": [
+      "local-postgres",
+      "aws-s3"
+    ],
+    "provisioning_tool": "serverless",
+    "deployment_strategy": "local-postgres-dev + aws-prod",
+    "env_targets": [
+      "local",
+      "dev",
+      "prod"
+    ],
+    "naming_conventions": {
+      "prefix": "lego",
+      "separator": "-"
+    },
+    "local_dev": {
+      "use_docker": true,
+      "postgres_container": {
+        "image": "postgres:15",
+        "ports": [
+          "5432:5432"
+        ],
+        "volumes": [
+          "./data/postgres:/var/lib/postgresql/data"
+        ],
+        "environment": {
+          "POSTGRES_USER": "lego",
+          "POSTGRES_PASSWORD": "lego",
+          "POSTGRES_DB": "profile_page"
+        }
+      }
+    }
+  },
+  "npm_packages": {
+    "required": [
+      "zod",
+      "cors",
+      "helmet",
+      "uuid",
+      "bcryptjs",
+      "winston",
+      "express-rate-limit",
+      "dotenv"
+    ],
+    "dev_only": [
+      "typescript",
+      "vitest",
+      "supertest",
+      "@types/node",
+      "@types/express",
+      "ts-node",
+      "nodemon",
+      "eslint",
+      "prettier",
+      "eslint-plugin-prettier",
+      "eslint-config-prettier"
+    ]
+  },
+  "testing": {
+    "test_runner": "vitest",
+    "test_command": "pnpm run test",
+    "mocks_required": true,
+    "mocking_strategy": "stub-db-and-api",
+    "mocking_libraries": [
+      "vi.mock",
+      "msw",
+      "supertest"
+    ],
+    "required_imports": [
+      "import { describe, it, expect, vi } from 'vitest'",
+      "import request from 'supertest'"
+    ]
+  },
+  "app_structure": {
+    "type": "standalone",
+    "framework": "express",
+    "entry_point": "src/index.ts",
+    "routes_folder": "src/routes",
+    "controllers_folder": "src/controllers",
+    "middleware_folder": "src/middleware"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/profile",
+      "description": "Get current user profile"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/profile",
+      "description": "Update profile info"
+    },
+    {
+      "method": "POST",
+      "path": "/api/profile/avatar",
+      "description": "Upload avatar image"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/profile/avatar",
+      "description": "Delete avatar image"
+    }
+  ],
+  "zod_schemas": [
+    {
+      "name": "ProfileUpdateSchema",
+      "schema": "z.object({\n  name: z.string().min(1).optional(),\n  username: z.string().optional(),\n  bio: z.string().optional()\n})"
+    },
+    {
+      "name": "AvatarUploadSchema",
+      "schema": "z.object({\n  file: z\n    .custom<File>()\n    .refine(file => ['image/jpeg', 'image/heic'].includes(file.type), {\n      message: \"Only .jpg or .heic files are supported\"\n    })\n})"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "user-wishlist-backend",
+  "description": "Generate tasks for the backend implementation of the User Wishlist Page feature.",
+  "input_file": "packages/wishlist/prds/user_wishlist_backend_prd.md",
+  "output_dir": "packages/wishlist/tasks/backend",
+  "task_categories": [
+    "api",
+    "database",
+    "file-validation",
+    "auth",
+    "reordering",
+    "testing"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day",
+    "2-3 days"
+  ],
+  "dependencies": "false",
+  "acceptance_criteria": "true",
+  "technical_details": "true",
+  "include_test_cases": "true",
+  "include_edge_cases": "true",
+  "output_format": "md",
+  "group_tasks_by": "category"
+}
