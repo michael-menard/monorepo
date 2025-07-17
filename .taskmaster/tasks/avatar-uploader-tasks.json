@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "projects": {
+    "avatar-uploader": {
+      "frontend": "packages/profile/tasks/frontend",
+      "backend": "packages/profile/tasks/backend"
+    }
+  }
+}

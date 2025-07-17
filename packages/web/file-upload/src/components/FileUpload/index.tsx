@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Toaster } from '@/components/ui/sonner';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
+import { Toaster } from '../ui/sonner';
 import { toast } from 'sonner';
 import { FileList } from './FileList';
 import { CompletedFileItem } from './CompletedFileItem';
@@ -161,7 +161,7 @@ export function FileUpload() {
             });
             return response.data; // Assuming axios returns data on success
           },
-          (_progress) => {
+          () => {
             // Progress tracking removed - not used in current implementation
           },
           (attempt, error) => {

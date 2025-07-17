@@ -1,0 +1,41 @@
+{
+  "name": "@monorepo/avatar-uploader",
+  "version": "0.1.0",
+  "description": "Reusable Avatar Uploader React component",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0"
+  },
+  "dependencies": {},
+  "author": "Michael Menard",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/monorepo.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "avatar",
+    "uploader",
+    "react",
+    "component",
+    "profile",
+    "image"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "type": "module"
+} 
