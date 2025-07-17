@@ -1,0 +1,162 @@
+import { Request, Response } from 'express';
+import { eq } from 'drizzle-orm';
+import { db } from '../db/client';
+import { users } from '../db/schema';
+import { z } from 'zod';
+import { avatarUpload, saveAvatar, deleteAvatar as deleteAvatarFile } from '../storage';
+
+// Error handling middleware for multer
+export const handleUploadError = (error: any, req: Request, res: Response, next: any) => {
+  if (error && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large. Maximum size is 10MB.' });
+  }
+  if (error && error.message === 'Only .jpg or .heic files are supported') {
+    return res.status(400).json({ error: 'Invalid file format. Only .jpg or .heic files are supported.' });
+  }
+  if (error) {
+    return res.status(500).json({ error: 'Upload failed', details: error.message });
+  }
+  next();
+};
+
+export const getProfile = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    const user = result[0];
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Database error', details: (error as Error).message });
+  }
+};
+
+const CreateProfileSchema = z.object({
+  username: z.string().min(1).optional(),
+  email: z.string().email(),
+  preferredName: z.string().min(1).optional(),
+});
+
+type CreateProfileInput = z.infer<typeof CreateProfileSchema>;
+
+export const createProfile = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { username, email, preferredName } = req.body;
+  const { file } = req;
+
+  // Validate input
+  const parsed = CreateProfileSchema.safeParse({ username, email, preferredName });
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+
+  if (!file) {
+    return res.status(400).json({ error: 'Avatar file is required' });
+  }
+
+  // Robust file type check (for tests and real requests)
+  if (!['image/jpeg', 'image/heic'].includes(file.mimetype)) {
+    return res.status(400).json({ error: 'Invalid file format. Only .jpg or .heic files are supported.' });
+  }
+
+  try {
+    // Check if user already exists
+    const existing = await db.select().from(users).where(eq(users.id, id));
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
+
+    // Save avatar (S3 or local)
+    const avatarUrl = await saveAvatar(id, file);
+
+    // Insert new user
+    const [user] = await db.insert(users).values({
+      id,
+      username: parsed.data.username,
+      email: parsed.data.email,
+      preferredName: parsed.data.preferredName,
+      avatar: avatarUrl,
+    }).returning();
+
+    res.status(201).json(user);
+  } catch (error) {
+    // Log error for debugging
+    console.error('createProfile error:', error);
+    res.status(500).json({ error: 'Database error', details: (error as Error).message, debug: error });
+  }
+};
+
+const UpdateProfileSchema = z.object({
+  username: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  preferredName: z.string().min(1).optional(),
+});
+
+type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+
+export const updateProfile = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { username, email, preferredName } = req.body;
+
+  // Validate input
+  const parsed = UpdateProfileSchema.safeParse({ username, email, preferredName });
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+
+  try {
+    // Check if user exists
+    const existing = await db.select().from(users).where(eq(users.id, id));
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update user profile
+    const updateData: any = { updatedAt: new Date() };
+    if (parsed.data.username !== undefined) updateData.username = parsed.data.username;
+    if (parsed.data.email !== undefined) updateData.email = parsed.data.email;
+    if (parsed.data.preferredName !== undefined) updateData.preferredName = parsed.data.preferredName;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ error: 'Database error', details: (error as Error).message });
+  }
+};
+
+export const deleteAvatar = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Check if user exists
+    const existing = await db.select().from(users).where(eq(users.id, id));
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = existing[0];
+
+    // Delete avatar file if it exists
+    if (user.avatar) {
+      await deleteAvatarFile(user.avatar);
+    }
+
+    // Update user to remove avatar reference
+    const [updatedUser] = await db
+      .update(users)
+      .set({ avatar: null, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+
+    res.json({ message: 'Avatar deleted successfully', user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ error: 'Database error', details: (error as Error).message });
+  }
+}; 

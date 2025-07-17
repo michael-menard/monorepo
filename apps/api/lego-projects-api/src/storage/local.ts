@@ -1,0 +1,30 @@
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
+
+const uploadsDir = 'uploads';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+export const localStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${uuidv4()}${ext}`);
+  },
+});
+
+export function getLocalAvatarUrl(filename: string): string {
+  return `/uploads/${filename}`;
+}
+
+export function deleteLocalAvatar(avatarUrl: string): void {
+  const filePath = path.join(process.cwd(), avatarUrl.startsWith('/') ? avatarUrl.substring(1) : avatarUrl);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+} 

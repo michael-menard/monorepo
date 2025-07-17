@@ -17,10 +17,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@react-constructs/utils": "workspace:*",
-    "@repo/api-shared": "workspace:*",
-    "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
