@@ -11,5 +11,9 @@ module.exports = {
   moduleNameMapper: {
     // Map db/client import to the actual TypeScript file
     '^../db/client$': '<rootDir>/src/db/client.ts',
+    // Map storage import to the actual TypeScript file
+    '^../storage$': '<rootDir>/src/storage/index.ts',
+    // Map middleware import to the actual TypeScript file
+    '^../src/middleware/auth$': '<rootDir>/src/middleware/auth.ts',
   },
 };

@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
-import AvatarUploader, { AvatarUploaderProps } from '../src/index';
+import AvatarUploader, { AvatarUploaderProps } from '../src/index.tsx';
 import { vi } from 'vitest';
 
 // Mock URL.createObjectURL
@@ -12,8 +12,13 @@ afterAll(() => {
   vi.restoreAllMocks();
 });
 
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
 describe('AvatarUploader', () => {
   const userId = 'user-123';
+  const baseUrl = 'http://localhost:3000';
   const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
   const heicFile = new File(['avatar'], 'avatar.heic', { type: 'image/heic' });
   const jpegFile = new File(['avatar'], 'avatar.jpeg', { type: 'image/jpeg' });
@@ -21,20 +26,23 @@ describe('AvatarUploader', () => {
   const bigFile = new File([new ArrayBuffer(21 * 1024 * 1024)], 'big.png', { type: 'image/png' }); // 21MB
   const badTypeFile = new File(['notimage'], 'notimage.txt', { type: 'text/plain' });
 
+  beforeEach(() => {
+    mockFetch.mockClear();
+  });
+
   function setup(props: Partial<AvatarUploaderProps> = {}) {
-    const onUpload = vi.fn(() => Promise.resolve());
     const onSuccess = vi.fn();
     const onError = vi.fn();
     render(
       <AvatarUploader
         userId={userId}
-        onUpload={onUpload}
+        baseUrl={baseUrl}
         onSuccess={onSuccess}
         onError={onError}
         {...props}
       />
     );
-    return { onUpload, onSuccess, onError };
+    return { onSuccess, onError };
   }
 
   it('renders file input and buttons', () => {
@@ -57,19 +65,28 @@ describe('AvatarUploader', () => {
     expect(screen.getByAltText(/avatar preview/i)).toHaveAttribute('src', 'mock-preview-url');
   });
 
-  it('calls onUpload with correct arguments', async () => {
-    const { onUpload } = setup();
+  it('calls fetch with correct arguments on upload', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true });
+    setup();
     const input = screen.getByLabelText('', { selector: 'input[type="file"]' });
     fireEvent.change(input, { target: { files: [file] } });
     const uploadBtn = screen.getByText(/upload/i);
     fireEvent.click(uploadBtn);
     await waitFor(() => {
-      expect(onUpload).toHaveBeenCalledWith(file, userId);
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${baseUrl}/api/users/${userId}/avatar`,
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(FormData),
+          credentials: 'include',
+        })
+      );
     });
   });
 
   it('handles upload success callback', async () => {
-    const { onSuccess } = setup({ onUpload: () => Promise.resolve() });
+    mockFetch.mockResolvedValueOnce({ ok: true });
+    const { onSuccess } = setup();
     const input = screen.getByLabelText('', { selector: 'input[type="file"]' });
     fireEvent.change(input, { target: { files: [file] } });
     const uploadBtn = screen.getByText(/upload/i);
@@ -80,14 +97,19 @@ describe('AvatarUploader', () => {
   });
 
   it('handles upload error callback', async () => {
-    const error = new Error('fail');
-    const { onError } = setup({ onUpload: () => Promise.reject(error) });
+    const error = new Error('Upload failed: 500 Internal Server Error');
+    mockFetch.mockResolvedValueOnce({ 
+      ok: false, 
+      status: 500, 
+      statusText: 'Internal Server Error' 
+    });
+    const { onError } = setup();
     const input = screen.getByLabelText('', { selector: 'input[type="file"]' });
     fireEvent.change(input, { target: { files: [file] } });
     const uploadBtn = screen.getByText(/upload/i);
     fireEvent.click(uploadBtn);
     await waitFor(() => {
-      expect(onError).toHaveBeenCalledWith(error);
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 
@@ -98,16 +120,15 @@ describe('AvatarUploader', () => {
   });
 
   it('disables upload button when uploading', async () => {
-    let resolveUpload: () => void;
-    const onUpload = vi.fn(() => new Promise<void>(res => { resolveUpload = res; }));
-    setup({ onUpload });
+    mockFetch.mockImplementationOnce(() => new Promise(resolve => {
+      setTimeout(() => resolve({ ok: true }), 100);
+    }));
+    setup();
     const input = screen.getByLabelText('', { selector: 'input[type="file"]' });
     fireEvent.change(input, { target: { files: [file] } });
     const uploadBtn = screen.getByText(/upload/i);
     fireEvent.click(uploadBtn);
     expect(uploadBtn).toBeDisabled();
-    // Finish upload
-    resolveUpload!();
     await waitFor(() => {
       expect(uploadBtn).not.toBeDisabled();
     });
@@ -156,15 +177,15 @@ describe('AvatarUploader', () => {
   });
 
   it('shows progress indicator during upload', async () => {
-    let resolveUpload: () => void;
-    const onUpload = vi.fn(() => new Promise<void>(res => { resolveUpload = res; }));
-    setup({ onUpload });
+    mockFetch.mockImplementationOnce(() => new Promise(resolve => {
+      setTimeout(() => resolve({ ok: true }), 100);
+    }));
+    setup();
     const input = screen.getByLabelText('', { selector: 'input[type="file"]' });
     fireEvent.change(input, { target: { files: [file] } });
     const uploadBtn = screen.getByText(/upload/i);
     fireEvent.click(uploadBtn);
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    resolveUpload!();
     await waitFor(() => {
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });

@@ -4,7 +4,6 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "test:run": "jest",
     "test:coverage": "jest --coverage",
     "prepare": "husky install",
     "dev": "nodemon index.ts",
@@ -16,6 +15,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.848.0",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^24.0.14",
@@ -41,16 +41,6 @@
     "vitest": "^3.2.4",
     "winston": "^3.17.0",
     "zod": "^4.0.5"
-  },
-  "jest": {
-    "coverageThreshold": {
-      "global": {
-        "branches": 10,
-        "functions": 10,
-        "lines": 10,
-        "statements": 10
-      }
-    }
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",

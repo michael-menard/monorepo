@@ -18,6 +18,10 @@ jest.mock('../db/client', () => ({
     }))
   }
 }));
+// Mock saveAvatar to always return a predictable value
+jest.mock('../../storage', () => ({
+  saveAvatar: jest.fn(() => Promise.resolve('/uploads/avatar.jpg')),
+}));
 import { getProfile, createProfile } from '../profile';
 import type { Request, Response } from 'express';
 import { db } from '../../db/client';
@@ -67,7 +71,7 @@ describe('profile controller', () => {
           where: jest.fn(() => [])
         }))
       })) as any);
-      req.file = { filename: 'avatar.jpg', mimetype: 'image/jpeg' } as any;
+      req.file = { filename: 'avatar.jpg', mimetype: 'image/jpeg', path: '/tmp/avatar.jpg' } as any;
       await createProfile(req as Request, res);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({

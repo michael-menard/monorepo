@@ -1,6 +1,12 @@
 import { Router } from 'express';
-import { getProfile, createProfile, updateProfile, deleteAvatar, upload, handleUploadError } from '../handlers/profile';
+import { getProfile, createProfile, updateProfile, deleteAvatar, uploadAvatar, handleUploadError } from '../handlers/profile';
+import { avatarUpload } from '../storage';
 import { requireAuth, canModifyProfile } from '../middleware/auth';
+import { 
+  validateFileContent, 
+  fileAccessControl, 
+  virusScanFile 
+} from '../middleware/security';
 
 const router = Router();
 
@@ -8,12 +14,33 @@ const router = Router();
 router.get('/:id', getProfile);
 
 // POST /api/users/:id - Upload profile (with avatar) - requires auth
-router.post('/:id', requireAuth, canModifyProfile, upload.single('avatar'), handleUploadError, createProfile);
+router.post('/:id', 
+  requireAuth, 
+  canModifyProfile, 
+  fileAccessControl,
+  avatarUpload.single('avatar'), 
+  handleUploadError,
+  validateFileContent,
+  virusScanFile,
+  createProfile
+);
 
 // PATCH /api/users/:id - Update profile info - requires auth
 router.patch('/:id', requireAuth, canModifyProfile, updateProfile);
 
+// POST /api/users/:id/avatar - Upload avatar only - requires auth
+router.post('/:id/avatar', 
+  requireAuth, 
+  canModifyProfile, 
+  fileAccessControl,
+  avatarUpload.single('avatar'), 
+  handleUploadError,
+  validateFileContent,
+  virusScanFile,
+  uploadAvatar
+);
+
 // DELETE /api/users/:id/avatar - Delete avatar image - requires auth
-router.delete('/:id/avatar', requireAuth, canModifyProfile, deleteAvatar);
+router.delete('/:id/avatar', requireAuth, canModifyProfile, fileAccessControl, deleteAvatar);
 
 export default router; 

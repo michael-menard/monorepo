@@ -1,81 +1,82 @@
+/// <reference types="vite/client" />
+
+import type { Meta, StoryObj } from '@storybook/react';
 import AvatarUploader from './index.tsx';
 
-export default {
+const meta: Meta<typeof AvatarUploader> = {
   title: 'Components/AvatarUploader',
   component: AvatarUploader,
   parameters: {
     layout: 'centered',
-    docs: {
-      description: {
-        component: 'A reusable avatar upload component that supports image selection, preview, and upload functionality.',
-      },
-    },
   },
+  tags: ['autodocs'],
   argTypes: {
     userId: {
       control: 'text',
       description: 'The user ID for the avatar upload',
     },
-    onUpload: {
-      action: 'upload',
-      description: 'Function called when upload is triggered',
+    baseUrl: {
+      control: 'text',
+      description: 'Base URL for the API endpoint',
     },
     onSuccess: {
       action: 'success',
-      description: 'Callback when upload succeeds',
+      description: 'Callback called when upload completes successfully',
     },
     onError: {
       action: 'error',
-      description: 'Callback when upload fails',
-    },
-  },
-  tags: ['autodocs'],
-};
-
-export const Default = {
-  args: {
-    userId: 'user-123',
-    onUpload: async (file: File, userId: string) => {
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Uploading file:', file.name, 'for user:', userId);
+      description: 'Callback called when upload fails',
     },
   },
 };
 
-export const WithSuccessCallback = {
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
   args: {
-    userId: 'user-456',
-    onUpload: async (file: File, userId: string) => {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Upload successful for user:', userId);
-    },
+    userId: 'user123',
+    baseUrl: 'http://localhost:3000',
+  },
+};
+
+export const WithCallbacks: Story = {
+  args: {
+    userId: 'user456',
+    baseUrl: 'https://api.example.com',
     onSuccess: () => {
-      alert('Avatar uploaded successfully!');
-    },
-  },
-};
-
-export const WithErrorCallback = {
-  args: {
-    userId: 'user-789',
-    onUpload: async (file: File, userId: string) => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      throw new Error('Upload failed: Network error');
+      console.log('Avatar uploaded successfully!');
     },
     onError: (error: Error) => {
-      alert(`Upload failed: ${error.message}`);
+      console.error('Upload failed:', error);
     },
   },
 };
 
-export const LoadingState = {
+export const DevelopmentEnvironment: Story = {
   args: {
-    userId: 'user-101',
-    onUpload: async (file: File, userId: string) => {
-      // Simulate a longer upload time to show loading state
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log('Upload completed for user:', userId);
+    userId: 'dev-user',
+    baseUrl: 'http://localhost:8000',
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Example for development environment with local API server.',
+      },
+    },
+  },
+};
+
+export const ProductionEnvironment: Story = {
+  args: {
+    userId: 'prod-user',
+    baseUrl: 'https://api.yourapp.com',
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Example for production environment with deployed API.',
+      },
     },
   },
 }; 

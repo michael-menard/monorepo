@@ -240,6 +240,104 @@ paths:
                   value:
                     error: "User not found"
   /{id}/avatar:
+    post:
+      summary: Upload user avatar
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Avatar image file (JPEG, PNG, or HEIC, max 20MB)
+            examples:
+              valid:
+                summary: Valid avatar upload
+                value:
+                  avatar: (binary file)
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Avatar uploaded successfully"
+                  avatarUrl:
+                    type: string
+                    example: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                  user:
+                    $ref: '#/components/schemas/User'
+              examples:
+                uploaded:
+                  value:
+                    message: "Avatar uploaded successfully"
+                    avatarUrl: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                    user:
+                      id: "user-123"
+                      username: "testuser"
+                      email: "test@example.com"
+                      preferredName: "Testy"
+                      avatar: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                      createdAt: "2024-07-12T12:34:56.000Z"
+                      updatedAt: "2024-07-12T13:15:00.000Z"
+        '400':
+          description: Invalid file or missing avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingFile:
+                  value:
+                    error: "Avatar file is required"
+                invalidFormat:
+                  value:
+                    error: "Invalid file format. Only JPEG, PNG, and HEIC files are supported."
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                tooLarge:
+                  value:
+                    error: "File too large. Maximum size is 20MB."
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    error: "User not found"
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unauthorized:
+                  value:
+                    error: "Authentication required"
     delete:
       summary: Delete user avatar
       security:

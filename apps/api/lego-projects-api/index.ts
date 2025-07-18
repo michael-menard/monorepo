@@ -8,11 +8,34 @@ if (!process.env.AUTH_API) {
 }
 
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import { profileRouter } from './src/routes';
+import { 
+  securityHeaders, 
+  sanitizeRequest, 
+  securityLogger, 
+  createRateLimiters 
+} from './src/middleware/security';
 
 const app = express();
 
-app.use(express.json());
+// Security middleware (order matters!)
+app.use(securityHeaders);
+app.use(securityLogger);
+app.use(sanitizeRequest);
+
+// Rate limiting
+const rateLimiters = createRateLimiters();
+app.use(rateLimiters.general); // Apply general rate limiting to all routes
+
+// Body parsing
+app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Apply specific rate limiting to upload routes
+app.use('/api/users/:id/avatar', rateLimiters.upload);
+app.use('/api/users', rateLimiters.auth); // Apply auth rate limiting to user routes
 
 // Mount router
 app.use('/api/users', profileRouter);

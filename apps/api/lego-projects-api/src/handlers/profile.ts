@@ -8,10 +8,10 @@ import { avatarUpload, saveAvatar, deleteAvatar as deleteAvatarFile } from '../s
 // Error handling middleware for multer
 export const handleUploadError = (error: any, req: Request, res: Response, next: any) => {
   if (error && error.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File too large. Maximum size is 10MB.' });
+    return res.status(413).json({ error: 'File too large. Maximum size is 20MB.' });
   }
-  if (error && error.message === 'Only .jpg or .heic files are supported') {
-    return res.status(400).json({ error: 'Invalid file format. Only .jpg or .heic files are supported.' });
+  if (error && error.message === 'Only JPEG, PNG, and HEIC files are supported') {
+    return res.status(400).json({ error: 'Invalid file format. Only JPEG, PNG, and HEIC files are supported.' });
   }
   if (error) {
     return res.status(500).json({ error: 'Upload failed', details: error.message });
@@ -56,10 +56,8 @@ export const createProfile = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Avatar file is required' });
   }
 
-  // Robust file type check (for tests and real requests)
-  if (!['image/jpeg', 'image/heic'].includes(file.mimetype)) {
-    return res.status(400).json({ error: 'Invalid file format. Only .jpg or .heic files are supported.' });
-  }
+  // File validation is now handled by security middleware
+  // (validateFileContent, virusScanFile)
 
   try {
     // Check if user already exists
@@ -84,7 +82,7 @@ export const createProfile = async (req: Request, res: Response) => {
   } catch (error) {
     // Log error for debugging
     console.error('createProfile error:', error);
-    res.status(500).json({ error: 'Database error', details: (error as Error).message, debug: error });
+    res.status(500).json({ error: 'Database error', details: (error as Error).message });
   }
 };
 
@@ -128,6 +126,55 @@ export const updateProfile = async (req: Request, res: Response) => {
     res.json(updatedUser);
   } catch (error) {
     res.status(500).json({ error: 'Database error', details: (error as Error).message });
+  }
+};
+
+export const uploadAvatar = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { file } = req;
+
+  if (!file) {
+    return res.status(400).json({ error: 'Avatar file is required' });
+  }
+
+  // File validation is now handled by security middleware
+  // (validateFileContent, virusScanFile)
+
+  try {
+    // Check if user exists
+    const existing = await db.select().from(users).where(eq(users.id, id));
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = existing[0];
+
+    // Delete old avatar if it exists
+    if (user.avatar) {
+      await deleteAvatarFile(user.avatar);
+    }
+
+    // Save new avatar
+    const avatarUrl = await saveAvatar(id, file);
+
+    // Update user with new avatar
+    const [updatedUser] = await db
+      .update(users)
+      .set({ avatar: avatarUrl, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+
+    res.json({ 
+      message: 'Avatar uploaded successfully', 
+      avatarUrl,
+      user: updatedUser 
+    });
+  } catch (error) {
+    console.error('uploadAvatar error:', error);
+    res.status(500).json({ 
+      error: 'Upload failed', 
+      details: (error as Error).message 
+    });
   }
 };
 

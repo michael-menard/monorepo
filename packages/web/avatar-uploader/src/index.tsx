@@ -6,7 +6,7 @@ import React, { useRef, useState } from 'react';
 
 export interface AvatarUploaderProps {
   userId: string;
-  onUpload: (file: File, userId: string) => Promise<void>;
+  baseUrl: string; // Base URL for the API endpoint
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }
@@ -20,7 +20,7 @@ const ACCEPTED_TYPES = [
 const MAX_SIZE_MB = 20;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-const AvatarUploader: React.FC<AvatarUploaderProps> = ({ userId, onUpload, onSuccess, onError }) => {
+const AvatarUploader: React.FC<AvatarUploaderProps> = ({ userId, baseUrl, onSuccess, onError }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -72,6 +72,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({ userId, onUpload, onSuc
     setUploading(true);
     setError(null);
     setProgress(0);
+    
     // Simulate progress (since we can't get real progress without backend support)
     progressInterval = setInterval(() => {
       setProgress(prev => {
@@ -82,8 +83,21 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({ userId, onUpload, onSuc
         return prev + 10;
       });
     }, 200);
+
     try {
-      await onUpload(selectedFile, userId);
+      const formData = new FormData();
+      formData.append('avatar', selectedFile);
+
+      const response = await fetch(`${baseUrl}/api/users/${userId}/avatar`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Include cookies for authentication
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      }
+
       setProgress(100);
       if (onSuccess) onSuccess();
       setTimeout(() => {
@@ -91,7 +105,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({ userId, onUpload, onSuc
         setUploading(false);
       }, 500);
     } catch (err: any) {
-      setError('Upload failed. Please try again.');
+      setError(err.message || 'Upload failed. Please try again.');
       if (onError) onError(err);
       setUploading(false);
       setProgress(0);

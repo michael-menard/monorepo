@@ -41,7 +41,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 // Mock UI components
-vi.mock('@/components/ui/button', () => ({
+vi.mock('../src/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className }: any) => (
     <button onClick={onClick} disabled={disabled} className={className} data-testid="button">
       {children}
@@ -49,13 +49,13 @@ vi.mock('@/components/ui/button', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/progress', () => ({
+vi.mock('../src/components/ui/progress', () => ({
   Progress: ({ value, className }: any) => (
     <div className={className} data-testid="progress" data-value={value} />
   ),
 }));
 
-vi.mock('@/components/ui/sonner', () => ({
+vi.mock('../src/components/ui/sonner', () => ({
   Toaster: ({ position }: any) => <div data-testid="toaster" data-position={position} />,
 }));
 
