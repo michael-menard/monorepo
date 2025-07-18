@@ -3,9 +3,8 @@ import { getProfile, createProfile, updateProfile, deleteAvatar, uploadAvatar, h
 import { avatarUpload } from '../storage';
 import { requireAuth, canModifyProfile } from '../middleware/auth';
 import { 
-  validateFileContent, 
-  fileAccessControl, 
-  virusScanFile 
+  processUploadedImage, 
+  fileAccessControl
 } from '../middleware/security';
 
 const router = Router();
@@ -20,8 +19,7 @@ router.post('/:id',
   fileAccessControl,
   avatarUpload.single('avatar'), 
   handleUploadError,
-  validateFileContent,
-  virusScanFile,
+  processUploadedImage(),
   createProfile
 );
 
@@ -35,8 +33,7 @@ router.post('/:id/avatar',
   fileAccessControl,
   avatarUpload.single('avatar'), 
   handleUploadError,
-  validateFileContent,
-  virusScanFile,
+  processUploadedImage(),
   uploadAvatar
 );
 

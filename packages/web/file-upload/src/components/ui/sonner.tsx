@@ -1,5 +1,25 @@
-import { useTheme } from "next-themes"
+import { useState, useEffect } from "react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+
+// Simple theme hook for React apps
+const useTheme = () => {
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
+
+  useEffect(() => {
+    // Check for system preference
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const handleChange = () => {
+      setTheme(mediaQuery.matches ? "dark" : "light")
+    }
+    
+    mediaQuery.addEventListener("change", handleChange)
+    handleChange() // Set initial theme
+    
+    return () => mediaQuery.removeEventListener("change", handleChange)
+  }, [])
+
+  return { theme }
+}
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()

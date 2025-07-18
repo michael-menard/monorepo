@@ -2,27 +2,38 @@ import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z } from 'zod';
+import { 
+  imageProcessingMiddleware, 
+  canProcessImage, 
+  getImageDimensions,
+  DEFAULT_AVATAR_CONFIG 
+} from '../utils/imageProcessor';
 
 // File validation schemas
 const FileValidationSchema = z.object({
   mimetype: z.string().refine(
-    (mime) => ['image/jpeg', 'image/jpg', 'image/png', 'image/heic'].includes(mime),
-    { message: 'Invalid file type. Only JPEG, PNG, and HEIC files are allowed.' }
+    (mime) => ['image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/webp'].includes(mime),
+    { message: 'Invalid file type. Only JPEG, PNG, HEIC, and WebP files are allowed.' }
   ),
   size: z.number().max(20 * 1024 * 1024, 'File size must be less than 20MB'),
   originalname: z.string().refine(
     (name) => {
       const ext = name.toLowerCase().split('.').pop();
-      return ['jpg', 'jpeg', 'png', 'heic'].includes(ext || '');
+      return ['jpg', 'jpeg', 'png', 'heic', 'webp'].includes(ext || '');
     },
-    { message: 'Invalid file extension. Only .jpg, .jpeg, .png, .heic files are allowed.' }
+    { message: 'Invalid file extension. Only .jpg, .jpeg, .png, .heic, .webp files are allowed.' }
   ),
+  buffer: z.instanceof(Buffer).refine(
+    (buffer) => buffer.length > 0,
+    { message: 'File buffer cannot be empty' }
+  )
 });
 
 // Magic bytes for file type validation
 const MAGIC_BYTES = {
   jpeg: [0xFF, 0xD8, 0xFF],
   png: [0x89, 0x50, 0x4E, 0x47],
+  webp: [0x52, 0x49, 0x46, 0x46], // WebP signature (RIFF)
   heic: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63], // HEIC signature
 };
 
@@ -112,6 +123,13 @@ export const validateFileContent = (req: Request, res: Response, next: NextFunct
       });
     }
 
+    // Check if image can be processed
+    if (!canProcessImage(file.mimetype)) {
+      return res.status(400).json({ 
+        error: 'Image format is not supported for processing' 
+      });
+    }
+
     next();
   } catch (error) {
     console.error('File validation error:', error);
@@ -135,6 +153,10 @@ function validateMagicBytes(buffer: Buffer, mimetype: string): boolean {
     
     case 'image/png':
       return MAGIC_BYTES.png.every((byte, index) => bytes[index] === byte);
+    
+    case 'image/webp':
+      // WebP files start with RIFF signature
+      return MAGIC_BYTES.webp.every((byte, index) => bytes[index] === byte);
     
     case 'image/heic':
       // HEIC files have a more complex structure, check for ftyp box
@@ -333,6 +355,76 @@ async function simulateVirusScan(buffer: Buffer): Promise<boolean> {
   return true;
 }
 
+// Enhanced file processing middleware that combines validation, virus scanning, and image processing
+export const processUploadedImage = (config?: any) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const file = req.file;
+    
+    if (!file) {
+      return next();
+    }
+
+    try {
+      // Step 1: Validate file content
+      const validation = FileValidationSchema.safeParse(file);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'File validation failed', 
+          details: validation.error.issues 
+        });
+      }
+
+      // Step 2: Check if image can be processed
+      if (!canProcessImage(file.mimetype)) {
+        return res.status(400).json({ 
+          error: 'Image format is not supported for processing' 
+        });
+      }
+
+      // Step 3: Validate magic bytes
+      const buffer = file.buffer;
+      if (!buffer || buffer.length < 4) {
+        return res.status(400).json({ error: 'Invalid file content' });
+      }
+
+      const isValidContent = validateMagicBytes(buffer, file.mimetype);
+      if (!isValidContent) {
+        return res.status(400).json({ 
+          error: 'File content does not match declared type. Possible file corruption or malicious content.' 
+        });
+      }
+
+      // Step 4: Additional security checks
+      if (!isValidImageContent(buffer)) {
+        return res.status(400).json({ 
+          error: 'File appears to be corrupted or contains invalid content' 
+        });
+      }
+
+      // Step 5: Virus scanning (simulated)
+      const isClean = await simulateVirusScan(buffer);
+      if (!isClean) {
+        return res.status(400).json({ 
+          error: 'File appears to be malicious and has been rejected' 
+        });
+      }
+
+      // Step 6: Process and resize image
+      const processingConfig = {
+        ...DEFAULT_AVATAR_CONFIG,
+        ...config
+      };
+
+      // Apply image processing middleware
+      await imageProcessingMiddleware(processingConfig)(req, res, next);
+
+    } catch (error) {
+      console.error('Image processing error:', error);
+      return res.status(500).json({ error: 'Failed to process uploaded image' });
+    }
+  };
+};
+
 // Export all security middleware
 export const securityMiddleware = {
   createRateLimiters,
@@ -342,4 +434,5 @@ export const securityMiddleware = {
   securityLogger,
   fileAccessControl,
   virusScanFile,
+  processUploadedImage,
 }; 

@@ -8,6 +8,7 @@ import InstructionsList from '@/pages/Instructions/InstructionsList'
 import CreateInstruction from '@/pages/Instructions/CreateInstruction'
 import InspirationGallery from '@/pages/Inspiration/InspirationGallery'
 import ProfileMain from '@/pages/Profile/ProfileMain'
+import ProfileDemo from '@/pages/Profile/ProfileDemo'
 import ResetPassword from '@/pages/Auth/ResetPassword';
 import EmailVerification from '@/pages/Auth/EmailVerification';
 import ProjectsPage from '@/pages/Projects/ProjectsPage';
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <ProfileMain /> },
+          { path: 'demo', element: <ProfileDemo /> },
         ]
       },
       

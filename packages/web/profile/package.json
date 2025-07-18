@@ -1,0 +1,61 @@
+{
+  "name": "@monorepo/profile",
+  "version": "1.0.0",
+  "description": "Reusable Profile Page component for monorepo apps",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.48.2",
+    "zod": "^3.22.4",
+    "framer-motion": "^10.16.4",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-progress": "^1.0.3",
+    "@radix-ui/react-avatar": "^1.0.4",
+    "react-easy-crop": "^5.0.4",
+    "@repo/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vitest": "^1.0.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.5.1",
+    "@testing-library/jest-dom": "^6.1.4",
+    "vitest-axe": "^0.1.0",
+    "jsdom": "^23.0.1",
+    "eslint": "^8.53.0",
+    "prettier": "^3.0.3"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "keywords": [
+    "react",
+    "profile",
+    "avatar",
+    "ui",
+    "component",
+    "monorepo"
+  ],
+  "author": "Monorepo Team",
+  "license": "MIT"
+} 

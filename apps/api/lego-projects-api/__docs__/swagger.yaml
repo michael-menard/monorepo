@@ -2,7 +2,20 @@ openapi: 3.0.3
 info:
   title: Lego Projects Profile API
   version: 1.0.0
-  description: API for user profile management (excluding authentication)
+  description: |
+    API for user profile management with enhanced security features.
+    
+    **Security Features:**
+    - File content validation and virus scanning
+    - Rate limiting and access control
+    - Image processing and optimization
+    - Authentication via JWT cookies
+    
+    **File Upload:**
+    - Supports JPEG, PNG, and HEIC formats
+    - Maximum file size: 20MB
+    - Automatic image optimization and resizing
+    - Secure file storage with S3 or local fallback
 servers:
   - url: /api/users
 components:
@@ -11,12 +24,14 @@ components:
       type: apiKey
       in: cookie
       name: token
+      description: JWT token stored in HTTP-only cookie
   schemas:
     User:
       type: object
       properties:
         id:
           type: string
+          format: uuid
           example: "user-123"
         username:
           type: string
@@ -50,19 +65,43 @@ components:
           type: string
           nullable: true
           example: "No user with the given ID."
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            fieldErrors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+            formErrors:
+              type: array
+              items:
+                type: string
+          example:
+            fieldErrors:
+              email: ["Invalid email address"]
+              username: ["Username is required"]
+            formErrors: ["Invalid form data"]
 paths:
   /{id}:
     get:
       summary: Get user profile
+      description: Retrieve a user's public profile information
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+            format: uuid
+          description: User ID
       responses:
         '200':
-          description: User profile
+          description: User profile retrieved successfully
           content:
             application/json:
               schema:
@@ -88,8 +127,21 @@ paths:
                   value:
                     error: "User not found"
                     details: "No user with the given ID."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       summary: Create user profile with avatar
+      description: |
+        Create a new user profile with avatar upload. 
+        
+        **Security Features:**
+        - File content validation and virus scanning
+        - Image optimization and resizing
+        - Access control validation
       security:
         - cookieAuth: []
       parameters:
@@ -98,26 +150,37 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
+          description: User ID
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
+              required:
+                - email
+                - avatar
               properties:
                 username:
                   type: string
+                  minLength: 1
                   example: "testuser"
+                  description: Username (optional)
                 email:
                   type: string
                   format: email
                   example: "test@example.com"
+                  description: Valid email address (required)
                 preferredName:
                   type: string
+                  minLength: 1
                   example: "Testy"
+                  description: Preferred display name (optional)
                 avatar:
                   type: string
                   format: binary
+                  description: Avatar image file (JPEG, PNG, or HEIC, max 20MB, required)
             examples:
               valid:
                 summary: Valid request
@@ -128,7 +191,7 @@ paths:
                   avatar: (binary file)
       responses:
         '201':
-          description: Created user profile
+          description: User profile created successfully
           content:
             application/json:
               schema:
@@ -147,16 +210,32 @@ paths:
           description: Invalid input or missing avatar
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+              oneOf:
+                - $ref: '#/components/schemas/Error'
+                - $ref: '#/components/schemas/ValidationError'
               examples:
                 missingAvatar:
                   value:
                     error: "Avatar file is required"
                 invalidEmail:
                   value:
-                    error: "Invalid input"
-                    details: "email: Invalid email address"
+                    error:
+                      fieldErrors:
+                        email: ["Invalid email address"]
+                      formErrors: ["Validation failed"]
+        '403':
+          description: Authentication required or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unauthorized:
+                  value:
+                    error: "Authentication required"
+                accessDenied:
+                  value:
+                    error: "You can only modify your own profile"
         '409':
           description: User already exists
           content:
@@ -167,8 +246,35 @@ paths:
                 exists:
                   value:
                     error: "User already exists"
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                tooLarge:
+                  value:
+                    error: "File too large. Maximum size is 20MB."
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rateLimit:
+                  value:
+                    error: "Too many requests. Please try again later."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     patch:
       summary: Update user profile
+      description: Update user profile information (username, email, preferredName)
       security:
         - cookieAuth: []
       parameters:
@@ -177,6 +283,8 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
+          description: User ID
       requestBody:
         required: true
         content:
@@ -186,14 +294,19 @@ paths:
               properties:
                 username:
                   type: string
+                  minLength: 1
                   example: "updateduser"
+                  description: New username (optional)
                 email:
                   type: string
                   format: email
                   example: "updated@example.com"
+                  description: New email address (optional)
                 preferredName:
                   type: string
+                  minLength: 1
                   example: "Updated Name"
+                  description: New preferred name (optional)
             examples:
               valid:
                 summary: Valid update
@@ -203,7 +316,7 @@ paths:
                   preferredName: "Updated Name"
       responses:
         '200':
-          description: Updated user profile
+          description: User profile updated successfully
           content:
             application/json:
               schema:
@@ -222,13 +335,29 @@ paths:
           description: Invalid input
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+              oneOf:
+                - $ref: '#/components/schemas/Error'
+                - $ref: '#/components/schemas/ValidationError'
               examples:
                 invalid:
                   value:
-                    error: "Invalid input"
-                    details: "username: Must not be empty"
+                    error:
+                      fieldErrors:
+                        username: ["Username must not be empty"]
+                      formErrors: ["Validation failed"]
+        '403':
+          description: Authentication required or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unauthorized:
+                  value:
+                    error: "Authentication required"
+                accessDenied:
+                  value:
+                    error: "You can only modify your own profile"
         '404':
           description: User not found
           content:
@@ -239,9 +368,32 @@ paths:
                 notFound:
                   value:
                     error: "User not found"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rateLimit:
+                  value:
+                    error: "Too many requests. Please try again later."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /{id}/avatar:
     post:
       summary: Upload user avatar
+      description: |
+        Upload a new avatar image for the user.
+        
+        **Security Features:**
+        - File content validation and virus scanning
+        - Image optimization and resizing
+        - Access control validation
       security:
         - cookieAuth: []
       parameters:
@@ -250,12 +402,16 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
+          description: User ID
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
+              required:
+                - avatar
               properties:
                 avatar:
                   type: string
@@ -308,16 +464,19 @@ paths:
                 invalidFormat:
                   value:
                     error: "Invalid file format. Only JPEG, PNG, and HEIC files are supported."
-        '413':
-          description: File too large
+        '403':
+          description: Authentication required or access denied
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                tooLarge:
+                unauthorized:
                   value:
-                    error: "File too large. Maximum size is 20MB."
+                    error: "Authentication required"
+                accessDenied:
+                  value:
+                    error: "You can only modify your own profile"
         '404':
           description: User not found
           content:
@@ -328,18 +487,40 @@ paths:
                 notFound:
                   value:
                     error: "User not found"
-        '403':
-          description: Authentication required
+        '413':
+          description: File too large
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                unauthorized:
+                tooLarge:
                   value:
-                    error: "Authentication required"
+                    error: "File too large. Maximum size is 20MB."
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rateLimit:
+                  value:
+                    error: "Too many requests. Please try again later."
+        '500':
+          description: Upload failed or internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                uploadFailed:
+                  value:
+                    error: "Upload failed"
+                    details: "Failed to process image"
     delete:
       summary: Delete user avatar
+      description: Remove the user's avatar image
       security:
         - cookieAuth: []
       parameters:
@@ -348,9 +529,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
+          description: User ID
       responses:
         '200':
-          description: Avatar deleted
+          description: Avatar deleted successfully
           content:
             application/json:
               schema:
@@ -373,6 +556,19 @@ paths:
                       avatar: null
                       createdAt: "2024-07-12T12:34:56.000Z"
                       updatedAt: "2024-07-12T13:10:00.000Z"
+        '403':
+          description: Authentication required or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unauthorized:
+                  value:
+                    error: "Authentication required"
+                accessDenied:
+                  value:
+                    error: "You can only modify your own profile"
         '404':
           description: User not found
           content:
@@ -382,4 +578,20 @@ paths:
               examples:
                 notFound:
                   value:
-                    error: "User not found" 
+                    error: "User not found"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rateLimit:
+                  value:
+                    error: "Too many requests. Please try again later."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
