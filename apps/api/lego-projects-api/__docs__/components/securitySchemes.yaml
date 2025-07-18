@@ -1,0 +1,5 @@
+cookieAuth:
+  type: apiKey
+  in: cookie
+  name: token
+  description: JWT authentication via httpOnly cookie named 'token'. 

@@ -1,0 +1,58 @@
+{
+  "quadrants": [
+    { "name": "Techniques" },
+    { "name": "Tools" },
+    { "name": "Platforms" },
+    { "name": "Languages & Frameworks" }
+  ],
+  "rings": [
+    { "name": "Adopt", "color": "#93c47d" },
+    { "name": "Trial", "color": "#93d2c2" },
+    { "name": "Assess", "color": "#fbdb84" },
+    { "name": "Hold", "color": "#efafa9" }
+  ],
+  "entries": [
+    {
+      "name": "Monorepo Structure",
+      "quadrant": "Techniques",
+      "ring": "Adopt",
+      "description": "Single repository for all apps and packages to simplify code sharing and dependency management."
+    },
+    {
+      "name": "Drizzle ORM",
+      "quadrant": "Tools",
+      "ring": "Adopt",
+      "description": "Type-safe, modern ORM for PostgreSQL."
+    },
+    {
+      "name": "AWS Lambda",
+      "quadrant": "Platforms",
+      "ring": "Trial",
+      "description": "Serverless compute platform for scalable backend services."
+    },
+    {
+      "name": "RTK Query",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Adopt",
+      "description": "Modern data fetching and caching for React apps."
+    },
+    {
+      "name": "Vitest",
+      "quadrant": "Tools",
+      "ring": "Adopt",
+      "description": "Fast, modern test runner for TypeScript and JavaScript."
+    },
+    {
+      "name": "GraphQL",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Assess",
+      "description": "Query language for APIs, under consideration for future features."
+    },
+    {
+      "name": "Serverless Framework",
+      "quadrant": "Tools",
+      "ring": "Trial",
+      "description": "Framework for deploying serverless applications."
+    }
+  ]
+} 

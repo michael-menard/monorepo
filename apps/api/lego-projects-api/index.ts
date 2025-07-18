@@ -9,7 +9,7 @@ if (!process.env.AUTH_API) {
 
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { profileRouter } from './src/routes';
+import profileRouter from './src/routes';
 import { 
   securityHeaders, 
   sanitizeRequest, 
@@ -37,14 +37,18 @@ app.use(cookieParser());
 app.use('/api/users/:id/avatar', rateLimiters.upload);
 app.use('/api/users', rateLimiters.auth); // Apply auth rate limiting to user routes
 
-// Mount router
-app.use('/api/users', profileRouter);
+// Mount router at root level since routes already have /api prefix
+app.use('/', profileRouter);
 
 app.get('/', (req, res) => {
   res.send('Lego Projects API is running');
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-}); 
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+export default app; 

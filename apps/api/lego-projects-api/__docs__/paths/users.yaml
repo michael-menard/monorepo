@@ -1,0 +1,508 @@
+/{id}:
+  get:
+    summary: Get user profile
+    description: Retrieve a user's public profile information
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+    responses:
+      '200':
+        description: User profile retrieved successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/User'
+            examples:
+              success:
+                value:
+                  id: "user-123"
+                  username: "testuser"
+                  email: "test@example.com"
+                  preferredName: "Testy"
+                  avatar: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                  createdAt: "2024-07-12T12:34:56.000Z"
+                  updatedAt: "2024-07-12T12:34:56.000Z"
+      '404':
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              notFound:
+                value:
+                  error: "User not found"
+                  details: "No user with the given ID."
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+  post:
+    summary: Create user profile with avatar
+    description: |
+      Create a new user profile with avatar upload. 
+      
+      **Security Features:**
+      - File content validation and virus scanning
+      - Image optimization and resizing
+      - Access control validation
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - email
+              - avatar
+            properties:
+              username:
+                type: string
+                minLength: 1
+                example: "testuser"
+                description: Username (optional)
+              email:
+                type: string
+                format: email
+                example: "test@example.com"
+                description: Valid email address (required)
+              preferredName:
+                type: string
+                minLength: 1
+                example: "Testy"
+                description: Preferred display name (optional)
+              avatar:
+                type: string
+                format: binary
+                description: Avatar image file (JPEG, PNG, or HEIC, max 20MB, required)
+          examples:
+            valid:
+              summary: Valid request
+              value:
+                username: "testuser"
+                email: "test@example.com"
+                preferredName: "Testy"
+                avatar: (binary file)
+    responses:
+      '201':
+        description: User profile created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/User'
+            examples:
+              created:
+                value:
+                  id: "user-123"
+                  username: "testuser"
+                  email: "test@example.com"
+                  preferredName: "Testy"
+                  avatar: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                  createdAt: "2024-07-12T12:34:56.000Z"
+                  updatedAt: "2024-07-12T12:34:56.000Z"
+      '400':
+        description: Invalid input or missing avatar
+        content:
+          application/json:
+            oneOf:
+              - $ref: '../components/schemas.yaml#/Error'
+              - $ref: '../components/schemas.yaml#/ValidationError'
+            examples:
+              missingAvatar:
+                value:
+                  error: "Avatar file is required"
+              invalidEmail:
+                value:
+                  error:
+                    fieldErrors:
+                      email: ["Invalid email address"]
+                    formErrors: ["Validation failed"]
+      '403':
+        description: Authentication required or access denied
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  error: "Authentication required"
+              accessDenied:
+                value:
+                  error: "You can only modify your own profile"
+      '409':
+        description: User already exists
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              exists:
+                value:
+                  error: "User already exists"
+      '413':
+        description: File too large
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              tooLarge:
+                value:
+                  error: "File too large. Maximum size is 20MB."
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              rateLimit:
+                value:
+                  error: "Too many requests. Please try again later."
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+  patch:
+    summary: Update user profile
+    description: Update user profile information (username, email, preferredName)
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                minLength: 1
+                example: "updateduser"
+                description: New username (optional)
+              email:
+                type: string
+                format: email
+                example: "updated@example.com"
+                description: New email address (optional)
+              preferredName:
+                type: string
+                minLength: 1
+                example: "Updated Name"
+                description: New preferred name (optional)
+          examples:
+            valid:
+              summary: Valid update
+              value:
+                username: "updateduser"
+                email: "updated@example.com"
+                preferredName: "Updated Name"
+    responses:
+      '200':
+        description: User profile updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/User'
+            examples:
+              updated:
+                value:
+                  id: "user-123"
+                  username: "updateduser"
+                  email: "updated@example.com"
+                  preferredName: "Updated Name"
+                  avatar: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                  createdAt: "2024-07-12T12:34:56.000Z"
+                  updatedAt: "2024-07-12T13:00:00.000Z"
+      '400':
+        description: Invalid input
+        content:
+          application/json:
+            oneOf:
+              - $ref: '../components/schemas.yaml#/Error'
+              - $ref: '../components/schemas.yaml#/ValidationError'
+            examples:
+              invalid:
+                value:
+                  error:
+                    fieldErrors:
+                      username: ["Username must not be empty"]
+                    formErrors: ["Validation failed"]
+      '403':
+        description: Authentication required or access denied
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  error: "Authentication required"
+              accessDenied:
+                value:
+                  error: "You can only modify your own profile"
+      '404':
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              notFound:
+                value:
+                  error: "User not found"
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              rateLimit:
+                value:
+                  error: "Too many requests. Please try again later."
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+/{id}/avatar:
+  post:
+    summary: Upload user avatar
+    description: |
+      Upload a new avatar image for the user.
+      
+      **Security Features:**
+      - File content validation and virus scanning
+      - Image optimization and resizing
+      - Access control validation
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: User ID
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - avatar
+            properties:
+              avatar:
+                type: string
+                format: binary
+                description: Avatar image file (JPEG, PNG, or HEIC, max 20MB)
+          examples:
+            valid:
+              summary: Valid avatar upload
+              value:
+                avatar: (binary file)
+    responses:
+      '200':
+        description: Avatar uploaded successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Avatar uploaded successfully"
+                avatarUrl:
+                  type: string
+                  example: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                user:
+                  $ref: '../components/schemas.yaml#/User'
+            examples:
+              uploaded:
+                value:
+                  message: "Avatar uploaded successfully"
+                  avatarUrl: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                  user:
+                    id: "user-123"
+                    username: "testuser"
+                    email: "test@example.com"
+                    preferredName: "Testy"
+                    avatar: "https://bucket.s3.region.amazonaws.com/avatars/user-123/avatar-uuid.jpg"
+                    createdAt: "2024-07-12T12:34:56.000Z"
+                    updatedAt: "2024-07-12T13:15:00.000Z"
+      '400':
+        description: Invalid file or missing avatar
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              missingFile:
+                value:
+                  error: "Avatar file is required"
+              invalidFormat:
+                value:
+                  error: "Invalid file format. Only JPEG, PNG, and HEIC files are supported."
+      '403':
+        description: Authentication required or access denied
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  error: "Authentication required"
+              accessDenied:
+                value:
+                  error: "You can only modify your own profile"
+      '404':
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              notFound:
+                value:
+                  error: "User not found"
+      '413':
+        description: File too large
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              tooLarge:
+                value:
+                  error: "File too large. Maximum size is 20MB."
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              rateLimit:
+                value:
+                  error: "Too many requests. Please try again later."
+      '500':
+        description: Upload failed or internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              uploadFailed:
+                value:
+                  error: "Upload failed"
+                  details: "Failed to process image"
+delete:
+  summary: Delete user avatar
+  description: Remove the user's avatar image
+  security:
+    - cookieAuth: []
+  parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: User ID
+  responses:
+    '200':
+      description: Avatar deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Avatar deleted successfully"
+              user:
+                $ref: '../components/schemas.yaml#/User'
+          examples:
+            deleted:
+              value:
+                message: "Avatar deleted successfully"
+                user:
+                  id: "user-123"
+                  username: "testuser"
+                  email: "test@example.com"
+                  preferredName: "Testy"
+                  avatar: null
+                  createdAt: "2024-07-12T12:34:56.000Z"
+                  updatedAt: "2024-07-12T13:10:00.000Z"
+    '403':
+      description: Authentication required or access denied
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/Error'
+          examples:
+            unauthorized:
+              value:
+                error: "Authentication required"
+            accessDenied:
+              value:
+                error: "You can only modify your own profile"
+    '404':
+      description: User not found
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/Error'
+          examples:
+            notFound:
+              value:
+                error: "User not found"
+    '429':
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/Error'
+          examples:
+            rateLimit:
+              value:
+                error: "Too many requests. Please try again later."
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/Error' 

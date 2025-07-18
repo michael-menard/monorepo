@@ -1,0 +1,268 @@
+/api/images:
+  get:
+    summary: List all images for the authenticated user
+    description: >
+      Returns all images for the authenticated user. Supports optional filters: `albumId`, `flagged`, `tag` (all as query params).
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: query
+        name: albumId
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter images by album ID
+      - in: query
+        name: flagged
+        required: false
+        schema:
+          type: boolean
+        description: Filter images by flagged status
+      - in: query
+        name: tag
+        required: false
+        schema:
+          type: string
+        description: Filter images by tag
+    responses:
+      '200':
+        description: Images retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    $ref: '../components/schemas.yaml#/GalleryImage'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+  post:
+    summary: Upload gallery image
+    description: Upload a new image to the gallery. Requires authentication.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - image
+            properties:
+              image:
+                type: string
+                format: binary
+                description: Image file (JPEG, PNG, HEIC, WebP, max 50MB)
+              albumId:
+                type: string
+                format: uuid
+                description: Album ID (optional)
+              title:
+                type: string
+                description: Image title (optional)
+              description:
+                type: string
+                description: Image description (optional)
+              tags:
+                type: array
+                items:
+                  type: string
+                description: Tags (optional)
+          examples:
+            valid:
+              summary: Valid image upload
+              value:
+                image: (binary file)
+                albumId: "album-123"
+                title: "My Image"
+                description: "A beautiful photo"
+                tags: ["nature", "sunset"]
+    responses:
+      '201':
+        description: Image uploaded successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/GalleryImageResponse'
+      '400':
+        description: Invalid input or missing image
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '413':
+        description: File too large
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/images/{id}:
+  patch:
+    summary: Update image metadata
+    description: Edit metadata for a gallery image. Only the owner or admin can edit.
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Image ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: New image title (optional)
+              description:
+                type: string
+                description: New image description (optional)
+              tags:
+                type: array
+                items:
+                  type: string
+                description: New tags (optional)
+              albumId:
+                type: string
+                format: uuid
+                description: New album ID (optional)
+          examples:
+            valid:
+              summary: Valid update
+              value:
+                title: "Updated Title"
+                description: "Updated description"
+                tags: ["updated", "tag"]
+                albumId: "album-456"
+    responses:
+      '200':
+        description: Image metadata updated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/GalleryImageResponse'
+      '400':
+        description: Invalid input
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '403':
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '404':
+        description: Image not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+  delete:
+    summary: Delete gallery image
+    description: Delete a gallery image. Only the owner or admin can delete.
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Image ID
+    responses:
+      '200':
+        description: Image deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/GalleryImageDeleteResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '403':
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '404':
+        description: Image not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error' 

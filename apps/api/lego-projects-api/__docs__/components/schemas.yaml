@@ -1,0 +1,167 @@
+User:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    username:
+      type: string
+    email:
+      type: string
+      format: email
+    preferredName:
+      type: string
+    avatar:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+GalleryImage:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    userId:
+      type: string
+      format: uuid
+    title:
+      type: string
+    description:
+      type: string
+      nullable: true
+    tags:
+      type: array
+      items:
+        type: string
+      nullable: true
+    imageUrl:
+      type: string
+    albumId:
+      type: string
+      format: uuid
+      nullable: true
+    flagged:
+      type: boolean
+    createdAt:
+      type: string
+      format: date-time
+    lastUpdatedAt:
+      type: string
+      format: date-time
+
+GalleryAlbum:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    userId:
+      type: string
+      format: uuid
+    title:
+      type: string
+    description:
+      type: string
+      nullable: true
+    coverImageId:
+      type: string
+      format: uuid
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    lastUpdatedAt:
+      type: string
+      format: date-time
+    images:
+      type: array
+      items:
+        $ref: '#/GalleryImage'
+
+GalleryFlag:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    imageId:
+      type: string
+      format: uuid
+    userId:
+      type: string
+      format: uuid
+    reason:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    lastUpdatedAt:
+      type: string
+      format: date-time
+
+Error:
+  type: object
+  properties:
+    error:
+      type: string
+    details:
+      type: string
+      nullable: true
+
+ValidationError:
+  type: object
+  properties:
+    error:
+      type: object
+      properties:
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        formErrors:
+          type: array
+          items:
+            type: string
+
+GalleryImageResponse:
+  type: object
+  properties:
+    message:
+      type: string
+    image:
+      $ref: '#/GalleryImage'
+
+GalleryImageDeleteResponse:
+  type: object
+  properties:
+    message:
+      type: string
+    image:
+      $ref: '#/GalleryImage'
+
+GalleryAlbumResponse:
+  type: object
+  properties:
+    album:
+      $ref: '#/GalleryAlbum'
+    images:
+      type: array
+      items:
+        $ref: '#/GalleryImage'
+
+GalleryFlagResponse:
+  type: object
+  properties:
+    message:
+      type: string
+    flag:
+      $ref: '#/GalleryFlag' 

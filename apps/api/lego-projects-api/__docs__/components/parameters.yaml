@@ -1,0 +1,35 @@
+id:
+  name: id
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+  description: Resource ID (user, album, or image)
+
+albumId:
+  name: albumId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+  description: Album ID
+
+imageId:
+  name: imageId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+  description: Image ID
+
+userId:
+  name: userId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+  description: User ID 

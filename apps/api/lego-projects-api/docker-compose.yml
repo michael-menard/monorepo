@@ -22,5 +22,26 @@ services:
     depends_on:
       - db
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 volumes:
-  db_data: 
+  db_data:
+  esdata:
+
+# Note: If running on Linux, you may need to increase the virtual memory map count:
+# sudo sysctl -w vm.max_map_count=262144 
