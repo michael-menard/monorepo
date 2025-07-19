@@ -121,12 +121,56 @@ export const mocGalleryAlbums = pgTable('moc_gallery_albums', {
   galleryAlbumIdx: index('idx_moc_gallery_albums_gallery_album_id_lazy').on(table.galleryAlbumId),
 }));
 
+export const wishlistItems = pgTable('wishlist_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  productLink: text('product_link'),
+  imageUrl: text('image_url'),
+  category: text('category'), // LEGO categories like 'Speed Champions', 'Modular', 'Star Wars', etc.
+  sortOrder: text('sort_order').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  userIdx: index('idx_wishlist_user_id').on(table.userId),
+  userSortIdx: index('idx_wishlist_sort_order').on(table.userId, table.sortOrder),
+  categorySortIdx: index('idx_wishlist_category_sort').on(table.userId, table.category, table.sortOrder),
+}));
+
+// MOC Parts Lists Table - Enhanced tracking for parts lists
+export const mocPartsLists = pgTable('moc_parts_lists', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  mocId: uuid('moc_id').notNull().references(() => mocInstructions.id, { onDelete: 'cascade' }),
+  fileId: uuid('file_id').references(() => mocFiles.id, { onDelete: 'set null' }), // Optional file reference
+  title: text('title').notNull(),
+  description: text('description'),
+  built: boolean('built').default(false),
+  purchased: boolean('purchased').default(false),
+  inventoryPercentage: text('inventory_percentage').default('0.00'), // Using text to match decimal precision
+  totalPartsCount: text('total_parts_count'), // Using text for large numbers
+  acquiredPartsCount: text('acquired_parts_count').default('0'),
+  costEstimate: text('cost_estimate'), // Using text for decimal precision
+  actualCost: text('actual_cost'), // Using text for decimal precision
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  mocIdx: index('idx_moc_parts_lists_moc_id').on(table.mocId),
+  fileIdx: index('idx_moc_parts_lists_file_id').on(table.fileId),
+  builtIdx: index('idx_moc_parts_lists_built').on(table.built),
+  purchasedIdx: index('idx_moc_parts_lists_purchased').on(table.purchased),
+  mocBuiltIdx: index('idx_moc_parts_lists_moc_built').on(table.mocId, table.built),
+  mocPurchasedIdx: index('idx_moc_parts_lists_moc_purchased').on(table.mocId, table.purchased),
+}));
+
 // Define relationships for lazy loading
 export const usersRelations = relations(users, ({ many }) => ({
   galleryImages: many(galleryImages),
   galleryAlbums: many(galleryAlbums),
   galleryFlags: many(galleryFlags),
   mocInstructions: many(mocInstructions),
+  wishlistItems: many(wishlistItems),
 }));
 
 export const galleryImagesRelations = relations(galleryImages, ({ one, many }) => ({
@@ -174,13 +218,15 @@ export const mocInstructionsRelations = relations(mocInstructions, ({ one, many 
   files: many(mocFiles),
   galleryImages: many(mocGalleryImages),
   galleryAlbums: many(mocGalleryAlbums),
+  partsLists: many(mocPartsLists),
 }));
 
-export const mocFilesRelations = relations(mocFiles, ({ one }) => ({
+export const mocFilesRelations = relations(mocFiles, ({ one, many }) => ({
   moc: one(mocInstructions, {
     fields: [mocFiles.mocId],
     references: [mocInstructions.id],
   }),
+  partsLists: many(mocPartsLists),
 }));
 
 export const mocGalleryImagesRelations = relations(mocGalleryImages, ({ one }) => ({
@@ -202,5 +248,23 @@ export const mocGalleryAlbumsRelations = relations(mocGalleryAlbums, ({ one }) =
   galleryAlbum: one(galleryAlbums, {
     fields: [mocGalleryAlbums.galleryAlbumId],
     references: [galleryAlbums.id],
+  }),
+}));
+
+export const mocPartsListsRelations = relations(mocPartsLists, ({ one }) => ({
+  moc: one(mocInstructions, {
+    fields: [mocPartsLists.mocId],
+    references: [mocInstructions.id],
+  }),
+  file: one(mocFiles, {
+    fields: [mocPartsLists.fileId],
+    references: [mocFiles.id],
+  }),
+}));
+
+export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
+  user: one(users, {
+    fields: [wishlistItems.userId],
+    references: [users.id],
   }),
 })); 

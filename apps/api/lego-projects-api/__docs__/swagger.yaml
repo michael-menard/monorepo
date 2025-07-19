@@ -36,6 +36,32 @@ paths:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download-info'
   /api/mocs/{id}/files/{fileId}/download:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download'
+  /api/moc-instructions/{mocId}/parts-lists:
+    $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists'
+  /api/moc-instructions/{mocId}/parts-lists/{partsListId}:
+    $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists/{partsListId}'
+  /api/moc-instructions/{mocId}/parts-lists/{partsListId}/status:
+    $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists/{partsListId}/status'
+  /api/user/parts-lists/summary:
+    $ref: './paths/moc-parts-lists.yaml#/user/parts-lists/summary'
+  /api/wishlist:
+    $ref: './paths/wishlist.yaml#/api/wishlist'
+  /api/wishlist/search:
+    $ref: './paths/wishlist.yaml#/api/wishlist/search'
+  /api/wishlist/{id}:
+    $ref: './paths/wishlist.yaml#/api/wishlist/{id}'
+  /api/wishlist/reorder:
+    $ref: './paths/wishlist.yaml#/api/wishlist/reorder'
+  /api/wishlist/reorder/debounced:
+    $ref: './paths/wishlist.yaml#/api/wishlist/reorder/debounced'
+  /api/wishlist/reorder/status:
+    $ref: './paths/wishlist.yaml#/api/wishlist/reorder/status'
+  /api/wishlist/reorder/cancel:
+    $ref: './paths/wishlist.yaml#/api/wishlist/reorder/cancel'
+  /api/wishlist/upload-image:
+    $ref: './paths/wishlist.yaml#/api/wishlist/upload-image'
+  /api/wishlist/image:
+    $ref: './paths/wishlist.yaml#/api/wishlist/image'
 components:
   schemas:
     $ref: './components/schemas.yaml'

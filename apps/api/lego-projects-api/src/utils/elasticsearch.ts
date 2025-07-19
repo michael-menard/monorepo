@@ -3,6 +3,7 @@ import { Client } from '@elastic/elasticsearch';
 const ELASTIC_URL = process.env.ELASTICSEARCH_URL || 'http://elasticsearch:9200';
 export const ES_INDEX = 'gallery_images';
 export const MOC_INDEX = 'moc_instructions';
+export const WISHLIST_INDEX = 'wishlist_items';
 
 export const esClient = new Client({ node: ELASTIC_URL });
 
@@ -152,6 +153,47 @@ export async function deleteMoc(id: string) {
   }
 }
 
+// --- WISHLIST INDEXING ---
+export async function indexWishlistItem(item: any) {
+  try {
+    await esClient.index({
+      index: WISHLIST_INDEX,
+      id: item.id,
+      document: {
+        ...item,
+        type: 'wishlist',
+      },
+    });
+  } catch (err: any) {
+    console.warn('Failed to index wishlist item in ES:', err.message);
+  }
+}
+
+export async function updateWishlistItem(item: any) {
+  try {
+    await esClient.update({
+      index: WISHLIST_INDEX,
+      id: item.id,
+      doc: {
+        ...item,
+        type: 'wishlist',
+      },
+      doc_as_upsert: true,
+    });
+  } catch (err: any) {
+    console.warn('Failed to update wishlist item in ES:', err.message);
+  }
+}
+
+export async function deleteWishlistItem(id: string) {
+  try {
+    await esClient.delete({ index: WISHLIST_INDEX, id });
+  } catch (err: any) {
+    if (err.meta && err.meta.statusCode === 404) return; // Already gone
+    console.warn('Failed to delete wishlist item from ES:', err.message);
+  }
+}
+
 // --- UNIFIED SEARCH ---
 export async function searchGalleryItems({
   userId,
@@ -276,6 +318,67 @@ export async function searchMocs({
   }
 }
 
+// --- WISHLIST SEARCH ---
+export async function searchWishlistItems({
+  userId,
+  query,
+  category,
+  from = 0,
+  size = 20,
+}: {
+  userId: string;
+  query?: string;
+  category?: string;
+  from?: number;
+  size?: number;
+}) {
+  const must: any[] = [ { term: { userId } } ];
+  
+  if (category) {
+    must.push({ term: { category } });
+  }
+  
+  if (query) {
+    must.push({
+      multi_match: {
+        query,
+        fields: ['title^3', 'description', 'category^2'],
+        fuzziness: 'AUTO',
+        type: 'best_fields',
+      },
+    });
+  }
+  
+  try {
+    const result = await esClient.search({
+      index: WISHLIST_INDEX,
+      from,
+      size,
+      query: { bool: { must } },
+      sort: [{ sortOrder: { order: 'asc' } }, { updatedAt: { order: 'desc' } }],
+      _source: [
+        'id',
+        'title',
+        'description',
+        'productLink',
+        'imageUrl',
+        'category',
+        'sortOrder',
+        'createdAt',
+        'updatedAt'
+      ],
+    });
+    
+    return {
+      hits: result.hits.hits.map((hit: any) => hit._source),
+      total: result.hits.total ? (typeof result.hits.total === 'number' ? result.hits.total : result.hits.total.value) : 0,
+    };
+  } catch (err: any) {
+    console.warn('Wishlist ES search failed, falling back to Postgres:', err.message);
+    return null;
+  }
+}
+
 // --- INDEX INITIALIZATION ---
 export async function initializeMocIndex() {
   try {
@@ -330,5 +433,61 @@ export async function initializeMocIndex() {
     }
   } catch (err: any) {
     console.warn('Failed to initialize MOC index:', err.message);
+  }
+} 
+
+// --- INDEX INITIALIZATION ---
+export async function initializeWishlistIndex() {
+  try {
+    // Check if index exists
+    const indexExists = await esClient.indices.exists({ index: WISHLIST_INDEX });
+    
+    if (!indexExists) {
+      await esClient.indices.create({
+        index: WISHLIST_INDEX,
+        mappings: {
+          properties: {
+            id: { type: 'keyword' },
+            userId: { type: 'keyword' },
+            title: { 
+              type: 'text',
+              analyzer: 'standard',
+              fields: {
+                keyword: { type: 'keyword' }
+              }
+            },
+            description: { 
+              type: 'text',
+              analyzer: 'standard'
+            },
+            productLink: { type: 'keyword' },
+            imageUrl: { type: 'keyword' },
+            category: { 
+              type: 'keyword',
+              fields: {
+                text: { type: 'text', analyzer: 'standard' }
+              }
+            },
+            sortOrder: { type: 'keyword' },
+            type: { type: 'keyword' },
+            createdAt: { type: 'date' },
+            updatedAt: { type: 'date' }
+          }
+        },
+        settings: {
+          analysis: {
+            analyzer: {
+              standard: {
+                type: 'standard',
+                stopwords: '_english_'
+              }
+            }
+          }
+        }
+      });
+      console.log(`Created Elasticsearch index: ${WISHLIST_INDEX}`);
+    }
+  } catch (err: any) {
+    console.warn('Failed to initialize Wishlist index:', err.message);
   }
 } 

@@ -208,4 +208,326 @@ MocInstruction:
       format: date-time
     updatedAt:
       type: string
-      format: date-time 
+      format: date-time
+
+MocPartsList:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    mocId:
+      type: string
+      format: uuid
+    fileId:
+      type: string
+      format: uuid
+      nullable: true
+    title:
+      type: string
+    description:
+      type: string
+      nullable: true
+    built:
+      type: boolean
+    purchased:
+      type: boolean
+    inventoryPercentage:
+      type: string
+      pattern: '^\d{1,3}\.\d{2}$'
+      description: 'Percentage of parts owned (0.00 to 100.00)'
+    totalPartsCount:
+      type: string
+      nullable: true
+      description: 'Total number of parts in this list'
+    acquiredPartsCount:
+      type: string
+      description: 'Number of parts currently owned/acquired'
+    costEstimate:
+      type: string
+      nullable: true
+      description: 'Estimated cost to purchase all parts'
+    actualCost:
+      type: string
+      nullable: true
+      description: 'Actual amount spent on parts'
+    notes:
+      type: string
+      nullable: true
+      description: 'User notes about this parts list'
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+CreateMocPartsList:
+  type: object
+  required:
+    - title
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+      nullable: true
+    fileId:
+      type: string
+      format: uuid
+      nullable: true
+    totalPartsCount:
+      type: string
+      nullable: true
+    costEstimate:
+      type: string
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+
+UpdateMocPartsList:
+  type: object
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 255
+    description:
+      type: string
+      nullable: true
+    built:
+      type: boolean
+    purchased:
+      type: boolean
+    inventoryPercentage:
+      type: string
+      pattern: '^\d{1,3}\.\d{2}$'
+    totalPartsCount:
+      type: string
+      nullable: true
+    acquiredPartsCount:
+      type: string
+    costEstimate:
+      type: string
+      nullable: true
+    actualCost:
+      type: string
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+
+PartsListStatusUpdate:
+  type: object
+  properties:
+    built:
+      type: boolean
+    purchased:
+      type: boolean
+    inventoryPercentage:
+      type: string
+      pattern: '^\d{1,3}\.\d{2}$'
+    acquiredPartsCount:
+      type: string
+    actualCost:
+      type: string
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+
+PartsListSummary:
+  type: object
+  properties:
+    statistics:
+      type: object
+      properties:
+        totalPartsLists:
+          type: integer
+        builtCount:
+          type: integer
+        purchasedCount:
+          type: integer
+        averageInventoryPercentage:
+          type: string
+    recentPartsLists:
+      type: array
+      items:
+        type: object
+        properties:
+          totalPartsLists:
+            type: string
+          built:
+            type: boolean
+          purchased:
+            type: boolean
+          mocTitle:
+            type: string
+          partsListTitle:
+            type: string
+          inventoryPercentage:
+            type: string
+
+# Wishlist Schemas
+WishlistItem:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: 'Unique identifier for the wishlist item'
+    userId:
+      type: string
+      format: uuid
+      description: 'ID of the user who owns this wishlist item'
+    title:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: 'Title of the wishlist item'
+    description:
+      type: string
+      maxLength: 1000
+      nullable: true
+      description: 'Optional description of the wishlist item'
+    productLink:
+      type: string
+      format: uri
+      nullable: true
+      description: 'Optional URL link to the product'
+    imageUrl:
+      type: string
+      format: uri
+      nullable: true
+      description: 'Optional URL link to an image of the item'
+    category:
+      type: string
+      maxLength: 100
+      nullable: true
+      description: 'LEGO category/theme (e.g., Speed Champions, Modular, Star Wars, etc.)'
+      example: 'Speed Champions'
+    sortOrder:
+      type: string
+      description: 'Sort order for displaying items in the list'
+    createdAt:
+      type: string
+      format: date-time
+      description: 'When the item was created'
+    updatedAt:
+      type: string
+      format: date-time
+      description: 'When the item was last updated'
+
+CreateWishlistItem:
+  type: object
+  required:
+    - title
+    - sortOrder
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: 'Title of the wishlist item'
+    description:
+      type: string
+      maxLength: 1000
+      nullable: true
+      description: 'Optional description of the wishlist item'
+    productLink:
+      type: string
+      format: uri
+      nullable: true
+      description: 'Optional URL link to the product'
+    imageUrl:
+      type: string
+      format: uri
+      nullable: true
+      description: 'Optional URL link to an image of the item'
+    category:
+      type: string
+      maxLength: 100
+      nullable: true
+      description: 'LEGO category/theme (e.g., Speed Champions, Modular, Star Wars, etc.)'
+      example: 'Speed Champions'
+    sortOrder:
+      type: string
+      description: 'Sort order for displaying items in the list'
+  example:
+    title: "LEGO Creator Expert Big Ben"
+    description: "Amazing detailed Big Ben set with moving clock hands"
+    productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+    category: "Creator Expert"
+    imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben.jpg"
+    sortOrder: "1"
+
+UpdateWishlistItem:
+  type: object
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: 'Updated title of the wishlist item'
+    description:
+      type: string
+      maxLength: 1000
+      nullable: true
+      description: 'Updated description of the wishlist item'
+    productLink:
+      type: string
+      format: uri
+      nullable: true
+      description: 'Updated URL link to the product'
+    imageUrl:
+      type: string
+      format: uri
+      nullable: true
+      description: 'Updated URL link to an image of the item'
+    category:
+      type: string
+      maxLength: 100
+      nullable: true
+      description: 'Updated LEGO category/theme (e.g., Speed Champions, Modular, Star Wars, etc.)'
+      example: 'Modular'
+    sortOrder:
+      type: string
+      description: 'Updated sort order for displaying items in the list'
+  example:
+    title: "LEGO Creator Expert Updated Big Ben"
+    description: "Updated description for the amazing Big Ben set"
+
+WishlistResponse:
+  type: object
+  properties:
+    status:
+      type: integer
+      example: 200
+    message:
+      type: string
+      example: "Wishlist retrieved successfully"
+    data:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/WishlistItem'
+
+WishlistItemResponse:
+  type: object
+  properties:
+    status:
+      type: integer
+      example: 201
+    message:
+      type: string
+      example: "Wishlist item created successfully"
+    data:
+      type: object
+      properties:
+        item:
+          $ref: '#/WishlistItem'

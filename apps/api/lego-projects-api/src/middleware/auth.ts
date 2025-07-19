@@ -8,6 +8,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: any;
+      authenticatedUserId?: string;
     }
   }
 }
@@ -89,5 +90,29 @@ export const canModifyProfile = (req: Request, res: Response, next: NextFunction
     return res.status(403).json({ error: 'You can only modify your own profile' });
   }
   
+  next();
+};
+
+// Middleware to ensure users can only access their own wishlist items
+export const wishlistOwnershipAuth = (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user?.sub;
+  
+  if (!userId) {
+    return res.status(403).json({ 
+      error: 'User not authenticated',
+      statusCode: 403 
+    });
+  }
+  
+  // For create operations, ensure userId in body matches authenticated user
+  if (req.method === 'POST' && req.body.userId && req.body.userId !== userId) {
+    return res.status(403).json({ 
+      error: 'You can only create wishlist items for yourself',
+      statusCode: 403 
+    });
+  }
+  
+  // Add authenticated userId to request for handlers to use
+  req.authenticatedUserId = userId;
   next();
 }; 

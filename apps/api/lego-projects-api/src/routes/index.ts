@@ -10,6 +10,7 @@ import { requireAuth } from '../middleware/auth';
 import { getAllAlbums, getAllImages } from '../handlers/gallery';
 import { getGallery } from '../handlers/gallery';
 import mocInstructionsRouter from './moc-instructions';
+import wishlistRouter from './wishlist';
 
 const router = Router();
 
@@ -42,5 +43,8 @@ router.use('/api/mocs', mocInstructionsRouter);
 
 // Register Profile router
 router.use('/api/users', profileRouter);
+
+// Register Wishlist router
+router.use('/api/wishlist', wishlistRouter);
 
 export default router; 

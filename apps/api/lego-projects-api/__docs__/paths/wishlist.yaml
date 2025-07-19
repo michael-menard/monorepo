@@ -1,0 +1,1147 @@
+/api/wishlist:
+  get:
+    summary: Get all wishlist items for authenticated user
+    description: |
+      Retrieve all wishlist items for the authenticated user, ordered by sort order.
+      Returns an empty array if the user has no wishlist items.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    parameters:
+      - name: category
+        in: query
+        description: Filter wishlist items by LEGO category/theme
+        required: false
+        schema:
+          type: string
+        example: "Speed Champions"
+    responses:
+      '200':
+        description: Wishlist items retrieved successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/WishlistResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Wishlist retrieved successfully"
+                  data:
+                    items:
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        userId: "123e4567-e89b-12d3-a456-426614174000"
+                        title: "LEGO Creator Expert Big Ben"
+                        description: "Amazing detailed Big Ben set"
+                        productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                        imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben.jpg"
+                        sortOrder: "1"
+                        createdAt: "2024-12-30T10:00:00Z"
+                        updatedAt: "2024-12-30T10:00:00Z"
+              empty:
+                value:
+                  status: 200
+                  message: "Wishlist retrieved successfully"
+                  data:
+                    items: []
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  status: 403
+                  error: "UNAUTHORIZED"
+                  message: "User not authenticated"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/search:
+  get:
+    summary: Search wishlist items with full-text search and category filtering
+    description: |
+      Search through wishlist items using Elasticsearch for full-text search capabilities.
+      Supports searching by text query and filtering by category.
+      Falls back to database search if Elasticsearch is unavailable.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    parameters:
+      - name: q
+        in: query
+        description: Search query to match against title, description, and category
+        required: false
+        schema:
+          type: string
+        example: "big ben"
+      - name: category
+        in: query
+        description: Filter by LEGO category/theme
+        required: false
+        schema:
+          type: string
+        example: "Creator Expert"
+      - name: from
+        in: query
+        description: Starting index for pagination
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        example: 0
+      - name: size
+        in: query
+        description: Number of results to return
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        example: 20
+    responses:
+      '200':
+        description: Wishlist search completed successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                  example: "Wishlist search completed successfully"
+                data:
+                  type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '../components/schemas.yaml#/WishlistItem'
+                    total:
+                      type: integer
+                      description: Total number of matching items
+                      example: 5
+                    source:
+                      type: string
+                      enum: [elasticsearch, database]
+                      description: Data source used for the search
+                      example: "elasticsearch"
+            examples:
+              elasticsearch_results:
+                value:
+                  status: 200
+                  message: "Wishlist search completed successfully"
+                  data:
+                    items:
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        userId: "123e4567-e89b-12d3-a456-426614174000"
+                        title: "LEGO Creator Expert Big Ben"
+                        description: "Amazing detailed Big Ben set"
+                        productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                        imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben.jpg"
+                        category: "Creator Expert"
+                        sortOrder: "1"
+                        createdAt: "2024-12-30T10:00:00Z"
+                        updatedAt: "2024-12-30T10:00:00Z"
+                    total: 1
+                    source: "elasticsearch"
+              database_fallback:
+                value:
+                  status: 200
+                  message: "Wishlist search completed successfully"
+                  data:
+                    items: []
+                    total: 0
+                    source: "database"
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+  post:
+    summary: Create a new wishlist item
+    description: |
+      Add a new item to the authenticated user's wishlist.
+      All fields except title and sortOrder are optional.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CreateWishlistItem'
+          examples:
+            complete:
+              summary: Complete wishlist item
+              value:
+                title: "LEGO Creator Expert Big Ben"
+                description: "Amazing detailed Big Ben set with moving clock hands"
+                productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben.jpg"
+                sortOrder: "1"
+            minimal:
+              summary: Minimal wishlist item
+              value:
+                title: "Simple LEGO Set"
+                sortOrder: "2"
+    responses:
+      '201':
+        description: Wishlist item created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/WishlistItemResponse'
+            examples:
+              success:
+                value:
+                  status: 201
+                  message: "Wishlist item created successfully"
+                  data:
+                    item:
+                      id: "550e8400-e29b-41d4-a716-446655440001"
+                      userId: "123e4567-e89b-12d3-a456-426614174000"
+                      title: "LEGO Creator Expert Big Ben"
+                      description: "Amazing detailed Big Ben set with moving clock hands"
+                      productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                      imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben.jpg"
+                      sortOrder: "1"
+                      createdAt: "2024-12-30T10:30:00Z"
+                      updatedAt: "2024-12-30T10:30:00Z"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              validationError:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "Invalid input data"
+                  details:
+                    - code: "too_small"
+                      minimum: 1
+                      path: ["title"]
+                      message: "Title is required"
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  status: 403
+                  error: "UNAUTHORIZED"
+                  message: "User not authenticated"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/{id}:
+  put:
+    summary: Update wishlist item (full update)
+    description: |
+      Update an existing wishlist item. Only the owner can update their items.
+      This performs a full update - include all fields you want to keep.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The ID of the wishlist item to update
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateWishlistItem'
+          examples:
+            update:
+              summary: Update wishlist item
+              value:
+                title: "Updated LEGO Creator Expert Big Ben"
+                description: "Updated description for the amazing Big Ben set"
+                productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben-updated.jpg"
+                sortOrder: "1"
+    responses:
+      '200':
+        description: Wishlist item updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/WishlistItemResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Wishlist item updated successfully"
+                  data:
+                    item:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      userId: "123e4567-e89b-12d3-a456-426614174000"
+                      title: "Updated LEGO Creator Expert Big Ben"
+                      description: "Updated description for the amazing Big Ben set"
+                      productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                      imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben-updated.jpg"
+                      sortOrder: "1"
+                      createdAt: "2024-12-30T10:00:00Z"
+                      updatedAt: "2024-12-30T11:00:00Z"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '404':
+        description: Wishlist item not found or not owned by user
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              notFound:
+                value:
+                  status: 404
+                  error: "NOT_FOUND"
+                  message: "Wishlist item not found or you do not have permission to modify it"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+  patch:
+    summary: Update wishlist item (partial update)
+    description: |
+      Partially update an existing wishlist item. Only the owner can update their items.
+      Only include the fields you want to update - other fields will remain unchanged.
+      This is the preferred method for partial updates.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The ID of the wishlist item to update
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateWishlistItem'
+          examples:
+            partialUpdate:
+              summary: Partial update - only title
+              value:
+                title: "Updated Title Only"
+            multipleFields:
+              summary: Update multiple fields
+              value:
+                title: "New Title"
+                description: "New description"
+                productLink: "https://example.com/new-product"
+    responses:
+      '200':
+        description: Wishlist item updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/WishlistItemResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Wishlist item updated successfully"
+                  data:
+                    item:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      userId: "123e4567-e89b-12d3-a456-426614174000"
+                      title: "Updated Title Only"
+                      description: "Original description remains"
+                      productLink: "https://www.lego.com/en-us/product/big-ben-10253"
+                      imageUrl: "https://www.lego.com/cdn/cs/set/assets/big-ben.jpg"
+                      sortOrder: "1"
+                      createdAt: "2024-12-30T10:00:00Z"
+                      updatedAt: "2024-12-30T11:15:00Z"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              validationError:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "Invalid input data"
+                  details:
+                    - code: "invalid_string"
+                      path: ["productLink"]
+                      message: "Product link must be a valid URL"
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '404':
+        description: Wishlist item not found or not owned by user
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              notFound:
+                value:
+                  status: 404
+                  error: "NOT_FOUND"
+                  message: "Wishlist item not found or you do not have permission to modify it"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+  delete:
+    summary: Delete wishlist item
+    description: |
+      Delete a wishlist item. Only the owner can delete their items.
+      This action cannot be undone.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The ID of the wishlist item to delete
+    responses:
+      '200':
+        description: Wishlist item deleted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                  example: "Wishlist item deleted successfully"
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Wishlist item deleted successfully"
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '404':
+        description: Wishlist item not found or not owned by user
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              notFound:
+                value:
+                  status: 404
+                  error: "NOT_FOUND"
+                  message: "Wishlist item not found or you do not have permission to delete it"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/reorder:
+  put:
+    summary: Reorder wishlist items
+    description: |
+      Update the sort order of multiple wishlist items at once.
+      Only the owner can reorder their items.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - itemOrders
+            properties:
+              itemOrders:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - sortOrder
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: The ID of the wishlist item
+                    sortOrder:
+                      type: string
+                      description: The new sort order for this item
+          examples:
+            reorder:
+              summary: Reorder three items
+              value:
+                itemOrders:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    sortOrder: "3"
+                  - id: "550e8400-e29b-41d4-a716-446655440001"
+                    sortOrder: "1"
+                  - id: "550e8400-e29b-41d4-a716-446655440002"
+                    sortOrder: "2"
+    responses:
+      '200':
+        description: Wishlist reordered successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/WishlistResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Wishlist reordered successfully"
+                  data:
+                    items:
+                      - id: "550e8400-e29b-41d4-a716-446655440001"
+                        title: "First Item"
+                        sortOrder: "1"
+                      - id: "550e8400-e29b-41d4-a716-446655440002"
+                        title: "Second Item"
+                        sortOrder: "2"
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        title: "Third Item"
+                        sortOrder: "3"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              validationError:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "itemOrders must be a non-empty array"
+      '403':
+        description: User not authenticated or forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  status: 403
+                  error: "UNAUTHORIZED"
+                  message: "User not authenticated"
+              forbidden:
+                value:
+                  status: 403
+                  error: "FORBIDDEN"
+                  message: "You can only reorder your own wishlist items"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+  post:
+    summary: Reorder wishlist items (alternative method)
+    description: |
+      Update the sort order of multiple wishlist items at once using POST method.
+      Functionally identical to the PUT method - use whichever your client prefers.
+      Only the owner can reorder their items.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - itemOrders
+            properties:
+              itemOrders:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - sortOrder
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: The ID of the wishlist item
+                    sortOrder:
+                      type: string
+                      description: The new sort order for this item
+              requestId:
+                type: string
+                description: Optional request ID for tracking
+          examples:
+            reorder_post:
+              summary: Reorder using POST method
+              value:
+                itemOrders:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    sortOrder: "3"
+                  - id: "550e8400-e29b-41d4-a716-446655440001"
+                    sortOrder: "1"
+                  - id: "550e8400-e29b-41d4-a716-446655440002"
+                    sortOrder: "2"
+                requestId: "req-456"
+    responses:
+      '200':
+        description: Wishlist reordered successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/WishlistResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Wishlist reordered successfully"
+                  data:
+                    items:
+                      - id: "550e8400-e29b-41d4-a716-446655440001"
+                        title: "First Item"
+                        sortOrder: "1"
+                      - id: "550e8400-e29b-41d4-a716-446655440002"
+                        title: "Second Item"
+                        sortOrder: "2"
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        title: "Third Item"
+                        sortOrder: "3"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              validationError:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "itemOrders must be a non-empty array"
+      '403':
+        description: User not authenticated or forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  status: 403
+                  error: "UNAUTHORIZED"
+                  message: "User not authenticated"
+              forbidden:
+                value:
+                  status: 403
+                  error: "FORBIDDEN"
+                  message: "You can only reorder your own wishlist items"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/upload-image:
+  post:
+    summary: Upload image for wishlist
+    description: |
+      Upload an image file for use in wishlist items.
+      Supports JPEG and HEIC formats with a maximum size of 20MB.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - image
+            properties:
+              image:
+                type: string
+                format: binary
+                description: Image file (JPEG or HEIC, max 20MB)
+          examples:
+            upload:
+              summary: Upload JPEG image
+              value:
+                image: (binary file)
+    responses:
+      '200':
+        description: Image uploaded successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                  example: "Image uploaded successfully"
+                data:
+                  type: object
+                  properties:
+                    imageUrl:
+                      type: string
+                      format: uri
+                      description: URL of the uploaded image
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Image uploaded successfully"
+                  data:
+                    imageUrl: "https://bucket.s3.region.amazonaws.com/wishlist/user-123/wishlist-uuid.jpg"
+      '400':
+        description: Invalid file or validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              invalidFileType:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "Only JPEG and HEIC files are supported"
+              noFile:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "No file provided"
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '413':
+        description: File too large
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              fileTooLarge:
+                value:
+                  status: 413
+                  error: "FILE_ERROR"
+                  message: "File size exceeds 20MB limit"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/image:
+  delete:
+    summary: Delete wishlist image
+    description: |
+      Delete an image that was previously uploaded for wishlist use.
+      Only the owner can delete their images.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - imageUrl
+            properties:
+              imageUrl:
+                type: string
+                format: uri
+                description: URL of the image to delete
+          examples:
+            delete:
+              summary: Delete image by URL
+              value:
+                imageUrl: "https://bucket.s3.region.amazonaws.com/wishlist/user-123/wishlist-uuid.jpg"
+    responses:
+      '200':
+        description: Image deleted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                  example: "Image deleted successfully"
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Image deleted successfully"
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              noImageUrl:
+                value:
+                  status: 400
+                  error: "VALIDATION_ERROR"
+                  message: "Image URL is required"
+      '403':
+        description: User not authenticated or forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            examples:
+              unauthorized:
+                value:
+                  status: 403
+                  error: "UNAUTHORIZED"
+                  message: "User not authenticated"
+              forbidden:
+                value:
+                  status: 403
+                  error: "FORBIDDEN"
+                  message: "You can only delete your own images"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/reorder/debounced:
+  post:
+    summary: Debounced reorder wishlist items
+    description: |
+      Debounced endpoint for reordering wishlist items with rapid UI updates.
+      This endpoint batches rapid successive reorder requests to reduce database load.
+      Responses are immediate for better UX, with actual database updates happening after a delay.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - itemOrders
+            properties:
+              itemOrders:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - sortOrder
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: The ID of the wishlist item
+                    sortOrder:
+                      type: string
+                      description: The new sort order for this item
+              requestId:
+                type: string
+                description: Optional request ID for tracking
+          examples:
+            debounced_reorder:
+              summary: Debounced reorder request
+              value:
+                itemOrders:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    sortOrder: "3"
+                  - id: "550e8400-e29b-41d4-a716-446655440001"
+                    sortOrder: "1"
+                requestId: "req-123-456"
+    responses:
+      '200':
+        description: Reorder request accepted (will be processed with debouncing)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                  example: "Reorder request accepted"
+                data:
+                  type: object
+                  properties:
+                    requestId:
+                      type: string
+                      example: "req-123-456"
+                    pendingExecution:
+                      type: boolean
+                      example: true
+                    estimatedExecutionTime:
+                      type: string
+                      format: date-time
+                      example: "2024-12-30T11:00:30Z"
+            examples:
+              accepted:
+                value:
+                  status: 200
+                  message: "Reorder request accepted"
+                  data:
+                    requestId: "req-123-456"
+                    pendingExecution: true
+                    estimatedExecutionTime: "2024-12-30T11:00:30Z"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/reorder/status:
+  get:
+    summary: Check reorder operation status
+    description: |
+      Check if there are any pending reorder operations for the authenticated user.
+      Useful for showing loading states in the UI while debounced operations are pending.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Reorder status retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    hasPending:
+                      type: boolean
+                      description: Whether there are pending reorder operations
+                    requestId:
+                      type: string
+                      nullable: true
+                      description: ID of the pending request
+                    timeRemaining:
+                      type: integer
+                      nullable: true
+                      description: Milliseconds until execution
+                    estimatedExecutionTime:
+                      type: string
+                      format: date-time
+                      nullable: true
+                      description: When the operation will execute
+            examples:
+              pending:
+                value:
+                  status: 200
+                  message: "Reorder status retrieved"
+                  data:
+                    hasPending: true
+                    requestId: "req-123-456"
+                    timeRemaining: 300
+                    estimatedExecutionTime: "2024-12-30T11:00:30Z"
+              no_pending:
+                value:
+                  status: 200
+                  message: "No pending reorder operations"
+                  data:
+                    hasPending: false
+                    requestId: null
+                    timeRemaining: null
+                    estimatedExecutionTime: null
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/wishlist/reorder/cancel:
+  post:
+    summary: Cancel pending reorder operation
+    description: |
+      Cancel any pending debounced reorder operation for the authenticated user.
+      This immediately cancels the pending operation before it executes.
+    tags:
+      - Wishlist
+    security:
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Pending reorder operation cancelled successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                message:
+                  type: string
+                  example: "Pending reorder operation cancelled"
+                data:
+                  type: object
+                  properties:
+                    cancelled:
+                      type: boolean
+                      example: true
+                    requestId:
+                      type: string
+                      nullable: true
+                      example: "req-123-456"
+            examples:
+              cancelled:
+                value:
+                  status: 200
+                  message: "Pending reorder operation cancelled"
+                  data:
+                    cancelled: true
+                    requestId: "req-123-456"
+              none_pending:
+                value:
+                  status: 200
+                  message: "No pending reorder operations to cancel"
+                  data:
+                    cancelled: false
+                    requestId: null
+      '403':
+        description: User not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
