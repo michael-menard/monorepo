@@ -1,0 +1,74 @@
+# Profile Page Backend Implementation PRD
+
+## Overview
+Implement backend support for the Profile Page component including user data retrieval, avatar storage, upload limits, and endpoint protection. This will provide the API endpoints needed for the frontend ProfilePage component to function properly.
+
+## Current Status
+The MOC Instructions backend is complete. This Profile Page backend will build on the existing infrastructure and patterns established in the lego-projects-api.
+
+## Core Requirements
+
+### 1. User Profile Management
+- Fetch user profile data (name, bio, avatar URL)
+- Update user profile information (name, bio)
+- Handle avatar uploads with proper validation
+- Secure all endpoints with authentication
+
+### 2. Avatar Upload System
+- Support .jpg and .heic file formats
+- Implement file size validation (max 10MB)
+- Store avatars in S3 with user-scoped paths
+- Generate and return avatar URLs
+- Handle avatar deletion
+
+### 3. API Endpoints
+- GET /api/profile - Get current user profile
+- PATCH /api/profile - Update profile information
+- POST /api/profile/avatar - Upload avatar image
+- DELETE /api/profile/avatar - Delete avatar image
+
+### 4. Security & Validation
+- Enforce authentication on all endpoints
+- Validate file types and sizes
+- Prevent unauthorized access to other users' profiles
+- Handle edge cases gracefully
+
+### 5. Database Integration
+- Extend existing user schema if needed
+- Store profile metadata in PostgreSQL
+- Handle avatar file references
+
+### 6. Testing
+- Comprehensive Jest + Supertest tests
+- Mock external dependencies (S3, database)
+- Test all success and error scenarios
+- Test file upload edge cases
+
+## Technical Implementation
+
+### Database Schema
+- Extend users table with profile fields (bio, avatar_url)
+- Ensure proper indexing for profile queries
+
+### File Storage
+- Use existing S3 utilities from MOC implementation
+- Implement user-scoped avatar storage
+- Handle file cleanup on deletion
+
+### API Response Format
+- Use consistent response format with status, message, and data
+- Include proper error handling and status codes
+- Return avatar URLs for frontend consumption
+
+### Validation
+- Use Zod schemas for request validation
+- Implement file type and size validation
+- Handle malformed requests gracefully
+
+## Success Criteria
+- All endpoints return proper HTTP status codes
+- File uploads work correctly with size/type validation
+- Authentication is enforced on all endpoints
+- Comprehensive test coverage (90%+)
+- Proper error handling for all edge cases
+- Integration with existing auth system 

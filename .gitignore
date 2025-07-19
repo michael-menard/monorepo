@@ -54,9 +54,9 @@ node_modules/
 *.sw?
 # OS specific
 
+*storybook.log
+storybook-static
+
 # Task files
 # tasks.json
 # tasks/ 
-
-*storybook.log
-storybook-static

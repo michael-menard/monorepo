@@ -1,0 +1,164 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Extend User Database Schema for Profile Data",
+        "description": "Add profile fields (bio, avatar_url) to the existing users table in PostgreSQL. Ensure proper indexing and constraints.",
+        "priority": "high",
+        "status": "done",
+        "dependencies": [],
+        "details": "Extend the existing users table schema to include profile-specific fields. Add bio (text, nullable) and avatar_url (text, nullable) columns. Create appropriate indexes for profile queries. Update the Drizzle schema definition.",
+        "testStrategy": "Create database migration tests to verify schema changes. Test that existing user data is preserved and new fields are properly nullable."
+      },
+      {
+        "id": 2,
+        "title": "Create Profile Routes and Router",
+        "description": "Set up Express router for profile endpoints with proper middleware and route definitions.",
+        "priority": "high",
+        "status": "done",
+        "dependencies": [
+          1
+        ],
+        "details": "Create src/routes/profile.ts with route definitions for GET /api/profile, PATCH /api/profile, POST /api/profile/avatar, and DELETE /api/profile/avatar. Register the router in the main routes index. Apply authentication middleware to all routes.",
+        "testStrategy": "Test that routes are properly registered and middleware is applied. Verify route paths match expected API structure."
+      },
+      {
+        "id": 3,
+        "title": "Implement GET /api/profile Handler",
+        "description": "Create handler to fetch current user's profile data including name, bio, and avatar URL.",
+        "priority": "high",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2
+        ],
+        "details": "Implement getProfile handler in src/handlers/profile.ts. Query user data from database using authenticated user ID. Return profile data in consistent API response format. Handle cases where profile fields are null.",
+        "testStrategy": "Write Jest + Supertest tests for successful profile retrieval, unauthorized access, and missing user scenarios. Mock database and authentication."
+      },
+      {
+        "id": 4,
+        "title": "Implement PATCH /api/profile Handler",
+        "description": "Create handler to update user profile information (name, bio) with proper validation.",
+        "priority": "high",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2
+        ],
+        "details": "Implement updateProfile handler with Zod validation for ProfileUpdateSchema. Update only provided fields in database. Return updated profile data. Ensure only the authenticated user can update their own profile.",
+        "testStrategy": "Test successful updates, validation errors, unauthorized access, and partial updates. Mock database operations and validate response format."
+      },
+      {
+        "id": 5,
+        "title": "Create Avatar Upload Utility",
+        "description": "Implement S3-based avatar upload utility with file validation and user-scoped storage.",
+        "priority": "high",
+        "status": "done",
+        "dependencies": [],
+        "details": "Create src/storage/avatar-storage.ts utility. Support .jpg and .heic file formats. Implement file size validation (max 10MB). Store files in S3 with user-scoped paths (users/{userId}/avatars/). Generate unique filenames using UUID. Return file URL and metadata.",
+        "testStrategy": "Test file upload with valid files, size validation, type validation, and S3 error handling. Mock S3 operations and verify file paths."
+      },
+      {
+        "id": 6,
+        "title": "Implement POST /api/profile/avatar Handler",
+        "description": "Create handler for avatar upload with file validation and database updates.",
+        "priority": "high",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          5
+        ],
+        "details": "Implement uploadAvatar handler using multer for file upload. Validate file type and size using Zod schema. Upload to S3 using avatar storage utility. Update user's avatar_url in database. Return avatar URL in response. Handle upload failures gracefully.",
+        "testStrategy": "Test successful uploads, file validation errors, S3 failures, and database update failures. Mock all external dependencies."
+      },
+      {
+        "id": 7,
+        "title": "Implement DELETE /api/profile/avatar Handler",
+        "description": "Create handler to delete user's avatar and clean up S3 storage.",
+        "priority": "medium",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          5
+        ],
+        "details": "Implement deleteAvatar handler. Remove avatar file from S3. Clear avatar_url in database. Handle cases where no avatar exists. Return confirmation of deletion.",
+        "testStrategy": "Test successful deletion, missing avatar scenarios, S3 deletion failures, and database update failures. Mock S3 and database operations."
+      },
+      {
+        "id": 8,
+        "title": "Add Zod Validation Schemas",
+        "description": "Create comprehensive Zod schemas for profile update and avatar upload validation.",
+        "priority": "high",
+        "status": "done",
+        "dependencies": [],
+        "details": "Create ProfileUpdateSchema for name, username, and bio validation. Create AvatarUploadSchema for file type and size validation. Add proper error messages and constraints. Export schemas for use in handlers.",
+        "testStrategy": "Test schema validation with valid and invalid data. Verify error messages are user-friendly and constraints are properly enforced."
+      },
+      {
+        "id": 9,
+        "title": "Implement Error Handling and Edge Cases",
+        "description": "Add comprehensive error handling for all profile endpoints and edge cases.",
+        "priority": "medium",
+        "status": "pending",
+        "dependencies": [
+          3,
+          4,
+          6,
+          7
+        ],
+        "details": "Handle file upload failures, database connection errors, S3 errors, and validation errors. Implement proper HTTP status codes (400, 403, 404, 413, 500). Add logging for debugging. Handle duplicate filename scenarios.",
+        "testStrategy": "Test all error scenarios and verify proper status codes and error messages. Test edge cases like network failures and concurrent uploads."
+      },
+      {
+        "id": 10,
+        "title": "Write Comprehensive Integration Tests",
+        "description": "Create Jest + Supertest tests for all profile endpoints with mocked dependencies.",
+        "priority": "high",
+        "status": "pending",
+        "dependencies": [
+          3,
+          4,
+          6,
+          7,
+          8,
+          9
+        ],
+        "details": "Create src/__tests__/profile.integration.test.ts. Test all endpoints with success and error scenarios. Mock database, S3, and authentication. Test file upload edge cases, validation errors, and authorization failures. Achieve 90%+ test coverage.",
+        "testStrategy": "Run tests with pnpm test. Verify all endpoints are covered. Test both success and failure scenarios. Mock all external dependencies."
+      },
+      {
+        "id": 11,
+        "title": "Add Profile Routes to Main Application",
+        "description": "Integrate profile routes into the main Express application and verify all endpoints work.",
+        "priority": "high",
+        "status": "pending",
+        "dependencies": [
+          2,
+          10
+        ],
+        "details": "Register profile router in main routes index. Update API documentation. Test all endpoints manually. Verify authentication integration. Check that all middleware is properly applied.",
+        "testStrategy": "Start the server and test all endpoints manually. Verify authentication works correctly. Check that routes are properly registered and accessible."
+      },
+      {
+        "id": 12,
+        "title": "Document Profile API Endpoints",
+        "description": "Create comprehensive documentation for all profile endpoints, including request/response formats and error codes.",
+        "priority": "low",
+        "status": "pending",
+        "dependencies": [
+          11
+        ],
+        "details": "Document all four profile endpoints with request/response examples. Include error codes and validation rules. Add to API documentation. Include authentication requirements and file upload specifications.",
+        "testStrategy": "Review documentation for accuracy and completeness. Verify examples work with actual API endpoints."
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-19T00:25:13.135Z",
+      "updated": "2025-07-19T00:33:35.909Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

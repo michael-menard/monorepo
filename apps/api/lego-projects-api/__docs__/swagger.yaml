@@ -28,6 +28,14 @@ paths:
     $ref: './paths/albums.yaml#/api/albums/{id}'
   /api/flag:
     $ref: './paths/flag.yaml#/api/flag'
+  /api/mocs:
+    $ref: './paths/moc-instructions.yaml#/api/mocs'
+  /api/mocs/{id}:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}'
+  /api/mocs/{id}/files/{fileId}/download-info:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download-info'
+  /api/mocs/{id}/files/{fileId}/download:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download'
 components:
   schemas:
     $ref: './components/schemas.yaml'

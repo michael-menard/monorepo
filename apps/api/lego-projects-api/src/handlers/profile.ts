@@ -3,7 +3,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db/client';
 import { users } from '../db/schema';
 import { z } from 'zod';
-import { avatarUpload, saveAvatar, deleteAvatar as deleteAvatarFile } from '../storage';
+import { uploadAvatar as uploadAvatarFile, deleteAvatar as deleteAvatarFile } from '../storage/avatar-storage';
+import { ProfileUpdateSchema, AvatarUploadSchema } from '../types';
 
 // Error handling middleware for multer
 export const handleUploadError = (error: any, req: Request, res: Response, next: any) => {
@@ -33,21 +34,17 @@ export const getProfile = async (req: Request, res: Response) => {
   }
 };
 
-const CreateProfileSchema = z.object({
-  username: z.string().min(1).optional(),
-  email: z.string().email(),
-  preferredName: z.string().min(1).optional(),
-});
-
-type CreateProfileInput = z.infer<typeof CreateProfileSchema>;
-
 export const createProfile = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { username, email, preferredName } = req.body;
+  const { username, email, preferredName, bio } = req.body;
   const { file } = req;
 
-  // Validate input
-  const parsed = CreateProfileSchema.safeParse({ username, email, preferredName });
+  // Validate input - create a schema that includes all profile fields
+  const ProfileCreateSchema = ProfileUpdateSchema.extend({
+    email: z.string().email('Invalid email format'),
+    preferredName: z.string().min(1, 'Preferred name must be at least 1 character').max(100, 'Preferred name must be less than 100 characters').optional(),
+  });
+  const parsed = ProfileCreateSchema.safeParse({ username, email, preferredName, bio });
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
@@ -66,16 +63,17 @@ export const createProfile = async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    // Save avatar (S3 or local)
-    const avatarUrl = await saveAvatar(id, file);
+    // Upload avatar (S3 or local)
+    const avatarUrl = await uploadAvatarFile(id, file);
 
     // Insert new user
     const [user] = await db.insert(users).values({
       id,
       username: parsed.data.username,
-      email: parsed.data.email,
-      preferredName: parsed.data.preferredName,
-      avatar: avatarUrl,
+      email,
+      preferredName,
+      bio: parsed.data.bio,
+      avatarUrl: avatarUrl,
     }).returning();
 
     res.status(201).json(user);
@@ -86,20 +84,16 @@ export const createProfile = async (req: Request, res: Response) => {
   }
 };
 
-const UpdateProfileSchema = z.object({
-  username: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  preferredName: z.string().min(1).optional(),
-});
-
-type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
-
 export const updateProfile = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { username, email, preferredName } = req.body;
+  const { username, email, preferredName, bio } = req.body;
 
-  // Validate input
-  const parsed = UpdateProfileSchema.safeParse({ username, email, preferredName });
+  // Validate input - create a schema that includes all profile fields
+  const ProfileUpdateFullSchema = ProfileUpdateSchema.extend({
+    email: z.string().email('Invalid email format').optional(),
+    preferredName: z.string().min(1, 'Preferred name must be at least 1 character').max(100, 'Preferred name must be less than 100 characters').optional(),
+  });
+  const parsed = ProfileUpdateFullSchema.safeParse({ username, email, preferredName, bio });
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
@@ -116,6 +110,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (parsed.data.username !== undefined) updateData.username = parsed.data.username;
     if (parsed.data.email !== undefined) updateData.email = parsed.data.email;
     if (parsed.data.preferredName !== undefined) updateData.preferredName = parsed.data.preferredName;
+    if (parsed.data.bio !== undefined) updateData.bio = parsed.data.bio;
 
     const [updatedUser] = await db
       .update(users)
@@ -150,17 +145,17 @@ export const uploadAvatar = async (req: Request, res: Response) => {
     const user = existing[0];
 
     // Delete old avatar if it exists
-    if (user.avatar) {
-      await deleteAvatarFile(user.avatar);
+    if (user.avatarUrl) {
+      await deleteAvatarFile(user.avatarUrl);
     }
 
-    // Save new avatar
-    const avatarUrl = await saveAvatar(id, file);
+    // Upload new avatar
+    const avatarUrl = await uploadAvatarFile(id, file);
 
     // Update user with new avatar
     const [updatedUser] = await db
       .update(users)
-      .set({ avatar: avatarUrl, updatedAt: new Date() })
+      .set({ avatarUrl: avatarUrl, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
 
@@ -191,14 +186,14 @@ export const deleteAvatar = async (req: Request, res: Response) => {
     const user = existing[0];
 
     // Delete avatar file if it exists
-    if (user.avatar) {
-      await deleteAvatarFile(user.avatar);
+    if (user.avatarUrl) {
+      await deleteAvatarFile(user.avatarUrl);
     }
 
     // Update user to remove avatar reference
     const [updatedUser] = await db
       .update(users)
-      .set({ avatar: null, updatedAt: new Date() })
+      .set({ avatarUrl: null, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
 

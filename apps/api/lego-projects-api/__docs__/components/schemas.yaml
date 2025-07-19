@@ -165,3 +165,47 @@ GalleryFlagResponse:
       type: string
     flag:
       $ref: '#/GalleryFlag' 
+
+ApiResponse:
+  type: object
+  properties:
+    status:
+      type: integer
+    message:
+      type: string
+    data:
+      nullable: true
+    error:
+      type: string
+      nullable: true
+    details:
+      nullable: true
+
+MocInstruction:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    userId:
+      type: string
+      format: uuid
+    title:
+      type: string
+    description:
+      type: string
+      nullable: true
+    tags:
+      type: array
+      items:
+        type: string
+      nullable: true
+    thumbnailUrl:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time 

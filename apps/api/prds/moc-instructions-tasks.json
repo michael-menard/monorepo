@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "title": "Design PostgreSQL schema for MOC metadata and file references",
+    "description": "Create tables for MOCs, files, and user ownership. Ensure support for metadata, tags, and file associations.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 2,
+    "title": "Implement S3 file upload utility (user-scoped)",
+    "description": "Create a utility to upload instruction, parts list, and image files to S3, scoped by user ID.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 3,
+    "title": "Implement S3 file download and deletion utility",
+    "description": "Enable secure download and deletion of files from S3, ensuring only owners can access/delete.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 4,
+    "title": "Set up Elasticsearch index for MOC metadata",
+    "description": "Configure Elasticsearch to index MOC titles, tags, and descriptions for full-text search.",
+    "priority": "medium",
+    "status": "complete"
+  },
+  {
+    "id": 5,
+    "title": "POST /api/mocs: Create new MOC with metadata",
+    "description": "Implement endpoint to create a new MOC, validate input, store metadata in Postgres, and index in Elasticsearch.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 6,
+    "title": "PATCH /api/mocs/:id: Update MOC metadata",
+    "description": "Implement endpoint to update MOC metadata, enforce ownership, update Postgres and Elasticsearch.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 7,
+    "title": "POST /api/mocs/:id/files: Upload instruction or parts list file",
+    "description": "Implement endpoint to upload a file, validate type, enforce one instruction file per MOC, update DB and S3.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 8,
+    "title": "DELETE /api/mocs/:id/files/:fileId: Delete file",
+    "description": "Implement endpoint to delete a file, remove from S3, update DB, enforce access control.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 9,
+    "title": "GET /api/mocs/search: Full-text search via Elasticsearch",
+    "description": "Implement endpoint to search MOCs by title, tags, and description using Elasticsearch.",
+    "priority": "medium",
+    "status": "complete"
+  },
+  {
+    "id": 10,
+    "title": "Enforce file type validation and single instruction file per MOC",
+    "description": "Add logic to reject unsupported file types and prevent multiple instruction files for a single MOC.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 11,
+    "title": "Implement access control: Only owners/admins can view/edit/delete MOCs",
+    "description": "Restrict all MOC endpoints to owners and admins. Return 403 for unauthorized access.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 12,
+    "title": "Handle file deletion and missing file edge cases",
+    "description": "Gracefully handle cases where files are deleted externally (e.g., S3 corruption) and mark as missing in DB.",
+    "priority": "medium",
+    "status": "complete"
+  },
+  {
+    "id": 13,
+    "title": "Write Jest + Supertest tests for all endpoints (success and error cases)",
+    "description": "Ensure all API endpoints are covered by tests, including permission checks, file validation, and error handling.",
+    "priority": "high",
+    "status": "complete"
+  },
+  {
+    "id": 14,
+    "title": "Write Jest + Supertest tests for file upload/download edge cases",
+    "description": "Test large file uploads, mid-upload failures, unsupported file types, and S3 errors.",
+    "priority": "medium",
+    "status": "complete"
+  },
+  {
+    "id": 15,
+    "title": "Document API endpoints and permissions",
+    "description": "Write documentation for all endpoints, required fields, and permission model.",
+    "priority": "low",
+    "status": "complete"
+  }
+] 

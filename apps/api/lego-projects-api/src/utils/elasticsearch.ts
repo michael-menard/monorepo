@@ -2,6 +2,7 @@ import { Client } from '@elastic/elasticsearch';
 
 const ELASTIC_URL = process.env.ELASTICSEARCH_URL || 'http://elasticsearch:9200';
 export const ES_INDEX = 'gallery_images';
+export const MOC_INDEX = 'moc_instructions';
 
 export const esClient = new Client({ node: ELASTIC_URL });
 
@@ -97,6 +98,60 @@ export async function deleteAlbum(id: string) {
   }
 }
 
+// --- MOC INSTRUCTIONS INDEXING ---
+export async function indexMoc(moc: any) {
+  try {
+    await esClient.index({
+      index: MOC_INDEX,
+      id: moc.id,
+      document: {
+        ...moc,
+        type: 'moc',
+        // Ensure searchable fields are properly indexed
+        title: moc.title,
+        description: moc.description,
+        tags: moc.tags || [],
+        userId: moc.userId,
+        createdAt: moc.createdAt,
+        updatedAt: moc.updatedAt,
+      },
+    });
+  } catch (err: any) {
+    console.warn('Failed to index MOC in ES:', err.message);
+  }
+}
+
+export async function updateMoc(moc: any) {
+  try {
+    await esClient.update({
+      index: MOC_INDEX,
+      id: moc.id,
+      doc: {
+        ...moc,
+        type: 'moc',
+        // Ensure searchable fields are properly indexed
+        title: moc.title,
+        description: moc.description,
+        tags: moc.tags || [],
+        userId: moc.userId,
+        updatedAt: moc.updatedAt,
+      },
+      doc_as_upsert: true,
+    });
+  } catch (err: any) {
+    console.warn('Failed to update MOC in ES:', err.message);
+  }
+}
+
+export async function deleteMoc(id: string) {
+  try {
+    await esClient.delete({ index: MOC_INDEX, id });
+  } catch (err: any) {
+    if (err.meta && err.meta.statusCode === 404) return; // Already gone
+    console.warn('Failed to delete MOC from ES:', err.message);
+  }
+}
+
 // --- UNIFIED SEARCH ---
 export async function searchGalleryItems({
   userId,
@@ -156,5 +211,124 @@ export async function searchGalleryItems({
   } catch (err: any) {
     console.warn('ES search failed, falling back to Postgres:', err.message);
     return null;
+  }
+}
+
+// --- MOC SEARCH ---
+export async function searchMocs({
+  userId,
+  query,
+  tag,
+  from = 0,
+  size = 20,
+}: {
+  userId: string;
+  query?: string;
+  tag?: string;
+  from?: number;
+  size?: number;
+}) {
+  const must: any[] = [ { term: { userId } } ];
+  
+  if (tag) {
+    must.push({ term: { tags: tag } });
+  }
+  
+  if (query) {
+    must.push({
+      multi_match: {
+        query,
+        fields: ['title^3', 'description', 'tags^2'],
+        fuzziness: 'AUTO',
+        type: 'best_fields',
+      },
+    });
+  }
+  
+  try {
+    const result = await esClient.search({
+      index: MOC_INDEX,
+      from,
+      size,
+      query: { bool: { must } },
+      sort: [{ updatedAt: { order: 'desc' } }],
+      _source: [
+        'id',
+        'title',
+        'description',
+        'tags',
+        'thumbnailUrl',
+        'instructionFileUrl',
+        'partsListFiles',
+        'galleryImageIds',
+        'createdAt',
+        'updatedAt'
+      ],
+    });
+    
+    return {
+      hits: result.hits.hits.map((hit: any) => hit._source),
+      total: result.hits.total ? (typeof result.hits.total === 'number' ? result.hits.total : result.hits.total.value) : 0,
+    };
+  } catch (err: any) {
+    console.warn('MOC ES search failed, falling back to Postgres:', err.message);
+    return null;
+  }
+}
+
+// --- INDEX INITIALIZATION ---
+export async function initializeMocIndex() {
+  try {
+    // Check if index exists
+    const indexExists = await esClient.indices.exists({ index: MOC_INDEX });
+    
+    if (!indexExists) {
+      await esClient.indices.create({
+        index: MOC_INDEX,
+        mappings: {
+          properties: {
+            id: { type: 'keyword' },
+            userId: { type: 'keyword' },
+            title: { 
+              type: 'text',
+              analyzer: 'standard',
+              fields: {
+                keyword: { type: 'keyword' }
+              }
+            },
+            description: { 
+              type: 'text',
+              analyzer: 'standard'
+            },
+            tags: { 
+              type: 'keyword',
+              fields: {
+                text: { type: 'text', analyzer: 'standard' }
+              }
+            },
+            thumbnailUrl: { type: 'keyword' },
+            instructionFileUrl: { type: 'keyword' },
+            partsListFiles: { type: 'keyword' },
+            galleryImageIds: { type: 'keyword' },
+            type: { type: 'keyword' },
+            createdAt: { type: 'date' },
+            updatedAt: { type: 'date' }
+          }
+        },
+        settings: {
+          analysis: {
+            analyzer: {
+              standard: {
+                type: 'standard',
+                stopwords: '_english_'
+              }
+            }
+          }
+        }
+      });
+      console.log(`Created Elasticsearch index: ${MOC_INDEX}`);
+    }
+  } catch (err: any) {
+    console.warn('Failed to initialize MOC index:', err.message);
   }
 } 

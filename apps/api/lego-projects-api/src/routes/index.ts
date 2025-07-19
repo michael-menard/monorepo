@@ -9,6 +9,7 @@ import { flagImage } from '../handlers/gallery';
 import { requireAuth } from '../middleware/auth';
 import { getAllAlbums, getAllImages } from '../handlers/gallery';
 import { getGallery } from '../handlers/gallery';
+import mocInstructionsRouter from './moc-instructions';
 
 const router = Router();
 
@@ -35,5 +36,11 @@ router.get('/api/gallery', requireAuth, getGallery);
 
 // POST /api/flag - flag an image for moderation
 router.post('/api/flag', requireAuth, flagImage);
+
+// Register MOC Instructions router
+router.use('/api/mocs', mocInstructionsRouter);
+
+// Register Profile router
+router.use('/api/users', profileRouter);
 
 export default router; 
