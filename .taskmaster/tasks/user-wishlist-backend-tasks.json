@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "category": "database",
+      "tasks": [
+        {
+          "id": "db-1",
+          "title": "Design Wishlist Database Schema",
+          "description": "Create tables for wishlist items with fields: id, user_id, title, description, product_link, image_url, sort_order. Ensure proper indexing for user_id and sort_order.",
+          "priority": "high",
+          "status": "pending",
+          "details": "Use PostgreSQL. Add constraints for user_id foreign key, unique id, and not null for required fields. Support efficient reordering.",
+          "testStrategy": "Write migration and rollback tests. Validate schema with test data."
+        }
+      ]
+    },
+    {
+      "category": "api",
+      "tasks": [
+        {
+          "id": "api-1",
+          "title": "Implement GET /api/wishlist Endpoint",
+          "description": "List all wishlist items for the authenticated user, ordered by sort_order.",
+          "priority": "high",
+          "status": "pending",
+          "dependencies": ["db-1", "auth-1"],
+          "details": "Return all fields. Handle empty lists. Enforce user scoping.",
+          "testStrategy": "Test with multiple users, empty lists, and unauthorized access."
+        },
+        {
+          "id": "api-2",
+          "title": "Implement POST /api/wishlist Endpoint",
+          "description": "Add a new wishlist item for the authenticated user. Validate input and persist to DB.",
+          "priority": "high",
+          "status": "pending",
+          "dependencies": ["db-1", "auth-1", "file-1"],
+          "details": "Validate required fields. Support optional image upload. Set sort_order to end of list.",
+          "testStrategy": "Test valid/invalid input, image upload, and auth failures."
+        },
+        {
+          "id": "api-3",
+          "title": "Implement PATCH /api/wishlist/:id Endpoint",
+          "description": "Update an existing wishlist item. Validate ownership and input.",
+          "priority": "high",
+          "status": "pending",
+          "dependencies": ["db-1", "auth-1"],
+          "details": "Allow updating title, description, product_link, image_url. Reject unauthorized or invalid updates.",
+          "testStrategy": "Test valid/invalid updates, ownership, and error cases."
+        },
+        {
+          "id": "api-4",
+          "title": "Implement DELETE /api/wishlist/:id Endpoint",
+          "description": "Remove a wishlist item. Enforce ownership and cascade delete image if present.",
+          "priority": "high",
+          "status": "pending",
+          "dependencies": ["db-1", "auth-1", "file-2"],
+          "details": "Delete DB row and associated image from S3. Return 200 on success, 404 if not found.",
+          "testStrategy": "Test delete with/without image, unauthorized, and not found cases."
+        },
+        {
+          "id": "api-5",
+          "title": "Implement POST /api/wishlist/reorder Endpoint",
+          "description": "Persist new order of wishlist items after drag-and-drop or page unload.",
+          "priority": "medium",
+          "status": "pending",
+          "dependencies": ["db-1", "auth-1"],
+          "details": "Accept array of item IDs in new order. Update sort_order in DB. Handle concurrent ops.",
+          "testStrategy": "Test reordering, concurrent requests, and edge cases."
+        }
+      ]
+    },
+    {
+      "category": "file-validation",
+      "tasks": [
+        {
+          "id": "file-1",
+          "title": "Implement Image Upload & Validation Utility",
+          "description": "Support .jpg and .heic uploads up to 20MB. Validate file type and size before upload.",
+          "priority": "high",
+          "status": "pending",
+          "details": "Reject files >20MB or unsupported types. Return 413 or 400 as appropriate.",
+          "testStrategy": "Test valid/invalid uploads, large files, and error handling."
+        },
+        {
+          "id": "file-2",
+          "title": "Implement Image Deletion Utility",
+          "description": "Delete image from S3 when wishlist item is deleted or image is replaced.",
+          "priority": "medium",
+          "status": "pending",
+          "details": "Ensure S3 cleanup. Handle missing/corrupt files gracefully.",
+          "testStrategy": "Test image deletion, missing file edge cases, and S3 errors."
+        }
+      ]
+    },
+    {
+      "category": "auth",
+      "tasks": [
+        {
+          "id": "auth-1",
+          "title": "Enforce Authorization on All Wishlist Endpoints",
+          "description": "Require authentication for all CRUD and reorder endpoints. Only allow access to user's own items.",
+          "priority": "high",
+          "status": "pending",
+          "details": "Return 403 for unauthorized access. Use middleware to check user_id.",
+          "testStrategy": "Test with/without auth, cross-user access, and error cases."
+        }
+      ]
+    },
+    {
+      "category": "reordering",
+      "tasks": [
+        {
+          "id": "reorder-1",
+          "title": "Persist Wishlist Item Order Changes",
+          "description": "Ensure sort_order is updated in DB after drag-and-drop or page unload.",
+          "priority": "medium",
+          "status": "pending",
+          "dependencies": ["api-5"],
+          "details": "Debounce updates on frontend, persist on backend. Handle race conditions.",
+          "testStrategy": "Test order changes, rapid updates, and concurrent ops."
+        }
+      ]
+    },
+    {
+      "category": "testing",
+      "tasks": [
+        {
+          "id": "test-1",
+          "title": "Write Tests for Wishlist API and Utilities",
+          "description": "Write Vitest + Supertest tests for all endpoints, image upload, validation, and edge cases.",
+          "priority": "high",
+          "status": "pending",
+          "details": "Stub DB and S3. Cover all test cases and edge cases from PRD.",
+          "testStrategy": "Test all endpoints, file validation, reordering, and error handling."
+        }
+      ]
+    }
+  ]
+} 

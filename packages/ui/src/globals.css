@@ -1,0 +1,328 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CSS custom properties for shadcn/ui compatibility */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Improve text rendering */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-secondary-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-secondary-400 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-secondary-500;
+  }
+
+  /* Focus visible styles for better accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Form controls with consistent styling */
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-error {
+    @apply text-sm text-error-600 mt-1;
+  }
+
+  .form-help {
+    @apply text-sm text-secondary-500 mt-1;
+  }
+
+  /* Loading states */
+  .loading-spinner {
+    @apply inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin;
+  }
+
+  .loading-dots::after {
+    content: '';
+    @apply inline-block w-1 h-1 rounded-full bg-current animate-pulse;
+    animation-duration: 1.4s;
+  }
+
+  /* Status indicators */
+  .status-online {
+    @apply relative;
+  }
+
+  .status-online::after {
+    content: '';
+    @apply absolute -top-1 -right-1 w-3 h-3 bg-success-500 border-2 border-white rounded-full;
+  }
+
+  /* Skeleton loading placeholders */
+  .skeleton {
+    @apply bg-secondary-200 animate-pulse rounded;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-circle {
+    @apply skeleton rounded-full;
+  }
+
+  /* Toast/notification styles */
+  .toast {
+    @apply flex items-center p-4 rounded-lg shadow-elevation-3 border backdrop-blur-sm;
+  }
+
+  .toast-success {
+    @apply bg-success-50 border-success-200 text-success-800;
+  }
+
+  .toast-warning {
+    @apply bg-warning-50 border-warning-200 text-warning-800;
+  }
+
+  .toast-error {
+    @apply bg-error-50 border-error-200 text-error-800;
+  }
+
+  .toast-info {
+    @apply bg-primary-50 border-primary-200 text-primary-800;
+  }
+
+  /* Modal/overlay styles */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-xl shadow-elevation-5 max-w-md w-full max-h-[90vh] overflow-auto;
+  }
+
+  /* Navigation styles */
+  .nav-link {
+    @apply px-3 py-2 rounded-md text-sm font-medium transition-colors;
+  }
+
+  .nav-link-active {
+    @apply bg-primary-100 text-primary-700;
+  }
+
+  .nav-link-inactive {
+    @apply text-secondary-600 hover:text-secondary-700 hover:bg-secondary-100;
+  }
+
+  /* Data table styles */
+  .table {
+    @apply w-full border-collapse;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-secondary-200;
+  }
+
+  .table td {
+    @apply px-4 py-3 text-sm text-secondary-900 border-b border-secondary-100;
+  }
+
+  .table tbody tr:hover {
+    @apply bg-secondary-50;
+  }
+
+  /* Progress bars */
+  .progress-bar {
+    @apply w-full bg-secondary-200 rounded-full h-2 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-primary-600 transition-all duration-300 ease-out;
+  }
+
+  /* Avatar styles */
+  .avatar {
+    @apply inline-flex items-center justify-center rounded-full bg-secondary-100 text-secondary-600 font-medium;
+  }
+
+  .avatar-xs {
+    @apply w-6 h-6 text-xs;
+  }
+
+  .avatar-sm {
+    @apply w-8 h-8 text-sm;
+  }
+
+  .avatar-md {
+    @apply w-10 h-10 text-base;
+  }
+
+  .avatar-lg {
+    @apply w-12 h-12 text-lg;
+  }
+
+  .avatar-xl {
+    @apply w-16 h-16 text-xl;
+  }
+
+  /* Utility classes for LEGO-specific styling */
+  .lego-brick {
+    @apply relative rounded-lg shadow-elevation-2 border-2 transition-all duration-200;
+  }
+
+  .lego-brick::before {
+    content: '';
+    @apply absolute top-1 left-1 right-1 h-2 bg-white/20 rounded-md;
+  }
+
+  .lego-brick:hover {
+    @apply transform -translate-y-1 shadow-elevation-3;
+  }
+
+  .lego-red {
+    @apply bg-lego-red border-red-800;
+  }
+
+  .lego-blue {
+    @apply bg-lego-blue border-blue-800;
+  }
+
+  .lego-yellow {
+    @apply bg-lego-yellow border-yellow-600;
+  }
+
+  .lego-green {
+    @apply bg-lego-green border-green-800;
+  }
+}
+
+@layer utilities {
+  /* Safe area utilities for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Print utilities */
+  @media print {
+    .print-hidden {
+      @apply hidden;
+    }
+
+    .print-visible {
+      @apply block;
+    }
+  }
+
+  /* High contrast mode utilities */
+  @media (prefers-contrast: high) {
+    .btn {
+      @apply border-2 border-current;
+    }
+  }
+
+  /* Animation utilities for performance */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .will-change-opacity {
+    will-change: opacity;
+  }
+
+  .will-change-contents {
+    will-change: contents;
+  }
+} 

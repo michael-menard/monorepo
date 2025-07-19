@@ -6,13 +6,19 @@ import { PersistGate } from 'redux-persist/integration/react'
 import './index.css'
 import { router } from './routes'
 import { store, persistor } from './store'
+import { AppInitializer } from './components/AppInitializer'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <RouterProvider router={router} />
-      </PersistGate>
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <AppInitializer>
+            <RouterProvider router={router} />
+          </AppInitializer>
+        </PersistGate>
+      </Provider>
+    </ErrorBoundary>
   </StrictMode>,
 )

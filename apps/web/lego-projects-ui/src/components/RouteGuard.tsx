@@ -1,92 +1,33 @@
-import { useAuthState } from '@/store/hooks';
+import { useAppSelector } from '@/store';
 import { Navigate, useLocation } from 'react-router-dom';
 
 interface RouteGuardProps {
   children: React.ReactNode;
   requireAuth?: boolean;
-  requireVerified?: boolean;
-  requireAdmin?: boolean;
-  redirectTo?: string;
-  fallback?: React.ReactNode;
 }
 
-export function RouteGuard({ 
-  children, 
-  requireAuth = false,
-  requireVerified = false,
-  requireAdmin = false,
-  redirectTo,
-  fallback
-}: RouteGuardProps) {
-  const { isAuthenticated, user, isCheckingAuth, isLoading } = useAuthState();
+export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
+  const { isAuthenticated, isInitialized } = useAppSelector(state => state.auth);
   const location = useLocation();
 
-  // Show loading while checking auth status or during auth operations
-  if (isCheckingAuth || isLoading) {
+  // Show loading while auth state is being initialized
+  if (!isInitialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-400">Checking authentication...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // If no auth requirements, render children directly
-  if (!requireAuth && !requireVerified && !requireAdmin) {
-    return <>{children}</>;
-  }
-
-  // Check authentication first
+  // If auth is required but user is not authenticated, redirect to login
   if (requireAuth && !isAuthenticated) {
-    const loginPath = redirectTo || '/auth/login';
-    return <Navigate to={loginPath} state={{ from: location }} replace />;
-  }
-
-  // Check if user exists (should exist if authenticated)
-  if (requireAuth && !user) {
-    console.error('User is authenticated but user object is null');
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  // Check email verification
-  if (requireVerified && user) {
-    const isVerified = user.isVerified || user.emailVerified;
-    
-    if (!isVerified) {
-      return <Navigate to="/auth/email-verification" state={{ from: location, email: user.email }} replace />;
-    }
+  // If user is authenticated and trying to access auth pages, redirect to dashboard
+  if (isAuthenticated && location.pathname.startsWith('/auth')) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  // Check admin role (for future use)
-  if (requireAdmin) {
-    // TODO: Implement when backend supports roles
-    // For now, we'll assume no admin users exist
-    const isAdmin = false; // user?.role === 'ADMIN';
-    
-    if (!isAdmin) {
-      if (fallback) {
-        return <>{fallback}</>;
-      }
-      
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-900">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-500 mb-4">Access Denied</h1>
-            <p className="text-gray-400 mb-4">You don't have permission to access this page.</p>
-            <button 
-              onClick={() => window.history.back()}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      );
-    }
-  }
-
-  // All checks passed - render protected content
   return <>{children}</>;
 } 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch } from '@/store';
 import { persistor } from '@/store';
-import { logout } from '@repo/auth';
+import { authActions } from '@/store/slices/authSlice';
 
 interface UseCrossTabSyncOptions {
   enabled?: boolean;
@@ -21,7 +21,7 @@ export function useCrossTabSync(options: UseCrossTabSyncOptions = {}) {
       // If auth state was cleared (logout in another tab), clear local state
       if (event.newValue === null) {
         console.log('Auth state cleared in another tab, logging out locally');
-        dispatch(logout());
+        dispatch(authActions.logout());
         return;
       }
 

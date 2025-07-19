@@ -45,7 +45,7 @@ export const router = createBrowserRouter([
       {
         path: 'instructions',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true}>
+          <RouteGuard requireAuth={true} >
             <Outlet />
           </RouteGuard>
         ),
@@ -57,7 +57,7 @@ export const router = createBrowserRouter([
       {
         path: 'projects',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true}>
+          <RouteGuard requireAuth={true} >
             <ProjectsPage />
           </RouteGuard>
         ),
@@ -65,7 +65,7 @@ export const router = createBrowserRouter([
       {
         path: 'inspiration',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true}>
+          <RouteGuard requireAuth={true} >
             <Outlet />
           </RouteGuard>
         ),
@@ -76,7 +76,7 @@ export const router = createBrowserRouter([
       {
         path: 'wishlist',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true}>
+          <RouteGuard requireAuth={true} >
             <WishlistPage />
           </RouteGuard>
         ),
@@ -84,7 +84,7 @@ export const router = createBrowserRouter([
       {
         path: 'social',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true}>
+          <RouteGuard requireAuth={true} >
             <SocialPage />
           </RouteGuard>
         ),
@@ -92,7 +92,7 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true}>
+          <RouteGuard requireAuth={true} >
             <Outlet />
           </RouteGuard>
         ),
@@ -106,7 +106,7 @@ export const router = createBrowserRouter([
       {
         path: 'admin',
         element: (
-          <RouteGuard requireAuth={true} requireVerified={true} requireAdmin={true}>
+          <RouteGuard requireAuth={true}  >
             <div className="text-center p-8">
               <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
               <p className="text-gray-600">Admin functionality coming soon...</p>

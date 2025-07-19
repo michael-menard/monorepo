@@ -1,5 +1,6 @@
 
 @import "tw-animate-css";
+@import '../../../packages/ui/src/globals.css';
 
 @custom-variant dark (&:is(.dark *));
 

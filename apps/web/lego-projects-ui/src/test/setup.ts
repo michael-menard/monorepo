@@ -1,125 +1,64 @@
-import { vi, beforeEach, afterEach } from 'vitest'
+/**
+ * Vitest Test Setup Configuration
+ * Sets up testing environment, global mocks, and utilities
+ */
 import '@testing-library/jest-dom'
+import { cleanup } from '@testing-library/react'
+import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 
-// Mock RTK Query API
-vi.mock('@/services/authApi', () => ({
-  authApi: {
-    reducerPath: 'authApi',
-    reducer: vi.fn(),
-    middleware: vi.fn(),
-  },
-  useLoginMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useSignupMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useLogoutMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useRefreshTokenMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useVerifyEmailMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useForgotPasswordMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useResetPasswordMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-  useSocialLoginMutation: () => [
-    vi.fn(),
-    { isLoading: false, error: null, isSuccess: false }
-  ],
-}))
+// =============================================================================
+// GLOBAL TEST CLEANUP
+// =============================================================================
 
-// Mock @packages/auth
-const mockUseAuthState = vi.fn()
+// Cleanup after each test
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
 
-vi.mock('@packages/auth', () => ({
-  useAuthState: mockUseAuthState,
-  useAuthActions: vi.fn(() => ({
-    login: vi.fn(),
-    logout: vi.fn(),
-    signup: vi.fn(),
-    refreshToken: vi.fn(),
-    verifyEmail: vi.fn(),
-    forgotPassword: vi.fn(),
-    resetPassword: vi.fn(),
-    socialLogin: vi.fn(),
-  })),
-  authReducer: vi.fn(),
-}))
+// =============================================================================
+// MOCK BROWSER APIS
+// =============================================================================
 
-// Export for use in tests
-export { mockUseAuthState }
-
-// Mock react-router-dom
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/', state: null }),
-  useParams: () => ({}),
-  MemoryRouter: ({ children }: { children: unknown }) => children,
-  BrowserRouter: ({ children }: { children: unknown }) => children,
-  Link: ({ children, to }: { children: unknown; to: string }) => ({ type: 'a', props: { href: to, children } }),
-  NavLink: ({ children, to }: { children: unknown; to: string }) => ({ type: 'a', props: { href: to, children } }),
-}))
-
-// Mock Redux store
-vi.mock('@/store', () => ({
-  store: {
-    getState: vi.fn(() => ({
-      auth: {
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null
-      },
-      user: {
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null
-      }
-    })),
-    dispatch: vi.fn(),
-    subscribe: vi.fn(),
-  }
-}))
-
-// Mock environment variables
-vi.mock('import.meta.env', () => ({
-  VITE_AUTH_API_URL: 'http://localhost:3001',
-  VITE_APP_NAME: 'Lego Projects UI',
-  VITE_APP_VERSION: '1.0.0',
-}))
-
-// Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  warn: vi.fn(),
-  error: vi.fn(),
-  log: vi.fn(),
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
 }
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
+
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+}
+
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+})
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
@@ -131,6 +70,10 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
+  takeRecords: vi.fn(),
+  root: null,
+  rootMargin: '',
+  thresholds: [],
 }))
 
 // Mock ResizeObserver
@@ -140,92 +83,118 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }))
 
-// Mock fetch
+// =============================================================================
+// MOCK FETCH API
+// =============================================================================
+
+// Global fetch mock
 global.fetch = vi.fn()
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn(),
+// Helper to mock fetch responses
+export const mockFetch = (response: unknown, ok: boolean = true, status: number = 200) => {
+  const mockResponse = {
+    ok,
+    status,
+    statusText: ok ? 'OK' : 'Error',
+    json: () => Promise.resolve(response),
+    text: () => Promise.resolve(JSON.stringify(response)),
+    headers: new Headers(),
+    url: '',
+    redirected: false,
+    type: 'basic' as ResponseType,
+    body: null,
+    bodyUsed: false,
+    clone: vi.fn(),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    blob: () => Promise.resolve(new Blob()),
+    formData: () => Promise.resolve(new FormData()),
+  };
+  
+  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse)
 }
-global.localStorage = localStorageMock
 
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn(),
+// Helper to mock fetch errors
+export const mockFetchError = (error: Error = new Error('Network error')) => {
+  (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error)
 }
-global.sessionStorage = sessionStorageMock
 
-// Mock database connections and API calls
-vi.mock('@/hooks/useAuthRefresh', () => ({
-  useAuthRefresh: () => ({
-    refreshAuth: vi.fn(),
-    isLoading: false,
-    error: null,
+// =============================================================================
+// MOCK FILE APIS
+// =============================================================================
+
+// Mock URL.createObjectURL
+global.URL.createObjectURL = vi.fn(() => 'mock-object-url')
+global.URL.revokeObjectURL = vi.fn()
+
+// =============================================================================
+// MOCK REACT ROUTER
+// =============================================================================
+
+// Mock react-router-dom
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useLocation: () => ({
+      pathname: '/',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default',
+    }),
+    useParams: () => ({}),
+    useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  }
+})
+
+// =============================================================================
+// MOCK EXTERNAL DEPENDENCIES
+// =============================================================================
+
+// Mock framer-motion
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: 'div',
+    span: 'span',
+    button: 'button',
+    form: 'form',
+    input: 'input',
+    textarea: 'textarea',
+    img: 'img',
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+  useAnimation: () => ({
+    start: vi.fn(),
+    stop: vi.fn(),
+    set: vi.fn(),
+  }),
+  useMotionValue: (initial: unknown) => ({
+    get: () => initial,
+    set: vi.fn(),
+    on: vi.fn(),
+    destroy: vi.fn(),
   }),
 }))
 
-// Mock any external API calls
-vi.mock('@/services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
+// =============================================================================
+// ENVIRONMENT VARIABLES
+// =============================================================================
 
-// Mock any database connections
-vi.mock('@/lib/db', () => ({
-  connectDB: vi.fn(),
-  disconnectDB: vi.fn(),
-}))
+// Set test environment variables
+process.env.NODE_ENV = 'test'
+process.env.VITE_API_URL = 'http://localhost:3001'
+process.env.VITE_AUTH_SERVICE_URL = 'http://localhost:3002'
 
-// Mock any external services
-vi.mock('@/services/external', () => ({
-  externalService: {
-    call: vi.fn(),
-  },
-}))
+// =============================================================================
+// CLEANUP HANDLERS
+// =============================================================================
 
-// Mock any WebSocket connections
-vi.mock('@/services/websocket', () => ({
-  WebSocketService: {
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    send: vi.fn(),
-  },
-}))
-
-// Mock any timer functions that might cause hanging
-vi.mock('@/utils/timers', () => ({
-  setTimeout: vi.fn(),
-  setInterval: vi.fn(),
-  clearTimeout: vi.fn(),
-  clearInterval: vi.fn(),
-}))
-
-// Mock any async operations that might hang
-vi.mock('@/utils/async', () => ({
-  asyncOperation: vi.fn(),
-  waitFor: vi.fn(),
-}))
-
-// Set test timeout to prevent hanging
-beforeEach(() => {
-  vi.setConfig({ testTimeout: 5000 })
+beforeAll(() => {
+  // Setup any global test state
 })
 
-afterEach(() => {
-  vi.clearAllMocks()
-  vi.clearAllTimers()
+afterAll(() => {
+  // Cleanup any persistent mocks or state
+  vi.restoreAllMocks()
 }) 

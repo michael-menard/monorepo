@@ -1,5 +1,26 @@
 import React, { useState } from 'react';
-import { ProfilePage, type ProfileData } from '@monorepo/profile';
+// TODO: Import from @repo/profile once components are implemented
+// import { ProfilePage, type ProfileData } from '@repo/profile';
+
+// Temporary types until profile package is implemented
+type ProfileData = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+  stats: {
+    projects: number;
+    followers: number;
+    following: number;
+  };
+  bio?: string;
+  email?: string;
+  isFollowing?: boolean;
+  isOwnProfile?: boolean;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ProfilePage: React.FC<{ children: React.ReactNode; [key: string]: any }> = ({ children }) => <div>{children}</div>;
 
 const ProfileDemo: React.FC = () => {
   const [profile, setProfile] = useState<ProfileData>({

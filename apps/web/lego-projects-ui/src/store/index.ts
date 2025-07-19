@@ -1,43 +1,172 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { authReducer } from '@repo/auth';
-import { authApi } from '@/services/authApi';
-import storage from 'redux-persist/lib/storage';
-import { persistReducer, persistStore, createTransform } from 'redux-persist';
+/**
+ * Redux Store Configuration
+ * Central store setup with persistence and feature slices
+ */
+import { configureStore } from '@reduxjs/toolkit'
+import { persistStore, persistReducer } from 'redux-persist'
+import storage from 'redux-persist/lib/storage'
+import { setupListeners } from '@reduxjs/toolkit/query'
+import type { TypedUseSelectorHook } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
+import { combineReducers } from '@reduxjs/toolkit'
 
-// Transform to remove tokens from persisted auth state
-const removeTokensTransform = createTransform(
-  (inboundState) => {
-    if (!inboundState) return inboundState;
-    const rest = { ...inboundState } as Record<string, unknown>;
-    delete rest.tokens;
-    return rest;
-  },
-  (outboundState) => outboundState,
-  { whitelist: ['auth'] }
-);
+// Import feature slices
+import authSlice from './slices/authSlice'
+import uiSlice from './slices/uiSlice'
+import preferencesSlice from './slices/preferencesSlice'
+
+// =============================================================================
+// PERSISTENCE CONFIGURATION
+// =============================================================================
 
 const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['auth', 'preferences'], // Only persist auth and preferences
+  blacklist: ['ui'], // Don't persist UI state (except what we specifically want)
+}
+
+const authPersistConfig = {
   key: 'auth',
   storage,
-  whitelist: ['auth'], // Only persist the auth slice
-  transforms: [removeTokensTransform],
-};
+  blacklist: ['isLoading', 'error', 'showAuthModal', 'authModalType'], // Don't persist UI state
+}
 
-const persistedAuthReducer = persistReducer(persistConfig, authReducer);
+const preferencesPersistConfig = {
+  key: 'preferences',
+  storage,
+  blacklist: ['lastSyncTime'], // Don't persist sync timestamps
+}
+
+// =============================================================================
+// ROOT REDUCER
+// =============================================================================
+
+const rootReducer = combineReducers({
+  auth: persistReducer(authPersistConfig, authSlice),
+  ui: uiSlice, // No persistence for UI state
+  preferences: persistReducer(preferencesPersistConfig, preferencesSlice),
+})
+
+const persistedReducer = persistReducer(persistConfig, rootReducer)
+
+// =============================================================================
+// STORE CONFIGURATION
+// =============================================================================
 
 export const store = configureStore({
-  reducer: {
-    auth: persistedAuthReducer,
-    [authApi.reducerPath]: authApi.reducer,
-  },
+  reducer: persistedReducer,
+  
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // redux-persist uses non-serializable values
-    }).concat(authApi.middleware),
-});
+      serializableCheck: {
+        ignoredActions: [
+          'persist/PERSIST',
+          'persist/REHYDRATE',
+          'persist/PAUSE',
+          'persist/PURGE',
+          'persist/REGISTER',
+        ],
+      },
+    }),
+    
+  // Enable Redux DevTools in development
+  devTools: process.env.NODE_ENV !== 'production',
+})
 
-export const persistor = persistStore(store);
+// =============================================================================
+// PERSISTOR
+// =============================================================================
 
-export default store;
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch; 
+export const persistor = persistStore(store)
+
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
+
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
+
+// =============================================================================
+// TYPED HOOKS
+// =============================================================================
+
+// Use throughout your app instead of plain `useDispatch` and `useSelector`
+export const useAppDispatch: () => AppDispatch = useDispatch
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+// =============================================================================
+// STORE SETUP
+// =============================================================================
+
+// Enable listener behavior for the store
+setupListeners(store.dispatch)
+
+// =============================================================================
+// SELECTORS
+// =============================================================================
+
+// Common selectors for frequently accessed state
+export const selectAuth = (state: RootState) => state.auth
+export const selectUI = (state: RootState) => state.ui
+export const selectPreferences = (state: RootState) => state.preferences
+
+// Memoized selectors for computed state
+export const selectIsAuthenticated = (state: RootState) => 
+  state.auth.isAuthenticated && !!state.auth.user
+
+export const selectCurrentUser = (state: RootState) => state.auth.user
+
+export const selectIsLoading = (state: RootState) => 
+  state.auth.isLoading || state.ui.isLoading
+
+export const selectTheme = (state: RootState) => 
+  state.preferences.theme || state.ui.theme
+
+// =============================================================================
+// STORE UTILITIES
+// =============================================================================
+
+/**
+ * Get the current authentication status
+ */
+export const getAuthStatus = () => {
+  const state = store.getState()
+  return {
+    isAuthenticated: selectIsAuthenticated(state),
+    user: selectCurrentUser(state),
+    token: state.auth.token,
+  }
+}
+
+/**
+ * Type guard for checking if user is authenticated
+ */
+export const isUserAuthenticated = (
+  auth: RootState['auth']
+): auth is RootState['auth'] & { user: NonNullable<RootState['auth']['user']> } => {
+  return auth.isAuthenticated && auth.user !== null
+}
+
+/**
+ * Purge persisted data (useful for logout)
+ */
+export const purgePersistedData = async () => {
+  try {
+    await persistor.purge()
+  } catch (error) {
+    console.error('Failed to purge persisted data:', error)
+  }
+}
+
+// =============================================================================
+// EXPORTS
+// =============================================================================
+
+// Export store as default
+export default store
+
+// Export action creators
+export { authActions } from './slices/authSlice'
+export { uiActions } from './slices/uiSlice'
+export { preferencesActions } from './slices/preferencesSlice' 
