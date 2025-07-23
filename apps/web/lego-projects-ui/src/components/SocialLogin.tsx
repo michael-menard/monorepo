@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useSocialLoginMutation } from '@/services/authApi';
+import { useSocialLoginMutation } from '@repo/auth/src/store/authApi';
 import { FcGoogle } from 'react-icons/fc';
 import { FaTwitter, FaFacebook, FaGithub } from 'react-icons/fa';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';

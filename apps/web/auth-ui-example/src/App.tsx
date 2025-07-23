@@ -4,9 +4,9 @@ import { Routes, Route } from 'react-router-dom'
 // Import auth components directly
 import { LoginComponent } from '@repo/auth/src/components/LoginComponent'
 import SignupComponent from '@repo/auth/src/components/Signup'
-import ForgotPasswordComponent from '@repo/auth/src/components/ForgotPassword'
-import ResetPasswordComponent from '@repo/auth/src/components/ResetPassword'
-import EmailVerificationComponent from '@repo/auth/src/components/EmailVerification'
+import { ForgotPassword } from './components/ForgotPassword/ForgotPassword';
+import { ResetPassword } from './components/ResetPassword/ResetPassword';
+import { EmailVerification } from './components/EmailVerification/EmailVerification';
 
 function App() {
   return (
@@ -29,13 +29,13 @@ function App() {
           <SignupComponent />
         </div>} />
         <Route path="/forgot-password" element={<div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex items-center justify-center">
-          <ForgotPasswordComponent />
+          <ForgotPassword />
         </div>} />
         <Route path="/reset-password/:token" element={<div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex items-center justify-center">
-          <ResetPasswordComponent />
+          <ResetPassword />
         </div>} />
         <Route path="/verify-email" element={<div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex items-center justify-center">
-          <EmailVerificationComponent />
+          <EmailVerification />
         </div>} />
         <Route path="/dashboard" element={<div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex items-center justify-center">
           <div className="text-white text-center">

@@ -76,12 +76,6 @@ export const authApi = createApi({
         body: { token, password },
       }),
     }),
-    socialLogin: builder.mutation<AuthResponse, { provider: 'google' | 'twitter' | 'facebook' | 'github' }>({
-      query: ({ provider }) => ({
-        url: `/auth/social/${provider}`,
-        method: 'GET',
-      }),
-    }),
   }),
 });
 
@@ -95,5 +89,4 @@ export const {
   useVerifyEmailMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
-  useSocialLoginMutation,
 } = authApi; 

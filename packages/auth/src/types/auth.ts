@@ -10,6 +10,7 @@ export const UserSchema = z.object({
   isVerified: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  role: z.string().min(1), // e.g., 'user', 'admin'
 });
 
 export const AuthTokensSchema = z.object({
@@ -35,7 +36,8 @@ export const LoginRequestSchema = z.object({
 export const SignupRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  name: z.string().min(1),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
 });
 
 export const ResetPasswordRequestSchema = z.object({
@@ -45,6 +47,10 @@ export const ResetPasswordRequestSchema = z.object({
 export const ConfirmResetRequestSchema = z.object({
   token: z.string(),
   newPassword: z.string().min(6),
+});
+
+export const VerifyEmailRequestSchema = z.object({
+  code: z.string().min(6).max(6),
 });
 
 export const AuthErrorSchema = z.object({
@@ -74,5 +80,6 @@ export interface LoginRequest extends z.infer<typeof LoginRequestSchema> {}
 export interface SignupRequest extends z.infer<typeof SignupRequestSchema> {}
 export interface ResetPasswordRequest extends z.infer<typeof ResetPasswordRequestSchema> {}
 export interface ConfirmResetRequest extends z.infer<typeof ConfirmResetRequestSchema> {}
+export interface VerifyEmailRequest extends z.infer<typeof VerifyEmailRequestSchema> {}
 export interface AuthError extends z.infer<typeof AuthErrorSchema> {}
 export interface AuthState extends z.infer<typeof AuthStateSchema> {} 

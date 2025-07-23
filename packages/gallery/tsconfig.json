@@ -13,7 +13,7 @@
     "noEmit": false,
     "composite": true,
     "baseUrl": ".",
-    "types": ["react", "react-dom"],
+    "types": ["react", "react-dom", "vitest", "vitest/globals"],
     "paths": {
       "@repo/ui": ["../ui/src/index.ts"],
       "@repo/ui/*": ["../ui/src/*"]
@@ -24,9 +24,6 @@
   ],
   "exclude": [
     "dist",
-    "node_modules", 
-    "**/*.test.*",
-    "**/*.spec.*",
-    "**/__tests__/**"
+    "node_modules"
   ]
 } 
