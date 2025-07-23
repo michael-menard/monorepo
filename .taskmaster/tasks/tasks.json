@@ -1,866 +1,1137 @@
 {
-  "metadata": {
-    "generatedAt": "2024-01-20T12:00:00Z",
-    "version": "1.0.0",
-    "totalTasks": 85,
-    "tags": {
-      "frontend-ui-development": {
-        "currentTag": "frontend-ui-development",
-        "description": "Complete frontend UI development tasks for auth, gallery, wishlist, profile, and MOC features",
-        "createdAt": "2024-01-20T12:00:00Z",
-        "tasks": [
-          {
-            "id": "1",
-            "title": "Set up Turborepo monorepo structure",
-            "description": "Initialize Turborepo workspace with proper package structure for frontend packages",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": [],
-            "details": "Create root package.json with workspace configuration, set up turbo.json for build pipeline, configure shared dependencies and scripts across packages",
-            "testStrategy": "Verify all packages can be built and workspace commands work correctly"
-          },
-          {
-            "id": "2",
-            "title": "Configure shared TypeScript config",
-            "description": "Set up shared TypeScript configuration for all frontend packages",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["1"],
-            "details": "Create base tsconfig.json with shared compiler options, strict mode enabled, proper module resolution, and path mapping for workspace packages",
-            "testStrategy": "Verify TypeScript compilation works across all packages with no errors"
-          },
-          {
-            "id": "3",
-            "title": "Set up shared Tailwind CSS configuration",
-            "description": "Configure Tailwind CSS with shared design tokens and component styles",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["1"],
-            "details": "Create shared tailwind.config.js with design system tokens, custom colors, spacing, typography, and component variants. Set up PostCSS configuration",
-            "testStrategy": "Verify Tailwind classes work consistently across all packages"
-          },
-          {
-            "id": "4",
-            "title": "Install and configure ShadCN UI components",
-            "description": "Set up ShadCN UI component library with shared component configuration",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["2", "3"],
-            "details": "Install ShadCN UI, configure components.json, set up shared component exports, and create base UI component package",
-            "testStrategy": "Verify ShadCN components render correctly with proper theming"
-          },
-          {
-            "id": "5",
-            "title": "Configure Vite build setup",
-            "description": "Set up Vite configuration for all frontend packages with proper bundling",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["2"],
-            "details": "Create shared Vite config with TypeScript support, proper asset handling, environment variable support, and development server configuration",
-            "testStrategy": "Verify all packages build successfully and dev server starts without errors"
-          },
-          {
-            "id": "6",
-            "title": "Set up Vitest testing framework",
-            "description": "Configure Vitest with React Testing Library and accessibility testing",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["5"],
-            "details": "Install and configure Vitest, @testing-library/react, vitest-axe, MSW for API mocking, and setup test utilities",
-            "testStrategy": "Verify test runner works with sample component tests and accessibility audits"
-          },
-          {
-            "id": "7",
-            "title": "Create packages/auth package structure",
-            "description": "Initialize auth package with proper folder structure and configuration",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Create package.json, src folder structure with components, hooks, types, and services. Set up exports and build configuration",
-            "testStrategy": "Verify package builds and exports are accessible from other packages"
-          },
-          {
-            "id": "8",
-            "title": "Create packages/gallery package structure",
-            "description": "Initialize gallery package with proper folder structure",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Create package structure for gallery components, image handling utilities, and upload functionality",
-            "testStrategy": "Verify package structure and basic exports work correctly"
-          },
-          {
-            "id": "9",
-            "title": "Create packages/wishlist package structure",
-            "description": "Initialize wishlist package with proper folder structure",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Create package structure for wishlist components, drag-and-drop utilities, and CRUD operations",
-            "testStrategy": "Verify package structure and basic exports work correctly"
-          },
-          {
-            "id": "10",
-            "title": "Create packages/profile package structure",
-            "description": "Initialize profile package with proper folder structure",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Create package structure for profile components, avatar upload utilities, and editing functionality",
-            "testStrategy": "Verify package structure and basic exports work correctly"
-          },
-          {
-            "id": "11",
-            "title": "Create packages/moc package structure",
-            "description": "Initialize MOC instructions package with proper folder structure",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Create package structure for MOC components, file upload utilities, and instruction management",
-            "testStrategy": "Verify package structure and basic exports work correctly"
-          },
-          {
-            "id": "12",
-            "title": "Implement Zod validation schemas",
-            "description": "Create all Zod schemas for form validation across packages",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["7"],
-            "details": "Implement UserSchema, AuthResponseSchema, GalleryImageFormSchema, AlbumFormSchema, MocFormSchema, WishlistItemSchema, and AvatarUploadSchema with proper validation rules",
-            "testStrategy": "Test all schemas with valid and invalid data to ensure proper validation"
-          },
-          {
-            "id": "13",
-            "title": "Set up Redux Toolkit store configuration",
-            "description": "Configure Redux store with RTK Query and auth slice",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["7"],
-            "details": "Create store configuration, auth slice with initial state, and RTK Query API slice setup with base query configuration",
-            "testStrategy": "Verify store works with auth actions and API calls"
-          },
-          {
-            "id": "14",
-            "title": "Implement LoginForm component",
-            "description": "Create login form with React Hook Form and Zod validation",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["12", "13"],
-            "details": "Build LoginForm with email/password fields, form validation, error handling, and submission logic. Include loading states and accessibility features",
-            "testStrategy": "Test form validation, submission, error states, and accessibility compliance"
-          },
-          {
-            "id": "15",
-            "title": "Implement SignupForm component",
-            "description": "Create signup form with password strength indicator",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["12", "13"],
-            "details": "Build SignupForm with email, firstName, lastName, password, confirmPassword fields. Include password strength indicator and comprehensive validation",
-            "testStrategy": "Test form validation, password matching, strength indicator, and submission flow"
-          },
-          {
-            "id": "16",
-            "title": "Implement EmailVerification component",
-            "description": "Create email verification component with OTP input",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["12", "13"],
-            "details": "Build 6-digit OTP input component with auto-submit, resend functionality, and proper validation",
-            "testStrategy": "Test OTP input, auto-submission, resend functionality, and error handling"
-          },
-          {
-            "id": "17",
-            "title": "Implement ForgotPasswordForm component",
-            "description": "Create forgot password form with email validation",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["12", "13"],
-            "details": "Build simple email input form for password reset requests with proper validation and feedback",
-            "testStrategy": "Test email validation and form submission with success/error states"
-          },
-          {
-            "id": "18",
-            "title": "Implement ResetPasswordForm component",
-            "description": "Create password reset form with token validation",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["12", "13"],
-            "details": "Build form for setting new password with token from URL params, password confirmation, and strength requirements",
-            "testStrategy": "Test password validation, confirmation matching, and token handling"
-          },
-          {
-            "id": "19",
-            "title": "Implement SocialLoginButton component",
-            "description": "Create social login buttons for Google/Twitter/Facebook",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["13"],
-            "details": "Build reusable social login button component with proper OAuth flow handling and provider-specific styling",
-            "testStrategy": "Test OAuth flow initiation and proper redirect handling"
-          },
-          {
-            "id": "20",
-            "title": "Implement RouteGuard component",
-            "description": "Create route protection component with role-based access",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["13"],
-            "details": "Build RouteGuard with authentication checks, role validation, automatic token refresh, and redirect logic",
-            "testStrategy": "Test route protection, token refresh, and proper redirects for different user states"
-          },
-          {
-            "id": "21",
-            "title": "Implement auth Redux slice",
-            "description": "Create comprehensive auth state management with Redux Toolkit",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["13"],
-            "details": "Build auth slice with user state, authentication status, loading states, error handling, and token management",
-            "testStrategy": "Test all auth actions, state updates, and async thunks"
-          },
-          {
-            "id": "22",
-            "title": "Implement auth service API client",
-            "description": "Create auth service client for API communication",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["13"],
-            "details": "Build API client with login, signup, logout, refresh, password reset, and email verification endpoints",
-            "testStrategy": "Test all API endpoints with proper request/response handling and error management"
-          },
-          {
-            "id": "23",
-            "title": "Implement token management utilities",
-            "description": "Create secure token handling with HTTP-only cookies",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["22"],
-            "details": "Build token storage, refresh logic, expiry handling, and secure cookie management utilities",
-            "testStrategy": "Test token refresh, expiry detection, and secure storage mechanisms"
-          },
-          {
-            "id": "24",
-            "title": "Create shared FileUpload component",
-            "description": "Build reusable file upload component with drag-and-drop",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Create flexible file upload component with drag-and-drop, progress tracking, file type validation, and size limits",
-            "testStrategy": "Test file selection, drag-and-drop, validation, progress tracking, and error handling"
-          },
-          {
-            "id": "25",
-            "title": "Implement InspirationGallery component",
-            "description": "Create masonry layout gallery with infinite scroll",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["24"],
-            "details": "Build responsive masonry layout using CSS Grid or Flexbox with infinite scroll, loading states, and responsive breakpoints",
-            "testStrategy": "Test layout responsiveness, infinite scroll, loading states, and image loading"
-          },
-          {
-            "id": "26",
-            "title": "Implement ImageUploadModal component",
-            "description": "Create modal for image uploads with preview",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["24"],
-            "details": "Build modal with FileUpload integration, image preview, metadata input fields, and upload progress",
-            "testStrategy": "Test modal opening/closing, file upload, preview functionality, and form submission"
-          },
-          {
-            "id": "27",
-            "title": "Implement InspirationCard component",
-            "description": "Create image card with hover effects and actions",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["25"],
-            "details": "Build image card with hover drawer using Framer Motion, action buttons, metadata display, and responsive design",
-            "testStrategy": "Test hover animations, button interactions, responsive layout, and accessibility"
-          },
-          {
-            "id": "28",
-            "title": "Implement AlbumView component",
-            "description": "Create album view reusing gallery layout",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["25"],
-            "details": "Build album-specific view with filtered gallery layout, album header, and management controls",
-            "testStrategy": "Test album filtering, layout consistency, and album-specific features"
-          },
-          {
-            "id": "29",
-            "title": "Implement CreateAlbumDialog component",
-            "description": "Create dialog for album creation from drag operations",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["27"],
-            "details": "Build dialog that appears when dragging images together, with album naming and initial image selection",
-            "testStrategy": "Test drag-triggered dialog, album creation, and image association"
-          },
-          {
-            "id": "30",
-            "title": "Implement FilterBar component",
-            "description": "Create search and filter bar with Elasticsearch integration",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["25"],
-            "details": "Build search input with debounced queries, tag filters, category selection, and Elasticsearch integration",
-            "testStrategy": "Test search functionality, filter application, debouncing, and query performance"
-          },
-          {
-            "id": "31",
-            "title": "Implement Lightbox component",
-            "description": "Create accessible lightbox for image viewing",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["27"],
-            "details": "Build lightbox with keyboard navigation, zoom controls, image navigation, and accessibility features",
-            "testStrategy": "Test keyboard navigation, zoom functionality, image switching, and accessibility compliance"
-          },
-          {
-            "id": "32",
-            "title": "Implement drag-and-drop for album creation",
-            "description": "Add drag-and-drop functionality to create albums",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["29"],
-            "details": "Implement drag detection, drop zones, visual feedback, and album creation workflow when dropping images onto each other",
-            "testStrategy": "Test drag operations, drop detection, visual feedback, and album creation flow"
-          },
-          {
-            "id": "33",
-            "title": "Implement infinite scroll with IntersectionObserver",
-            "description": "Add infinite scroll functionality to gallery",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["25"],
-            "details": "Use IntersectionObserver API for efficient infinite scroll, loading indicators, and performance optimization",
-            "testStrategy": "Test scroll behavior, loading triggers, performance with large datasets, and edge cases"
-          },
-          {
-            "id": "34",
-            "title": "Implement multi-select with batch operations",
-            "description": "Add multi-select functionality for batch operations",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["27"],
-            "details": "Build checkbox-based multi-select with batch delete, batch album operations, and selection management",
-            "testStrategy": "Test selection functionality, batch operations, and state management"
-          },
-          {
-            "id": "35",
-            "title": "Implement WishlistItemCard component",
-            "description": "Create draggable wishlist item card",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Build card with drag handle, item details, action buttons, and responsive layout. Include image display and product link handling",
-            "testStrategy": "Test drag functionality, button interactions, responsive layout, and data display"
-          },
-          {
-            "id": "36",
-            "title": "Implement WishlistList component",
-            "description": "Create list component with reordering functionality",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["35"],
-            "details": "Build list container with drag-and-drop reordering, optimistic updates, and persistence logic",
-            "testStrategy": "Test reordering, state updates, persistence, and error handling"
-          },
-          {
-            "id": "37",
-            "title": "Implement AddEditWishlistModal component",
-            "description": "Create modal for adding and editing wishlist items",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["12", "24"],
-            "details": "Build modal with form fields for title, description, image upload, product link, and category selection",
-            "testStrategy": "Test form validation, image upload, modal interactions, and data submission"
-          },
-          {
-            "id": "38",
-            "title": "Implement wishlist drag-and-drop reordering",
-            "description": "Add drag-and-drop reordering to wishlist items",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["36"],
-            "details": "Implement smooth drag-and-drop with visual feedback, reorder persistence, and optimistic UI updates",
-            "testStrategy": "Test drag operations, visual feedback, reorder persistence, and edge cases"
-          },
-          {
-            "id": "39",
-            "title": "Implement wishlist auto-save functionality",
-            "description": "Add auto-save after idle period for wishlist changes",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["38"],
-            "details": "Build debounced save mechanism that persists changes after 2 seconds of inactivity or on page exit",
-            "testStrategy": "Test auto-save timing, debouncing, page exit handling, and error recovery"
-          },
-          {
-            "id": "40",
-            "title": "Implement CategoryFilter component",
-            "description": "Create category filtering for wishlist items",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["36"],
-            "details": "Build filter component with predefined LEGO categories and custom category support",
-            "testStrategy": "Test filtering functionality, category management, and filter persistence"
-          },
-          {
-            "id": "41",
-            "title": "Implement ProfilePage layout component",
-            "description": "Create main profile page layout with sidebar and content areas",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Build responsive two-column layout with profile sidebar and main content area, supporting custom children injection",
-            "testStrategy": "Test responsive layout, content injection, and layout consistency"
-          },
-          {
-            "id": "42",
-            "title": "Implement ProfileSidebar component",
-            "description": "Create sidebar with avatar and user information",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["41"],
-            "details": "Build sidebar with avatar display, user name, bio, stats, and action buttons",
-            "testStrategy": "Test data display, responsive behavior, and component interactions"
-          },
-          {
-            "id": "43",
-            "title": "Implement ProfileMain component",
-            "description": "Create main content area for profile content",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["41"],
-            "details": "Build flexible content area that accepts children and maintains consistent styling",
-            "testStrategy": "Test content rendering, styling consistency, and flexibility"
-          },
-          {
-            "id": "44",
-            "title": "Implement AvatarUploader component",
-            "description": "Create avatar upload with cropping functionality",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["24", "42"],
-            "details": "Build avatar upload with react-easy-crop integration, file type validation (.jpg/.heic), and upload progress",
-            "testStrategy": "Test file upload, cropping functionality, validation, and error handling"
-          },
-          {
-            "id": "45",
-            "title": "Implement avatar cropping modal",
-            "description": "Create modal for avatar editing with crop and zoom controls",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["44"],
-            "details": "Build modal with react-easy-crop, zoom controls, crop area selection, and save/cancel functionality",
-            "testStrategy": "Test cropping controls, zoom functionality, modal interactions, and image processing"
-          },
-          {
-            "id": "46",
-            "title": "Implement ProfileSkeleton component",
-            "description": "Create loading skeleton for profile page",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["41"],
-            "details": "Build skeleton component matching profile layout with animated placeholders",
-            "testStrategy": "Test skeleton display, animation, and layout matching"
-          },
-          {
-            "id": "47",
-            "title": "Implement MocInstructionsGallery component",
-            "description": "Create MOC gallery with filtering and search",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["25"],
-            "details": "Build MOC-specific gallery reusing gallery layout with MOC-specific filtering and display options",
-            "testStrategy": "Test gallery layout, MOC-specific features, and search functionality"
-          },
-          {
-            "id": "48",
-            "title": "Implement MocDetailPage component",
-            "description": "Create detailed MOC page with editable forms",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["47"],
-            "details": "Build detailed view with editable title, description, tags, thumbnail display, and file management areas",
-            "testStrategy": "Test form editing, file management, and data persistence"
-          },
-          {
-            "id": "49",
-            "title": "Implement MOC file upload areas",
-            "description": "Create file upload areas for different MOC file types",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["24", "48"],
-            "details": "Build specialized upload areas for PDF instructions, .io files, CSV/JSON parts lists, and thumbnail images",
-            "testStrategy": "Test file type validation, upload progress, and file management"
-          },
-          {
-            "id": "50",
-            "title": "Implement MocCard component",
-            "description": "Create MOC card for gallery display",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["47"],
-            "details": "Build card component with thumbnail, title, description, tags, and action buttons",
-            "testStrategy": "Test card display, interactions, and responsive layout"
-          },
-          {
-            "id": "51",
-            "title": "Implement MOC search and filter functionality",
-            "description": "Add search and filtering capabilities to MOC gallery",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["47"],
-            "details": "Build search by title/tags, filter by file types, and integration with Elasticsearch if available",
-            "testStrategy": "Test search functionality, filtering options, and query performance"
-          },
-          {
-            "id": "52",
-            "title": "Implement file download functionality",
-            "description": "Add file download capabilities for MOC files",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["49"],
-            "details": "Build secure file download with progress tracking and proper file handling",
-            "testStrategy": "Test download functionality, progress tracking, and file integrity"
-          },
-          {
-            "id": "53",
-            "title": "Implement gallery image linking for MOCs",
-            "description": "Add functionality to link gallery images to MOC instructions",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["48", "25"],
-            "details": "Build image selection interface and linking mechanism between gallery and MOC instructions",
-            "testStrategy": "Test image selection, linking functionality, and data persistence"
-          },
-          {
-            "id": "54",
-            "title": "Set up React Router configuration",
-            "description": "Configure routing for all application pages",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["20"],
-            "details": "Set up React Router with all routes, nested routing, route guards, and proper navigation structure",
-            "testStrategy": "Test navigation, route protection, and proper URL handling"
-          },
-          {
-            "id": "55",
-            "title": "Implement error boundary components",
-            "description": "Create error boundaries for graceful error handling",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["4"],
-            "details": "Build error boundary components with user-friendly error displays and error reporting",
-            "testStrategy": "Test error catching, display, and recovery mechanisms"
-          },
-          {
-            "id": "56",
-            "title": "Implement loading states and skeletons",
-            "description": "Add consistent loading states across all components",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["4"],
-            "details": "Create loading spinners, skeleton screens, and progress indicators for all async operations",
-            "testStrategy": "Test loading states, skeleton accuracy, and loading performance"
-          },
-          {
-            "id": "57",
-            "title": "Implement responsive design breakpoints",
-            "description": "Ensure all components work across different screen sizes",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["3"],
-            "details": "Test and adjust all components for mobile, tablet, and desktop breakpoints with proper responsive behavior",
-            "testStrategy": "Test responsive behavior across all breakpoints and devices"
-          },
-          {
-            "id": "58",
-            "title": "Implement accessibility features",
-            "description": "Add comprehensive accessibility support to all components",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["4"],
-            "details": "Add ARIA labels, keyboard navigation, focus management, and screen reader support across all components",
-            "testStrategy": "Run accessibility audits and test with screen readers and keyboard-only navigation"
-          },
-          {
-            "id": "59",
-            "title": "Implement form validation error messages",
-            "description": "Add comprehensive error messaging for all forms",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["12"],
-            "details": "Create consistent error message system with proper field validation feedback and user guidance",
-            "testStrategy": "Test all validation scenarios and error message clarity"
-          },
-          {
-            "id": "60",
-            "title": "Implement toast notification system",
-            "description": "Create toast notifications for user feedback",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["4"],
-            "details": "Build toast notification system for success, error, and info messages with proper positioning and timing",
-            "testStrategy": "Test toast display, timing, positioning, and accessibility"
-          },
-          {
-            "id": "61",
-            "title": "Implement image optimization utilities",
-            "description": "Add image optimization for uploads and display",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["24"],
-            "details": "Build image compression, resizing, and format optimization utilities for better performance",
-            "testStrategy": "Test image optimization quality, performance, and file size reduction"
-          },
-          {
-            "id": "62",
-            "title": "Implement caching strategies",
-            "description": "Add caching for API calls and image assets",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["22"],
-            "details": "Implement RTK Query caching, image caching, and localStorage caching where appropriate",
-            "testStrategy": "Test cache performance, invalidation, and storage management"
-          },
-          {
-            "id": "63",
-            "title": "Write comprehensive unit tests for auth package",
-            "description": "Create unit tests for all auth components and utilities",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["6", "23"],
-            "details": "Write tests for all auth components, hooks, utilities, and Redux logic with high coverage",
-            "testStrategy": "Achieve 95%+ test coverage with meaningful tests for all auth functionality"
-          },
-          {
-            "id": "64",
-            "title": "Write comprehensive unit tests for gallery package",
-            "description": "Create unit tests for all gallery components and utilities",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["6", "34"],
-            "details": "Write tests for gallery components, image handling, drag-and-drop, and search functionality",
-            "testStrategy": "Achieve 95%+ test coverage with tests for all gallery features"
-          },
-          {
-            "id": "65",
-            "title": "Write comprehensive unit tests for wishlist package",
-            "description": "Create unit tests for all wishlist components and utilities",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["6", "40"],
-            "details": "Write tests for wishlist components, drag-and-drop, auto-save, and category filtering",
-            "testStrategy": "Achieve 95%+ test coverage with tests for all wishlist functionality"
-          },
-          {
-            "id": "66",
-            "title": "Write comprehensive unit tests for profile package",
-            "description": "Create unit tests for all profile components and utilities",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["6", "46"],
-            "details": "Write tests for profile components, avatar upload, cropping, and layout functionality",
-            "testStrategy": "Achieve 95%+ test coverage with tests for all profile features"
-          },
-          {
-            "id": "67",
-            "title": "Write comprehensive unit tests for MOC package",
-            "description": "Create unit tests for all MOC components and utilities",
-            "status": "pending",
-            "priority": "high",
-            "dependencies": ["6", "53"],
-            "details": "Write tests for MOC components, file handling, search, and gallery integration",
-            "testStrategy": "Achieve 95%+ test coverage with tests for all MOC functionality"
-          },
-          {
-            "id": "68",
-            "title": "Implement integration tests for auth flow",
-            "description": "Create end-to-end tests for complete authentication flow",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["63"],
-            "details": "Write integration tests covering login, signup, email verification, password reset, and route protection",
-            "testStrategy": "Test complete user authentication journeys with API mocking"
-          },
-          {
-            "id": "69",
-            "title": "Implement integration tests for gallery workflow",
-            "description": "Create integration tests for gallery operations",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["64"],
-            "details": "Write tests for image upload, album creation, search, and batch operations",
-            "testStrategy": "Test complete gallery workflows with file upload simulation"
-          },
-          {
-            "id": "70",
-            "title": "Implement integration tests for wishlist operations",
-            "description": "Create integration tests for wishlist CRUD operations",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["65"],
-            "details": "Write tests for wishlist creation, editing, reordering, and category management",
-            "testStrategy": "Test complete wishlist workflows with drag-and-drop simulation"
-          },
-          {
-            "id": "71",
-            "title": "Optimize bundle size and code splitting",
-            "description": "Implement code splitting and bundle optimization",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["5"],
-            "details": "Set up lazy loading, route-based code splitting, and bundle analysis to optimize loading performance",
-            "testStrategy": "Analyze bundle size, loading performance, and chunk optimization"
-          },
-          {
-            "id": "72",
-            "title": "Implement performance monitoring",
-            "description": "Add performance monitoring and analytics",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["71"],
-            "details": "Set up performance monitoring, Core Web Vitals tracking, and user analytics",
-            "testStrategy": "Monitor performance metrics and loading times across different scenarios"
-          },
-          {
-            "id": "73",
-            "title": "Implement keyboard navigation support",
-            "description": "Add comprehensive keyboard navigation to all interactive elements",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["58"],
-            "details": "Ensure all components support keyboard navigation with proper focus management and shortcuts",
-            "testStrategy": "Test all functionality using only keyboard navigation"
-          },
-          {
-            "id": "74",
-            "title": "Implement drag-and-drop accessibility",
-            "description": "Add keyboard alternatives for all drag-and-drop operations",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["73"],
-            "details": "Provide keyboard-accessible alternatives for all drag-and-drop functionality",
-            "testStrategy": "Test drag-and-drop alternatives using only keyboard input"
-          },
-          {
-            "id": "75",
-            "title": "Implement theme system support",
-            "description": "Add dark/light theme support across all components",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["3"],
-            "details": "Extend Tailwind configuration with theme variables and implement theme switching",
-            "testStrategy": "Test theme switching and consistency across all components"
-          },
-          {
-            "id": "76",
-            "title": "Implement internationalization (i18n) setup",
-            "description": "Prepare components for internationalization support",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["4"],
-            "details": "Set up i18n framework and prepare all text for translation",
-            "testStrategy": "Test text extraction and placeholder translation functionality"
-          },
-          {
-            "id": "77",
-            "title": "Implement offline support",
-            "description": "Add offline functionality for critical features",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["62"],
-            "details": "Implement service worker and offline caching for essential functionality",
-            "testStrategy": "Test offline behavior and data synchronization when connection returns"
-          },
-          {
-            "id": "78",
-            "title": "Implement progressive web app features",
-            "description": "Add PWA capabilities for mobile app-like experience",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["77"],
-            "details": "Add PWA manifest, service worker, and app shell for installable web app",
-            "testStrategy": "Test PWA installation and offline functionality on mobile devices"
-          },
-          {
-            "id": "79",
-            "title": "Create comprehensive documentation",
-            "description": "Write documentation for all packages and components",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["11"],
-            "details": "Create README files, component documentation, and usage examples for all packages",
-            "testStrategy": "Verify documentation accuracy and completeness"
-          },
-          {
-            "id": "80",
-            "title": "Set up Storybook for component development",
-            "description": "Configure Storybook for isolated component development",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["4"],
-            "details": "Set up Storybook with all components, stories, and documentation",
-            "testStrategy": "Verify all components render correctly in Storybook"
-          },
-          {
-            "id": "81",
-            "title": "Implement component library versioning",
-            "description": "Set up semantic versioning for packages",
-            "status": "pending",
-            "priority": "low",
-            "dependencies": ["1"],
-            "details": "Configure changeset or similar tool for package versioning and release management",
-            "testStrategy": "Test version bumping and package publishing workflow"
-          },
-          {
-            "id": "82",
-            "title": "Implement cross-browser testing",
-            "description": "Test compatibility across different browsers",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["67"],
-            "details": "Test all functionality across Chrome, Firefox, Safari, and Edge browsers",
-            "testStrategy": "Verify consistent behavior and performance across target browsers"
-          },
-          {
-            "id": "83",
-            "title": "Implement mobile responsiveness testing",
-            "description": "Test mobile experience across different devices",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["57"],
-            "details": "Test touch interactions, responsive layouts, and mobile-specific functionality",
-            "testStrategy": "Test on various mobile devices and screen sizes"
-          },
-          {
-            "id": "84",
-            "title": "Implement security hardening",
-            "description": "Add security measures and vulnerability scanning",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["23"],
-            "details": "Implement CSP headers, XSS protection, and security scanning tools",
-            "testStrategy": "Run security audits and vulnerability scans"
-          },
-          {
-            "id": "85",
-            "title": "Create deployment configuration",
-            "description": "Set up deployment pipeline for all packages",
-            "status": "pending",
-            "priority": "medium",
-            "dependencies": ["81"],
-            "details": "Configure CI/CD pipeline with automated testing, building, and deployment",
-            "testStrategy": "Test deployment pipeline and verify successful deployments"
-          }
-        ]
+  "master": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Set up Turborepo monorepo structure",
+        "description": "Initialize Turborepo workspace with proper package structure for frontend packages",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [],
+        "details": "Create root package.json with workspace configuration, set up turbo.json for build pipeline, configure shared dependencies and scripts across packages",
+        "testStrategy": "Verify all packages can be built and workspace commands work correctly",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "2",
+        "title": "Configure shared TypeScript config",
+        "description": "Set up shared TypeScript configuration for all frontend packages",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "Create base tsconfig.json with shared compiler options, strict mode enabled, proper module resolution, and path mapping for workspace packages",
+        "testStrategy": "Verify TypeScript compilation works across all packages with no errors",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "3",
+        "title": "Set up shared Tailwind CSS configuration",
+        "description": "Configure Tailwind CSS with shared design tokens and component styles",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "Create shared tailwind.config.js with design system tokens, custom colors, spacing, typography, and component variants. Set up PostCSS configuration",
+        "testStrategy": "Verify Tailwind classes work consistently across all packages",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "4",
+        "title": "Install and configure ShadCN UI components",
+        "description": "Set up ShadCN UI component library with shared component configuration",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "2",
+          "3"
+        ],
+        "details": "Install ShadCN UI, configure components.json, set up shared component exports, and create base UI component package",
+        "testStrategy": "Verify ShadCN components render correctly with proper theming",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "5",
+        "title": "Configure Vite build setup",
+        "description": "Set up Vite configuration for all frontend packages with proper bundling",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "2"
+        ],
+        "details": "Create shared Vite config with TypeScript support, proper asset handling, environment variable support, and development server configuration",
+        "testStrategy": "Verify all packages build successfully and dev server starts without errors",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "6",
+        "title": "Set up Vitest testing framework",
+        "description": "Configure Vitest with React Testing Library and accessibility testing",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "5"
+        ],
+        "details": "Install and configure Vitest, @testing-library/react, vitest-axe, MSW for API mocking, and setup test utilities",
+        "testStrategy": "Verify test runner works with sample component tests and accessibility audits",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "7",
+        "title": "Create packages/auth package structure",
+        "description": "Initialize auth package with proper folder structure and configuration",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create package.json, src folder structure with components, hooks, types, and services. Set up exports and build configuration",
+        "testStrategy": "Verify package builds and exports are accessible from other packages",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "8",
+        "title": "Create packages/gallery package structure",
+        "description": "Initialize gallery package with proper folder structure",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create package structure for gallery components, image handling utilities, and upload functionality",
+        "testStrategy": "Verify package structure and basic exports work correctly",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "9",
+        "title": "Create packages/wishlist package structure",
+        "description": "Initialize wishlist package with proper folder structure",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create package structure for wishlist components, drag-and-drop utilities, and CRUD operations",
+        "testStrategy": "Verify package structure and basic exports work correctly",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "10",
+        "title": "Create packages/profile package structure",
+        "description": "Initialize profile package with proper folder structure",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create package structure for profile components, avatar upload utilities, and editing functionality",
+        "testStrategy": "Verify package structure and basic exports work correctly",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "11",
+        "title": "Create packages/moc package structure",
+        "description": "Initialize MOC instructions package with proper folder structure",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create package structure for MOC components, file upload utilities, and instruction management",
+        "testStrategy": "Verify package structure and basic exports work correctly",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "12",
+        "title": "Implement Zod validation schemas",
+        "description": "Create all Zod schemas for form validation across packages",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "7"
+        ],
+        "details": "Implement UserSchema, AuthResponseSchema, GalleryImageFormSchema, AlbumFormSchema, MocFormSchema, WishlistItemSchema, and AvatarUploadSchema with proper validation rules",
+        "testStrategy": "Test all schemas with valid and invalid data to ensure proper validation",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "13",
+        "title": "Set up Redux Toolkit store configuration",
+        "description": "Configure Redux store with RTK Query and auth slice",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "7"
+        ],
+        "details": "Create store configuration, auth slice with initial state, and RTK Query API slice setup with base query configuration",
+        "testStrategy": "Verify store works with auth actions and API calls",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "14",
+        "title": "Implement LoginForm component",
+        "description": "Create login form with React Hook Form and Zod validation",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "details": "Build LoginForm with email/password fields, form validation, error handling, and submission logic. Include loading states and accessibility features",
+        "testStrategy": "Test form validation, submission, error states, and accessibility compliance",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "15",
+        "title": "Implement SignupForm component",
+        "description": "Create signup form with password strength indicator",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "details": "Build SignupForm with email, firstName, lastName, password, confirmPassword fields. Include password strength indicator and comprehensive validation",
+        "testStrategy": "Test form validation, password matching, strength indicator, and submission flow",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "16",
+        "title": "Implement EmailVerification component",
+        "description": "Create email verification component with OTP input",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "details": "Build 6-digit OTP input component with auto-submit, resend functionality, and proper validation",
+        "testStrategy": "Test OTP input, auto-submission, resend functionality, and error handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "17",
+        "title": "Implement ForgotPasswordForm component",
+        "description": "Create forgot password form with email validation",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "details": "Build simple email input form for password reset requests with proper validation and feedback",
+        "testStrategy": "Test email validation and form submission with success/error states",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "18",
+        "title": "Implement ResetPasswordForm component",
+        "description": "Create password reset form with token validation",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "details": "Build form for setting new password with token from URL params, password confirmation, and strength requirements",
+        "testStrategy": "Test password validation, confirmation matching, and token handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "19",
+        "title": "Implement SocialLoginButton component",
+        "description": "Create social login buttons for Google/Twitter/Facebook",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "13"
+        ],
+        "details": "Build reusable social login button component with proper OAuth flow handling and provider-specific styling",
+        "testStrategy": "Test OAuth flow initiation and proper redirect handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "20",
+        "title": "Implement RouteGuard component",
+        "description": "Create route protection component with role-based access",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "13"
+        ],
+        "details": "Build RouteGuard with authentication checks, role validation, automatic token refresh, and redirect logic",
+        "testStrategy": "Test route protection, token refresh, and proper redirects for different user states",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "21",
+        "title": "Implement auth Redux slice",
+        "description": "Create comprehensive auth state management with Redux Toolkit",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "13"
+        ],
+        "details": "Build auth slice with user state, authentication status, loading states, error handling, and token management",
+        "testStrategy": "Test all auth actions, state updates, and async thunks",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "22",
+        "title": "Implement auth service API client",
+        "description": "Create auth service client for API communication",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "13"
+        ],
+        "details": "Build API client with login, signup, logout, refresh, password reset, and email verification endpoints",
+        "testStrategy": "Test all API endpoints with proper request/response handling and error management",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "23",
+        "title": "Implement token management utilities",
+        "description": "Create secure token handling with HTTP-only cookies",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "22"
+        ],
+        "details": "Build token storage, refresh logic, expiry handling, and secure cookie management utilities",
+        "testStrategy": "Test token refresh, expiry detection, and secure storage mechanisms",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "24",
+        "title": "Create shared FileUpload component",
+        "description": "Build reusable file upload component with drag-and-drop",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create flexible file upload component with drag-and-drop, progress tracking, file type validation, and size limits",
+        "testStrategy": "Test file selection, drag-and-drop, validation, progress tracking, and error handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "25",
+        "title": "Implement InspirationGallery component",
+        "description": "Create masonry layout gallery with infinite scroll",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "24"
+        ],
+        "details": "Build responsive masonry layout using CSS Grid or Flexbox with infinite scroll, loading states, and responsive breakpoints",
+        "testStrategy": "Test layout responsiveness, infinite scroll, loading states, and image loading",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "26",
+        "title": "Implement ImageUploadModal component",
+        "description": "Create modal for image uploads with preview",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "24"
+        ],
+        "details": "Build modal with FileUpload integration, image preview, metadata input fields, and upload progress",
+        "testStrategy": "Test modal opening/closing, file upload, preview functionality, and form submission",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "27",
+        "title": "Implement InspirationCard component",
+        "description": "Create image card with hover effects and actions",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "25"
+        ],
+        "details": "Build image card with hover drawer using Framer Motion, action buttons, metadata display, and responsive design",
+        "testStrategy": "Test hover animations, button interactions, responsive layout, and accessibility",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "28",
+        "title": "Implement AlbumView component",
+        "description": "Create album view reusing gallery layout",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "25"
+        ],
+        "details": "Build album-specific view with filtered gallery layout, album header, and management controls",
+        "testStrategy": "Test album filtering, layout consistency, and album-specific features",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "29",
+        "title": "Implement CreateAlbumDialog component",
+        "description": "Create dialog for album creation from drag operations",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "27"
+        ],
+        "details": "Build dialog that appears when dragging images together, with album naming and initial image selection",
+        "testStrategy": "Test drag-triggered dialog, album creation, and image association",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "30",
+        "title": "Implement FilterBar component",
+        "description": "Create search and filter bar with Elasticsearch integration",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "25"
+        ],
+        "details": "Build search input with debounced queries, tag filters, category selection, and Elasticsearch integration",
+        "testStrategy": "Test search functionality, filter application, debouncing, and query performance",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "31",
+        "title": "Implement Lightbox component",
+        "description": "Create accessible lightbox for image viewing",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "27"
+        ],
+        "details": "Build lightbox with keyboard navigation, zoom controls, image navigation, and accessibility features",
+        "testStrategy": "Test keyboard navigation, zoom functionality, image switching, and accessibility compliance",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "32",
+        "title": "Implement drag-and-drop for album creation",
+        "description": "Add drag-and-drop functionality to create albums",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "29"
+        ],
+        "details": "Implement drag detection, drop zones, visual feedback, and album creation workflow when dropping images onto each other",
+        "testStrategy": "Test drag operations, drop detection, visual feedback, and album creation flow",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "33",
+        "title": "Implement infinite scroll with IntersectionObserver",
+        "description": "Add infinite scroll functionality to gallery",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "25"
+        ],
+        "details": "Use IntersectionObserver API for efficient infinite scroll, loading indicators, and performance optimization",
+        "testStrategy": "Test scroll behavior, loading triggers, performance with large datasets, and edge cases",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "34",
+        "title": "Implement multi-select with batch operations",
+        "description": "Add multi-select functionality for batch operations",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "27"
+        ],
+        "details": "Build checkbox-based multi-select with batch delete, batch album operations, and selection management",
+        "testStrategy": "Test selection functionality, batch operations, and state management",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "35",
+        "title": "Implement WishlistItemCard component",
+        "description": "Create draggable wishlist item card",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Build card with drag handle, item details, action buttons, and responsive layout. Include image display and product link handling",
+        "testStrategy": "Test drag functionality, button interactions, responsive layout, and data display",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "36",
+        "title": "Implement WishlistList component",
+        "description": "Create list component with reordering functionality",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "35"
+        ],
+        "details": "Build list container with drag-and-drop reordering, optimistic updates, and persistence logic",
+        "testStrategy": "Test reordering, state updates, persistence, and error handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "37",
+        "title": "Implement AddEditWishlistModal component",
+        "description": "Create modal for adding and editing wishlist items",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "24"
+        ],
+        "details": "Build modal with form fields for title, description, image upload, product link, and category selection",
+        "testStrategy": "Test form validation, image upload, modal interactions, and data submission",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "38",
+        "title": "Implement wishlist drag-and-drop reordering",
+        "description": "Add drag-and-drop reordering to wishlist items",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "36"
+        ],
+        "details": "Implement smooth drag-and-drop with visual feedback, reorder persistence, and optimistic UI updates",
+        "testStrategy": "Test drag operations, visual feedback, reorder persistence, and edge cases",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "39",
+        "title": "Implement wishlist auto-save functionality",
+        "description": "Add auto-save after idle period for wishlist changes",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "38"
+        ],
+        "details": "Build debounced save mechanism that persists changes after 2 seconds of inactivity or on page exit",
+        "testStrategy": "Test auto-save timing, debouncing, page exit handling, and error recovery",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "40",
+        "title": "Implement CategoryFilter component",
+        "description": "Create category filtering for wishlist items",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "36"
+        ],
+        "details": "Build filter component with predefined LEGO categories and custom category support",
+        "testStrategy": "Test filtering functionality, category management, and filter persistence",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "41",
+        "title": "Implement ProfilePage layout component",
+        "description": "Create main profile page layout with sidebar and content areas",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Build responsive two-column layout with profile sidebar and main content area, supporting custom children injection",
+        "testStrategy": "Test responsive layout, content injection, and layout consistency",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "42",
+        "title": "Implement ProfileSidebar component",
+        "description": "Create sidebar with avatar and user information",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "41"
+        ],
+        "details": "Build sidebar with avatar display, user name, bio, stats, and action buttons",
+        "testStrategy": "Test data display, responsive behavior, and component interactions",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "43",
+        "title": "Implement ProfileMain component",
+        "description": "Create main content area for profile content",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "41"
+        ],
+        "details": "Build flexible content area that accepts children and maintains consistent styling",
+        "testStrategy": "Test content rendering, styling consistency, and flexibility",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "44",
+        "title": "Implement AvatarUploader component",
+        "description": "Create avatar upload with cropping functionality",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "24",
+          "42"
+        ],
+        "details": "Build avatar upload with react-easy-crop integration, file type validation (.jpg/.heic), and upload progress",
+        "testStrategy": "Test file upload, cropping functionality, validation, and error handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "45",
+        "title": "Implement avatar cropping modal",
+        "description": "Create modal for avatar editing with crop and zoom controls",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "44"
+        ],
+        "details": "Build modal with react-easy-crop, zoom controls, crop area selection, and save/cancel functionality",
+        "testStrategy": "Test cropping controls, zoom functionality, modal interactions, and image processing",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "46",
+        "title": "Implement ProfileSkeleton component",
+        "description": "Create loading skeleton for profile page",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "41"
+        ],
+        "details": "Build skeleton component matching profile layout with animated placeholders",
+        "testStrategy": "Test skeleton display, animation, and layout matching",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "47",
+        "title": "Implement MocInstructionsGallery component",
+        "description": "Create MOC gallery with filtering and search",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "25"
+        ],
+        "details": "Build MOC-specific gallery reusing gallery layout with MOC-specific filtering and display options",
+        "testStrategy": "Test gallery layout, MOC-specific features, and search functionality",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "48",
+        "title": "Implement MocDetailPage component",
+        "description": "Create detailed MOC page with editable forms",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "47"
+        ],
+        "details": "Build detailed view with editable title, description, tags, thumbnail display, and file management areas",
+        "testStrategy": "Test form editing, file management, and data persistence",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "49",
+        "title": "Implement MOC file upload areas",
+        "description": "Create file upload areas for different MOC file types",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "24",
+          "48"
+        ],
+        "details": "Build specialized upload areas for PDF instructions, .io files, CSV/JSON parts lists, and thumbnail images",
+        "testStrategy": "Test file type validation, upload progress, and file management",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "50",
+        "title": "Implement MocCard component",
+        "description": "Create MOC card for gallery display",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "47"
+        ],
+        "details": "Build card component with thumbnail, title, description, tags, and action buttons",
+        "testStrategy": "Test card display, interactions, and responsive layout",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "51",
+        "title": "Implement MOC search and filter functionality",
+        "description": "Add search and filtering capabilities to MOC gallery",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "47"
+        ],
+        "details": "Build search by title/tags, filter by file types, and integration with Elasticsearch if available",
+        "testStrategy": "Test search functionality, filtering options, and query performance",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "52",
+        "title": "Implement file download functionality",
+        "description": "Add file download capabilities for MOC files",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "49"
+        ],
+        "details": "Build secure file download with progress tracking and proper file handling",
+        "testStrategy": "Test download functionality, progress tracking, and file integrity",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "53",
+        "title": "Implement gallery image linking for MOCs",
+        "description": "Add functionality to link gallery images to MOC instructions",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "48",
+          "25"
+        ],
+        "details": "Build image selection interface and linking mechanism between gallery and MOC instructions",
+        "testStrategy": "Test image selection, linking functionality, and data persistence",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "54",
+        "title": "Set up React Router configuration",
+        "description": "Configure routing for all application pages",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "20"
+        ],
+        "details": "Set up React Router with all routes, nested routing, route guards, and proper navigation structure",
+        "testStrategy": "Test navigation, route protection, and proper URL handling",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "55",
+        "title": "Implement error boundary components",
+        "description": "Create error boundaries for graceful error handling",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Build error boundary components with user-friendly error displays and error reporting",
+        "testStrategy": "Test error catching, display, and recovery mechanisms",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "56",
+        "title": "Implement loading states and skeletons",
+        "description": "Add consistent loading states across all components",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Create loading spinners, skeleton screens, and progress indicators for all async operations",
+        "testStrategy": "Test loading states, skeleton accuracy, and loading performance",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "57",
+        "title": "Implement responsive design breakpoints",
+        "description": "Ensure all components work across different screen sizes",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "3"
+        ],
+        "details": "Test and adjust all components for mobile, tablet, and desktop breakpoints with proper responsive behavior",
+        "testStrategy": "Test responsive behavior across all breakpoints and devices",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "58",
+        "title": "Implement accessibility features",
+        "description": "Add comprehensive accessibility support to all components",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Add ARIA labels, keyboard navigation, focus management, and screen reader support across all components",
+        "testStrategy": "Run accessibility audits and test with screen readers and keyboard-only navigation",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "59",
+        "title": "Implement form validation error messages",
+        "description": "Add comprehensive error messaging for all forms",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "12"
+        ],
+        "details": "Create consistent error message system with proper field validation feedback and user guidance",
+        "testStrategy": "Test all validation scenarios and error message clarity",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "60",
+        "title": "Implement toast notification system",
+        "description": "Create toast notifications for user feedback",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Build toast notification system for success, error, and info messages with proper positioning and timing",
+        "testStrategy": "Test toast display, timing, positioning, and accessibility",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "61",
+        "title": "Implement image optimization utilities",
+        "description": "Add image optimization for uploads and display",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "24"
+        ],
+        "details": "Build image compression, resizing, and format optimization utilities for better performance",
+        "testStrategy": "Test image optimization quality, performance, and file size reduction",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "62",
+        "title": "Implement caching strategies",
+        "description": "Add caching for API calls and image assets",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "22"
+        ],
+        "details": "Implement RTK Query caching, image caching, and localStorage caching where appropriate",
+        "testStrategy": "Test cache performance, invalidation, and storage management",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "63",
+        "title": "Write comprehensive unit tests for auth package",
+        "description": "Create unit tests for all auth components and utilities",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "6",
+          "23"
+        ],
+        "details": "Write tests for all auth components, hooks, utilities, and Redux logic with high coverage",
+        "testStrategy": "Achieve 95%+ test coverage with meaningful tests for all auth functionality",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "64",
+        "title": "Write comprehensive unit tests for gallery package",
+        "description": "Create unit tests for all gallery components and utilities",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "6",
+          "34"
+        ],
+        "details": "Write tests for gallery components, image handling, drag-and-drop, and search functionality",
+        "testStrategy": "Achieve 95%+ test coverage with tests for all gallery features",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "65",
+        "title": "Write comprehensive unit tests for wishlist package",
+        "description": "Create unit tests for all wishlist components and utilities",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "6",
+          "40"
+        ],
+        "details": "Write tests for wishlist components, drag-and-drop, auto-save, and category filtering",
+        "testStrategy": "Achieve 95%+ test coverage with tests for all wishlist functionality",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "66",
+        "title": "Write comprehensive unit tests for profile package",
+        "description": "Create unit tests for all profile components and utilities",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "6",
+          "46"
+        ],
+        "details": "Write tests for profile components, avatar upload, cropping, and layout functionality",
+        "testStrategy": "Achieve 95%+ test coverage with tests for all profile features",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "67",
+        "title": "Write comprehensive unit tests for MOC package",
+        "description": "Create unit tests for all MOC components and utilities",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "6",
+          "53"
+        ],
+        "details": "Write tests for MOC components, file handling, search, and gallery integration",
+        "testStrategy": "Achieve 95%+ test coverage with tests for all MOC functionality",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "68",
+        "title": "Implement integration tests for auth flow",
+        "description": "Create end-to-end tests for complete authentication flow",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "63"
+        ],
+        "details": "Write integration tests covering login, signup, email verification, password reset, and route protection",
+        "testStrategy": "Test complete user authentication journeys with API mocking",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "69",
+        "title": "Implement integration tests for gallery workflow",
+        "description": "Create integration tests for gallery operations",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "64"
+        ],
+        "details": "Write tests for image upload, album creation, search, and batch operations",
+        "testStrategy": "Test complete gallery workflows with file upload simulation",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "70",
+        "title": "Implement integration tests for wishlist operations",
+        "description": "Create integration tests for wishlist CRUD operations",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "65"
+        ],
+        "details": "Write tests for wishlist creation, editing, reordering, and category management",
+        "testStrategy": "Test complete wishlist workflows with drag-and-drop simulation",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "71",
+        "title": "Optimize bundle size and code splitting",
+        "description": "Implement code splitting and bundle optimization",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "5"
+        ],
+        "details": "Set up lazy loading, route-based code splitting, and bundle analysis to optimize loading performance",
+        "testStrategy": "Analyze bundle size, loading performance, and chunk optimization",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "72",
+        "title": "Implement performance monitoring",
+        "description": "Add performance monitoring and analytics",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "71"
+        ],
+        "details": "Set up performance monitoring, Core Web Vitals tracking, and user analytics",
+        "testStrategy": "Monitor performance metrics and loading times across different scenarios",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "73",
+        "title": "Implement keyboard navigation support",
+        "description": "Add comprehensive keyboard navigation to all interactive elements",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "58"
+        ],
+        "details": "Ensure all components support keyboard navigation with proper focus management and shortcuts",
+        "testStrategy": "Test all functionality using only keyboard navigation",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "74",
+        "title": "Implement drag-and-drop accessibility",
+        "description": "Add keyboard alternatives for all drag-and-drop operations",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "73"
+        ],
+        "details": "Provide keyboard-accessible alternatives for all drag-and-drop functionality",
+        "testStrategy": "Test drag-and-drop alternatives using only keyboard input",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "75",
+        "title": "Implement theme system support",
+        "description": "Add dark/light theme support across all components",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "3"
+        ],
+        "details": "Extend Tailwind configuration with theme variables and implement theme switching",
+        "testStrategy": "Test theme switching and consistency across all components",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "76",
+        "title": "Implement internationalization (i18n) setup",
+        "description": "Prepare components for internationalization support",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Set up i18n framework and prepare all text for translation",
+        "testStrategy": "Test text extraction and placeholder translation functionality",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "77",
+        "title": "Implement offline support",
+        "description": "Add offline functionality for critical features",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "62"
+        ],
+        "details": "Implement service worker and offline caching for essential functionality",
+        "testStrategy": "Test offline behavior and data synchronization when connection returns",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "78",
+        "title": "Implement progressive web app features",
+        "description": "Add PWA capabilities for mobile app-like experience",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "77"
+        ],
+        "details": "Add PWA manifest, service worker, and app shell for installable web app",
+        "testStrategy": "Test PWA installation and offline functionality on mobile devices",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "79",
+        "title": "Create comprehensive documentation",
+        "description": "Write documentation for all packages and components",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "11"
+        ],
+        "details": "Create README files, component documentation, and usage examples for all packages",
+        "testStrategy": "Verify documentation accuracy and completeness",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "80",
+        "title": "Set up Storybook for component development",
+        "description": "Configure Storybook for isolated component development",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Set up Storybook with all components, stories, and documentation",
+        "testStrategy": "Verify all components render correctly in Storybook",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "81",
+        "title": "Implement component library versioning",
+        "description": "Set up semantic versioning for packages",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "1"
+        ],
+        "details": "Configure changeset or similar tool for package versioning and release management",
+        "testStrategy": "Test version bumping and package publishing workflow",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "82",
+        "title": "Implement cross-browser testing",
+        "description": "Test compatibility across different browsers",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "67"
+        ],
+        "details": "Test all functionality across Chrome, Firefox, Safari, and Edge browsers",
+        "testStrategy": "Verify consistent behavior and performance across target browsers",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "83",
+        "title": "Implement mobile responsiveness testing",
+        "description": "Test mobile experience across different devices",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "57"
+        ],
+        "details": "Test touch interactions, responsive layouts, and mobile-specific functionality",
+        "testStrategy": "Test on various mobile devices and screen sizes",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "84",
+        "title": "Implement security hardening",
+        "description": "Add security measures and vulnerability scanning",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "23"
+        ],
+        "details": "Implement CSP headers, XSS protection, and security scanning tools",
+        "testStrategy": "Run security audits and vulnerability scans",
+        "tag": "frontend-ui-development"
+      },
+      {
+        "id": "85",
+        "title": "Create deployment configuration",
+        "description": "Set up deployment pipeline for all packages",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "81"
+        ],
+        "details": "Configure CI/CD pipeline with automated testing, building, and deployment",
+        "testStrategy": "Test deployment pipeline and verify successful deployments",
+        "tag": "frontend-ui-development"
       }
+    ],
+    "metadata": {
+      "created": "2025-07-23T19:07:49.120Z",
+      "updated": "2025-07-23T19:07:49.120Z",
+      "description": "Tasks for master context"
+    }
+  },
+  "frontend-ui-development": {
+    "tasks": [],
+    "metadata": {
+      "created": "2025-07-23T19:08:24.436Z",
+      "updated": "2025-07-23T19:08:24.436Z",
+      "description": "Frontend UI development tasks based on all PRDs"
     }
   }
 }

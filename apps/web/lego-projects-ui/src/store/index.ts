@@ -14,6 +14,7 @@ import { combineReducers } from '@reduxjs/toolkit'
 import authSlice from './slices/authSlice'
 import uiSlice from './slices/uiSlice'
 import preferencesSlice from './slices/preferencesSlice'
+import { baseApi } from './api'
 
 // =============================================================================
 // PERSISTENCE CONFIGURATION
@@ -46,6 +47,7 @@ const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authSlice),
   ui: uiSlice, // No persistence for UI state
   preferences: persistReducer(preferencesPersistConfig, preferencesSlice),
+  [baseApi.reducerPath]: baseApi.reducer,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
@@ -68,7 +70,7 @@ export const store = configureStore({
           'persist/REGISTER',
         ],
       },
-    }),
+    }).concat(baseApi.middleware),
     
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',

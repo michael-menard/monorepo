@@ -10,8 +10,9 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "vite build",
+    "dev": "vite",
+    "type-check": "tsc --noEmit",
     "lint": "eslint src/",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
