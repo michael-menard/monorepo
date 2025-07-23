@@ -26,7 +26,8 @@
     "./toast": "./src/toast.tsx",
     "./tooltip": "./src/tooltip.tsx",
     "./utils": "./src/lib/utils.ts",
-    "./file-upload": "./src/FileUpload/index.tsx"
+    "./file-upload": "./src/FileUpload/index.tsx",
+    "./image-upload-modal": "./src/ImageUploadModal/index.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

@@ -9,6 +9,7 @@ export interface GalleryImage {
   description?: string;
   author?: string;
   uploadDate: string;
+  tags?: string[];
   [key: string]: any;
 }
 

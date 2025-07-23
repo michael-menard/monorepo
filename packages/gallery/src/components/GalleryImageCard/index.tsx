@@ -8,6 +8,10 @@ export interface GalleryImageCardProps {
   author?: string;
   uploadDate?: string | Date;
   initialLiked?: boolean;
+  tags?: string[];
+  onView?: () => void;
+  onShare?: () => void;
+  onDelete?: () => void;
 }
 
 const formatDate = (date?: string | Date) => {
@@ -24,80 +28,134 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
   author,
   uploadDate,
   initialLiked = false,
+  tags = [],
+  onView,
+  onShare,
+  onDelete,
 }) => {
   const [liked, setLiked] = useState(initialLiked);
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
-      className="gallery-image-card"
+      className="group relative bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
       tabIndex={0}
       aria-label={title}
-      style={{
-        borderRadius: 12,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        background: '#fff',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 220,
-        maxWidth: 320,
-        width: '100%',
-        margin: 'auto',
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={onView}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onView?.();
+        }
       }}
     >
-      <div style={{ position: 'relative', width: '100%', paddingTop: '66%', background: '#f1f5f9' }}>
+      {/* Image Container */}
+      <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
         <img
           src={src}
           alt={alt || title}
           loading="lazy"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-          }}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
+        
+        {/* Like Button */}
         <button
           type="button"
           aria-label={liked ? 'Unlike' : 'Like'}
-          onClick={() => setLiked(l => !l)}
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            background: 'rgba(255,255,255,0.85)',
-            border: 'none',
-            borderRadius: '50%',
-            width: 36,
-            height: 36,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-            fontSize: 20,
-            color: liked ? '#e11d48' : '#64748b',
-            transition: 'color 0.2s',
+          onClick={(e) => {
+            e.stopPropagation();
+            setLiked(l => !l);
           }}
+          className="absolute top-2 right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-110"
         >
-          {liked ? '❤️' : '🤍'}
+          <span className="text-lg">
+            {liked ? '❤️' : '🤍'}
+          </span>
         </button>
-      </div>
-      <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{title}</div>
-        {description && (
-          <div style={{ color: '#64748b', fontSize: 14, marginBottom: 8, lineHeight: 1.4 }}>{description}</div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: 'auto', fontSize: 13, color: '#64748b' }}>
-          {author && <span style={{ marginRight: 8 }}>By {author}</span>}
-          {uploadDate && <span>{formatDate(uploadDate)}</span>}
+
+        {/* Hover Overlay with Actions */}
+        <div className={`absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity duration-300 ${
+          isHovered ? 'opacity-100' : 'opacity-0'
+        }`}>
+          <div className="flex space-x-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onView?.();
+              }}
+              className="px-3 py-1.5 bg-white/90 hover:bg-white text-gray-800 rounded-md text-sm font-medium transition-colors"
+            >
+              View
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare?.();
+              }}
+              className="px-3 py-1.5 bg-white/90 hover:bg-white text-gray-800 rounded-md text-sm font-medium transition-colors"
+            >
+              Share
+            </button>
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                }}
+                className="px-3 py-1.5 bg-red-500/90 hover:bg-red-500 text-white rounded-md text-sm font-medium transition-colors"
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
-      {/* Storybook: Add stories for default, liked, with/without author, with/without description */}
+
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+          {title}
+        </h3>
+        
+        {description && (
+          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+            {description}
+          </p>
+        )}
+
+        {/* Tags */}
+        {tags && tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {tags.slice(0, 3).map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+            {tags.length > 3 && (
+              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                +{tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center space-x-2">
+            {author && (
+              <span className="truncate">By {author}</span>
+            )}
+            {uploadDate && (
+              <span>{formatDate(uploadDate)}</span>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

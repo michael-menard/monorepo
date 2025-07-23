@@ -321,7 +321,7 @@
         "id": "25",
         "title": "Implement InspirationGallery component",
         "description": "Create masonry layout gallery with infinite scroll",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "24"
@@ -334,7 +334,7 @@
         "id": "26",
         "title": "Implement ImageUploadModal component",
         "description": "Create modal for image uploads with preview",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "24"

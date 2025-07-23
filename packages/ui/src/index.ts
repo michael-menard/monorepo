@@ -32,5 +32,8 @@ export * from './loading-spinner/index.js';
 // File Upload component
 export * from './FileUpload/index.js';
 
+// Modal components
+export { default as ImageUploadModal } from './ImageUploadModal/index.js';
+
 // Utils
 export * from './lib/utils.js'; 
