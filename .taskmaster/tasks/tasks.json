@@ -308,7 +308,7 @@
         "id": "24",
         "title": "Create shared FileUpload component",
         "description": "Build reusable file upload component with drag-and-drop",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "4"

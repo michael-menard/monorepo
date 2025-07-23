@@ -29,5 +29,8 @@ export * from './badge.js';
 // Loading components
 export * from './loading-spinner/index.js';
 
+// File Upload component
+export * from './FileUpload/index.js';
+
 // Utils
 export * from './lib/utils.js'; 
