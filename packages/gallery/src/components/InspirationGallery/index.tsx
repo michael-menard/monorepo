@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { useGetImagesQuery, GalleryImage } from '../../store/galleryApi.js';
-import GalleryImageCard from '../GalleryImageCard/index.js';
+import GalleryCard from '../GalleryCard/index.js';
 
 interface InspirationGalleryProps {
   // Infinite scroll props
@@ -123,13 +123,13 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
             ref={index === data.data.length - 1 ? lastElementRef : null}
             className="break-inside-avoid"
           >
-            <GalleryImageCard
+            <GalleryCard
               src={img.url}
               title={img.title}
               description={img.description ?? ''}
               author={img.author ?? ''}
               uploadDate={img.uploadDate}
-              tags={img.tags}
+              tags={img.tags ?? []}
               onView={() => console.log('View image:', img.id)}
               onShare={() => console.log('Share image:', img.id)}
               onDelete={() => console.log('Delete image:', img.id)}

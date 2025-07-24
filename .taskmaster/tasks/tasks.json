@@ -345,22 +345,22 @@
       },
       {
         "id": "27",
-        "title": "Implement InspirationCard component",
-        "description": "Create image card with hover effects and actions",
-        "status": "pending",
+        "title": "Merge GalleryImageCard and InspirationCard into GalleryCard",
+        "description": "Create unified GalleryCard component with advanced features",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "25"
         ],
-        "details": "Build image card with hover drawer using Framer Motion, action buttons, metadata display, and responsive design",
-        "testStrategy": "Test hover animations, button interactions, responsive layout, and accessibility",
+        "details": "Merged GalleryImageCard and InspirationCard into a single GalleryCard component with Framer Motion animations, advanced hover effects, action buttons (View, Share, Download, Add to Album, Delete), metadata display, and responsive design. Removed duplicate components and updated all references.",
+        "testStrategy": "Test hover animations, button interactions, responsive layout, accessibility, and all action handlers",
         "tag": "frontend-ui-development"
       },
       {
         "id": "28",
         "title": "Implement AlbumView component",
         "description": "Create album view reusing gallery layout",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "25"

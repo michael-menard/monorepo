@@ -13,7 +13,7 @@
     "noEmit": false,
     "composite": true,
     "baseUrl": ".",
-    "types": ["react", "react-dom", "vitest", "vitest/globals"],
+    "types": ["react", "react-dom"],
     "paths": {
       "@repo/ui": ["../ui/src/index.ts"],
       "@repo/ui/*": ["../ui/src/*"]
