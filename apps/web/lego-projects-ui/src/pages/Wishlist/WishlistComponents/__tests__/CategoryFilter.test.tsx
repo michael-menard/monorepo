@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CategoryFilter from '../CategoryFilter.js';
-import { LegoCategoryEnum } from '../../WishlistSchemas';
+import { LegoCategoryEnum } from '../../WishlistSchemas/index.js';
 
 const categories = LegoCategoryEnum.options;
 

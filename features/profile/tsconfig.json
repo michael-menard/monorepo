@@ -9,7 +9,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     // Use classic node module resolution to allow extensionless imports for TypeScript source files
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "allowImportingTsExtensions": false,
     "noEmit": false,
     "composite": true,

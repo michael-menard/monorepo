@@ -15,7 +15,8 @@
     "isolatedModules": true,
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-ui.json",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "moduleResolution": "NodeNext"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

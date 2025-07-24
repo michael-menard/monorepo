@@ -5,6 +5,8 @@
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "noImplicitAny": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-lego-projects-ui.json",
     "paths": {
       "@/*": ["./src/*"],
