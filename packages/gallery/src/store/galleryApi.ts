@@ -23,6 +23,21 @@ export interface GalleryImagesResponse {
   message?: string;
 }
 
+export interface SearchFilters {
+  query?: string;
+  tags?: string[];
+  category?: string;
+  from?: number;
+  size?: number;
+}
+
+export interface SearchResponse {
+  data: GalleryImage[];
+  total: number;
+  source: 'elasticsearch' | 'database';
+  message?: string;
+}
+
 const baseUrl = 'http://localhost/api/gallery'; // Always use absolute URL for consistency in tests and dev
 
 export const galleryApi = createApi({
@@ -51,6 +66,35 @@ export const galleryApi = createApi({
     getImageById: builder.query<GalleryImageResponse, string>({
       query: (id: string) => `/${id}`,
       providesTags: (result: GalleryImageResponse | undefined, error: unknown, id: string) => [{ type: 'GalleryImage', id }],
+    }),
+    searchImages: builder.query<SearchResponse, SearchFilters>({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        if (filters.query) params.append('q', filters.query);
+        if (filters.tags && filters.tags.length > 0) {
+          filters.tags.forEach(tag => params.append('tag', tag));
+        }
+        if (filters.category) params.append('category', filters.category);
+        if (filters.from !== undefined) params.append('from', filters.from.toString());
+        if (filters.size !== undefined) params.append('size', filters.size.toString());
+        
+        return `/search?${params.toString()}`;
+      },
+      providesTags: (result: SearchResponse | undefined) =>
+        result?.data
+          ? [
+              ...result.data.map(({ id }: { id: string }) => ({ type: 'GalleryImage' as const, id })),
+              { type: 'GalleryImage', id: 'LIST' },
+            ]
+          : [{ type: 'GalleryImage', id: 'LIST' }],
+    }),
+    getAvailableTags: builder.query<string[], void>({
+      query: () => '/tags',
+      providesTags: ['GalleryImage'],
+    }),
+    getAvailableCategories: builder.query<string[], void>({
+      query: () => '/categories',
+      providesTags: ['GalleryImage'],
     }),
     uploadImage: builder.mutation<GalleryImageResponse, Partial<GalleryImage> & { file: File }>({
       query: (body: Partial<GalleryImage> & { file: File }) => {
@@ -97,6 +141,9 @@ export const galleryApi = createApi({
 export const {
   useGetImagesQuery,
   useGetImageByIdQuery,
+  useSearchImagesQuery,
+  useGetAvailableTagsQuery,
+  useGetAvailableCategoriesQuery,
   useUploadImageMutation,
   useUpdateImageMutation,
   useDeleteImageMutation,

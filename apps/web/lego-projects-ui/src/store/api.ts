@@ -11,7 +11,7 @@ export const baseApi = createApi({
     baseUrl: config.api.baseUrl,
     prepareHeaders: (headers, { getState }) => {
       // Optionally add auth token from state
-      const state = getState() as any
+      const state = getState() as { auth?: { token?: string } }
       const token = state?.auth?.token
       if (token) {
         headers.set('authorization', `Bearer ${token}`)
@@ -19,7 +19,7 @@ export const baseApi = createApi({
       return headers
     },
   }),
-  tagTypes: ['User', 'LegoSet', 'Auth', 'Collection', 'Wishlist', 'MOC'],
+  tagTypes: ['User', 'LegoSet', 'Auth', 'Collection', 'Wishlist', 'MOC', 'FileUpload'],
   endpoints: () => ({}),
 })
 

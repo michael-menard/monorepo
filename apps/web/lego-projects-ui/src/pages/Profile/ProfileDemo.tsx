@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useUploadAvatarMutation } from '@/services/userApi';
+
 // TODO: Import from @repo/profile once components are implemented
 // import { ProfilePage, type ProfileData } from '@repo/profile';
 
@@ -35,28 +37,16 @@ const ProfileDemo: React.FC = () => {
     },
   });
 
+  const [uploadAvatar] = useUploadAvatarMutation();
+
   const handleAvatarUpload = async (file: File): Promise<string> => {
-    // In a real app, you would upload to your backend API
-    const formData = new FormData();
-    formData.append('avatar', file);
-    
     try {
-      // Example API call to the backend
-      const response = await fetch(`${import.meta.env.VITE_LEGO_PROJECTS_API}/api/users/1/avatar`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload avatar');
-      }
-      
-      const { avatarUrl } = await response.json();
+      const result = await uploadAvatar({ userId: profile.id, file }).unwrap();
       
       // Update the profile with new avatar URL
-      setProfile((prev: ProfileData) => ({ ...prev, avatarUrl }));
+      setProfile((prev: ProfileData) => ({ ...prev, avatarUrl: result.avatarUrl }));
       
-      return avatarUrl;
+      return result.avatarUrl;
     } catch (error) {
       console.error('Avatar upload failed:', error);
       throw error;

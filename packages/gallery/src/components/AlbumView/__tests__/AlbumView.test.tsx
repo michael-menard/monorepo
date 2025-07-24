@@ -42,7 +42,7 @@ vi.mock('../../../store/albumsApi.js', () => ({
 }));
 
 // Mock GalleryCard as a simple div
-vi.mock('../GalleryCard/index.js', () => ({
+vi.mock('../../GalleryCard/index.js', () => ({
   default: ({ title, description }: any) => (
     <div data-testid="gallery-card">
       <h3>{title}</h3>

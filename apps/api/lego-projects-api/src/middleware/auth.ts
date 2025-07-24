@@ -1,7 +1,6 @@
 import 'dotenv/config'; // Ensure .env variables are loaded
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import axios from 'axios';
 
 // Extend Express Request interface to include user property
 declare global {
@@ -45,11 +44,20 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         }
 
         try {
-          const refreshResponse = await axios.post(`${AUTH_API}/refresh`, {
-            refreshToken
+          const refreshResponse = await fetch(`${AUTH_API}/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken }),
           });
 
-          const newToken = refreshResponse.data?.token;
+          if (!refreshResponse.ok) {
+            return res.status(403).json({ error: 'Failed to refresh token' });
+          }
+
+          const refreshData = await refreshResponse.json();
+          const newToken = refreshData?.token;
           if (!newToken) {
             return res.status(403).json({ error: 'Failed to refresh token: No token returned' });
           }
@@ -98,21 +106,10 @@ export const wishlistOwnershipAuth = (req: Request, res: Response, next: NextFun
   const userId = req.user?.sub;
   
   if (!userId) {
-    return res.status(403).json({ 
-      error: 'User not authenticated',
-      statusCode: 403 
-    });
+    return res.status(403).json({ error: 'Authentication required' });
   }
   
-  // For create operations, ensure userId in body matches authenticated user
-  if (req.method === 'POST' && req.body.userId && req.body.userId !== userId) {
-    return res.status(403).json({ 
-      error: 'You can only create wishlist items for yourself',
-      statusCode: 403 
-    });
-  }
-  
-  // Add authenticated userId to request for handlers to use
+  // Add user ID to request for use in route handlers
   req.authenticatedUserId = userId;
   next();
 }; 

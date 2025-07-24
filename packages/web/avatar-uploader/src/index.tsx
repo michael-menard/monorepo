@@ -3,13 +3,14 @@
 // Usage: import AvatarUploader from '@monorepo/avatar-uploader'
 // See README.md for details
 import React from 'react';
-import { FileUpload } from '@repo/ui';
+import { FileUpload } from '../../../../../ui/src/index.js';
 
 export interface AvatarUploaderProps {
   userId: string;
   baseUrl: string; // Base URL for the API endpoint
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  uploadFunction?: (request: { userId: string; file: File }) => Promise<{ avatarUrl: string }>;
 }
 
 const ACCEPTED_TYPES = [
@@ -19,29 +20,42 @@ const ACCEPTED_TYPES = [
   'image/heic',
 ];
 
-const AvatarUploader: React.FC<AvatarUploaderProps> = ({ userId, baseUrl, onSuccess, onError }) => {
+const AvatarUploader: React.FC<AvatarUploaderProps> = ({ 
+  userId, 
+  baseUrl, 
+  onSuccess, 
+  onError, 
+  uploadFunction 
+}) => {
   const handleUpload = async (files: File[] | File) => {
     const file = Array.isArray(files) ? files[0] : files;
     if (!file) return;
 
     try {
-      const formData = new FormData();
-      formData.append('avatar', file);
+      if (uploadFunction) {
+        // Use the provided upload function instead of fetch
+        const result = await uploadFunction({ userId, file });
+        console.log('Avatar upload successful:', result);
+        onSuccess?.();
+      } else {
+        // Fallback to original fetch behavior
+        const formData = new FormData();
+        formData.append('avatar', file);
 
-      const response = await fetch(`${baseUrl}/api/users/${userId}/avatar`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Include cookies for authentication
-      });
+        const response = await fetch(`${baseUrl}/api/users/${userId}/avatar`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include', // Include cookies for authentication
+        });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Avatar upload successful:', result);
+        onSuccess?.();
       }
-
-      const result = await response.json();
-      console.log('Avatar upload successful:', result);
-      
-      onSuccess?.();
     } catch (error) {
       console.error('Avatar upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';

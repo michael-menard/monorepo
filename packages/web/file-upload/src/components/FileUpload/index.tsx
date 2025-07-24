@@ -7,7 +7,25 @@ import type { UploadStatus, RetryInfo } from './types';
 import { Clock, RefreshCw } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
-export function FileUploadComponent() {
+export interface FileUploadResponse {
+  success: boolean;
+  fileUrl?: string;
+  message: string;
+}
+
+export interface FileUploadRequest {
+  file: File;
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  uploadTimestamp?: number;
+}
+
+export interface FileUploadComponentProps {
+  uploadFunction?: (request: FileUploadRequest) => Promise<FileUploadResponse>;
+}
+
+export function FileUploadComponent({ uploadFunction }: FileUploadComponentProps = {}) {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     activeUploads: 0,
     queueLength: 0,
@@ -56,29 +74,41 @@ export function FileUploadComponent() {
       };
       
       try {
-        await throttleRef.current.addToQueue(
-          async () => {
-            const response = await fetch('https://httpbin.org/post', {
-              method: 'POST',
-              body: formData,
-              headers,
-            });
-            return response.json();
-          },
-          () => {
-            // Progress tracking removed - not used in current implementation
-          },
-          (attempt, error) => {
-            setRetryInfo({
-              attempt,
-              maxAttempts: throttleRef.current['config'].maxRetries,
-              error,
-              delay: throttleRef.current['config'].retryDelay * Math.pow(throttleRef.current['config'].backoffMultiplier, attempt - 1),
-            });
-            
-            toast.warning(`Retrying upload for ${sanitizeFileName(file.name)} (attempt ${attempt}/${throttleRef.current['config'].maxRetries})`);
-          }
-        );
+        if (uploadFunction) {
+          // Use the provided upload function instead of fetch
+          await uploadFunction({
+            file,
+            fileName: headers['X-File-Name'],
+            fileSize: file.size,
+            fileType: file.type,
+            uploadTimestamp: Date.now(),
+          });
+        } else {
+          // Fallback to original fetch behavior
+          await throttleRef.current.addToQueue(
+            async () => {
+              const response = await fetch('https://httpbin.org/post', {
+                method: 'POST',
+                body: formData,
+                headers,
+              });
+              return response.json();
+            },
+            () => {
+              // Progress tracking removed - not used in current implementation
+            },
+            (attempt, error) => {
+              setRetryInfo({
+                attempt,
+                maxAttempts: throttleRef.current['config'].maxRetries,
+                error,
+                delay: throttleRef.current['config'].retryDelay * Math.pow(throttleRef.current['config'].backoffMultiplier, attempt - 1),
+              });
+              
+              toast.warning(`Retrying upload for ${sanitizeFileName(file.name)} (attempt ${attempt}/${throttleRef.current['config'].maxRetries})`);
+            }
+          );
+        }
         
         toast.success(`Successfully uploaded ${sanitizeFileName(file.name)}`);
       } catch (error) {

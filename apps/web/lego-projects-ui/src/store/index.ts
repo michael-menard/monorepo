@@ -98,22 +98,13 @@ export const useAppDispatch: () => AppDispatch = useDispatch
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
 
 // =============================================================================
-// STORE SETUP
-// =============================================================================
-
-// Enable listener behavior for the store
-setupListeners(store.dispatch)
-
-// =============================================================================
 // SELECTORS
 // =============================================================================
 
-// Common selectors for frequently accessed state
 export const selectAuth = (state: RootState) => state.auth
 export const selectUI = (state: RootState) => state.ui
 export const selectPreferences = (state: RootState) => state.preferences
 
-// Memoized selectors for computed state
 export const selectIsAuthenticated = (state: RootState) => 
   state.auth.isAuthenticated && !!state.auth.user
 
@@ -126,49 +117,30 @@ export const selectTheme = (state: RootState) =>
   state.preferences.theme || state.ui.theme
 
 // =============================================================================
-// STORE UTILITIES
+// UTILITY FUNCTIONS
 // =============================================================================
 
-/**
- * Get the current authentication status
- */
 export const getAuthStatus = () => {
   const state = store.getState()
   return {
     isAuthenticated: selectIsAuthenticated(state),
     user: selectCurrentUser(state),
-    token: state.auth.token,
+    isLoading: selectIsLoading(state),
   }
 }
 
-/**
- * Type guard for checking if user is authenticated
- */
 export const isUserAuthenticated = (
   auth: RootState['auth']
 ): auth is RootState['auth'] & { user: NonNullable<RootState['auth']['user']> } => {
-  return auth.isAuthenticated && auth.user !== null
+  return auth.isAuthenticated && !!auth.user
 }
 
-/**
- * Purge persisted data (useful for logout)
- */
 export const purgePersistedData = async () => {
-  try {
-    await persistor.purge()
-  } catch (error) {
-    console.error('Failed to purge persisted data:', error)
-  }
+  await persistor.purge()
 }
 
 // =============================================================================
-// EXPORTS
+// SETUP LISTENERS
 // =============================================================================
 
-// Export store as default
-export default store
-
-// Export action creators
-export { authActions } from './slices/authSlice'
-export { uiActions } from './slices/uiSlice'
-export { preferencesActions } from './slices/preferencesSlice' 
+setupListeners(store.dispatch) 
