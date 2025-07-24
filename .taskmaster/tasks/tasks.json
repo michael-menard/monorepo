@@ -373,7 +373,7 @@
         "id": "29",
         "title": "Implement CreateAlbumDialog component",
         "description": "Create dialog for album creation from drag operations",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "27"
@@ -386,7 +386,7 @@
         "id": "30",
         "title": "Implement FilterBar component",
         "description": "Create search and filter bar with Elasticsearch integration",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "25"
