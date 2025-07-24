@@ -11,10 +11,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { combineReducers } from '@reduxjs/toolkit'
 
 // Import feature slices
-import authSlice from './slices/authSlice'
-import uiSlice from './slices/uiSlice'
-import preferencesSlice from './slices/preferencesSlice'
-import { baseApi } from './api'
+import authReducer from './slices/authSlice.js'
+import uiReducer from './slices/uiSlice.js'
+import preferencesReducer from './slices/preferencesSlice.js'
+import { baseApi } from './api.js'
 
 // =============================================================================
 // PERSISTENCE CONFIGURATION
@@ -44,9 +44,9 @@ const preferencesPersistConfig = {
 // =============================================================================
 
 const rootReducer = combineReducers({
-  auth: persistReducer(authPersistConfig, authSlice),
-  ui: uiSlice, // No persistence for UI state
-  preferences: persistReducer(preferencesPersistConfig, preferencesSlice),
+  auth: persistReducer(authPersistConfig, authReducer),
+  ui: uiReducer, // No persistence for UI state
+  preferences: persistReducer(preferencesPersistConfig, preferencesReducer),
   [baseApi.reducerPath]: baseApi.reducer,
 })
 
@@ -58,8 +58,7 @@ const persistedReducer = persistReducer(persistConfig, rootReducer)
 
 export const store = configureStore({
   reducer: persistedReducer,
-  
-  middleware: (getDefaultMiddleware) =>
+  middleware: ((getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: [
@@ -70,8 +69,7 @@ export const store = configureStore({
           'persist/REGISTER',
         ],
       },
-    }).concat(baseApi.middleware),
-    
+    }).concat(baseApi.middleware)) as any,
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',
 })
@@ -101,19 +99,19 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
 // SELECTORS
 // =============================================================================
 
-export const selectAuth = (state: RootState) => state.auth
-export const selectUI = (state: RootState) => state.ui
-export const selectPreferences = (state: RootState) => state.preferences
+export const selectAuth = (state: RootState): RootState['auth'] => state.auth
+export const selectUI = (state: RootState): RootState['ui'] => state.ui
+export const selectPreferences = (state: RootState): RootState['preferences'] => state.preferences
 
-export const selectIsAuthenticated = (state: RootState) => 
+export const selectIsAuthenticated = (state: RootState): boolean => 
   state.auth.isAuthenticated && !!state.auth.user
 
-export const selectCurrentUser = (state: RootState) => state.auth.user
+export const selectCurrentUser = (state: RootState): RootState['auth']['user'] => state.auth.user
 
-export const selectIsLoading = (state: RootState) => 
+export const selectIsLoading = (state: RootState): boolean => 
   state.auth.isLoading || state.ui.isLoading
 
-export const selectTheme = (state: RootState) => 
+export const selectTheme = (state: RootState): string | undefined => 
   state.preferences.theme || state.ui.theme
 
 // =============================================================================

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useUploadAvatarMutation } from '@/services/userApi';
-import { ProfilePage, type ProfileData } from '@repo/profile';
+import { ProfilePage, type ProfileData } from '../../../../packages/profile/src/index.js';
 
 // TODO: Import from @repo/profile once components are implemented
 // import { ProfilePage, type ProfileData } from '@repo/profile';

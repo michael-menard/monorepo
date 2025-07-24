@@ -1,9 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import MocGalleryCard, { MocGalleryCardSchema, MocGalleryCardData } from './MocGalleryCard';
+import { useState, useEffect } from 'react';
+import MocGalleryCard from './MocGalleryCard.js';
 // Extensionless import is required for TypeScript source files that are not built to .js
-import FilterBar from '../../gallery/src/components/FilterBar';
-import { z } from 'zod';
+import FilterBar from '../../gallery/src/components/FilterBar.js';
 // For now, mock the API call to fetch MOC items
 const mockMocs = [
     {

@@ -3,7 +3,7 @@
  * Provides a foundation for all API endpoints in the app
  */
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { config } from '@/config/env';
+import { config } from '../config/env.js';
 export const baseApi = createApi({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({

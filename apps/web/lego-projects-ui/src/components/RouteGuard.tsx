@@ -1,4 +1,4 @@
-import { useAppSelector } from '@/store';
+import { useAppSelector } from '../../store/index.js';
 import { Navigate, useLocation } from 'react-router-dom';
 
 interface RouteGuardProps {

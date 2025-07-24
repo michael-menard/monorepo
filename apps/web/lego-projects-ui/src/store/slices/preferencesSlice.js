@@ -179,6 +179,7 @@ const preferencesSlice = createSlice({
 // EXPORTS
 // =============================================================================
 export const preferencesActions = preferencesSlice.actions;
+export { preferencesSlice };
 export default preferencesSlice.reducer;
 // =============================================================================
 // UTILITY FUNCTIONS

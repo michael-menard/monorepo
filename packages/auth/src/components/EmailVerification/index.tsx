@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import Input from "../Input";
+import Input from "../Input/index.js";
 import { Mail } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const EmailVerification = () => {
 	const [code, setCode] = (React as any).useState("");

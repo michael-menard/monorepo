@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useToast } from "@/hooks/use-toast";
-import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport, } from "@/components/ui/toast";
+import { useToast } from '../../hooks/use-toast.js';
+import { Toast, ToastViewport } from './toast.js';
 export function Toaster() {
     const { toasts } = useToast();
     return (_jsxs(ToastProvider, { children: [toasts.map(function ({ id, title, description, action, ...props }) {

@@ -2,7 +2,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { WishlistItemCard } from '../WishlistItemCard';
+import { WishlistItemCard } from '../WishlistItemCard.js';
 const mockItem = {
     id: 'item1',
     title: 'LEGO Millennium Falcon',

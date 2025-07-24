@@ -9,7 +9,7 @@ import {
   shouldRefreshToken,
   refreshTokenWithRetry,
   clearRefreshState
-} from '../token';
+} from '../token.js';
 
 // Mock fetch globally
 // Note: We use fetch here instead of RTK Query because this utility function

@@ -7,6 +7,8 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+// @ts-expect-error: TypeScript cannot resolve .js import for toast, but it exists and is correct for NodeNext/ESM
+import { Toast } from "../components/ui/toast.js"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000

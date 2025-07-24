@@ -3,8 +3,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import Login from '../index';
-import authReducer from '../../../store/authSlice';
+import Login from '../index.js';
+import authReducer from '../../../store/authSlice.js';
 
 // Mock framer-motion
 vi.mock('framer-motion', () => ({

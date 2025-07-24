@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { AuthResponse } from '@repo/auth';
+import type { AuthResponse } from '../../../packages/auth/src/index.js';
 
 // Local types that extend or complement the shared types
 export interface LoginCredentials {

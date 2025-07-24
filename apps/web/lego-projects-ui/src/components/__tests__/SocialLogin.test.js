@@ -3,9 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import SocialLogin from '../SocialLogin';
+import SocialLogin from '../SocialLogin.js';
 // Mock the auth API
-vi.mock('@/services/authApi', () => ({
+vi.mock('../../services/authApi.js', () => ({
     useSocialLoginMutation: () => [
         vi.fn(),
         { isLoading: false }

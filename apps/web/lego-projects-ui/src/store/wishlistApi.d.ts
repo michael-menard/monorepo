@@ -1,4 +1,4 @@
-import type { WishlistItem } from '@/types/schemas';
+import type { WishlistItem } from '../types/schemas.js';
 export declare const wishlistApi: import("@reduxjs/toolkit/query").Api<import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, {
     updateWishlist: import("@reduxjs/toolkit/query").MutationDefinition<{
         items: WishlistItem[];
@@ -26,8 +26,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
     requestId: string;
     data?: {
         success: boolean;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -35,8 +35,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
     requestId: string;
     data?: {
         success: boolean;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -54,8 +54,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
     requestId: string;
     data?: {
         success: boolean;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -73,8 +73,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
     requestId: string;
     data?: {
         success: boolean;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -82,8 +82,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
     requestId: string;
     data?: {
         success: boolean;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -94,7 +94,7 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -114,8 +114,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
         requestId: string;
         data?: {
             success: boolean;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -123,8 +123,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
         requestId: string;
         data?: {
             success: boolean;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -142,8 +142,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
         requestId: string;
         data?: {
             success: boolean;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -161,8 +161,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
         requestId: string;
         data?: {
             success: boolean;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -170,8 +170,8 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
         requestId: string;
         data?: {
             success: boolean;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -181,9 +181,9 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     items: WishlistItem[];
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
     items: WishlistItem[];
@@ -192,6 +192,6 @@ export declare const useUpdateWishlistMutation: <R extends Record<string, any> =
 }, "api", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
     originalArgs?: {
         items: WishlistItem[];
-    } | undefined;
+    };
     reset: () => void;
 }];

@@ -1,9 +1,8 @@
 import { jsx as _jsx, Fragment as _Fragment } from "react/jsx-runtime";
-import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MocGalleryCard, { MockGalleryCardSchema as MocGalleryCardSchema, MockGalleryCardData as MocGalleryCardData } from '../MocGalleryCard';
+import MocGalleryCard, { MocGalleryCardSchema } from '../MocGalleryCard.js';
 // Mock framer-motion to avoid animation timing issues in tests
 vi.mock('framer-motion', () => {
     const React = require('react');

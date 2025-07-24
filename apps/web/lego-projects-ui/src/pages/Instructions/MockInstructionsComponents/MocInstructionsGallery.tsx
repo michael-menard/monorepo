@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import MocGalleryCard, { MocGalleryCardSchema, MocGalleryCardData } from './MocGalleryCard';
+import MocGalleryCard, { MocGalleryCardSchema, MocGalleryCardData } from './MocGalleryCard.js';
 // Extensionless import is required for TypeScript source files that are not built to .js
-import FilterBar from '../../gallery/src/components/FilterBar';
+import FilterBar from '../../gallery/src/components/FilterBar.js';
 import { z } from 'zod';
 
 // For now, mock the API call to fetch MOC items

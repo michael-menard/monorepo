@@ -31,15 +31,15 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: FileUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: FileUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: FileUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: FileUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -55,8 +55,8 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: FileUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: FileUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -72,15 +72,15 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: FileUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: FileUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: FileUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: FileUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -91,7 +91,7 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -109,15 +109,15 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: FileUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: FileUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: FileUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: FileUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -133,8 +133,8 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: FileUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: FileUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -150,15 +150,15 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: FileUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: FileUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: FileUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: FileUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -168,9 +168,9 @@ export declare const useUploadFileMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: FileUploadRequest) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<FileUploadRequest, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", FileUploadResponse, "api", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
-    originalArgs?: FileUploadRequest | undefined;
+}) => readonly [(arg: FileUploadRequest) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<FileUploadRequest, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", FileUploadResponse, "api", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
+    originalArgs?: FileUploadRequest;
     reset: () => void;
 }];

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { LoginComponent } from '../LoginComponent';
+import { LoginComponent } from '../LoginComponent/index.js';
 
 // Mock useAuth hook
 const mockUseAuth = {

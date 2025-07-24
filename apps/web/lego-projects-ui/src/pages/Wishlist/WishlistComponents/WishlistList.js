@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import WishlistItemCard from './WishlistItemCard';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import WishlistItemCard from './WishlistItemCard.js';
 import { motion } from 'framer-motion';
 // Add import for RTK Query mutation
 // @ts-ignore: This import is from the main app, adjust path as needed in integration

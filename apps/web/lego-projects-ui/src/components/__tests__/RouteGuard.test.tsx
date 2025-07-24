@@ -1,11 +1,11 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { RouteGuard } from '../RouteGuard';
+import { RouteGuard } from '../RouteGuard.js';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 // Mock useAppSelector
-vi.mock('@/store', () => ({
+vi.mock('../../../store/index.js', () => ({
   useAppSelector: vi.fn(),
 }));
 

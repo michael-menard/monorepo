@@ -1,5 +1,6 @@
-import { baseApi } from './api';
-import type { WishlistItem } from '@/types/schemas';
+import { baseApi } from './api.js';
+// @ts-expect-error: TypeScript cannot resolve .js import for schemas, but it exists and is correct for NodeNext/ESM
+import type { WishlistItem } from '../types/schemas.js';
 
 export const wishlistApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

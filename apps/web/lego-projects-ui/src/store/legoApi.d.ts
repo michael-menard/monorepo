@@ -31,9 +31,9 @@ export declare const legoApi: import("@reduxjs/toolkit/query").Api<import("@redu
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>;
     getLegoSet: import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", {
         id: string;
@@ -41,9 +41,9 @@ export declare const legoApi: import("@reduxjs/toolkit/query").Api<import("@redu
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }, "api", unknown>;
     searchLegoSets: import("@reduxjs/toolkit/query").QueryDefinition<{
         query: string;
@@ -53,20 +53,20 @@ export declare const legoApi: import("@reduxjs/toolkit/query").Api<import("@redu
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>;
 }, "api", "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", typeof import("@reduxjs/toolkit/query").coreModuleName | typeof import("@reduxjs/toolkit/query/react").reactHooksModuleName>;
 export declare const useGetLegoSetsQuery: <R extends Record<string, any> = import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
     status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-    originalArgs?: undefined | undefined;
-    data?: undefined | undefined;
-    error?: undefined | undefined;
-    requestId?: undefined | undefined;
-    endpointName?: string | undefined;
-    startedTimeStamp?: undefined | undefined;
-    fulfilledTimeStamp?: undefined | undefined;
+    originalArgs?: undefined;
+    data?: undefined;
+    error?: undefined;
+    requestId?: undefined;
+    endpointName?: string;
+    startedTimeStamp?: undefined;
+    fulfilledTimeStamp?: undefined;
 } & {
     currentData?: {
         id: string;
@@ -74,10 +74,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -91,9 +91,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -101,10 +101,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -124,9 +124,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -134,10 +134,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -153,9 +153,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -163,10 +163,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -180,9 +180,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -190,10 +190,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -201,20 +201,20 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     isError: false;
 }, "error">>)>> & {
     status: import("@reduxjs/toolkit/query").QueryStatus;
-}>(arg: void | typeof import("@reduxjs/toolkit/query").skipToken, options?: (import("@reduxjs/toolkit/query").SubscriptionOptions & {
+}>(arg: void | typeof import("@reduxjs/toolkit/query").skipToken, options?: import("@reduxjs/toolkit/query").SubscriptionOptions & {
     skip?: boolean;
     refetchOnMountOrArgChange?: boolean | number;
 } & {
     skip?: boolean;
-    selectFromResult?: ((state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
+    selectFromResult?: (state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-        originalArgs?: undefined | undefined;
-        data?: undefined | undefined;
-        error?: undefined | undefined;
-        requestId?: undefined | undefined;
-        endpointName?: string | undefined;
-        startedTimeStamp?: undefined | undefined;
-        fulfilledTimeStamp?: undefined | undefined;
+        originalArgs?: undefined;
+        data?: undefined;
+        error?: undefined;
+        requestId?: undefined;
+        endpointName?: string;
+        startedTimeStamp?: undefined;
+        fulfilledTimeStamp?: undefined;
     } & {
         currentData?: {
             id: string;
@@ -222,10 +222,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -239,9 +239,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -249,10 +249,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -272,9 +272,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -282,10 +282,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -301,9 +301,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -311,10 +311,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -328,9 +328,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -338,10 +338,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -349,27 +349,27 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         isError: false;
     }, "error">>)>> & {
         status: import("@reduxjs/toolkit/query").QueryStatus;
-    }) => R) | undefined;
-}) | undefined) => [R][R extends any ? 0 : never] & {
+    }) => R;
+}) => [R][R extends any ? 0 : never] & {
     refetch: () => import("@reduxjs/toolkit/query").QueryActionCreatorResult<import("@reduxjs/toolkit/query").QueryDefinition<void, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", {
         id: string;
         name: string;
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>>;
 }, useGetLegoSetQuery: <R extends Record<string, any> = import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
     status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-    originalArgs?: undefined | undefined;
-    data?: undefined | undefined;
-    error?: undefined | undefined;
-    requestId?: undefined | undefined;
-    endpointName?: string | undefined;
-    startedTimeStamp?: undefined | undefined;
-    fulfilledTimeStamp?: undefined | undefined;
+    originalArgs?: undefined;
+    data?: undefined;
+    error?: undefined;
+    requestId?: undefined;
+    endpointName?: string;
+    startedTimeStamp?: undefined;
+    fulfilledTimeStamp?: undefined;
 } & {
     currentData?: {
         id: string;
@@ -377,10 +377,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    } | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -394,9 +394,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }, "api", unknown>> & {
     currentData?: {
         id: string;
@@ -404,10 +404,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    } | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -427,9 +427,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }, "api", unknown>> & {
     currentData?: {
         id: string;
@@ -437,10 +437,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    } | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -456,9 +456,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }, "api", unknown>> & {
     currentData?: {
         id: string;
@@ -466,10 +466,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    } | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -483,9 +483,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }, "api", unknown>> & {
     currentData?: {
         id: string;
@@ -493,10 +493,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    } | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -504,20 +504,20 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     isError: false;
 }, "error">>)>> & {
     status: import("@reduxjs/toolkit/query").QueryStatus;
-}>(arg: string | typeof import("@reduxjs/toolkit/query").skipToken, options?: (import("@reduxjs/toolkit/query").SubscriptionOptions & {
+}>(arg: string | typeof import("@reduxjs/toolkit/query").skipToken, options?: import("@reduxjs/toolkit/query").SubscriptionOptions & {
     skip?: boolean;
     refetchOnMountOrArgChange?: boolean | number;
 } & {
     skip?: boolean;
-    selectFromResult?: ((state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
+    selectFromResult?: (state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-        originalArgs?: undefined | undefined;
-        data?: undefined | undefined;
-        error?: undefined | undefined;
-        requestId?: undefined | undefined;
-        endpointName?: string | undefined;
-        startedTimeStamp?: undefined | undefined;
-        fulfilledTimeStamp?: undefined | undefined;
+        originalArgs?: undefined;
+        data?: undefined;
+        error?: undefined;
+        requestId?: undefined;
+        endpointName?: string;
+        startedTimeStamp?: undefined;
+        fulfilledTimeStamp?: undefined;
     } & {
         currentData?: {
             id: string;
@@ -525,10 +525,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        } | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -542,9 +542,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }, "api", unknown>> & {
         currentData?: {
             id: string;
@@ -552,10 +552,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        } | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -575,9 +575,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }, "api", unknown>> & {
         currentData?: {
             id: string;
@@ -585,10 +585,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        } | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -604,9 +604,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }, "api", unknown>> & {
         currentData?: {
             id: string;
@@ -614,10 +614,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        } | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -631,9 +631,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }, "api", unknown>> & {
         currentData?: {
             id: string;
@@ -641,10 +641,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        } | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -652,27 +652,27 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         isError: false;
     }, "error">>)>> & {
         status: import("@reduxjs/toolkit/query").QueryStatus;
-    }) => R) | undefined;
-}) | undefined) => [R][R extends any ? 0 : never] & {
+    }) => R;
+}) => [R][R extends any ? 0 : never] & {
     refetch: () => import("@reduxjs/toolkit/query").QueryActionCreatorResult<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", {
         id: string;
         name: string;
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }, "api", unknown>>;
 }, useSearchLegoSetsQuery: <R extends Record<string, any> = import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
     status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-    originalArgs?: undefined | undefined;
-    data?: undefined | undefined;
-    error?: undefined | undefined;
-    requestId?: undefined | undefined;
-    endpointName?: string | undefined;
-    startedTimeStamp?: undefined | undefined;
-    fulfilledTimeStamp?: undefined | undefined;
+    originalArgs?: undefined;
+    data?: undefined;
+    error?: undefined;
+    requestId?: undefined;
+    endpointName?: string;
+    startedTimeStamp?: undefined;
+    fulfilledTimeStamp?: undefined;
 } & {
     currentData?: {
         id: string;
@@ -680,10 +680,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -699,9 +699,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -709,10 +709,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -734,9 +734,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -744,10 +744,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -765,9 +765,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -775,10 +775,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -794,9 +794,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     theme: string;
     year: number;
     numParts: number;
-    imageUrl?: string | undefined;
-    description?: string | undefined;
-    isRetired?: boolean | undefined;
+    imageUrl?: string;
+    description?: string;
+    isRetired?: boolean;
 }[], "api", unknown>> & {
     currentData?: {
         id: string;
@@ -804,10 +804,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
-    }[] | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
+    }[];
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -815,22 +815,22 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
     isError: false;
 }, "error">>)>> & {
     status: import("@reduxjs/toolkit/query").QueryStatus;
-}>(arg: typeof import("@reduxjs/toolkit/query").skipToken | {
+}>(arg: {
     query: string;
-}, options?: (import("@reduxjs/toolkit/query").SubscriptionOptions & {
+} | typeof import("@reduxjs/toolkit/query").skipToken, options?: import("@reduxjs/toolkit/query").SubscriptionOptions & {
     skip?: boolean;
     refetchOnMountOrArgChange?: boolean | number;
 } & {
     skip?: boolean;
-    selectFromResult?: ((state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
+    selectFromResult?: (state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-        originalArgs?: undefined | undefined;
-        data?: undefined | undefined;
-        error?: undefined | undefined;
-        requestId?: undefined | undefined;
-        endpointName?: string | undefined;
-        startedTimeStamp?: undefined | undefined;
-        fulfilledTimeStamp?: undefined | undefined;
+        originalArgs?: undefined;
+        data?: undefined;
+        error?: undefined;
+        requestId?: undefined;
+        endpointName?: string;
+        startedTimeStamp?: undefined;
+        fulfilledTimeStamp?: undefined;
     } & {
         currentData?: {
             id: string;
@@ -838,10 +838,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -857,9 +857,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -867,10 +867,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -892,9 +892,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -902,10 +902,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -923,9 +923,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -933,10 +933,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -952,9 +952,9 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>> & {
         currentData?: {
             id: string;
@@ -962,10 +962,10 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
             theme: string;
             year: number;
             numParts: number;
-            imageUrl?: string | undefined;
-            description?: string | undefined;
-            isRetired?: boolean | undefined;
-        }[] | undefined;
+            imageUrl?: string;
+            description?: string;
+            isRetired?: boolean;
+        }[];
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -973,8 +973,8 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         isError: false;
     }, "error">>)>> & {
         status: import("@reduxjs/toolkit/query").QueryStatus;
-    }) => R) | undefined;
-}) | undefined) => [R][R extends any ? 0 : never] & {
+    }) => R;
+}) => [R][R extends any ? 0 : never] & {
     refetch: () => import("@reduxjs/toolkit/query").QueryActionCreatorResult<import("@reduxjs/toolkit/query").QueryDefinition<{
         query: string;
     }, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", {
@@ -983,8 +983,8 @@ export declare const useGetLegoSetsQuery: <R extends Record<string, any> = impor
         theme: string;
         year: number;
         numParts: number;
-        imageUrl?: string | undefined;
-        description?: string | undefined;
-        isRetired?: boolean | undefined;
+        imageUrl?: string;
+        description?: string;
+        isRetired?: boolean;
     }[], "api", unknown>>;
 };

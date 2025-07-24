@@ -6,7 +6,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import Navbar from '../index';
+import Navbar from '../index.js';
 describe('Navbar', () => {
     const createMockStore = (authState) => {
         return configureStore({

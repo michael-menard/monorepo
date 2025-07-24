@@ -1,8 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Avatar, AvatarImage, AvatarFallback, Button } from '@repo/ui';
-import { CropModal } from './CropModal';
-import { cn } from '../lib/utils';
+import { CropModal } from './CropModal.js';
+import { cn } from '../lib/utils.js';
 export const AvatarUploader = ({ currentAvatarUrl, onUpload, className, disabled = false, }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [showCropModal, setShowCropModal] = useState(false);

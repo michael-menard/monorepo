@@ -1,8 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React from 'react';
-import { ProfileSidebar } from './ProfileSidebar';
-import { ProfileMain } from './ProfileMain';
-import { ProfileSkeleton } from './ProfileSkeleton';
+import { ProfileSidebar } from './ProfileSidebar.js';
+import { ProfileMain } from './ProfileMain.js';
+import { ProfileSkeleton } from './ProfileSkeleton.js';
 export const ProfilePage = ({ profile, onAvatarUpload, onProfileUpdate, isEditable, loading, children }) => {
     if (loading) {
         return _jsx(ProfileSkeleton, {});

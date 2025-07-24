@@ -43,9 +43,9 @@ declare const EnvSchema: z.ZodObject<{
     VITE_BUNDLE_ANALYZER: z.ZodDefault<z.ZodPipe<z.ZodString, z.ZodTransform<boolean, string>>>;
     MODE: z.ZodDefault<z.ZodEnum<{
         development: "development";
+        test: "test";
         staging: "staging";
         production: "production";
-        test: "test";
     }>>;
 }, z.core.$strip>;
 declare const env: {
@@ -69,20 +69,20 @@ declare const env: {
     VITE_ENABLE_SERVICE_WORKER: boolean;
     VITE_CACHE_TIMEOUT: number;
     VITE_BUNDLE_ANALYZER: boolean;
-    MODE: "development" | "staging" | "production" | "test";
-    VITE_ENABLE_DEV_TOOLS?: boolean | undefined;
-    VITE_ENABLE_REDUX_DEVTOOLS?: boolean | undefined;
-    VITE_ENABLE_REACT_QUERY_DEVTOOLS?: boolean | undefined;
-    VITE_ANALYTICS_ID?: string | undefined;
-    VITE_SENTRY_DSN?: string | undefined;
-    VITE_SENTRY_ENVIRONMENT?: string | undefined;
-    VITE_IMAGE_CDN_URL?: string | undefined;
-    VITE_SUPPORTED_IMAGE_TYPES?: string | undefined;
-    VITE_GOOGLE_CLIENT_ID?: string | undefined;
-    VITE_FACEBOOK_APP_ID?: string | undefined;
-    VITE_GITHUB_CLIENT_ID?: string | undefined;
-    VITE_BUILD_TARGET?: string | undefined;
-    VITE_SOURCE_MAPS?: boolean | undefined;
+    MODE: "development" | "test" | "staging" | "production";
+    VITE_ENABLE_DEV_TOOLS?: boolean;
+    VITE_ENABLE_REDUX_DEVTOOLS?: boolean;
+    VITE_ENABLE_REACT_QUERY_DEVTOOLS?: boolean;
+    VITE_ANALYTICS_ID?: string;
+    VITE_SENTRY_DSN?: string;
+    VITE_SENTRY_ENVIRONMENT?: string;
+    VITE_IMAGE_CDN_URL?: string;
+    VITE_SUPPORTED_IMAGE_TYPES?: string;
+    VITE_GOOGLE_CLIENT_ID?: string;
+    VITE_FACEBOOK_APP_ID?: string;
+    VITE_GITHUB_CLIENT_ID?: string;
+    VITE_BUILD_TARGET?: string;
+    VITE_SOURCE_MAPS?: boolean;
 };
 export declare const app: {
     readonly name: string;

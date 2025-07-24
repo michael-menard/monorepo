@@ -3,10 +3,10 @@
  * Tests for store configuration and basic functionality
  */
 import { describe, it, expect } from 'vitest';
-import { store } from '../index';
-import { authActions } from '../slices/authSlice';
-import { uiActions } from '../slices/uiSlice';
-import { preferencesActions } from '../slices/preferencesSlice';
+import { store } from '../index.js';
+import { authActions } from '../slices/authSlice.js';
+import { uiActions } from '../slices/uiSlice.js';
+import { preferencesActions } from '../slices/preferencesSlice.js';
 describe('Redux Store', () => {
     it('should have initial state', () => {
         const state = store.getState();

@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { Mail, Lock } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import Input from "../Input";
-import { useAuth } from "../../hooks/useAuth";
+import Input from "../Input/index.js";
+import { useAuth } from '../../index.js';
 
 const Login = () => {
 	const [email, setEmail] = (React as any).useState("");

@@ -1,4 +1,4 @@
-import { baseApi } from './api';
+import { baseApi } from './api.js';
 export const wishlistApi = baseApi.injectEndpoints({
     endpoints: (build) => ({
         updateWishlist: build.mutation({

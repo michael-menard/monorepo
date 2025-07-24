@@ -2,7 +2,7 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 import React from 'react'
 import { Provider } from 'react-redux'
-import { store } from '../store/store'
+import { store } from '../store/store.js';
 
 // Mock react-router-dom
 vi.mock('react-router-dom', async () => {

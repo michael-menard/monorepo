@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { LoginSchema, SignupSchema, EmailSchema, PasswordSchema, UserProfileSchema, LegoSetSchema, ApiErrorSchema, ApiSuccessSchema, } from '../schemas';
+import { LoginSchema, SignupSchema, EmailSchema, PasswordSchema, UserProfileSchema, LegoSetSchema, ApiErrorSchema, ApiSuccessSchema, } from '../schemas.js';
 describe('Authentication Schemas', () => {
     describe('EmailSchema', () => {
         it('validates correct email addresses', () => {

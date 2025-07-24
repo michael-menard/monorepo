@@ -1,5 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import { RouteGuard } from './RouteGuard';
+import { RouteGuard } from './RouteGuard.js';
 export function withRouteGuard(Component, options = {}) {
     const WrappedComponent = (props) => (_jsx(RouteGuard, { ...options, children: _jsx(Component, { ...props }) }));
     // Set display name for debugging

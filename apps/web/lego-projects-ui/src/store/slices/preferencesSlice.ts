@@ -9,7 +9,7 @@ import type { PayloadAction } from '@reduxjs/toolkit'
 // TYPES
 // =============================================================================
 
-interface PreferencesState {
+export interface PreferencesState {
   // Display preferences
   theme: 'light' | 'dark' | 'auto'
   language: string
@@ -294,7 +294,8 @@ const preferencesSlice = createSlice({
 // EXPORTS
 // =============================================================================
 
-export const preferencesActions = preferencesSlice.actions
+export const preferencesActions: typeof preferencesSlice.actions = preferencesSlice.actions
+export { preferencesSlice }
 export default preferencesSlice.reducer
 
 // =============================================================================

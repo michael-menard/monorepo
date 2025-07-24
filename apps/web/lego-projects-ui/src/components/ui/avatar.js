@@ -1,7 +1,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import * as React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
-import { cn } from "@/lib/utils";
+// @ts-expect-error: TypeScript cannot resolve .js import for utils, but it exists and is correct for NodeNext/ESM
+import { cn } from "../../lib/utils.js";
 function Avatar({ className, ...props }) {
     return (_jsx(AvatarPrimitive.Root, { "data-slot": "avatar", className: cn("relative flex size-8 shrink-0 overflow-hidden rounded-full", className), ...props }));
 }

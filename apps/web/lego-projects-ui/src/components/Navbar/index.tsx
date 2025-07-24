@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import { useAppSelector } from '@/store';
 import { motion } from 'framer-motion';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LoadingSpinner } from '../ui/loading-spinner.js';
 
 export default function Navbar() {
   const navigate = useNavigate();

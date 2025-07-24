@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import WishlistItemCard from './WishlistItemCard';
-import type { WishlistItem } from './WishlistItemCard';
+import WishlistItemCard from './WishlistItemCard.js';
+import type { WishlistItem } from './WishlistItemCard.js';
 import { motion } from 'framer-motion';
 // Add import for RTK Query mutation
 // @ts-ignore: This import is from the main app, adjust path as needed in integration

@@ -3,7 +3,7 @@
  * Handles authentication endpoints: login, signup, get current user
  */
 import { z } from 'zod';
-import { baseApi } from './api';
+import { baseApi } from './api.js';
 // Zod schemas for request/response validation
 export const LoginRequestSchema = z.object({
     email: z.string().email(),

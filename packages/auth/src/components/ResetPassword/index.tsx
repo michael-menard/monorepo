@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import Input from "../Input";
+import Input from "../Input/index.js";
 import { Lock } from "lucide-react";
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import PasswordStrength from "../PasswordStrength";
-import { useAuth } from "../../hooks/useAuth";
+import PasswordStrength from "../PasswordStrength/index.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const ResetPassword = () => {
 	const [password, setPassword] = (React as any).useState("");

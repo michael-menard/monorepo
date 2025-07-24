@@ -1,6 +1,7 @@
 import React from 'react';
 import { z } from 'zod';
-import type { WishlistItemSchema } from '../../WishlistSchemas';
+// @ts-expect-error: TypeScript cannot resolve .js import for WishlistSchemas, but it exists and is correct for NodeNext/ESM
+import type { WishlistItemSchema } from '../../WishlistSchemas/index.js';
 
 export type WishlistItem = z.infer<typeof WishlistItemSchema> & { id: string };
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MocGalleryCard, { MockGalleryCardSchema as MocGalleryCardSchema, MockGalleryCardData as MocGalleryCardData } from '../MocGalleryCard';
+import MocGalleryCard, { MocGalleryCardSchema, MocGalleryCardData } from '../MocGalleryCard.js';
 
 // Mock framer-motion to avoid animation timing issues in tests
 vi.mock('framer-motion', () => {

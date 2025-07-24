@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useRefreshTokenMutation } from '@/services/authApi';
+import { useAppDispatch } from '@/store/index.js';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 

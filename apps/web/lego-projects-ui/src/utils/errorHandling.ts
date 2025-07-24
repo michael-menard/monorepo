@@ -1,4 +1,4 @@
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '../hooks/use-toast.js';
 
 // Error types for authentication
 export const AuthErrorType = {

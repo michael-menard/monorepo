@@ -3,7 +3,7 @@
  * Handles endpoints for fetching LEGO sets and set details
  */
 import { z } from 'zod'
-import { baseApi } from './api'
+import { baseApi } from './api.js';
 
 // Zod schemas for LEGO set data
 export const LegoSetSchema = z.object({

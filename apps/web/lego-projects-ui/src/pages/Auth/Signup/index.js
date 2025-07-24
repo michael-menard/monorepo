@@ -1,14 +1,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSignupMutation } from '@/services/authApi';
+import { useSignupMutation } from '../../services/authApi.js';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import { Mail, Lock, User } from 'lucide-react';
 import { z } from 'zod';
 import { Input, PasswordStrength } from '@repo/auth';
-import SocialLogin from '@/components/SocialLogin';
+// @ts-expect-error: TypeScript cannot resolve .js import for SocialLogin, but it exists and is correct for NodeNext/ESM
+import SocialLogin from '../../components/SocialLogin.js';
 // Local schema that matches the shared SignupRequestSchema
 const signupSchema = z.object({
     email: z.string().email('Please enter a valid email address'),

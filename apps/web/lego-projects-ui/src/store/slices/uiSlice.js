@@ -167,6 +167,7 @@ const uiSlice = createSlice({
 // EXPORTS
 // =============================================================================
 export const uiActions = uiSlice.actions;
+export { uiSlice };
 export default uiSlice.reducer;
 // =============================================================================
 // HELPER ACTION CREATORS

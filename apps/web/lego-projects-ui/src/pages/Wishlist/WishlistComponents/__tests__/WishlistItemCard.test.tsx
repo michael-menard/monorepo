@@ -1,8 +1,8 @@
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { WishlistItemCard } from '../WishlistItemCard';
-import type { WishlistItem } from '../WishlistItemCard';
+import { WishlistItemCard } from '../WishlistItemCard.js';
+import type { WishlistItem } from '../WishlistItemCard.js';
 
 const mockItem: WishlistItem = {
   id: 'item1',

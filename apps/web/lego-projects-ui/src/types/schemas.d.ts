@@ -73,19 +73,6 @@ export declare const UserProfileSchema: z.ZodObject<{
     updatedAt: z.ZodString;
 }, z.core.$strip>;
 export declare const UpdateProfileSchema: z.ZodObject<{
-    firstName: z.ZodOptional<z.ZodString>;
-    lastName: z.ZodOptional<z.ZodString>;
-    username: z.ZodOptional<z.ZodString>;
-    avatar: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    bio: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    location: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    website: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    socialLinks: z.ZodOptional<z.ZodOptional<z.ZodObject<{
-        instagram: z.ZodOptional<z.ZodString>;
-        youtube: z.ZodOptional<z.ZodString>;
-        flickr: z.ZodOptional<z.ZodString>;
-        rebrickable: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>>;
     preferences: z.ZodOptional<z.ZodOptional<z.ZodObject<{
         theme: z.ZodDefault<z.ZodEnum<{
             light: "light";
@@ -95,6 +82,19 @@ export declare const UpdateProfileSchema: z.ZodObject<{
         emailNotifications: z.ZodDefault<z.ZodBoolean>;
         publicProfile: z.ZodDefault<z.ZodBoolean>;
         showEmail: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strip>>>;
+    avatar: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    location: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    firstName: z.ZodOptional<z.ZodString>;
+    username: z.ZodOptional<z.ZodString>;
+    bio: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    lastName: z.ZodOptional<z.ZodString>;
+    website: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    socialLinks: z.ZodOptional<z.ZodOptional<z.ZodObject<{
+        instagram: z.ZodOptional<z.ZodString>;
+        youtube: z.ZodOptional<z.ZodString>;
+        flickr: z.ZodOptional<z.ZodString>;
+        rebrickable: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 export declare const LegoSetSchema: z.ZodObject<{
@@ -112,9 +112,9 @@ export declare const LegoSetSchema: z.ZodObject<{
         currency: z.ZodDefault<z.ZodString>;
     }, z.core.$strip>>;
     availability: z.ZodEnum<{
+        retired: "retired";
         available: "available";
         retiring: "retiring";
-        retired: "retired";
         exclusive: "exclusive";
     }>;
     images: z.ZodArray<z.ZodString>;
@@ -179,16 +179,7 @@ export declare const MocSchema: z.ZodObject<{
 }, z.core.$strip>;
 export declare const CreateMocSchema: z.ZodObject<{
     pieces: z.ZodNumber;
-    images: z.ZodArray<z.ZodObject<{
-        file: z.ZodCustom<File, File>;
-        preview: z.ZodOptional<z.ZodString>;
-        size: z.ZodNumber;
-        type: z.ZodEnum<{
-            "image/jpeg": "image/jpeg";
-            "image/png": "image/png";
-            "image/webp": "image/webp";
-        }>;
-    }, z.core.$strip>>;
+    title: z.ZodString;
     description: z.ZodString;
     instructions: z.ZodObject<{
         format: z.ZodEnum<{
@@ -205,14 +196,23 @@ export declare const CreateMocSchema: z.ZodObject<{
             image: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>>>;
     }, z.core.$strip>;
-    title: z.ZodString;
-    tags: z.ZodArray<z.ZodString>;
     difficulty: z.ZodEnum<{
         beginner: "beginner";
         intermediate: "intermediate";
         advanced: "advanced";
         expert: "expert";
     }>;
+    tags: z.ZodArray<z.ZodString>;
+    images: z.ZodArray<z.ZodObject<{
+        file: z.ZodCustom<File, File>;
+        preview: z.ZodOptional<z.ZodString>;
+        size: z.ZodNumber;
+        type: z.ZodEnum<{
+            "image/jpeg": "image/jpeg";
+            "image/png": "image/png";
+            "image/webp": "image/webp";
+        }>;
+    }, z.core.$strip>>;
     estimatedTime: z.ZodObject<{
         hours: z.ZodNumber;
         minutes: z.ZodNumber;
@@ -231,9 +231,9 @@ export declare const WishlistItemSchema: z.ZodObject<{
     id: z.ZodString;
     setId: z.ZodString;
     priority: z.ZodDefault<z.ZodEnum<{
-        low: "low";
         medium: "medium";
         high: "high";
+        low: "low";
         urgent: "urgent";
     }>>;
     notes: z.ZodOptional<z.ZodString>;
@@ -242,13 +242,13 @@ export declare const WishlistItemSchema: z.ZodObject<{
     acquiredAt: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export declare const CreateWishlistItemSchema: z.ZodObject<{
-    setId: z.ZodString;
     priority: z.ZodDefault<z.ZodEnum<{
-        low: "low";
         medium: "medium";
         high: "high";
+        low: "low";
         urgent: "urgent";
     }>>;
+    setId: z.ZodString;
     notes: z.ZodOptional<z.ZodString>;
     targetPrice: z.ZodOptional<z.ZodNumber>;
 }, z.core.$strip>;
@@ -346,23 +346,23 @@ export declare const SearchFormSchema: z.ZodObject<{
             max: z.ZodOptional<z.ZodNumber>;
         }, z.core.$strip>>;
         availability: z.ZodOptional<z.ZodArray<z.ZodEnum<{
+            retired: "retired";
             available: "available";
             retiring: "retiring";
-            retired: "retired";
             exclusive: "exclusive";
         }>>>;
     }, z.core.$strip>>;
     sort: z.ZodOptional<z.ZodObject<{
         field: z.ZodDefault<z.ZodEnum<{
             name: "name";
-            year: "year";
             pieces: "pieces";
             price: "price";
+            year: "year";
             relevance: "relevance";
         }>>;
         order: z.ZodDefault<z.ZodEnum<{
-            asc: "asc";
             desc: "desc";
+            asc: "asc";
         }>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;

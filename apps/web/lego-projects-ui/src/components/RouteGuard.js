@@ -1,5 +1,5 @@
 import { jsx as _jsx, Fragment as _Fragment } from "react/jsx-runtime";
-import { useAppSelector } from '@/store';
+import { useAppSelector } from '../../store/index.js';
 import { Navigate, useLocation } from 'react-router-dom';
 export function RouteGuard({ children, requireAuth = false }) {
     const { isAuthenticated, isInitialized } = useAppSelector(state => state.auth);

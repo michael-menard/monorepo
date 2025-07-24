@@ -5,8 +5,8 @@ import { Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useResetPasswordMutation } from '@/services/authApi';
-import { PasswordStrength, Input } from '@repo/auth';
+import { useResetPasswordMutation } from '../../services/authApi.js';
+import { PasswordStrength, Input } from '../../../../packages/auth/src/index.js';
 
 // Create a schema for reset password with confirmation
 const ResetPasswordFormSchema = z.object({

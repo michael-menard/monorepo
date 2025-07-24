@@ -1,8 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@repo/ui';
-import { AvatarUploader } from './AvatarUploader';
-import { cn } from '../lib/utils';
+import { AvatarUploader } from './AvatarUploader.js';
+import { cn } from '../lib/utils.js';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';

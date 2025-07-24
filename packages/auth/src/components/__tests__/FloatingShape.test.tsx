@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import FloatingShape from '../FloatingShape';
+import FloatingShape from '../FloatingShape/index.js';
 
 describe('FloatingShape', () => {
   const defaultProps = {

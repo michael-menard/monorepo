@@ -3,7 +3,6 @@
  * Manages user authentication state, tokens, and auth-related UI state
  */
 import { createSlice } from '@reduxjs/toolkit';
-import { z } from 'zod';
 // =============================================================================
 // INITIAL STATE
 // =============================================================================
@@ -181,6 +180,7 @@ const authSlice = createSlice({
 // EXPORTS
 // =============================================================================
 export const authActions = authSlice.actions;
+export { authSlice };
 export default authSlice.reducer;
 // =============================================================================
 // UTILITY FUNCTIONS

@@ -3,7 +3,8 @@ import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
 import { ChevronDownIcon } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+// @ts-expect-error: TypeScript cannot resolve .js import for utils, but it exists and is correct for NodeNext/ESM
+import { cn } from "../../lib/utils.js"
 
 function NavigationMenu({
   className,

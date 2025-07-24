@@ -1,4 +1,4 @@
-import { baseApi } from '@/store/api';
+import { baseApi } from '../store/api.js';
 // User API slice
 export const userApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({

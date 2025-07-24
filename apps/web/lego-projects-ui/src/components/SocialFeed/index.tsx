@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { FaTwitter, FaInstagram, FaHeart, FaComment, FaShare, FaEllipsisH } from 'react-icons/fa';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.js';
+import { Button } from '../ui/button.js';
+import { LoadingSpinner } from '../ui/loading-spinner.js';
 
 interface SocialPost {
   id: string;

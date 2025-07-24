@@ -1,4 +1,4 @@
-import { baseApi } from '@/store/api';
+import { baseApi } from '../store/api.js';
 
 // Types for file upload operations
 export interface FileUploadResponse {

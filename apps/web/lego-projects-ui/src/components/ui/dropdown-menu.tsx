@@ -2,7 +2,8 @@ import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+// @ts-expect-error: TypeScript cannot resolve .js import for utils, but it exists and is correct for NodeNext/ESM
+import { cn } from "../../lib/utils.js"
 
 function DropdownMenu({
   ...props

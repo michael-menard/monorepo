@@ -1,8 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useState, useEffect } from 'react';
-import CategoryFilter from '../../../../packages/wishlist/src/components/CategoryFilter';
-import WishlistList from '../../../../packages/wishlist/src/components/WishlistList';
-import { WishlistItem } from '../../../../packages/wishlist/src/components/WishlistItemCard';
+import { useState, useEffect } from 'react';
+import CategoryFilter from './WishlistComponents/CategoryFilter.js';
+import WishlistList from './WishlistComponents/WishlistList.js';
 const persistKey = 'wishlist-items';
 const WishlistPage = () => {
     const [category, setCategory] = useState(null);

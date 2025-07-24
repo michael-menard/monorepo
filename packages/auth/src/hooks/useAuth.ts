@@ -1,5 +1,6 @@
-import { useSelector, useDispatch } from 'react-redux';
-import type { AppDispatch } from '../store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch } from '../store/store.js';
+import { clearError, clearMessage } from '../store/authSlice.js';
 import {
   selectUser,
   selectIsAuthenticated,
@@ -7,9 +8,7 @@ import {
   selectIsCheckingAuth,
   selectError,
   selectMessage,
-  clearError,
-  clearMessage,
-} from '../store/authSlice';
+} from '../store/authSlice.js';
 import {
   useLoginMutation,
   useSignupMutation,
@@ -17,7 +16,7 @@ import {
   useVerifyEmailMutation,
   useCheckAuthQuery,
   useResetPasswordMutation,
-} from '../store/authApi';
+} from '../store/authApi.js';
 
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();

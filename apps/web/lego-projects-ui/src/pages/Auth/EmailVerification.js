@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, RefreshCw, ArrowLeft } from 'lucide-react';
-import { useVerifyEmailMutation, useForgotPasswordMutation } from '@/services/authApi';
+import { useVerifyEmailMutation, useForgotPasswordMutation } from '../../services/authApi.js';
 import { Input } from '@repo/auth';
 export default function EmailVerification({ email: propEmail }) {
     const [code, setCode] = useState('');

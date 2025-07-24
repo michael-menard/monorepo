@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useUploadAvatarMutation } from '@/services/userApi';
-import { ProfilePage } from '@repo/profile';
+import { ProfilePage } from '../../../../packages/profile/src/index.js';
 // Remove the placeholder ProfilePage component since we're now importing the real one
 // const ProfilePage: React.FC<{ children: React.ReactNode; [key: string]: any }> = ({ children }) => <div>{children}</div>;
 const ProfileDemo = () => {

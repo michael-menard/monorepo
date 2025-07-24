@@ -4,10 +4,10 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import RouteGuard from '../index';
-import authReducer from '../../../store/authSlice';
-import { authApi } from '../../../store/authApi';
-import * as tokenUtils from '../../../utils/token';
+import RouteGuard from '../index.js';
+import authReducer from '../../../store/authSlice.js';
+import { authApi } from '../../../store/authApi.js';
+import * as tokenUtils from '../../../utils/token.js';
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();

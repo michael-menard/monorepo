@@ -24,7 +24,7 @@ export interface ModalState {
   data?: unknown
 }
 
-interface UIState {
+export interface UIState {
   // Loading states
   isLoading: boolean
   loadingMessage: string | null
@@ -264,7 +264,8 @@ const uiSlice = createSlice({
 // EXPORTS
 // =============================================================================
 
-export const uiActions = uiSlice.actions
+export const uiActions: typeof uiSlice.actions = uiSlice.actions
+export { uiSlice }
 export default uiSlice.reducer
 
 // =============================================================================

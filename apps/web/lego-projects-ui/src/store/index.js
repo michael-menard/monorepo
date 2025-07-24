@@ -9,10 +9,10 @@ import { setupListeners } from '@reduxjs/toolkit/query';
 import { useDispatch, useSelector } from 'react-redux';
 import { combineReducers } from '@reduxjs/toolkit';
 // Import feature slices
-import authSlice from './slices/authSlice';
-import uiSlice from './slices/uiSlice';
-import preferencesSlice from './slices/preferencesSlice';
-import { baseApi } from './api';
+import authReducer from './slices/authSlice.js';
+import uiReducer from './slices/uiSlice.js';
+import preferencesReducer from './slices/preferencesSlice.js';
+import { baseApi } from './api.js';
 // =============================================================================
 // PERSISTENCE CONFIGURATION
 // =============================================================================
@@ -36,9 +36,9 @@ const preferencesPersistConfig = {
 // ROOT REDUCER
 // =============================================================================
 const rootReducer = combineReducers({
-    auth: persistReducer(authPersistConfig, authSlice),
-    ui: uiSlice, // No persistence for UI state
-    preferences: persistReducer(preferencesPersistConfig, preferencesSlice),
+    auth: persistReducer(authPersistConfig, authReducer),
+    ui: uiReducer, // No persistence for UI state
+    preferences: persistReducer(preferencesPersistConfig, preferencesReducer),
     [baseApi.reducerPath]: baseApi.reducer,
 });
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -47,7 +47,7 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 // =============================================================================
 export const store = configureStore({
     reducer: persistedReducer,
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+    middleware: ((getDefaultMiddleware) => getDefaultMiddleware({
         serializableCheck: {
             ignoredActions: [
                 'persist/PERSIST',
@@ -57,7 +57,7 @@ export const store = configureStore({
                 'persist/REGISTER',
             ],
         },
-    }).concat(baseApi.middleware),
+    }).concat(baseApi.middleware)),
     // Enable Redux DevTools in development
     devTools: process.env.NODE_ENV !== 'production',
 });

@@ -1,9 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import * as React from "react";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
 import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+// @ts-expect-error: TypeScript cannot resolve .js import for utils, but it exists and is correct for NodeNext/ESM
+import { cn } from "../../lib/utils.js";
 function NavigationMenu({ className, children, viewport = true, ...props }) {
     return (_jsxs(NavigationMenuPrimitive.Root, { "data-slot": "navigation-menu", "data-viewport": viewport, className: cn("group/navigation-menu relative flex max-w-max flex-1 items-center justify-center", className), ...props, children: [children, viewport && _jsx(NavigationMenuViewport, {})] }));
 }

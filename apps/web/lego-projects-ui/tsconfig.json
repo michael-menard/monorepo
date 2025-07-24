@@ -9,26 +9,26 @@
     "moduleResolution": "NodeNext",
     "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-lego-projects-ui.json",
     "paths": {
-      "@/*": ["./src/*"],
+      "@/store": ["./src/store/index.ts"],
+      "@/store/*": ["./src/store/*"],
+      "@/components": ["./src/components"],
+      "@/components/*": ["./src/components/*"],
+      "@/services": ["./src/services"],
+      "@/services/*": ["./src/services/*"],
+      "@/types": ["./src/types"],
+      "@/types/*": ["./src/types/*"],
       "@repo/auth": ["../../../packages/auth/src/index.ts"],
       "@repo/auth/*": ["../../../packages/auth/src/*"],
       "@repo/ui": ["../../../packages/ui/src/index.ts"],
-      "@repo/ui/*": ["../../../packages/ui/src/*"],
-      "@repo/gallery": ["../../../features/gallery/src/index.ts"],
-      "@repo/gallery/*": ["../../../features/gallery/src/*"],
-      "@repo/wishlist": ["../../../features/wishlist/src/index.ts"],
-      "@repo/wishlist/*": ["../../../features/wishlist/src/*"],
-      "@repo/profile": ["../../../features/profile/src/index.ts"],
-      "@repo/profile/*": ["../../../features/profile/src/*"],
-      "@repo/moc": ["../../../features/moc/src/index.ts"],
-      "@repo/moc/*": ["../../../features/moc/src/*"]
+      "@repo/ui/*": ["../../../packages/ui/src/*"]
     }
   },
   "include": [
     "src",
     "src/pages/Wishlist/WishlistSchemas",
     "../../packages/auth/src",
-    "../../packages/ui/src"
+    "../../packages/ui/src",
+    "../../features/profile/src/**/*"
   ],
   "files": [],
   "references": [

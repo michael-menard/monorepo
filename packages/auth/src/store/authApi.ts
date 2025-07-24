@@ -6,7 +6,7 @@ import type {
   ConfirmResetRequest,
   AuthResponse,
   VerifyEmailRequest,
-} from '../types/auth';
+} from '../types/auth.js';
 
 const baseUrl = process.env.NODE_ENV === 'development'
   ? 'http://localhost:5000/api/auth'

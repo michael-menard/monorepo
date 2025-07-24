@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from "framer-motion";
-import Input from "../Input";
+import Input from "../Input/index.js";
 import { Lock, Mail, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import PasswordStrength from "../PasswordStrength";
-import { useAuth } from "../../hooks/useAuth";
+import PasswordStrength from "../PasswordStrength/index.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const Signup = () => {
 	const [firstName, setFirstName] = React.useState("");

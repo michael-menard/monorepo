@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React from 'react';
 import { z } from 'zod';
-import { cn } from '@repo/ui/lib/utils';
+import { cn } from '@repo/ui/lib/utils.js';
 import { motion, AnimatePresence } from 'framer-motion';
 /**
  * Zod schema for MocGalleryCard data

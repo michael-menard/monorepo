@@ -1,9 +1,4 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-/**
- * Testing Utilities
- * Custom render functions and test helpers for consistent testing
- */
-import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';

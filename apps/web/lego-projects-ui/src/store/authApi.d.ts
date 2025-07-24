@@ -96,8 +96,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -112,8 +112,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -138,8 +138,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -164,8 +164,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -180,8 +180,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -192,7 +192,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -219,8 +219,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -235,8 +235,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -261,8 +261,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -287,8 +287,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -303,8 +303,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -314,9 +314,9 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     email: string;
     password: string;
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
@@ -335,7 +335,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     originalArgs?: {
         email: string;
         password: string;
-    } | undefined;
+    };
     reset: () => void;
 }], useSignupMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -364,8 +364,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -380,8 +380,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -406,8 +406,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -432,8 +432,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -448,8 +448,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             updatedAt: string;
         };
         token: string;
-    } | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    };
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -460,7 +460,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -487,8 +487,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -503,8 +503,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -529,8 +529,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -555,8 +555,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -571,8 +571,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
                 updatedAt: string;
             };
             token: string;
-        } | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        };
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -582,9 +582,9 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     email: string;
     password: string;
     username: string;
@@ -606,17 +606,17 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         email: string;
         password: string;
         username: string;
-    } | undefined;
+    };
     reset: () => void;
 }], useGetCurrentUserQuery: <R extends Record<string, any> = import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
     status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-    originalArgs?: undefined | undefined;
-    data?: undefined | undefined;
-    error?: undefined | undefined;
-    requestId?: undefined | undefined;
-    endpointName?: string | undefined;
-    startedTimeStamp?: undefined | undefined;
-    fulfilledTimeStamp?: undefined | undefined;
+    originalArgs?: undefined;
+    data?: undefined;
+    error?: undefined;
+    requestId?: undefined;
+    endpointName?: string;
+    startedTimeStamp?: undefined;
+    fulfilledTimeStamp?: undefined;
 } & {
     currentData?: {
         id: string;
@@ -624,7 +624,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         username: string;
         createdAt: string;
         updatedAt: string;
-    } | undefined;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -645,7 +645,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         username: string;
         createdAt: string;
         updatedAt: string;
-    } | undefined;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -672,7 +672,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         username: string;
         createdAt: string;
         updatedAt: string;
-    } | undefined;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -695,7 +695,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         username: string;
         createdAt: string;
         updatedAt: string;
-    } | undefined;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -716,7 +716,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         username: string;
         createdAt: string;
         updatedAt: string;
-    } | undefined;
+    };
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -724,20 +724,20 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isError: false;
 }, "error">>)>> & {
     status: import("@reduxjs/toolkit/query").QueryStatus;
-}>(arg: void | typeof import("@reduxjs/toolkit/query").skipToken, options?: (import("@reduxjs/toolkit/query").SubscriptionOptions & {
+}>(arg: void | typeof import("@reduxjs/toolkit/query").skipToken, options?: import("@reduxjs/toolkit/query").SubscriptionOptions & {
     skip?: boolean;
     refetchOnMountOrArgChange?: boolean | number;
 } & {
     skip?: boolean;
-    selectFromResult?: ((state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
+    selectFromResult?: (state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-        originalArgs?: undefined | undefined;
-        data?: undefined | undefined;
-        error?: undefined | undefined;
-        requestId?: undefined | undefined;
-        endpointName?: string | undefined;
-        startedTimeStamp?: undefined | undefined;
-        fulfilledTimeStamp?: undefined | undefined;
+        originalArgs?: undefined;
+        data?: undefined;
+        error?: undefined;
+        requestId?: undefined;
+        endpointName?: string;
+        startedTimeStamp?: undefined;
+        fulfilledTimeStamp?: undefined;
     } & {
         currentData?: {
             id: string;
@@ -745,7 +745,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             username: string;
             createdAt: string;
             updatedAt: string;
-        } | undefined;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -766,7 +766,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             username: string;
             createdAt: string;
             updatedAt: string;
-        } | undefined;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -793,7 +793,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             username: string;
             createdAt: string;
             updatedAt: string;
-        } | undefined;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -816,7 +816,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             username: string;
             createdAt: string;
             updatedAt: string;
-        } | undefined;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -837,7 +837,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
             username: string;
             createdAt: string;
             updatedAt: string;
-        } | undefined;
+        };
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -845,8 +845,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isError: false;
     }, "error">>)>> & {
         status: import("@reduxjs/toolkit/query").QueryStatus;
-    }) => R) | undefined;
-}) | undefined) => [R][R extends any ? 0 : never] & {
+    }) => R;
+}) => [R][R extends any ? 0 : never] & {
     refetch: () => import("@reduxjs/toolkit/query").QueryActionCreatorResult<import("@reduxjs/toolkit/query").QueryDefinition<void, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", {
         id: string;
         email: string;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { SocialShare } from '../SocialShare';
+import { SocialShare } from '../SocialShare.js';
 describe('SocialShare', () => {
   it('renders all share buttons', () => {
     render(<SocialShare />);

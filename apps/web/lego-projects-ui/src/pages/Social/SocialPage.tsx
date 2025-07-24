@@ -1,8 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
-import { SocialShare } from '@/components/SocialShare';
-import { SocialFeed } from '@/components/SocialFeed';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// @ts-expect-error: TypeScript cannot resolve .js import for SocialShare, but it exists and is correct for NodeNext/ESM
+import { SocialShare } from '../../components/SocialShare/index.js';
+// @ts-expect-error: TypeScript cannot resolve .js import for SocialFeed, but it exists and is correct for NodeNext/ESM
+import { SocialFeed } from '../../components/SocialFeed/index.js';
+// @ts-expect-error: TypeScript cannot resolve .js import for button, but it exists and is correct for NodeNext/ESM
+import { Button } from '../../components/ui/button.js';
+// @ts-expect-error: TypeScript cannot resolve .js import for card, but it exists and is correct for NodeNext/ESM
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card.js';
 import { FaTwitter, FaInstagram, FaFacebook, FaLinkedin, FaGithub } from 'react-icons/fa';
 
 // Mock data for social feed

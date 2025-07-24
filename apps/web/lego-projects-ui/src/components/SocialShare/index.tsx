@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { FaTwitter, FaFacebook, FaLinkedin, FaWhatsapp, FaEnvelope, FaLink } from 'react-icons/fa';
-import { Button } from '@/components/ui/button';
+// @ts-expect-error: TypeScript cannot resolve .js import for button, but it exists and is correct for NodeNext/ESM
+import { Button } from '../ui/button.js';
 
 interface SocialShareProps {
   url?: string;

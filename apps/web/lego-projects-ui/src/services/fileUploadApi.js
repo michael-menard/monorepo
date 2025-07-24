@@ -1,4 +1,4 @@
-import { baseApi } from '@/store/api';
+import { baseApi } from '../store/api.js';
 // File upload API slice
 export const fileUploadApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({

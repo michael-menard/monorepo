@@ -51,15 +51,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AvatarUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: AvatarUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AvatarUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: AvatarUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -75,8 +75,8 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AvatarUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: AvatarUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -92,15 +92,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AvatarUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: AvatarUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AvatarUploadResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: AvatarUploadResponse;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -111,7 +111,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -129,15 +129,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AvatarUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: AvatarUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AvatarUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: AvatarUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -153,8 +153,8 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AvatarUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: AvatarUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -170,15 +170,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AvatarUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: AvatarUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AvatarUploadResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: AvatarUploadResponse;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -188,9 +188,9 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     userId: string;
     file: File;
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
@@ -200,19 +200,19 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     originalArgs?: {
         userId: string;
         file: File;
-    } | undefined;
+    };
     reset: () => void;
 }], useGetUserProfileQuery: <R extends Record<string, any> = import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
     status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-    originalArgs?: undefined | undefined;
-    data?: undefined | undefined;
-    error?: undefined | undefined;
-    requestId?: undefined | undefined;
-    endpointName?: string | undefined;
-    startedTimeStamp?: undefined | undefined;
-    fulfilledTimeStamp?: undefined | undefined;
+    originalArgs?: undefined;
+    data?: undefined;
+    error?: undefined;
+    requestId?: undefined;
+    endpointName?: string;
+    startedTimeStamp?: undefined;
+    fulfilledTimeStamp?: undefined;
 } & {
-    currentData?: ProfileData | undefined;
+    currentData?: ProfileData;
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -221,7 +221,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
 }, "isUninitialized"> & {
     isUninitialized: true;
 }) | import("@reduxjs/toolkit/query").TSHelpersOverride<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-    currentData?: ProfileData | undefined;
+    currentData?: ProfileData;
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -236,7 +236,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     isFetching: true;
     error: undefined;
 } & Required<Pick<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-    currentData?: ProfileData | undefined;
+    currentData?: ProfileData;
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -247,7 +247,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     isFetching: false;
     error: undefined;
 } & Required<Pick<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-    currentData?: ProfileData | undefined;
+    currentData?: ProfileData;
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -256,7 +256,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
 }, "data" | "fulfilledTimeStamp" | "currentData">>) | ({
     isError: true;
 } & Required<Pick<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-    currentData?: ProfileData | undefined;
+    currentData?: ProfileData;
     isUninitialized: false;
     isLoading: false;
     isFetching: false;
@@ -264,22 +264,22 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     isError: false;
 }, "error">>)>> & {
     status: import("@reduxjs/toolkit/query").QueryStatus;
-}>(arg: string | typeof import("@reduxjs/toolkit/query").skipToken, options?: (import("@reduxjs/toolkit/query").SubscriptionOptions & {
+}>(arg: string | typeof import("@reduxjs/toolkit/query").skipToken, options?: import("@reduxjs/toolkit/query").SubscriptionOptions & {
     skip?: boolean;
     refetchOnMountOrArgChange?: boolean | number;
 } & {
     skip?: boolean;
-    selectFromResult?: ((state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
+    selectFromResult?: (state: import("@reduxjs/toolkit/query").TSHelpersId<(Omit<{
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
-        originalArgs?: undefined | undefined;
-        data?: undefined | undefined;
-        error?: undefined | undefined;
-        requestId?: undefined | undefined;
-        endpointName?: string | undefined;
-        startedTimeStamp?: undefined | undefined;
-        fulfilledTimeStamp?: undefined | undefined;
+        originalArgs?: undefined;
+        data?: undefined;
+        error?: undefined;
+        requestId?: undefined;
+        endpointName?: string;
+        startedTimeStamp?: undefined;
+        fulfilledTimeStamp?: undefined;
     } & {
-        currentData?: ProfileData | undefined;
+        currentData?: ProfileData;
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -288,7 +288,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     }, "isUninitialized"> & {
         isUninitialized: true;
     }) | import("@reduxjs/toolkit/query").TSHelpersOverride<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-        currentData?: ProfileData | undefined;
+        currentData?: ProfileData;
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -303,7 +303,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         isFetching: true;
         error: undefined;
     } & Required<Pick<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-        currentData?: ProfileData | undefined;
+        currentData?: ProfileData;
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -314,7 +314,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         isFetching: false;
         error: undefined;
     } & Required<Pick<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-        currentData?: ProfileData | undefined;
+        currentData?: ProfileData;
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -323,7 +323,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     }, "data" | "fulfilledTimeStamp" | "currentData">>) | ({
         isError: true;
     } & Required<Pick<import("@reduxjs/toolkit/query").QuerySubState<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>> & {
-        currentData?: ProfileData | undefined;
+        currentData?: ProfileData;
         isUninitialized: false;
         isLoading: false;
         isFetching: false;
@@ -331,8 +331,8 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         isError: false;
     }, "error">>)>> & {
         status: import("@reduxjs/toolkit/query").QueryStatus;
-    }) => R) | undefined;
-}) | undefined) => [R][R extends any ? 0 : never] & {
+    }) => R;
+}) => [R][R extends any ? 0 : never] & {
     refetch: () => import("@reduxjs/toolkit/query").QueryActionCreatorResult<import("@reduxjs/toolkit/query").QueryDefinition<string, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, "User" | "LegoSet" | "Auth" | "Collection" | "Wishlist" | "MOC" | "FileUpload", ProfileData, "api", unknown>>;
 }, useUpdateUserProfileMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -352,15 +352,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: ProfileData | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: ProfileData;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: ProfileData | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: ProfileData;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -376,8 +376,8 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: ProfileData | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: ProfileData;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -393,15 +393,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: ProfileData | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: ProfileData;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: ProfileData | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: ProfileData;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -412,7 +412,7 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -430,15 +430,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: ProfileData | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: ProfileData;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: ProfileData | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: ProfileData;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -454,8 +454,8 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: ProfileData | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: ProfileData;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -471,15 +471,15 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: ProfileData | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: ProfileData;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: ProfileData | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: ProfileData;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -489,9 +489,9 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     userId: string;
     data: ProfileUpdateRequest;
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
@@ -501,6 +501,6 @@ export declare const useUploadAvatarMutation: <R extends Record<string, any> = (
     originalArgs?: {
         userId: string;
         data: ProfileUpdateRequest;
-    } | undefined;
+    };
     reset: () => void;
 }];

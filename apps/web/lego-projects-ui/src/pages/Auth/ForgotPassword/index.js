@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import { Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useForgotPasswordMutation } from '@/services/authApi';
+import { useForgotPasswordMutation } from '../../services/authApi.js';
 import { ResetPasswordRequestSchema } from '@repo/auth';
 import { Input } from '@repo/auth';
 export default function ForgotPassword() {

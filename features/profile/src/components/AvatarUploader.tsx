@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Avatar, AvatarImage, AvatarFallback, Button } from '@repo/ui';
-import { CropModal } from './CropModal';
-import { cn } from '../lib/utils';
-import type { AvatarUploaderProps } from '../types/index';
+import { CropModal } from './CropModal.js';
+import { cn } from '../lib/utils.js';
+import type { AvatarUploaderProps } from '../types/index.js';
 
 export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   currentAvatarUrl,

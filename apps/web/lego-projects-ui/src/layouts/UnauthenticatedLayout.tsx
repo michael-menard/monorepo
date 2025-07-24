@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import Navbar from '../components/Navbar/index.js';
+import Footer from '../components/Footer/index.js';
 
 export default function UnauthenticatedLayout({ children }: { children: ReactNode }) {
   return (

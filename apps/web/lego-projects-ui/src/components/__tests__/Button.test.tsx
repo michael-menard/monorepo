@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import { renderComponent } from '@/test/utils'
+import { renderComponent } from '../../test/utils.js';
 
 // Simple Button component for testing
 const Button = ({ 

@@ -1,7 +1,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import Footer from '../Footer/index';
+import Footer from '../Footer/index.js';
 describe('Footer', () => {
     it('renders social media and legal links', () => {
         render(_jsx(Footer, {}));

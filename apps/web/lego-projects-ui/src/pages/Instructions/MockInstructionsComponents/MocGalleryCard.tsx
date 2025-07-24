@@ -1,6 +1,6 @@
 import React from 'react';
 import { z } from 'zod';
-import { cn } from '@repo/ui/lib/utils';
+import { cn } from '@repo/ui/lib/utils.js';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { WishlistItem } from './WishlistItemCard';
+import type { WishlistItem } from './WishlistItemCard.js';
 export interface WishlistListProps {
     items: WishlistItem[];
     onEdit?: (id: string) => void;

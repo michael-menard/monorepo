@@ -1,7 +1,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { SocialFeed } from '../SocialFeed';
+import { SocialFeed } from '../SocialFeed.js';
 describe('SocialFeed', () => {
     it('renders empty state when no posts', () => {
         render(_jsx(SocialFeed, { posts: [] }));

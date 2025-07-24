@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useAppDispatch } from '@/store';
-import { persistor } from '@/store';
-import { authActions } from '@/store/slices/authSlice';
+import { useAppDispatch } from '@/store/index.js';
+import { persistor } from '@/store/index.js';
+import { authActions } from '@/store/slices/authSlice.js';
 export function useCrossTabSync(options = {}) {
     const { enabled = true } = options;
     const dispatch = useAppDispatch();

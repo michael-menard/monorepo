@@ -2,8 +2,10 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import WishlistList, { reorder } from '../WishlistList.js';
-import type { WishlistItem } from '../WishlistItemCard';
+import type { WishlistItem } from '../WishlistItemCard.js';
 import { act } from 'react-dom/test-utils';
+// @ts-expect-error
+import * as wishlistApi from '../../../store/wishlistApi';
 
 // Mock the RTK Query mutation from the main app
 vi.mock('apps/web/lego-projects-ui/src/store/wishlistApi', () => ({
@@ -98,7 +100,7 @@ describe('WishlistList', () => {
 
   it('debounces auto-save and calls backend only once for rapid changes', async () => {
     const updateWishlist = vi.fn().mockResolvedValue({ success: true });
-    vi.mocked(require('apps/web/lego-projects-ui/src/store/wishlistApi').useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
+    vi.mocked(wishlistApi.useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
     render(<WishlistList items={mockItems} persistKey={persistKey} />);
     // Simulate reorder
     act(() => {
@@ -117,7 +119,7 @@ describe('WishlistList', () => {
 
   it('updates localStorage after successful backend save', async () => {
     const updateWishlist = vi.fn().mockResolvedValue({ success: true });
-    vi.mocked(require('apps/web/lego-projects-ui/src/store/wishlistApi').useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
+    vi.mocked(wishlistApi.useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
     render(<WishlistList items={mockItems} persistKey={persistKey} />);
     act(() => {
       fireEvent.click(screen.getAllByLabelText('Edit item')[0]);
@@ -134,7 +136,7 @@ describe('WishlistList', () => {
 
   it('flushes unsaved changes on page unload', () => {
     const updateWishlist = vi.fn().mockResolvedValue({ success: true });
-    vi.mocked(require('apps/web/lego-projects-ui/src/store/wishlistApi').useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
+    vi.mocked(wishlistApi.useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
     render(<WishlistList items={mockItems} persistKey={persistKey} />);
     // Simulate change
     act(() => {
@@ -159,7 +161,7 @@ describe('WishlistList', () => {
 
   it('does not call backend if no changes', () => {
     const updateWishlist = vi.fn();
-    vi.mocked(require('apps/web/lego-projects-ui/src/store/wishlistApi').useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
+    vi.mocked(wishlistApi.useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: false, isSuccess: true }]);
     render(<WishlistList items={mockItems} persistKey={persistKey} />);
     act(() => {
       vi.advanceTimersByTime(2000);
@@ -169,7 +171,7 @@ describe('WishlistList', () => {
 
   it('handles backend error gracefully', async () => {
     const updateWishlist = vi.fn().mockRejectedValue(new Error('fail'));
-    vi.mocked(require('apps/web/lego-projects-ui/src/store/wishlistApi').useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: true, isSuccess: false, error: new Error('fail') }]);
+    vi.mocked(wishlistApi.useUpdateWishlistMutation).mockReturnValue([updateWishlist, { isLoading: false, isError: true, isSuccess: false, error: new Error('fail') }]);
     render(<WishlistList items={mockItems} persistKey={persistKey} />);
     act(() => {
       fireEvent.click(screen.getAllByLabelText('Edit item')[0]);

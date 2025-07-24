@@ -1,14 +1,14 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose, } from '@repo/ui/dialog';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@repo/ui/form';
-import { Input } from '@repo/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@repo/ui/select';
-import { Button } from '@repo/ui/button';
-import { FileUpload } from '@repo/ui';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose, } from '../../../ui/src/dialog.js';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../../../ui/src/form.js';
+import { Input } from '../../../ui/src/input.js';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/src/select.js';
+import { Button } from '../../../ui/src/button.js';
+import { FileUpload } from '../../../ui/src/index.js';
 const CATEGORIES = [
     'Star Wars',
     'Castle',

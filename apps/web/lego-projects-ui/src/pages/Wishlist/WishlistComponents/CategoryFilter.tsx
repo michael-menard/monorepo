@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { LegoCategoryEnum } from '../../WishlistSchemas';
+// @ts-expect-error: TypeScript cannot resolve .js import for WishlistSchemas, but it exists and is correct for NodeNext/ESM
+import { LegoCategoryEnum } from '../../WishlistSchemas/index.js';
 
 export interface CategoryFilterProps {
   value: string | null;

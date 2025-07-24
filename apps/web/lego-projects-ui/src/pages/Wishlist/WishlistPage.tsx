@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import CategoryFilter from '../../../../packages/wishlist/src/components/CategoryFilter';
-import WishlistList from '../../../../packages/wishlist/src/components/WishlistList';
-import { WishlistItem } from '../../../../packages/wishlist/src/components/WishlistItemCard';
+import CategoryFilter from './WishlistComponents/CategoryFilter.js';
+import WishlistList from './WishlistComponents/WishlistList.js';
+import { WishlistItem } from './WishlistComponents/WishlistItemCard.js';
 
 const persistKey = 'wishlist-items';
 

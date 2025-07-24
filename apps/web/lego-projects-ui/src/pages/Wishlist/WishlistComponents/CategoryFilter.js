@@ -1,6 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import React, { useState } from 'react';
-import { LegoCategoryEnum } from '../../WishlistSchemas';
+import { useState } from 'react';
+// @ts-expect-error: TypeScript cannot resolve .js import for WishlistSchemas, but it exists and is correct for NodeNext/ESM
+import { LegoCategoryEnum } from '../../WishlistSchemas/index.js';
 const predefinedCategories = LegoCategoryEnum.options;
 export const CategoryFilter = ({ value, onChange, allowCustom = true }) => {
     const [custom, setCustom] = useState('');

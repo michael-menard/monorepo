@@ -5,7 +5,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
  */
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderComponent } from '@/test/utils';
+import { renderComponent } from '../../test/utils.js';
 // Simple Button component for testing
 const Button = ({ onClick, children, disabled = false }) => (_jsx("button", { onClick: onClick, disabled: disabled, "data-testid": "button", children: children }));
 describe('Button Component', () => {

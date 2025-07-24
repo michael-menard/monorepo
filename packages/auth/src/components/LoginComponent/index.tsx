@@ -1,9 +1,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '../../hooks/useAuth';
-import { loginSchema, type LoginFormData } from './schema';
-import Input from '../Input';
-import { Button } from '../ui/button';
+import { useAuth } from '../../hooks/useAuth.js';
+import { loginSchema, type LoginFormData } from './schema.js';
+import Input from '../Input/index.js';
+import { Button } from '../ui/button.js';
 
 export const LoginComponent = () => {
   const { login, isLoading, error, clearError } = useAuth();

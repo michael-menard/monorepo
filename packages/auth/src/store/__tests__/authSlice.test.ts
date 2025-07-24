@@ -14,8 +14,8 @@ import authReducer, {
   selectIsCheckingAuth,
   selectError,
   selectMessage,
-} from '../authSlice';
-import type { User } from '../../types/auth';
+} from '../authSlice.js';
+import type { User } from '../../types/auth.js';
 
 describe('authSlice', () => {
   const initialState = {
@@ -44,13 +44,13 @@ describe('authSlice', () => {
 
   it('should handle clearError', () => {
     const stateWithError = { ...initialState, error: 'Some error' };
-    const state = authReducer(stateWithError, clearError());
+    const state = authReducer(stateWithError, clearError(undefined));
     expect(state.error).toBeNull();
   });
 
   it('should handle clearMessage', () => {
     const stateWithMessage = { ...initialState, message: 'Some message' };
-    const state = authReducer(stateWithMessage, clearMessage());
+    const state = authReducer(stateWithMessage, clearMessage(undefined));
     expect(state.message).toBeNull();
   });
 
@@ -62,7 +62,7 @@ describe('authSlice', () => {
 
   it('should handle logoutSuccess', () => {
     const stateWithUser = { ...initialState, user: mockUser, isAuthenticated: true };
-    const state = authReducer(stateWithUser, logoutSuccess());
+    const state = authReducer(stateWithUser, logoutSuccess(undefined));
     expect(state.user).toBeNull();
     expect(state.isAuthenticated).toBe(false);
     expect(state.error).toBeNull();

@@ -3,10 +3,10 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * App Initializer Component
  * Handles app startup, authentication initialization, theme setup, and global state management
  */
-import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store';
-import { authActions, getStoredTokens } from '@/store/slices/authSlice';
-import { uiActions } from '@/store/slices/uiSlice';
+import { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store/index.js';
+import { authActions, getStoredTokens } from '../../store/slices/authSlice.js';
+import { uiActions } from '../../store/slices/uiSlice.js';
 // Simple loading spinner component
 const LoadingSpinner = () => (_jsx("div", { className: "animate-spin rounded-full h-8 w-8 border-b-2 border-primary" }));
 export const AppInitializer = ({ children }) => {

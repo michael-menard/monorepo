@@ -1,7 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useCallback, useMemo } from 'react';
 import { FaTwitter, FaFacebook, FaLinkedin, FaWhatsapp, FaEnvelope, FaLink } from 'react-icons/fa';
-import { Button } from '@/components/ui/button';
+// @ts-expect-error: TypeScript cannot resolve .js import for button, but it exists and is correct for NodeNext/ESM
+import { Button } from '../ui/button.js';
 export const SocialShare = React.memo(function SocialShare({ url = window.location.href, title = 'Check out this amazing Lego project!', description = 'Discover incredible Lego building instructions and inspiration.', hashtags = ['lego', 'building', 'creativity'], className = '', variant = 'horizontal' }) {
     const shareLinks = useMemo(() => [
         {

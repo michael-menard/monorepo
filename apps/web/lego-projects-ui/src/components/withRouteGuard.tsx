@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { RouteGuard } from './RouteGuard';
+import { RouteGuard } from './RouteGuard.js';
 
 interface RouteGuardOptions {
   requireAuth?: boolean;

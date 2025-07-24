@@ -4,7 +4,8 @@
  */
 import { createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
-import type { UserProfileSchema } from '@/types/schemas'
+// @ts-expect-error: TypeScript cannot resolve .js import for schemas, but it exists and is correct for NodeNext/ESM
+import type { UserProfileSchema } from '../../types/schemas.js';
 import { z } from 'zod'
 
 // =============================================================================
@@ -13,7 +14,7 @@ import { z } from 'zod'
 
 type UserProfile = z.infer<typeof UserProfileSchema>
 
-interface AuthState {
+export interface AuthState {
   // User data
   user: UserProfile | null
   token: string | null
@@ -269,7 +270,8 @@ const authSlice = createSlice({
 // EXPORTS
 // =============================================================================
 
-export const authActions = authSlice.actions
+export const authActions: typeof authSlice.actions = authSlice.actions
+export { authSlice }
 export default authSlice.reducer
 
 // =============================================================================

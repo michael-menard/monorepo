@@ -13,7 +13,7 @@ import {
   LegoSetSchema,
   ApiErrorSchema,
   ApiSuccessSchema,
-} from '../schemas'
+} from '../schemas.js'
 
 describe('Authentication Schemas', () => {
   describe('EmailSchema', () => {

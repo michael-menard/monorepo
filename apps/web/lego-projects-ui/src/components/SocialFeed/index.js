@@ -1,9 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useCallback, useMemo } from 'react';
 import { FaTwitter, FaInstagram, FaHeart, FaComment, FaShare, FaEllipsisH } from 'react-icons/fa';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.js';
+import { Button } from '../ui/button.js';
+import { LoadingSpinner } from '../ui/loading-spinner.js';
 export const SocialFeed = React.memo(function SocialFeed({ posts = [], loading = false, error = null, onRefresh, className = '' }) {
     const [likedPosts, setLikedPosts] = useState(new Set());
     const handleLike = useCallback((postId) => {

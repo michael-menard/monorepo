@@ -1,4 +1,3 @@
-import type { AuthResponse } from '@repo/auth';
 export interface LoginCredentials {
     email: string;
     password: string;
@@ -50,15 +49,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -74,8 +73,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -91,15 +90,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -110,7 +109,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -128,15 +127,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -152,8 +151,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -169,15 +168,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -187,10 +186,10 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: LoginCredentials) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<LoginCredentials, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
-    originalArgs?: LoginCredentials | undefined;
+}) => readonly [(arg: LoginCredentials) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<LoginCredentials, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
+    originalArgs?: LoginCredentials;
     reset: () => void;
 }], useSignupMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -210,15 +209,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -234,8 +233,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -251,15 +250,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -270,7 +269,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -288,15 +287,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -312,8 +311,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -329,15 +328,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -347,10 +346,10 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: SignupData) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<SignupData, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
-    originalArgs?: SignupData | undefined;
+}) => readonly [(arg: SignupData) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<SignupData, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
+    originalArgs?: SignupData;
     reset: () => void;
 }], useRefreshTokenMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -370,15 +369,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -394,8 +393,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -411,15 +410,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -430,7 +429,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -448,15 +447,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -472,8 +471,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -489,15 +488,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -507,10 +506,10 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: void) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<void, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
-    originalArgs?: void | undefined;
+}) => readonly [(arg: void) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<void, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
+    originalArgs?: void;
     reset: () => void;
 }], useLogoutMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -530,15 +529,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -554,8 +553,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -571,15 +570,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -590,7 +589,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -608,15 +607,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -632,8 +631,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -649,15 +648,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -667,10 +666,10 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: void) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<void, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
-    originalArgs?: void | undefined;
+}) => readonly [(arg: void) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<void, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
+    originalArgs?: void;
     reset: () => void;
 }], useVerifyEmailMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -690,15 +689,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -714,8 +713,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -731,15 +730,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -750,7 +749,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -768,15 +767,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -792,8 +791,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -809,15 +808,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -827,16 +826,16 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     otp: string;
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
     otp: string;
 }, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
     originalArgs?: {
         otp: string;
-    } | undefined;
+    };
     reset: () => void;
 }], useForgotPasswordMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -856,15 +855,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -880,8 +879,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -897,15 +896,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -916,7 +915,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -934,15 +933,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -958,8 +957,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -975,15 +974,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -993,16 +992,16 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     email: string;
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
     email: string;
 }, import("@reduxjs/toolkit/query").BaseQueryFn<string | import("@reduxjs/toolkit/query").FetchArgs, unknown, import("@reduxjs/toolkit/query").FetchBaseQueryError, {}, import("@reduxjs/toolkit/query").FetchBaseQueryMeta>, never, AuthResponse, "authApi", unknown>>, import("@reduxjs/toolkit/query").TSHelpersNoInfer<R> & {
     originalArgs?: {
         email: string;
-    } | undefined;
+    };
     reset: () => void;
 }], useResetPasswordMutation: <R extends Record<string, any> = ({
     requestId?: undefined;
@@ -1022,15 +1021,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -1046,8 +1045,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.pending;
 } & {
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -1063,15 +1062,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
 } & Omit<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
 }, "error"> & Required<Pick<{
     requestId: string;
-    data?: AuthResponse | undefined;
-    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+    data?: any;
+    error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
     endpointName: string;
     startedTimeStamp: number;
     fulfilledTimeStamp?: number;
@@ -1082,7 +1081,7 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     isSuccess: false;
     isError: true;
 })>(options?: {
-    selectFromResult?: ((state: ({
+    selectFromResult?: (state: ({
         requestId?: undefined;
         status: import("@reduxjs/toolkit/query").QueryStatus.uninitialized;
         data?: undefined;
@@ -1100,15 +1099,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.fulfilled;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "data" | "fulfilledTimeStamp"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -1124,8 +1123,8 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.pending;
     } & {
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -1141,15 +1140,15 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         status: import("@reduxjs/toolkit/query").QueryStatus.rejected;
     } & Omit<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
     }, "error"> & Required<Pick<{
         requestId: string;
-        data?: AuthResponse | undefined;
-        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError | undefined;
+        data?: any;
+        error?: import("@reduxjs/toolkit/query").FetchBaseQueryError | import("@reduxjs/toolkit").SerializedError;
         endpointName: string;
         startedTimeStamp: number;
         fulfilledTimeStamp?: number;
@@ -1159,9 +1158,9 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
         isLoading: false;
         isSuccess: false;
         isError: true;
-    })) => R) | undefined;
+    })) => R;
     fixedCacheKey?: string;
-} | undefined) => readonly [(arg: {
+}) => readonly [(arg: {
     token: string;
     password: string;
 }) => import("@reduxjs/toolkit/query").MutationActionCreatorResult<import("@reduxjs/toolkit/query").MutationDefinition<{
@@ -1171,6 +1170,6 @@ export declare const useLoginMutation: <R extends Record<string, any> = ({
     originalArgs?: {
         token: string;
         password: string;
-    } | undefined;
+    };
     reset: () => void;
 }];

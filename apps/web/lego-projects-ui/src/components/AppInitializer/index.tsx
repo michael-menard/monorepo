@@ -3,9 +3,9 @@
  * Handles app startup, authentication initialization, theme setup, and global state management
  */
 import React, { useEffect, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/store'
-import { authActions, getStoredTokens } from '@/store/slices/authSlice'
-import { uiActions } from '@/store/slices/uiSlice'
+import { useAppDispatch, useAppSelector } from '../../store/index.js';
+import { authActions, getStoredTokens } from '../../store/slices/authSlice.js';
+import { uiActions } from '../../store/slices/uiSlice.js';
 
 // Simple loading spinner component
 const LoadingSpinner = () => (

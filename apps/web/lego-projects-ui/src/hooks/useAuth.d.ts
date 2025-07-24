@@ -5,7 +5,7 @@ export declare function useAuth(): {
     logout: () => Promise<void>;
     forceLogout: () => Promise<void>;
     updateLastActivity: () => void;
-    getLastActivity: () => number | null;
+    getLastActivity: () => number;
     user: {
         id: string;
         email: string;
@@ -14,22 +14,22 @@ export declare function useAuth(): {
         username: string;
         createdAt: string;
         updatedAt: string;
-        avatar?: string | undefined;
-        bio?: string | undefined;
-        location?: string | undefined;
-        website?: string | undefined;
+        avatar?: string;
+        bio?: string;
+        location?: string;
+        website?: string;
         socialLinks?: {
-            instagram?: string | undefined;
-            youtube?: string | undefined;
-            flickr?: string | undefined;
-            rebrickable?: string | undefined;
-        } | undefined;
+            instagram?: string;
+            youtube?: string;
+            flickr?: string;
+            rebrickable?: string;
+        };
         preferences?: {
             theme: "light" | "dark" | "system";
             emailNotifications: boolean;
             publicProfile: boolean;
             showEmail: boolean;
-        } | undefined;
+        };
     } | null;
     token: string | null;
     refreshToken: string | null;
@@ -60,23 +60,23 @@ export declare function useUser(): {
     username: string;
     createdAt: string;
     updatedAt: string;
-    avatar?: string | undefined;
-    bio?: string | undefined;
-    location?: string | undefined;
-    website?: string | undefined;
+    avatar?: string;
+    bio?: string;
+    location?: string;
+    website?: string;
     socialLinks?: {
-        instagram?: string | undefined;
-        youtube?: string | undefined;
-        flickr?: string | undefined;
-        rebrickable?: string | undefined;
-    } | undefined;
+        instagram?: string;
+        youtube?: string;
+        flickr?: string;
+        rebrickable?: string;
+    };
     preferences?: {
         theme: "light" | "dark" | "system";
         emailNotifications: boolean;
         publicProfile: boolean;
         showEmail: boolean;
-    } | undefined;
-} | null;
+    };
+};
 /**
  * Simple hook to check if user is verified
  */
@@ -88,4 +88,4 @@ export declare function useAuthLoading(): boolean;
 /**
  * Simple hook to get auth error
  */
-export declare function useAuthError(): string | null;
+export declare function useAuthError(): string;

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { selectIsAuthenticated, selectUser, selectIsCheckingAuth, setCheckingAuth, setUser } from '../../store/authSlice';
-import { useCheckAuthQuery } from '../../store/authApi';
-import { isTokenExpired, refreshToken, shouldRefreshToken, getTokenExpiry } from '../../utils/token';
+import { selectIsAuthenticated, selectUser, selectIsCheckingAuth, setCheckingAuth, setUser } from '../../store/authSlice.js';
+import { useCheckAuthQuery } from '../../store/authApi.js';
+import { isTokenExpired, refreshToken, shouldRefreshToken, getTokenExpiry } from '../../utils/token.js';
 
 interface RouteGuardProps {
   children: React.ReactNode;

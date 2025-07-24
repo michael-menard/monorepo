@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import PasswordStrength from '../PasswordStrength';
+import PasswordStrength from '../PasswordStrength/index.js';
 
 describe('PasswordStrength', () => {
   it('renders the password strength component', () => {

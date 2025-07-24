@@ -1,6 +1,6 @@
 import React from 'react';
 import { z } from 'zod';
-import type { WishlistItemSchema } from '../../WishlistSchemas';
+import type { WishlistItemSchema } from '../../WishlistSchemas/index.js';
 export type WishlistItem = z.infer<typeof WishlistItemSchema> & {
     id: string;
 };

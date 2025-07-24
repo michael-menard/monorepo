@@ -1,32 +1,32 @@
 // Components
-export { default as Input } from './components/Input';
-export { Button } from './components/ui/button';
-export { Card } from './components/ui/card';
-export { Label } from './components/ui/label';
-export { default as LoadingSpinner } from './components/LoadingSpinner';
-export { default as PasswordStrength } from './components/PasswordStrength';
-export { default as FloatingShape } from './components/FloatingShape';
+export { default as Input } from './components/Input/index.js';
+export { Button } from './components/ui/button.js';
+export { Card } from './components/ui/card.js';
+export { Label } from './components/ui/label.js';
+export { default as LoadingSpinner } from './components/LoadingSpinner/index.js';
+export { default as PasswordStrength } from './components/PasswordStrength/index.js';
+export { default as FloatingShape } from './components/FloatingShape/index.js';
 
 // Auth Components
-export { default as Login } from './components/Login';
-export { default as Signup } from './components/Signup';
-export { default as ForgotPassword } from './components/ForgotPassword';
-export { default as ResetPassword } from './components/ResetPassword';
-export { default as EmailVerification } from './components/EmailVerification';
+export { default as Login } from './components/Login/index.js';
+export { default as Signup } from './components/Signup/index.js';
+export { default as ForgotPassword } from './components/ForgotPassword/index.js';
+export { default as ResetPassword } from './components/ResetPassword/index.js';
+export { default as EmailVerification } from './components/EmailVerification/index.js';
 
 // Hooks
-export { useAuth } from './hooks/useAuth';
+export { useAuth } from './hooks/useAuth.js';
 
 // Store
-export { default as authReducer } from './store/authSlice';
-export { authApi } from './store/authApi';
-export type { RootState } from './store/store';
+export { default as authReducer } from './store/authSlice.js';
+export { authApi } from './store/authApi.js';
+export type { RootState } from './store/store.js';
 
 // Types
-export type { User, AuthState, AuthTokens, AuthResponse, AuthError, LoginRequest, SignupRequest, ResetPasswordRequest, ConfirmResetRequest } from './types/auth';
+export type { User, AuthState, AuthTokens, AuthResponse, AuthError, LoginRequest, SignupRequest, ResetPasswordRequest, ConfirmResetRequest } from './types/auth.js';
 
 // Zod Schemas
-export { SignupRequestSchema, LoginRequestSchema, ResetPasswordRequestSchema, ConfirmResetRequestSchema } from './types/auth';
+export { SignupRequestSchema, LoginRequestSchema, ResetPasswordRequestSchema, ConfirmResetRequestSchema } from './types/auth.js';
 
 // Utils
-export * from './utils/date'; 
+export * from './utils/date.js'; 

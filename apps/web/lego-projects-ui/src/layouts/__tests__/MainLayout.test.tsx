@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import MainLayout from '../MainLayout';
+import MainLayout from '../MainLayout.js';
 
 // Mock Navbar and Footer for isolation if needed
 vi.mock('@/components/Navbar', () => ({

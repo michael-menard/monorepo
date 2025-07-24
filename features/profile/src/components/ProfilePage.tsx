@@ -1,8 +1,8 @@
 import React from 'react';
-import { ProfileSidebar } from './ProfileSidebar';
-import { ProfileMain } from './ProfileMain';
-import { ProfileSkeleton } from './ProfileSkeleton';
-import type { ProfilePageProps } from '../types/index';
+import { ProfileSidebar } from './ProfileSidebar.js';
+import { ProfileMain } from './ProfileMain.js';
+import { ProfileSkeleton } from './ProfileSkeleton.js';
+import type { ProfilePageProps } from '../types/index.js';
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ profile, onAvatarUpload, onProfileUpdate, isEditable, loading, children }) => {
   if (loading) {

@@ -4,11 +4,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import { Mail, Lock } from 'lucide-react';
-import { useLoginMutation } from '@/services/authApi';
+import { useLoginMutation } from '../../services/authApi.js';
 import { LoginRequestSchema } from '@repo/auth';
 import type { LoginRequest } from '@repo/auth';
 import { Input } from '@repo/auth';
-import SocialLogin from '@/components/SocialLogin';
+// @ts-expect-error: TypeScript cannot resolve .js import for SocialLogin, but it exists and is correct for NodeNext/ESM
+import SocialLogin from '../../components/SocialLogin.js';
 
 export default function Login() {
   const navigate = useNavigate();

@@ -1,20 +1,20 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { createBrowserRouter, Outlet } from 'react-router-dom';
-import MainLayout from '@/layouts/MainLayout';
-import { RouteGuard } from '@/components/RouteGuard';
-import Login from '@/pages/Auth/Login';
-import Signup from '@/pages/Auth/Signup';
-import ForgotPassword from '@/pages/Auth/ForgotPassword';
-import InstructionsList from '@/pages/Instructions/InstructionsList';
-import CreateInstruction from '@/pages/Instructions/CreateInstruction';
-import InspirationGallery from '@/pages/Inspiration/InspirationGallery';
-import ProfileMain from '@/pages/Profile/ProfileMain';
-import ProfileDemo from '@/pages/Profile/ProfileDemo';
-import ResetPassword from '@/pages/Auth/ResetPassword';
-import EmailVerification from '@/pages/Auth/EmailVerification';
-import ProjectsPage from '@/pages/Projects/ProjectsPage';
-import WishlistPage from '@/pages/Wishlist/WishlistPage';
-import SocialPage from '@/pages/Social/SocialPage';
+import MainLayout from '../layouts/MainLayout.js';
+import { RouteGuard } from '../components/RouteGuard.js';
+import Login from '../pages/Auth/Login/index.js';
+import Signup from '../pages/Auth/Signup/index.js';
+import ForgotPassword from '../pages/Auth/ForgotPassword/index.js';
+import InstructionsList from '../pages/Instructions/InstructionsList.js';
+import CreateInstruction from '../pages/Instructions/CreateInstruction.js';
+import InspirationGallery from '../pages/Inspiration/InspirationGallery.js';
+import ProfileMain from '../pages/Profile/ProfileMain.js';
+import ProfileDemo from '../pages/Profile/ProfileDemo.js';
+import ResetPassword from '../pages/Auth/ResetPassword.js';
+import EmailVerification from '../pages/Auth/EmailVerification.js';
+import ProjectsPage from '../pages/Projects/ProjectsPage.js';
+import WishlistPage from '../pages/Wishlist/WishlistPage.js';
+import SocialPage from '../pages/Social/SocialPage.js';
 export const router = createBrowserRouter([
     {
         path: '/',
