@@ -105,10 +105,10 @@ export default defineConfig({
       // Monorepo Package Aliases
       '@repo/auth': path.resolve(__dirname, '../../../packages/auth/src'),
       '@repo/ui': path.resolve(__dirname, '../../../packages/ui/src'),
-      '@repo/profile': path.resolve(__dirname, '../../../packages/profile/src'),
-      '@repo/gallery': path.resolve(__dirname, '../../../packages/gallery/src'),
-      '@repo/moc': path.resolve(__dirname, '../../../packages/moc/src'),
-      '@repo/wishlist': path.resolve(__dirname, '../../../packages/wishlist/src'),
+      '@repo/profile': path.resolve(__dirname, '../../../features/profile/src'),
+      '@repo/gallery': path.resolve(__dirname, '../../../features/gallery/src'),
+      '@repo/moc': path.resolve(__dirname, '../../../features/moc/src'),
+      '@repo/wishlist': path.resolve(__dirname, '../../../features/wishlist/src'),
     }
   },
   

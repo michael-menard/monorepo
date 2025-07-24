@@ -1,18 +1,18 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react-swc';
-import path from 'path';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
-      name: 'Auth',
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'Profile',
       fileName: 'index',
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react-hook-form', '@hookform/resolvers', 'zod', 'clsx', 'tailwind-merge'],
+      external: ['react', 'react-dom', 'react-hook-form', '@hookform/resolvers', 'zod', 'react-easy-crop', 'clsx', 'tailwind-merge'],
       output: {
         globals: {
           react: 'React',
@@ -20,6 +20,7 @@ export default defineConfig({
           'react-hook-form': 'ReactHookForm',
           '@hookform/resolvers': 'HookformResolvers',
           zod: 'zod',
+          'react-easy-crop': 'ReactEasyCrop',
           clsx: 'clsx',
           'tailwind-merge': 'tailwindMerge',
         },
@@ -28,7 +29,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': resolve(__dirname, 'src'),
+      '@repo/ui': resolve(__dirname, '../../packages/ui/src'),
     },
   },
 }); 

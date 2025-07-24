@@ -7,10 +7,9 @@ const config: StorybookConfig = {
     '../stories/**/*.mdx',
     '../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)',
     // UI packages in monorepo
-    '../packages/web/avatar-uploader/src/**/*.stories.@(js|jsx|ts|tsx)',
-    '../packages/web/file-upload/src/**/*.stories.@(js|jsx|ts|tsx)',
     '../packages/ui/src/**/*.stories.@(js|jsx|ts|tsx)',
     '../packages/auth/src/**/*.stories.@(js|jsx|ts|tsx)',
+    '../features/profile/src/**/*.stories.@(js|jsx|ts|tsx)',
   ],
   addons: [
     '@chromatic-com/storybook',
@@ -39,11 +38,9 @@ const config: StorybookConfig = {
     // Add path aliases for monorepo packages
     config.resolve.alias = {
       ...config.resolve.alias,
-      // Avatar uploader package
-      '@monorepo/avatar-uploader': path.resolve(__dirname, '../packages/web/avatar-uploader/src'),
-      '@monorepo/file-upload': path.resolve(__dirname, '../packages/web/file-upload/src'),
-      '@monorepo/ui': path.resolve(__dirname, '../packages/ui/src'),
-      '@monorepo/auth': path.resolve(__dirname, '../packages/auth/src'),
+      '@repo/ui': path.resolve(__dirname, '../packages/ui/src'),
+      '@repo/auth': path.resolve(__dirname, '../packages/auth/src'),
+      '@repo/profile': path.resolve(__dirname, '../features/profile/src'),
     };
     
     return config;

@@ -19,7 +19,7 @@ export { useAuth } from './hooks/useAuth';
 
 // Store
 export { default as authReducer } from './store/authSlice';
-export { logout } from './store/authSlice';
+export { authApi } from './store/authApi';
 export type { RootState } from './store/store';
 
 // Types

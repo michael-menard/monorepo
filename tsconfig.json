@@ -49,14 +49,14 @@
       "@repo/auth/*": ["./packages/auth/src/*"],
       "@repo/ui": ["./packages/ui/src/index.ts"],
       "@repo/ui/*": ["./packages/ui/src/*"],
-      "@repo/gallery": ["./packages/gallery/src/index.ts"],
-      "@repo/gallery/*": ["./packages/gallery/src/*"],
-      "@repo/wishlist": ["./packages/wishlist/src/index.ts"],
-      "@repo/wishlist/*": ["./packages/wishlist/src/*"],
-      "@repo/profile": ["./packages/profile/src/index.ts"],
-      "@repo/profile/*": ["./packages/profile/src/*"],
-      "@repo/moc": ["./packages/moc/src/index.ts"],
-      "@repo/moc/*": ["./packages/moc/src/*"],
+      "@repo/gallery": ["./features/gallery/src/index.ts"],
+      "@repo/gallery/*": ["./features/gallery/src/*"],
+      "@repo/wishlist": ["./features/wishlist/src/index.ts"],
+      "@repo/wishlist/*": ["./features/wishlist/src/*"],
+      "@repo/profile": ["./features/profile/src/index.ts"],
+      "@repo/profile/*": ["./features/profile/src/*"],
+      "@repo/moc": ["./features/moc/src/index.ts"],
+      "@repo/moc/*": ["./features/moc/src/*"],
       "@/*": ["./src/*"]
     },
     "typeRoots": [
@@ -96,13 +96,10 @@
   "references": [
     { "path": "./packages/auth" },
     { "path": "./packages/ui" },
-    { "path": "./packages/gallery" },
-    { "path": "./packages/wishlist" },
-    { "path": "./packages/profile" },
-    { "path": "./packages/moc" },
-    { "path": "./packages/web/file-upload" },
-    { "path": "./packages/web/avatar-uploader" },
-    { "path": "./packages/web/profile" },
+    { "path": "./features/gallery" },
+    { "path": "./features/wishlist" },
+    { "path": "./features/profile" },
+    { "path": "./features/moc" },
     { "path": "./apps/web/lego-projects-ui" }
   ]
 } 

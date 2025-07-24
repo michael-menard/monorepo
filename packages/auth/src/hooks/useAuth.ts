@@ -7,16 +7,17 @@ import {
   selectIsCheckingAuth,
   selectError,
   selectMessage,
-  signup,
-  login,
-  logout,
-  verifyEmail,
-  checkAuth,
-  forgotPassword,
-  resetPassword,
   clearError,
   clearMessage,
 } from '../store/authSlice';
+import {
+  useLoginMutation,
+  useSignupMutation,
+  useLogoutMutation,
+  useVerifyEmailMutation,
+  useCheckAuthQuery,
+  useResetPasswordMutation,
+} from '../store/authApi';
 
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -28,28 +29,30 @@ export const useAuth = () => {
   const error = useSelector(selectError);
   const message = useSelector(selectMessage);
 
+  // RTK Query hooks
+  const [loginMutation, { isLoading: isLoginLoading }] = useLoginMutation();
+  const [signupMutation, { isLoading: isSignupLoading }] = useSignupMutation();
+  const [logoutMutation] = useLogoutMutation();
+  const [verifyEmailMutation] = useVerifyEmailMutation();
+  const [resetPasswordMutation] = useResetPasswordMutation();
+  const { data: authData, isLoading: isCheckAuthLoading } = useCheckAuthQuery();
+
   return {
     // State
     user,
     isAuthenticated,
-    isLoading,
+    isLoading: isLoading || isLoginLoading || isSignupLoading || isCheckAuthLoading,
     isCheckingAuth,
     error,
     message,
     
     // Actions
-    signup: (email: string, password: string, name: string) => 
-      dispatch(signup({ email, password, name })),
-    login: (email: string, password: string) => 
-      dispatch(login({ email, password })),
-    logout: () => dispatch(logout()),
-    verifyEmail: (code: string) => 
-      dispatch(verifyEmail({ code })),
-    checkAuth: () => dispatch(checkAuth()),
-    forgotPassword: (email: string) => 
-      dispatch(forgotPassword({ email })),
-    resetPassword: (token: string, password: string) => 
-      dispatch(resetPassword({ token, password })),
+    signup: signupMutation,
+    login: loginMutation,
+    logout: logoutMutation,
+    verifyEmail: verifyEmailMutation,
+    checkAuth: () => {}, // This is handled by the query
+    resetPassword: resetPasswordMutation,
     clearError: () => dispatch(clearError(undefined)),
     clearMessage: () => dispatch(clearMessage(undefined)),
   };

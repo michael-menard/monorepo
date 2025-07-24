@@ -30,18 +30,18 @@ export default defineConfig(({ mode }) => {
         // Monorepo package aliases
         "@repo/auth": path.resolve(__dirname, "../../../packages/auth/src/index.ts"),
         "@repo/ui": path.resolve(__dirname, "../../../packages/ui/src/index.ts"),
-        "@repo/gallery": path.resolve(__dirname, "../../../packages/gallery/src/index.ts"),
-        "@repo/wishlist": path.resolve(__dirname, "../../../packages/wishlist/src/index.ts"),
-        "@repo/profile": path.resolve(__dirname, "../../../packages/profile/src/index.ts"),
-        "@repo/moc": path.resolve(__dirname, "../../../packages/moc/src/index.ts"),
+        "@repo/gallery": path.resolve(__dirname, "../../../features/gallery/src/index.ts"),
+        "@repo/wishlist": path.resolve(__dirname, "../../../features/wishlist/src/index.ts"),
+        "@repo/profile": path.resolve(__dirname, "../../../features/profile/src/index.ts"),
+        "@repo/moc": path.resolve(__dirname, "../../../features/moc/src/index.ts"),
         
         // Package sub-module aliases
         "@repo/auth/*": path.resolve(__dirname, "../../../packages/auth/src/*"),
         "@repo/ui/*": path.resolve(__dirname, "../../../packages/ui/src/*"),
-        "@repo/gallery/*": path.resolve(__dirname, "../../../packages/gallery/src/*"),
-        "@repo/wishlist/*": path.resolve(__dirname, "../../../packages/wishlist/src/*"),
-        "@repo/profile/*": path.resolve(__dirname, "../../../packages/profile/src/*"),
-        "@repo/moc/*": path.resolve(__dirname, "../../../packages/moc/src/*"),
+        "@repo/gallery/*": path.resolve(__dirname, "../../../features/gallery/src/*"),
+        "@repo/wishlist/*": path.resolve(__dirname, "../../../features/wishlist/src/*"),
+        "@repo/profile/*": path.resolve(__dirname, "../../../features/profile/src/*"),
+        "@repo/moc/*": path.resolve(__dirname, "../../../features/moc/src/*"),
       },
     },
     

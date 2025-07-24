@@ -256,7 +256,7 @@
         "id": "20",
         "title": "Implement RouteGuard component",
         "description": "Create route protection component with role-based access",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "13"
@@ -491,7 +491,7 @@
         "id": "38",
         "title": "Implement wishlist drag-and-drop reordering",
         "description": "Add drag-and-drop reordering to wishlist items",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "36"
@@ -543,7 +543,7 @@
         "id": "42",
         "title": "Implement ProfileSidebar component",
         "description": "Create sidebar with avatar and user information",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "41"
@@ -556,7 +556,7 @@
         "id": "43",
         "title": "Implement ProfileMain component",
         "description": "Create main content area for profile content",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "41"
@@ -569,7 +569,7 @@
         "id": "44",
         "title": "Implement AvatarUploader component",
         "description": "Create avatar upload with cropping functionality",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "24",
@@ -583,7 +583,7 @@
         "id": "45",
         "title": "Implement avatar cropping modal",
         "description": "Create modal for avatar editing with crop and zoom controls",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "44"
@@ -596,7 +596,7 @@
         "id": "46",
         "title": "Implement ProfileSkeleton component",
         "description": "Create loading skeleton for profile page",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "41"
@@ -1128,6 +1128,17 @@
         "dependencies": [],
         "details": "1. Review both FilteredGallery and InspirationGallery implementations.\n2. Merge their features into a single component, keeping all advanced features (filtering, infinite scroll, drag-and-drop, album creation, etc.).\n3. Update all imports/usages in the codebase to use the unified component.\n4. Remove or deprecate InspirationGallery if it is no longer needed.\n5. Test all gallery-related functionality to ensure nothing is broken.",
         "testStrategy": "Test all gallery-related features: filtering, infinite scroll, drag-and-drop, album creation, and ensure no regressions in any views that previously used either component."
+      },
+      {
+        "id": "87",
+        "title": "Refactor monorepo structure: Move features under packages",
+        "description": "Refactor the monorepo structure to move the features directory under packages. Currently features/ is a sibling to packages/, but it should be packages/features/ to follow industry standards and improve tooling compatibility.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [],
+        "details": "1. Move features/ directory to packages/features/\n2. Update all path references in configuration files (tsconfig.json, vite.config.ts, vitest.config.ts, etc.)\n3. Update workspace configuration in package.json\n4. Update Storybook configuration\n5. Update all import paths throughout the codebase\n6. Test that builds and tests still work after the refactor\n\nThis will create a more conventional monorepo structure where all code packages live under packages/ with clear separation between reusable packages (ui, auth) and domain-specific features.",
+        "testStrategy": "Verify that all packages build successfully, tests pass, and imports work correctly after the refactor. Test both individual package builds and the full monorepo build.",
+        "tag": "frontend-ui-development"
       }
     ],
     "metadata": {
