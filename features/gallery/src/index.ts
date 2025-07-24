@@ -1,4 +1,4 @@
 // Gallery package exports
-export * from './components/index.js';
-export * from './types/index.js';
-export * from './schemas/index.js'; 
+export * from './components/index';
+export * from './types/index';
+export * from './schemas/index'; 

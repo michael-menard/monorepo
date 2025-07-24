@@ -46,10 +46,11 @@ const createTestStore = () => {
     preloadedState: {
       auth: {
         user: null,
+        tokens: null,
         isAuthenticated: false,
         isLoading: false,
-        error: null,
         isCheckingAuth: false,
+        error: null,
         message: null,
       },
     },

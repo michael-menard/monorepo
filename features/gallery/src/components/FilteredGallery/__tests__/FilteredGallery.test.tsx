@@ -1,11 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import FilteredGallery from '../index.js';
-import { GalleryImage } from '../../../store/galleryApi.js';
+import FilteredGallery from '../index';
+import { GalleryImage } from '../../../store/galleryApi';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import { galleryApi } from '../../../store/galleryApi.js';
+import { galleryApi } from '../../../store/galleryApi';
 
 function createTestStore() {
   return configureStore({

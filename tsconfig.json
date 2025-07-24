@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     // Module Resolution
+    // Use NodeNext for both module and moduleResolution for modern ESM/TypeScript monorepo compatibility
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
@@ -51,12 +52,12 @@
       "@repo/ui/*": ["./packages/ui/src/*"],
       "@repo/gallery": ["./features/gallery/src/index.ts"],
       "@repo/gallery/*": ["./features/gallery/src/*"],
-      "@repo/wishlist": ["./features/wishlist/src/index.ts"],
-      "@repo/wishlist/*": ["./features/wishlist/src/*"],
       "@repo/profile": ["./features/profile/src/index.ts"],
       "@repo/profile/*": ["./features/profile/src/*"],
       "@repo/moc": ["./features/moc/src/index.ts"],
       "@repo/moc/*": ["./features/moc/src/*"],
+      "@repo/mock-instructions": ["./features/mock-instructions/src/index.ts"],
+      "@repo/mock-instructions/*": ["./features/mock-instructions/src/*"],
       "@/*": ["./src/*"]
     },
     "typeRoots": [
@@ -97,9 +98,7 @@
     { "path": "./packages/auth" },
     { "path": "./packages/ui" },
     { "path": "./features/gallery" },
-    { "path": "./features/wishlist" },
     { "path": "./features/profile" },
-    { "path": "./features/moc" },
     { "path": "./apps/web/lego-projects-ui" }
   ]
 } 

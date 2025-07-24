@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "composite": true,
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-lego-projects-ui.json",
     "paths": {
       "@/*": ["./src/*"],
       "@repo/auth": ["../../../packages/auth/src/index.ts"],
@@ -17,9 +22,15 @@
       "@repo/moc/*": ["../../../features/moc/src/*"]
     }
   },
+  "include": [
+    "src",
+    "src/pages/Wishlist/WishlistSchemas",
+    "../../packages/auth/src",
+    "../../packages/ui/src"
+  ],
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    { "path": "../../../packages/auth" },
+    { "path": "../../../packages/ui" }
   ]
 }

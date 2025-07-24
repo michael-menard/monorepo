@@ -1,7 +1,7 @@
 // If you see a type error for '@reduxjs/toolkit', ensure you have @reduxjs/toolkit installed.
 import { configureStore } from '@reduxjs/toolkit';
-import { galleryApi } from './galleryApi.js';
-import { albumsApi } from './albumsApi.js';
+import { galleryApi } from './galleryApi';
+import { albumsApi } from './albumsApi';
 // import galleryReducer from './gallerySlice'; // Uncomment and implement when ready
 
 const placeholderReducer = (state = {}, action: any) => state;

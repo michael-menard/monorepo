@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@repo/ui';
-import { AvatarUploader } from './AvatarUploader.js';
-import { cn } from '../lib/utils.js';
-import type { ProfileSidebarProps } from '../types/index.js';
+import { AvatarUploader } from './AvatarUploader';
+import { cn } from '../lib/utils';
+import type { ProfileSidebarProps } from '../types/index';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js';
-import { GalleryImage } from '../../store/albumsApi.js';
-import { GalleryAlbum } from '../../store/albumsApi.js';
+import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi';
+import { GalleryImage } from '../../store/albumsApi';
+import { GalleryAlbum } from '../../store/albumsApi';
 
 export interface CreateAlbumDialogProps {
   isOpen: boolean;

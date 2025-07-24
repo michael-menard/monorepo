@@ -1,39 +1,39 @@
 // Core components
-export * from './button.js';
-export * from './card.js';
-export * from './input.js';
-export * from './label.js';
-export * from './separator.js';
-export * from './avatar.js';
-export * from './code.js';
+export * from './button';
+export * from './card';
+export * from './input';
+export * from './label';
+export * from './separator';
+export * from './avatar';
+export * from './code';
 
 // Form components
-export * from './form.js';
-export * from './checkbox.js';
-export * from './switch.js';
-export * from './select.js';
+export * from './form';
+export * from './checkbox';
+export * from './switch';
+export * from './select';
 
 // Layout & Navigation
-export * from './tabs.js';
-export * from './dropdown-menu.js';
+export * from './tabs';
+export * from './dropdown-menu';
 
 // Overlay components
-export * from './dialog.js';
-export * from './popover.js';
-export * from './tooltip.js';
-export * from './toast.js';
+export * from './dialog';
+export * from './popover';
+export * from './tooltip';
+export * from './toast';
 
 // Feedback components  
-export * from './badge.js';
+export * from './badge';
 
 // Loading components
-export * from './loading-spinner/index.js';
+export * from './loading-spinner/index';
 
 // File Upload component
-export * from './FileUpload/index.js';
+export * from './FileUpload/index';
 
 // Modal components
-export { default as ImageUploadModal } from './ImageUploadModal/index.js';
+export { default as ImageUploadModal } from './ImageUploadModal/index';
 
 // Utils
-export * from './lib/utils.js'; 
+export * from './lib/utils'; 

@@ -1,15 +1,15 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import FilterBar from '../FilterBar/index.js';
-import GalleryCard from '../GalleryCard/index.js';
-import CreateAlbumDialog from '../CreateAlbumDialog/index.js';
+import FilterBar from '../FilterBar/index';
+import GalleryCard from '../GalleryCard/index';
+import CreateAlbumDialog from '../CreateAlbumDialog/index';
 import { 
   useSearchImagesQuery, 
   useGetAvailableTagsQuery, 
   useGetAvailableCategoriesQuery,
   SearchFilters, 
   GalleryImage
-} from '../../store/galleryApi.js';
+} from '../../store/galleryApi';
 
 export interface FilteredGalleryProps {
   className?: string;

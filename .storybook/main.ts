@@ -10,6 +10,7 @@ const config: StorybookConfig = {
     '../packages/ui/src/**/*.stories.@(js|jsx|ts|tsx)',
     '../packages/auth/src/**/*.stories.@(js|jsx|ts|tsx)',
     '../features/profile/src/**/*.stories.@(js|jsx|ts|tsx)',
+    '../features/mock-instructions/src/**/*.stories.@(js|jsx|ts|tsx)',
   ],
   addons: [
     '@chromatic-com/storybook',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useGetAlbumByIdQuery, useUpdateAlbumMutation, useDeleteAlbumMutation, useRemoveImageFromAlbumMutation } from '../../store/albumsApi.js';
-import GalleryCard from '../GalleryCard/index.js';
+import { useGetAlbumByIdQuery, useUpdateAlbumMutation, useDeleteAlbumMutation, useRemoveImageFromAlbumMutation } from '../../store/albumsApi';
+import GalleryCard from '../GalleryCard/index';
 import { motion } from 'framer-motion';
 
 interface AlbumViewProps {

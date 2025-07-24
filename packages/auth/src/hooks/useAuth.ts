@@ -35,7 +35,7 @@ export const useAuth = () => {
   const [logoutMutation] = useLogoutMutation();
   const [verifyEmailMutation] = useVerifyEmailMutation();
   const [resetPasswordMutation] = useResetPasswordMutation();
-  const { data: authData, isLoading: isCheckAuthLoading } = useCheckAuthQuery();
+  const { isLoading: isCheckAuthLoading } = useCheckAuthQuery();
 
   return {
     // State

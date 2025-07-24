@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "declaration": true,
+    "declarationDir": "dist/types",
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -11,7 +12,10 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-ui.json",
+    "noImplicitAny": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

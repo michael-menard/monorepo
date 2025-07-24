@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Lightbox } from '../index.js';
+import { Lightbox } from '../index';
 
 describe('Lightbox', () => {
   const images = [

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { notFound, errorHandler } from '@repo/api-shared';
+import { notFound, errorHandler } from '../middleware/errorMiddleware';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('Error Middleware', () => {

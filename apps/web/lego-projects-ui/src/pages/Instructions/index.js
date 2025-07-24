@@ -1,0 +1,5 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Outlet } from 'react-router-dom';
+export default function InstructionsLayout() {
+    return (_jsx("div", { className: "instructions-layout min-h-screen bg-gray-50", children: _jsx("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8", children: _jsxs("div", { className: "flex", children: [_jsx("div", { className: "w-64 flex-shrink-0", children: _jsxs("div", { className: "bg-white rounded-lg shadow p-6", children: [_jsx("h3", { className: "text-lg font-medium text-gray-900 mb-4", children: "Instructions" }), _jsxs("nav", { className: "space-y-2", children: [_jsx("a", { href: "/instructions", className: "block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50", children: "All Instructions" }), _jsx("a", { href: "/instructions/create", className: "block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50", children: "Create New" })] })] }) }), _jsx("div", { className: "flex-1 ml-8", children: _jsx(Outlet, {}) })] }) }) }));
+}

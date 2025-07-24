@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import CreateAlbumDialog from '../index.js';
-import { GalleryImage } from '../../../store/albumsApi.js';
+import CreateAlbumDialog from '../index';
+import { GalleryImage } from '../../../store/albumsApi';
 
 // Mock framer-motion
 vi.mock('framer-motion', () => ({

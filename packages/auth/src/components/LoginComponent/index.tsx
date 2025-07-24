@@ -1,4 +1,3 @@
-import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,7 +20,7 @@ export const LoginComponent = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
-      await login(data.email, data.password);
+      await login({ email: data.email, password: data.password });
     } catch (err) {
       // Handle any additional errors here if needed
       console.error('Login error:', err);

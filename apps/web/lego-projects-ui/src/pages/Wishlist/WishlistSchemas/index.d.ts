@@ -1,0 +1,43 @@
+import { z } from 'zod';
+export declare const LegoCategoryEnum: z.ZodEnum<{
+    "Star Wars": "Star Wars";
+    Castle: "Castle";
+    City: "City";
+    Technic: "Technic";
+    Friends: "Friends";
+    "Harry Potter": "Harry Potter";
+    "Super Heroes": "Super Heroes";
+    Creator: "Creator";
+    Ninjago: "Ninjago";
+    Other: "Other";
+    "Speed Champions": "Speed Champions";
+    Disney: "Disney";
+    Minecraft: "Minecraft";
+    Ideas: "Ideas";
+    Architecture: "Architecture";
+}>;
+export declare const WishlistItemSchema: z.ZodObject<{
+    title: z.ZodString;
+    description: z.ZodOptional<z.ZodString>;
+    productLink: z.ZodOptional<z.ZodString>;
+    imageUrl: z.ZodOptional<z.ZodString>;
+    category: z.ZodUnion<readonly [z.ZodEnum<{
+        "Star Wars": "Star Wars";
+        Castle: "Castle";
+        City: "City";
+        Technic: "Technic";
+        Friends: "Friends";
+        "Harry Potter": "Harry Potter";
+        "Super Heroes": "Super Heroes";
+        Creator: "Creator";
+        Ninjago: "Ninjago";
+        Other: "Other";
+        "Speed Champions": "Speed Champions";
+        Disney: "Disney";
+        Minecraft: "Minecraft";
+        Ideas: "Ideas";
+        Architecture: "Architecture";
+    }>, z.ZodString]>;
+    sortOrder: z.ZodNumber;
+}, z.core.$strip>;
+export type LegoCategory = z.infer<typeof LegoCategoryEnum>;

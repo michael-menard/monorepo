@@ -8,10 +8,12 @@
     "sourceMap": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "moduleResolution": "NodeNext",
+    // Use classic node module resolution to allow extensionless imports for TypeScript source files
+    "moduleResolution": "node",
     "allowImportingTsExtensions": false,
     "noEmit": false,
     "composite": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-gallery.json",
     "baseUrl": ".",
     "types": ["react", "react-dom"],
     "paths": {

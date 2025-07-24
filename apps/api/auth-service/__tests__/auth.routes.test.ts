@@ -5,7 +5,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { User } from '../models/User';
 import bcryptjs from 'bcryptjs';
 import request from 'supertest';
-import { app } from '../../index';
+import { app } from '../index';
 
 // Mock the auth controller
 vi.mock('../controllers/auth.controller', () => ({

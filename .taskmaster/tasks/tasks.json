@@ -649,7 +649,7 @@
         "id": "50",
         "title": "Implement MocCard component",
         "description": "Create MOC card for gallery display",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "47"

@@ -19,7 +19,7 @@ const Login = () => {
 			return;
 		}
 		
-		await login(email, password);
+		await login({ email, password });
 	};
 
 	const handleForgotPassword = () => {

@@ -1,15 +1,16 @@
+import React from 'react';
 import { motion } from "framer-motion";
 import Input from "../Input";
 import { Lock, Mail, User } from "lucide-react";
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import PasswordStrength from "../PasswordStrength";
 import { useAuth } from "../../hooks/useAuth";
 
 const Signup = () => {
-	const [name, setName] = (React as any).useState("");
-	const [email, setEmail] = (React as any).useState("");
-	const [password, setPassword] = (React as any).useState("");
+	const [firstName, setFirstName] = React.useState("");
+	const [lastName, setLastName] = React.useState("");
+	const [email, setEmail] = React.useState("");
+	const [password, setPassword] = React.useState("");
 	const navigate = useNavigate();
 
 	const { signup, error, isLoading } = useAuth();
@@ -18,12 +19,12 @@ const Signup = () => {
 		e.preventDefault();
 
 		// Basic validation
-		if (!name.trim() || !email.trim() || !password.trim()) {
+		if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
 			return;
 		}
 
 		try {
-			await signup(email, password, name);
+			await signup({ email, password, firstName, lastName });
 			navigate("/verify-email");
 		} catch (error) {
 			console.log(error);
@@ -51,9 +52,16 @@ const Signup = () => {
 					<Input
 						icon={User as any}
 						type='text'
-						placeholder='Full Name'
-						value={name}
-						onChange={(e: any) => setName(e.target.value)}
+						placeholder='First Name'
+						value={firstName}
+						onChange={(e: any) => setFirstName(e.target.value)}
+					/>
+					<Input
+						icon={User as any}
+						type='text'
+						placeholder='Last Name'
+						value={lastName}
+						onChange={(e: any) => setLastName(e.target.value)}
 					/>
 					<Input
 						icon={Mail as any}

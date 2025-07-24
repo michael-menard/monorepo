@@ -1,0 +1,35 @@
+import { jsx as _jsx } from "react/jsx-runtime";
+/**
+ * Example Button Component Tests
+ * Validates Vitest configuration and testing utilities
+ */
+import { describe, it, expect, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { renderComponent } from '@/test/utils';
+// Simple Button component for testing
+const Button = ({ onClick, children, disabled = false }) => (_jsx("button", { onClick: onClick, disabled: disabled, "data-testid": "button", children: children }));
+describe('Button Component', () => {
+    it('renders with text', () => {
+        renderComponent(_jsx(Button, { children: "Click me" }));
+        expect(screen.getByTestId('button')).toBeInTheDocument();
+        expect(screen.getByText('Click me')).toBeInTheDocument();
+    });
+    it('handles click events', async () => {
+        const handleClick = vi.fn();
+        const { user } = renderComponent(_jsx(Button, { onClick: handleClick, children: "Click me" }));
+        await user.click(screen.getByTestId('button'));
+        expect(handleClick).toHaveBeenCalledOnce();
+    });
+    it('can be disabled', () => {
+        renderComponent(_jsx(Button, { disabled: true, children: "Disabled" }));
+        expect(screen.getByTestId('button')).toBeDisabled();
+    });
+    it('supports keyboard interaction', async () => {
+        const handleClick = vi.fn();
+        const { user } = renderComponent(_jsx(Button, { onClick: handleClick, children: "Press me" }));
+        const button = screen.getByTestId('button');
+        button.focus();
+        await user.keyboard('{Enter}');
+        expect(handleClick).toHaveBeenCalledOnce();
+    });
+});
