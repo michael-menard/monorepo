@@ -1,8 +1,8 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePage } from '../components/ProfilePage';
-import type { ProfileData } from '../types';
+import { ProfilePage } from '../components/ProfilePage.js';
+import type { ProfileData } from '../types/index.js';
 
 const mockProfile: ProfileData = {
   id: '1',

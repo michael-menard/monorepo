@@ -1,4 +1,17 @@
-// Profile package exports
-export * from './components/index.js';
-export * from './types/index.js';
+// Components
+export { ProfilePage } from './components/ProfilePage.js';
+export { ProfileSidebar } from './components/ProfileSidebar.js';
+export { ProfileMain } from './components/ProfileMain.js';
+export { AvatarUploader } from './components/AvatarUploader.js';
+export { ProfileSkeleton } from './components/ProfileSkeleton.js';
+
+// Types
+export type {
+  ProfileData,
+  ProfilePageProps,
+  ProfileSidebarProps,
+  ProfileMainProps,
+  AvatarUploaderProps,
+  CropModalProps,
+} from './types/index.js';
 export * from './schemas/index.js'; 

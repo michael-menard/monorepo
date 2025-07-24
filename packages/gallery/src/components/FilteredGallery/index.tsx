@@ -1,14 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import FilterBar from '../FilterBar/index.js';
 import GalleryCard from '../GalleryCard/index.js';
+import CreateAlbumDialog from '../CreateAlbumDialog/index.js';
 import { 
   useSearchImagesQuery, 
   useGetAvailableTagsQuery, 
   useGetAvailableCategoriesQuery,
-  SearchFilters 
+  SearchFilters, 
+  GalleryImage
 } from '../../store/galleryApi.js';
-import { GalleryImage } from '../../store/galleryApi.js';
 
 export interface FilteredGalleryProps {
   className?: string;
@@ -35,6 +36,15 @@ const FilteredGallery: React.FC<FilteredGalleryProps> = ({
     from: 0,
     size: pageSize,
   });
+
+  // Drag-and-drop state
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
+  const [albumDialogImages, setAlbumDialogImages] = useState<GalleryImage[] | null>(null);
+  const [isAlbumDialogOpen, setIsAlbumDialogOpen] = useState(false);
+
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Fetch available tags and categories for filter options
   const { data: availableTags = [] } = useGetAvailableTagsQuery();
@@ -113,10 +123,88 @@ const FilteredGallery: React.FC<FilteredGalleryProps> = ({
     onImageDelete?.(imageId);
   }, [onImageDelete]);
 
+  const handleSelect = useCallback((id: string, checked: boolean) => {
+    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(sel => sel !== id));
+  }, []);
+
   const images = searchResults?.data || [];
   const total = searchResults?.total || 0;
   const hasMore = images.length < total;
   const isSearching = filters.query || (filters.tags && filters.tags.length > 0) || filters.category;
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(images.map(img => img.id));
+  }, [images]);
+
+  const handleBatchAddToAlbum = useCallback(() => {
+    const selectedImages = images.filter(img => selectedIds.includes(img.id));
+    if (selectedImages.length > 0) {
+      setAlbumDialogImages(selectedImages);
+      setIsAlbumDialogOpen(true);
+    }
+  }, [images, selectedIds]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds([]);
+  }, []);
+
+  const handleBatchDelete = useCallback(() => {
+    if (!handleImageDelete) return;
+    selectedIds.forEach(id => handleImageDelete(id));
+    setSelectedIds([]);
+  }, [selectedIds, handleImageDelete]);
+
+  // Drag-and-drop handlers
+  const handleDragStart = (id: string) => {
+    setDraggedImageId(id);
+  };
+  const handleDragEnd = () => {
+    setDraggedImageId(null);
+    setDragOverImageId(null);
+  };
+  const handleDragOver = (id: string) => {
+    setDragOverImageId(id);
+  };
+  const handleDragLeave = () => {
+    setDragOverImageId(null);
+  };
+  const handleDropImage = (sourceId: string, targetId: string) => {
+    if (!searchResults?.data) return;
+    const source = searchResults.data.find(img => img.id === sourceId);
+    const target = searchResults.data.find(img => img.id === targetId);
+    if (source && target) {
+      setAlbumDialogImages([source, target]);
+      setIsAlbumDialogOpen(true);
+    }
+    setDraggedImageId(null);
+    setDragOverImageId(null);
+  };
+  const handleAlbumDialogClose = () => {
+    setIsAlbumDialogOpen(false);
+    setAlbumDialogImages(null);
+  };
+
+  // Infinite scroll sentinel ref
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasMore || isFetching) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    if (typeof window === 'undefined' || !window.IntersectionObserver) return;
+    const observer = new window.IntersectionObserver(
+      (entries: IntersectionObserverEntry[]) => {
+        if (entries.length > 0 && entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { root: null, rootMargin: '200px', threshold: 0.01 }
+    );
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, isFetching, handleLoadMore]);
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -151,6 +239,17 @@ const FilteredGallery: React.FC<FilteredGalleryProps> = ({
         </div>
       )}
 
+      {/* Batch Actions Toolbar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-2 sticky top-0 z-30 shadow">
+          <span className="font-medium text-blue-700">{selectedIds.length} selected</span>
+          <button onClick={handleBatchDelete} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Delete Selected</button>
+          <button onClick={handleBatchAddToAlbum} className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600">Add to Album</button>
+          <button onClick={handleClearSelection} className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Clear Selection</button>
+          <button onClick={handleSelectAll} className="px-3 py-1 bg-blue-200 text-blue-700 rounded hover:bg-blue-300">Select All</button>
+        </div>
+      )}
+
       {/* Gallery Grid */}
       {images.length > 0 ? (
         <>
@@ -178,21 +277,29 @@ const FilteredGallery: React.FC<FilteredGalleryProps> = ({
                   onShare={() => handleImageShare(image.id)}
                   onDownload={() => handleImageDownload(image.id)}
                   onDelete={() => handleImageDelete(image.id)}
+                  draggableId={image.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDropImage={handleDropImage}
+                  isDragOver={dragOverImageId === image.id}
+                  // Visual feedback for drag-over
+                  onDragOver={() => handleDragOver(image.id)}
+                  onDragLeave={handleDragLeave}
+                  selected={selectedIds.includes(image.id)}
+                  onSelect={checked => handleSelect(image.id, checked)}
                 />
               </motion.div>
             ))}
           </motion.div>
 
-          {/* Load More Button */}
+          {/* Infinite Scroll Sentinel */}
           {hasMore && (
-            <div className="flex justify-center pt-6">
-              <button
-                onClick={handleLoadMore}
-                disabled={isFetching}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isFetching ? 'Loading...' : 'Load More'}
-              </button>
+            <div ref={sentinelRef} className="flex justify-center pt-6" data-testid="infinite-scroll-sentinel">
+              {isFetching ? (
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              ) : (
+                <span className="text-gray-400">Scroll to load more...</span>
+              )}
             </div>
           )}
         </>
@@ -239,6 +346,13 @@ const FilteredGallery: React.FC<FilteredGalleryProps> = ({
           </div>
         </div>
       )}
+
+      {/* Create Album Dialog for Drag-and-Drop */}
+      <CreateAlbumDialog
+        isOpen={isAlbumDialogOpen}
+        onClose={handleAlbumDialogClose}
+        selectedImages={albumDialogImages || []}
+      />
     </div>
   );
 };

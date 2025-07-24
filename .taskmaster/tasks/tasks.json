@@ -399,7 +399,7 @@
         "id": "31",
         "title": "Implement Lightbox component",
         "description": "Create accessible lightbox for image viewing",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "27"
@@ -412,7 +412,7 @@
         "id": "32",
         "title": "Implement drag-and-drop for album creation",
         "description": "Add drag-and-drop functionality to create albums",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "29"
@@ -425,7 +425,7 @@
         "id": "33",
         "title": "Implement infinite scroll with IntersectionObserver",
         "description": "Add infinite scroll functionality to gallery",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "25"
@@ -438,7 +438,7 @@
         "id": "34",
         "title": "Implement multi-select with batch operations",
         "description": "Add multi-select functionality for batch operations",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "27"
@@ -451,7 +451,7 @@
         "id": "35",
         "title": "Implement WishlistItemCard component",
         "description": "Create draggable wishlist item card",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "4"
@@ -464,7 +464,7 @@
         "id": "36",
         "title": "Implement WishlistList component",
         "description": "Create list component with reordering functionality",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "35"
@@ -477,7 +477,7 @@
         "id": "37",
         "title": "Implement AddEditWishlistModal component",
         "description": "Create modal for adding and editing wishlist items",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "12",
@@ -504,7 +504,7 @@
         "id": "39",
         "title": "Implement wishlist auto-save functionality",
         "description": "Add auto-save after idle period for wishlist changes",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "38"
@@ -517,12 +517,12 @@
         "id": "40",
         "title": "Implement CategoryFilter component",
         "description": "Create category filtering for wishlist items",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "36"
         ],
-        "details": "Build filter component with predefined LEGO categories and custom category support",
+        "details": "Build filter component with predefined LEGO categories and custom category support. the categories should be a zod type",
         "testStrategy": "Test filtering functionality, category management, and filter persistence",
         "tag": "frontend-ui-development"
       },
@@ -530,7 +530,7 @@
         "id": "41",
         "title": "Implement ProfilePage layout component",
         "description": "Create main profile page layout with sidebar and content areas",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "4"
@@ -1118,6 +1118,16 @@
         "details": "Configure CI/CD pipeline with automated testing, building, and deployment",
         "testStrategy": "Test deployment pipeline and verify successful deployments",
         "tag": "frontend-ui-development"
+      },
+      {
+        "id": "86",
+        "title": "Refactor gallery components: Consolidate FilteredGallery and InspirationGallery",
+        "description": "Consolidate FilteredGallery and InspirationGallery into a single, feature-rich gallery component. Remove duplication, ensure all features (filtering, infinite scroll, drag-and-drop, album creation, etc.) are preserved. Update all usages to use the unified component. Deprecate or remove the legacy InspirationGallery if no longer needed.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [],
+        "details": "1. Review both FilteredGallery and InspirationGallery implementations.\n2. Merge their features into a single component, keeping all advanced features (filtering, infinite scroll, drag-and-drop, album creation, etc.).\n3. Update all imports/usages in the codebase to use the unified component.\n4. Remove or deprecate InspirationGallery if it is no longer needed.\n5. Test all gallery-related functionality to ensure nothing is broken.",
+        "testStrategy": "Test all gallery-related features: filtering, infinite scroll, drag-and-drop, album creation, and ensure no regressions in any views that previously used either component."
       }
     ],
     "metadata": {

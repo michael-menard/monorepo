@@ -16,6 +16,15 @@ export interface GalleryCardProps {
   onLike?: (liked: boolean) => void;
   onAddToAlbum?: () => void;
   onDownload?: () => void;
+  draggableId?: string;
+  onDragStart?: (id: string) => void;
+  onDragEnd?: () => void;
+  onDropImage?: (sourceId: string, targetId: string) => void;
+  isDragOver?: boolean;
+  onDragOver?: () => void;
+  onDragLeave?: () => void;
+  selected?: boolean;
+  onSelect?: (checked: boolean) => void;
 }
 
 const formatDate = (date?: string | Date) => {
@@ -51,6 +60,15 @@ const GalleryCard: React.FC<GalleryCardProps> = ({
   onLike,
   onAddToAlbum,
   onDownload,
+  draggableId,
+  onDragStart,
+  onDragEnd,
+  onDropImage,
+  isDragOver = false,
+  onDragOver,
+  onDragLeave,
+  selected = false,
+  onSelect,
 }) => {
   const [liked, setLiked] = useState(initialLiked);
   const [isHovered, setIsHovered] = useState(false);
@@ -77,9 +95,30 @@ const GalleryCard: React.FC<GalleryCardProps> = ({
     });
   }
 
+  // Drag-and-drop handlers
+  const handleDragStart = (e: React.DragEvent) => {
+    if (draggableId && onDragStart) {
+      e.dataTransfer.setData('text/plain', draggableId);
+      onDragStart(draggableId);
+    }
+  };
+  const handleDragEnd = () => {
+    onDragEnd?.();
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('text/plain');
+    if (draggableId && sourceId && sourceId !== draggableId) {
+      onDropImage?.(sourceId, draggableId);
+    }
+  };
+
   return (
     <motion.div
-      className="group relative bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer"
+      className={`group relative bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer ${isDragOver ? 'ring-4 ring-blue-400' : ''} ${selected ? 'ring-2 ring-blue-600' : ''}`}
       tabIndex={0}
       role="button"
       aria-label={title}
@@ -96,7 +135,24 @@ const GalleryCard: React.FC<GalleryCardProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      draggable={!!draggableId}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={e => { handleDragOver(e); onDragOver?.(); }}
+      onDragLeave={onDragLeave}
+      onDrop={handleDrop}
     >
+      {/* Multi-select Checkbox */}
+      <div className="absolute top-2 left-2 z-20">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={e => onSelect?.(e.target.checked)}
+          onClick={e => e.stopPropagation()}
+          className="w-5 h-5 accent-blue-600 rounded border-gray-300 shadow focus:ring focus:ring-blue-200"
+          aria-label={selected ? 'Deselect image' : 'Select image'}
+        />
+      </div>
       {/* Image Container */}
       <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
         <motion.img

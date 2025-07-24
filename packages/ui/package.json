@@ -27,6 +27,7 @@
     "./tooltip": "./src/tooltip.tsx",
     "./utils": "./src/lib/utils.ts",
     "./file-upload": "./src/FileUpload/index.tsx",
+    "./FileUpload": "./src/FileUpload/index.tsx",
     "./image-upload-modal": "./src/ImageUploadModal/index.tsx"
   },
   "scripts": {

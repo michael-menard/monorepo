@@ -19,13 +19,21 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../ui/src/FileUpload/index.tsx",
+    "../ui/src/dialog.tsx",
+    "../ui/src/form.tsx",
+    "../ui/src/input.tsx",
+    "../ui/src/select.tsx",
+    "../ui/src/button.tsx"
   ],
   "exclude": [
     "dist",
-    "node_modules", 
+    "node_modules",
     "**/*.test.*",
     "**/*.spec.*",
-    "**/__tests__/**"
+    "**/__tests__/**",
+    "../ui/src/**/*.test.*",
+    "../ui/src/**/__tests__/**"
   ]
 } 

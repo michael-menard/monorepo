@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '../lib/utils.js';
 
 export const ProfileSkeleton: React.FC = () => (
   <div data-testid="profile-skeleton" className="animate-pulse flex flex-col space-y-6 items-center">

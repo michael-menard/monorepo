@@ -8,7 +8,7 @@ import {
   DialogFooter,
 } from '@repo/ui';
 import { Button } from '@repo/ui';
-import type { CropModalProps } from '@/types';
+import type { CropModalProps } from '../types/index.js';
 
 interface CroppedAreaPixels {
   x: number;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ProfileSidebar } from '../components/ProfileSidebar';
-import type { ProfileData } from '../types';
+import { ProfileSidebar } from '../components/ProfileSidebar.js';
+import type { ProfileData } from '../types/index.js';
 
 const mockProfile: ProfileData = {
   id: '1',
