@@ -4,9 +4,9 @@
     "rootDir": ".",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
-    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ESNext",
     "strict": true
   },
   "include": ["**/*"],

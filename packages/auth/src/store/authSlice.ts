@@ -58,6 +58,8 @@ export const {
   setMessage,
 } = authSlice.actions;
 
+export { initialState };
+
 // Selectors
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
 export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;

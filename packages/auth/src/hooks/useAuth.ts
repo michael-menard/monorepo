@@ -16,6 +16,7 @@ import {
   useVerifyEmailMutation,
   useCheckAuthQuery,
   useResetPasswordMutation,
+  useConfirmResetMutation,
 } from '../store/authApi.js';
 
 export const useAuth = () => {
@@ -34,6 +35,7 @@ export const useAuth = () => {
   const [logoutMutation] = useLogoutMutation();
   const [verifyEmailMutation] = useVerifyEmailMutation();
   const [resetPasswordMutation] = useResetPasswordMutation();
+  const [confirmResetMutation] = useConfirmResetMutation();
   const { isLoading: isCheckAuthLoading } = useCheckAuthQuery();
 
   return {
@@ -52,6 +54,7 @@ export const useAuth = () => {
     verifyEmail: verifyEmailMutation,
     checkAuth: () => {}, // This is handled by the query
     resetPassword: resetPasswordMutation,
+    confirmReset: confirmResetMutation,
     clearError: () => dispatch(clearError(undefined)),
     clearMessage: () => dispatch(clearMessage(undefined)),
   };

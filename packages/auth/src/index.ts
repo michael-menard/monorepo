@@ -20,13 +20,32 @@ export { useAuth } from './hooks/useAuth.js';
 // Store
 export { default as authReducer } from './store/authSlice.js';
 export { authApi } from './store/authApi.js';
+export { initialState as authInitialState } from './store/authSlice.js';
 export type { RootState } from './store/store.js';
 
 // Types
 export type { User, AuthState, AuthTokens, AuthResponse, AuthError, LoginRequest, SignupRequest, ResetPasswordRequest, ConfirmResetRequest } from './types/auth.js';
 
 // Zod Schemas
-export { SignupRequestSchema, LoginRequestSchema, ResetPasswordRequestSchema, ConfirmResetRequestSchema } from './types/auth.js';
+export {
+  SignupRequestSchema,
+  LoginRequestSchema,
+  ResetPasswordRequestSchema,
+  ConfirmResetRequestSchema,
+  VerifyEmailRequestSchema,
+} from './types/auth.js';
 
 // Utils
 export * from './utils/date.js'; 
+
+export {
+  useLoginMutation,
+  useSignupMutation,
+  useLogoutMutation,
+  useRefreshMutation,
+  useResetPasswordMutation,
+  useConfirmResetMutation,
+  useCheckAuthQuery,
+  useVerifyEmailMutation,
+  useSocialLoginMutation,
+} from './store/authApi.js'; 

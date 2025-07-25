@@ -3,4 +3,6 @@ packages:
   - "apps/api/*"
   - "apps/web/*"
   - "packages/*"
-  - "packages/*/*"
+  - "packages/auth*"
+  - "packages/features/*"
+  - "packages/ui/*"

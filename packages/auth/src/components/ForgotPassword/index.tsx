@@ -8,7 +8,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 const ForgotPassword = () => {
 	const [email, setEmail] = (React as any).useState("");
 	const navigate = useNavigate();
-	const { forgotPassword, isLoading, error, message } = useAuth();
+	const { resetPassword, isLoading, error, message } = useAuth();
 
 	const handleSubmit = async (e: any) => {
 		e.preventDefault();
@@ -18,7 +18,7 @@ const ForgotPassword = () => {
 			return;
 		}
 		
-		await forgotPassword(email);
+		await resetPassword({ email });
 	};
 
 	const handleBackToLogin = () => {

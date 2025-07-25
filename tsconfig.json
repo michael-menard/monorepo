@@ -1,104 +1,21 @@
 {
   "compilerOptions": {
-    // Module Resolution
-    // Use NodeNext for both module and moduleResolution for modern ESM/TypeScript monorepo compatibility
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "verbatimModuleSyntax": false,
-    
-    // Type Checking - Strict Mode
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "useUnknownInCatchVariables": true,
-    "alwaysStrict": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    
-    // Emit
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "noEmit": false,
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo",
-    
-    // JavaScript Support
-    "allowJs": true,
-    "checkJs": false,
-    
-    // Interop Constraints
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    
-    // Type Resolution
-    "baseUrl": ".",
-    "paths": {
-      "@repo/auth": ["./packages/auth/src/index.ts"],
-      "@repo/auth/*": ["./packages/auth/src/*"],
-      "@repo/ui": ["./packages/ui/src/index.ts"],
-      "@repo/ui/*": ["./packages/ui/src/*"],
-      "@repo/gallery": ["./features/gallery/src/index.ts"],
-      "@repo/gallery/*": ["./features/gallery/src/*"],
-      "@repo/profile": ["./features/profile/src/index.ts"],
-      "@repo/profile/*": ["./features/profile/src/*"],
-      "@repo/moc": ["./features/moc/src/index.ts"],
-      "@repo/moc/*": ["./features/moc/src/*"],
-      "@repo/mock-instructions": ["./features/mock-instructions/src/index.ts"],
-      "@repo/mock-instructions/*": ["./features/mock-instructions/src/*"],
-      "@/*": ["./src/*"]
-    },
-    "typeRoots": [
-      "./node_modules/@types",
-      "./packages/*/types",
-      "./types"
-    ],
-    "types": [],
-    
-    // Advanced
+    "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    
-    // React
-    "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "isolatedModules": true,
+    "noEmit": false,
+    "types": ["react", "react-dom"],
+    "baseUrl": "."
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.js",
-    "**/*.jsx",
-    "**/*.mts",
-    "**/*.cts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    ".turbo",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
-  ],
-  "references": [
-    { "path": "./packages/auth" },
-    { "path": "./packages/ui" },
-    { "path": "./features/gallery" },
-    { "path": "./features/profile" },
-    { "path": "./apps/web/lego-projects-ui" }
-  ]
+  "exclude": ["node_modules", "dist"],
+  "include": ["packages/**/*", "apps/**/*"]
 } 

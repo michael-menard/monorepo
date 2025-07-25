@@ -6,14 +6,13 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "lib": ["es2022", "DOM", "DOM.Iterable"],
-    "module": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "moduleDetection": "force",
-    "moduleResolution": "NodeNext",
     "noUncheckedIndexedAccess": false,
-    "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2022",
+    "target": "ESNext",
     "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./src",
@@ -24,10 +23,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "typeRoots": ["./src/types", "./node_modules/@types"],
-    "composite": true,
-    "declarationDir": "dist/types",
-    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-auth.json"
+    "types": ["react", "react-dom"],
+    "composite": true
   },
-  "include": ["src/**/*", "src/types/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*", "src/types/**/*"]
 } 

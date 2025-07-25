@@ -3,7 +3,7 @@
 ## Project Overview
 This is a React monorepo using pnpm workspaces with the following structure:
 - `apps/web/lego-projects-ui/` - Main React frontend application
-- `apps/api/instructions-store/` - Backend API service
+- `apps/api/` - Backend API service
 - `packages/ui/` - Shared UI components
 - `packages/utils/` - Shared utilities
 
@@ -27,7 +27,6 @@ This is a React monorepo using pnpm workspaces with the following structure:
 - Prefer Tailwind CSS classes over inline styles
 - Keep components in their own directories
 - Use functional components with hooks
-- Follow monorepo best practices
 
 ## Recent Changes
 - Set up Redux Toolkit with user authentication slice
@@ -37,7 +36,6 @@ This is a React monorepo using pnpm workspaces with the following structure:
 - Created standard navbar with conditional rendering
 
 ## Next Steps
-- Migrate MERN stack auth project into monorepo
 - Create auth service in `apps/api/auth-service/`
 - Integrate auth UI components
 - Connect frontend to auth service

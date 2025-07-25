@@ -11,7 +11,7 @@ const ResetPassword = () => {
 	const [confirmPassword, setConfirmPassword] = (React as any).useState("");
 	const { token } = useParams<{ token: string }>();
 	const navigate = useNavigate();
-	const { resetPassword, isLoading, error, message } = useAuth();
+	const { confirmReset, isLoading, error, message } = useAuth();
 
 	const handleSubmit = async (e: any) => {
 		e.preventDefault();
@@ -26,7 +26,7 @@ const ResetPassword = () => {
 		}
 
 		if (token) {
-			await resetPassword(token, password);
+			await confirmReset({ token, newPassword: password });
 			navigate("/login");
 		}
 	};

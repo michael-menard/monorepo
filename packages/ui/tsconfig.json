@@ -1,22 +1,24 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
     "declaration": true,
     "declarationDir": "dist/types",
     "jsx": "react-jsx",
+    "types": ["react", "react-dom"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
     "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "isolatedModules": true,
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-ui.json",
     "noImplicitAny": false,
-    "moduleResolution": "NodeNext"
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ESNext"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
