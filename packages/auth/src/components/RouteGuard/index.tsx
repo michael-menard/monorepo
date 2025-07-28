@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { selectIsAuthenticated, selectUser, selectIsCheckingAuth, setCheckingAuth, setUser } from '../../store/authSlice.js';
-import { useCheckAuthQuery } from '../../store/authApi.js';
-import { isTokenExpired, refreshToken, shouldRefreshToken, getTokenExpiry } from '../../utils/token.js';
+import { selectIsCheckingAuth, setCheckingAuth } from '../../store/authSlice.js';
+import { refreshToken } from '../../utils/token.js';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -20,27 +19,21 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
   unauthorizedTo = '/unauthorized',
   requireVerified = false,
 }) => {
-  const isAuthenticated = useSelector(selectIsAuthenticated);
-  const user = useSelector(selectUser);
   const isCheckingAuth = useSelector(selectIsCheckingAuth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Use RTK Query to check auth status
-  const { data: authData, isLoading: isCheckingAuthQuery, error } = useCheckAuthQuery(undefined, {
-    skip: isAuthenticated, // Skip if already authenticated
-  });
+  // Get user and authentication state from Redux store
+  const user = useSelector((state: any) => state.auth.user);
+  const isAuthenticated = useSelector((state: any) => state.auth.isAuthenticated);
 
   useEffect(() => {
-    // Update auth state based on RTK Query result
-    if (authData?.data?.user) {
-      dispatch(setUser(authData.data.user));
-      dispatch(setCheckingAuth(false));
-    } else if (error) {
+    // Update checking auth state when auth check completes
+    if (!isCheckingAuth) {
       dispatch(setCheckingAuth(false));
     }
-  }, [authData, error, dispatch]);
+  }, [isCheckingAuth, dispatch]);
 
   useEffect(() => {
     // Automatic token refresh logic - only run once when user is authenticated
@@ -54,7 +47,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
         // Token was refreshed successfully
         console.log('Token refreshed successfully');
       } catch (error) {
-        console.error('Token refresh failed:', error);
+        console.error('Token refresh failed:');
         // If refresh fails, redirect to login
         navigate(redirectTo, { replace: true });
       } finally {
@@ -66,10 +59,30 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     if (isAuthenticated && user && !isRefreshing) {
       handleTokenRefresh();
     }
-  }, [isAuthenticated, user]); // Remove isRefreshing and navigate from dependencies to prevent loops
+  }, [isAuthenticated, user, isRefreshing, navigate, redirectTo]);
+
+  // Handle navigation effects
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate(redirectTo, { replace: true });
+      return;
+    }
+
+    // Check email verification if required
+    if (requireVerified && user && !user.emailVerified) {
+      navigate('/verify-email', { replace: true });
+      return;
+    }
+
+    // Check role-based access
+    if (requiredRole && user?.role !== requiredRole) {
+      navigate(unauthorizedTo, { replace: true });
+      return;
+    }
+  }, [isAuthenticated, user, requireVerified, requiredRole, redirectTo, unauthorizedTo, navigate]);
 
   // Show loading while checking auth
-  if (isCheckingAuth || isCheckingAuthQuery) {
+  if (isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div 
@@ -81,25 +94,17 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    navigate(redirectTo, { replace: true });
-    return null;
+  // Render children if authenticated and meets requirements
+  if (
+    isAuthenticated &&
+    (!requireVerified || !user || user.emailVerified) &&
+    (!requiredRole || user?.role === requiredRole)
+  ) {
+    return <>{children}</>;
   }
 
-  // Check email verification if required
-  if (requireVerified && user && !user.emailVerified) {
-    navigate('/verify-email', { replace: true });
-    return null;
-  }
-
-  // Check role-based access
-  if (requiredRole && user?.role !== requiredRole) {
-    navigate(unauthorizedTo, { replace: true });
-    return null;
-  }
-
-  return <>{children}</>;
+  // Don't render children if not authenticated or doesn't meet requirements
+  return null;
 };
 
 export default RouteGuard; 

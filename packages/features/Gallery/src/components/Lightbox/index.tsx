@@ -33,7 +33,9 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, onClos
   // Prevent background scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, []);
 
   // Focus trap click outside
@@ -95,7 +97,12 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, onClos
           ref={imgRef}
           src={images[index]}
           alt={`Image ${index + 1} of ${images.length}`}
-          style={{ transform: `scale(${zoom})`, maxHeight: '80vh', maxWidth: '90vw', transition: 'transform 0.2s' }}
+          style={{
+            transform: `scale(${zoom})`,
+            maxHeight: '80vh',
+            maxWidth: '90vw',
+            transition: 'transform 0.2s',
+          }}
           className="rounded shadow-lg"
         />
         <div className="mt-2 text-white text-sm">
@@ -106,4 +113,4 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, onClos
   );
 };
 
-export default Lightbox; 
+export default Lightbox;

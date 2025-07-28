@@ -1,24 +1,39 @@
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../dialog';
-import { Button } from '../button';
-import { Input } from '../input';
-import { Label } from '../label';
-import { FileUpload } from '../FileUpload';
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '@repo/ui';
+import { Button } from '@repo/ui';
+import { Input } from '@repo/ui';
+import { Label } from '@repo/ui';
+import { FileUpload } from '@monorepo/fileupload';
 
 interface ImageUploadModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { file: File; title: string; description: string; tags?: string[]; extra?: Record<string, any> }) => void;
+  onSubmit: (data: {
+    file: File;
+    title: string;
+    description: string;
+    tags?: string[];
+    extra?: Record<string, any>;
+  }) => void;
   isLoading?: boolean;
   onUploadProgress?: (progress: number) => void;
-  renderExtraFields?: (extra: Record<string, any>, setExtra: (v: Record<string, any>) => void) => React.ReactNode;
+  renderExtraFields?: (
+    extra: Record<string, any>,
+    setExtra: (v: Record<string, any>) => void,
+  ) => React.ReactNode;
   theme?: 'light' | 'dark';
   maxFileSizeMB?: number;
   acceptedFormats?: string[];
   showTags?: boolean;
 }
 
-const DEFAULT_ACCEPTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/webp'];
+const DEFAULT_ACCEPTED_FORMATS = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/heic',
+  'image/webp',
+];
 
 const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   open,
@@ -41,52 +56,55 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleUpload = useCallback(async (files: File[] | File, metadata?: Record<string, any>) => {
-    const file = Array.isArray(files) ? files[0] : files;
-    if (!file) return;
+  const handleUpload = useCallback(
+    async (files: File[] | File, metadata?: Record<string, any>) => {
+      const file = Array.isArray(files) ? files[0] : files;
+      if (!file) return;
 
-    setIsUploading(true);
-    setError(null);
-    setUploadProgress(0);
-
-    try {
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          const newProgress = prev + 10;
-          onUploadProgress?.(newProgress);
-          return newProgress;
-        });
-      }, 100);
-
-      // Simulate actual upload (replace with real upload logic)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      onUploadProgress?.(100);
-
-      // Prepare submission data
-      const submissionData = {
-        file,
-        title: title.trim() || metadata?.title || 'Untitled',
-        description: description.trim() || metadata?.description || '',
-        tags: tags.length > 0 ? tags : metadata?.tags || [],
-        extra: { ...extra, ...metadata?.extra },
-      };
-
-      onSubmit(submissionData);
-      
-      // Reset form
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-      console.error('Image upload error:', err);
-    } finally {
-      setIsUploading(false);
+      setIsUploading(true);
+      setError(null);
       setUploadProgress(0);
-    }
-  }, [title, description, tags, extra, onUploadProgress, onSubmit]);
+
+      try {
+        // Simulate upload progress
+        const progressInterval = globalThis.setInterval(() => {
+          setUploadProgress((prev) => {
+            const newProgress = prev + 10;
+            onUploadProgress?.(newProgress);
+            return newProgress;
+          });
+        }, 100);
+
+        // Simulate actual upload (replace with real upload logic)
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        globalThis.clearInterval(progressInterval);
+        setUploadProgress(100);
+        onUploadProgress?.(100);
+
+        // Prepare submission data
+        const submissionData = {
+          file,
+          title: title.trim() || metadata?.title || 'Untitled',
+          description: description.trim() || metadata?.description || '',
+          tags: tags.length > 0 ? tags : metadata?.tags || [],
+          extra: { ...extra, ...metadata?.extra },
+        };
+
+        onSubmit(submissionData);
+
+        // Reset form
+        handleClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Upload failed');
+        console.error('Image upload error:', err);
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    },
+    [title, description, tags, extra, onUploadProgress, onSubmit],
+  );
 
   const handleError = useCallback((error: string) => {
     setError(error);
@@ -108,21 +126,24 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   const handleAddTag = useCallback(() => {
     const trimmedTag = tagInput.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags(prev => [...prev, trimmedTag]);
+      setTags((prev) => [...prev, trimmedTag]);
       setTagInput('');
     }
   }, [tagInput, tags]);
 
   const handleRemoveTag = useCallback((tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+    setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   }, []);
 
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
-    }
-  }, [handleAddTag]);
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddTag();
+      }
+    },
+    [handleAddTag],
+  );
 
   const metadataFields = [
     { name: 'title', label: 'Title', type: 'text' as const, required: true },
@@ -135,7 +156,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
         <DialogHeader>
           <DialogTitle>Upload Image</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Error Display */}
           {error && (
@@ -152,7 +173,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                 <span>{uploadProgress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
@@ -219,7 +240,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                       Add
                     </Button>
                   </div>
-                  
+
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {tags.map((tag, index) => (
@@ -255,11 +276,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading || isUploading}
-          >
+          <Button variant="outline" onClick={handleClose} disabled={isLoading || isUploading}>
             Cancel
           </Button>
           <Button
@@ -274,4 +291,4 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   );
 };
 
-export default ImageUploadModal; 
+export default ImageUploadModal;

@@ -9,10 +9,14 @@ export { default as FloatingShape } from './components/FloatingShape/index.js';
 
 // Auth Components
 export { default as Login } from './components/Login/index.js';
-export { default as Signup } from './components/Signup/index.js';
-export { default as ForgotPassword } from './components/ForgotPassword/index.js';
-export { default as ResetPassword } from './components/ResetPassword/index.js';
-export { default as EmailVerification } from './components/EmailVerification/index.js';
+export { default as LoginForm } from './components/LoginForm/index.js';
+export { SignupForm as Signup } from './components/SignupForm/index.js';
+export { SignupForm } from './components/SignupForm/index.js';
+export { default as ForgotPasswordForm } from './components/ForgotPasswordForm/index.js';
+export { default as ResetPasswordForm } from './components/ResetPasswordForm/index.js';
+export { default as ConfirmResetPasswordForm } from './components/ConfirmResetPasswordForm/index.js';
+export { default as EmailVerificationForm } from './components/EmailVerificationForm/index.js';
+export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index.js';
 
 // Hooks
 export { useAuth } from './hooks/useAuth.js';
@@ -24,7 +28,7 @@ export { initialState as authInitialState } from './store/authSlice.js';
 export type { RootState } from './store/store.js';
 
 // Types
-export type { User, AuthState, AuthTokens, AuthResponse, AuthError, LoginRequest, SignupRequest, ResetPasswordRequest, ConfirmResetRequest } from './types/auth.js';
+export * from './types/index.js';
 
 // Zod Schemas
 export {
@@ -36,7 +40,7 @@ export {
 } from './types/auth.js';
 
 // Utils
-export * from './utils/date.js'; 
+export * from './utils/date.js';
 
 export {
   useLoginMutation,

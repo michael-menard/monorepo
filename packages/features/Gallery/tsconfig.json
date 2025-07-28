@@ -1,31 +1,27 @@
 {
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
-    "noEmit": false,
-    "composite": true,
-    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-gallery.json",
     "baseUrl": ".",
-    "types": ["react", "react-dom"],
     "paths": {
-      "@repo/ui": ["../../packages/ui/src/index.ts"],
-      "@repo/ui/*": ["../../packages/ui/src/*"]
-    }
+      "@/*": ["./src/*"],
+      "@repo/ui": ["../../ui/src/index.ts"],
+      "@repo/ui/*": ["../../ui/src/*"]
+    },
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-gallery.json"
   },
-  "include": [
-    "src/**/*"
-  ],
+  "include": ["src/**/*", "index.ts"],
   "exclude": [
-    "dist",
-    "node_modules"
+    "dist", 
+    "node_modules", 
+    "**/*.test.ts", 
+    "**/*.test.tsx", 
+    "**/*.stories.ts", 
+    "**/*.stories.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "src/**/*.stories.tsx",
+    "src/**/*.stories.ts"
   ]
 } 

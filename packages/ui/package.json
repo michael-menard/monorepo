@@ -58,6 +58,8 @@
     "jsdom": "^25.0.1",
     "msw": "^2.10.4",
     "storybook": "^9.0.17",
+    "tailwindcss": "^4.1.11",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "5.8.3",
     "vitest": "^3.2.4"
   },
@@ -93,15 +95,18 @@
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "framer-motion": "^12.23.3",
     "i18next": "^25.3.2",
     "lucide-react": "^0.468.0",
+    "next-themes": "^0.4.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-easy-crop": "^5.5.0",
     "react-hook-form": "^7.61.1",
     "react-i18next": "^15.6.1",
+    "sonner": "^2.0.6",
     "tailwind-merge": "^2.6.0"
   }
 }

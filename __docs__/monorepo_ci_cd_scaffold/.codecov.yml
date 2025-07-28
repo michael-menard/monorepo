@@ -1,0 +1,15 @@
+codecov:
+  token: ${CODECOV_TOKEN}
+  require_ci_to_pass: true
+
+coverage:
+  status:
+    project:
+      default:
+        target: 90%
+    patch:
+      default:
+        target: 80%
+
+comment:
+  layout: "reach, diff, flags, files"

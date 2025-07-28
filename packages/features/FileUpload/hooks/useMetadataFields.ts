@@ -27,11 +27,11 @@ export const useMetadataFields = (fields: MetadataField[] = []) => {
   const [state, setState] = useState<MetadataState>({
     values: {},
     errors: {},
-    isValid: true
+    isValid: true,
   });
 
   const validateField = useCallback((name: string): string | null => {
-    const field = fields.find(f => f.name === name);
+    const field = fields.find((f) => f.name === name);
     if (!field) return null;
 
     const value = state.values[name];
@@ -51,32 +51,51 @@ export const useMetadataFields = (fields: MetadataField[] = []) => {
   }, [fields, state.values]);
 
   const updateField = useCallback((name: string, value: any) => {
-    setState(prev => {
+    setState((prev) => {
       const newValues = { ...prev.values, [name]: value };
       const newErrors = { ...prev.errors };
-      
+
       // Clear error for this field
       delete newErrors[name];
-      
-      // Validate the field
-      const error = validateField(name);
-      if (error) {
-        newErrors[name] = error;
+
+      // Validate the field with the new value
+      const field = fields.find((f) => f.name === name);
+      if (field) {
+        let error: string | null = null;
+
+        if (field.required && (!value || value === '')) {
+          error = `${field.label} is required`;
+        } else if (field.type === 'number' && value !== undefined && value !== '') {
+          const numValue = Number(value);
+          if (isNaN(numValue)) {
+            error = `${field.label} must be a valid number`;
+          }
+        }
+
+        if (error) {
+          newErrors[name] = error;
+        }
       }
 
       // Check if all fields are valid
-      const isValid = fields.every(field => {
-        const fieldError = validateField(field.name);
-        return !fieldError;
+      const isValid = fields.every((field) => {
+        const fieldValue = newValues[field.name];
+        if (field.required && (!fieldValue || fieldValue === '')) {
+          return false;
+        }
+        if (field.type === 'number' && fieldValue !== undefined && fieldValue !== '') {
+          return !isNaN(Number(fieldValue));
+        }
+        return true;
       });
 
       return {
         values: newValues,
         errors: newErrors,
-        isValid
+        isValid,
       };
     });
-  }, [fields, validateField]);
+  }, [fields]);
 
   const validateAll = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};

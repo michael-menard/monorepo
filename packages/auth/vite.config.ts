@@ -1,57 +1,49 @@
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Add this plugin to rewrite extensionless imports to .js
-function addJsExtension() {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig(({ mode }) => {
   return {
-    name: 'add-js-extension',
-    generateBundle(_: Record<string, unknown>, bundle: Record<string, any>) {
-      for (const file of Object.values(bundle)) {
-        if (file.type === 'chunk') {
-          file.code = file.code.replace(
-            /from\s+(['"])(\.{1,2}\/[^'".]+?)\1/g,
-            (match: string, quote: string, importPath: string) => {
-              // Only add .js if not already present and not a .css or .json import
-              if (!importPath.endsWith('.js') && !importPath.endsWith('.css') && !importPath.endsWith('.json')) {
-                return `from ${quote}${importPath}.js${quote}`;
-              }
-              return match;
-            }
-          );
-        }
-      }
+    plugins: [react()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        // Add workspace package aliases for better imports
+        '@packages/ui': path.resolve(__dirname, '../ui/src'),
+        '@packages/shared': path.resolve(__dirname, '../shared/src'),
+        '@packages/wishlist': path.resolve(__dirname, '../wishlist/src'),
+        '@packages/features': path.resolve(__dirname, '../features'),
+      },
     },
-  };
-}
-
-export default {
-  plugins: [react()],
-  build: {
-    lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
-      name: 'Auth',
-      fileName: 'index',
-      formats: ['es'],
-    },
-    rollupOptions: {
-      external: ['react', 'react-dom', 'react-hook-form', '@hookform/resolvers', 'zod', 'clsx', 'tailwind-merge'],
-      output: {
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'react-hook-form': 'ReactHookForm',
-          '@hookform/resolvers': 'HookformResolvers',
-          zod: 'zod',
-          clsx: 'clsx',
-          'tailwind-merge': 'tailwindMerge',
+    build: {
+      lib: {
+        entry: path.resolve(__dirname, 'src/index.ts'),
+        name: 'Auth',
+        fileName: 'index',
+        formats: ['es', 'cjs'],
+      },
+      outDir: 'dist',
+      sourcemap: mode === 'development',
+      rollupOptions: {
+        external: ['react', 'react-dom', 'zod', '@packages/ui', '@packages/shared'],
+        output: {
+          globals: {
+            react: 'React',
+            'react-dom': 'ReactDOM',
+            zod: 'zod',
+          },
         },
       },
-      plugins: [addJsExtension()], // <-- Add the plugin here
     },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+    define: {
+      __DEV__: mode === 'development',
     },
-  },
-}; 
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
+      exclude: ['@packages/ui', '@packages/shared'],
+    },
+  };
+}); 

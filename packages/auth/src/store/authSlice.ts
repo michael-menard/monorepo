@@ -1,71 +1,113 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction, Slice } from '@reduxjs/toolkit';
-import type { User, AuthState } from '../types/auth.js';
+
+// Simplified auth state - only UI-specific state
+interface AuthState {
+  isCheckingAuth: boolean;
+  lastActivity: number | null;
+  sessionTimeout: number;
+  message: string | null;
+}
 
 const initialState: AuthState = {
-  user: null,
-  tokens: null,
-  isAuthenticated: false,
-  isLoading: false,
   isCheckingAuth: true,
-  error: null,
+  lastActivity: null,
+  sessionTimeout: 30 * 60 * 1000, // 30 minutes in milliseconds
   message: null,
 };
+
+// Async thunks
+export const updateLastActivity = createAsyncThunk('auth/updateLastActivity', async () => {
+  return Date.now();
+});
+
+export const checkSessionTimeout = createAsyncThunk('auth/checkSessionTimeout', async (_, { getState }) => {
+  const state = getState() as { auth: AuthState };
+  const { lastActivity, sessionTimeout } = state.auth;
+
+  if (lastActivity && sessionTimeout) {
+    const now = Date.now();
+    const timeSinceLastActivity = now - lastActivity;
+
+    if (timeSinceLastActivity > sessionTimeout) {
+      throw new Error('Session expired');
+    }
+  }
+
+  return Date.now();
+});
 
 // Slice
 export const authSlice: Slice<AuthState> = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    clearError: (state) => {
-      state.error = null;
-    },
     clearMessage: (state) => {
       state.message = null;
-    },
-    setUser: (state, action: PayloadAction<User>) => {
-      state.user = action.payload;
-      state.isAuthenticated = true;
-    },
-    logoutSuccess: (state) => {
-      state.user = null;
-      state.isAuthenticated = false;
-      state.error = null;
-    },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
     },
     setCheckingAuth: (state, action: PayloadAction<boolean>) => {
       state.isCheckingAuth = action.payload;
     },
-    setError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
-    },
     setMessage: (state, action: PayloadAction<string | null>) => {
       state.message = action.payload;
     },
+    updateSessionTimeout: (state, action: PayloadAction<number>) => {
+      state.sessionTimeout = action.payload;
+    },
+    resetAuthState: () => {
+      return { ...initialState };
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(updateLastActivity.fulfilled, (state, action) => {
+        state.lastActivity = action.payload;
+      })
+      .addCase(checkSessionTimeout.fulfilled, (state, action) => {
+        state.lastActivity = action.payload;
+      })
+      .addCase(checkSessionTimeout.rejected, (state) => {
+        state.lastActivity = null;
+        state.message = 'Session expired';
+      });
   },
 });
 
 export const {
-  clearError,
   clearMessage,
-  setUser,
-  logoutSuccess,
-  setLoading,
   setCheckingAuth,
-  setError,
   setMessage,
+  updateSessionTimeout,
+  resetAuthState,
 } = authSlice.actions;
 
 export { initialState };
 
 // Selectors
-export const selectUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
-export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
 export const selectIsCheckingAuth = (state: { auth: AuthState }) => state.auth.isCheckingAuth;
-export const selectError = (state: { auth: AuthState }) => state.auth.error;
 export const selectMessage = (state: { auth: AuthState }) => state.auth.message;
+export const selectLastActivity = (state: { auth: AuthState }) => state.auth.lastActivity;
+export const selectSessionTimeout = (state: { auth: AuthState }) => state.auth.sessionTimeout;
+
+// Computed selectors
+export const selectIsSessionExpired = (state: { auth: AuthState }) => {
+  const { lastActivity, sessionTimeout } = state.auth;
+  if (!lastActivity || !sessionTimeout) return false;
+  
+  const now = Date.now();
+  const timeSinceLastActivity = now - lastActivity;
+  return timeSinceLastActivity > sessionTimeout;
+};
+
+export const selectTimeUntilSessionExpiry = (state: { auth: AuthState }) => {
+  const { lastActivity, sessionTimeout } = state.auth;
+  if (!lastActivity || !sessionTimeout) return null;
+  
+  const now = Date.now();
+  const timeSinceLastActivity = now - lastActivity;
+  const timeRemaining = sessionTimeout - timeSinceLastActivity;
+  
+  return timeRemaining > 0 ? timeRemaining : 0;
+};
 
 export default authSlice.reducer;

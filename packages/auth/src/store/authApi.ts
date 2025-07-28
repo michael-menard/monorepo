@@ -18,6 +18,7 @@ export const authApi = createApi({
     baseUrl,
     credentials: 'include', // for cookies
   }),
+  tagTypes: ['Auth', 'User'],
   endpoints: (builder) => ({
     login: builder.mutation<AuthResponse, LoginRequest>({
       query: (body) => ({
@@ -25,6 +26,7 @@ export const authApi = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['Auth', 'User'],
     }),
     signup: builder.mutation<AuthResponse, SignupRequest>({
       query: (body) => ({
@@ -32,12 +34,14 @@ export const authApi = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['Auth'],
     }),
     logout: builder.mutation<void, void>({
       query: () => ({
         url: '/logout',
         method: 'POST',
       }),
+      invalidatesTags: ['Auth', 'User'],
     }),
     refresh: builder.mutation<AuthResponse, void>({
       query: () => ({
@@ -58,12 +62,14 @@ export const authApi = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['Auth'],
     }),
     checkAuth: builder.query<AuthResponse, void>({
       query: () => ({
         url: '/check-auth',
         method: 'GET',
       }),
+      providesTags: ['Auth', 'User'],
     }),
     verifyEmail: builder.mutation<AuthResponse, VerifyEmailRequest>({
       query: (body) => ({
@@ -71,12 +77,20 @@ export const authApi = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['User'],
+    }),
+    resendVerificationCode: builder.mutation<AuthResponse, void>({
+      query: () => ({
+        url: '/resend-verification',
+        method: 'POST',
+      }),
     }),
     socialLogin: builder.mutation<AuthResponse, { provider: 'google' | 'twitter' | 'facebook' | 'github' }>({
       query: ({ provider }) => ({
         url: `/social/${provider}`,
         method: 'GET',
       }),
+      invalidatesTags: ['Auth', 'User'],
     }),
   }),
 });
@@ -90,5 +104,6 @@ export const {
   useConfirmResetMutation,
   useCheckAuthQuery,
   useVerifyEmailMutation,
+  useResendVerificationCodeMutation,
   useSocialLoginMutation,
 } = authApi; 

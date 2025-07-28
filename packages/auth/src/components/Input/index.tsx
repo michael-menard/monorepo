@@ -1,4 +1,5 @@
-import React from "react";
+
+import React from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ComponentType<{ className?: string }>;

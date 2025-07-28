@@ -1,5 +1,11 @@
 // If you see a type error for '@reduxjs/toolkit/query/react', ensure you have @reduxjs/toolkit installed.
-import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import {
+  createApi,
+  fetchBaseQuery,
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react';
 import type { EndpointBuilder } from '@reduxjs/toolkit/query';
 
 export interface GalleryImage {
@@ -52,38 +58,52 @@ export const galleryApi = createApi({
     },
   }),
   tagTypes: ['GalleryImage'],
-  endpoints: (builder: EndpointBuilder<BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>, 'GalleryImage', 'galleryApi'>) => ({
+  endpoints: (
+    builder: EndpointBuilder<
+      BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>,
+      'GalleryImage',
+      'galleryApi'
+    >,
+  ) => ({
     getImages: builder.query<GalleryImagesResponse, void>({
       query: () => '/',
       providesTags: (result: GalleryImagesResponse | undefined) =>
         result?.data
           ? [
-              ...result.data.map(({ id }: { id: string }) => ({ type: 'GalleryImage' as const, id })),
+              ...result.data.map(({ id }: { id: string }) => ({
+                type: 'GalleryImage' as const,
+                id,
+              })),
               { type: 'GalleryImage', id: 'LIST' },
             ]
           : [{ type: 'GalleryImage', id: 'LIST' }],
     }),
     getImageById: builder.query<GalleryImageResponse, string>({
       query: (id: string) => `/${id}`,
-      providesTags: (result: GalleryImageResponse | undefined, error: unknown, id: string) => [{ type: 'GalleryImage', id }],
+      providesTags: (result: GalleryImageResponse | undefined, error: unknown, id: string) => [
+        { type: 'GalleryImage', id },
+      ],
     }),
     searchImages: builder.query<SearchResponse, SearchFilters>({
       query: (filters) => {
         const params = new URLSearchParams();
         if (filters.query) params.append('q', filters.query);
         if (filters.tags && filters.tags.length > 0) {
-          filters.tags.forEach(tag => params.append('tag', tag));
+          filters.tags.forEach((tag) => params.append('tag', tag));
         }
         if (filters.category) params.append('category', filters.category);
         if (filters.from !== undefined) params.append('from', filters.from.toString());
         if (filters.size !== undefined) params.append('size', filters.size.toString());
-        
+
         return `/search?${params.toString()}`;
       },
       providesTags: (result: SearchResponse | undefined) =>
         result?.data
           ? [
-              ...result.data.map(({ id }: { id: string }) => ({ type: 'GalleryImage' as const, id })),
+              ...result.data.map(({ id }: { id: string }) => ({
+                type: 'GalleryImage' as const,
+                id,
+              })),
               { type: 'GalleryImage', id: 'LIST' },
             ]
           : [{ type: 'GalleryImage', id: 'LIST' }],
@@ -114,15 +134,20 @@ export const galleryApi = createApi({
       },
       invalidatesTags: [{ type: 'GalleryImage', id: 'LIST' }],
     }),
-    updateImage: builder.mutation<GalleryImageResponse, { id: string; data: Partial<GalleryImage> }>({
+    updateImage: builder.mutation<
+      GalleryImageResponse,
+      { id: string; data: Partial<GalleryImage> }
+    >({
       query: ({ id, data }: { id: string; data: Partial<GalleryImage> }) => ({
         url: `/${id}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (result: GalleryImageResponse | undefined, error: unknown, arg: { id: string; data: Partial<GalleryImage> }) => [
-        { type: 'GalleryImage', id: arg.id },
-      ],
+      invalidatesTags: (
+        result: GalleryImageResponse | undefined,
+        error: unknown,
+        arg: { id: string; data: Partial<GalleryImage> },
+      ) => [{ type: 'GalleryImage', id: arg.id }],
     }),
     deleteImage: builder.mutation<{ message: string }, string>({
       query: (id: string) => ({
@@ -149,4 +174,4 @@ export const {
   useDeleteImageMutation,
 } = galleryApi;
 
-// For testing: mock fetchBaseQuery or use MSW to mock endpoints 
+// For testing: mock fetchBaseQuery or use MSW to mock endpoints

@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useGetAlbumByIdQuery, useUpdateAlbumMutation, useDeleteAlbumMutation, useRemoveImageFromAlbumMutation } from '../../store/albumsApi.js';
-import GalleryCard from '../GalleryCard/index.js';
+import {
+  useGetAlbumByIdQuery,
+  useUpdateAlbumMutation,
+  useDeleteAlbumMutation,
+  useRemoveImageFromAlbumMutation,
+} from '../../store/albumsApi.js';
+import ImageCard from '../ImageCard/index.js';
 import { motion } from 'framer-motion';
 
 interface AlbumViewProps {
@@ -10,17 +15,12 @@ interface AlbumViewProps {
   onShare?: () => void;
 }
 
-const AlbumView: React.FC<AlbumViewProps> = ({ 
-  albumId, 
-  onBack, 
-  onEdit, 
-  onShare 
-}) => {
+const AlbumView: React.FC<AlbumViewProps> = ({ albumId, onBack, onEdit, onShare }) => {
   const { data, error, isLoading, refetch } = useGetAlbumByIdQuery(albumId);
   const [updateAlbum] = useUpdateAlbumMutation();
   const [deleteAlbum] = useDeleteAlbumMutation();
   const [removeImageFromAlbum] = useRemoveImageFromAlbumMutation();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -36,7 +36,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
 
   const handleSaveEdit = async () => {
     if (!data?.album) return;
-    
+
     try {
       await updateAlbum({
         id: albumId,
@@ -93,7 +93,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   if (isLoading) {
     return (
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="animate-pulse">
+        <div className="animate-pulse" data-testid="loading-skeleton">
           <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
@@ -120,14 +120,14 @@ const AlbumView: React.FC<AlbumViewProps> = ({
           <div className="text-red-600 text-lg font-medium mb-2">Failed to load album</div>
           <div className="text-gray-500 text-sm mb-4">Please try refreshing the page</div>
           <div className="flex justify-center space-x-4">
-            <button 
+            <button
               onClick={() => refetch()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Retry
             </button>
             {onBack && (
-              <button 
+              <button
                 onClick={onBack}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
               >
@@ -146,7 +146,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-2">Album not found</div>
           {onBack && (
-            <button 
+            <button
               onClick={onBack}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
@@ -163,7 +163,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Album Header */}
-      <motion.div 
+      <motion.div
         className="mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -178,11 +178,16 @@ const AlbumView: React.FC<AlbumViewProps> = ({
                 aria-label="Go back"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
             )}
-            
+
             {isEditing ? (
               <div className="flex-1 max-w-2xl">
                 <input
@@ -203,9 +208,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
             ) : (
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900">{album.title}</h1>
-                {album.description && (
-                  <p className="text-gray-600 mt-2">{album.description}</p>
-                )}
+                {album.description && <p className="text-gray-600 mt-2">{album.description}</p>}
               </div>
             )}
           </div>
@@ -255,15 +258,20 @@ const AlbumView: React.FC<AlbumViewProps> = ({
 
         {/* Album Metadata */}
         <div className="flex items-center space-x-6 text-sm text-gray-500">
-          <span>{images?.length || 0} image{(images?.length || 0) !== 1 ? 's' : ''}</span>
+          <span>
+            {images?.length || 0} image{(images?.length || 0) !== 1 ? 's' : ''}
+          </span>
           <span>Created {new Date(album.createdAt).toLocaleDateString()}</span>
           <span>Last updated {new Date(album.lastUpdatedAt).toLocaleDateString()}</span>
         </div>
 
         {/* Images Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" role="grid">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+          role="grid"
+        >
           {images?.map((image) => (
-            <GalleryCard
+            <ImageCard
               key={image.id}
               src={image.url}
               title={image.title}
@@ -309,4 +317,4 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   );
 };
 
-export default AlbumView; 
+export default AlbumView;

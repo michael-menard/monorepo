@@ -1,0 +1,172 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Lint, Test, and Build Changed
+        run: pnpm turbo run lint test build --since=origin/main
+
+
+  deploy-web:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=apps/web
+
+
+  deploy-auth-api:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=apps/auth-api
+      - name: Deploy to Serverless
+        run: |
+          cd apps/auth-api
+          npx serverless deploy
+
+
+  deploy-gallery-api:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=apps/gallery-api
+      - name: Deploy to Serverless
+        run: |
+          cd apps/gallery-api
+          npx serverless deploy
+
+
+  deploy-wishlist-api:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=apps/wishlist-api
+      - name: Deploy to Serverless
+        run: |
+          cd apps/wishlist-api
+          npx serverless deploy
+
+
+  deploy-ui:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=packages/ui
+
+
+  deploy-auth:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=packages/auth
+
+
+  deploy-gallery:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=packages/gallery
+
+
+  deploy-wishlist:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=packages/wishlist
+
+
+  deploy-profile:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=packages/profile
+
+
+  deploy-moc:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install deps
+        run: pnpm install
+      - name: Build app
+        run: pnpm turbo run build --filter=packages/moc

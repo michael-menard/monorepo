@@ -1,13 +1,13 @@
+import React from 'react';
 import { motion } from "framer-motion";
 import { Mail, Lock } from "lucide-react";
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../Input/index.js";
 import { useAuth } from '../../index.js';
 
 const Login = () => {
-	const [email, setEmail] = (React as any).useState("");
-	const [password, setPassword] = (React as any).useState("");
+	const [email, setEmail] = React.useState("");
+	const [password, setPassword] = React.useState("");
 	const navigate = useNavigate();
 	const { login, isLoading, error } = useAuth();
 
@@ -68,7 +68,7 @@ const Login = () => {
 							Forgot password?
 						</button>
 					</div>
-					{error && <p className='text-red-500 font-semibold mb-2'>{error}</p>}
+					{error && <p className='text-red-500 font-semibold mb-2'>{String(error)}</p>}
 
 					<motion.button
 						whileHover={{ scale: 1.02 }}
