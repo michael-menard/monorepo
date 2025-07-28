@@ -1,24 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Filter, Tag, ChevronDown } from 'lucide-react';
-
-export interface FilterBarProps {
-  onSearchChange: (query: string) => void;
-  onTagsChange: (tags: string[]) => void;
-  onCategoryChange: (category: string) => void;
-  onClearFilters: () => void;
-  availableTags?: string[];
-  availableCategories?: string[];
-  searchPlaceholder?: string;
-  className?: string;
-  debounceMs?: number;
-}
-
-export interface FilterState {
-  searchQuery: string;
-  selectedTags: string[];
-  selectedCategory: string;
-}
+import type { FilterBarProps, FilterState } from '../../schemas';
 
 const FilterBar: React.FC<FilterBarProps> = ({
   onSearchChange,

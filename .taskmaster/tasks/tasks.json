@@ -1558,7 +1558,7 @@
     "id": "30",
     "title": "Implement FilterBar component",
     "description": "Create search and filter bar with Elasticsearch integration",
-    "status": "pending",
+    "status": "done",
     "priority": "medium",
     "dependencies": [
       "25"

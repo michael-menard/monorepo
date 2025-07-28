@@ -17,8 +17,8 @@ const mockConfirmReset = vi.fn();
 const mockUseAuth = vi.fn(() => ({
   confirmReset: mockConfirmReset,
   isLoading: false,
-  error: null,
-  message: null,
+  error: null as any,
+  message: null as string | null,
 }));
 
 vi.mock('../../../hooks/useAuth', () => ({
@@ -31,8 +31,8 @@ describe('ConfirmResetPasswordForm', () => {
     mockUseAuth.mockReturnValue({
       confirmReset: mockConfirmReset,
       isLoading: false,
-      error: null,
-      message: null,
+      error: null as any,
+      message: null as string | null,
     });
   });
 
@@ -60,7 +60,7 @@ describe('ConfirmResetPasswordForm', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
+      expect(screen.getAllByText('Password must be at least 8 characters')).toHaveLength(2);
     });
   });
 
@@ -75,7 +75,7 @@ describe('ConfirmResetPasswordForm', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+      expect(screen.getAllByText('Passwords do not match')).toHaveLength(2);
     });
   });
 

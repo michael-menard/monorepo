@@ -49,7 +49,28 @@ export const AlbumCreationDataSchema = z.object({
   imageIds: z.array(z.string()).min(1, 'At least one image is required'),
 });
 
+// FilterBar schemas
+export const FilterStateSchema = z.object({
+  searchQuery: z.string(),
+  selectedTags: z.array(z.string()),
+  selectedCategory: z.string(),
+});
+
+export const FilterBarPropsSchema = z.object({
+  onSearchChange: z.function().args(z.string()).returns(z.void()),
+  onTagsChange: z.function().args(z.array(z.string())).returns(z.void()),
+  onCategoryChange: z.function().args(z.string()).returns(z.void()),
+  onClearFilters: z.function().args().returns(z.void()),
+  availableTags: z.array(z.string()).optional().default([]),
+  availableCategories: z.array(z.string()).optional().default([]),
+  searchPlaceholder: z.string().optional().default('Search images...'),
+  className: z.string().optional().default(''),
+  debounceMs: z.number().optional().default(300),
+});
+
 // Export types derived from schemas
 export type CreateAlbumDialogProps = z.infer<typeof CreateAlbumDialogPropsSchema>;
 export type DragDropData = z.infer<typeof DragDropDataSchema>;
 export type AlbumCreationData = z.infer<typeof AlbumCreationDataSchema>;
+export type FilterState = z.infer<typeof FilterStateSchema>;
+export type FilterBarProps = z.infer<typeof FilterBarPropsSchema>;
