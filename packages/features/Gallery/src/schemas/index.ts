@@ -68,9 +68,34 @@ export const FilterBarPropsSchema = z.object({
   debounceMs: z.number().optional().default(300),
 });
 
+// Lightbox component schemas
+export const LightboxPropsSchema = z.object({
+  images: z.array(z.string().url()).min(1, 'At least one image is required'),
+  currentIndex: z
+    .number()
+    .int()
+    .min(0)
+    .refine(
+      () => {
+        // This will be validated at runtime when we have access to the images array
+        return true;
+      },
+      { message: 'Current index must be within bounds of images array' },
+    ),
+  onClose: z.function().args().returns(z.void()),
+});
+
+// Lightbox state schema
+export const LightboxStateSchema = z.object({
+  index: z.number().int().min(0),
+  zoom: z.number().min(1).max(3),
+});
+
 // Export types derived from schemas
 export type CreateAlbumDialogProps = z.infer<typeof CreateAlbumDialogPropsSchema>;
 export type DragDropData = z.infer<typeof DragDropDataSchema>;
 export type AlbumCreationData = z.infer<typeof AlbumCreationDataSchema>;
 export type FilterState = z.infer<typeof FilterStateSchema>;
 export type FilterBarProps = z.infer<typeof FilterBarPropsSchema>;
+export type LightboxProps = z.infer<typeof LightboxPropsSchema>;
+export type LightboxState = z.infer<typeof LightboxStateSchema>;

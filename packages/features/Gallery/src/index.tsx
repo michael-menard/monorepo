@@ -90,5 +90,6 @@ const Gallery: React.FC<GalleryProps> = ({
 // Gallery package exports
 export default Gallery;
 export { InspirationGallery };
+export { Lightbox } from './components/Lightbox/index.js';
 export * from './types/index.js';
 export * from './schemas/index.js';

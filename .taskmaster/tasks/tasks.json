@@ -1392,7 +1392,7 @@
     "id": "27",
     "title": "Merge GalleryImageCard and InspirationCard into GalleryCard",
     "description": "Create unified GalleryCard component with advanced features",
-    "status": "pending",
+    "status": "done",
     "priority": "high",
     "dependencies": [
       "25"
@@ -1611,7 +1611,7 @@
     "id": "31",
     "title": "Implement Lightbox component",
     "description": "Create accessible lightbox for image viewing",
-    "status": "pending",
+    "status": "done",
     "priority": "medium",
     "dependencies": [
       "27"
