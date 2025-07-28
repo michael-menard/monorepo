@@ -336,4 +336,4 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
   );
 };
 
-export default AlbumViewWithProps; 
+export default AlbumViewWithProps;

@@ -5,6 +5,15 @@ import { motion } from 'framer-motion';
 import InspirationGallery from '../index.js';
 import type { GalleryImage } from '../../../types/index.js';
 
+// Mock IntersectionObserver
+const mockIntersectionObserver = vi.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: () => null,
+  unobserve: () => null,
+  disconnect: () => null,
+});
+window.IntersectionObserver = mockIntersectionObserver;
+
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {

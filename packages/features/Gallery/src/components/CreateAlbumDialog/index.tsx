@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js';
-import { GalleryImage } from '../../store/albumsApi.js';
 import { GalleryAlbum } from '../../store/albumsApi.js';
 import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
-import { AlbumCreationDataSchema, CreateAlbumDialogProps } from '../../schemas/index.js';
+import { AlbumCreationDataSchema, CreateAlbumDialogProps, type AlbumCreationData } from '../../schemas/index.js';
 import { z } from 'zod';
 
 const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
@@ -12,6 +11,7 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   onClose,
   selectedImages,
   onAlbumCreated,
+  onImagesSelected,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -115,7 +115,26 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   const handleImagesDropped = (imageIds: string[]) => {
     // This would typically be handled by the parent component
     // that manages the selectedImages state
-    console.log('Images dropped:', imageIds);
+    if (onImagesSelected) {
+      // Add the dropped image IDs to the selected images
+      const newSelectedImages = [...selectedImages];
+      imageIds.forEach((imageId) => {
+        if (!newSelectedImages.find(img => img.id === imageId)) {
+          // Find the image data from the gallery context
+          // For now, we'll create a minimal image object
+          newSelectedImages.push({
+            id: imageId,
+            url: '', // This would be populated from the gallery context
+            title: `Image ${imageId}`,
+            description: '',
+            author: '',
+            tags: [],
+            createdAt: new Date().toISOString(),
+          });
+        }
+      });
+      onImagesSelected(newSelectedImages);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {

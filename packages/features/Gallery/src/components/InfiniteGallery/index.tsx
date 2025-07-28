@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageCard from '../ImageCard/index.js';
 import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
+import { useInfiniteGallery } from '../../hooks/useInfiniteGallery.js';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver.js';
-import type { GalleryImage } from '../../types/index.js';
+import type { GalleryFilters } from '../../store/galleryApi.js';
 
-export interface InspirationGalleryProps {
-  images: GalleryImage[];
+export interface InfiniteGalleryProps {
   className?: string;
-  onImageClick?: (image: GalleryImage) => void;
+  initialFilters?: Omit<GalleryFilters, 'cursor' | 'limit'>;
+  pageSize?: number;
+  onImageClick?: (image: any) => void;
   onImageLike?: (imageId: string, liked: boolean) => void;
   onImageShare?: (imageId: string) => void;
   onImageDelete?: (imageId: string) => void;
@@ -16,9 +18,6 @@ export interface InspirationGalleryProps {
   onImageAddToAlbum?: (imageId: string) => void;
   onImagesSelected?: (imageIds: string[]) => void;
   selectedImages?: string[];
-  onLoadMore?: () => Promise<void>;
-  hasMore?: boolean;
-  loading?: boolean;
   columns?: {
     sm?: number;
     md?: number;
@@ -28,9 +27,10 @@ export interface InspirationGalleryProps {
   gap?: number;
 }
 
-const InspirationGallery: React.FC<InspirationGalleryProps> = ({
-  images,
+const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
   className = '',
+  initialFilters = {},
+  pageSize = 20,
   onImageClick,
   onImageLike,
   onImageShare,
@@ -39,26 +39,25 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   onImageAddToAlbum,
   onImagesSelected,
   selectedImages = [],
-  onLoadMore,
-  hasMore = false,
-  loading = false,
   columns = { sm: 2, md: 3, lg: 4, xl: 5 },
   gap = 4,
 }) => {
-  const [organizedImages, setOrganizedImages] = useState<GalleryImage[][]>([]);
-  const [imageHeights, setImageHeights] = useState<{ [key: string]: number }>({});
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const { actions: dragActions } = useAlbumDragAndDrop();
+
+  // Use infinite gallery hook
+  const { items, isLoading, isFetching, error, hasMore, loadMore, refresh } = useInfiniteGallery({
+    initialFilters,
+    pageSize,
+  });
 
   // Intersection Observer for infinite scroll
   const handleIntersection = useCallback(
     (isIntersecting: boolean) => {
-      if (isIntersecting && hasMore && !loading && onLoadMore) {
-        onLoadMore();
+      if (isIntersecting && hasMore && !isFetching) {
+        loadMore();
       }
     },
-    [hasMore, loading, onLoadMore],
+    [hasMore, isFetching, loadMore],
   );
 
   const { ref: loadMoreRef } = useIntersectionObserver(handleIntersection, {
@@ -71,40 +70,6 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
     const { sm, md, lg, xl } = columns;
     return `columns-1 ${sm ? `sm:columns-${sm}` : ''} ${md ? `md:columns-${md}` : ''} ${lg ? `lg:columns-${lg}` : ''} ${xl ? `xl:columns-${xl}` : ''}`;
   };
-
-  // Organize images into columns for masonry layout
-  const organizeImagesIntoColumns = (images: GalleryImage[]) => {
-    const { sm = 2, md = 3, lg = 4, xl = 5 } = columns;
-    const maxColumns = Math.max(sm, md, lg, xl);
-
-    const imageColumns: GalleryImage[][] = Array.from({ length: maxColumns }, () => []);
-    const columnHeights = Array.from({ length: maxColumns }, () => 0);
-
-    images.forEach((image) => {
-      // Find the shortest column
-      const shortestColumnIndex = columnHeights.indexOf(Math.min(...columnHeights));
-      imageColumns[shortestColumnIndex].push(image);
-
-      // Estimate height (you could make this more sophisticated)
-      const estimatedHeight = imageHeights[image.id] || 300;
-      columnHeights[shortestColumnIndex] += estimatedHeight + gap;
-    });
-
-    return imageColumns;
-  };
-
-  // Handle image load to get actual heights
-  const handleImageLoad = useCallback((imageId: string, height: number) => {
-    setImageHeights((prev) => ({
-      ...prev,
-      [imageId]: height,
-    }));
-  }, []);
-
-  // Update organized images when images or heights change
-  useEffect(() => {
-    setOrganizedImages(organizeImagesIntoColumns(images));
-  }, [images, columns, imageHeights, gap]);
 
   const handleDragStart = (e: React.DragEvent, imageId: string) => {
     dragActions.handleDragStart(e, [imageId]);
@@ -119,7 +84,27 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
     }
   };
 
-  if (!images || images.length === 0) {
+  // Handle errors
+  if (error) {
+    return (
+      <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
+        <div className="text-center">
+          <div className="text-6xl mb-4">❌</div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Error loading gallery</h3>
+          <p className="text-gray-600 mb-4">Something went wrong while loading your images.</p>
+          <button
+            onClick={refresh}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle empty state
+  if (!isLoading && (!items || items.length === 0)) {
     return (
       <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
         <motion.div
@@ -129,8 +114,8 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
           transition={{ duration: 0.5 }}
         >
           <div className="text-8xl mb-6">🎨</div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">No inspiration yet</h3>
-          <p className="text-gray-600 text-lg">Start adding images to your inspiration gallery!</p>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">No images yet</h3>
+          <p className="text-gray-600 text-lg">Start adding images to your gallery!</p>
         </motion.div>
       </div>
     );
@@ -139,15 +124,11 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   return (
     <div className={`w-full ${className}`}>
       {/* Masonry Gallery */}
-      <div
-        ref={containerRef}
-        className={`${getColumnClasses()} gap-${gap}`}
-        style={{ columnGap: `${gap * 0.25}rem` }}
-      >
+      <div className={`${getColumnClasses()} gap-${gap}`} style={{ columnGap: `${gap * 0.25}rem` }}>
         <AnimatePresence>
-          {images.map((image, index) => (
+          {items.map((item, index) => (
             <motion.div
-              key={image.id}
+              key={item.id}
               className="break-inside-avoid mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -160,33 +141,43 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
               layout
             >
               <ImageCard
-                src={image.url}
-                alt={image.title || image.description || 'Gallery image'}
-                title={image.title || 'Untitled'}
-                description={image.description}
-                author={image.author}
-                uploadDate={image.createdAt}
-                tags={image.tags}
-                onView={() => onImageClick?.(image)}
-                onLike={(liked) => onImageLike?.(image.id, liked)}
-                onShare={() => onImageShare?.(image.id)}
-                onDelete={() => onImageDelete?.(image.id)}
-                onDownload={() => onImageDownload?.(image.id)}
-                onAddToAlbum={() => onImageAddToAlbum?.(image.id)}
-                draggableId={image.id}
+                src={item.url || ''}
+                alt={item.title || item.description || 'Gallery image'}
+                title={item.title || 'Untitled'}
+                description={item.description}
+                author={item.author}
+                uploadDate={item.createdAt}
+                tags={item.tags}
+                onView={() => onImageClick?.(item)}
+                onLike={(liked) => onImageLike?.(item.id, liked)}
+                onShare={() => onImageShare?.(item.id)}
+                onDelete={() => onImageDelete?.(item.id)}
+                onDownload={() => onImageDownload?.(item.id)}
+                onAddToAlbum={() => onImageAddToAlbum?.(item.id)}
+                draggableId={item.id}
                 onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
-                selected={selectedImages.includes(image.id)}
-                onSelect={(checked) => handleImageSelect(image.id, checked)}
+                selected={selectedImages.includes(item.id)}
+                onSelect={(checked) => handleImageSelect(item.id, checked)}
               />
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="text-gray-600">Loading gallery...</span>
+          </div>
+        </div>
+      )}
+
       {/* Load More Trigger */}
       {hasMore && (
         <div ref={loadMoreRef} className="flex justify-center py-8">
-          {loading ? (
+          {isFetching ? (
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
               <span className="text-gray-600">Loading more images...</span>
@@ -198,12 +189,10 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
       )}
 
       {/* End of gallery message */}
-      {!hasMore && images.length > 0 && (
+      {!hasMore && items.length > 0 && (
         <div className="flex justify-center py-8">
           <div className="text-center">
-            <p className="text-gray-600 text-sm">
-              You've reached the end of your inspiration gallery!
-            </p>
+            <p className="text-gray-600 text-sm">You've reached the end of your gallery!</p>
           </div>
         </div>
       )}
@@ -211,4 +200,4 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   );
 };
 
-export default InspirationGallery;
+export default InfiniteGallery; 

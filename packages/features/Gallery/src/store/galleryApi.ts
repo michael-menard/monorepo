@@ -44,6 +44,36 @@ export interface SearchResponse {
   message?: string;
 }
 
+// New interfaces for unified gallery with pagination
+export interface GalleryItem {
+  id: string;
+  type: 'image' | 'album';
+  url?: string;
+  title: string;
+  description?: string;
+  author?: string;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+  [key: string]: any;
+}
+
+export interface GalleryFilters {
+  type?: 'album' | 'image' | 'all';
+  tag?: string;
+  albumId?: string;
+  flagged?: boolean;
+  search?: string;
+  limit?: number;
+  cursor?: number;
+}
+
+export interface GalleryResponse {
+  items: GalleryItem[];
+  nextCursor: number | null;
+  hasMore: boolean;
+}
+
 const baseUrl = 'http://localhost/api/gallery'; // Always use absolute URL for consistency in tests and dev
 
 export const galleryApi = createApi({
@@ -57,14 +87,40 @@ export const galleryApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['GalleryImage'],
+  tagTypes: ['GalleryImage', 'GalleryAlbum', 'GalleryItem'],
   endpoints: (
     builder: EndpointBuilder<
       BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>,
-      'GalleryImage',
+      'GalleryImage' | 'GalleryAlbum' | 'GalleryItem',
       'galleryApi'
     >,
   ) => ({
+    // New unified gallery endpoint with infinite scroll support
+    getGallery: builder.query<GalleryResponse, GalleryFilters>({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        if (filters.type) params.append('type', filters.type);
+        if (filters.tag) params.append('tag', filters.tag);
+        if (filters.albumId) params.append('albumId', filters.albumId);
+        if (filters.flagged !== undefined) params.append('flagged', filters.flagged.toString());
+        if (filters.search) params.append('search', filters.search);
+        if (filters.limit) params.append('limit', filters.limit.toString());
+        if (filters.cursor !== undefined) params.append('cursor', filters.cursor.toString());
+
+        return `/?${params.toString()}`;
+      },
+      providesTags: (result: GalleryResponse | undefined) =>
+        result?.items
+          ? [
+              ...result.items.map(({ id, type }) => ({
+                type: type === 'image' ? 'GalleryImage' : 'GalleryAlbum',
+                id,
+              })),
+              { type: 'GalleryItem', id: 'LIST' },
+            ]
+          : [{ type: 'GalleryItem', id: 'LIST' }],
+    }),
+
     getImages: builder.query<GalleryImagesResponse, void>({
       query: () => '/',
       providesTags: (result: GalleryImagesResponse | undefined) =>
@@ -132,7 +188,10 @@ export const galleryApi = createApi({
           body: formData,
         };
       },
-      invalidatesTags: [{ type: 'GalleryImage', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'GalleryImage', id: 'LIST' },
+        { type: 'GalleryItem', id: 'LIST' },
+      ],
     }),
     updateImage: builder.mutation<
       GalleryImageResponse,
@@ -157,6 +216,44 @@ export const galleryApi = createApi({
       invalidatesTags: (result: { message: string } | undefined, error: unknown, id: string) => [
         { type: 'GalleryImage', id },
         { type: 'GalleryImage', id: 'LIST' },
+        { type: 'GalleryItem', id: 'LIST' },
+      ],
+    }),
+    batchDeleteImages: builder.mutation<{ message: string; deletedIds: string[] }, string[]>({
+      query: (imageIds: string[]) => ({
+        url: '/batch-delete',
+        method: 'DELETE',
+        body: { imageIds },
+      }),
+      invalidatesTags: (
+        result: { message: string; deletedIds: string[] } | undefined,
+        error: unknown,
+        imageIds: string[],
+      ) => [
+        ...imageIds.map((id) => ({ type: 'GalleryImage' as const, id })),
+        { type: 'GalleryImage', id: 'LIST' },
+        { type: 'GalleryItem', id: 'LIST' },
+      ],
+    }),
+    batchAddImagesToAlbum: builder.mutation<
+      { message: string; albumId: string; addedIds: string[] },
+      { albumId: string; imageIds: string[] }
+    >({
+      query: ({ albumId, imageIds }) => ({
+        url: `/albums/${albumId}/batch-add`,
+        method: 'POST',
+        body: { imageIds },
+      }),
+      invalidatesTags: (
+        result: { message: string; albumId: string; addedIds: string[] } | undefined,
+        error: unknown,
+        arg: { albumId: string; imageIds: string[] },
+      ) => [
+        { type: 'GalleryAlbum', id: arg.albumId },
+        { type: 'GalleryAlbum', id: 'LIST' },
+        ...arg.imageIds.map((id) => ({ type: 'GalleryImage' as const, id })),
+        { type: 'GalleryImage', id: 'LIST' },
+        { type: 'GalleryItem', id: 'LIST' },
       ],
     }),
   }),
@@ -164,6 +261,7 @@ export const galleryApi = createApi({
 
 // Export hooks for usage in components
 export const {
+  useGetGalleryQuery,
   useGetImagesQuery,
   useGetImageByIdQuery,
   useSearchImagesQuery,
@@ -172,6 +270,8 @@ export const {
   useUploadImageMutation,
   useUpdateImageMutation,
   useDeleteImageMutation,
+  useBatchDeleteImagesMutation,
+  useBatchAddImagesToAlbumMutation,
 } = galleryApi;
 
 // For testing: mock fetchBaseQuery or use MSW to mock endpoints

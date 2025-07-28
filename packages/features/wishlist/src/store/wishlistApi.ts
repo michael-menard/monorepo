@@ -1,17 +1,16 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { 
-  WishlistItem, 
-  Wishlist, 
-  CreateWishlistItem, 
+import type {
+  WishlistItem,
+  Wishlist,
+  CreateWishlistItem,
   UpdateWishlistItem,
   CreateWishlist,
   UpdateWishlist,
-  WishlistFilter
+  WishlistFilter,
 } from '../schemas';
 
-const baseUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5000/api/wishlist'
-  : '/api/wishlist';
+const baseUrl =
+  process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api/wishlist' : '/api/wishlist';
 
 export const wishlistApi = createApi({
   reducerPath: 'wishlistApi',
@@ -107,6 +106,38 @@ export const wishlistApi = createApi({
         { type: 'WishlistItem', id: wishlistId }
       ],
     }),
+
+    // Batch operations endpoints
+    batchDeleteWishlistItems: builder.mutation<{ message: string; deletedIds: string[] }, { wishlistId: string; itemIds: string[] }>({
+      query: ({ wishlistId, itemIds }) => ({
+        url: `/${wishlistId}/items/batch-delete`,
+        method: 'DELETE',
+        body: { itemIds },
+      }),
+      invalidatesTags: (result, error, { wishlistId }) => [
+        { type: 'WishlistItem', id: wishlistId }
+      ],
+    }),
+    batchUpdateWishlistItems: builder.mutation<{ message: string; updatedIds: string[] }, { wishlistId: string; itemIds: string[]; data: Partial<UpdateWishlistItem> }>({
+      query: ({ wishlistId, itemIds, data }) => ({
+        url: `/${wishlistId}/items/batch-update`,
+        method: 'PUT',
+        body: { itemIds, data },
+      }),
+      invalidatesTags: (result, error, { wishlistId }) => [
+        { type: 'WishlistItem', id: wishlistId }
+      ],
+    }),
+    batchTogglePurchased: builder.mutation<{ message: string; updatedIds: string[] }, { wishlistId: string; itemIds: string[]; isPurchased: boolean }>({
+      query: ({ wishlistId, itemIds, isPurchased }) => ({
+        url: `/${wishlistId}/items/batch-toggle-purchased`,
+        method: 'PUT',
+        body: { itemIds, isPurchased },
+      }),
+      invalidatesTags: (result, error, { wishlistId }) => [
+        { type: 'WishlistItem', id: wishlistId }
+      ],
+    }),
   }),
 });
 
@@ -122,4 +153,7 @@ export const {
   useUpdateWishlistItemMutation,
   useDeleteWishlistItemMutation,
   useReorderWishlistItemsMutation,
+  useBatchDeleteWishlistItemsMutation,
+  useBatchUpdateWishlistItemsMutation,
+  useBatchTogglePurchasedMutation,
 } = wishlistApi; 

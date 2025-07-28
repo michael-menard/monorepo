@@ -33,6 +33,23 @@ export const CreateAlbumDialogPropsSchema = z.object({
     }),
   ),
   onAlbumCreated: z.function().args(z.string()).returns(z.void()).optional(),
+  onImagesSelected: z
+    .function()
+    .args(
+      z.array(
+        z.object({
+          id: z.string(),
+          url: z.string().url(),
+          title: z.string(),
+          description: z.string().optional(),
+          author: z.string().optional(),
+          tags: z.array(z.string()).optional(),
+          createdAt: z.string().optional(),
+        }),
+      ),
+    )
+    .returns(z.void())
+    .optional(),
 });
 
 // Drag and drop data schema

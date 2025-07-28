@@ -164,4 +164,4 @@ export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarRet
     // Computed
     searchParams,
   };
-}; 
+};

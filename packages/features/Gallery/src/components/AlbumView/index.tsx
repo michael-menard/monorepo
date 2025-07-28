@@ -6,6 +6,7 @@ import {
   useRemoveImageFromAlbumMutation,
 } from '../../store/albumsApi.js';
 import ImageCard from '../ImageCard/index.js';
+import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
 import { motion } from 'framer-motion';
 
 interface AlbumViewProps {
@@ -13,13 +14,24 @@ interface AlbumViewProps {
   onBack?: () => void;
   onEdit?: () => void;
   onShare?: () => void;
+  onImagesSelected?: (imageIds: string[]) => void;
+  selectedImages?: string[];
 }
 
-const AlbumView: React.FC<AlbumViewProps> = ({ albumId, onBack, onEdit, onShare }) => {
+const AlbumView: React.FC<AlbumViewProps> = ({ 
+  albumId, 
+  onBack, 
+  onEdit, 
+  onShare,
+  onImagesSelected,
+  selectedImages = [],
+}) => {
   const { data, error, isLoading, refetch } = useGetAlbumByIdQuery(albumId);
   const [updateAlbum] = useUpdateAlbumMutation();
   const [deleteAlbum] = useDeleteAlbumMutation();
   const [removeImageFromAlbum] = useRemoveImageFromAlbumMutation();
+
+  const { actions: dragActions } = useAlbumDragAndDrop();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -87,6 +99,19 @@ const AlbumView: React.FC<AlbumViewProps> = ({ albumId, onBack, onEdit, onShare 
   const handleDownloadImage = (imageId: string) => {
     console.log('Download image:', imageId);
     // TODO: Implement image download
+  };
+
+  const handleDragStart = (e: React.DragEvent, imageId: string) => {
+    dragActions.handleDragStart(e, [imageId]);
+  };
+
+  const handleImageSelect = (imageId: string, checked: boolean) => {
+    if (onImagesSelected) {
+      const newSelected = checked
+        ? [...selectedImages, imageId]
+        : selectedImages.filter((id) => id !== imageId);
+      onImagesSelected(newSelected);
+    }
   };
 
   // Loading state
@@ -283,6 +308,10 @@ const AlbumView: React.FC<AlbumViewProps> = ({ albumId, onBack, onEdit, onShare 
               onShare={() => handleShareImage(image.id)}
               onDownload={() => handleDownloadImage(image.id)}
               onDelete={() => handleRemoveImage(image.id)}
+              draggableId={image.id}
+              onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
+              selected={selectedImages.includes(image.id)}
+              onSelect={(checked) => handleImageSelect(image.id, checked)}
             />
           ))}
         </div>

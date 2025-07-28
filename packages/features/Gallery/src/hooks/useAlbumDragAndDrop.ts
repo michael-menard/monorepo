@@ -129,4 +129,4 @@ export const useAlbumDragAndDrop = (): UseAlbumDragAndDropReturn => {
       dragAreaProps,
     },
   };
-}; 
+};

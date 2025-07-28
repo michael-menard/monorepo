@@ -8,6 +8,7 @@ import type {
   UpdateWishlist,
   DragDrop,
   WishlistFilter,
+  CategoryFilter,
 } from '../schemas';
 
 // Re-export types from schemas
@@ -20,6 +21,7 @@ export type {
   UpdateWishlist,
   DragDrop,
   WishlistFilter,
+  CategoryFilter,
 } from '../schemas';
 
 // Additional types for components
@@ -56,6 +58,13 @@ export interface WishlistFilterProps {
   filter: WishlistFilter;
   onFilterChange: (filter: WishlistFilter) => void;
   categories: string[];
+  className?: string;
+}
+
+export interface CategoryFilterProps {
+  filter: CategoryFilter;
+  onFilterChange: (filter: CategoryFilter) => void;
+  categories?: string[];
   className?: string;
 }
 

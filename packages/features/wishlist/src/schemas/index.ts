@@ -64,6 +64,11 @@ export const wishlistFilterSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// Category filter schema
+export const categoryFilterSchema = z.object({
+  category: z.string().optional(),
+});
+
 // Export types
 export type WishlistItem = z.infer<typeof wishlistItemSchema>;
 export type Wishlist = z.infer<typeof wishlistSchema>;
@@ -72,4 +77,5 @@ export type UpdateWishlistItem = z.infer<typeof updateWishlistItemSchema>;
 export type CreateWishlist = z.infer<typeof createWishlistSchema>;
 export type UpdateWishlist = z.infer<typeof updateWishlistSchema>;
 export type DragDrop = z.infer<typeof dragDropSchema>;
-export type WishlistFilter = z.infer<typeof wishlistFilterSchema>; 
+export type WishlistFilter = z.infer<typeof wishlistFilterSchema>;
+export type CategoryFilter = z.infer<typeof categoryFilterSchema>; 

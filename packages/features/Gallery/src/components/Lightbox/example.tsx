@@ -66,14 +66,10 @@ const LightboxExample: React.FC = () => {
       </div>
 
       {isOpen && (
-        <Lightbox
-          images={sampleImages}
-          currentIndex={currentIndex}
-          onClose={handleClose}
-        />
+        <Lightbox images={sampleImages} currentIndex={currentIndex} onClose={handleClose} />
       )}
     </div>
   );
 };
 
-export default LightboxExample; 
+export default LightboxExample;

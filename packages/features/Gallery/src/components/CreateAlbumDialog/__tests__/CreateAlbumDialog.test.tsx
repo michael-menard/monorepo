@@ -333,6 +333,80 @@ describe('CreateAlbumDialog', () => {
     expect(mockHandleDrop).toHaveBeenCalled();
   });
 
+  it('handles images dropped into the dialog', async () => {
+    const mockOnImagesSelected = vi.fn();
+    const { useAlbumDragAndDrop } = vi.mocked(await import('../../../hooks/useAlbumDragAndDrop'));
+    
+    // Mock the hook to simulate a successful drop
+    const mockHandleDrop = vi.fn((event, callback) => {
+      // Simulate dropping image IDs
+      callback(['new-image-1', 'new-image-2']);
+    });
+    
+    useAlbumDragAndDrop.mockReturnValue({
+      state: {
+        isDragOver: false,
+        isDragging: false,
+        draggedImages: [],
+      },
+      actions: {
+        handleDragStart: vi.fn(),
+        handleDragOver: vi.fn(),
+        handleDragEnter: vi.fn(),
+        handleDragLeave: vi.fn(),
+        handleDrop: mockHandleDrop,
+        dragAreaProps: {
+          onDragOver: vi.fn(),
+          onDragEnter: vi.fn(),
+          onDragLeave: vi.fn(),
+          onDrop: vi.fn(),
+        },
+      },
+    });
+    
+    renderWithProvider({ onImagesSelected: mockOnImagesSelected });
+    
+    const dialog = screen.getByRole('generic');
+    const dropEvent = new Event('drop', { bubbles: true });
+    fireEvent(dialog, dropEvent);
+    
+    expect(mockHandleDrop).toHaveBeenCalled();
+    expect(mockOnImagesSelected).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'new-image-1' }),
+        expect.objectContaining({ id: 'new-image-2' }),
+      ])
+    );
+  });
+
+  it('shows visual feedback when dragging over the dialog', async () => {
+    const { useAlbumDragAndDrop } = vi.mocked(await import('../../../hooks/useAlbumDragAndDrop'));
+    useAlbumDragAndDrop.mockReturnValue({
+      state: {
+        isDragOver: true,
+        isDragging: false,
+        draggedImages: [],
+      },
+      actions: {
+        handleDragStart: vi.fn(),
+        handleDragOver: vi.fn(),
+        handleDragEnter: vi.fn(),
+        handleDragLeave: vi.fn(),
+        handleDrop: vi.fn(),
+        dragAreaProps: {
+          onDragOver: vi.fn(),
+          onDragEnter: vi.fn(),
+          onDragLeave: vi.fn(),
+          onDrop: vi.fn(),
+        },
+      },
+    });
+    
+    renderWithProvider();
+    
+    expect(screen.getByText('Drop images here to add to album')).toBeInTheDocument();
+  });
+
   it('resets form when dialog opens', () => {
     const { rerender } = renderWithProvider({ isOpen: false });
     
