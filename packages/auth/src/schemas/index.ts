@@ -26,6 +26,8 @@ export const LoginSchema = z.object({
   password: z.string().min(8).max(100),
 });
 
+export type LoginFormData = z.infer<typeof LoginSchema>;
+
 // Signup schema
 export const SignupSchema = z.object({
   email: z.string().email(),
@@ -33,7 +35,12 @@ export const SignupSchema = z.object({
   lastName: z.string().min(1).max(50),
   password: z.string().min(8).max(100),
   confirmPassword: z.string().min(8).max(100),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
+
+export type SignupFormData = z.infer<typeof SignupSchema>;
 
 // Forgot password schema
 export const ForgotPasswordSchema = z.object({
@@ -45,6 +52,9 @@ export const ResetPasswordSchema = z.object({
   token: z.string(),
   newPassword: z.string().min(8).max(100),
   confirmPassword: z.string().min(8).max(100),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 // Verify email schema

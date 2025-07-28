@@ -23,4 +23,4 @@ export function isTokenExpired(token: string): boolean {
 
 export async function refreshToken(): Promise<string | null> {
   return null;
-} 
+}

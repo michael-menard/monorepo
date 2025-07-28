@@ -1,29 +1,7 @@
 import React, { useRef, useCallback } from 'react';
-import { Button } from '../button';
-import { Input } from '../input';
-import { Label } from '../label';
-import { cn } from '../lib/utils';
-import { useFileUpload, useMetadataFields, useDragAndDrop, MetadataField } from './hooks';
-
-export interface FileUploadProps {
-  accept?: string | string[];
-  maxSizeMB?: number;
-  multiple?: boolean;
-  showPreview?: boolean;
-  showCropper?: boolean;
-  cropAspectRatio?: number;
-  onUpload: (files: File[] | File, metadata?: Record<string, any>) => Promise<void> | void;
-  onRemove?: (file: File) => void;
-  onError?: (error: string) => void;
-  metadataFields?: MetadataField[];
-  mode?: 'modal' | 'inline' | 'avatar';
-  initialFiles?: File[];
-  uploadButtonLabel?: string;
-  disabled?: boolean;
-  className?: string;
-  dragAreaClassName?: string;
-  previewClassName?: string;
-}
+import { Button, Input, Label, cn } from '@repo/ui';
+import { useFileUpload, useMetadataFields, useDragAndDrop, useUploadProgress } from './hooks';
+import { FileUploadProps, MetadataField } from './schemas';
 
 export const FileUpload: React.FC<FileUploadProps> = ({
   accept = 'image/*',
@@ -56,6 +34,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
   const { state: dragState, actions: dragActions } = useDragAndDrop();
 
+  const { state: progressState, actions: progressActions } = useUploadProgress();
+
   // Initialize with initial files if provided
   React.useEffect(() => {
     if (initialFiles.length > 0) {
@@ -86,8 +66,24 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     }
 
     const metadata = metadataFields.length > 0 ? metadataState.values : undefined;
-    await fileActions.upload(metadata);
-  }, [fileActions, metadataState, metadataActions, metadataFields]);
+    
+    // Start progress tracking
+    progressActions.startUpload(fileState.files);
+    
+    try {
+      await fileActions.upload(metadata);
+      // Mark all files as completed
+      fileState.files.forEach(file => {
+        progressActions.completeUpload(file);
+      });
+    } catch (error) {
+      // Mark all files as failed
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      fileState.files.forEach(file => {
+        progressActions.failUpload(file, errorMessage);
+      });
+    }
+  }, [fileActions, metadataState, metadataActions, metadataFields, fileState.files, progressActions]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     dragActions.handleDrop(e, fileActions.addFiles);
@@ -158,25 +154,66 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             Selected Files ({fileState.files.length})
           </h4>
           <div className="space-y-2">
-            {fileState.files.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">{file.name}</span>
-                  <span className="text-xs text-gray-500">
-                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                  </span>
+            {fileState.files.map((file, index) => {
+              const fileProgress = progressActions.getFileProgress(file);
+              return (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-700">{file.name}</span>
+                    <span className="text-xs text-gray-500">
+                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                    {fileProgress && (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${
+                              fileProgress.status === 'completed'
+                                ? 'bg-green-500'
+                                : fileProgress.status === 'error'
+                                ? 'bg-red-500'
+                                : 'bg-blue-500'
+                            }`}
+                            style={{ width: `${fileProgress.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {fileProgress.progress}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveFile(file)}
+                    disabled={disabled}
+                  >
+                    Remove
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRemoveFile(file)}
-                  disabled={disabled}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
+        </div>
+      )}
+
+      {/* Overall progress */}
+      {progressState.isUploading && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Overall Progress</span>
+            <span>{Math.round(progressState.overallProgress)}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progressState.overallProgress}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-500">
+            {progressState.completedFiles} of {progressState.totalFiles} files completed
+          </p>
         </div>
       )}
 

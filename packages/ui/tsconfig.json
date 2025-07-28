@@ -1,25 +1,29 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
-    "declaration": true,
-    "declarationDir": "dist/types",
-    "jsx": "react-jsx",
-    "types": ["react", "react-dom"],
+    "target": "ESNext",
+    "module": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
-    "composite": true,
+    "noEmit": false,
+    "types": ["react", "react-dom"],
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-ui.json",
-    "noImplicitAny": false,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "target": "ESNext"
+    "noImplicitAny": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
 }

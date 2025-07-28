@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && tsc --project tsconfig.json",
-    "lint": "eslint .",
+    "check-types": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:ui": "vitest --ui",

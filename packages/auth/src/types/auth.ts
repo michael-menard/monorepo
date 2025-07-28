@@ -56,20 +56,21 @@ export const VerifyEmailRequestSchema = z.object({
 export const AuthErrorSchema = z.object({
   success: z.literal(false),
   message: z.string(),
-  errors: z.array(z.object({
-    field: z.string(),
-    message: z.string(),
-  })).optional(),
+  errors: z
+    .array(
+      z.object({
+        field: z.string(),
+        message: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 export const AuthStateSchema = z.object({
-  user: UserSchema.nullable(),
-  tokens: AuthTokensSchema.nullable(),
-  isAuthenticated: z.boolean(),
-  isLoading: z.boolean(),
-  isCheckingAuth: z.boolean().optional(),
-  error: z.string().nullable(),
-  message: z.string().nullable().optional(),
+  isCheckingAuth: z.boolean(),
+  lastActivity: z.number().nullable(),
+  sessionTimeout: z.number(),
+  message: z.string().nullable(),
 });
 
 // TypeScript interfaces (single source of truth)

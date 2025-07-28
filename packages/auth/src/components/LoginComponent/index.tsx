@@ -6,7 +6,7 @@ import Input from '../Input/index.js';
 import { Button } from '../ui/button.js';
 
 export const LoginComponent = () => {
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading } = useAuth();
 
   const {
     register,
@@ -19,7 +19,7 @@ export const LoginComponent = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      clearError();
+      
       await login({ email: data.email, password: data.password });
     } catch (err) {
       // Handle any additional errors here if needed
@@ -65,9 +65,9 @@ export const LoginComponent = () => {
               <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
             )}
           </div>
-          {error && (
+          {errors.root && (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-red-600 text-sm">{error}</p>
+              <p className="text-red-600 text-sm">{String(errors.root.message)}</p>
             </div>
           )}
           <Button

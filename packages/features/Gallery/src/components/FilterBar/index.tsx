@@ -1,24 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Filter, Tag, ChevronDown } from 'lucide-react';
-
-export interface FilterBarProps {
-  onSearchChange: (query: string) => void;
-  onTagsChange: (tags: string[]) => void;
-  onCategoryChange: (category: string) => void;
-  onClearFilters: () => void;
-  availableTags?: string[];
-  availableCategories?: string[];
-  searchPlaceholder?: string;
-  className?: string;
-  debounceMs?: number;
-}
-
-export interface FilterState {
-  searchQuery: string;
-  selectedTags: string[];
-  selectedCategory: string;
-}
+import type { FilterBarProps, FilterState } from '../../schemas';
 
 const FilterBar: React.FC<FilterBarProps> = ({
   onSearchChange,
@@ -56,29 +39,35 @@ const FilterBar: React.FC<FilterBarProps> = ({
       isInitialRender.current = false;
       return;
     }
-    
+
     onSearchChange(debouncedSearchQuery);
   }, [debouncedSearchQuery, onSearchChange]);
 
   const handleSearchChange = useCallback((value: string) => {
-    setFilters(prev => ({ ...prev, searchQuery: value }));
+    setFilters((prev) => ({ ...prev, searchQuery: value }));
   }, []);
 
-  const handleTagToggle = useCallback((tag: string) => {
-    setFilters(prev => {
-      const newTags = prev.selectedTags.includes(tag)
-        ? prev.selectedTags.filter(t => t !== tag)
-        : [...prev.selectedTags, tag];
-      
-      onTagsChange(newTags);
-      return { ...prev, selectedTags: newTags };
-    });
-  }, [onTagsChange]);
+  const handleTagToggle = useCallback(
+    (tag: string) => {
+      setFilters((prev) => {
+        const newTags = prev.selectedTags.includes(tag)
+          ? prev.selectedTags.filter((t) => t !== tag)
+          : [...prev.selectedTags, tag];
 
-  const handleCategoryChange = useCallback((category: string) => {
-    setFilters(prev => ({ ...prev, selectedCategory: category }));
-    onCategoryChange(category);
-  }, [onCategoryChange]);
+        onTagsChange(newTags);
+        return { ...prev, selectedTags: newTags };
+      });
+    },
+    [onTagsChange],
+  );
+
+  const handleCategoryChange = useCallback(
+    (category: string) => {
+      setFilters((prev) => ({ ...prev, selectedCategory: category }));
+      onCategoryChange(category);
+    },
+    [onCategoryChange],
+  );
 
   const handleClearFilters = useCallback(() => {
     setFilters({
@@ -89,7 +78,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
     onClearFilters();
   }, [onClearFilters]);
 
-  const hasActiveFilters = filters.searchQuery || filters.selectedTags.length > 0 || filters.selectedCategory;
+  const hasActiveFilters =
+    filters.searchQuery || filters.selectedTags.length > 0 || filters.selectedCategory;
 
   return (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
@@ -247,4 +237,4 @@ const FilterBar: React.FC<FilterBarProps> = ({
   );
 };
 
-export default FilterBar; 
+export default FilterBar;

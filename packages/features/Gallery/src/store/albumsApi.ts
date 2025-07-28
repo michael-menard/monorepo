@@ -1,4 +1,10 @@
-import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import {
+  createApi,
+  fetchBaseQuery,
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react';
 import type { EndpointBuilder } from '@reduxjs/toolkit/query';
 
 export interface GalleryAlbum {
@@ -46,7 +52,13 @@ export const albumsApi = createApi({
     },
   }),
   tagTypes: ['GalleryAlbum'],
-  endpoints: (builder: EndpointBuilder<BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>, 'GalleryAlbum', 'albumsApi'>) => ({
+  endpoints: (
+    builder: EndpointBuilder<
+      BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>,
+      'GalleryAlbum',
+      'albumsApi'
+    >,
+  ) => ({
     getAlbums: builder.query<GalleryAlbumsResponse, { withImages?: boolean }>({
       query: (params) => ({
         url: '/albums',
@@ -55,7 +67,10 @@ export const albumsApi = createApi({
       providesTags: (result: GalleryAlbumsResponse | undefined) =>
         result?.albums
           ? [
-              ...result.albums.map(({ id }: { id: string }) => ({ type: 'GalleryAlbum' as const, id })),
+              ...result.albums.map(({ id }: { id: string }) => ({
+                type: 'GalleryAlbum' as const,
+                id,
+              })),
               { type: 'GalleryAlbum', id: 'LIST' },
             ]
           : [{ type: 'GalleryAlbum', id: 'LIST' }],
@@ -75,13 +90,20 @@ export const albumsApi = createApi({
       }),
       invalidatesTags: [{ type: 'GalleryAlbum', id: 'LIST' }],
     }),
-    updateAlbum: builder.mutation<GalleryAlbumResponse, { id: string; data: Partial<GalleryAlbum> }>({
+    updateAlbum: builder.mutation<
+      GalleryAlbumResponse,
+      { id: string; data: Partial<GalleryAlbum> }
+    >({
       query: ({ id, data }) => ({
         url: `/albums/${id}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (result: GalleryAlbumResponse | undefined, error: unknown, arg: { id: string; data: Partial<GalleryAlbum> }) => [
+      invalidatesTags: (
+        result: GalleryAlbumResponse | undefined,
+        error: unknown,
+        arg: { id: string; data: Partial<GalleryAlbum> },
+      ) => [
         { type: 'GalleryAlbum', id: arg.id },
         { type: 'GalleryAlbum', id: 'LIST' },
       ],
@@ -102,17 +124,28 @@ export const albumsApi = createApi({
         method: 'POST',
         body: { imageId },
       }),
-      invalidatesTags: (result: GalleryAlbumResponse | undefined, error: unknown, arg: { albumId: string; imageId: string }) => [
+      invalidatesTags: (
+        result: GalleryAlbumResponse | undefined,
+        error: unknown,
+        arg: { albumId: string; imageId: string },
+      ) => [
         { type: 'GalleryAlbum', id: arg.albumId },
         { type: 'GalleryAlbum', id: 'LIST' },
       ],
     }),
-    removeImageFromAlbum: builder.mutation<GalleryAlbumResponse, { albumId: string; imageId: string }>({
+    removeImageFromAlbum: builder.mutation<
+      GalleryAlbumResponse,
+      { albumId: string; imageId: string }
+    >({
       query: ({ albumId, imageId }) => ({
         url: `/albums/${albumId}/images/${imageId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result: GalleryAlbumResponse | undefined, error: unknown, arg: { albumId: string; imageId: string }) => [
+      invalidatesTags: (
+        result: GalleryAlbumResponse | undefined,
+        error: unknown,
+        arg: { albumId: string; imageId: string },
+      ) => [
         { type: 'GalleryAlbum', id: arg.albumId },
         { type: 'GalleryAlbum', id: 'LIST' },
       ],
@@ -129,4 +162,4 @@ export const {
   useDeleteAlbumMutation,
   useAddImageToAlbumMutation,
   useRemoveImageFromAlbumMutation,
-} = albumsApi; 
+} = albumsApi;
