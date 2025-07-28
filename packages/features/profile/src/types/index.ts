@@ -46,6 +46,24 @@ export interface ProfileCardProps {
   className?: string;
 }
 
+export interface ProfilePageProps {
+  profile: Profile;
+  sidebarContent: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  sidebarClassName?: string;
+  contentClassName?: string;
+}
+
+export interface ProfileSidebarProps {
+  profile: Profile;
+  onEdit?: () => void;
+  onUploadAvatar?: (file: File) => void;
+  onViewProfile?: () => void;
+  isEditable?: boolean;
+  className?: string;
+}
+
 export interface ProfileHeaderProps {
   profile: Profile;
   onEdit?: () => void;
