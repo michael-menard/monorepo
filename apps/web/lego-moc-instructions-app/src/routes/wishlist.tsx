@@ -1,14 +1,14 @@
 import { createRoute } from '@tanstack/react-router';
 import { rootRoute } from '../main';
-import MocDetailPage from '../pages/MocDetailPage';
+import WishlistGalleryPage from '../pages/WishlistGalleryPage';
 import { createTanStackRouteGuard } from '../components/TanStackRouteGuard';
 
-export const mocDetailRoute = createRoute({
+export const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/moc-instructions/$id',
+  path: '/wishlist',
   beforeLoad: createTanStackRouteGuard({
     requireAuth: true,
     redirectTo: '/',
   }),
-  component: MocDetailPage,
+  component: WishlistGalleryPage,
 }); 

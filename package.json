@@ -7,9 +7,10 @@
     "apps/api/*",
     "apps/web/*",
     "packages/*",
-    "packages/auth*",
+    "packages/auth",
     "packages/features/*",
-    "packages/ui/*"
+    "packages/ui",
+    "packages/shared"
   ],
   "scripts": {
     "build": "turbo run build",

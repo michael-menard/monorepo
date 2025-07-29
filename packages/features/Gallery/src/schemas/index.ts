@@ -1,118 +1,73 @@
 import { z } from 'zod';
 
-// Gallery image form schema
-export const GalleryImageFormSchema = z.object({
-  title: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
+// Gallery Image Schema
+export const GalleryImageSchema = z.object({
+  id: z.string(),
+  url: z.string().url(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  author: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  file: z.instanceof(File),
-  fileType: z.enum(['image/jpeg', 'image/png', 'image/heic']),
-  fileSize: z.number().max(20 * 1024 * 1024), // 20MB
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-// Album form schema
-export const AlbumFormSchema = z.object({
-  title: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  tags: z.array(z.string()).optional(),
+// Album Schema
+export const AlbumSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  images: z.array(GalleryImageSchema),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-// CreateAlbumDialog props schema
-export const CreateAlbumDialogPropsSchema = z.object({
-  isOpen: z.boolean(),
-  onClose: z.function().args().returns(z.void()),
-  selectedImages: z.array(
-    z.object({
-      id: z.string(),
-      url: z.string().url(),
-      title: z.string(),
-      description: z.string().optional(),
-      author: z.string().optional(),
-      tags: z.array(z.string()).optional(),
-      createdAt: z.string().optional(),
-    }),
-  ),
-  onAlbumCreated: z.function().args(z.string()).returns(z.void()).optional(),
-  onImagesSelected: z
+// Gallery Layout Schema
+export const GalleryLayoutSchema = z.enum(['grid', 'masonry']);
+
+// Gallery Props Schema
+export const GalleryPropsSchema = z.object({
+  images: z.array(GalleryImageSchema),
+  layout: GalleryLayoutSchema.optional().default('grid'),
+  className: z.string().optional().default(''),
+  onImageClick: z.function().args(z.instanceof(Object)).returns(z.void()).optional(),
+  onImageLike: z.function().args(z.string(), z.boolean()).returns(z.void()).optional(),
+  onImageShare: z.function().args(z.string()).returns(z.void()).optional(),
+  onImageDelete: z.function().args(z.string()).returns(z.void()).optional(),
+  onImageDownload: z.function().args(z.string()).returns(z.void()).optional(),
+  onImageAddToAlbum: z.function().args(z.string()).returns(z.void()).optional(),
+  onImagesSelected: z.function().args(z.array(z.string())).returns(z.void()).optional(),
+  selectedImages: z.array(z.string()).optional().default([]),
+  onImagesDeleted: z.function().args(z.array(z.string())).returns(z.void()).optional(),
+  onImagesAddedToAlbum: z
     .function()
-    .args(
-      z.array(
-        z.object({
-          id: z.string(),
-          url: z.string().url(),
-          title: z.string(),
-          description: z.string().optional(),
-          author: z.string().optional(),
-          tags: z.array(z.string()).optional(),
-          createdAt: z.string().optional(),
-        }),
-      ),
-    )
+    .args(z.array(z.string()), z.string())
     .returns(z.void())
     .optional(),
+  onImagesDownloaded: z.function().args(z.array(z.string())).returns(z.void()).optional(),
+  onImagesShared: z.function().args(z.array(z.string())).returns(z.void()).optional(),
 });
 
-// Drag and drop data schema
-export const DragDropDataSchema = z.object({
-  type: z.literal('gallery-image'),
-  imageIds: z.array(z.string()),
-  source: z.enum(['gallery', 'album', 'selection']),
+// Gallery Image Card Props Schema
+export const GalleryImageCardPropsSchema = z.object({
+  image: GalleryImageSchema,
+  onLike: z.function().args(z.string()).returns(z.void()).optional(),
+  onShare: z.function().args(z.string()).returns(z.void()).optional(),
+  className: z.string().optional(),
 });
 
-// Album creation data schema
-export const AlbumCreationDataSchema = z.object({
-  title: z.string().min(1, 'Album title is required').max(100, 'Title too long'),
-  description: z.string().max(500, 'Description too long').optional(),
-  imageIds: z.array(z.string()).min(1, 'At least one image is required'),
-});
-
-// FilterBar schemas
-export const FilterStateSchema = z.object({
-  searchQuery: z.string(),
-  selectedTags: z.array(z.string()),
-  selectedCategory: z.string(),
-});
-
-export const FilterBarPropsSchema = z.object({
-  onSearchChange: z.function().args(z.string()).returns(z.void()),
-  onTagsChange: z.function().args(z.array(z.string())).returns(z.void()),
-  onCategoryChange: z.function().args(z.string()).returns(z.void()),
-  onClearFilters: z.function().args().returns(z.void()),
-  availableTags: z.array(z.string()).optional().default([]),
-  availableCategories: z.array(z.string()).optional().default([]),
-  searchPlaceholder: z.string().optional().default('Search images...'),
-  className: z.string().optional().default(''),
-  debounceMs: z.number().optional().default(300),
-});
-
-// Lightbox component schemas
-export const LightboxPropsSchema = z.object({
-  images: z.array(z.string().url()).min(1, 'At least one image is required'),
-  currentIndex: z
-    .number()
-    .int()
-    .min(0)
-    .refine(
-      () => {
-        // This will be validated at runtime when we have access to the images array
-        return true;
-      },
-      { message: 'Current index must be within bounds of images array' },
-    ),
-  onClose: z.function().args().returns(z.void()),
-});
-
-// Lightbox state schema
-export const LightboxStateSchema = z.object({
-  index: z.number().int().min(0),
-  zoom: z.number().min(1).max(3),
+// Animation Config Schema
+export const AnimationConfigSchema = z.object({
+  duration: z.number().min(0.1).max(2.0).default(0.3),
+  delay: z.number().min(0).max(1.0).default(0.05),
+  easing: z.enum(['linear', 'easeIn', 'easeOut', 'easeInOut']).default('easeOut'),
+  stagger: z.boolean().default(true),
 });
 
 // Export types derived from schemas
-export type CreateAlbumDialogProps = z.infer<typeof CreateAlbumDialogPropsSchema>;
-export type DragDropData = z.infer<typeof DragDropDataSchema>;
-export type AlbumCreationData = z.infer<typeof AlbumCreationDataSchema>;
-export type FilterState = z.infer<typeof FilterStateSchema>;
-export type FilterBarProps = z.infer<typeof FilterBarPropsSchema>;
-export type LightboxProps = z.infer<typeof LightboxPropsSchema>;
-export type LightboxState = z.infer<typeof LightboxStateSchema>;
+export type GalleryImage = z.infer<typeof GalleryImageSchema>;
+export type Album = z.infer<typeof AlbumSchema>;
+export type GalleryLayout = z.infer<typeof GalleryLayoutSchema>;
+export type GalleryProps = z.infer<typeof GalleryPropsSchema>;
+export type GalleryImageCardProps = z.infer<typeof GalleryImageCardPropsSchema>;
+export type AnimationConfig = z.infer<typeof AnimationConfigSchema>;

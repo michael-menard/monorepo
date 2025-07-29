@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
+import { Provider } from 'react-redux'
 import {
   Outlet,
   RouterProvider,
@@ -9,11 +10,13 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
+import { homeRoute } from './routes/home.tsx'
 import { mocDetailRoute } from './routes/moc-detail.tsx'
 import { mocGalleryRoute } from './routes/moc-gallery.tsx'
 import { profileRoute } from './routes/profile.tsx'
+import { wishlistRoute } from './routes/wishlist.tsx'
 
-import Header from './components/Header'
+import Layout from './components/Layout'
 
 import TanStackQueryLayout from './integrations/tanstack-query/layout.tsx'
 
@@ -22,32 +25,25 @@ import * as TanStackQueryProvider from './integrations/tanstack-query/root-provi
 import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
 
-import App from './App.tsx'
+import { store } from './store/store'
 
 export const rootRoute = createRootRoute({
   component: () => (
-    <>
-      <Header />
+    <Layout>
       <Outlet />
       <TanStackRouterDevtools />
-
       <TanStackQueryLayout />
-    </>
+    </Layout>
   ),
 })
 
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: App,
-})
-
 const routeTree = rootRoute.addChildren([
-  indexRoute,
+  homeRoute,
   TanStackQueryDemo(rootRoute),
   mocGalleryRoute,
   mocDetailRoute,
   profileRoute,
+  wishlistRoute,
 ])
 
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext()
@@ -73,9 +69,11 @@ if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
-        <RouterProvider router={router} />
-      </TanStackQueryProvider.Provider>
+      <Provider store={store}>
+        <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
+          <RouterProvider router={router} />
+        </TanStackQueryProvider.Provider>
+      </Provider>
     </StrictMode>,
   )
 }

@@ -11,7 +11,7 @@
     },
     "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo-gallery.json"
   },
-  "include": ["src/**/*", "index.ts"],
+  "include": ["src/**/*"],
   "exclude": [
     "dist", 
     "node_modules", 
