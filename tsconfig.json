@@ -22,7 +22,7 @@
       "@repo/gallery": ["packages/features/gallery/src"],
       "@repo/wishlist": ["packages/wishlist/src"],
       "@repo/profile": ["packages/features/profile/src"],
-      "@repo/moc": ["packages/features/moc/src"]
+      "@repo/moc-instructions": ["packages/features/moc-instructions/src"]
     }
   },
   "include": ["src/**/*", "packages/**/*"],

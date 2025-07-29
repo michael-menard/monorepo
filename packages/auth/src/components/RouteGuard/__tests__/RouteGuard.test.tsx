@@ -5,10 +5,10 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import RouteGuard from '../index';
 import authReducer from '../../../store/authSlice';
+import { authApi } from '../../../store/authApi';
 
 // Mock dependencies
 vi.mock('../../../utils/token');
-vi.mock('../../../store/authApi');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -21,13 +21,15 @@ vi.mock('react-router-dom', async () => {
 
 // Import mocked modules
 import * as tokenUtils from '../../../utils/token';
-import * as authApi from '../../../store/authApi';
 
 const createMockStore = (initialState = {}) => {
   return configureStore({
     reducer: {
       auth: authReducer,
+      [authApi.reducerPath]: authApi.reducer,
     },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(authApi.middleware),
     preloadedState: {
       auth: {
         user: null,
@@ -37,6 +39,8 @@ const createMockStore = (initialState = {}) => {
         isCheckingAuth: false,
         error: null,
         message: null,
+        lastActivity: null,
+        sessionTimeout: 1800000,
         ...initialState,
       },
     },
@@ -60,13 +64,6 @@ describe('RouteGuard', () => {
     mockNavigate.mockClear();
     
     // Default mock implementations
-    vi.mocked(authApi.useCheckAuthQuery).mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    
     vi.mocked(tokenUtils.refreshToken).mockResolvedValue('new-token');
   });
 
