@@ -17,6 +17,7 @@ export { default as ResetPasswordForm } from './components/ResetPasswordForm/ind
 export { default as ConfirmResetPasswordForm } from './components/ConfirmResetPasswordForm/index.js';
 export { default as EmailVerificationForm } from './components/EmailVerificationForm/index.js';
 export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index.js';
+export { default as RouteGuard } from './components/RouteGuard/index.js';
 
 // Hooks
 export { useAuth } from './hooks/useAuth.js';

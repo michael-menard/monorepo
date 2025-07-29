@@ -217,4 +217,12 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tool
 export { cn } from './lib/utils';
 
 // Showcase component
-export { ComponentShowcase } from './ComponentShowcase'; 
+export { ComponentShowcase } from './ComponentShowcase';
+
+// Composite components
+export { AppCard } from './AppCard';
+export { AppDataTable } from './AppDataTable';
+export { ConfirmationDialog } from './ConfirmationDialog';
+export { FormSection } from './FormSection';
+export { PageHeader } from './PageHeader';
+export { TabPanel } from './TabPanel'; 

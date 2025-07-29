@@ -54,7 +54,7 @@ import {
   mocPartsListSchema,
   createMocPartsListSchema,
   updateMocPartsListSchema,
-} from '../../packages/features/moc/src/schemas';
+} from '../../packages/features/moc-instructions/src/schemas';
 
 describe('Zod Validation Schemas', () => {
   describe('Auth Package Schemas', () => {

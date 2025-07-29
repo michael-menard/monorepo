@@ -6,7 +6,7 @@ import { store as authStore } from '../../packages/auth/src/store/store';
 import { store as galleryStore } from '../../packages/features/gallery/src/store/store';
 import { store as wishlistStore } from '../../packages/wishlist/src/store/store';
 import { store as profileStore } from '../../packages/features/profile/src/store/store';
-import { store as mocStore } from '../../packages/features/moc/src/store/store';
+import { store as instructionsStore } from '../../packages/features/moc-instructions/src/store/store';
 
 // Import slices and APIs
 import authReducer, { setUser, logoutSuccess, setLoading } from '../../packages/auth/src/store/authSlice';
@@ -15,8 +15,8 @@ import wishlistReducer, { setItems, addItem, updateItem, removeItem } from '../.
 import { wishlistApi } from '../../packages/wishlist/src/store/wishlistApi';
 import profileReducer, { setProfile, updateProfile, setError } from '../../packages/features/profile/src/store/profileSlice';
 import { profileApi } from '../../packages/features/profile/src/store/profileApi';
-import mocReducer, { setInstructions, addInstruction, setCurrentInstruction } from '../../packages/features/moc/src/store/mocSlice';
-import { mocApi } from '../../packages/features/moc/src/store/mocApi';
+import instructionsReducer, { setInstructions, addInstruction, setCurrentInstruction } from '../../packages/features/moc-instructions/src/store/instructionsSlice';
+import { instructionsApi } from '../../packages/features/moc-instructions/src/store/instructionsApi';
 
 describe('Redux Store Configurations', () => {
   describe('Auth Store', () => {
@@ -164,23 +164,23 @@ describe('Redux Store Configurations', () => {
     });
   });
 
-  describe('MOC Store', () => {
-    it('should configure MOC store correctly', () => {
-      expect(mocStore.getState()).toBeDefined();
-      expect(typeof mocStore.dispatch).toBe('function');
-      expect(typeof mocStore.getState).toBe('function');
+  describe('Instructions Store', () => {
+    it('should configure Instructions store correctly', () => {
+      expect(instructionsStore.getState()).toBeDefined();
+      expect(typeof instructionsStore.dispatch).toBe('function');
+      expect(typeof instructionsStore.getState).toBe('function');
     });
 
-    it('should have MOC reducer in state', () => {
-      const state = mocStore.getState();
-      expect(state.moc).toBeDefined();
-      expect(state.moc.instructions).toEqual([]);
-      expect(state.moc.currentInstruction).toBeNull();
-      expect(state.moc.isLoading).toBe(false);
-      expect(state.moc.error).toBeNull();
+    it('should have Instructions reducer in state', () => {
+      const state = instructionsStore.getState();
+      expect(state.instructions).toBeDefined();
+      expect(state.instructions.instructions).toEqual([]);
+      expect(state.instructions.currentInstruction).toBeNull();
+      expect(state.instructions.isLoading).toBe(false);
+      expect(state.instructions.error).toBeNull();
     });
 
-    it('should handle MOC actions correctly', () => {
+    it('should handle Instructions actions correctly', () => {
       const testInstruction = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         title: 'LEGO Spaceship',
@@ -198,19 +198,19 @@ describe('Redux Store Configurations', () => {
         updatedAt: new Date(),
       };
 
-      mocStore.dispatch(addInstruction(testInstruction));
-      let state = mocStore.getState();
-      expect(state.moc.instructions).toHaveLength(1);
-      expect(state.moc.instructions[0]).toEqual(testInstruction);
+      instructionsStore.dispatch(addInstruction(testInstruction));
+      let state = instructionsStore.getState();
+      expect(state.instructions.instructions).toHaveLength(1);
+      expect(state.instructions.instructions[0]).toEqual(testInstruction);
 
-      mocStore.dispatch(setCurrentInstruction(testInstruction));
-      state = mocStore.getState();
-      expect(state.moc.currentInstruction).toEqual(testInstruction);
+      instructionsStore.dispatch(setCurrentInstruction(testInstruction));
+      state = instructionsStore.getState();
+      expect(state.instructions.currentInstruction).toEqual(testInstruction);
     });
 
-    it('should have mocApi reducer in state', () => {
-      const state = mocStore.getState();
-      expect(state[mocApi.reducerPath]).toBeDefined();
+    it('should have instructionsApi reducer in state', () => {
+      const state = instructionsStore.getState();
+      expect(state[instructionsApi.reducerPath]).toBeDefined();
     });
   });
 
@@ -264,9 +264,9 @@ describe('Redux Store Configurations', () => {
       const profileState = profileStore.getState();
       expect(profileState[profileApi.reducerPath]).toBeDefined();
 
-      // Check MOC API
-      const mocState = mocStore.getState();
-      expect(mocState[mocApi.reducerPath]).toBeDefined();
+      // Check Instructions API
+      const instructionsState = instructionsStore.getState();
+      expect(instructionsState[instructionsApi.reducerPath]).toBeDefined();
     });
 
     it('should have proper middleware configuration', () => {
@@ -275,7 +275,7 @@ describe('Redux Store Configurations', () => {
       expect(galleryStore.getState()).toBeDefined();
       expect(wishlistStore.getState()).toBeDefined();
       expect(profileStore.getState()).toBeDefined();
-      expect(mocStore.getState()).toBeDefined();
+      expect(instructionsStore.getState()).toBeDefined();
     });
   });
 }); 

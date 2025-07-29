@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
 import { selectIsCheckingAuth, setCheckingAuth } from '../../store/authSlice.js';
 import { refreshToken } from '../../utils/token.js';
 
-interface RouteGuardProps {
-  children: React.ReactNode;
-  requiredRole?: string;
-  redirectTo?: string;
-  unauthorizedTo?: string;
-  requireVerified?: boolean;
-}
+const RouteGuardPropsSchema = z.object({
+  children: z.any(), // React.ReactNode
+  requiredRole: z.string().optional(),
+  redirectTo: z.string().optional(),
+  unauthorizedTo: z.string().optional(),
+  requireVerified: z.boolean().optional(),
+});
+
+type RouteGuardProps = z.infer<typeof RouteGuardPropsSchema>;
 
 const RouteGuard: React.FC<RouteGuardProps> = ({
   children,
