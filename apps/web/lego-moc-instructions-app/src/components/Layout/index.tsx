@@ -1,15 +1,7 @@
 import { 
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
+  AppAvatar,
   Badge,
   Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
   NavigationMenu,
   NavigationMenuContent,
   NavigationMenuItem,
@@ -23,16 +15,16 @@ import { Link } from '@tanstack/react-router'
 import { 
   BookOpen,
   Heart, 
-  LogOut, 
-  Menu,
-  Settings,
-  User, 
-  X
+  Menu
 } from 'lucide-react'
+import { z } from 'zod'
 
-interface LayoutProps {
-  children: React.ReactNode
-}
+// Zod schema for layout props
+const LayoutPropsSchema = z.object({
+  children: z.any(),
+});
+
+type LayoutProps = z.infer<typeof LayoutPropsSchema>;
 
 function Layout({ children }: LayoutProps) {
   // Mock authentication state - will be replaced with real auth later
@@ -48,13 +40,30 @@ function Layout({ children }: LayoutProps) {
     },
   };
 
-  const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  // Handler for avatar upload
+  const handleAvatarUpload = async (file: File) => {
+    // Simulate upload delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    
+    // In a real app, you would upload the file to your server
+    console.log('Avatar uploaded:', file.name);
+    
+    // Update the mock auth state with new avatar URL
+    // mockAuth.user.avatar = URL.createObjectURL(file);
+  };
+
+  // Handler for profile navigation
+  const handleProfileClick = () => {
+    console.log('Profile clicked - navigate to profile page');
+    // In a real app, you would navigate to the profile page
+    // You can use the router here: router.navigate({ to: '/profile' });
+  };
+
+  // Handler for logout
+  const handleLogout = () => {
+    console.log('Logout confirmed');
+    // In a real app, you would clear auth state and redirect to login
+    // You can use the router here: router.navigate({ to: '/login' });
   };
 
   return (
@@ -107,48 +116,18 @@ function Layout({ children }: LayoutProps) {
             {/* Right side - User Actions */}
             <div className="flex items-center space-x-4">
               {mockAuth.isAuthenticated ? (
-                // Authenticated user - Show Avatar with Dropdown
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage 
-                          src={mockAuth.user.avatar || undefined} 
-                          alt={mockAuth.user.name}
-                        />
-                        <AvatarFallback className="text-xs">
-                          {getUserInitials(mockAuth.user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{mockAuth.user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {mockAuth.user.email}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                // Authenticated user - Show AppAvatar
+                <AppAvatar
+                  avatarUrl={mockAuth.user.avatar || undefined}
+                  userName={mockAuth.user.name}
+                  userEmail={mockAuth.user.email}
+                  onAvatarUpload={handleAvatarUpload}
+                  onProfileClick={handleProfileClick}
+                  onLogout={handleLogout}
+                  size="sm"
+                  showEditButton={true}
+                  disabled={false}
+                />
               ) : (
                 // Unauthenticated user - Show Sign In/Sign Up
                 <div className="flex items-center space-x-2">

@@ -221,6 +221,7 @@ export { ComponentShowcase } from './ComponentShowcase';
 
 // Composite components
 export { AppCard } from './AppCard';
+export { AppAvatar } from './AppAvatar';
 export { AppDataTable } from './AppDataTable';
 export { ConfirmationDialog } from './ConfirmationDialog';
 export { FormSection } from './FormSection';
