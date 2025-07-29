@@ -1,94 +1,135 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import Gallery from '../index.js';
-import type { GalleryImage } from '../types/index.js';
+import { Gallery } from '../index.js';
+import type { GalleryImage } from '../schemas/index.js';
 
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, className, ...props }: any) => (
-      <div className={className} {...props}>
-        {children}
-      </div>
-    ),
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
+  AnimatePresence: ({ children }: any) => <div>{children}</div>,
+  LayoutGroup: ({ children }: any) => <div>{children}</div>,
 }));
 
 // Mock ImageCard component
 vi.mock('../components/ImageCard/index.js', () => ({
-  default: ({ title, src }: any) => (
-    <div data-testid="image-card">
+  default: ({ title, src, onView }: any) => (
+    <div data-testid="image-card" onClick={onView}>
       <img src={src} alt={title} />
       <h3>{title}</h3>
     </div>
   ),
 }));
 
-const mockImages: GalleryImage[] = [
+// Mock BatchOperationsToolbar component
+vi.mock('../components/BatchOperationsToolbar/index.js', () => ({
+  default: ({ selectedImages, totalImages }: any) => (
+    <div data-testid="batch-toolbar">
+      <span>{selectedImages.length} selected</span>
+      <span>{totalImages} total</span>
+    </div>
+  ),
+}));
+
+// Mock hooks
+vi.mock('../hooks/useAlbumDragAndDrop.js', () => ({
+  useAlbumDragAndDrop: () => ({
+    actions: {
+      handleDragStart: vi.fn(),
+    },
+  }),
+}));
+
+const mockImages: Array<GalleryImage> = [
   {
     id: '1',
     url: 'https://example.com/image1.jpg',
     title: 'Test Image 1',
-    description: 'A test image',
+    description: 'Test description 1',
     author: 'Test Author',
     tags: ['test', 'image'],
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-01'),
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
   },
   {
     id: '2',
     url: 'https://example.com/image2.jpg',
     title: 'Test Image 2',
-    description: 'Another test image',
+    description: 'Test description 2',
     author: 'Test Author 2',
-    tags: ['test', 'image2'],
-    createdAt: new Date('2023-01-02'),
-    updatedAt: new Date('2023-01-02'),
+    tags: ['test', 'image'],
+    createdAt: new Date('2024-01-02'),
+    updatedAt: new Date('2024-01-02'),
   },
 ];
 
-describe('Gallery', () => {
-  it('renders all images', () => {
+describe('Gallery Component', () => {
+  it('renders grid layout by default', () => {
     render(<Gallery images={mockImages} />);
     
     const imageCards = screen.getAllByTestId('image-card');
     expect(imageCards).toHaveLength(2);
     
-    expect(screen.getByText('Test Image 1')).toBeInTheDocument();
-    expect(screen.getByText('Test Image 2')).toBeInTheDocument();
+    const container = screen.getByTestId('image-card').parentElement;
+    expect(container).toHaveClass('grid');
   });
 
-  it('renders images with correct data', () => {
-    render(<Gallery images={mockImages} />);
+  it('renders masonry layout when specified', () => {
+    render(<Gallery images={mockImages} layout="masonry" />);
     
-    const images = screen.getAllByRole('img');
-    expect(images).toHaveLength(2);
-    expect(images[0]).toHaveAttribute('src', 'https://example.com/image1.jpg');
-    expect(images[0]).toHaveAttribute('alt', 'Test Image 1');
-    expect(images[1]).toHaveAttribute('src', 'https://example.com/image2.jpg');
-    expect(images[1]).toHaveAttribute('alt', 'Test Image 2');
+    const imageCards = screen.getAllByTestId('image-card');
+    expect(imageCards).toHaveLength(2);
+    
+    const container = screen.getByTestId('image-card').parentElement;
+    expect(container).toHaveClass('columns-1');
   });
 
-  it('shows empty state when no images provided', () => {
+  it('renders empty state when no images', () => {
     render(<Gallery images={[]} />);
     
     expect(screen.getByText('No images yet')).toBeInTheDocument();
     expect(screen.getByText('Add some images to get started!')).toBeInTheDocument();
   });
 
-  it('shows empty state when images is null', () => {
-    render(<Gallery images={null as any} />);
-    
-    expect(screen.getByText('No images yet')).toBeInTheDocument();
-    expect(screen.getByText('Add some images to get started!')).toBeInTheDocument();
-  });
-
-  it('renders with custom className', () => {
-    render(<Gallery images={mockImages} className="custom-class" />);
+  it('calls onImageClick when image card is clicked', () => {
+    const mockOnImageClick = vi.fn();
+    render(<Gallery images={mockImages} onImageClick={mockOnImageClick} />);
     
     const imageCards = screen.getAllByTestId('image-card');
-    expect(imageCards).toHaveLength(2);
-    // The component renders correctly with custom className
+    fireEvent.click(imageCards[0]);
+    
+    expect(mockOnImageClick).toHaveBeenCalledWith(mockImages[0]);
+  });
+
+  it('displays batch operations toolbar when images are selected', () => {
+    render(<Gallery images={mockImages} selectedImages={['1']} />);
+    
+    const toolbar = screen.getByTestId('batch-toolbar');
+    expect(toolbar).toBeInTheDocument();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(screen.getByText('2 total')).toBeInTheDocument();
+  });
+
+  it('applies custom className', () => {
+    render(<Gallery images={mockImages} className="custom-class" />);
+    
+    const container = screen.getByTestId('image-card').parentElement;
+    expect(container).toHaveClass('custom-class');
+  });
+
+  it('handles responsive grid classes correctly', () => {
+    render(<Gallery images={mockImages} layout="grid" />);
+    
+    const container = screen.getByTestId('image-card').parentElement;
+    expect(container).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3');
+  });
+
+  it('handles responsive masonry classes correctly', () => {
+    render(<Gallery images={mockImages} layout="masonry" />);
+    
+    const container = screen.getByTestId('image-card').parentElement;
+    expect(container).toHaveClass('columns-1', 'sm:columns-2', 'md:columns-3');
   });
 }); 

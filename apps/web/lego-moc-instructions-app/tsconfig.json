@@ -24,6 +24,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@repo/auth": ["../../packages/auth/src"],
+      "@repo/ui": ["../../packages/ui/src"],
+      "@repo/profile": ["../../packages/features/profile/src"],
+      "@monorepo/shared": ["../../packages/shared/src"]
     }
   }
 }

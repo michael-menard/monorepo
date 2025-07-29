@@ -410,6 +410,9 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
+      '@repo/features-wishlist':
+        specifier: workspace:*
+        version: link:../../../packages/features/wishlist
       '@repo/gallery':
         specifier: workspace:*
         version: link:../../../packages/features/gallery
