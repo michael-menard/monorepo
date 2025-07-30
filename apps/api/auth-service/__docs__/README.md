@@ -237,8 +237,8 @@ The following environment variables are required:
 JWT_SECRET=your-jwt-secret
 MONGODB_URI=mongodb://localhost:27017/auth-service
 CLIENT_URL=http://localhost:3000
-MAILTRAP_USER=your-mailtrap-user
-MAILTRAP_PASS=your-mailtrap-password
+ETHEREAL_USER=your-ethereal-username
+ETHEREAL_PASS=your-ethereal-password
 ```
 
 ## Support

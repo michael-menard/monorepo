@@ -8,7 +8,7 @@ import {
 	sendResetSuccessEmail,
 	sendVerificationEmail,
 	sendWelcomeEmail,
-} from "../mailtrap/emails";
+} from "../email/ethereal.service";
 import { User } from "../models/User";
 
 export const signup = async (req: Request, res: Response) => {

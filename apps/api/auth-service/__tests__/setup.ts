@@ -68,8 +68,8 @@ vi.mock('jsonwebtoken', () => ({
   verify: vi.fn().mockReturnValue({ userId: 'test-user-id' }),
 }));
 
-// Mock mailtrap
-vi.mock('../mailtrap/emails', () => ({
+// Mock email service
+vi.mock('../email/ethereal.service', () => ({
   sendVerificationEmail: vi.fn().mockResolvedValue({}),
   sendWelcomeEmail: vi.fn().mockResolvedValue({}),
   sendPasswordResetEmail: vi.fn().mockResolvedValue({}),

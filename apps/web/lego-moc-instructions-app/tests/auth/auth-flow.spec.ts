@@ -395,24 +395,27 @@ test.describe('Auth Flow', () => {
     });
 
     test('should display email verification form', async ({ page }) => {
-      await expect(page.locator('h1')).toContainText('Verify your email');
-      await expect(page.locator('input[name="verificationCode"]')).toBeVisible();
+      // Check for the AppCard title instead of h1
+      await expect(page.locator('[data-testid="app-card-title"]')).toContainText('Verify Your Email');
+      // Check for the input field with correct id
+      await expect(page.locator('input[id="code"]')).toBeVisible();
+      // Check for the submit button
       await expect(page.locator('button[type="submit"]')).toContainText('Verify Email');
     });
 
     test('should show validation error for empty verification code', async ({ page }) => {
       await page.click('button[type="submit"]');
-      await expect(page.locator('text=Verification code is required')).toBeVisible();
+      await expect(page.locator('text=Verification code must be 6 characters')).toBeVisible();
     });
 
     test('should show validation error for invalid verification code format', async ({ page }) => {
-      await page.fill('input[name="verificationCode"]', '123');
+      await page.fill('input[id="code"]', '123');
       await page.click('button[type="submit"]');
-      await expect(page.locator('text=Verification code must be 6 digits')).toBeVisible();
+      await expect(page.locator('text=Verification code must be 6 characters')).toBeVisible();
     });
 
     test('should handle successful email verification', async ({ page }) => {
-      await page.fill('input[name="verificationCode"]', '123456');
+      await page.fill('input[id="code"]', '123456');
       
       // Mock the email verification API call
       await page.route('**/api/auth/verify-email', async route => {
@@ -425,31 +428,31 @@ test.describe('Auth Flow', () => {
       
       await page.click('button[type="submit"]');
       
-      // Wait for success message
-      await expect(page.locator('text=Email verified successfully')).toBeVisible();
-      await expect(page.locator('text=Your email has been verified')).toBeVisible();
+      // Wait for success message - check for the verified state
+      await expect(page.locator('text=Email Verified')).toBeVisible();
+      await expect(page.locator('text=Your email has been successfully verified')).toBeVisible();
     });
 
     test('should handle email verification error', async ({ page }) => {
-      await page.fill('input[name="verificationCode"]', '123456');
+      await page.fill('input[id="code"]', '123456');
       
       // Mock the email verification API call to return an error
       await page.route('**/api/auth/verify-email', async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
-          body: JSON.stringify({ error: 'Invalid verification code' }),
+          body: JSON.stringify({ message: 'Invalid verification code' }),
         });
       });
       
       await page.click('button[type="submit"]');
       
       // Wait for error message
-      await expect(page.locator('text=Email verification failed. Please try again.')).toBeVisible();
+      await expect(page.locator('text=Invalid verification code')).toBeVisible();
     });
 
     test('should navigate to home page after successful verification', async ({ page }) => {
-      await page.fill('input[name="verificationCode"]', '123456');
+      await page.fill('input[id="code"]', '123456');
       
       // Mock successful verification
       await page.route('**/api/auth/verify-email', async route => {
@@ -463,8 +466,8 @@ test.describe('Auth Flow', () => {
       await page.click('button[type="submit"]');
       
       // Wait for success state and click home link
-      await expect(page.locator('text=Email verified successfully')).toBeVisible();
-      await page.click('text=Go to home');
+      await expect(page.locator('text=Email Verified')).toBeVisible();
+      await page.click('text=Go to Home');
       await expect(page).toHaveURL('/');
     });
   });

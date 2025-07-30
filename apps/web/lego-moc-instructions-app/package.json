@@ -15,6 +15,10 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
+
+    "test:ethereal-setup": "tsx src/pages/auth/EmailVerificationPage/__tests__/setup-ethereal.ts",
+    "test:mailhog-setup": "tsx src/pages/auth/EmailVerificationPage/__tests__/setup-mailhog.ts",
+    "test:ethereal-config": "tsx test-ethereal-email.ts",
     "lint": "eslint src/",
     "format": "prettier --write src/",
     "check": "prettier --write src/ && eslint --fix src/",

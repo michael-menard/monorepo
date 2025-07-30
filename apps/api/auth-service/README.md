@@ -111,7 +111,7 @@ pnpm --filter @repo/auth-service-frontend lint    # Run ESLint
 - **Helmet:** Security headers
 - **Rate Limiting:** API request throttling
 - **Input Validation:** Zod schema validation
-- **Email Verification:** Mailtrap integration
+- **Email Verification:** Ethereal Email integration
 
 ## 🗄️ Database
 
@@ -125,8 +125,8 @@ The service uses Mongoose ODM with automatic connection management and error han
 
 ## 📧 Email Integration
 
-### Mailtrap Configuration
-- **Development:** Uses Mailtrap for email testing
+### Email Configuration
+- **Development:** Uses Ethereal Email for email testing
 - **Production:** Configurable SMTP settings
 - **Templates:** Pre-built email templates
 
@@ -155,8 +155,8 @@ JWT_REFRESH_SECRET=your-super-secret-refresh-key
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 # Email
-MAILTRAP_TOKEN=your-mailtrap-token
-MAILTRAP_INBOX_ID=your-mailtrap-inbox-id
+ETHEREAL_USER=your-ethereal-username
+ETHEREAL_PASS=your-ethereal-password
 ```
 
 ## 🧪 Testing
