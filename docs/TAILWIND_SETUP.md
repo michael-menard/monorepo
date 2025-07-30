@@ -1,211 +1,257 @@
-# Shared Tailwind CSS Configuration
+# Local Tailwind CSS and shadcn/ui Configuration
 
-This monorepo uses a **globally shared Tailwind CSS configuration** that combines the design system tokens with shadcn/ui components.
+This monorepo uses **local Tailwind CSS and shadcn/ui configurations** for each package and app that needs them.
 
-## 🌍 **Global Setup Status**
+## 🌍 **Local Setup Status**
 
-✅ **FULLY GLOBAL** - The Tailwind configuration is now set up globally across the entire monorepo:
+✅ **LOCAL CONFIGURATION** - Each package and app manages its own Tailwind CSS and shadcn/ui setup:
 
-- **Root Configuration**: `tailwind.config.js` serves as the single source of truth
-- **All Packages**: Every package extends the root configuration
-- **Shared Styles**: `src/styles/globals.css` contains all design system variables
-- **Consistent Tokens**: All packages use the same design system tokens
+- **Individual Configurations**: Each package has its own `tailwind.config.js`
+- **Local Dependencies**: Each package installs its own Tailwind and shadcn dependencies
+- **Independent Styles**: Each package manages its own CSS and design tokens
+- **Flexible Setup**: Packages can choose their own styling approach
 
 ## 📁 **File Structure**
 
 ```
-├── tailwind.config.js                    # 🌍 GLOBAL ROOT CONFIG
-├── postcss.config.js                     # 🌍 GLOBAL POSTCSS CONFIG
-├── src/styles/globals.css               # 🌍 GLOBAL SHARED STYLES
-├── packages/ui/tailwind.config.js       # ✅ Extends root config
-├── packages/auth/tailwind.config.js     # ✅ Extends root config
-├── packages/profile/tailwind.config.js  # ✅ Extends root config
-├── packages/moc/tailwind.config.js      # ✅ Extends root config
-├── packages/features/Gallery/tailwind.config.js # ✅ Extends root config
-└── packages/shared/tailwind.config.js   # 📋 Template for new packages
+├── packages/ui/tailwind.config.js       # ✅ Local UI package config
+├── packages/auth/tailwind.config.js     # ✅ Local auth package config
+├── packages/features/gallery/tailwind.config.js # ✅ Local gallery config
+├── packages/features/profile/tailwind.config.js # ✅ Local profile config
+├── apps/web/lego-moc-instructions-app/tailwind.config.js # ✅ Local app config
+└── [other packages with local configs]  # ✅ Each package manages its own setup
 ```
 
-## 🚀 **Quick Setup for New Packages**
+## 🚀 **Setup for New Packages**
 
-### Option 1: Use the Setup Script (Recommended)
+### Step 1: Install Local Dependencies
 
 ```bash
-node scripts/setup-tailwind.js <package-name>
+cd packages/your-new-package
+pnpm add -D tailwindcss
+pnpm add -D @tailwindcss/typography @tailwindcss/forms @tailwindcss/aspect-ratio
 ```
 
-### Option 2: Manual Setup
+### Step 2: Install shadcn/ui Dependencies (if needed)
 
-1. Create a `tailwind.config.js` file in your package:
+```bash
+pnpm add class-variance-authority clsx tailwind-merge lucide-react
+pnpm add @radix-ui/react-slot @radix-ui/react-dialog @radix-ui/react-label
+# Add other Radix UI components as needed
+```
+
+### Step 3: Create Tailwind Configuration
+
+Create a `tailwind.config.js` file in your package:
 
 ```javascript
-import rootConfig from '../../tailwind.config.js';
-
 /** @type {import('tailwindcss').Config} */
 export default {
-  presets: [rootConfig],
-  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
-  prefix: '',
+  content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+    // Add paths to other packages you want to include
+  ],
   theme: {
     extend: {
-      // Package-specific extensions can go here
+      colors: {
+        // Your package-specific colors
+      },
+      // Other theme extensions
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/aspect-ratio'),
+  ],
 };
 ```
 
-2. Import the shared styles in your main CSS file:
+### Step 4: No PostCSS Required
+
+Tailwind CSS v4 does not require PostCSS configuration. The CSS processing is handled internally by Tailwind CSS v4.
+
+### Step 5: Create CSS File
+
+Create a `src/styles.css` or `src/globals.css` file:
 
 ```css
-@import '../../src/styles/globals.css';
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    /* Add your design tokens */
+  }
+  
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    /* Dark mode tokens */
+  }
+}
 ```
 
-## 🎨 **Available Design Tokens**
+## 🎨 **shadcn/ui Setup**
 
-### Colors
+### Step 1: Initialize shadcn/ui
 
-**Accent Colors:**
-- `blue`, `green`, `violet`, `orange`, `yellow`, `indigo`, `emerald`, `fuchsia`, `red`, `sky`, `pink`, `neutral`
+```bash
+npx shadcn@latest init
+```
 
-**Gray Scale:**
-- `gray-0` through `gray-1100`
+### Step 2: Configure components.json
 
-**Dark Mode Grays:**
-- `gray-dark-0` through `gray-dark-1100`
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "src/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "src/components",
+    "utils": "src/lib/utils"
+  }
+}
+```
 
-**Background Colors:**
-- `bg-1` through `bg-10`
+### Step 3: Add Components
 
-**System Colors:**
-- `color-brands`, `neutral-bg`, `dark-neutral-bg`, `dark-neutral-border`
-
-### Typography
-
-**Headers:**
-- `text-header-1` through `text-header-7`
-
-**Body Text:**
-- `text-normal`, `text-subtitle`, `text-subtitle-semibold`
-
-**Button Labels:**
-- `text-btn-label`, `text-mini-btn-label`
-
-**Descriptions:**
-- `text-desc`, `text-mini-desc`
-
-### Utility Classes
-
-**Typography Components:**
-- `.header-1` through `.header-7`
-- `.subtitle`, `.subtitle-semibold`
-- `.btn-label`, `.mini-btn-label`
-- `.desc`, `.mini-desc`
-
-**Filters:**
-- `.filter-black`, `.filter-white`
-
-### Screen Breakpoints
-
-- `xs: 500px` (custom breakpoint)
+```bash
+npx shadcn@latest add button
+npx shadcn@latest add input
+npx shadcn@latest add card
+# Add other components as needed
+```
 
 ## 💡 **Example Usage**
 
 ```tsx
 import React from 'react';
+import { Button } from './components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 
 export function ExampleComponent() {
   return (
-    <div className="bg-neutral-bg p-4">
-      <h1 className="header-1 text-blue">Main Title</h1>
-      <p className="text-normal text-gray-600">
-        This uses the shared design system tokens.
-      </p>
-      <button className="bg-blue text-white px-4 py-2 rounded">
-        Button with Design Tokens
-      </button>
-    </div>
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Local Package Component</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-gray-600 mb-4">
+          This component uses local Tailwind and shadcn/ui setup.
+        </p>
+        <Button>Local Button</Button>
+      </CardContent>
+    </Card>
   );
 }
 ```
 
 ## 🌙 **Dark Mode**
 
-The configuration supports dark mode using the `dark` class. Dark mode variables are automatically applied when the `dark` class is present on the HTML element.
-
-## 🔧 **Customization**
-
-To add package-specific styles:
-
-1. Extend the theme in your package's `tailwind.config.js`:
-
-```javascript
-theme: {
-  extend: {
-    colors: {
-      'package-specific': '#your-color',
-    },
-    fontSize: {
-      'custom-size': ['18px', '24px'],
-    },
-  },
-},
-```
-
-2. Add custom utilities in your CSS file:
+Each package can implement its own dark mode strategy:
 
 ```css
-@layer utilities {
-  .custom-utility {
-    /* Your custom styles */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+  
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
   }
 }
 ```
 
-## 📦 **Dependencies**
+## 🔧 **Customization**
 
-Make sure your package has these dependencies:
+Each package can customize its own design system:
 
+```javascript
+// tailwind.config.js
+export default {
+  theme: {
+    extend: {
+      colors: {
+        'package-primary': '#your-color',
+        'package-secondary': '#another-color',
+      },
+      fontSize: {
+        'custom-size': ['18px', '24px'],
+      },
+    },
+  },
+};
+```
+
+## 📦 **Required Dependencies**
+
+For Tailwind CSS:
 ```json
 {
   "devDependencies": {
     "tailwindcss": "^4.1.11",
-    "tailwindcss-animate": "^1.0.7",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/container-queries": "^0.1.1"
+    "@tailwindcss/aspect-ratio": "^0.4.2"
+  }
+}
+```
+
+For shadcn/ui:
+```json
+{
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4",
+    "lucide-react": "^0.468.0",
+    "@radix-ui/react-slot": "^1.0.2"
   }
 }
 ```
 
 ## ✅ **Verification**
 
-To verify your Tailwind configuration is working:
+To verify your local configuration is working:
 
-1. Use the design tokens in your components
-2. Check that dark mode works correctly
-3. Verify that custom utilities are applied
-4. Test responsive breakpoints
+1. Check that Tailwind classes are applied correctly
+2. Verify that shadcn/ui components render properly
+3. Test dark mode functionality
+4. Ensure custom utilities work as expected
 
 ## 🔍 **Troubleshooting**
 
 **Styles not applying:**
 - Check that your `content` paths include your component files
-- Verify that the shared CSS is imported
-- Ensure your package extends the root config correctly
+- Verify that CSS is imported in your main entry point
+- Ensure Tailwind CSS v4 is properly configured
 
-**Dark mode not working:**
-- Check that the `dark` class is applied to the HTML element
-- Verify dark mode variables are defined in the CSS
+**shadcn/ui components not working:**
+- Check that all Radix UI dependencies are installed
+- Verify the `components.json` configuration
+- Ensure the utils file is properly set up
 
-**Custom styles not working:**
-- Ensure your custom styles are in the correct `@layer`
-- Check that your Tailwind config extends the root config properly
+**Build issues:**
+- Check that all dependencies are in the correct package
+- Verify that Vite configuration is correct
+- Ensure TypeScript types are properly configured
 
-## 🌟 **Benefits of Global Setup**
+## 🌟 **Benefits of Local Setup**
 
-- **Consistency**: All packages use the same design tokens
-- **Maintainability**: Single source of truth for design system
-- **Performance**: Shared configuration reduces bundle size
-- **Developer Experience**: Familiar tokens across all packages
-- **Scalability**: Easy to add new packages with consistent styling 
+- **Independence**: Each package manages its own styling
+- **Flexibility**: Packages can use different styling approaches
+- **Performance**: Only install dependencies where needed
+- **Maintainability**: Clear separation of concerns
+- **Scalability**: Easy to add new packages without affecting others 

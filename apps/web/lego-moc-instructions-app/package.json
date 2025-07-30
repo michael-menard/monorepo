@@ -17,7 +17,6 @@
     "test:e2e:debug": "playwright test --debug",
     "test:forgot-password": "playwright test tests/auth/forgot-password.spec.ts",
     "test:forgot-password-e2e": "playwright test tests/auth/forgot-password-e2e.spec.ts",
-
     "test:ethereal-setup": "tsx src/pages/auth/EmailVerificationPage/__tests__/setup-ethereal.ts",
     "test:mailhog-setup": "tsx src/pages/auth/EmailVerificationPage/__tests__/setup-mailhog.ts",
     "test:ethereal-config": "tsx test-ethereal-email.ts",
@@ -28,6 +27,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.1",
     "@monorepo/fileupload": "workspace:*",
     "@monorepo/shared": "workspace:*",
     "@reduxjs/toolkit": "^2.8.2",
@@ -37,7 +37,6 @@
     "@repo/moc-instructions": "workspace:*",
     "@repo/profile": "workspace:*",
     "@repo/ui": "workspace:*",
-    "@tailwindcss/postcss": "^4.1.11",
     "@tanstack/react-query": "^5.66.5",
     "@tanstack/react-query-devtools": "^5.66.5",
     "@tanstack/react-router": "^1.130.2",
@@ -47,6 +46,7 @@
     "lucide-react": "^0.476.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.61.1",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.20.1",
     "tailwind-merge": "^3.0.2",

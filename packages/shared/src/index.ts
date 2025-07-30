@@ -1,1 +1,4 @@
-export * from './store/store'; 
+export * from './store/store';
+
+// Design system exports
+export * from './design-system'; 

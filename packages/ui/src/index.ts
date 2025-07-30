@@ -1,5 +1,6 @@
 // Core components
 export { Button, buttonVariants } from './button';
+export { CustomButton, customButtonVariants } from './custom-button';
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card';
 export { Input } from './input';
 export { Label } from './label';

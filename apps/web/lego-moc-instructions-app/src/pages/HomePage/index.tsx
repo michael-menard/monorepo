@@ -13,6 +13,11 @@ import {
   Zap
 } from 'lucide-react'
 import { config } from '../../config/environment.js'
+import DesignSystemGrid from '../../components/DesignSystemGrid'
+import DarkModeToggle from '../../components/DarkModeToggle'
+import ColorTest from '../../components/ColorTest'
+import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo'
+
 
 function HomePage() {
   // Mock authentication hook - will be replaced with real auth later
@@ -68,8 +73,24 @@ function HomePage() {
     { label: "Community Rating", value: "4.8★", icon: Star }
   ];
 
-  return (
+    return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Dark Mode Toggle */}
+      <DarkModeToggle />
+      
+      {/* Color Test - Remove this after verification */}
+      <div className="container mx-auto px-4 py-8">
+        <ColorTest />
+      </div>
+      
+      {/* Button Customization Demo - Remove this after viewing */}
+      <div className="container mx-auto px-4 py-8">
+        <ButtonCustomizationDemo />
+      </div>
+      
+      {/* Design System Grid - Remove this after viewing */}
+      <DesignSystemGrid />
+      
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center space-y-6">

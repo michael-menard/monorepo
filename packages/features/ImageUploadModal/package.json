@@ -20,25 +20,26 @@
     "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
+    "@monorepo/fileupload": "workspace:*",
+    "@repo/ui": "workspace:*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "zod": "^3.22.4",
-    "@repo/ui": "workspace:*",
-    "@monorepo/fileupload": "workspace:*"
+    "tailwindcss": "^4.1.11",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react-swc": "^3.6.0",
+    "jsdom": "^26.1.0",
     "typescript": "5.8.3",
     "vite": "^5.2.10",
-    "vitest": "^3.2.4",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "jsdom": "^26.1.0"
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   }
-} 
+}

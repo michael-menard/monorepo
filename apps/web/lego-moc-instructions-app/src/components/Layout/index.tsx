@@ -30,11 +30,11 @@ function Layout({ children }: LayoutProps) {
             {/* Left side - Brand */}
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
                   <span className="text-primary-foreground font-bold text-sm">M</span>
                 </div>
-                <span className="font-bold text-xl">MOC Builder</span>
-                <Badge variant="secondary" className="ml-2">Beta</Badge>
+                <span className="font-bold text-xl text-foreground">MOC Builder</span>
+                <Badge variant="secondary" className="ml-2 bg-tertiary text-tertiary-foreground">Beta</Badge>
               </Link>
             </div>
 
@@ -61,12 +61,15 @@ function Layout({ children }: LayoutProps) {
               {/* For now, always show Sign In/Sign Up since auth is not implemented */}
               <div className="flex items-center space-x-2">
                 <Link to="/auth/login">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="outline" size="default">
                     Sign In
                   </Button>
                 </Link>
                 <Link to="/auth/signup">
-                  <Button size="sm">
+                  <Button 
+                    variant="default" 
+                    size="default"
+                  >
                     Sign Up
                   </Button>
                 </Link>

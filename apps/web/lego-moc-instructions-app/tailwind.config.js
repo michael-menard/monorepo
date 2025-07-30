@@ -1,11 +1,12 @@
-import rootConfig from '../../../tailwind.config.js';
+import sharedPreset from '@monorepo/shared/tailwind-preset.js';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  presets: [rootConfig],
   content: [
     './src/**/*.{js,ts,jsx,tsx}',
     './index.html',
     '../../../packages/ui/src/**/*.{js,ts,jsx,tsx}',
   ],
+  presets: [sharedPreset],
+  plugins: [],
 }; 
