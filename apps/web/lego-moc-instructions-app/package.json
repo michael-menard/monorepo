@@ -16,6 +16,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:forgot-password": "playwright test tests/auth/forgot-password.spec.ts",
+    "test:forgot-password-e2e": "playwright test tests/auth/forgot-password-e2e.spec.ts",
 
     "test:ethereal-setup": "tsx src/pages/auth/EmailVerificationPage/__tests__/setup-ethereal.ts",
     "test:mailhog-setup": "tsx src/pages/auth/EmailVerificationPage/__tests__/setup-mailhog.ts",
