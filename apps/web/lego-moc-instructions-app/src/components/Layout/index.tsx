@@ -1,21 +1,15 @@
 import { 
-  AppAvatar,
   Badge,
   Button,
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
-  Separator,
   cn
 } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
 import { 
-  BookOpen,
-  Heart, 
-  Menu
+  BookOpen
 } from 'lucide-react'
 import { z } from 'zod'
 
@@ -27,45 +21,6 @@ const LayoutPropsSchema = z.object({
 type LayoutProps = z.infer<typeof LayoutPropsSchema>;
 
 function Layout({ children }: LayoutProps) {
-  // Mock authentication state - will be replaced with real auth later
-  const mockAuth = {
-    isAuthenticated: false, // Set to true to test authenticated access
-    user: {
-      id: '1',
-      email: 'test@example.com',
-      name: 'Test User',
-      role: 'user',
-      emailVerified: true,
-      avatar: null as string | null, // Will be replaced with real avatar URL
-    },
-  };
-
-  // Handler for avatar upload
-  const handleAvatarUpload = async (file: File) => {
-    // Simulate upload delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // In a real app, you would upload the file to your server
-    console.log('Avatar uploaded:', file.name);
-    
-    // Update the mock auth state with new avatar URL
-    // mockAuth.user.avatar = URL.createObjectURL(file);
-  };
-
-  // Handler for profile navigation
-  const handleProfileClick = () => {
-    console.log('Profile clicked - navigate to profile page');
-    // In a real app, you would navigate to the profile page
-    // You can use the router here: router.navigate({ to: '/profile' });
-  };
-
-  // Handler for logout
-  const handleLogout = () => {
-    console.log('Logout confirmed');
-    // In a real app, you would clear auth state and redirect to login
-    // You can use the router here: router.navigate({ to: '/login' });
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky Navbar */}
@@ -88,57 +43,34 @@ function Layout({ children }: LayoutProps) {
               <NavigationMenu>
                 <NavigationMenuList>
                   <NavigationMenuItem>
-                    <Link to="/moc-instructions">
-                      <NavigationMenuLink className={cn(
+                    <NavigationMenuLink asChild>
+                      <Link to="/moc-instructions" className={cn(
                         "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
                       )}>
                         <BookOpen className="mr-2 h-4 w-4" />
                         Browse MOCs
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                  {mockAuth.isAuthenticated && (
-                    <NavigationMenuItem>
-                      <Link to="/wishlist">
-                        <NavigationMenuLink className={cn(
-                          "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
-                        )}>
-                          <Heart className="mr-2 h-4 w-4" />
-                          Wishlist
-                        </NavigationMenuLink>
                       </Link>
-                    </NavigationMenuItem>
-                  )}
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
                 </NavigationMenuList>
               </NavigationMenu>
             </div>
 
             {/* Right side - User Actions */}
             <div className="flex items-center space-x-4">
-              {mockAuth.isAuthenticated ? (
-                // Authenticated user - Show AppAvatar
-                <AppAvatar
-                  avatarUrl={mockAuth.user.avatar || undefined}
-                  userName={mockAuth.user.name}
-                  userEmail={mockAuth.user.email}
-                  onAvatarUpload={handleAvatarUpload}
-                  onProfileClick={handleProfileClick}
-                  onLogout={handleLogout}
-                  size="sm"
-                  showEditButton={true}
-                  disabled={false}
-                />
-              ) : (
-                // Unauthenticated user - Show Sign In/Sign Up
-                <div className="flex items-center space-x-2">
+              {/* For now, always show Sign In/Sign Up since auth is not implemented */}
+              <div className="flex items-center space-x-2">
+                <Link to="/auth/login">
                   <Button variant="ghost" size="sm">
                     Sign In
                   </Button>
+                </Link>
+                <Link to="/auth/signup">
                   <Button size="sm">
                     Sign Up
                   </Button>
-                </div>
-              )}
+                </Link>
+              </div>
             </div>
           </div>
         </div>

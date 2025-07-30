@@ -15,6 +15,11 @@ import { mocDetailRoute } from './routes/moc-detail.tsx'
 import { mocGalleryRoute } from './routes/moc-gallery.tsx'
 import { profileRoute } from './routes/profile.tsx'
 import { wishlistRoute } from './routes/wishlist.tsx'
+import { loginRoute } from './routes/auth/login.tsx'
+import { signupRoute } from './routes/auth/signup.tsx'
+import { forgotPasswordRoute } from './routes/auth/forgot-password.tsx'
+import { resetPasswordRoute } from './routes/auth/reset-password.tsx'
+import { verifyEmailRoute } from './routes/auth/verify-email.tsx'
 
 import Layout from './components/Layout'
 
@@ -44,6 +49,11 @@ const routeTree = rootRoute.addChildren([
   mocDetailRoute,
   profileRoute,
   wishlistRoute,
+  loginRoute,
+  signupRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
+  verifyEmailRoute,
 ])
 
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext()

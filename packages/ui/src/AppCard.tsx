@@ -28,7 +28,7 @@ export const AppCard: React.FC<AppCardProps> = ({
         <CardHeader className={headerClassName}>
           <div className="flex items-center justify-between">
             <div>
-              {title && <CardTitle>{title}</CardTitle>}
+              {title && <CardTitle data-testid="app-card-title">{title}</CardTitle>}
               {description && <CardDescription>{description}</CardDescription>}
             </div>
             {actions && <div className="flex items-center gap-2">{actions}</div>}

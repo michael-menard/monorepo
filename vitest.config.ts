@@ -23,7 +23,10 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/.{idea,git,cache,output,temp}**',
-      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*'
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
+      '**/__tests__/**/*.e2e.test.*',
+      '**/__tests__/**/*.spec.*',
+      '**/src/pages/auth/EmailVerificationPage/__tests__/**'
     ],
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

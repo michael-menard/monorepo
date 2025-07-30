@@ -2,10 +2,14 @@
   "name": "@repo/ui",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
     "./globals.css": "./src/globals.css",
     "./avatar": "./src/avatar.tsx",
     "./badge": "./src/badge.tsx",

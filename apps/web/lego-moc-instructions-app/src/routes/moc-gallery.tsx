@@ -1,7 +1,7 @@
 import { createRoute } from '@tanstack/react-router';
+import { createTanStackRouteGuard } from '@repo/auth';
 import { rootRoute } from '../main';
 import MocInstructionsGallery from '../pages/MocInstructionsGallery';
-import { createTanStackRouteGuard } from '../components/TanStackRouteGuard';
 
 export const mocGalleryRoute = createRoute({
   getParentRoute: () => rootRoute,

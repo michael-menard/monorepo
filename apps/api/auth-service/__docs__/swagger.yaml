@@ -1,0 +1,646 @@
+openapi: 3.0.3
+info:
+  title: Auth Service API
+  description: |
+    Authentication and authorization service for the LEGO MOC Instructions App.
+    
+    This API provides endpoints for user registration, authentication, email verification,
+    password reset, and session management.
+    
+    ## Features
+    - User registration with email verification
+    - Secure login with JWT tokens
+    - Password reset functionality
+    - Email verification system
+    - Session management
+    
+    ## Authentication
+    Most endpoints require authentication via JWT tokens sent in HTTP-only cookies.
+    Protected endpoints will return 401 Unauthorized if no valid token is provided.
+    
+    ## Error Handling
+    All endpoints return consistent error responses with appropriate HTTP status codes
+    and descriptive error messages.
+    
+    ## Rate Limiting
+    Authentication endpoints are rate-limited to prevent abuse.
+    
+  version: 1.0.0
+  contact:
+    name: LEGO MOC Instructions Team
+    email: support@lego-moc-instructions.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api.lego-moc-instructions.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: User Management
+    description: User registration and profile management
+  - name: Email Verification
+    description: Email verification and resend functionality
+  - name: Password Reset
+    description: Password reset and recovery
+  - name: Health
+    description: Health check and monitoring
+
+paths:
+  /auth/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the auth service is running
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00Z"
+
+  /auth/sign-up:
+    post:
+      tags:
+        - User Management
+      summary: Register a new user
+      description: |
+        Create a new user account with email verification.
+        
+        The user will receive a verification email with a 6-digit code.
+        The account must be verified before the user can log in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  description: User's password (minimum 8 characters)
+                  example: "SecurePassword123!"
+                name:
+                  type: string
+                  minLength: 2
+                  description: User's full name
+                  example: "John Doe"
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    success: false
+                    message: "All fields are required"
+                user_exists:
+                  summary: User already exists
+                  value:
+                    success: false
+                    message: "User already exists"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate a user and create a session.
+        
+        Returns a JWT token in an HTTP-only cookie for session management.
+        The user must have verified their email before they can log in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+                password:
+                  type: string
+                  description: User's password
+                  example: "SecurePassword123!"
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: JWT token cookie
+              schema:
+                type: string
+                example: "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Strict"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_credentials:
+                  summary: Invalid credentials
+                  value:
+                    success: false
+                    message: "Invalid credentials"
+                    code: "INVALID_CREDENTIALS"
+        '403':
+          description: Email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                email_not_verified:
+                  summary: Email not verified
+                  value:
+                    success: false
+                    message: "Email not verified"
+                    code: "EMAIL_NOT_VERIFIED"
+
+  /auth/log-out:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: |
+        Log out the current user and clear the session.
+        
+        Clears the JWT token cookie and invalidates the session.
+      responses:
+        '200':
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              description: Cleared token cookie
+              schema:
+                type: string
+                example: "token=; HttpOnly; Secure; SameSite=Strict; Max-Age=0"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/check-auth:
+    get:
+      tags:
+        - Authentication
+      summary: Check authentication status
+      description: |
+        Verify if the current user is authenticated.
+        
+        Returns the current user's information if the JWT token is valid.
+        This endpoint is protected and requires a valid JWT token.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User is authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  summary: No valid token
+                  value:
+                    success: false
+                    message: "Access denied. No token provided."
+        '400':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                user_not_found:
+                  summary: User not found
+                  value:
+                    success: false
+                    message: "User not found"
+
+  /auth/verify-email:
+    post:
+      tags:
+        - Email Verification
+      summary: Verify email address
+      description: |
+        Verify a user's email address using the verification code sent during registration.
+        
+        The verification code expires after 24 hours.
+        Once verified, the user can log in to the application.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+                  pattern: '^[0-9]{6}$'
+                  description: 6-digit verification code
+                  example: "123456"
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_code:
+                  summary: Invalid verification code
+                  value:
+                    success: false
+                    message: "Invalid or expired verification code"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Email Verification
+      summary: Resend verification email
+      description: |
+        Resend the verification email to an unverified user.
+        
+        Generates a new 6-digit verification code and sends it via email.
+        The new code expires after 24 hours.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                email_required:
+                  summary: Email required
+                  value:
+                    success: false
+                    message: "Email is required"
+                    code: "EMAIL_REQUIRED"
+                already_verified:
+                  summary: Already verified
+                  value:
+                    success: false
+                    message: "User already verified"
+                    code: "ALREADY_VERIFIED"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                user_not_found:
+                  summary: User not found
+                  value:
+                    success: false
+                    message: "User not found"
+                    code: "USER_NOT_FOUND"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Password Reset
+      summary: Request password reset
+      description: |
+        Send a password reset link to the user's email address.
+        
+        Generates a secure reset token and sends a reset link via email.
+        The reset token expires after 1 hour.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                user_not_found:
+                  summary: User not found
+                  value:
+                    success: false
+                    message: "User not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/reset-password/{token}:
+    post:
+      tags:
+        - Password Reset
+      summary: Reset password
+      description: |
+        Reset the user's password using a valid reset token.
+        
+        The token is provided in the URL and must be valid and not expired.
+        After successful reset, the user will receive a confirmation email.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Password reset token
+          schema:
+            type: string
+          example: "abc123def456ghi789"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                  description: New password (minimum 8 characters)
+                  example: "NewSecurePassword123!"
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  summary: Invalid or expired token
+                  value:
+                    success: false
+                    message: "Invalid or expired reset token"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: JWT token stored in HTTP-only cookie
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: User's unique identifier
+          example: "507f1f77bcf86cd799439011"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        name:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        isVerified:
+          type: boolean
+          description: Whether the user's email is verified
+          example: true
+        lastLogin:
+          type: string
+          format: date-time
+          description: Last login timestamp
+          example: "2024-01-15T10:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2024-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-15T10:30:00Z"
+      required:
+        - _id
+        - email
+        - name
+        - isVerified
+
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Operation completed successfully"
+        data:
+          description: Response data (varies by endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "An error occurred"
+        code:
+          type: string
+          description: Error code for programmatic handling
+          example: "INVALID_CREDENTIALS"
+
+  examples:
+    UserExample:
+      summary: Example user object
+      value:
+        _id: "507f1f77bcf86cd799439011"
+        email: "user@example.com"
+        name: "John Doe"
+        isVerified: true
+        lastLogin: "2024-01-15T10:30:00Z"
+        createdAt: "2024-01-01T00:00:00Z"
+        updatedAt: "2024-01-15T10:30:00Z"
+
+    LoginRequestExample:
+      summary: Example login request
+      value:
+        email: "user@example.com"
+        password: "SecurePassword123!"
+
+    SignupRequestExample:
+      summary: Example signup request
+      value:
+        email: "newuser@example.com"
+        password: "SecurePassword123!"
+        name: "Jane Smith"
+
+    VerificationRequestExample:
+      summary: Example email verification request
+      value:
+        code: "123456"
+
+    PasswordResetRequestExample:
+      summary: Example password reset request
+      value:
+        email: "user@example.com"
+
+    NewPasswordRequestExample:
+      summary: Example new password request
+      value:
+        password: "NewSecurePassword123!"
+
+externalDocs:
+  description: Find more info about the Auth Service
+  url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/auth-service 

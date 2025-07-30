@@ -1,7 +1,7 @@
 import { createRoute } from '@tanstack/react-router';
+import { createTanStackRouteGuard } from '@repo/auth';
 import { rootRoute } from '../main';
 import ProfilePage from '../pages/ProfilePage';
-import { createTanStackRouteGuard } from '../components/TanStackRouteGuard';
 
 export const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
