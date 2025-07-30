@@ -241,6 +241,197 @@
                   error: "FORBIDDEN"
                   details: null
 
+/api/mocs/search:
+  get:
+    summary: Search MOC instructions
+    description: Full-text search for MOC instructions using Elasticsearch
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: query
+        name: q
+        required: false
+        schema:
+          type: string
+        description: Search query
+      - in: query
+        name: tags
+        required: false
+        schema:
+          type: string
+        description: Filter by tags (comma-separated)
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results to return
+      - in: query
+        name: offset
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Number of results to skip
+    responses:
+      '200':
+        description: Search results retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                results:
+                  type: array
+                  items:
+                    $ref: '../components/schemas.yaml#/MocInstruction'
+                total:
+                  type: integer
+                  description: Total number of results
+                limit:
+                  type: integer
+                  description: Number of results returned
+                offset:
+                  type: integer
+                  description: Number of results skipped
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/files:
+  post:
+    summary: Upload file to MOC instruction
+    description: Upload a file (instruction or parts list) to an existing MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary
+                description: File to upload (PDF, CSV, or other supported formats)
+    responses:
+      '201':
+        description: File uploaded successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 201
+                  message: "File uploaded successfully"
+                  data:
+                    id: "file-uuid"
+                    mocId: "moc-uuid"
+                    originalFilename: "instruction.pdf"
+                    fileType: "instruction"
+                    fileUrl: "https://example.com/file.pdf"
+                    mimeType: "application/pdf"
+                    fileSize: 1024000
+                    createdAt: "2024-06-10T12:00:00Z"
+      '400':
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '413':
+        description: File too large
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/files/{fileId}:
+  delete:
+    summary: Delete file from MOC instruction
+    description: Delete a file from an existing MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+      - in: path
+        name: fileId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: File ID
+    responses:
+      '200':
+        description: File deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "File deleted successfully"
+                  data: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: File not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
 /api/mocs/{id}/files/{fileId}/download-info:
   get:
     summary: Get file download information

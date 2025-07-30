@@ -1,41 +1,87 @@
 openapi: 3.0.3
 info:
-  title: Lego Projects Profile API
+  title: LEGO Projects API
   version: 1.0.0
   description: |
-    API for user profile management with enhanced security features.
+    Comprehensive API for LEGO MOC Instructions application with enhanced security features.
+    
+    **Core Features:**
+    - User profile management with avatar uploads
+    - Gallery and album management
+    - MOC instructions and file management
+    - Wishlist functionality with reordering
+    - Full-text search via Elasticsearch
+    - Image processing and optimization
     
     **Security Features:**
     - File content validation and virus scanning
     - Rate limiting and access control
     - Image processing and optimization
     - Authentication via JWT cookies
+    - Request sanitization and security headers
     
     **File Upload:**
     - Supports JPEG, PNG, and HEIC formats
     - Maximum file size: 20MB
     - Automatic image optimization and resizing
     - Secure file storage with S3 or local fallback
+    - Virus scanning and content validation
+    
+    **Search & Indexing:**
+    - Elasticsearch integration for full-text search
+    - Real-time indexing of MOC instructions and wishlist items
+    - Advanced filtering and sorting capabilities
+    
+  contact:
+    name: LEGO MOC Instructions Team
+    email: support@lego-moc-instructions.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
 servers:
-  - url: /api/users
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.lego-moc-instructions.com
+    description: Production server
 paths:
-  $ref: './paths/users.yaml'
+  # User Profile Management
+  /api/users/{id}:
+    $ref: './paths/users.yaml#/api/users/{id}'
+  /api/users/{id}/avatar:
+    $ref: './paths/users.yaml#/api/users/{id}/avatar'
+  
+  # Gallery Management
   /api/images:
     $ref: './paths/images.yaml#/api/images'
   /api/images/{id}:
     $ref: './paths/images.yaml#/api/images/{id}'
+  /api/albums:
+    $ref: './paths/albums.yaml#/api/albums'
   /api/albums/{id}:
     $ref: './paths/albums.yaml#/api/albums/{id}'
+  /api/gallery:
+    $ref: './paths/gallery.yaml#/api/gallery'
   /api/flag:
     $ref: './paths/flag.yaml#/api/flag'
+  
+  # MOC Instructions Management
   /api/mocs:
     $ref: './paths/moc-instructions.yaml#/api/mocs'
+  /api/mocs/search:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/search'
   /api/mocs/{id}:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}'
+  /api/mocs/{id}/files:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files'
+  /api/mocs/{id}/files/{fileId}:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}'
   /api/mocs/{id}/files/{fileId}/download-info:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download-info'
   /api/mocs/{id}/files/{fileId}/download:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download'
+  
+  # MOC Parts Lists (Legacy - for reference)
   /api/moc-instructions/{mocId}/parts-lists:
     $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists'
   /api/moc-instructions/{mocId}/parts-lists/{partsListId}:
@@ -44,6 +90,8 @@ paths:
     $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists/{partsListId}/status'
   /api/user/parts-lists/summary:
     $ref: './paths/moc-parts-lists.yaml#/user/parts-lists/summary'
+  
+  # Wishlist Management
   /api/wishlist:
     $ref: './paths/wishlist.yaml#/api/wishlist'
   /api/wishlist/search:
@@ -62,6 +110,43 @@ paths:
     $ref: './paths/wishlist.yaml#/api/wishlist/upload-image'
   /api/wishlist/image:
     $ref: './paths/wishlist.yaml#/api/wishlist/image'
+
+  # Health Check
+  /:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the LEGO Projects API is running
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Lego Projects API is running"
+
+tags:
+  - name: Health
+    description: Health check and monitoring
+  - name: User Profiles
+    description: User profile management and avatar uploads
+  - name: Gallery
+    description: Image gallery and album management
+  - name: MOC Instructions
+    description: MOC instructions and file management
+  - name: Wishlist
+    description: Wishlist management and reordering
+  - name: Search
+    description: Full-text search functionality
+  - name: Files
+    description: File upload, download, and management
+  - name: Security
+    description: Security and moderation features
+  - name: Security
+    description: Security and moderation features
+
 components:
   schemas:
     $ref: './components/schemas.yaml'
@@ -70,4 +155,8 @@ components:
   parameters:
     $ref: './components/parameters.yaml'
   securitySchemes:
-    $ref: './components/securitySchemes.yaml' 
+    $ref: './components/securitySchemes.yaml'
+
+externalDocs:
+  description: Find more info about the LEGO Projects API
+  url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/lego-projects-api 

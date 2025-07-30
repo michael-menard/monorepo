@@ -13,6 +13,7 @@ info:
     - Password reset functionality
     - Email verification system
     - Session management
+    - Debug and monitoring endpoints
     
     ## Authentication
     Most endpoints require authentication via JWT tokens sent in HTTP-only cookies.
@@ -24,6 +25,10 @@ info:
     
     ## Rate Limiting
     Authentication endpoints are rate-limited to prevent abuse.
+    
+    ## Email Service
+    The service uses Ethereal Email for development/testing and supports multiple email providers.
+    Email sending failures don't block user registration but are logged for monitoring.
     
   version: 1.0.0
   contact:
@@ -50,6 +55,8 @@ tags:
     description: Password reset and recovery
   - name: Health
     description: Health check and monitoring
+  - name: Debug
+    description: Debug and development endpoints
 
 paths:
   /auth/health:
@@ -69,10 +76,6 @@ paths:
                   status:
                     type: string
                     example: "ok"
-                  timestamp:
-                    type: string
-                    format: date-time
-                    example: "2024-01-15T10:30:00Z"
 
   /auth/sign-up:
     post:
@@ -118,8 +121,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
                 properties:
-                  data:
-                    $ref: '#/components/schemas/UserResponse'
+                  user:
+                    $ref: '#/components/schemas/User'
         '400':
           description: Bad request
           content:
@@ -187,8 +190,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
                 properties:
-                  data:
-                    $ref: '#/components/schemas/UserResponse'
+                  user:
+                    $ref: '#/components/schemas/User'
         '400':
           description: Bad request
           content:
@@ -228,12 +231,6 @@ paths:
       responses:
         '200':
           description: Logout successful
-          headers:
-            Set-Cookie:
-              description: Cleared token cookie
-              schema:
-                type: string
-                example: "token=; HttpOnly; Secure; SameSite=Strict; Max-Age=0"
           content:
             application/json:
               schema:
@@ -259,8 +256,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
                 properties:
-                  data:
-                    $ref: '#/components/schemas/UserResponse'
+                  user:
+                    $ref: '#/components/schemas/User'
         '401':
           description: Not authenticated
           content:
@@ -272,7 +269,7 @@ paths:
                   summary: No valid token
                   value:
                     success: false
-                    message: "Access denied. No token provided."
+                    message: "Not authorized, no token"
         '400':
           description: User not found
           content:
@@ -318,8 +315,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
                 properties:
-                  data:
-                    $ref: '#/components/schemas/UserResponse'
+                  user:
+                    $ref: '#/components/schemas/User'
         '400':
           description: Invalid or expired code
           content:
@@ -440,6 +437,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                success:
+                  summary: Password reset email sent
+                  value:
+                    success: true
+                    message: "Password reset link sent to your email"
         '400':
           description: Bad request
           content:
@@ -498,6 +501,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                success:
+                  summary: Password reset successful
+                  value:
+                    success: true
+                    message: "Password reset successful"
         '400':
           description: Bad request
           content:
@@ -516,6 +525,179 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /debug/system:
+    get:
+      tags:
+        - Debug
+      summary: System information
+      description: Get system information for debugging purposes
+      responses:
+        '200':
+          description: System information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  platform:
+                    type: string
+                    example: "darwin"
+                  arch:
+                    type: string
+                    example: "x64"
+                  cpus:
+                    type: integer
+                    example: 8
+                  memory:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 17179869184
+                      free:
+                        type: integer
+                        example: 8589934592
+                  uptime:
+                    type: number
+                    example: 12345.67
+                  nodeVersion:
+                    type: string
+                    example: "v18.17.0"
+                  processId:
+                    type: integer
+                    example: 12345
+
+  /debug/env:
+    get:
+      tags:
+        - Debug
+      summary: Environment information
+      description: Get safe environment variable information
+      responses:
+        '200':
+          description: Environment information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodeEnv:
+                    type: string
+                    example: "development"
+                  port:
+                    type: string
+                    example: "5000"
+                  hasMongoDB:
+                    type: boolean
+                    example: true
+                  hasJwtSecret:
+                    type: boolean
+                    example: true
+                  hasFrontendUrl:
+                    type: boolean
+                    example: true
+
+  /debug/db-test:
+    get:
+      tags:
+        - Debug
+      summary: Database connection test
+      description: Test database connectivity
+      responses:
+        '200':
+          description: Database test completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "Database connection test not implemented yet"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00Z"
+
+  /debug/echo:
+    get:
+      tags:
+        - Debug
+      summary: Echo request details
+      description: Echo back request details for debugging
+      responses:
+        '200':
+          description: Request details echoed back
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  method:
+                    type: string
+                    example: "GET"
+                  url:
+                    type: string
+                    example: "/debug/echo"
+                  headers:
+                    type: object
+                  query:
+                    type: object
+                  body:
+                    type: object
+                  cookies:
+                    type: object
+                  ip:
+                    type: string
+                    example: "127.0.0.1"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00Z"
+
+  /test/hello:
+    get:
+      tags:
+        - Debug
+      summary: Hello world test
+      description: Simple hello world endpoint for testing
+      responses:
+        '200':
+          description: Hello world response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Hello, world!"
+
+  /test/info:
+    get:
+      tags:
+        - Debug
+      summary: Server information
+      description: Get basic server information
+      responses:
+        '200':
+          description: Server information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  server:
+                    type: string
+                    example: "Express"
+                  time:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00Z"
+                  environment:
+                    type: string
+                    example: "development"
 
 components:
   securitySchemes:
@@ -542,6 +724,10 @@ components:
           type: string
           description: User's full name
           example: "John Doe"
+        password:
+          type: string
+          description: Hashed password (never returned in responses)
+          example: "$2a$10$hashedpasswordstring"
         isVerified:
           type: boolean
           description: Whether the user's email is verified
@@ -551,6 +737,24 @@ components:
           format: date-time
           description: Last login timestamp
           example: "2024-01-15T10:30:00Z"
+        resetPasswordToken:
+          type: string
+          description: Password reset token (temporary)
+          example: "abc123def456ghi789"
+        resetPasswordExpiresAt:
+          type: string
+          format: date-time
+          description: Password reset token expiration
+          example: "2024-01-15T11:30:00Z"
+        verificationToken:
+          type: string
+          description: Email verification token (temporary)
+          example: "123456"
+        verificationTokenExpiresAt:
+          type: string
+          format: date-time
+          description: Email verification token expiration
+          example: "2024-01-16T10:30:00Z"
         createdAt:
           type: string
           format: date-time
