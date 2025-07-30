@@ -10,6 +10,15 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./dist/*": {
+      "import": "./dist/*",
+      "require": "./dist/*",
+      "types": "./dist/*.d.ts"
+    },
+    "./src/*": {
+      "import": "./src/*",
+      "require": "./src/*"
     }
   },
   "scripts": {

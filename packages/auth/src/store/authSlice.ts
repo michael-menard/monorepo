@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction, Slice } from '@reduxjs/toolkit';
 
 // Simplified auth state - only UI-specific state
-interface AuthState {
+export interface AuthState {
   isCheckingAuth: boolean;
   lastActivity: number | null;
   sessionTimeout: number;

@@ -42,7 +42,13 @@ export const signup = async (req: Request, res: Response) => {
 		// jwt
 		generateTokenAndSetCookie(res, user._id);
 
-		await sendVerificationEmail(user.email, verificationToken);
+		// Try to send verification email, but don't fail if it doesn't work
+		try {
+			await sendVerificationEmail(user.email, verificationToken);
+		} catch (emailError) {
+			console.warn('Failed to send verification email:', emailError);
+			// Continue with signup even if email fails
+		}
 
 		res.status(201).json({
 			success: true,

@@ -18,6 +18,10 @@ export { default as ConfirmResetPasswordForm } from './components/ConfirmResetPa
 export { default as EmailVerificationForm } from './components/EmailVerificationForm/index.js';
 export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index.js';
 export { default as RouteGuard } from './components/RouteGuard/index.js';
+export {
+  createTanStackRouteGuard,
+  type TanStackRouteGuardOptions,
+} from './components/TanStackRouteGuard/index.js';
 
 // Hooks
 export { useAuth } from './hooks/useAuth.js';
