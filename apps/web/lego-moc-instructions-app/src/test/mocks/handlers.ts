@@ -55,5 +55,13 @@ export const handlers = [
     }, { status: 400 })
   }),
 
+  // Reset password endpoint
+  http.post('*/auth/reset-password/*', () => {
+    return HttpResponse.json({
+      success: true,
+      message: 'Password reset successful'
+    }, { status: 200 })
+  }),
+
   // Add more auth handlers as needed
 ] 

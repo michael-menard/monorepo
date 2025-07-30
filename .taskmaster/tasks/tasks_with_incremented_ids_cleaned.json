@@ -1,4 +1,56 @@
 {
+  "implement reset password id in the email": {
+    "id": 140,
+    "title": "implement reset password id in the email",
+    "description": "implement reset password id in the email",
+    "status": "done",
+    "priority": "high",
+    "dependencies": [
+      "24",
+      "42"
+    ],
+    "details": "add an id to the reset password email so that the user can reset their password",
+    "testStrategy": "Test file upload, cropping functionality, validation, and error handling",
+    "tag": "frontend-ui-development",
+    "techStack": [
+      "ESNext",
+      "React",
+      "Vite",
+      "Zod",
+      "Vitest",
+      "MSW",
+      "Testing Library",
+      "TanStack Start"
+    ],
+    "relatedFiles": [],
+    "pointers": [],
+    "rules": [
+      "All apps must use ESNext module resolution (not NodeNext)",
+      "React apps must use TanStack Start",
+      "Use Zod schemas over TypeScript interfaces",
+      "All apps must be compatible with serverless framework",
+      "All external dependencies must be mocked in tests.",
+      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+    ],
+    "constraints": [
+      "the id should not be be a onetime use code.",
+      "the id should expire after 10 minutes"
+    ],
+    "infra": {
+      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
+      "hosting": "Serverless Framework",
+      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
+      "cdn": "Cloudflare or Vercel Assets"
+    },
+    "metrics": [
+      "CI pipeline green on all branches",
+      "95%+ test coverage",
+      "Lighthouse score > 90",
+      "No unused dependencies or exports"
+    ],
+    "tags": [],
+    "blockedBy": []
+  },
   "Create an AppAvatar Component": {
     "id": 140,
     "title": "Implement AvatarUploader component",

@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Lock } from 'lucide-react'
-import { useRouter } from '@tanstack/react-router'
+import { useParams, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState } from 'react'
@@ -20,6 +20,7 @@ type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>
 
 function ResetPasswordPage() {
   const router = useRouter()
+  const { token } = useParams({ from: '/auth/reset-password/$token' })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -40,10 +41,7 @@ function ResetPasswordPage() {
       // Remove confirmPassword before sending to backend
       const { confirmPassword, ...resetData } = data
       
-      // Get token from URL params (you might need to adjust this based on your routing)
-      const token = window.location.pathname.split('/').pop() || ''
-      
-      // Call the auth API
+      // Call the auth API with token from route params
       const response = await authApi.resetPassword(token, resetData)
       
       console.log('Reset password successful:', response)
@@ -94,7 +92,7 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4" data-testid="reset-password-main">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
