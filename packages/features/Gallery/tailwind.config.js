@@ -1,9 +1,7 @@
-import sharedConfig from '../../tailwind.config.js';
+import rootConfig from '../../tailwind.config.js';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  ...sharedConfig,
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-}; 
+  presets: [rootConfig],
+  content: ['./src/**/*.{js,ts,jsx,tsx}'],
+} 

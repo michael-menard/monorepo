@@ -92,7 +92,7 @@ function HomePage() {
                   </Button>
                 </Link>
                 <Link to="/wishlist">
-                  <Button variant="outline" size="lg" className="gap-2">
+                  <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
                     <Heart className="h-4 w-4" />
                     My Wishlist
                   </Button>
@@ -106,7 +106,7 @@ function HomePage() {
                     Browse MOCs
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg" className="gap-2">
+                <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
                   <User className="h-4 w-4" />
                   Sign Up
                 </Button>
@@ -159,12 +159,12 @@ function HomePage() {
               </CardHeader>
               <CardContent>
                 {feature.requiresAuth && !mockAuth.isAuthenticated ? (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="outline" className="w-full border border-input bg-background" disabled>
                     Login Required
                   </Button>
                 ) : (
                   <Link to={feature.href} className="w-full">
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full border border-input bg-background">
                       {feature.action}
                     </Button>
                   </Link>
@@ -226,7 +226,7 @@ function HomePage() {
               </Button>
             </Link>
             {!mockAuth.isAuthenticated && (
-              <Button variant="outline" size="lg" className="gap-2">
+              <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
                 <User className="h-4 w-4" />
                 Create Account
               </Button>

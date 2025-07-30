@@ -9,7 +9,7 @@ if (!process.env.AUTH_API) {
 
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import profileRouter from './src/routes';
+import profileRouter from './src/routes/index';
 import { 
   securityHeaders, 
   sanitizeRequest, 

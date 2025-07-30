@@ -37,7 +37,7 @@
     "@repo/moc-instructions": "workspace:*",
     "@repo/profile": "workspace:*",
     "@repo/ui": "workspace:*",
-    "@tailwindcss/postcss": "^4.0.6",
+    "@tailwindcss/postcss": "^4.1.11",
     "@tanstack/react-query": "^5.66.5",
     "@tanstack/react-query-devtools": "^5.66.5",
     "@tanstack/react-router": "^1.130.2",
@@ -50,7 +50,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.20.1",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss": "^4.0.6",
+    "tailwindcss": "^4.1.11",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.76"
   },

@@ -1,1935 +1,1928 @@
 {
-  "implement reset password id in the email": {
-    "id": 140,
-    "title": "implement reset password id in the email",
-    "description": "implement reset password id in the email",
-    "status": "done",
-    "priority": "high",
-    "dependencies": [
-      "24",
-      "42"
-    ],
-    "details": "add an id to the reset password email so that the user can reset their password",
-    "testStrategy": "Test file upload, cropping functionality, validation, and error handling",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "the id should not be be a onetime use code.",
-      "the id should expire after 10 minutes"
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-
-
-
-  "Create an AppAvatar Component": {
-    "id": 140,
-    "title": "Implement AvatarUploader component",
-    "description": "Create an AppAvatar Component",
-    "status": "done",
-    "priority": "high",
-    "dependencies": [
-      "24",
-      "42"
-    ],
-    "details": "Build avatar upload with react-easy-crop integration, file type validation (.jpg/.heic), and upload progress",
-    "testStrategy": "Test file upload, cropping functionality, validation, and error handling",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "use the shadcn/ui Avatar component",
-      "use the shadcn/ui AvatarFallback component",
-      "use the shadcn/ui AvatarImage component",
-      "use the shadcn/ui AvatarFallbackText component",
-      "use the shadcn/ui AvatarFallbackIcon component",
-      "use the shadcn/ui AvatarFallbackImage component",
-      "use the shadcn/ui AvatarFallbackText component",
-      "when hovering over the component a pencil icon should appear to edit the avatar on the user's own avatar",
-      "clicking the pencil icon should open a modal to upload a new avatar leveraging the existing AvatarUploader component im packages/features/profile",
-      "clicking the avatar should open a dropdown using shadcn/ui DropdownMenu",
-      "the dropdown should have the following options: 'Profile', 'Logout'",
-      "the 'Profile' option should opnavigate to the profile page",
-      "the 'Logout' option should oem a model that asks the user if they are sure they want to logout",
-      "the log out option should be disabled for now until auth is implemented",
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-
-
-
-  
-  "Create MOC gallery with filtering and search": {
-    "id": 190,
-    "title": "Implement MocInstructionsGallery component",
-    "description": "Create MOC gallery with filtering and search",
-    "status": "done",
-    "priority": "high",
-    "dependencies": [
-      "25"
-    ],
-    "details": "Build MOC-specific gallery reusing gallery layout with MOC-specific filtering and display options",
-    "testStrategy": "Test gallery layout, MOC-specific features, and search functionality",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "the MocInstructionsGallery component should use the packages/features/gallery component",
-      "this may already be complete in apps/web/lego-moc-instructions-app/src/pages/MocInstructionsGallery",
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create detailed MOC page with editable forms (Step 1 of 3)": {
-    "id": 200,
-    "title": "Implement MocDetailPage component",
-    "description": "Create detailed MOC page with editable forms (Step 1 of 3)",
-    "status": "ready",
-    "priority": "high",
-    "dependencies": [
-      "47"
-    ],
-    "details": "Build detailed view with editable title, description, tags, thumbnail display, and file management areas",
-    "testStrategy": "Test form editing, file management, and data persistence",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create file upload areas for different MOC file types (Step 1 of 3)": {
-    "id": 230,
-    "title": "Implement MOC file upload areas",
-    "description": "Create file upload areas for different MOC file types (Step 1 of 3)",
-    "status": "ready",
-    "priority": "high",
-    "dependencies": [
-      "24",
-      "48"
-    ],
-    "details": "Build specialized upload areas for PDF instructions, .io files, CSV/JSON parts lists, and thumbnail images",
-    "testStrategy": "Test file type validation, upload progress, and file management",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create MOC card for gallery display (Step 1 of 3)": {
-    "id": 260,
-    "title": "Implement MocCard component",
-    "description": "Create MOC card for gallery display (Step 1 of 3)",
-    "status": "ready",
-    "priority": "high",
-    "dependencies": [
-      "47"
-    ],
-    "details": "Build card component with thumbnail, title, description, tags, and action buttons",
-    "testStrategy": "Test card display, interactions, and responsive layout",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add search and filtering capabilities to MOC gallery (Step 1 of 3)": {
-    "id": 290,
-    "title": "Implement MOC search and filter functionality",
-    "description": "Add search and filtering capabilities to MOC gallery (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "47"
-    ],
-    "details": "Build search by title/tags, filter by file types, and integration with Elasticsearch if available",
-    "testStrategy": "Test search functionality, filtering options, and query performance",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add file download capabilities for MOC files (Step 1 of 3)": {
-    "id": 320,
-    "title": "Implement file download functionality",
-    "description": "Add file download capabilities for MOC files (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "49"
-    ],
-    "details": "Build secure file download with progress tracking and proper file handling",
-    "testStrategy": "Test download functionality, progress tracking, and file integrity",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add functionality to link gallery images to MOC instructions (Step 1 of 3)": {
-    "id": 350,
-    "title": "Implement gallery image linking for MOCs",
-    "description": "Add functionality to link gallery images to MOC instructions (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "48",
-      "25"
-    ],
-    "details": "Build image selection interface and linking mechanism between gallery and MOC instructions",
-    "testStrategy": "Test image selection, linking functionality, and data persistence",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Configure routing for all application pages (Step 1 of 3)": {
-    "id": 380,
-    "title": "Set up React Router configuration",
-    "description": "Configure routing for all application pages (Step 1 of 3)",
-    "status": "ready",
-    "priority": "high",
-    "dependencies": [
-      "20"
-    ],
-    "details": "Set up React Router with all routes, nested routing, route guards, and proper navigation structure",
-    "testStrategy": "Test navigation, route protection, and proper URL handling",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create error boundaries for graceful error handling (Step 1 of 3)": {
-    "id": 410,
-    "title": "Implement error boundary components",
-    "description": "Create error boundaries for graceful error handling (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "4"
-    ],
-    "details": "Build error boundary components with user-friendly error displays and error reporting",
-    "testStrategy": "Test error catching, display, and recovery mechanisms",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add consistent loading states across all components (Step 1 of 3)": {
-    "id": 440,
-    "title": "Implement loading states and skeletons",
-    "description": "Add consistent loading states across all components (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "4"
-    ],
-    "details": "Create loading spinners, skeleton screens, and progress indicators for all async operations",
-    "testStrategy": "Test loading states, skeleton accuracy, and loading performance",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Ensure all components work across different screen sizes (Step 1 of 3)": {
-    "id": 470,
-    "title": "Implement responsive design breakpoints",
-    "description": "Ensure all components work across different screen sizes (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "3"
-    ],
-    "details": "Test and adjust all components for mobile, tablet, and desktop breakpoints with proper responsive behavior",
-    "testStrategy": "Test responsive behavior across all breakpoints and devices",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add comprehensive accessibility support to all components (Step 1 of 3)": {
-    "id": 500,
-    "title": "Implement accessibility features",
-    "description": "Add comprehensive accessibility support to all components (Step 1 of 3)",
-    "status": "ready",
-    "priority": "high",
-    "dependencies": [
-      "4"
-    ],
-    "details": "Add ARIA labels, keyboard navigation, focus management, and screen reader support across all components",
-    "testStrategy": "Run accessibility audits and test with screen readers and keyboard-only navigation",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add comprehensive error messaging for all forms (Step 1 of 3)": {
-    "id": 530,
-    "title": "Implement form validation error messages",
-    "description": "Add comprehensive error messaging for all forms (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "12"
-    ],
-    "details": "Create consistent error message system with proper field validation feedback and user guidance",
-    "testStrategy": "Test all validation scenarios and error message clarity",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create toast notifications for user feedback (Step 1 of 3)": {
-    "id": 560,
-    "title": "Implement toast notification system",
-    "description": "Create toast notifications for user feedback (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "4"
-    ],
-    "details": "Build toast notification system for success, error, and info messages with proper positioning and timing",
-    "testStrategy": "Test toast display, timing, positioning, and accessibility",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add image optimization for uploads and display (Step 1 of 3)": {
-    "id": 590,
-    "title": "Implement image optimization utilities",
-    "description": "Add image optimization for uploads and display (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "24"
-    ],
-    "details": "Build image compression, resizing, and format optimization utilities for better performance",
-    "testStrategy": "Test image optimization quality, performance, and file size reduction",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add caching for API calls and image assets (Step 1 of 3)": {
-    "id": 620,
-    "title": "Implement caching strategies",
-    "description": "Add caching for API calls and image assets (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "22"
-    ],
-    "details": "Implement RTK Query caching, image caching, and localStorage caching where appropriate",
-    "testStrategy": "Test cache performance, invalidation, and storage management",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create end-to-end tests for complete authentication flow (Step 1 of 3)": {
-    "id": 800,
-    "title": "Implement integration tests for auth flow",
-    "description": "Create end-to-end tests for complete authentication flow (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "63"
-    ],
-    "details": "Write integration tests covering login, signup, email verification, password reset, and route protection",
-    "testStrategy": "Test complete user authentication journeys with API mocking",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create integration tests for gallery operations (Step 1 of 3)": {
-    "id": 830,
-    "title": "Implement integration tests for gallery workflow",
-    "description": "Create integration tests for gallery operations (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "64"
-    ],
-    "details": "Write tests for image upload, album creation, search, and batch operations",
-    "testStrategy": "Test complete gallery workflows with file upload simulation",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Create integration tests for wishlist CRUD operations (Step 1 of 3)": {
-    "id": 860,
-    "title": "Implement integration tests for wishlist operations",
-    "description": "Create integration tests for wishlist CRUD operations (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "65"
-    ],
-    "details": "Write tests for wishlist creation, editing, reordering, and category management",
-    "testStrategy": "Test complete wishlist workflows with drag-and-drop simulation",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Implement code splitting and bundle optimization (Step 1 of 3)": {
-    "id": 890,
-    "title": "Optimize bundle size and code splitting",
-    "description": "Implement code splitting and bundle optimization (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "5"
-    ],
-    "details": "Set up lazy loading, route-based code splitting, and bundle analysis to optimize loading performance",
-    "testStrategy": "Analyze bundle size, loading performance, and chunk optimization",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add performance monitoring and analytics (Step 1 of 3)": {
-    "id": 920,
-    "title": "Implement performance monitoring",
-    "description": "Add performance monitoring and analytics (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "71"
-    ],
-    "details": "Set up performance monitoring, Core Web Vitals tracking, and user analytics",
-    "testStrategy": "Monitor performance metrics and loading times across different scenarios",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add comprehensive keyboard navigation to all interactive elements (Step 1 of 3)": {
-    "id": 950,
-    "title": "Implement keyboard navigation support",
-    "description": "Add comprehensive keyboard navigation to all interactive elements (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "58"
-    ],
-    "details": "Ensure all components support keyboard navigation with proper focus management and shortcuts",
-    "testStrategy": "Test all functionality using only keyboard navigation",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add keyboard alternatives for all drag-and-drop operations (Step 1 of 3)": {
-    "id": 980,
-    "title": "Implement drag-and-drop accessibility",
-    "description": "Add keyboard alternatives for all drag-and-drop operations (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "73"
-    ],
-    "details": "Provide keyboard-accessible alternatives for all drag-and-drop functionality",
-    "testStrategy": "Test drag-and-drop alternatives using only keyboard input",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add dark/light theme support across all components (Step 1 of 3)": {
-    "id": 1010,
-    "title": "Implement theme system support",
-    "description": "Add dark/light theme support across all components (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "3"
-    ],
-    "details": "Extend Tailwind configuration with theme variables and implement theme switching",
-    "testStrategy": "Test theme switching and consistency across all components",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Prepare components for internationalization support (Step 1 of 3)": {
-    "id": 1040,
-    "title": "Implement internationalization (i18n) setup",
-    "description": "Prepare components for internationalization support (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "4"
-    ],
-    "details": "Set up i18n framework and prepare all text for translation",
-    "testStrategy": "Test text extraction and placeholder translation functionality",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add offline functionality for critical features (Step 1 of 3)": {
-    "id": 1070,
-    "title": "Implement offline support",
-    "description": "Add offline functionality for critical features (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "62"
-    ],
-    "details": "Implement service worker and offline caching for essential functionality",
-    "testStrategy": "Test offline behavior and data synchronization when connection returns",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add PWA capabilities for mobile app-like experience (Step 1 of 3)": {
-    "id": 1100,
-    "title": "Implement progressive web app features",
-    "description": "Add PWA capabilities for mobile app-like experience (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "77"
-    ],
-    "details": "Add PWA manifest, service worker, and app shell for installable web app",
-    "testStrategy": "Test PWA installation and offline functionality on mobile devices",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Write documentation for all packages and components (Step 1 of 3)": {
-    "id": 1130,
-    "title": "Create comprehensive documentation",
-    "description": "Write documentation for all packages and components (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "11"
-    ],
-    "details": "Create README files, component documentation, and usage examples for all packages",
-    "testStrategy": "Verify documentation accuracy and completeness",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Configure Storybook for isolated component development (Step 1 of 3)": {
-    "id": 1160,
-    "title": "Set up Storybook for component development",
-    "description": "Configure Storybook for isolated component development (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "4"
-    ],
-    "details": "Set up Storybook with all components, stories, and documentation",
-    "testStrategy": "Verify all components render correctly in Storybook",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Set up semantic versioning for packages (Step 1 of 3)": {
-    "id": 1190,
-    "title": "Implement component library versioning",
-    "description": "Set up semantic versioning for packages (Step 1 of 3)",
-    "status": "ready",
-    "priority": "low",
-    "dependencies": [
-      "1"
-    ],
-    "details": "Configure changeset or similar tool for package versioning and release management",
-    "testStrategy": "Test version bumping and package publishing workflow",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Test compatibility across different browsers (Step 1 of 3)": {
-    "id": 1220,
-    "title": "Implement cross-browser testing",
-    "description": "Test compatibility across different browsers (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "67"
-    ],
-    "details": "Test all functionality across Chrome, Firefox, Safari, and Edge browsers",
-    "testStrategy": "Verify consistent behavior and performance across target browsers",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Test mobile experience across different devices (Step 1 of 3)": {
-    "id": 1250,
-    "title": "Implement mobile responsiveness testing",
-    "description": "Test mobile experience across different devices (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "57"
-    ],
-    "details": "Test touch interactions, responsive layouts, and mobile-specific functionality",
-    "testStrategy": "Test on various mobile devices and screen sizes",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Add security measures and vulnerability scanning (Step 1 of 3)": {
-    "id": 1280,
-    "title": "Implement security hardening",
-    "description": "Add security measures and vulnerability scanning (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "23"
-    ],
-    "details": "Implement CSP headers, XSS protection, and security scanning tools",
-    "testStrategy": "Run security audits and vulnerability scans",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  },
-  "Set up deployment pipeline for all packages (Step 1 of 3)": {
-    "id": 1310,
-    "title": "Create deployment configuration",
-    "description": "Set up deployment pipeline for all packages (Step 1 of 3)",
-    "status": "ready",
-    "priority": "medium",
-    "dependencies": [
-      "81"
-    ],
-    "details": "Configure CI/CD pipeline with automated testing, building, and deployment",
-    "testStrategy": "Test deployment pipeline and verify successful deployments",
-    "tag": "frontend-ui-development",
-    "techStack": [
-      "ESNext",
-      "React",
-      "Vite",
-      "Zod",
-      "Vitest",
-      "MSW",
-      "Testing Library",
-      "TanStack Start"
-    ],
-    "relatedFiles": [],
-    "pointers": [],
-    "rules": [
-      "All apps must use ESNext module resolution (not NodeNext)",
-      "React apps must use TanStack Start",
-      "Use Zod schemas over TypeScript interfaces",
-      "All apps must be compatible with serverless framework",
-      "All external dependencies must be mocked in tests.",
-      "Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-    ],
-    "constraints": [
-      "Avoid TypeScript interfaces; prefer Zod + types",
-      "No NodeNext",
-      "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
-    ],
-    "infra": {
-      "ci": "GitHub Actions with git hooks for lint/test/pre-push",
-      "hosting": "Serverless Framework",
-      "db": "Depends on app (e.g., PostgreSQL, Supabase)",
-      "cdn": "Cloudflare or Vercel Assets"
-    },
-    "metrics": [
-      "CI pipeline green on all branches",
-      "95%+ test coverage",
-      "Lighthouse score > 90",
-      "No unused dependencies or exports"
-    ],
-    "tags": [],
-    "blockedBy": []
-  }
+	"implement reset password id in the email": {
+		"id": 140,
+		"title": "implement reset password id in the email",
+		"description": "implement reset password id in the email",
+		"status": "done",
+		"priority": "high",
+		"dependencies": [
+			"24",
+			"42"
+		],
+		"details": "add an id to the reset password email so that the user can reset their password",
+		"testStrategy": "Test file upload, cropping functionality, validation, and error handling",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"the id should not be be a onetime use code.",
+			"the id should expire after 10 minutes"
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create an AppAvatar Component": {
+		"id": 140,
+		"title": "Implement AvatarUploader component",
+		"description": "Create an AppAvatar Component",
+		"status": "done",
+		"priority": "high",
+		"dependencies": [
+			"24",
+			"42"
+		],
+		"details": "Build avatar upload with react-easy-crop integration, file type validation (.jpg/.heic), and upload progress",
+		"testStrategy": "Test file upload, cropping functionality, validation, and error handling",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"use the shadcn/ui Avatar component",
+			"use the shadcn/ui AvatarFallback component",
+			"use the shadcn/ui AvatarImage component",
+			"use the shadcn/ui AvatarFallbackText component",
+			"use the shadcn/ui AvatarFallbackIcon component",
+			"use the shadcn/ui AvatarFallbackImage component",
+			"use the shadcn/ui AvatarFallbackText component",
+			"when hovering over the component a pencil icon should appear to edit the avatar on the user's own avatar",
+			"clicking the pencil icon should open a modal to upload a new avatar leveraging the existing AvatarUploader component im packages/features/profile",
+			"clicking the avatar should open a dropdown using shadcn/ui DropdownMenu",
+			"the dropdown should have the following options: 'Profile', 'Logout'",
+			"the 'Profile' option should opnavigate to the profile page",
+			"the 'Logout' option should oem a model that asks the user if they are sure they want to logout",
+			"the log out option should be disabled for now until auth is implemented",
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create MOC gallery with filtering and search": {
+		"id": 190,
+		"title": "Implement MocInstructionsGallery component",
+		"description": "Create MOC gallery with filtering and search",
+		"status": "done",
+		"priority": "high",
+		"dependencies": [
+			"25"
+		],
+		"details": "Build MOC-specific gallery reusing gallery layout with MOC-specific filtering and display options",
+		"testStrategy": "Test gallery layout, MOC-specific features, and search functionality",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"the MocInstructionsGallery component should use the packages/features/gallery component",
+			"this may already be complete in apps/web/lego-moc-instructions-app/src/pages/MocInstructionsGallery",
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create detailed MOC page with editable forms (Step 1 of 3)": {
+		"id": 200,
+		"title": "Implement MocDetailPage component",
+		"description": "Create detailed MOC page with editable forms (Step 1 of 3)",
+		"status": "ready",
+		"priority": "high",
+		"dependencies": [
+			"47"
+		],
+		"details": "Build detailed view with editable title, description, tags, thumbnail display, and file management areas",
+		"testStrategy": "Test form editing, file management, and data persistence",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create file upload areas for different MOC file types (Step 1 of 3)": {
+		"id": 230,
+		"title": "Implement MOC file upload areas",
+		"description": "Create file upload areas for different MOC file types (Step 1 of 3)",
+		"status": "ready",
+		"priority": "high",
+		"dependencies": [
+			"24",
+			"48"
+		],
+		"details": "Build specialized upload areas for PDF instructions, .io files, CSV/JSON parts lists, and thumbnail images",
+		"testStrategy": "Test file type validation, upload progress, and file management",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create MOC card for gallery display (Step 1 of 3)": {
+		"id": 260,
+		"title": "Implement MocCard component",
+		"description": "Create MOC card for gallery display (Step 1 of 3)",
+		"status": "ready",
+		"priority": "high",
+		"dependencies": [
+			"47"
+		],
+		"details": "Build card component with thumbnail, title, description, tags, and action buttons",
+		"testStrategy": "Test card display, interactions, and responsive layout",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add search and filtering capabilities to MOC gallery (Step 1 of 3)": {
+		"id": 290,
+		"title": "Implement MOC search and filter functionality",
+		"description": "Add search and filtering capabilities to MOC gallery (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"47"
+		],
+		"details": "Build search by title/tags, filter by file types, and integration with Elasticsearch if available",
+		"testStrategy": "Test search functionality, filtering options, and query performance",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add file download capabilities for MOC files (Step 1 of 3)": {
+		"id": 320,
+		"title": "Implement file download functionality",
+		"description": "Add file download capabilities for MOC files (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"49"
+		],
+		"details": "Build secure file download with progress tracking and proper file handling",
+		"testStrategy": "Test download functionality, progress tracking, and file integrity",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add functionality to link gallery images to MOC instructions (Step 1 of 3)": {
+		"id": 350,
+		"title": "Implement gallery image linking for MOCs",
+		"description": "Add functionality to link gallery images to MOC instructions (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"48",
+			"25"
+		],
+		"details": "Build image selection interface and linking mechanism between gallery and MOC instructions",
+		"testStrategy": "Test image selection, linking functionality, and data persistence",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Configure routing for all application pages (Step 1 of 3)": {
+		"id": 380,
+		"title": "Set up React Router configuration",
+		"description": "Configure routing for all application pages (Step 1 of 3)",
+		"status": "ready",
+		"priority": "high",
+		"dependencies": [
+			"20"
+		],
+		"details": "Set up React Router with all routes, nested routing, route guards, and proper navigation structure",
+		"testStrategy": "Test navigation, route protection, and proper URL handling",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create error boundaries for graceful error handling (Step 1 of 3)": {
+		"id": 410,
+		"title": "Implement error boundary components",
+		"description": "Create error boundaries for graceful error handling (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"4"
+		],
+		"details": "Build error boundary components with user-friendly error displays and error reporting",
+		"testStrategy": "Test error catching, display, and recovery mechanisms",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add consistent loading states across all components (Step 1 of 3)": {
+		"id": 440,
+		"title": "Implement loading states and skeletons",
+		"description": "Add consistent loading states across all components (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"4"
+		],
+		"details": "Create loading spinners, skeleton screens, and progress indicators for all async operations",
+		"testStrategy": "Test loading states, skeleton accuracy, and loading performance",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Ensure all components work across different screen sizes (Step 1 of 3)": {
+		"id": 470,
+		"title": "Implement responsive design breakpoints",
+		"description": "Ensure all components work across different screen sizes (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"3"
+		],
+		"details": "Test and adjust all components for mobile, tablet, and desktop breakpoints with proper responsive behavior",
+		"testStrategy": "Test responsive behavior across all breakpoints and devices",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add comprehensive accessibility support to all components (Step 1 of 3)": {
+		"id": 500,
+		"title": "Implement accessibility features",
+		"description": "Add comprehensive accessibility support to all components (Step 1 of 3)",
+		"status": "ready",
+		"priority": "high",
+		"dependencies": [
+			"4"
+		],
+		"details": "Add ARIA labels, keyboard navigation, focus management, and screen reader support across all components",
+		"testStrategy": "Run accessibility audits and test with screen readers and keyboard-only navigation",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add comprehensive error messaging for all forms (Step 1 of 3)": {
+		"id": 530,
+		"title": "Implement form validation error messages",
+		"description": "Add comprehensive error messaging for all forms (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"12"
+		],
+		"details": "Create consistent error message system with proper field validation feedback and user guidance",
+		"testStrategy": "Test all validation scenarios and error message clarity",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create toast notifications for user feedback (Step 1 of 3)": {
+		"id": 560,
+		"title": "Implement toast notification system",
+		"description": "Create toast notifications for user feedback (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"4"
+		],
+		"details": "Build toast notification system for success, error, and info messages with proper positioning and timing",
+		"testStrategy": "Test toast display, timing, positioning, and accessibility",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add image optimization for uploads and display (Step 1 of 3)": {
+		"id": 590,
+		"title": "Implement image optimization utilities",
+		"description": "Add image optimization for uploads and display (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"24"
+		],
+		"details": "Build image compression, resizing, and format optimization utilities for better performance",
+		"testStrategy": "Test image optimization quality, performance, and file size reduction",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add caching for API calls and image assets (Step 1 of 3)": {
+		"id": 620,
+		"title": "Implement caching strategies",
+		"description": "Add caching for API calls and image assets (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"22"
+		],
+		"details": "Implement RTK Query caching, image caching, and localStorage caching where appropriate",
+		"testStrategy": "Test cache performance, invalidation, and storage management",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create end-to-end tests for complete authentication flow (Step 1 of 3)": {
+		"id": 800,
+		"title": "Implement integration tests for auth flow",
+		"description": "Create end-to-end tests for complete authentication flow (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"63"
+		],
+		"details": "Write integration tests covering login, signup, email verification, password reset, and route protection",
+		"testStrategy": "Test complete user authentication journeys with API mocking",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create integration tests for gallery operations (Step 1 of 3)": {
+		"id": 830,
+		"title": "Implement integration tests for gallery workflow",
+		"description": "Create integration tests for gallery operations (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"64"
+		],
+		"details": "Write tests for image upload, album creation, search, and batch operations",
+		"testStrategy": "Test complete gallery workflows with file upload simulation",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Create integration tests for wishlist CRUD operations (Step 1 of 3)": {
+		"id": 860,
+		"title": "Implement integration tests for wishlist operations",
+		"description": "Create integration tests for wishlist CRUD operations (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"65"
+		],
+		"details": "Write tests for wishlist creation, editing, reordering, and category management",
+		"testStrategy": "Test complete wishlist workflows with drag-and-drop simulation",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Implement code splitting and bundle optimization (Step 1 of 3)": {
+		"id": 890,
+		"title": "Optimize bundle size and code splitting",
+		"description": "Implement code splitting and bundle optimization (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"5"
+		],
+		"details": "Set up lazy loading, route-based code splitting, and bundle analysis to optimize loading performance",
+		"testStrategy": "Analyze bundle size, loading performance, and chunk optimization",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add performance monitoring and analytics (Step 1 of 3)": {
+		"id": 920,
+		"title": "Implement performance monitoring",
+		"description": "Add performance monitoring and analytics (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"71"
+		],
+		"details": "Set up performance monitoring, Core Web Vitals tracking, and user analytics",
+		"testStrategy": "Monitor performance metrics and loading times across different scenarios",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add comprehensive keyboard navigation to all interactive elements (Step 1 of 3)": {
+		"id": 950,
+		"title": "Implement keyboard navigation support",
+		"description": "Add comprehensive keyboard navigation to all interactive elements (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"58"
+		],
+		"details": "Ensure all components support keyboard navigation with proper focus management and shortcuts",
+		"testStrategy": "Test all functionality using only keyboard navigation",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add keyboard alternatives for all drag-and-drop operations (Step 1 of 3)": {
+		"id": 980,
+		"title": "Implement drag-and-drop accessibility",
+		"description": "Add keyboard alternatives for all drag-and-drop operations (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"73"
+		],
+		"details": "Provide keyboard-accessible alternatives for all drag-and-drop functionality",
+		"testStrategy": "Test drag-and-drop alternatives using only keyboard input",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add dark/light theme support across all components (Step 1 of 3)": {
+		"id": 1010,
+		"title": "Implement theme system support",
+		"description": "Add dark/light theme support across all components (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"3"
+		],
+		"details": "Extend Tailwind configuration with theme variables and implement theme switching",
+		"testStrategy": "Test theme switching and consistency across all components",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Prepare components for internationalization support (Step 1 of 3)": {
+		"id": 1040,
+		"title": "Implement internationalization (i18n) setup",
+		"description": "Prepare components for internationalization support (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"4"
+		],
+		"details": "Set up i18n framework and prepare all text for translation",
+		"testStrategy": "Test text extraction and placeholder translation functionality",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add offline functionality for critical features (Step 1 of 3)": {
+		"id": 1070,
+		"title": "Implement offline support",
+		"description": "Add offline functionality for critical features (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"62"
+		],
+		"details": "Implement service worker and offline caching for essential functionality",
+		"testStrategy": "Test offline behavior and data synchronization when connection returns",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add PWA capabilities for mobile app-like experience (Step 1 of 3)": {
+		"id": 1100,
+		"title": "Implement progressive web app features",
+		"description": "Add PWA capabilities for mobile app-like experience (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"77"
+		],
+		"details": "Add PWA manifest, service worker, and app shell for installable web app",
+		"testStrategy": "Test PWA installation and offline functionality on mobile devices",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Write documentation for all packages and components (Step 1 of 3)": {
+		"id": 1130,
+		"title": "Create comprehensive documentation",
+		"description": "Write documentation for all packages and components (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"11"
+		],
+		"details": "Create README files, component documentation, and usage examples for all packages",
+		"testStrategy": "Verify documentation accuracy and completeness",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Configure Storybook for isolated component development (Step 1 of 3)": {
+		"id": 1160,
+		"title": "Set up Storybook for component development",
+		"description": "Configure Storybook for isolated component development (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"4"
+		],
+		"details": "Set up Storybook with all components, stories, and documentation",
+		"testStrategy": "Verify all components render correctly in Storybook",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Set up semantic versioning for packages (Step 1 of 3)": {
+		"id": 1190,
+		"title": "Implement component library versioning",
+		"description": "Set up semantic versioning for packages (Step 1 of 3)",
+		"status": "ready",
+		"priority": "low",
+		"dependencies": [
+			"1"
+		],
+		"details": "Configure changeset or similar tool for package versioning and release management",
+		"testStrategy": "Test version bumping and package publishing workflow",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Test compatibility across different browsers (Step 1 of 3)": {
+		"id": 1220,
+		"title": "Implement cross-browser testing",
+		"description": "Test compatibility across different browsers (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"67"
+		],
+		"details": "Test all functionality across Chrome, Firefox, Safari, and Edge browsers",
+		"testStrategy": "Verify consistent behavior and performance across target browsers",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Test mobile experience across different devices (Step 1 of 3)": {
+		"id": 1250,
+		"title": "Implement mobile responsiveness testing",
+		"description": "Test mobile experience across different devices (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"57"
+		],
+		"details": "Test touch interactions, responsive layouts, and mobile-specific functionality",
+		"testStrategy": "Test on various mobile devices and screen sizes",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Add security measures and vulnerability scanning (Step 1 of 3)": {
+		"id": 1280,
+		"title": "Implement security hardening",
+		"description": "Add security measures and vulnerability scanning (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"23"
+		],
+		"details": "Implement CSP headers, XSS protection, and security scanning tools",
+		"testStrategy": "Run security audits and vulnerability scans",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	},
+	"Set up deployment pipeline for all packages (Step 1 of 3)": {
+		"id": 1310,
+		"title": "Create deployment configuration",
+		"description": "Set up deployment pipeline for all packages (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
+		"dependencies": [
+			"81"
+		],
+		"details": "Configure CI/CD pipeline with automated testing, building, and deployment",
+		"testStrategy": "Test deployment pipeline and verify successful deployments",
+		"tag": "frontend-ui-development",
+		"techStack": [
+			"ESNext",
+			"React",
+			"Vite",
+			"Zod",
+			"Vitest",
+			"MSW",
+			"Testing Library",
+			"TanStack Start"
+		],
+		"relatedFiles": [],
+		"pointers": [],
+		"rules": [
+			"All apps must use ESNext module resolution (not NodeNext)",
+			"React apps must use TanStack Start",
+			"Use Zod schemas over TypeScript interfaces",
+			"All apps must be compatible with serverless framework",
+			"All external dependencies must be mocked in tests.",
+			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
+		],
+		"constraints": [
+			"Avoid TypeScript interfaces; prefer Zod + types",
+			"No NodeNext",
+			"Do not use watch flags in test scripts; tests should run once and exit.",
+			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
+		],
+		"infra": {
+			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
+			"hosting": "Serverless Framework",
+			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
+			"cdn": "Cloudflare or Vercel Assets"
+		},
+		"metrics": [
+			"CI pipeline green on all branches",
+			"95%+ test coverage",
+			"Lighthouse score > 90",
+			"No unused dependencies or exports"
+		],
+		"tags": [],
+		"blockedBy": []
+	}
 }
