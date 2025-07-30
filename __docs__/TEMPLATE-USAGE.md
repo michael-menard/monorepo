@@ -1,153 +1,179 @@
-# Template Usage Guide
+# Package Creation Guide
 
-This guide explains how to use the templates in this monorepo to quickly create new packages and apps.
+This guide explains how to create new packages in this monorepo based on the current structure.
 
-## Available Templates
+## Current Package Structure
 
-### 1. Backend Template (`packages/api/template-backend`)
-A complete backend template with:
-- PostgreSQL + Prisma ORM
-- GraphQL schema for AppSync
-- TypeScript configuration
-- Zod validation
-- Vitest testing
-- Environment configuration
+### 1. Auth Package (`packages/auth/`)
+Authentication and authorization functionality:
+- Auth components (Login, Signup, Password Reset)
+- Auth utilities and hooks
+- Redux store for auth state management
+- Route guards for protected routes
 
-### 2. Frontend Template (`packages/web/template-frontend`)
-A complete frontend template with:
-- TypeScript + Vitest
-- Redux Toolkit (RTK)
-- Modern development setup
-- Testing configuration
+### 2. Feature Packages (`packages/features/`)
+Feature-specific functionality:
+- FileUpload - File upload components and utilities
+- gallery - Image gallery functionality
+- profile - User profile management
+- wishlist - Wishlist functionality
+- moc-instructions - MOC instruction features
+- ImageUploadModal - Image upload modal component
+
+### 3. UI Package (`packages/ui/`)
+Reusable UI components and design system:
+- shadcn/ui components
+- Design system tokens
+- UI utilities and helpers
+
+### 4. Shared Package (`packages/shared/`)
+Shared utilities and configurations:
+- Common utilities
+- Shared configurations
+- TypeScript types
+
+### 5. Tech Radar Package (`packages/tech-radar/`)
+Technology radar and assessment tools:
+- Tech radar components
+- Radar data and configurations
+- Radar utilities
 
 ## Quick Start: Using the Script
 
 The easiest way to create a new package is using the provided script:
 
 ```bash
-# Create a new backend package
-./scripts/create-package.sh my-backend backend
+# Create a new feature package
+./scripts/create-package.sh my-feature feature
 
-# Create a new frontend package
-./scripts/create-package.sh my-frontend frontend
+# Create a new auth package
+./scripts/create-package.sh my-auth auth
 ```
 
 The script will:
 1. Copy the appropriate template
 2. Update the package name in `package.json`
-3. Create a `.env` file from `.env.example`
+3. Create necessary configuration files
 4. Provide next steps
 
-## Manual Template Usage
+## Manual Package Creation
 
-### Option 1: Copy Template Directory
+### Option 1: Copy Existing Package
 
 ```bash
-# For backend packages
-cp -r packages/api/template-backend packages/api/my-new-backend
+# For feature packages
+cp -r packages/features/FileUpload packages/features/my-new-feature
 
-# For frontend packages
-cp -r packages/web/template-frontend packages/web/my-new-frontend
+# For auth packages
+cp -r packages/auth packages/auth/my-new-auth
+
+# For UI components
+cp -r packages/ui packages/ui/my-new-ui
 ```
 
 ### Option 2: Use as Reference
 
-You can browse the template directories to understand the structure and copy specific files as needed.
+You can browse the existing package directories to understand the structure and copy specific files as needed.
 
-## Template Structure
+## Package Structure Examples
 
-### Backend Template Structure
+### Feature Package Structure (e.g., FileUpload)
 ```
-packages/api/template-backend/
-├── .env.example          # Environment variables template
+packages/features/FileUpload/
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
-├── vitest.config.ts      # Test configuration
-├── prisma/
-│   └── schema.prisma     # Database schema
+├── vite.config.ts        # Vite configuration
 ├── src/
-│   ├── schema.graphql    # GraphQL schema
-│   ├── schema.test.ts    # Schema tests (co-located)
-│   ├── resolvers.ts      # GraphQL resolvers
-│   ├── resolvers.test.ts # Resolver tests (co-located)
-│   └── index.ts          # Main entry point
+│   ├── index.tsx         # Main component
+│   ├── index.d.ts        # TypeScript definitions
+│   ├── hooks/            # Custom hooks
+│   └── __tests__/        # Test files
+├── test/                 # Test utilities
 └── README.md             # Documentation
 ```
 
-**Testing Strategy: Co-located Tests**
-- Test files are placed next to the files they test
-- Makes it easier to find and maintain tests
-- Follows modern testing best practices
-
-### Frontend Template Structure
+### Auth Package Structure
 ```
-packages/web/template-frontend/
+packages/auth/
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
-├── vitest.config.ts      # Test configuration
 ├── src/
-│   ├── store/            # Redux store setup
-│   ├── components/       # React components
+│   ├── components/       # Auth components
+│   ├── hooks/            # Auth hooks
+│   ├── store/            # Redux store
+│   ├── schemas/          # Zod schemas
+│   ├── types/            # TypeScript types
+│   └── __tests__/        # Test files
+└── README.md             # Documentation
+```
+
+### UI Package Structure
+```
+packages/ui/
+├── package.json          # Dependencies and scripts
+├── tsconfig.json         # TypeScript configuration
+├── components.json       # shadcn/ui configuration
+├── src/
+│   ├── components/       # UI components
+│   ├── lib/              # Utility functions
 │   └── __tests__/        # Test files
 └── README.md             # Documentation
 ```
 
 ## Post-Creation Steps
 
-After creating a new package from a template:
+After creating a new package:
 
-### For Backend Packages:
-1. **Update Environment Variables**:
-   ```bash
-   cd packages/my-backend
-   # Edit .env file with your actual values
-   ```
-
-2. **Configure Database**:
-   ```bash
-   # Update DATABASE_URL in .env
-   # Generate Prisma client
-   npx prisma generate
-   # Push schema to database
-   npx prisma db push
-   ```
-
-3. **Install Dependencies**:
-   ```bash
-   pnpm install
-   ```
-
-4. **Update Package Configuration**:
-   - Update `name` and `description` in `package.json`
-   - Customize GraphQL schema in `src/schema.graphql`
-   - Add your resolvers in `src/resolvers.ts`
-
-### For Frontend Packages:
+### For Feature Packages:
 1. **Install Dependencies**:
    ```bash
-   cd packages/my-frontend
+   cd packages/features/my-feature
    pnpm install
    ```
 
 2. **Update Package Configuration**:
    - Update `name` and `description` in `package.json`
-   - Customize Redux store in `src/store/`
-   - Add your components in `src/components/`
+   - Customize the component in `src/index.tsx`
+   - Add your hooks in `src/hooks/`
 
-## Template Customization
+### For Auth Packages:
+1. **Install Dependencies**:
+   ```bash
+   cd packages/auth/my-auth
+   pnpm install
+   ```
 
-### Adding New Templates
+2. **Update Package Configuration**:
+   - Update `name` and `description` in `package.json`
+   - Customize auth components in `src/components/`
+   - Update auth store in `src/store/`
 
-To add a new template type:
+### For UI Packages:
+1. **Install Dependencies**:
+   ```bash
+   cd packages/ui/my-ui
+   pnpm install
+   ```
 
-1. Create a new template directory: `packages/template-<type>`
+2. **Update Package Configuration**:
+   - Update `name` and `description` in `package.json`
+   - Add your UI components in `src/components/`
+   - Update `components.json` for shadcn/ui if needed
+
+## Package Customization
+
+### Adding New Package Types
+
+To add a new package type:
+
+1. Create a new package directory: `packages/<type>/`
 2. Update the `create-package.sh` script to include the new type
-3. Document the template structure and usage
+3. Document the package structure and usage
 
-### Modifying Existing Templates
+### Modifying Existing Packages
 
-When modifying templates, consider:
-- Keep templates minimal but functional
+When modifying packages, consider:
+- Keep packages focused and single-purpose
 - Include comprehensive documentation
 - Add example code that demonstrates best practices
 - Include proper TypeScript configurations
@@ -155,20 +181,20 @@ When modifying templates, consider:
 
 ## Best Practices
 
-1. **Template Naming**: Use descriptive names like `template-backend`, `template-frontend`, `template-library`
+1. **Package Naming**: Use descriptive names like `file-upload`, `user-profile`, `image-gallery`
 
-2. **Consistency**: Keep similar structure across templates where possible
+2. **Consistency**: Keep similar structure across packages where possible
 
-3. **Documentation**: Each template should have a comprehensive README
+3. **Documentation**: Each package should have a comprehensive README
 
-4. **Dependencies**: Use the shared config packages when possible:
-   - `@monorepo/typescript-config`
-   - `@monorepo/eslint-config`
-   - `@monorepo/shared-config`
+4. **Dependencies**: Use the shared packages when possible:
+   - `@monorepo/shared` for utilities
+   - `@monorepo/ui` for UI components
+   - `@monorepo/auth` for auth functionality
 
-5. **Testing**: Always include testing setup in templates
+5. **Testing**: Always include testing setup in packages
 
-6. **Environment**: Include `.env.example` files for configuration
+6. **TypeScript**: Use proper TypeScript configurations and type definitions
 
 ## Troubleshooting
 

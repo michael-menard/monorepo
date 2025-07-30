@@ -51,6 +51,9 @@
     "tags": [],
     "blockedBy": []
   },
+
+
+
   "Create an AppAvatar Component": {
     "id": 140,
     "title": "Implement AvatarUploader component",
@@ -119,6 +122,10 @@
     "tags": [],
     "blockedBy": []
   },
+
+
+
+  
   "Create MOC gallery with filtering and search": {
     "id": 190,
     "title": "Implement MocInstructionsGallery component",

@@ -19,7 +19,7 @@ Welcome to the project! Follow these steps to get started:
    ```
 5. **Run the frontend**
    ```sh
-   cd apps/web/lego-projects-ui && pnpm dev
+   cd apps/web/lego-moc-instructions-app && pnpm dev
    ```
 6. **Run all tests**
    ```sh

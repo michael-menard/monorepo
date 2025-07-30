@@ -51,6 +51,10 @@ This document outlines the recommended documentation structure and content for t
 - **MIGRATION_STRATEGY.md** (already present)
 - **ERD diagrams** (already present)
 
+**Current API Services:**
+- **auth-service** - Authentication and user management
+- **lego-projects-api** - LEGO projects and gallery management
+
 ---
 
 ## 3. apps/web Level
@@ -73,6 +77,9 @@ This document outlines the recommended documentation structure and content for t
   - How global state is managed (RTK Query, Redux, etc.)
   - Where to add new slices or endpoints
 
+**Current Web Applications:**
+- **lego-moc-instructions-app** - LEGO MOC instructions and gallery application
+
 ---
 
 ## 4. packages Level
@@ -86,6 +93,13 @@ This document outlines the recommended documentation structure and content for t
 - **CONVENTIONS.md** (optional, for shared code)
   - Import/export patterns
   - How to add new components/hooks/utils
+
+**Current Package Categories:**
+- **auth/** - Authentication components, hooks, and utilities
+- **features/** - Feature-specific packages (FileUpload, gallery, profile, wishlist, etc.)
+- **shared/** - Shared utilities and configurations
+- **tech-radar/** - Technology radar and assessment tools
+- **ui/** - Reusable UI components and design system
 
 ---
 
@@ -117,6 +131,52 @@ This document outlines the recommended documentation structure and content for t
 | packages      | README (per package), CONVENTIONS              |                              |
 | All           | TESTING_STRATEGY, DEPLOYMENT, MONITORING       |                              |
 
+## Current Project Structure
+
+```
+Monorepo/
+├── apps/
+│   ├── api/
+│   │   ├── auth-service/          # Authentication API
+│   │   ├── lego-projects-api/     # LEGO projects API
+│   │   └── MIGRATION_STRATEGY.md  # API migration strategy
+│   └── web/
+│       └── lego-moc-instructions-app/  # Main React application
+├── packages/
+│   ├── auth/                      # Authentication components
+│   ├── features/                  # Feature-specific packages
+│   ├── shared/                    # Shared utilities
+│   ├── tech-radar/                # Technology radar tools
+│   └── ui/                        # UI component library
+├── __docs__/                      # Project documentation
+├── taskmaster.config.js           # TaskMaster configuration
+└── .taskmaster/                   # TaskMaster CLI configuration
+```
+
+---
+
+## Recent Improvements
+
+### Documentation Organization
+- **Moved configuration files** from `__docs__/` to appropriate locations:
+  - `taskmaster.config.js` moved to root directory
+  - `tech-radar/` moved to `packages/tech-radar/`
+- **Updated all documentation** to reflect current project structure
+- **Standardized package organization** with clear categories and dependencies
+
+### Package Structure
+- **Auth package** (`packages/auth/`) - Centralized authentication functionality
+- **Feature packages** (`packages/features/`) - Organized by specific features
+- **Shared utilities** (`packages/shared/`) - Common utilities and configurations
+- **UI components** (`packages/ui/`) - Reusable UI component library
+- **Tech radar** (`packages/tech-radar/`) - Technology assessment tools
+
+### Testing Strategy
+- **Comprehensive test suites** for authentication flows
+- **E2E testing** with Playwright for critical user journeys
+- **Unit and integration tests** with Vitest
+- **Email testing** with Ethereal for password reset flows
+
 ---
 
 ## Tips for Tech Lead Portfolio
@@ -124,5 +184,6 @@ This document outlines the recommended documentation structure and content for t
 - Show how you’d help a new dev get up to speed (ONBOARDING.md).
 - Document rationale for major decisions (DECISION_LOG.md).
 - Demonstrate process, clarity, and leadership in your docs.
+- Keep documentation up-to-date with project changes and structure updates.
 
 If you want, you can use this file as a checklist and template for building out your documentation. Let me know if you want starter content for any specific doc! 

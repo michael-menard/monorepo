@@ -6,44 +6,51 @@ This guide explains the new organized package structure in the monorepo.
 
 ```
 packages/
-├── api/                    # Backend/API packages
-│   └── template-backend/   # Backend template
-├── web/                    # Frontend/Web packages
-│   └── template-frontend/  # Frontend template
-├── ui/                     # UI components (existing)
-│   └── ui/                # Main UI package
-└── shared/                 # Shared packages
-    ├── utils/              # Utility functions
-    ├── shared-config/      # Shared configuration
-    ├── typescript-config/  # TypeScript configs
-    └── eslint-config/      # ESLint configs
+├── auth/                   # Authentication package
+│   └── src/               # Auth components and utilities
+├── features/               # Feature-specific packages
+│   ├── FileUpload/        # File upload functionality
+│   ├── gallery/           # Gallery feature
+│   ├── ImageUploadModal/  # Image upload modal
+│   ├── moc-instructions/  # MOC instructions feature
+│   ├── profile/           # User profile feature
+│   └── wishlist/          # Wishlist feature
+├── shared/                 # Shared packages
+│   └── src/               # Shared utilities and configurations
+├── tech-radar/             # Technology radar package
+│   └── src/               # Tech radar components and data
+└── ui/                     # UI components (existing)
+    └── src/               # Main UI component library
 ```
 
 ## 🎯 Package Categories
 
-### **API Packages (`packages/api/`)**
-Backend and API-related packages:
-- **Backend services** - API endpoints, business logic
-- **Database utilities** - Prisma clients, database helpers
-- **API templates** - Backend service templates
-- **Server utilities** - Server-side utilities
+### **Auth Package (`packages/auth/`)**
+Authentication and authorization functionality:
+- **Auth components** - Login, signup, password reset forms
+- **Auth utilities** - Authentication hooks and utilities
+- **Auth store** - Redux store for auth state management
+- **Route guards** - Protected route components
 
 **Examples:**
-- `template-backend` - Backend service template
-- `auth-service` - Authentication service
-- `database-utils` - Database utilities
+- `LoginForm` - User login component
+- `SignupForm` - User registration component
+- `RouteGuard` - Protected route wrapper
+- `useAuth` - Authentication hook
 
-### **Web Packages (`packages/web/`)**
-Frontend and web-related packages:
-- **Web applications** - React apps, Next.js apps
-- **Client utilities** - Browser utilities, client-side helpers
-- **Web templates** - Frontend app templates
-- **Web components** - Web-specific components
+### **Feature Packages (`packages/features/`)**
+Feature-specific functionality:
+- **File upload** - File upload components and utilities
+- **Gallery** - Image gallery functionality
+- **Profile** - User profile management
+- **Wishlist** - Wishlist functionality
+- **MOC instructions** - MOC instruction features
 
 **Examples:**
-- `template-frontend` - Frontend app template
-- `web-utils` - Web-specific utilities
-- `client-auth` - Client-side auth utilities
+- `FileUpload` - File upload component
+- `gallery` - Gallery feature package
+- `profile` - User profile management
+- `wishlist` - Wishlist functionality
 
 ### **UI Packages (`packages/ui/`)**
 Reusable UI components and design system:
@@ -70,6 +77,16 @@ Packages used across multiple categories:
 - `typescript-config` - TypeScript configurations
 - `eslint-config` - ESLint configurations
 
+### **Tech Radar Package (`packages/tech-radar/`)**
+Technology radar and assessment tools:
+- **Tech radar components** - Components for displaying technology assessments
+- **Radar data** - Technology assessment data and configurations
+- **Radar utilities** - Utilities for managing tech radar data
+
+**Examples:**
+- `radar.json` - Technology assessment data
+- `generate-radar.ts` - Radar generation utilities
+
 ## 🚀 Creating New Packages
 
 ### **Using the Script (Recommended)**
@@ -83,17 +100,20 @@ Packages used across multiple categories:
 
 ### **Manual Creation**
 ```bash
-# Backend packages
-cp -r packages/api/template-backend packages/api/my-backend
+# Auth packages
+cp -r packages/auth packages/auth/my-auth-package
 
-# Frontend packages
-cp -r packages/web/template-frontend packages/web/my-frontend
+# Feature packages
+cp -r packages/features/FileUpload packages/features/my-feature
 
 # UI packages
-cp -r packages/ui/ui packages/ui/my-ui-component
+cp -r packages/ui packages/ui/my-ui-component
 
 # Shared packages
 mkdir packages/shared/my-shared-utils
+
+# Tech radar packages
+cp -r packages/tech-radar packages/tech-radar/my-radar-tool
 ```
 
 ## 📋 Package Placement Guidelines
@@ -102,18 +122,19 @@ mkdir packages/shared/my-shared-utils
 
 | Package Type | Location | Example |
 |-------------|----------|---------|
-| Backend service | `packages/api/` | `auth-service` |
-| Frontend app | `packages/web/` | `dashboard-app` |
+| Auth functionality | `packages/auth/` | `auth-components` |
+| Feature-specific | `packages/features/` | `file-upload` |
 | UI component | `packages/ui/` | `button-component` |
 | Shared utility | `packages/shared/` | `date-utils` |
-| Configuration | `packages/shared/` | `eslint-config` |
+| Tech radar | `packages/tech-radar/` | `radar-components` |
 
 ### **Decision Tree**
 
-1. **Is it a backend/API service?** → `packages/api/`
-2. **Is it a frontend/web app?** → `packages/web/`
+1. **Is it authentication-related?** → `packages/auth/`
+2. **Is it a specific feature?** → `packages/features/`
 3. **Is it a UI component?** → `packages/ui/`
-4. **Is it used by multiple categories?** → `packages/shared/`
+4. **Is it a tech radar tool?** → `packages/tech-radar/`
+5. **Is it used by multiple categories?** → `packages/shared/`
 
 ## 🔧 Workspace Configuration
 
@@ -140,9 +161,10 @@ packages:
 - `date-utils` (shared utility)
 
 ### **Dependencies**
-- **API packages** can depend on `shared/` packages
-- **Web packages** can depend on `shared/` and `ui/` packages
+- **Auth packages** can depend on `shared/` and `ui/` packages
+- **Feature packages** can depend on `shared/`, `ui/`, and `auth/` packages
 - **UI packages** can depend on `shared/` packages
+- **Tech radar packages** can depend on `shared/` and `ui/` packages
 - **Shared packages** should be minimal and focused
 
 ### **Documentation**
@@ -155,10 +177,11 @@ Each package should include:
 ## 🔄 Migration Notes
 
 ### **What Changed**
-- Templates moved to appropriate categories
+- Auth functionality consolidated in `auth/` package
+- Feature-specific packages organized in `features/` directory
+- Tech radar moved from root to `packages/tech-radar/`
 - Shared packages consolidated in `shared/`
-- Scripts updated to work with new structure
-- Documentation updated
+- Documentation updated to reflect current structure
 
 ### **Benefits**
 - ✅ Better organization and discovery
