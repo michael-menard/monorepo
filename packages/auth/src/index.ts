@@ -20,7 +20,6 @@ export { default as SocialLoginButtonGroup } from './components/SocialLoginButto
 export { default as RouteGuard } from './components/RouteGuard/index.js';
 export {
   createTanStackRouteGuard,
-  createTanStackRouteGuardWithRedux,
   type TanStackRouteGuardOptions,
 } from './components/TanStackRouteGuard/index.js';
 
@@ -47,7 +46,6 @@ export {
 
 // Utils
 export * from './utils/date.js';
-export { authStateManager } from './utils/authState.js';
 
 export {
   useLoginMutation,
@@ -59,4 +57,4 @@ export {
   useCheckAuthQuery,
   useVerifyEmailMutation,
   useSocialLoginMutation,
-} from './store/authApi.js'; 
+} from './store/authApi.js';

@@ -9,8 +9,8 @@ This command helps you get Task Master set up globally on your system.
    # Check if task-master command exists
    which task-master || echo "Task Master not found"
    
-   # Check npm global packages
-   npm list -g task-master-ai
+   # Check pnpm global packages
+   pnpm list -g task-master-ai
    ```
 
 2. **System Requirements Check**
@@ -18,8 +18,8 @@ This command helps you get Task Master set up globally on your system.
    # Verify Node.js is installed
    node --version
    
-   # Verify npm is installed  
-   npm --version
+   # Verify pnpm is installed  
+   pnpm --version
    
    # Check Node version (need 16+)
    ```
@@ -27,7 +27,7 @@ This command helps you get Task Master set up globally on your system.
 3. **Install Task Master Globally**
    If not installed, run:
    ```bash
-   npm install -g task-master-ai
+   pnpm add -g task-master-ai
    ```
 
 4. **Verify Installation**
@@ -76,17 +76,17 @@ If installation fails:
 **Permission Errors:**
 ```bash
 # Try with sudo (macOS/Linux)
-sudo npm install -g task-master-ai
+sudo pnpm add -g task-master-ai
 
-# Or fix npm permissions
-npm config set prefix ~/.npm-global
-export PATH=~/.npm-global/bin:$PATH
+# Or fix pnpm permissions
+pnpm config set global-bin-dir ~/.pnpm-global
+export PATH=~/.pnpm-global:$PATH
 ```
 
 **Network Issues:**
 ```bash
 # Use different registry
-npm install -g task-master-ai --registry https://registry.npmjs.org/
+pnpm add -g task-master-ai --registry https://registry.npmjs.org/
 ```
 
 **Node Version Issues:**

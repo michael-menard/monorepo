@@ -1,17 +1,7 @@
-# Future roadmap
+# Punch List
 
-
-## Monorepo level
 
 - [ ] drag and drop form builder
-- [ ] in app notifications service for messages and new sets found or price changes on watched wishlist items
-- [ ] chat app
+- [ ] reat time chat
+- [ ] reat lime in app notifications for in app updates on prices for watched wishlist items or watched lart lists for MOCs
 - [ ] 
-
-
-
-## Style
-
-- [ ] 
-
-

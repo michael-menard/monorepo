@@ -259,8 +259,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: npm install
-      - run: npm run test:email
+      - run: pnpm install
+              - run: pnpm run test:email
         env:
           ETHEREAL_USER: ${{ secrets.ETHEREAL_USER }}
           ETHEREAL_PASS: ${{ secrets.ETHEREAL_PASS }}

@@ -183,7 +183,7 @@ To serve the documentation locally:
 
 ```bash
 # Install swagger-ui-express
-npm install -g swagger-ui-express
+pnpm add -g swagger-ui-express
 
 # Serve the documentation
 swagger-ui-express swagger.yaml
@@ -214,7 +214,7 @@ The Swagger specification can be validated using:
 
 ```bash
 # Install swagger-cli
-npm install -g @apidevtools/swagger-cli
+pnpm add -g @apidevtools/swagger-cli
 
 # Validate the specification
 swagger-cli validate swagger.yaml

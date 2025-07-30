@@ -24,33 +24,33 @@ This project is a TypeScript-based authentication service with Express and Mongo
 
 ```bash
 # Start the development server with auto-reload
-npm run dev
+pnpm run dev
 ```
 
 ### Production Mode
 
 ```bash
 # Build the project
-npm run build
+pnpm run build
 
 # Start the production server
-npm start
+pnpm start
 ```
 
 ### Other Commands
 
 ```bash
 # Run TypeScript type checking
-npm run check
+pnpm run check
 
 # Run the simple server for quick testing
-npm run simple
+pnpm run simple
 
 # Kill any process using specific ports
-npm run killport 5000
+pnpm run killport 5000
 
 # Run the environment diagnostic tool
-npm run diagnose
+pnpm run diagnose
 ```
 
 ## Troubleshooting
@@ -60,7 +60,7 @@ If you encounter any issues, refer to the `TROUBLESHOOTING.md` file for common p
 ### Common Issues
 
 - **Connection Refused**: Make sure the server is running and the port is available
-- **TypeScript Errors**: Run `npm run check` to identify type issues
+- **TypeScript Errors**: Run `pnpm run check` to identify type issues
 - **MongoDB Connection**: Ensure MongoDB is running locally or update your connection string
 
 ## API Endpoints

@@ -13,19 +13,19 @@ If you're seeing "localhost refused to connect" or "ERR_CONNECTION_REFUSED" erro
 
 2. **Try the minimal debug server**
    ```bash
-   npm run debug-server
+   pnpm run debug-server
    ```
    Then visit http://localhost:5001
 
 3. **Check for port conflicts**
    ```bash
-   npm run killport 5000
-   npm run killport 5001
+   pnpm run killport 5000
+   pnpm run killport 5001
    ```
 
 4. **Verify your environment**
    ```bash
-   npm run diagnose
+   pnpm run diagnose
    ```
 
 ## TypeScript Compilation Errors
@@ -39,7 +39,7 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
 
 2. **Run the TypeScript type checker**
    ```bash
-   npm run check
+   pnpm run check
    ```
 
 3. **Look for duplicate import statements**
@@ -65,19 +65,19 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
 
 1. **Start completely fresh**
    ```bash
-   npm run clean
-   npm install
-   npm run dev
+   pnpm run clean
+   pnpm install
+   pnpm run dev
    ```
 
 2. **Try the most basic server**
    ```bash
-   npm run basic-server
+   pnpm run basic-server
    ```
 
 3. **Debug with minimal dependencies**
    ```bash
-   npm run debug-server
+   pnpm run debug-server
    ```
 
 4. **Check for port conflicts**
@@ -88,5 +88,5 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
 
 5. **Run server with extra debugging**
    ```bash
-   NODE_DEBUG=* npm run dev
+   NODE_DEBUG=* pnpm run dev
    ```

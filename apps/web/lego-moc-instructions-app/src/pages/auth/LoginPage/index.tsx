@@ -39,17 +39,8 @@ function LoginPage() {
       
       console.log('Login successful:', response)
       
-      // Save user data to localStorage for route guard access
-      if (response.data?.user) {
-        localStorage.setItem('auth_state', JSON.stringify({
-          user: response.data.user,
-          isAuthenticated: true,
-          lastUpdated: Date.now(),
-        }))
-      }
-      
-      // Navigate to profile page on success
-      router.navigate({ to: '/profile' })
+      // Navigate to home page on success
+      router.navigate({ to: '/' })
     } catch (err) {
       if (err instanceof AuthApiError) {
         setError(err.message)

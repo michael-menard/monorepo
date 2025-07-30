@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui';
-import { FileUpload } from '../../../../FileUpload';
+// import { FileUpload } from '@monorepo/fileupload';
 import {
   createWishlistItemSchema,
   updateWishlistItemSchema,
@@ -277,6 +277,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                   <FormLabel>Image</FormLabel>
                   <FormControl>
                     <div className="space-y-2">
+                      {/* FileUpload temporarily disabled
                       <FileUpload
                         accept="image/*"
                         maxSizeMB={5}
@@ -286,6 +287,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                         uploadButtonLabel="Upload Image"
                         disabled={isLoading}
                       />
+                      */}
                       {field.value && (
                         <div className="mt-2">
                           <img

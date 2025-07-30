@@ -22,6 +22,19 @@ export const AlbumSchema = z.object({
   updatedAt: z.date(),
 });
 
+// Album Creation Data Schema
+export const AlbumCreationDataSchema = z.object({
+  name: z.string().min(1, 'Album name is required'),
+  description: z.string().optional(),
+});
+
+// Drag and Drop Data Schema
+export const DragDropDataSchema = z.object({
+  type: z.enum(['gallery-image']),
+  imageIds: z.array(z.string()),
+  source: z.string(),
+});
+
 // Gallery Layout Schema
 export const GalleryLayoutSchema = z.enum(['grid', 'masonry']);
 
@@ -56,6 +69,22 @@ export const GalleryImageCardPropsSchema = z.object({
   className: z.string().optional(),
 });
 
+// Create Album Dialog Props Schema
+export const CreateAlbumDialogPropsSchema = z.object({
+  isOpen: z.boolean(),
+  onClose: z.function().args().returns(z.void()),
+  onAlbumCreated: z
+    .function()
+    .args(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string().optional(),
+      }),
+    )
+    .returns(z.void()),
+});
+
 // Animation Config Schema
 export const AnimationConfigSchema = z.object({
   duration: z.number().min(0.1).max(2.0).default(0.3),
@@ -67,7 +96,10 @@ export const AnimationConfigSchema = z.object({
 // Export types derived from schemas
 export type GalleryImage = z.infer<typeof GalleryImageSchema>;
 export type Album = z.infer<typeof AlbumSchema>;
+export type AlbumCreationData = z.infer<typeof AlbumCreationDataSchema>;
+export type DragDropData = z.infer<typeof DragDropDataSchema>;
 export type GalleryLayout = z.infer<typeof GalleryLayoutSchema>;
 export type GalleryProps = z.infer<typeof GalleryPropsSchema>;
 export type GalleryImageCardProps = z.infer<typeof GalleryImageCardPropsSchema>;
+export type CreateAlbumDialogProps = z.infer<typeof CreateAlbumDialogPropsSchema>;
 export type AnimationConfig = z.infer<typeof AnimationConfigSchema>;

@@ -1,16 +1,7 @@
 import { 
-  Badge,
-  Button,
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  cn
+  Button
 } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
-import { 
-  BookOpen
-} from 'lucide-react'
 import { z } from 'zod'
 
 // Zod schema for layout props
@@ -23,13 +14,10 @@ type LayoutProps = z.infer<typeof LayoutPropsSchema>;
 function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-                        {/* Sticky Navbar */}
-                  <nav 
-                    className="sticky top-0 z-50 w-full border-b backdrop-blur supports-[backdrop-filter]:bg-primary/30"
-                    style={{ backgroundColor: 'hsl(120 15% 33% / 0.5)' }}
-                  >
-                            <div className="px-8">
-                                <div className="flex h-20 items-center justify-between">
+      {/* Sticky Navbar */}
+      <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-6">
+          <div className="flex h-16 items-center justify-between">
             {/* Left side - Brand */}
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
@@ -41,6 +29,10 @@ function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Center - Navigation Menu */}
+            <div className="hidden md:flex items-center">
+              {/* Navigation menu removed */}
+            </div>
+
             {/* Right side - User Actions */}
             <div className="flex items-center space-x-4">
               {/* For now, always show Sign In/Sign Up since auth is not implemented */}
