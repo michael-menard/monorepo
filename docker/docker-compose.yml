@@ -1,0 +1,251 @@
+version: '3.8'
+
+services:
+  # MongoDB for Auth Service
+  mongodb:
+    image: mongo:7.0
+    container_name: lego-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: lego_auth
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ../apps/api/auth-service/db/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - lego-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # MongoDB Express for web-based admin interface
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: lego-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - lego-network
+
+  # PostgreSQL for Backend API
+  postgres:
+    image: postgres:15
+    container_name: lego-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lego_projects
+      POSTGRES_USER: lego_user
+      POSTGRES_PASSWORD: lego_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../apps/api/lego-projects-api/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - lego-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lego_user -d lego_projects"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Elasticsearch for search functionality
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: lego-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - cluster.name=lego-cluster
+      - node.name=lego-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - lego-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana for Elasticsearch management (optional)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: lego-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - lego-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../apps/api/auth-service
+      dockerfile: Dockerfile
+    container_name: lego-auth-service
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/lego_auth?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRE=30d
+      - COOKIE_EXPIRE=30
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.ethereal.email}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER:-test@example.com}
+      - EMAIL_PASS=${EMAIL_PASS:-password}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@legoapp.com}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - lego-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/auth/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend API (LEGO Projects API)
+  backend-api:
+    build:
+      context: ../apps/api/lego-projects-api
+      dockerfile: Dockerfile
+    container_name: lego-backend-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://lego_user:lego_password@postgres:5432/lego_projects
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - AUTH_API=http://auth-service:5000/api/auth
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-lego-uploads}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - lego-network
+    volumes:
+      - lego_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # LEGO MOC Instructions App (Frontend)
+  lego-app:
+    build:
+      context: ../apps/web/lego-moc-instructions-app
+      dockerfile: Dockerfile
+    container_name: lego-moc-instructions-app
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://backend-api:3000
+      - VITE_AUTH_API_URL=http://auth-service:5000
+    depends_on:
+      - auth-service
+      - backend-api
+    networks:
+      - lego-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for caching (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: lego-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lego-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: lego-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - auth-service
+      - backend-api
+      - lego-app
+    networks:
+      - lego-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  postgres_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  redis_data:
+    driver: local
+  lego_uploads:
+    driver: local
+
+networks:
+  lego-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 

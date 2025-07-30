@@ -33,6 +33,46 @@
     "preview": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "docker:build": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:dev": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:prod": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:swarm": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:stop": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:down": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:logs": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:status": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:cleanup": {
+      "cache": false,
+      "outputs": []
+    },
+    "docker:up": {
+      "cache": false,
+      "outputs": []
     }
   }
 }

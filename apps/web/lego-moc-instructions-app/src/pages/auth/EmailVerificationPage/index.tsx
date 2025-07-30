@@ -37,6 +37,15 @@ function EmailVerificationPage() {
       
       console.log('Email verification successful:', response)
       
+      // Save user data to localStorage for route guard access
+      if (response.data?.user) {
+        localStorage.setItem('auth_state', JSON.stringify({
+          user: response.data.user,
+          isAuthenticated: true,
+          lastUpdated: Date.now(),
+        }))
+      }
+      
       setIsVerified(true)
     } catch (err) {
       if (err instanceof AuthApiError) {
@@ -100,10 +109,10 @@ function EmailVerificationPage() {
                 You can now access all features of the application.
               </p>
               <button
-                onClick={() => router.navigate({ to: '/' })}
+                onClick={() => router.navigate({ to: '/profile' })}
                 className="text-primary hover:underline"
               >
-                Go to Home
+                Go to Profile
               </button>
             </div>
           </AppCard>
@@ -173,7 +182,7 @@ function EmailVerificationPage() {
                 onClick={handleResendCode}
                 className="text-sm text-primary hover:underline"
               >
-                Resend Code
+                Resend verification code
               </button>
             </div>
           </form>

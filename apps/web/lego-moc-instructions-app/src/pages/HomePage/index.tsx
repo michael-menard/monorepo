@@ -1,260 +1,86 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
-import { Link } from '@tanstack/react-router'
-import { 
-  BookOpen, 
-  Download,
-  Heart, 
-  Search, 
-  Shield,
-  Star,
-  Upload, 
-  User, 
-  Users,
-  Zap
-} from 'lucide-react'
-import { config } from '../../config/environment.js'
-import DesignSystemGrid from '../../components/DesignSystemGrid'
-import DarkModeToggle from '../../components/DarkModeToggle'
-import ColorTest from '../../components/ColorTest'
-import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo'
+import React from 'react'
 
+const designTokens = [
+  { name: '--primary', value: '#47624E', description: 'Primary brand color', color: 'bg-[#47624E]' },
+  { name: '--primary-foreground', value: '#fff', description: 'Primary text on primary', color: 'bg-white border border-gray-300' },
+  { name: '--secondary', value: '#B07E5B', description: 'Secondary brand color', color: 'bg-[#B07E5B]' },
+  { name: '--secondary-foreground', value: '#fff', description: 'Text on secondary', color: 'bg-white border border-gray-300' },
+  { name: '--accent', value: '#C7A27C', description: 'Accent color', color: 'bg-[#C7A27C]' },
+  { name: '--accent-foreground', value: '#333', description: 'Text on accent', color: 'bg-[#333]' },
+  { name: '--background', value: '#F7F5F2', description: 'App background', color: 'bg-[#F7F5F2] border border-gray-300' },
+  { name: '--foreground', value: '#1A1A1A', description: 'Default text color', color: 'bg-[#1A1A1A]' },
+  { name: '--muted', value: '#DCD3C2', description: 'Muted background', color: 'bg-[#DCD3C2]' },
+  { name: '--muted-foreground', value: '#545454', description: 'Muted text', color: 'bg-[#545454]' },
+  { name: '--destructive', value: '#B14D4D', description: 'Error/destructive', color: 'bg-[#B14D4D]' },
+  { name: '--success', value: '#3D9B74', description: 'Success', color: 'bg-[#3D9B74]' },
+  { name: '--warning', value: '#E0B64A', description: 'Warning', color: 'bg-[#E0B64A]' },
+  { name: '--info', value: '#567D99', description: 'Info', color: 'bg-[#567D99]' },
+  { name: '--border', value: '#B4B4B4', description: 'Border color', color: 'bg-[#B4B4B4]' },
+  { name: '--input', value: '#B4B4B4', description: 'Input border', color: 'bg-[#B4B4B4]' },
+  { name: '--radius', value: '0.5rem', description: 'Border radius', color: 'bg-gray-200' },
+]
+
+const colorExamples = [
+  { name: 'Primary', value: '#47624E', color: 'bg-[#47624E]' },
+  { name: 'Secondary', value: '#B07E5B', color: 'bg-[#B07E5B]' },
+  { name: 'Accent', value: '#C7A27C', color: 'bg-[#C7A27C]' },
+  { name: 'Background', value: '#F7F5F2', color: 'bg-[#F7F5F2] border border-gray-300' },
+  { name: 'Foreground', value: '#1A1A1A', color: 'bg-[#1A1A1A]' },
+  { name: 'Muted', value: '#DCD3C2', color: 'bg-[#DCD3C2]' },
+  { name: 'Destructive', value: '#B14D4D', color: 'bg-[#B14D4D]' },
+  { name: 'Success', value: '#3D9B74', color: 'bg-[#3D9B74]' },
+  { name: 'Warning', value: '#E0B64A', color: 'bg-[#E0B64A]' },
+  { name: 'Info', value: '#567D99', color: 'bg-[#567D99]' },
+]
 
 function HomePage() {
-  // Mock authentication hook - will be replaced with real auth later
-  const mockAuth = {
-    isAuthenticated: false, // Set to true to test authenticated access
-    user: {
-      id: '1',
-      email: 'test@example.com',
-      name: 'Test User',
-      role: 'user',
-      emailVerified: true,
-    },
-  };
-
-  const features = [
-    {
-      icon: BookOpen,
-      title: "Browse MOC Instructions",
-      description: "Explore thousands of custom LEGO MOC instructions from the community",
-      action: "Browse Gallery",
-      href: "/moc-instructions"
-    },
-    {
-      icon: Heart,
-      title: "Personal Wishlist",
-      description: "Save your favorite MOCs and track your building progress",
-      action: "View Wishlist",
-      href: "/wishlist",
-      requiresAuth: true
-    },
-    {
-      icon: User,
-      title: "User Profiles",
-      description: "Manage your profile, uploads, and building history",
-      action: "View Profile",
-      href: "/profile",
-      requiresAuth: true
-    },
-    {
-      icon: Upload,
-      title: "Share Your MOCs",
-      description: "Upload and share your own custom LEGO creations",
-      action: "Upload MOC",
-      href: "/moc-instructions/new",
-      requiresAuth: true
-    }
-  ];
-
-  const stats = [
-    { label: "MOC Instructions", value: "10,000+", icon: BookOpen },
-    { label: "Active Users", value: "5,000+", icon: Users },
-    { label: "Downloads", value: "50,000+", icon: Download },
-    { label: "Community Rating", value: "4.8★", icon: Star }
-  ];
-
-    return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Dark Mode Toggle */}
-      <DarkModeToggle />
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center py-16 px-4">
+      <h1 className="text-4xl font-bold mb-4 text-center">LEGO MOC Instructions App</h1>
+      <p className="text-lg max-w-2xl text-center mb-12">
+        Discover, build, and share custom LEGO MOC instructions. Join our community of builders and explore thousands of unique creations from around the world.
+      </p>
       
-      {/* Color Test - Remove this after verification */}
-      <div className="container mx-auto px-4 py-8">
-        <ColorTest />
+      <div className="w-full max-w-4xl space-y-8">
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Design System Tokens</h2>
+          <table className="w-full border border-border rounded-lg overflow-hidden text-sm">
+            <thead className="bg-muted">
+              <tr>
+                <th className="p-2 text-left">Token</th>
+                <th className="p-2 text-left">Value</th>
+                <th className="p-2 text-left">Description</th>
+                <th className="p-2 text-left">Color</th>
+              </tr>
+            </thead>
+            <tbody>
+              {designTokens.map(token => (
+                <tr key={token.name} className="border-t border-border">
+                  <td className="p-2 font-mono">{token.name}</td>
+                  <td className="p-2 font-mono">{token.value}</td>
+                  <td className="p-2">{token.description}</td>
+                  <td className="p-2">
+                    <div className={`w-6 h-6 rounded ${token.color}`}></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Color Examples</h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {colorExamples.map(color => (
+              <div key={color.name} className="text-center">
+                <div className={`w-16 h-16 rounded-lg mx-auto mb-2 ${color.color}`}></div>
+                <div className="font-medium text-sm">{color.name}</div>
+                <div className="text-xs text-muted-foreground font-mono">{color.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      
-      {/* Button Customization Demo - Remove this after viewing */}
-      <div className="container mx-auto px-4 py-8">
-        <ButtonCustomizationDemo />
-      </div>
-      
-      {/* Design System Grid - Remove this after viewing */}
-      <DesignSystemGrid />
-      
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-6">
-          <h1 className="text-5xl font-bold tracking-tight">
-            {config.app.name}
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Discover, build, and share custom LEGO MOC instructions. Join our community of builders 
-            and explore thousands of unique creations from around the world.
-          </p>
-          
-          {/* Call to Action Buttons */}
-          <div className="flex justify-center space-x-4">
-            {mockAuth.isAuthenticated ? (
-              <>
-                <Link to="/moc-instructions">
-                  <Button size="lg" className="gap-2">
-                    <Search className="h-4 w-4" />
-                    Browse MOCs
-                  </Button>
-                </Link>
-                <Link to="/wishlist">
-                  <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
-                    <Heart className="h-4 w-4" />
-                    My Wishlist
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link to="/moc-instructions">
-                  <Button size="lg" className="gap-2">
-                    <Search className="h-4 w-4" />
-                    Browse MOCs
-                  </Button>
-                </Link>
-                <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
-                  <User className="h-4 w-4" />
-                  Sign Up
-                </Button>
-              </>
-            )}
-          </div>
-
-          {mockAuth.isAuthenticated && (
-            <p className="text-sm text-muted-foreground">
-              Welcome back, {mockAuth.user.name}! 
-              <Link to="/profile" className="text-primary hover:underline ml-1">
-                View Profile
-              </Link>
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="text-center">
-              <CardContent className="pt-6">
-                <stat.icon className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Everything You Need to Build</h2>
-          <p className="text-lg text-muted-foreground">
-            From browsing to building, we've got you covered
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <feature.icon className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">{feature.title}</CardTitle>
-                <CardDescription>{feature.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {feature.requiresAuth && !mockAuth.isAuthenticated ? (
-                  <Button variant="outline" className="w-full border border-input bg-background" disabled>
-                    Login Required
-                  </Button>
-                ) : (
-                  <Link to={feature.href} className="w-full">
-                    <Button variant="outline" className="w-full border border-input bg-background">
-                      {feature.action}
-                    </Button>
-                  </Link>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Why Choose Us Section */}
-      <section className="container mx-auto px-4 py-16 bg-muted/50 rounded-lg">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Why Choose Our Platform?</h2>
-          <p className="text-lg text-muted-foreground">
-            Built by builders, for builders
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="text-center space-y-4">
-            <Shield className="h-12 w-12 mx-auto text-primary" />
-            <h3 className="text-xl font-semibold">Secure & Reliable</h3>
-            <p className="text-muted-foreground">
-              Your creations and data are protected with enterprise-grade security
-            </p>
-          </div>
-          
-          <div className="text-center space-y-4">
-            <Zap className="h-12 w-12 mx-auto text-primary" />
-            <h3 className="text-xl font-semibold">Lightning Fast</h3>
-            <p className="text-muted-foreground">
-              Optimized for speed with instant search and quick downloads
-            </p>
-          </div>
-          
-          <div className="text-center space-y-4">
-            <Users className="h-12 w-12 mx-auto text-primary" />
-            <h3 className="text-xl font-semibold">Community Driven</h3>
-            <p className="text-muted-foreground">
-              Join thousands of builders sharing their passion for LEGO
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-6">
-          <h2 className="text-3xl font-bold">Ready to Start Building?</h2>
-          <p className="text-lg text-muted-foreground">
-            Join our community and discover amazing LEGO MOCs today
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Link to="/moc-instructions">
-              <Button size="lg" className="gap-2">
-                <Search className="h-4 w-4" />
-                Start Browsing
-              </Button>
-            </Link>
-            {!mockAuth.isAuthenticated && (
-              <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
-                <User className="h-4 w-4" />
-                Create Account
-              </Button>
-            )}
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
