@@ -17,6 +17,26 @@ export {
   useFormField,
 } from './form';
 
+// Enhanced form error message components
+export {
+  FormErrorMessage,
+  EnhancedFormMessage,
+  FieldErrorMessage,
+  FormLevelErrorMessage,
+} from './form-error-message';
+
+export type { ErrorMessageType, FormErrorMessageProps } from './form-error-message';
+
+// Validation utilities
+export {
+  validationMessages,
+  createEnhancedSchemas,
+  validatePasswordStrength,
+  validateFile,
+  getNetworkErrorMessage,
+  createFormValidationHelpers,
+} from './validation-messages';
+
 // Dialog components
 export {
   Dialog,
@@ -39,6 +59,9 @@ export {
   SelectTrigger,
   SelectValue,
 } from './select';
+
+// MultiSelect component
+export { MultiSelect } from './multi-select';
 
 // Avatar components
 export { Avatar, AvatarFallback, AvatarImage } from './avatar';
@@ -198,6 +221,8 @@ export {
 
 // Tabs components
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+export { default as TabsWithBadgeDemo } from './tabs-with-badge-demo';
+export { default as TabsWithBadgeDemoExample } from './tabs-with-badge-demo.example';
 
 // Textarea component
 export { Textarea } from './textarea';
@@ -230,4 +255,84 @@ export { PageHeader } from './PageHeader';
 export { TabPanel } from './TabPanel';
 
 // Guided Tour components
-export { TourProvider, TourStep, TourTrigger, useTour } from './guided-tour'; 
+export { TourProvider, TourStep, TourTrigger, useTour } from './guided-tour';
+
+// Error Boundary components
+export { 
+  ErrorBoundary, 
+  useErrorHandler, 
+  generateErrorReport, 
+  sendErrorReport 
+} from './error-boundary';
+
+export type { ErrorInfo } from './error-boundary';
+export { ErrorInfoSchema } from './error-boundary';
+
+export {
+  ApiErrorBoundary,
+  FormErrorBoundary,
+  DataErrorBoundary,
+  ComponentErrorBoundary,
+  withErrorBoundary,
+  useAsyncError,
+  ApiErrorSchema
+} from './error-boundary-specialized';
+
+export type { ApiError } from './error-boundary-specialized';
+
+// Error Boundary example
+export { ErrorBoundaryExample } from './error-boundary.example';
+
+// Loading Spinner components
+export { 
+  LoadingSpinner, 
+  PulseSpinner, 
+  DotsSpinner, 
+  spinnerVariants, 
+  pulseVariants, 
+  dotsVariants 
+} from './loading-spinner';
+
+// Skeleton components
+export {
+  Skeleton,
+  CardSkeleton,
+  AvatarSkeleton,
+  TextSkeleton,
+  TableSkeleton,
+  ListSkeleton,
+  FormSkeleton,
+  skeletonVariants,
+} from './skeleton';
+
+// Progress Indicator components
+export {
+  ProgressIndicator,
+  CircularProgress,
+  LoadingOverlay,
+  progressVariants,
+  progressBarVariants,
+} from './progress-indicator';
+
+// Loading States Hook
+export {
+  useLoadingStates,
+  useMultipleLoadingStates,
+} from './hooks/useLoadingStates';
+
+export type {
+  LoadingType,
+  LoadingState,
+  UseLoadingStatesOptions,
+  UseLoadingStatesReturn,
+} from './hooks/useLoadingStates';
+
+// Loading States Example
+export { LoadingStatesExample } from './loading-states-example';
+
+// Form Error Example
+export { FormErrorExample } from './form-error-example';
+
+// Theme components
+export { ThemeProvider, useTheme } from './providers/ThemeProvider';
+export { ThemeToggle } from './components/ThemeToggle'; 

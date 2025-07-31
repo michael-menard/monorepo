@@ -1,6 +1,7 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "./lib/utils"
+import { KEYBOARD_KEYS, getAriaAttributes } from "./lib/keyboard-navigation"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
@@ -48,11 +49,37 @@ export interface ButtonProps
   [key: string]: any
 }
 
-const Button = ({ className, variant, size, asChild = false, ...props }: any) => {
+const Button = ({ 
+  className, 
+  variant, 
+  size, 
+  asChild = false, 
+  pressed,
+  disabled,
+  ...props 
+}: any) => {
   const Comp = asChild ? Slot : "button"
+  
+  const ariaAttributes = getAriaAttributes({
+    pressed,
+    disabled,
+  })
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    // Handle keyboard activation
+    if (event.key === KEYBOARD_KEYS.ENTER || event.key === KEYBOARD_KEYS.SPACE) {
+      event.preventDefault()
+      if (props.onClick) {
+        props.onClick(event)
+      }
+    }
+  }
+
   return (
     <Comp
       className={cn(buttonVariants({ variant, size, className }))}
+      onKeyDown={handleKeyDown}
+      {...ariaAttributes}
       {...props}
     />
   )

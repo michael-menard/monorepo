@@ -1,18 +1,52 @@
 import * as React from "react"
-
 import { cn } from "./lib/utils"
+import { getAriaAttributes, useUniqueId } from "./lib/keyboard-navigation"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+export interface TableProps extends React.ComponentProps<"table"> {
+  caption?: string;
+  summary?: string;
+  role?: string;
+}
+
+function Table({ 
+  className, 
+  caption,
+  summary,
+  role = "table",
+  ...props 
+}: TableProps) {
+  const uniqueId = useUniqueId('table')
+  const tableId = uniqueId
+  const captionId = `${tableId}-caption`
+  
+  const ariaAttributes = getAriaAttributes({
+    describedBy: caption ? captionId : undefined,
+  })
+
   return (
     <div
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
+      role="region"
+      aria-label={caption || "Data table"}
+      tabIndex={0}
     >
       <table
         data-slot="table"
+        id={tableId}
         className={cn("w-full caption-bottom text-sm", className)}
+        role={role}
+        aria-describedby={caption ? captionId : undefined}
+        {...ariaAttributes}
         {...props}
-      />
+      >
+        {caption && (
+          <caption id={captionId} className="sr-only">
+            {caption}
+          </caption>
+        )}
+        {props.children}
+      </table>
     </div>
   )
 }
@@ -50,20 +84,39 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableRow({ 
+  className, 
+  selected,
+  ...props 
+}: React.ComponentProps<"tr"> & { selected?: boolean }) {
+  const ariaAttributes = getAriaAttributes({
+    selected,
+  })
+
   return (
     <tr
       data-slot="table-row"
       className={cn(
         "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        selected && "bg-muted",
         className
       )}
+      aria-selected={selected}
+      {...ariaAttributes}
       {...props}
     />
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableHead({ 
+  className, 
+  sort,
+  ...props 
+}: React.ComponentProps<"th"> & { sort?: 'ascending' | 'descending' | 'none' | 'other' }) {
+  const ariaAttributes = getAriaAttributes({
+    sort,
+  })
+
   return (
     <th
       data-slot="table-head"
@@ -71,12 +124,18 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
         "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
+      scope="col"
+      aria-sort={sort}
+      {...ariaAttributes}
       {...props}
     />
   )
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+function TableCell({ 
+  className, 
+  ...props 
+}: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
