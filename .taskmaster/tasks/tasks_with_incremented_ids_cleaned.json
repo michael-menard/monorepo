@@ -62,7 +62,7 @@
 			"42"
 		],
 		"details": "Build avatar upload with react-easy-crop integration, file type validation (.jpg/.heic), and upload progress",
-		"testStrategy": "Test file upload, cropping functionality, validation, and error handling",
+		"testStrategy": "Test file upload, cropping functionality, validation, and error handling. ",
 		"tag": "frontend-ui-development",
 		"techStack": [
 			"ESNext",
@@ -85,6 +85,13 @@
 			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
 		],
 		"constraints": [
+			"the component should have unit tests",
+			"the component should have ux tests",
+			"the component should have proformance tests",
+			"the component should have security tests",
+			"the component should have accesssability tests",
+			"the component should have true end to end tests using playwright and no mocking",
+			"without an image uploaded the component should show the user's initials with the AvatarFallback Component",
 			"use the shadcn/ui Avatar component",
 			"use the shadcn/ui AvatarFallback component",
 			"use the shadcn/ui AvatarImage component",
@@ -95,10 +102,11 @@
 			"when hovering over the component a pencil icon should appear to edit the avatar on the user's own avatar",
 			"clicking the pencil icon should open a modal to upload a new avatar leveraging the existing AvatarUploader component im packages/features/profile",
 			"clicking the avatar should open a dropdown using shadcn/ui DropdownMenu",
-			"the dropdown should have the following options: 'Profile', 'Logout'",
-			"the 'Profile' option should opnavigate to the profile page",
-			"the 'Logout' option should oem a model that asks the user if they are sure they want to logout",
+			"the dropdown should have the following options: 'Profile', 'Logout', 'user settings'",
+			"the 'Profile' option should navigate to the profile page",
+			"the 'Logout' option should open a modal that asks the user if they are sure they want to logout",
 			"the log out option should be disabled for now until auth is implemented",
+			"the 'user settings' option should navigate to the user settings page",
 			"Avoid TypeScript interfaces; prefer Zod + types",
 			"No NodeNext",
 			"Do not use watch flags in test scripts; tests should run once and exit.",
@@ -119,6 +127,8 @@
 		"tags": [],
 		"blockedBy": []
 	},
+
+
 	"Create MOC gallery with filtering and search": {
 		"id": 190,
 		"title": "Implement MocInstructionsGallery component",
@@ -152,6 +162,12 @@
 			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
 		],
 		"constraints": [
+			"the component should have unit tests",
+			"the component should have ux tests",
+			"the component should have proformance tests",
+			"the component should have security tests",
+			"the component should have accesssability tests",
+			"the component should have true end to end tests using playwright and no mocking",
 			"the MocInstructionsGallery component should use the packages/features/gallery component",
 			"this may already be complete in apps/web/lego-moc-instructions-app/src/pages/MocInstructionsGallery",
 			"Avoid TypeScript interfaces; prefer Zod + types",

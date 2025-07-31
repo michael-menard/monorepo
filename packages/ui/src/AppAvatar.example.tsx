@@ -41,6 +41,7 @@ export const AppAvatarExample: React.FC = () => {
                     userEmail={userEmail}
                     showEditButton={true}
                     disabled={false}
+                    clickable={true}
                     size="lg"
                     onAvatarUpload={handleAvatarUpload}
                     onProfileClick={handleProfileClick}
@@ -66,6 +67,7 @@ export const AppAvatarExample: React.FC = () => {
                         onLogout={handleLogout}
                         showEditButton={true}
                         disabled={false}
+                        clickable={true}
                       />
             <p className="text-xs mt-2">Small</p>
           </div>
@@ -79,6 +81,7 @@ export const AppAvatarExample: React.FC = () => {
                           onLogout={handleLogout}
                           showEditButton={true}
                           disabled={false}
+                          clickable={true}
                         />
             <p className="text-xs mt-2">Medium</p>
           </div>
@@ -92,6 +95,7 @@ export const AppAvatarExample: React.FC = () => {
                           onLogout={handleLogout}
                           showEditButton={true}
                           disabled={false}
+                          clickable={true}
                         />
             <p className="text-xs mt-2">Large</p>
           </div>
@@ -107,6 +111,7 @@ export const AppAvatarExample: React.FC = () => {
                       userEmail={userEmail}
                       showEditButton={true}
                       disabled={false}
+                      clickable={true}
                       size="md"
                       onAvatarUpload={handleAvatarUpload}
                       onProfileClick={handleProfileClick}
@@ -128,6 +133,7 @@ export const AppAvatarExample: React.FC = () => {
                       userEmail={userEmail}
                       showEditButton={false}
                       disabled={false}
+                      clickable={true}
                       size="md"
                       onProfileClick={handleProfileClick}
                       onLogout={handleLogout}
@@ -148,6 +154,7 @@ export const AppAvatarExample: React.FC = () => {
                       userEmail={userEmail}
                       disabled={true}
                       showEditButton={true}
+                      clickable={true}
                       size="md"
                       onAvatarUpload={handleAvatarUpload}
                       onProfileClick={handleProfileClick}
@@ -169,6 +176,7 @@ export const AppAvatarExample: React.FC = () => {
             userEmail={userEmail}
             showEditButton={true}
             disabled={false}
+            clickable={true}
             size="md"
             onAvatarUpload={handleAvatarUpload}
             onProfileClick={handleProfileClick}
@@ -189,6 +197,7 @@ export const AppAvatarExample: React.FC = () => {
             userEmail={userEmail}
             showEditButton={true}
             disabled={false}
+            clickable={true}
             size="md"
             className="ring-2 ring-blue-500 ring-offset-2"
             onAvatarUpload={handleAvatarUpload}
@@ -197,6 +206,28 @@ export const AppAvatarExample: React.FC = () => {
           />
           <span className="text-sm text-muted-foreground">
             With custom ring styling
+          </span>
+        </div>
+      </div>
+
+      {/* Non-clickable Avatar */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Non-clickable Avatar</h2>
+        <div className="flex items-center space-x-4">
+          <AppAvatar
+            avatarUrl={avatarUrl}
+            userName={userName}
+            userEmail={userEmail}
+            showEditButton={true}
+            disabled={false}
+            clickable={false}
+            size="md"
+            onAvatarUpload={handleAvatarUpload}
+            onProfileClick={handleProfileClick}
+            onLogout={handleLogout}
+          />
+          <span className="text-sm text-muted-foreground">
+            No dropdown menu, but still shows edit button on hover
           </span>
         </div>
       </div>

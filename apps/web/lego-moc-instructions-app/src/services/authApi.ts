@@ -93,7 +93,7 @@ async function makeApiCall<T>(
 export const authApi = {
   // Sign up a new user
   async signup(data: SignupData): Promise<ApiResponse<{ user: User }>> {
-    return makeApiCall<{ user: User }>('/auth/sign-up', {
+    return makeApiCall<{ user: User }>('/api/auth/sign-up', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -101,7 +101,7 @@ export const authApi = {
 
   // Login user
   async login(data: LoginData): Promise<ApiResponse<{ user: User }>> {
-    return makeApiCall<{ user: User }>('/auth/login', {
+    return makeApiCall<{ user: User }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -109,21 +109,21 @@ export const authApi = {
 
   // Logout user
   async logout(): Promise<ApiResponse> {
-    return makeApiCall('/auth/log-out', {
+    return makeApiCall('/api/auth/log-out', {
       method: 'POST',
     })
   },
 
   // Check if user is authenticated
   async checkAuth(): Promise<ApiResponse<{ user: User }>> {
-    return makeApiCall<{ user: User }>('/auth/check-auth', {
+    return makeApiCall<{ user: User }>('/api/auth/check-auth', {
       method: 'GET',
     })
   },
 
   // Verify email with code
   async verifyEmail(data: VerifyEmailData): Promise<ApiResponse<{ user: User }>> {
-    return makeApiCall<{ user: User }>('/auth/verify-email', {
+    return makeApiCall<{ user: User }>('/api/auth/verify-email', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -131,7 +131,7 @@ export const authApi = {
 
   // Resend verification email
   async resendVerification(email: string): Promise<ApiResponse> {
-    return makeApiCall('/auth/resend-verification', {
+    return makeApiCall('/api/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify({ email }),
     })
@@ -139,7 +139,7 @@ export const authApi = {
 
   // Request password reset
   async forgotPassword(email: string): Promise<ApiResponse> {
-    return makeApiCall('/auth/forgot-password', {
+    return makeApiCall('/api/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     })
@@ -147,7 +147,7 @@ export const authApi = {
 
   // Reset password with token
   async resetPassword(token: string, data: ResetPasswordData): Promise<ApiResponse> {
-    return makeApiCall(`/auth/reset-password/${token}`, {
+    return makeApiCall(`/api/auth/reset-password/${token}`, {
       method: 'POST',
       body: JSON.stringify(data),
     })

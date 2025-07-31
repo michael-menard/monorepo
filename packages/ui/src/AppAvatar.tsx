@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { ChangeEvent } from 'react';
-import { Edit, User, LogOut, Upload } from 'lucide-react';
+import { Edit, User, LogOut, Settings, Upload, X } from 'lucide-react';
 import { z } from 'zod';
 
 // Global types for DOM elements
@@ -11,6 +11,7 @@ declare global {
     };
   }
 }
+
 import {
   Avatar,
   AvatarImage,
@@ -25,9 +26,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  ConfirmationDialog,
   cn,
 } from './index';
+
+import { ConfirmationDialog } from './ConfirmationDialog';
 
 // Zod schema for component props
 const AppAvatarSchema = z.object({
@@ -37,10 +39,12 @@ const AppAvatarSchema = z.object({
   onAvatarUpload: z.function().args(z.instanceof(File)).returns(z.promise(z.void())).optional(),
   onProfileClick: z.function().returns(z.void()).optional(),
   onLogout: z.function().returns(z.void()).optional(),
+  onUserSettingsClick: z.function().returns(z.void()).optional(),
   className: z.string().optional(),
   size: z.enum(['sm', 'md', 'lg']).default('md'),
   showEditButton: z.boolean().default(true),
   disabled: z.boolean().default(false),
+  clickable: z.boolean().default(true),
 });
 
 type AppAvatarProps = z.infer<typeof AppAvatarSchema>;
@@ -90,16 +94,18 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
   onAvatarUpload,
   onProfileClick,
   onLogout,
+  onUserSettingsClick,
   className,
   size = 'md',
   showEditButton = true,
   disabled = false,
+  clickable = true,
 }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const config = sizeConfig[size];
@@ -109,35 +115,37 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setError(null);
-
-    // Basic file validation
+    // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+      alert('Please select an image file');
       return;
     }
 
+    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
+      alert('File size must be less than 5MB');
       return;
     }
 
     setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
     setIsUploadModalOpen(true);
   };
 
   const handleAvatarUpload = async () => {
-    if (!onAvatarUpload || !selectedFile) return;
+    if (!selectedFile || !onAvatarUpload) return;
 
     setIsUploading(true);
-    setError(null);
 
     try {
       await onAvatarUpload(selectedFile);
       setIsUploadModalOpen(false);
       setSelectedFile(null);
+      setPreviewUrl(null);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Upload failed');
+      console.error('Avatar upload failed:', error);
+      alert('Failed to upload avatar. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -156,64 +164,93 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
     }
   };
 
+  const handleUserSettingsClick = () => {
+    if (onUserSettingsClick) {
+      onUserSettingsClick();
+    }
+  };
+
   const handleModalClose = () => {
     if (!isUploading) {
       setIsUploadModalOpen(false);
       setSelectedFile(null);
-      setError(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
     }
+  };
+
+  const handleFileInputClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
     <div className={cn('relative inline-block', className)}>
       {/* Avatar with Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className={cn(
-              'relative p-0 h-auto w-auto rounded-full hover:bg-transparent',
-              config.avatar,
-            )}
-            disabled={disabled}
-          >
-            <Avatar className={cn('cursor-pointer', config.avatar)}>
-              <AvatarImage src={avatarUrl} alt={`${userName || 'User'}'s avatar`} />
-              <AvatarFallback className={cn('font-semibold', config.text)}>
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
+      {clickable ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className={cn(
+                'relative p-0 h-auto w-auto rounded-full hover:bg-transparent',
+                config.avatar,
+              )}
+              disabled={disabled}
+            >
+              <Avatar className={cn('cursor-pointer', config.avatar)}>
+                <AvatarImage src={avatarUrl} alt={`${userName || 'User'}'s avatar`} />
+                <AvatarFallback className={cn('font-semibold', config.text)}>
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={handleProfileClick}>
-            <User className="mr-2 h-4 w-4" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setIsLogoutDialogOpen(true)}
-            disabled={!onLogout}
-            className="text-destructive focus:text-destructive"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleProfileClick}>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleUserSettingsClick}>
+              <Settings className="mr-2 h-4 w-4" />
+              User Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setIsLogoutDialogOpen(true)}
+              disabled={!onLogout}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        /* Non-clickable Avatar */
+        <div className={cn('relative', config.avatar)}>
+          <Avatar className={config.avatar}>
+            <AvatarImage src={avatarUrl} alt={`${userName || 'User'}'s avatar`} />
+            <AvatarFallback className={cn('font-semibold', config.text)}>
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      )}
 
       {/* Edit Button Overlay */}
       {showEditButton && onAvatarUpload && (
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-full bg-black/20">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-full bg-black/20 pointer-events-none">
           <Button
             variant="secondary"
             size="icon"
             className={cn(
-              'bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 shadow-md',
+              'bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 shadow-md pointer-events-auto',
               config.editButton,
             )}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleFileInputClick}
             disabled={disabled || isUploading}
           >
             <Edit className={config.icon} />
@@ -236,43 +273,45 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
           <DialogHeader>
             <DialogTitle>Update Profile Picture</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            {selectedFile && (
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Selected: {selectedFile.name}</p>
-                <div className="w-24 h-24 mx-auto rounded-full overflow-hidden bg-muted">
-                  <img
-                    src={URL.createObjectURL(selectedFile)}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
+          <div className="py-4">
+            <div className="text-center space-y-4">
+              {/* Preview */}
+              <div className="flex justify-center">
+                <div className="relative">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage src={previewUrl || avatarUrl} alt="Preview" />
+                    <AvatarFallback className="text-lg font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
               </div>
-            )}
 
-            {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">{error}</div>}
+              {/* File Info */}
+              {selectedFile && (
+                <div className="text-sm text-gray-600">
+                  <p>Selected: {selectedFile.name}</p>
+                  <p>Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+              )}
 
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={handleModalClose} disabled={isUploading}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAvatarUpload}
-                disabled={!selectedFile || isUploading}
-                className="flex items-center space-x-2"
-              >
-                {isUploading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    <span>Uploading...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    <span>Upload</span>
-                  </>
-                )}
-              </Button>
+              {/* Upload Button */}
+              <div className="flex justify-center gap-2">
+                <Button
+                  onClick={handleFileInputClick}
+                  variant="outline"
+                  disabled={isUploading}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Choose Different Image
+                </Button>
+                <Button
+                  onClick={handleAvatarUpload}
+                  disabled={!selectedFile || isUploading}
+                >
+                  {isUploading ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

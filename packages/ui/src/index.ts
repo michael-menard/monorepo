@@ -227,4 +227,7 @@ export { AppDataTable } from './AppDataTable';
 export { ConfirmationDialog } from './ConfirmationDialog';
 export { FormSection } from './FormSection';
 export { PageHeader } from './PageHeader';
-export { TabPanel } from './TabPanel'; 
+export { TabPanel } from './TabPanel';
+
+// Guided Tour components
+export { TourProvider, TourStep, TourTrigger, useTour } from './guided-tour'; 

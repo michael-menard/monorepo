@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage, Button, Badge } from '@repo/ui';
+import { AppAvatar, Button, Badge } from '@repo/ui';
 import type { ProfileSidebarProps } from '../../types';
 import {
   formatFullName,
@@ -21,36 +21,42 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   const avatarUrl = profile.avatar || generateAvatarPlaceholder(fullName);
   const completionPercentage = getProfileCompletionPercentage(profile);
 
-  const handleAvatarClick = () => {
-    if (isEditable && onUploadAvatar) {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = (e) => {
-        const target = e.target as HTMLInputElement;
-        const file = target.files?.[0];
-        if (file && onUploadAvatar) {
-          onUploadAvatar(file);
-        }
-      };
-      input.click();
+  const handleProfileClick = () => {
+    if (onViewProfile) {
+      onViewProfile();
     }
+  };
+
+  const handleUserSettingsClick = () => {
+    // Navigate to user settings page
+    window.location.href = '/settings';
+  };
+
+  const handleLogout = () => {
+    // Handle logout logic
+    console.log('Logout clicked');
+    // In a real app, this would clear auth tokens and redirect to login
   };
 
   return (
     <div className={`profile-sidebar ${className}`}>
       {/* Avatar Section */}
       <div className="flex flex-col items-center mb-6">
-        <div className="relative group">
-          <Avatar className="w-24 h-24 cursor-pointer" onClick={handleAvatarClick}>
-            <AvatarImage src={avatarUrl} alt={`${fullName}'s avatar`} />
-            <AvatarFallback className="text-lg font-semibold">{initials}</AvatarFallback>
-          </Avatar>
-          {isEditable && onUploadAvatar && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-white text-xs font-medium">Change</span>
-            </div>
-          )}
+        <div className="relative">
+          <AppAvatar
+            avatarUrl={avatarUrl}
+            userName={fullName}
+            userEmail={profile.email}
+            onAvatarUpload={isEditable && onUploadAvatar ? async (file: File) => {
+              onUploadAvatar(file);
+            } : undefined}
+            onProfileClick={handleProfileClick}
+            onUserSettingsClick={handleUserSettingsClick}
+            onLogout={handleLogout}
+            size="lg"
+            showEditButton={isEditable && !!onUploadAvatar}
+            className="w-24 h-24"
+          />
         </div>
         
         {/* Profile Completion Badge */}

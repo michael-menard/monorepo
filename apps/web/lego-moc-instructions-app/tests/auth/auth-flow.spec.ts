@@ -242,7 +242,7 @@ test.describe('Auth Flow', () => {
     });
 
     test('should display forgot password form', async ({ page }) => {
-      await expect(page.locator('h1')).toContainText('Forgot your password?');
+      await expect(page.locator('h3')).toContainText('Reset Password');
       await expect(page.locator('input[type="email"]')).toBeVisible();
       await expect(page.locator('button[type="submit"]')).toContainText('Send Reset Link');
     });
