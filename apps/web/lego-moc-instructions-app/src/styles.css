@@ -3,6 +3,9 @@
 /* Import shared design tokens */
 @import "@monorepo/shared/design-tokens.css";
 
+/* Import moc-instructions styles */
+@import "@repo/moc-instructions/styles.css";
+
 /* Tailwind CSS v4 Configuration */
 @theme {
   /* shadcn/ui colors - using shared design tokens */

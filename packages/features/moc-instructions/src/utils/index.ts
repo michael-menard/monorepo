@@ -1,4 +1,4 @@
-import type { MockInstruction, MockInstructionStep, MockInstructionFilter } from '../schemas';
+import type { MockInstruction, MockInstructionFilter } from '../schemas';
 
 // Format time in minutes to human readable format
 export const formatTime = (minutes: number): string => {
@@ -36,7 +36,7 @@ export const calculateTotalTime = (instruction: MockInstruction): number => {
   const stepTime = instruction.steps.reduce((total, step) => {
     return total + (step.estimatedTime || 0);
   }, 0);
-  return stepTime + (instruction.estimatedTime ? instruction.estimatedTime * 60 : 0);
+  return stepTime;
 };
 
 // Get difficulty color
@@ -90,6 +90,48 @@ export const validateFileSize = (file: File, maxSizeMB: number = 10): boolean =>
 export const validateImageType = (file: File): boolean => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   return allowedTypes.includes(file.type);
+};
+
+// Validate instruction file type (PDF, .io)
+export const validateInstructionFileType = (file: File): boolean => {
+  const allowedTypes = ['application/pdf'];
+  const allowedExtensions = ['.io'];
+  
+  return allowedTypes.includes(file.type) || 
+         allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+};
+
+// Get file type label
+export const getFileTypeLabel = (file: File): string => {
+  if (file.type === 'application/pdf') return 'PDF';
+  if (file.name.toLowerCase().endsWith('.io')) return 'Stud.io';
+  return 'Unknown';
+};
+
+// Validate parts list file type (CSV, XML, JSON)
+export const validatePartsListFileType = (file: File): boolean => {
+  const allowedTypes = ['text/csv', 'application/xml', 'application/json'];
+  const allowedExtensions = ['.csv', '.xml', '.json'];
+  
+  return allowedTypes.includes(file.type) || 
+         allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+};
+
+// Get parts list file type label
+export const getPartsListFileTypeLabel = (file: File): string => {
+  if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) return 'CSV';
+  if (file.type === 'application/xml' || file.name.toLowerCase().endsWith('.xml')) return 'XML';
+  if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) return 'JSON';
+  return 'Unknown';
+};
+
+// Format file size
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 // Compress image file

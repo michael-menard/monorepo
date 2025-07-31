@@ -8,9 +8,10 @@ import {
   MocInstructionsGallery as MocInstructionsGalleryComponent,
   useDeleteInstructionMutation,
   useGetInstructionsQuery,
+  type MockInstructionFilter,
+  type MockInstructionSortBy,
+  type SortOrder,
 } from '@repo/moc-instructions';
-
-// Gallery package integration can be added later for enhanced functionality
 
 export interface MocInstructionsGalleryProps {
   className?: string;
@@ -33,14 +34,14 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
   isEditable = false,
 }) => {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<MockInstructionFilter>({
     search: '',
     category: undefined,
     difficulty: undefined,
     isPublic: true,
     isPublished: true,
-    sortBy: 'createdAt' as const,
-    sortOrder: 'desc' as const,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
   });
 
   // RTK Query hooks
@@ -59,8 +60,12 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
     }
   }, [deleteInstruction]);
 
-  const handleFiltersChange = useCallback((newFilters: any) => {
+  const handleFiltersChange = useCallback((newFilters: MockInstructionFilter) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
+  }, []);
+
+  const handleSortChange = useCallback((newSortBy: MockInstructionSortBy, newSortOrder: SortOrder) => {
+    setFilters(prev => ({ ...prev, sortBy: newSortBy, sortOrder: newSortOrder }));
   }, []);
 
   const handleCreateNew = useCallback(() => {
@@ -119,6 +124,9 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
           onInstructionDelete={handleInstructionDelete}
           filters={filters}
           onFiltersChange={handleFiltersChange}
+          sortBy={filters.sortBy}
+          sortOrder={filters.sortOrder}
+          onSortChange={handleSortChange}
           layout={layout}
           columns={columns}
           gap={gap}

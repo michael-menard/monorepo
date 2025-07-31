@@ -93,6 +93,26 @@ export const AnimationConfigSchema = z.object({
   stagger: z.boolean().default(true),
 });
 
+// Filter State Schema
+export const FilterStateSchema = z.object({
+  searchQuery: z.string().default(''),
+  selectedTags: z.array(z.string()).default([]),
+  selectedCategory: z.string().default(''),
+});
+
+// Filter Bar Props Schema
+export const FilterBarPropsSchema = z.object({
+  onSearchChange: z.function().args(z.string()).returns(z.void()),
+  onTagsChange: z.function().args(z.array(z.string())).returns(z.void()),
+  onCategoryChange: z.function().args(z.string()).returns(z.void()),
+  onClearFilters: z.function().args().returns(z.void()),
+  availableTags: z.array(z.string()).default([]),
+  availableCategories: z.array(z.string()).default([]),
+  searchPlaceholder: z.string().default('Search images...'),
+  className: z.string().default(''),
+  debounceMs: z.number().min(0).max(2000).default(300),
+});
+
 // Export types derived from schemas
 export type GalleryImage = z.infer<typeof GalleryImageSchema>;
 export type Album = z.infer<typeof AlbumSchema>;
@@ -103,3 +123,5 @@ export type GalleryProps = z.infer<typeof GalleryPropsSchema>;
 export type GalleryImageCardProps = z.infer<typeof GalleryImageCardPropsSchema>;
 export type CreateAlbumDialogProps = z.infer<typeof CreateAlbumDialogPropsSchema>;
 export type AnimationConfig = z.infer<typeof AnimationConfigSchema>;
+export type FilterState = z.infer<typeof FilterStateSchema>;
+export type FilterBarProps = z.infer<typeof FilterBarPropsSchema>;

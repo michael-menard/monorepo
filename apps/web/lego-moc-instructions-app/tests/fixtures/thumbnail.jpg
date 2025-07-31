@@ -1,0 +1,17 @@
+# This is a placeholder for a JPEG thumbnail image
+# In a real implementation, this would be a binary JPEG file
+# For testing purposes, we'll use a text representation
+
+JPEG_HEADER:
+  SOI: 0xFFD8
+  APP0: 0xFFE0
+  SOF0: 0xFFC0
+  DHT: 0xFFC4
+  SOS: 0xFFDA
+  EOI: 0xFFD9
+
+IMAGE_DATA:
+  width: 100
+  height: 100
+  color_space: RGB
+  quality: 85 

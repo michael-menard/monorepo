@@ -1,16 +1,15 @@
 {
-	"implement reset password id in the email": {
-		"id": 140,
-		"title": "implement reset password id in the email",
-		"description": "implement reset password id in the email",
-		"status": "done",
-		"priority": "high",
+	"Add file download capabilities for MOC files (Step 1 of 3)": {
+		"id": 320,
+		"title": "Implement file download functionality",
+		"description": "Add file download capabilities for MOC files (Step 1 of 3)",
+		"status": "ready",
+		"priority": "medium",
 		"dependencies": [
-			"24",
-			"42"
+			"49"
 		],
-		"details": "add an id to the reset password email so that the user can reset their password",
-		"testStrategy": "Test file upload, cropping functionality, validation, and error handling",
+		"details": "Build secure file download with progress tracking and proper file handling",
+		"testStrategy": "Test download functionality, progress tracking, and file integrity",
 		"tag": "frontend-ui-development",
 		"techStack": [
 			"ESNext",
@@ -25,250 +24,12 @@
 		"relatedFiles": [],
 		"pointers": [],
 		"rules": [
-			"All apps must use ESNext module resolution (not NodeNext)",
-			"React apps must use TanStack Start",
-			"Use Zod schemas over TypeScript interfaces",
-			"All apps must be compatible with serverless framework",
-			"All external dependencies must be mocked in tests.",
-			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-		],
-		"constraints": [
-			"the id should not be be a onetime use code.",
-			"the id should expire after 10 minutes"
-		],
-		"infra": {
-			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
-			"hosting": "Serverless Framework",
-			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
-			"cdn": "Cloudflare or Vercel Assets"
-		},
-		"metrics": [
-			"CI pipeline green on all branches",
-			"95%+ test coverage",
-			"Lighthouse score > 90",
-			"No unused dependencies or exports"
-		],
-		"tags": [],
-		"blockedBy": []
-	},
-	"Create an AppAvatar Component": {
-		"id": 140,
-		"title": "Implement AvatarUploader component",
-		"description": "Create an AppAvatar Component",
-		"status": "done",
-		"priority": "high",
-		"dependencies": [
-			"24",
-			"42"
-		],
-		"details": "Build avatar upload with react-easy-crop integration, file type validation (.jpg/.heic), and upload progress",
-		"testStrategy": "Test file upload, cropping functionality, validation, and error handling. ",
-		"tag": "frontend-ui-development",
-		"techStack": [
-			"ESNext",
-			"React",
-			"Vite",
-			"Zod",
-			"Vitest",
-			"MSW",
-			"Testing Library",
-			"TanStack Start"
-		],
-		"relatedFiles": [],
-		"pointers": [],
-		"rules": [
-			"All apps must use ESNext module resolution (not NodeNext)",
-			"React apps must use TanStack Start",
-			"Use Zod schemas over TypeScript interfaces",
-			"All apps must be compatible with serverless framework",
-			"All external dependencies must be mocked in tests.",
-			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-		],
-		"constraints": [
 			"the component should have unit tests",
 			"the component should have ux tests",
 			"the component should have proformance tests",
 			"the component should have security tests",
 			"the component should have accesssability tests",
 			"the component should have true end to end tests using playwright and no mocking",
-			"without an image uploaded the component should show the user's initials with the AvatarFallback Component",
-			"use the shadcn/ui Avatar component",
-			"use the shadcn/ui AvatarFallback component",
-			"use the shadcn/ui AvatarImage component",
-			"use the shadcn/ui AvatarFallbackText component",
-			"use the shadcn/ui AvatarFallbackIcon component",
-			"use the shadcn/ui AvatarFallbackImage component",
-			"use the shadcn/ui AvatarFallbackText component",
-			"when hovering over the component a pencil icon should appear to edit the avatar on the user's own avatar",
-			"clicking the pencil icon should open a modal to upload a new avatar leveraging the existing AvatarUploader component im packages/features/profile",
-			"clicking the avatar should open a dropdown using shadcn/ui DropdownMenu",
-			"the dropdown should have the following options: 'Profile', 'Logout', 'user settings'",
-			"the 'Profile' option should navigate to the profile page",
-			"the 'Logout' option should open a modal that asks the user if they are sure they want to logout",
-			"the log out option should be disabled for now until auth is implemented",
-			"the 'user settings' option should navigate to the user settings page",
-			"Avoid TypeScript interfaces; prefer Zod + types",
-			"No NodeNext",
-			"Do not use watch flags in test scripts; tests should run once and exit.",
-			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
-		],
-		"infra": {
-			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
-			"hosting": "Serverless Framework",
-			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
-			"cdn": "Cloudflare or Vercel Assets"
-		},
-		"metrics": [
-			"CI pipeline green on all branches",
-			"95%+ test coverage",
-			"Lighthouse score > 90",
-			"No unused dependencies or exports"
-		],
-		"tags": [],
-		"blockedBy": []
-	},
-
-
-	"Create MOC gallery with filtering and search": {
-		"id": 190,
-		"title": "Implement MocInstructionsGallery component",
-		"description": "Create MOC gallery with filtering and search",
-		"status": "done",
-		"priority": "high",
-		"dependencies": [
-			"25"
-		],
-		"details": "Build MOC-specific gallery reusing gallery layout with MOC-specific filtering and display options",
-		"testStrategy": "Test gallery layout, MOC-specific features, and search functionality",
-		"tag": "frontend-ui-development",
-		"techStack": [
-			"ESNext",
-			"React",
-			"Vite",
-			"Zod",
-			"Vitest",
-			"MSW",
-			"Testing Library",
-			"TanStack Start"
-		],
-		"relatedFiles": [],
-		"pointers": [],
-		"rules": [
-			"All apps must use ESNext module resolution (not NodeNext)",
-			"React apps must use TanStack Start",
-			"Use Zod schemas over TypeScript interfaces",
-			"All apps must be compatible with serverless framework",
-			"All external dependencies must be mocked in tests.",
-			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-		],
-		"constraints": [
-			"the component should have unit tests",
-			"the component should have ux tests",
-			"the component should have proformance tests",
-			"the component should have security tests",
-			"the component should have accesssability tests",
-			"the component should have true end to end tests using playwright and no mocking",
-			"the MocInstructionsGallery component should use the packages/features/gallery component",
-			"this may already be complete in apps/web/lego-moc-instructions-app/src/pages/MocInstructionsGallery",
-			"Avoid TypeScript interfaces; prefer Zod + types",
-			"No NodeNext",
-			"Do not use watch flags in test scripts; tests should run once and exit.",
-			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
-		],
-		"infra": {
-			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
-			"hosting": "Serverless Framework",
-			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
-			"cdn": "Cloudflare or Vercel Assets"
-		},
-		"metrics": [
-			"CI pipeline green on all branches",
-			"95%+ test coverage",
-			"Lighthouse score > 90",
-			"No unused dependencies or exports"
-		],
-		"tags": [],
-		"blockedBy": []
-	},
-	"Create detailed MOC page with editable forms (Step 1 of 3)": {
-		"id": 200,
-		"title": "Implement MocDetailPage component",
-		"description": "Create detailed MOC page with editable forms (Step 1 of 3)",
-		"status": "ready",
-		"priority": "high",
-		"dependencies": [
-			"47"
-		],
-		"details": "Build detailed view with editable title, description, tags, thumbnail display, and file management areas",
-		"testStrategy": "Test form editing, file management, and data persistence",
-		"tag": "frontend-ui-development",
-		"techStack": [
-			"ESNext",
-			"React",
-			"Vite",
-			"Zod",
-			"Vitest",
-			"MSW",
-			"Testing Library",
-			"TanStack Start"
-		],
-		"relatedFiles": [],
-		"pointers": [],
-		"rules": [
-			"All apps must use ESNext module resolution (not NodeNext)",
-			"React apps must use TanStack Start",
-			"Use Zod schemas over TypeScript interfaces",
-			"All apps must be compatible with serverless framework",
-			"All external dependencies must be mocked in tests.",
-			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-		],
-		"constraints": [
-			"Avoid TypeScript interfaces; prefer Zod + types",
-			"No NodeNext",
-			"Do not use watch flags in test scripts; tests should run once and exit.",
-			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
-		],
-		"infra": {
-			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
-			"hosting": "Serverless Framework",
-			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
-			"cdn": "Cloudflare or Vercel Assets"
-		},
-		"metrics": [
-			"CI pipeline green on all branches",
-			"95%+ test coverage",
-			"Lighthouse score > 90",
-			"No unused dependencies or exports"
-		],
-		"tags": [],
-		"blockedBy": []
-	},
-	"Create file upload areas for different MOC file types (Step 1 of 3)": {
-		"id": 230,
-		"title": "Implement MOC file upload areas",
-		"description": "Create file upload areas for different MOC file types (Step 1 of 3)",
-		"status": "ready",
-		"priority": "high",
-		"dependencies": [
-			"24",
-			"48"
-		],
-		"details": "Build specialized upload areas for PDF instructions, .io files, CSV/JSON parts lists, and thumbnail images",
-		"testStrategy": "Test file type validation, upload progress, and file management",
-		"tag": "frontend-ui-development",
-		"techStack": [
-			"ESNext",
-			"React",
-			"Vite",
-			"Zod",
-			"Vitest",
-			"MSW",
-			"Testing Library",
-			"TanStack Start"
-		],
-		"relatedFiles": [],
-		"pointers": [],
-		"rules": [
 			"All apps must use ESNext module resolution (not NodeNext)",
 			"React apps must use TanStack Start",
 			"Use Zod schemas over TypeScript interfaces",
@@ -319,6 +80,248 @@
 			"Testing Library",
 			"TanStack Start"
 		],
+		"code Example":"
+		import { z } from 'zod';
+import React from 'react';
+
+// Base GalleryCard schema
+const GalleryCardSchema = z.object({
+  imageUrl: z.string().url(),
+  title: z.string().min(1),
+});
+
+// MocInstructionCard extends GalleryCard
+const MocInstructionCardSchema = GalleryCardSchema.extend({
+  instructions: z.string().min(1),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
+  pieceCount: z.number().min(1),
+});
+
+// InspirationGalleryCard extends GalleryCard  
+const InspirationGalleryCardSchema = GalleryCardSchema.extend({
+  description: z.string(),
+  tags: z.array(z.string()),
+  author: z.string().optional(),
+});
+
+// Extract the TypeScript types
+type GalleryCard = z.infer<typeof GalleryCardSchema>;
+type MocInstructionCard = z.infer<typeof MocInstructionCardSchema>;
+type InspirationGalleryCard = z.infer<typeof InspirationGalleryCardSchema>;
+
+// Gallery component props with generic constraint
+interface GalleryProps<T extends GalleryCard> {
+  items: T | T[]; // Single item or array (album)
+  renderItem: (item: T) => React.ReactNode;
+  className?: string;
+}
+
+function Gallery<T extends GalleryCard>({ 
+  items, 
+  renderItem, 
+  className 
+}: GalleryProps<T>) {
+  const isAlbum = Array.isArray(items);
+  const displayItem = isAlbum ? items[0] : items;
+  const previewItems = isAlbum ? items.slice(0, 3) : [items];
+  const totalCount = isAlbum ? items.length : 1;
+  
+  return (
+    <div className={`relative ${className}`}>
+      <div className="relative mb-3 mr-3">
+        {previewItems.map((item, index) => (
+          <div
+            key={index}
+            className={`
+              bg-white rounded-lg shadow-md overflow-hidden border border-gray-200
+              ${index === 0 ? 'relative z-30' : 'absolute'}
+              ${index === 1 ? 'z-20 translate-x-1 translate-y-1 w-[calc(100%-4px)]' : ''}
+              ${index === 2 ? 'z-10 translate-x-2 translate-y-2 w-[calc(100%-8px)]' : ''}
+            `}
+          >
+            <img 
+              src={item.imageUrl} 
+              alt={item.title}
+              className="w-full h-48 object-cover"
+            />
+            {index === 0 && (
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">{displayItem.title}</h3>
+                  {isAlbum && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                      {totalCount} items
+                    </span>
+                  )}
+                </div>
+                {renderItem(displayItem)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Usage examples:
+
+// Sample data
+const singleMocInstruction: MocInstructionCard = {
+  imageUrl: "https://example.com/castle.jpg",
+  title: "Medieval Castle",
+  instructions: "Build this amazing castle with detailed battlements and towers",
+  difficulty: "advanced",
+  pieceCount: 2847
+};
+
+const mocInstructionAlbum: MocInstructionCard[] = [
+  {
+    imageUrl: "https://example.com/castle.jpg",
+    title: "Castle Collection",
+    instructions: "Medieval castle with battlements",
+    difficulty: "advanced",
+    pieceCount: 2847
+  },
+  {
+    imageUrl: "https://example.com/fortress.jpg", 
+    title: "Mountain Fortress",
+    instructions: "Fortress built into mountainside",
+    difficulty: "intermediate",
+    pieceCount: 1856
+  },
+  {
+    imageUrl: "https://example.com/tower.jpg",
+    title: "Wizard Tower", 
+    instructions: "Tall mystical tower with spiral stairs",
+    difficulty: "beginner",
+    pieceCount: 645
+  }
+];
+
+const singleInspiration: InspirationGalleryCard = {
+  imageUrl: "https://example.com/spaceship.jpg",
+  title: "Custom Spaceship",
+  description: "A sleek futuristic design inspired by sci-fi movies",
+  tags: ["spaceship", "sci-fi", "custom"],
+  author: "BrickMaster3000"
+};
+
+const inspirationAlbum: InspirationGalleryCard[] = [
+  {
+    imageUrl: "https://example.com/spaceship.jpg",
+    title: "Sci-Fi Collection",
+    description: "Various spacecraft designs",
+    tags: ["spaceship", "sci-fi", "collection"],
+    author: "BrickMaster3000"
+  },
+  {
+    imageUrl: "https://example.com/fighter.jpg",
+    title: "Star Fighter",
+    description: "Compact single-pilot fighter",
+    tags: ["fighter", "sci-fi"],
+    author: "BrickMaster3000"
+  }
+];
+
+// Component usage examples
+function ExampleUsage() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+      {/* Single MOC Instruction Card */}
+      <Gallery 
+        items={singleMocInstruction}
+        renderItem={(item) => (
+          <div>
+            <p className="text-sm text-gray-600 mb-2">{item.instructions}</p>
+            <div className="flex justify-between items-center">
+              <span className={`text-xs px-2 py-1 rounded ${
+                item.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                item.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {item.difficulty}
+              </span>
+              <span className="text-xs text-gray-500">{item.pieceCount} pieces</span>
+            </div>
+          </div>
+        )}
+      />
+
+      {/* MOC Instruction Album (Stacked) */}
+      <Gallery 
+        items={mocInstructionAlbum}
+        renderItem={(item) => (
+          <div>
+            <p className="text-sm text-gray-600 mb-2">{item.instructions}</p>
+            <div className="flex justify-between items-center">
+              <span className={`text-xs px-2 py-1 rounded ${
+                item.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                item.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {item.difficulty}
+              </span>
+              <span className="text-xs text-gray-500">{item.pieceCount} pieces</span>
+            </div>
+          </div>
+        )}
+      />
+
+      {/* Single Inspiration Card */}
+      <Gallery 
+        items={singleInspiration}
+        renderItem={(item) => (
+          <div>
+            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {item.tags.map(tag => (
+                <span key={tag} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+            {item.author && (
+              <p className="text-xs text-gray-500">by {item.author}</p>
+            )}
+          </div>
+        )}
+      />
+
+      {/* Inspiration Album (Stacked) */}
+      <Gallery 
+        items={inspirationAlbum}
+        renderItem={(item) => (
+          <div>
+            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {item.tags.map(tag => (
+                <span key={tag} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+            {item.author && (
+              <p className="text-xs text-gray-500">by {item.author}</p>
+            )}
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
+export { 
+  Gallery, 
+  GalleryCardSchema, 
+  MocInstructionCardSchema, 
+  InspirationGalleryCardSchema,
+  type GalleryCard,
+  type MocInstructionCard, 
+  type InspirationGalleryCard,
+  type GalleryProps 
+};
+		",
 		"relatedFiles": [],
 		"pointers": [],
 		"rules": [
@@ -330,6 +333,12 @@
 			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
 		],
 		"constraints": [
+			"the component should have unit tests",
+			"the component should have ux tests",
+			"the component should have proformance tests",
+			"the component should have security tests",
+			"the component should have accesssability tests",
+			"the component should have true end to end tests using playwright and no mocking",
 			"Avoid TypeScript interfaces; prefer Zod + types",
 			"No NodeNext",
 			"Do not use watch flags in test scripts; tests should run once and exit.",
@@ -350,112 +359,9 @@
 		"tags": [],
 		"blockedBy": []
 	},
-	"Add search and filtering capabilities to MOC gallery (Step 1 of 3)": {
-		"id": 290,
-		"title": "Implement MOC search and filter functionality",
-		"description": "Add search and filtering capabilities to MOC gallery (Step 1 of 3)",
-		"status": "ready",
-		"priority": "medium",
-		"dependencies": [
-			"47"
-		],
-		"details": "Build search by title/tags, filter by file types, and integration with Elasticsearch if available",
-		"testStrategy": "Test search functionality, filtering options, and query performance",
-		"tag": "frontend-ui-development",
-		"techStack": [
-			"ESNext",
-			"React",
-			"Vite",
-			"Zod",
-			"Vitest",
-			"MSW",
-			"Testing Library",
-			"TanStack Start"
-		],
-		"relatedFiles": [],
-		"pointers": [],
-		"rules": [
-			"All apps must use ESNext module resolution (not NodeNext)",
-			"React apps must use TanStack Start",
-			"Use Zod schemas over TypeScript interfaces",
-			"All apps must be compatible with serverless framework",
-			"All external dependencies must be mocked in tests.",
-			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-		],
-		"constraints": [
-			"Avoid TypeScript interfaces; prefer Zod + types",
-			"No NodeNext",
-			"Do not use watch flags in test scripts; tests should run once and exit.",
-			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
-		],
-		"infra": {
-			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
-			"hosting": "Serverless Framework",
-			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
-			"cdn": "Cloudflare or Vercel Assets"
-		},
-		"metrics": [
-			"CI pipeline green on all branches",
-			"95%+ test coverage",
-			"Lighthouse score > 90",
-			"No unused dependencies or exports"
-		],
-		"tags": [],
-		"blockedBy": []
-	},
-	"Add file download capabilities for MOC files (Step 1 of 3)": {
-		"id": 320,
-		"title": "Implement file download functionality",
-		"description": "Add file download capabilities for MOC files (Step 1 of 3)",
-		"status": "ready",
-		"priority": "medium",
-		"dependencies": [
-			"49"
-		],
-		"details": "Build secure file download with progress tracking and proper file handling",
-		"testStrategy": "Test download functionality, progress tracking, and file integrity",
-		"tag": "frontend-ui-development",
-		"techStack": [
-			"ESNext",
-			"React",
-			"Vite",
-			"Zod",
-			"Vitest",
-			"MSW",
-			"Testing Library",
-			"TanStack Start"
-		],
-		"relatedFiles": [],
-		"pointers": [],
-		"rules": [
-			"All apps must use ESNext module resolution (not NodeNext)",
-			"React apps must use TanStack Start",
-			"Use Zod schemas over TypeScript interfaces",
-			"All apps must be compatible with serverless framework",
-			"All external dependencies must be mocked in tests.",
-			"Use 'pnpm vitest run' as the standard test command. Avoid 'vitest' or 'vitest --watch'."
-		],
-		"constraints": [
-			"Avoid TypeScript interfaces; prefer Zod + types",
-			"No NodeNext",
-			"Do not use watch flags in test scripts; tests should run once and exit.",
-			"All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
-		],
-		"infra": {
-			"ci": "GitHub Actions with git hooks for lint/test/pre-push",
-			"hosting": "Serverless Framework",
-			"db": "Depends on app (e.g., PostgreSQL, Supabase)",
-			"cdn": "Cloudflare or Vercel Assets"
-		},
-		"metrics": [
-			"CI pipeline green on all branches",
-			"95%+ test coverage",
-			"Lighthouse score > 90",
-			"No unused dependencies or exports"
-		],
-		"tags": [],
-		"blockedBy": []
-	},
+
+
+
 	"Add functionality to link gallery images to MOC instructions (Step 1 of 3)": {
 		"id": 350,
 		"title": "Implement gallery image linking for MOCs",

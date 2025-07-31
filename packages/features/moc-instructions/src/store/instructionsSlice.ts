@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 import type { MockInstruction, MockInstructionFilter } from '../schemas';
 
 interface InstructionsState {
@@ -97,3 +98,4 @@ export const {
 } = instructionsSlice.actions;
 
 export default instructionsSlice.reducer;
+export const instructionsReducer = instructionsSlice.reducer;

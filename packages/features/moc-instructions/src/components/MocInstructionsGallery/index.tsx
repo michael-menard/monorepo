@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Grid, List, Download, Share2, Heart, Eye } from 'lucide-react';
+import { Search, Filter, Grid, List } from 'lucide-react';
 import { Button } from '@repo/ui';
 
 import type { MockInstruction, MockInstructionFilter, MockInstructionSortBy, SortOrder } from '../../schemas';
@@ -39,10 +39,7 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
   instructions,
   className = '',
   onInstructionClick,
-  onInstructionLike,
-  onInstructionShare,
   onInstructionDelete,
-  onInstructionDownload,
   onInstructionsSelected,
   selectedInstructions = [],
   onLoadMore,
@@ -159,18 +156,16 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
     if (onFiltersChange) {
-      onFiltersChange({ ...filters, search: value });
+      onFiltersChange({ 
+        ...filters, 
+        search: value,
+        sortBy: filters?.sortBy || 'createdAt',
+        sortOrder: filters?.sortOrder || 'desc'
+      });
     }
   }, [filters, onFiltersChange]);
 
-  const handleInstructionSelect = useCallback((instructionId: string, checked: boolean) => {
-    const newSelected = checked
-      ? [...internalSelectedInstructions, instructionId]
-      : internalSelectedInstructions.filter((id) => id !== instructionId);
 
-    setInternalSelectedInstructions(newSelected);
-    onInstructionsSelected?.(newSelected);
-  }, [internalSelectedInstructions, onInstructionsSelected]);
 
   const handleClearSelection = useCallback(() => {
     setInternalSelectedInstructions([]);
@@ -257,7 +252,12 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
                   value={filters?.category || ''}
-                  onChange={(e) => onFiltersChange?.({ ...filters, category: e.target.value || undefined })}
+                  onChange={(e) => onFiltersChange?.({ 
+                    ...filters, 
+                    category: e.target.value || undefined,
+                    sortBy: filters?.sortBy || 'createdAt',
+                    sortOrder: filters?.sortOrder || 'desc'
+                  })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Categories</option>
@@ -275,7 +275,12 @@ const MocInstructionsGallery: React.FC<MocInstructionsGalleryProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
                 <select
                   value={filters?.difficulty || ''}
-                  onChange={(e) => onFiltersChange?.({ ...filters, difficulty: e.target.value as any || undefined })}
+                  onChange={(e) => onFiltersChange?.({ 
+                    ...filters, 
+                    difficulty: e.target.value as any || undefined,
+                    sortBy: filters?.sortBy || 'createdAt',
+                    sortOrder: filters?.sortOrder || 'desc'
+                  })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Difficulties</option>

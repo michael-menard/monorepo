@@ -105,6 +105,98 @@ export const instructionsImageUploadSchema = z.object({
   stepNumber: z.number().int().positive().optional(),
 });
 
+// File upload schema for Instructions files (PDF, .io)
+export const instructionsFileUploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine(
+      (file) => file.size <= 50 * 1024 * 1024, // 50MB max for PDFs and .io files
+      'File size must be less than 50MB',
+    )
+    .refine(
+      (file) => ['application/pdf', 'application/octet-stream'].includes(file.type) || file.name.endsWith('.io'),
+      'File must be a PDF or .io file',
+    ),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  thumbnailImage: z.instanceof(File).optional(),
+  instructionsId: z.string().uuid(),
+});
+
+// File upload schema for Parts List files (CSV, XML, JSON)
+export const partsListFileUploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine(
+      (file) => file.size <= 10 * 1024 * 1024, // 10MB max for parts list files
+      'File size must be less than 10MB',
+    )
+    .refine(
+      (file) => 
+        ['text/csv', 'application/xml', 'application/json'].includes(file.type) || 
+        file.name.endsWith('.csv') || 
+        file.name.endsWith('.xml') || 
+        file.name.endsWith('.json'),
+      'File must be a CSV, XML, or JSON file',
+    ),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  thumbnailImage: z.instanceof(File).optional(),
+  instructionsId: z.string().uuid(),
+});
+
+// Instructions file schema
+export const instructionsFileSchema = z.object({
+  id: z.string().uuid(),
+  instructionsId: z.string().uuid(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  fileName: z.string().min(1, 'File name is required'),
+  fileUrl: z.string().url(),
+  fileType: z.enum(['pdf', 'io']),
+  fileSize: z.number().positive(),
+  thumbnailUrl: z.string().url().optional(),
+  downloadCount: z.number().int().min(0).default(0),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+// Parts list file schema
+export const partsListFileSchema = z.object({
+  id: z.string().uuid(),
+  instructionsId: z.string().uuid(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  fileName: z.string().min(1, 'File name is required'),
+  fileUrl: z.string().url(),
+  fileType: z.enum(['csv', 'xml', 'json']),
+  fileSize: z.number().positive(),
+  thumbnailUrl: z.string().url().optional(),
+  downloadCount: z.number().int().min(0).default(0),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+// Create Instructions file schema
+export const createInstructionsFileSchema = instructionsFileSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Update Instructions file schema
+export const updateInstructionsFileSchema = createInstructionsFileSchema.partial();
+
+// Create Parts list file schema
+export const createPartsListFileSchema = partsListFileSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Update Parts list file schema
+export const updatePartsListFileSchema = createPartsListFileSchema.partial();
+
 // ============================================================================
 // FILTER AND SEARCH SCHEMAS
 // ============================================================================
@@ -416,6 +508,20 @@ export type UpdateMockInstructionStep = z.infer<typeof updateInstructionsStepSch
 
 // File upload types
 export type MockInstructionImageUpload = z.infer<typeof instructionsImageUploadSchema>;
+export type MockInstructionFileUpload = z.infer<typeof instructionsFileUploadSchema>;
+
+// Parts list file upload types
+export type PartsListFileUpload = z.infer<typeof partsListFileUploadSchema>;
+
+// File types
+export type MockInstructionFile = z.infer<typeof instructionsFileSchema>;
+export type CreateMockInstructionFile = z.infer<typeof createInstructionsFileSchema>;
+export type UpdateMockInstructionFile = z.infer<typeof updateInstructionsFileSchema>;
+
+// Parts list file types
+export type PartsListFile = z.infer<typeof partsListFileSchema>;
+export type CreatePartsListFile = z.infer<typeof createPartsListFileSchema>;
+export type UpdatePartsListFile = z.infer<typeof updatePartsListFileSchema>;
 
 // Filter types
 export type MockInstructionFilter = z.infer<typeof instructionsFilterSchema>;
