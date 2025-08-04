@@ -1,6 +1,6 @@
-import { Badge } from "src/components/ui/badge";
-import { Button } from "src/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Badge } from "../../../ui/badge";
+import { Button } from "../../../ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../ui/tabs";
 import { Copy } from "lucide-react";
 
 const tabs = [

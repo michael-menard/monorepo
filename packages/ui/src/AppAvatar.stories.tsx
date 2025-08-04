@@ -15,22 +15,10 @@ const meta: Meta<typeof AppAvatar> = {
   argTypes: {
     size: {
       control: { type: 'select' },
-      options: ['sm', 'md', 'lg', 'xl'],
+      options: ['sm', 'md', 'lg'],
       description: 'The size of the avatar',
     },
-    status: {
-      control: { type: 'select' },
-      options: ['online', 'offline', 'away', 'busy'],
-      description: 'The status indicator',
-    },
-    showStatus: {
-      control: { type: 'boolean' },
-      description: 'Whether to show the status indicator',
-    },
-    editable: {
-      control: { type: 'boolean' },
-      description: 'Whether the avatar is editable',
-    },
+    // Removed problematic argTypes that don't exist in the component interface
   },
   tags: ['autodocs'],
 }
@@ -40,107 +28,84 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
+    userName: 'John Doe',
   },
 }
 
 export const WithImage: Story = {
   args: {
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    imageUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
+    userName: 'Jane Smith',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
   },
 }
 
 export const Small: Story = {
   args: {
-    name: 'Alice Johnson',
-    email: 'alice.johnson@example.com',
+    userName: 'Alice Johnson',
     size: 'sm',
   },
 }
 
 export const Large: Story = {
   args: {
-    name: 'Bob Wilson',
-    email: 'bob.wilson@example.com',
+    userName: 'Bob Wilson',
     size: 'lg',
   },
 }
 
-export const ExtraLarge: Story = {
+export const Disabled: Story = {
   args: {
-    name: 'Carol Brown',
-    email: 'carol.brown@example.com',
-    size: 'xl',
+    userName: 'Carol Brown',
+    disabled: true,
   },
 }
 
-export const Online: Story = {
+export const WithEditButton: Story = {
   args: {
-    name: 'David Lee',
-    email: 'david.lee@example.com',
-    status: 'online',
-    showStatus: true,
+    userName: 'David Lee',
+    showEditButton: true,
   },
 }
 
-export const Offline: Story = {
+export const NonClickable: Story = {
   args: {
-    name: 'Eva Garcia',
-    email: 'eva.garcia@example.com',
-    status: 'offline',
-    showStatus: true,
+    userName: 'Eva Garcia',
+    clickable: false,
   },
 }
 
-export const Away: Story = {
+export const CustomClass: Story = {
   args: {
-    name: 'Frank Miller',
-    email: 'frank.miller@example.com',
-    status: 'away',
-    showStatus: true,
-  },
-}
-
-export const Busy: Story = {
-  args: {
-    name: 'Grace Taylor',
-    email: 'grace.taylor@example.com',
-    status: 'busy',
-    showStatus: true,
+    userName: 'Frank Miller',
+    className: 'border-2 border-blue-500',
   },
 }
 
 export const Editable: Story = {
   args: {
-    name: 'Henry Adams',
-    email: 'henry.adams@example.com',
-    editable: true,
+    userName: 'Henry Adams',
+    showEditButton: true,
   },
 }
 
 export const WithLongName: Story = {
   args: {
-    name: 'Isabella Rodriguez Martinez',
-    email: 'isabella.rodriguez.martinez@example.com',
+    userName: 'Isabella Rodriguez Martinez',
   },
 }
 
 export const NoEmail: Story = {
   args: {
-    name: 'Jack Thompson',
+    userName: 'Jack Thompson',
   },
 }
 
 export const AllSizes: Story = {
   render: () => (
     <div className="flex items-center gap-4">
-      <AppAvatar name="Small" size="sm" />
-      <AppAvatar name="Medium" size="md" />
-      <AppAvatar name="Large" size="lg" />
-      <AppAvatar name="Extra Large" size="xl" />
+      <AppAvatar userName="Small" size="sm" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar userName="Medium" size="md" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar userName="Large" size="lg" disabled={false} showEditButton={false} clickable={true} />
     </div>
   ),
   parameters: {
@@ -155,10 +120,10 @@ export const AllSizes: Story = {
 export const AllStatuses: Story = {
   render: () => (
     <div className="flex items-center gap-4">
-      <AppAvatar name="Online" status="online" showStatus />
-      <AppAvatar name="Offline" status="offline" showStatus />
-      <AppAvatar name="Away" status="away" showStatus />
-      <AppAvatar name="Busy" status="busy" showStatus />
+      <AppAvatar userName="Online" size="md" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar userName="Offline" size="md" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar userName="Away" size="md" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar userName="Busy" size="md" disabled={false} showEditButton={false} clickable={true} />
     </div>
   ),
   parameters: {
@@ -172,9 +137,8 @@ export const AllStatuses: Story = {
 
 export const WithFallback: Story = {
   args: {
-    name: 'Kate Wilson',
-    email: 'kate.wilson@example.com',
-    imageUrl: 'https://invalid-url-that-will-fail.com/image.jpg',
+    userName: 'Kate Wilson',
+    avatarUrl: 'https://invalid-url-that-will-fail.com/image.jpg',
   },
   parameters: {
     docs: {

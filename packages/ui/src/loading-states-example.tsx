@@ -313,7 +313,7 @@ export const LoadingStatesExample: React.FC = () => {
               <p>Type: {loadingStates.loadingState.type}</p>
               <p>Message: {loadingStates.loadingState.message || 'None'}</p>
               <p>Progress: {loadingStates.loadingState.progress}%</p>
-              <p>Error: {loadingStates.loadingState.error || 'None'}</p>
+              <p>Error: {loadingStates.loadingState.error?.toString() || 'None'}</p>
             </div>
           </div>
 
@@ -332,7 +332,7 @@ export const LoadingStatesExample: React.FC = () => {
 
           {loadingStates.isError && (
             <div className="p-4 bg-red-100 border border-red-200 rounded-lg">
-              <p className="text-red-800">❌ Error: {loadingStates.loadingState.error}</p>
+              <p className="text-red-800">❌ Error: {loadingStates.loadingState.error?.toString()}</p>
             </div>
           )}
         </div>

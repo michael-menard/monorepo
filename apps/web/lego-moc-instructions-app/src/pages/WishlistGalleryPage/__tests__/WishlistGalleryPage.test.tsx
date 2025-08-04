@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { WishlistGalleryPage } from '../index';
@@ -54,8 +54,9 @@ describe('WishlistGalleryPage Auto-Save', () => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
     mockSetTimeout.mockImplementation((fn, delay) => {
-      setTimeout(() => fn(), delay);
-      return 123; // Mock timeout ID
+      // Don't call the real setTimeout to avoid infinite recursion
+      // Just return a mock timeout ID
+      return 123;
     });
   });
 

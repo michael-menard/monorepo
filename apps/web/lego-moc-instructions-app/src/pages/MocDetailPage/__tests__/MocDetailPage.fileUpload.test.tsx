@@ -1,12 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { MocDetailPage } from '../index';
 import { instructionsApi } from '@repo/moc-instructions';
+import { MocDetailPage } from '../index';
 
 // Mock the moc-instructions package
 vi.mock('@repo/moc-instructions', async () => {

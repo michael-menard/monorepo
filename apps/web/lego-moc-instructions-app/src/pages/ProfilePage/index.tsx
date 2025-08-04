@@ -70,13 +70,19 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleAvatarUpload = (file: File) => {
-    // In a real app, this would upload to a server and return a URL
-    const url = URL.createObjectURL(file);
-    setProfile((prev: Profile) => ({
-      ...prev,
-      avatar: url,
-      updatedAt: new Date(),
-    }));
+    try {
+      // In a real app, this would upload to a server and return a URL
+      const url = URL.createObjectURL(file);
+      setProfile((prev: Profile) => ({
+        ...prev,
+        avatar: url,
+        updatedAt: new Date(),
+      }));
+    } catch (error) {
+      // Handle upload errors gracefully
+      console.error('Avatar upload failed:', error);
+      // Optionally show a toast notification or error message
+    }
   };
 
   // Create the sidebar content using ProfileSidebar component
@@ -106,7 +112,7 @@ export const ProfilePage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <Button variant="outline" onClick={handleBack} className="mb-4">
+        <Button variant="outline" onClick={handleBack} className="mb-4" data-testid="back-button">
           ← Back to Home
         </Button>
       </div>
@@ -195,10 +201,10 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={handleCancel}>
+              <Button variant="outline" onClick={handleCancel} data-testid="cancel-button">
                 Cancel
               </Button>
-              <Button onClick={() => handleSave(profile)}>
+              <Button onClick={() => handleSave(profile)} data-testid="save-button">
                 Save Changes
               </Button>
             </div>

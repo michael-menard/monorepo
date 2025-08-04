@@ -23,7 +23,10 @@ export function getLocalAvatarUrl(filename: string): string {
 }
 
 export function deleteLocalAvatar(avatarUrl: string): void {
-  const filePath = path.join(process.cwd(), avatarUrl.startsWith('/') ? avatarUrl.substring(1) : avatarUrl);
+  const filePath = path.join(
+    process.cwd(),
+    avatarUrl.startsWith('/') ? avatarUrl.substring(1) : avatarUrl,
+  );
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
@@ -46,4 +49,4 @@ export const galleryLocalStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     cb(null, `${uuidv4()}${ext}`);
   },
-}); 
+});

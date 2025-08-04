@@ -3,7 +3,10 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db/client';
 import { users } from '../db/schema';
 import { z } from 'zod';
-import { uploadAvatar as uploadAvatarFile, deleteAvatar as deleteAvatarFile } from '../storage/avatar-storage';
+import {
+  uploadAvatar as uploadAvatarFile,
+  deleteAvatar as deleteAvatarFile,
+} from '../storage/avatar-storage';
 import { ProfileUpdateSchema, AvatarUploadSchema } from '../types';
 
 // Error handling middleware for multer
@@ -12,7 +15,9 @@ export const handleUploadError = (error: any, req: Request, res: Response, next:
     return res.status(413).json({ error: 'File too large. Maximum size is 20MB.' });
   }
   if (error && error.message === 'Only JPEG, PNG, and HEIC files are supported') {
-    return res.status(400).json({ error: 'Invalid file format. Only JPEG, PNG, and HEIC files are supported.' });
+    return res
+      .status(400)
+      .json({ error: 'Invalid file format. Only JPEG, PNG, and HEIC files are supported.' });
   }
   if (error) {
     return res.status(500).json({ error: 'Upload failed', details: error.message });
@@ -42,7 +47,11 @@ export const createProfile = async (req: Request, res: Response) => {
   // Validate input - create a schema that includes all profile fields
   const ProfileCreateSchema = ProfileUpdateSchema.extend({
     email: z.string().email('Invalid email format'),
-    preferredName: z.string().min(1, 'Preferred name must be at least 1 character').max(100, 'Preferred name must be less than 100 characters').optional(),
+    preferredName: z
+      .string()
+      .min(1, 'Preferred name must be at least 1 character')
+      .max(100, 'Preferred name must be less than 100 characters')
+      .optional(),
   });
   const parsed = ProfileCreateSchema.safeParse({ username, email, preferredName, bio });
   if (!parsed.success) {
@@ -67,14 +76,17 @@ export const createProfile = async (req: Request, res: Response) => {
     const avatarUrl = await uploadAvatarFile(id, file);
 
     // Insert new user
-    const [user] = await db.insert(users).values({
-      id,
-      username: parsed.data.username,
-      email,
-      preferredName,
-      bio: parsed.data.bio,
-      avatarUrl: avatarUrl,
-    }).returning();
+    const [user] = await db
+      .insert(users)
+      .values({
+        id,
+        username: parsed.data.username,
+        email,
+        preferredName,
+        bio: parsed.data.bio,
+        avatarUrl: avatarUrl,
+      })
+      .returning();
 
     res.status(201).json(user);
   } catch (error) {
@@ -91,7 +103,11 @@ export const updateProfile = async (req: Request, res: Response) => {
   // Validate input - create a schema that includes all profile fields
   const ProfileUpdateFullSchema = ProfileUpdateSchema.extend({
     email: z.string().email('Invalid email format').optional(),
-    preferredName: z.string().min(1, 'Preferred name must be at least 1 character').max(100, 'Preferred name must be less than 100 characters').optional(),
+    preferredName: z
+      .string()
+      .min(1, 'Preferred name must be at least 1 character')
+      .max(100, 'Preferred name must be less than 100 characters')
+      .optional(),
   });
   const parsed = ProfileUpdateFullSchema.safeParse({ username, email, preferredName, bio });
   if (!parsed.success) {
@@ -109,7 +125,8 @@ export const updateProfile = async (req: Request, res: Response) => {
     const updateData: any = { updatedAt: new Date() };
     if (parsed.data.username !== undefined) updateData.username = parsed.data.username;
     if (parsed.data.email !== undefined) updateData.email = parsed.data.email;
-    if (parsed.data.preferredName !== undefined) updateData.preferredName = parsed.data.preferredName;
+    if (parsed.data.preferredName !== undefined)
+      updateData.preferredName = parsed.data.preferredName;
     if (parsed.data.bio !== undefined) updateData.bio = parsed.data.bio;
 
     const [updatedUser] = await db
@@ -159,16 +176,16 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       .where(eq(users.id, id))
       .returning();
 
-    res.json({ 
-      message: 'Avatar uploaded successfully', 
+    res.json({
+      message: 'Avatar uploaded successfully',
       avatarUrl,
-      user: updatedUser 
+      user: updatedUser,
     });
   } catch (error) {
     console.error('uploadAvatar error:', error);
-    res.status(500).json({ 
-      error: 'Upload failed', 
-      details: (error as Error).message 
+    res.status(500).json({
+      error: 'Upload failed',
+      details: (error as Error).message,
     });
   }
 };
@@ -201,4 +218,4 @@ export const deleteAvatar = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ error: 'Database error', details: (error as Error).message });
   }
-}; 
+};

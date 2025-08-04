@@ -14,4 +14,5 @@ export * from './store/store';
 export { default as MockInstructionCard } from './components/InstructionsCard';
 export { default as MocInstructionsGallery } from './components/MocInstructionsGallery';
 export { DownloadProgressComponent } from './components/DownloadProgress';
-export { DownloadManager } from './components/DownloadManager'; 
+export { DownloadManager } from './components/DownloadManager';
+export { default as GalleryImageLinker } from './components/GalleryImageLinker'; 

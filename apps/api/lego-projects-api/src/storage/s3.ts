@@ -9,13 +9,15 @@ const s3 = new S3Client({ region: REGION });
 export async function uploadAvatarToS3(userId: string, file: Express.Multer.File): Promise<string> {
   const ext = path.extname(file.originalname);
   const key = `avatars/${userId}/avatar-${uuidv4()}${ext}`;
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-    ACL: 'public-read',
-  }));
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      ACL: 'public-read',
+    }),
+  );
   // Return the S3 URL (can be customized for CDN, etc.)
   return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 }
@@ -25,22 +27,29 @@ export async function deleteAvatarFromS3(avatarUrl: string): Promise<void> {
   const match = avatarUrl.match(/\/avatars\/.*$/);
   if (!match) return;
   const key = match[0].replace(/^\//, '');
-  await s3.send(new DeleteObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  }));
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    }),
+  );
 }
 
-export async function uploadWishlistImageToS3(userId: string, file: Express.Multer.File): Promise<string> {
+export async function uploadWishlistImageToS3(
+  userId: string,
+  file: Express.Multer.File,
+): Promise<string> {
   const ext = path.extname(file.originalname);
   const key = `wishlist/${userId}/wishlist-${uuidv4()}${ext}`;
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-    ACL: 'public-read',
-  }));
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      ACL: 'public-read',
+    }),
+  );
   // Return the S3 URL
   return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 }
@@ -50,8 +59,10 @@ export async function deleteWishlistImageFromS3(imageUrl: string): Promise<void>
   const match = imageUrl.match(/\/wishlist\/.*$/);
   if (!match) return;
   const key = match[0].replace(/^\//, '');
-  await s3.send(new DeleteObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  }));
-} 
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    }),
+  );
+}

@@ -1,0 +1,50 @@
+{
+  "name": "@repo/shared-image-utils",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "browser": "./src/index.browser.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "browser": "./src/index.browser.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./schemas": {
+      "browser": "./src/schemas/index.browser.ts",
+      "import": "./src/schemas/index.ts",
+      "require": "./src/schemas/index.ts",
+      "types": "./src/schemas/index.ts"
+    },
+    "./types": {
+      "browser": "./src/types/index.browser.ts",
+      "import": "./src/types/index.ts",
+      "require": "./src/types/index.ts",
+      "types": "./src/types/index.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.22.4",
+    "sharp": "^0.33.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  }
+}

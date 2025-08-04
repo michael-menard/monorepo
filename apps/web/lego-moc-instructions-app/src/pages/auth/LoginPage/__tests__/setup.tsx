@@ -14,11 +14,16 @@ vi.mock('lucide-react', () => ({
 }))
 
 // Mock @tanstack/react-router
+const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
-    navigate: vi.fn(),
+    navigate: mockNavigate,
   }),
+  useParams: () => ({}),
 }))
+
+// Export mock for use in tests
+export { mockNavigate }
 
 // Mock authApi
 vi.mock('../../../../services/authApi', () => ({

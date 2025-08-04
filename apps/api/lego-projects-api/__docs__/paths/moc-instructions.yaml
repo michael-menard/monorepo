@@ -611,3 +611,175 @@
                   message: "Forbidden: You can only download files from your own MOCs"
                   error: "FORBIDDEN"
                   details: null 
+
+/api/mocs/{id}/gallery-images:
+  post:
+    summary: Link gallery image to MOC
+    description: Link an existing gallery image to a MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - galleryImageId
+            properties:
+              galleryImageId:
+                type: string
+                format: uuid
+                description: ID of the gallery image to link
+    responses:
+      '200':
+        description: Gallery image linked successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Gallery image linked successfully"
+                  data:
+                    id: "link-uuid"
+                    mocId: "moc-uuid"
+                    galleryImageId: "gallery-image-uuid"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC or gallery image)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: MOC or gallery image not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+  get:
+    summary: Get linked gallery images for MOC
+    description: Retrieve all gallery images linked to a MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+    responses:
+      '200':
+        description: Gallery images retrieved successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Gallery images retrieved successfully"
+                  data:
+                    - id: "gallery-image-uuid"
+                      userId: "user-uuid"
+                      title: "MOC Build Photo"
+                      description: "Front view of the completed MOC"
+                      imageUrl: "https://example.com/image.jpg"
+                      tags: ["front-view", "completed"]
+                      createdAt: "2024-06-10T12:00:00Z"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: MOC not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/gallery-images/{galleryImageId}:
+  delete:
+    summary: Unlink gallery image from MOC
+    description: Remove the link between a gallery image and MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+      - in: path
+        name: galleryImageId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Gallery Image ID
+    responses:
+      '200':
+        description: Gallery image unlinked successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Gallery image unlinked successfully"
+                  data: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC or gallery image)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: MOC, gallery image, or link not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse' 

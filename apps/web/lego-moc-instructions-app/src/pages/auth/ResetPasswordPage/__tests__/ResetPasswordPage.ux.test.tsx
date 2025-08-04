@@ -35,6 +35,9 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     navigate: mockNavigate,
   }),
+  useParams: () => ({
+    token: 'valid-token-123',
+  }),
 }))
 
 describe('ResetPasswordPage User Experience', () => {
@@ -252,7 +255,7 @@ describe('ResetPasswordPage User Experience', () => {
       await user.click(submitButton)
 
       // Should show loading state
-      expect(submitButton).toBeDisabled()
+      expect(submitButton).toHaveAttribute('aria-disabled', 'true')
       expect(screen.getByRole('button', { name: '' })).toBeInTheDocument() // Spinner
     })
 
@@ -541,7 +544,7 @@ describe('ResetPasswordPage User Experience', () => {
       await user.click(submitButton)
 
       // Should show loading state immediately
-      expect(submitButton).toBeDisabled()
+      expect(submitButton).toHaveAttribute('aria-disabled', 'true')
 
       // Should eventually complete
       await waitFor(() => {

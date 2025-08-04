@@ -1,6 +1,6 @@
 // Auth API service for making calls to the auth service endpoints
 
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:9000'
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:5001'
 
 interface ApiResponse<T = any> {
   success: boolean

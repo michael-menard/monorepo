@@ -32,57 +32,21 @@ import {
   TabPanel,
   Textarea,
 } from '@repo/ui';
-// TODO: MOC Image Upload Implementation - Next Steps
-// ================================================
+// Gallery Image Linking Implementation
+// ====================================
 // 
-// Current Status: Basic MOC image upload functionality implemented with:
-// - Upload button in Parts List tab (primary, large, full width, rounded, shadowed)
-// - File upload dialog with drag & drop support
-// - File validation (JPG, PNG, HEIC, max 10MB)
-// - Image compression and upload handling
-// - Gallery display ready for uploaded images
+// Status: Gallery image linking functionality implemented with:
+// - Backend API endpoints for linking/unlinking gallery images to MOCs
+// - GalleryImageLinker component for selecting and linking images
+// - Integration with MOC detail page gallery tab
+// - Support for viewing linked images in MOC's internal gallery
 //
-// Next Steps Required:
-// 1. Package Integration:
-//    - Uncomment and fix FileUpload component import
-//    - Uncomment and fix Gallery component import
-//    - Ensure packages are properly built and exported
-//    - Update package.json dependencies if needed
-//
-// 2. API Enhancement:
-//    - Extend backend API to handle MOC-specific image uploads
-//    - Create dedicated endpoint for MOC gallery images
-//    - Update RTK Query mutations for MOC image management
-//    - Add image metadata storage (title, description, tags)
-//
-// 3. Gallery Integration:
-//    - Replace current grid layout with Gallery component
-//    - Add image click handlers for modal/lightbox view
-//    - Implement image deletion functionality
-//    - Add image reordering capabilities
-//
-// 4. Testing:
-//    - Add unit tests for handleMocImageUpload function
-//    - Add integration tests for upload dialog
-//    - Add E2E tests with Playwright
-//    - Test file validation and error handling
-//
-// 5. UX Enhancements:
-//    - Add upload progress indicators
-//    - Implement drag & drop visual feedback
-//    - Add image preview before upload
-//    - Add bulk upload capabilities
-//
-// 6. Performance:
-//    - Implement image lazy loading
-//    - Add image optimization (WebP conversion)
-//    - Implement virtual scrolling for large galleries
-//
-// Files to Update:
-// - packages/features/FileUpload: Ensure proper exports
-// - packages/features/gallery: Ensure proper exports
-// - apps/api/lego-projects-api: Add MOC image endpoints
-// - packages/features/moc-instructions: Add image management types
+// Features:
+// - Link images from inspiration gallery to MOC instructions
+// - View linked images in MOC's details page internal gallery
+// - Unlink images without removing them from inspiration gallery
+// - Single image can be linked to multiple MOCs
+// - Modal interface for selecting gallery images to link
 //
 // import { FileUpload } from '../../../../../packages/features/FileUpload/index.tsx';
 // import { Gallery } from '../../../../../packages/features/gallery/src/index.tsx';
@@ -106,6 +70,8 @@ import {
   X,
 } from 'lucide-react';
 import {
+  DownloadManager,
+  GalleryImageLinker,
   calculateTotalParts,
   calculateTotalTime,
   compressImage,
@@ -121,7 +87,6 @@ import {
   useDeletePartsListFileMutation,
   useDownloadInstructionsFileMutation,
   useDownloadPartsListFileMutation,
-  DownloadManager,
   useGetInstructionQuery,
   useGetInstructionsFileDownloadInfoQuery,
   useGetInstructionsFilesQuery,
@@ -519,7 +484,7 @@ export const MocDetailPage: React.FC = () => {
     // This will be handled by the UI component
   };
 
-  const handleTagsUpdate = (newTags: string[]) => {
+  const handleTagsUpdate = (newTags: Array<string>) => {
     if (!moc) return;
     const tagInput = document.getElementById('tag-input') as HTMLInputElement;
     if (tagInput) {
@@ -958,8 +923,22 @@ export const MocDetailPage: React.FC = () => {
                 </AppCard>
               ) : null
             )}
-            {/* TODO: Add uploaded MOC images here when API is ready */}
           </div>
+
+          {/* Gallery Image Linker */}
+          {id && (
+            <AppCard title="Linked Gallery Images">
+              <GalleryImageLinker
+                mocId={id}
+                onImageLinked={(imageId) => {
+                  console.log('Image linked:', imageId);
+                }}
+                onImageUnlinked={(imageId) => {
+                  console.log('Image unlinked:', imageId);
+                }}
+              />
+            </AppCard>
+          )}
         </div>
       ),
     },

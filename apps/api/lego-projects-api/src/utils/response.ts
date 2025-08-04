@@ -15,7 +15,7 @@ export function apiResponse<T = any>(
   message: string,
   data?: T,
   error?: string,
-  details?: any
+  details?: any,
 ): ApiResponse<T> {
   const response: ApiResponse<T> = { status, message };
   if (data !== undefined) response.data = data;
@@ -43,7 +43,7 @@ export function apiErrorResponse(
   status: number,
   errorType: ApiErrorType,
   message: string,
-  details?: any
+  details?: any,
 ): ApiResponse<null> {
   return {
     status,
@@ -51,4 +51,4 @@ export function apiErrorResponse(
     error: errorType,
     details,
   };
-} 
+}

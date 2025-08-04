@@ -33,6 +33,9 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     navigate: mockNavigate,
   }),
+  useParams: () => ({
+    token: 'valid-token-123',
+  }),
 }))
 
 describe('ResetPasswordPage API Integration', () => {
@@ -155,7 +158,7 @@ describe('ResetPasswordPage API Integration', () => {
       await user.click(submitButton)
 
       // Check for loading spinner - button should be disabled and show spinner
-      expect(submitButton).toBeDisabled()
+      expect(submitButton).toHaveAttribute('aria-disabled', 'true')
       expect(screen.getByRole('button', { name: '' })).toBeInTheDocument() // Spinner button
     })
 

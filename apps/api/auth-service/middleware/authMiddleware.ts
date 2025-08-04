@@ -24,12 +24,12 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     if (!decoded) {
       return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
-    if (typeof decoded !== "string" && "userId" in decoded) {
+    if (typeof decoded !== 'string' && 'userId' in decoded) {
       req.userId = (decoded as any).userId;
     }
     next();
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    res.status(401).json({ success: false, message: 'Not authorized, token failed' });
   }
 };

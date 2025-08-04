@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import ProfilePage from '../index';
@@ -183,15 +183,15 @@ describe('ProfilePage Performance Tests', () => {
       fireEvent.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
-      const cancelButton = screen.getByTestId('button-outline');
+      const cancelButton = screen.getByTestId('cancel-button');
       
       const modalCloseTime = measurePerformance(async () => {
         fireEvent.click(cancelButton);
         await waitFor(() => {
-          expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+          expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
         });
       });
       
@@ -281,14 +281,14 @@ describe('ProfilePage Performance Tests', () => {
       for (let i = 0; i < 5; i++) {
         fireEvent.click(editButton);
         await waitFor(() => {
-          expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
         });
         
-        const cancelButton = screen.getByTestId('button-outline');
+        const cancelButton = screen.getByTestId('cancel-button');
         fireEvent.click(cancelButton);
         
         await waitFor(() => {
-          expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+          expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
         });
       }
       
@@ -360,20 +360,20 @@ describe('ProfilePage Performance Tests', () => {
       const reRenderTime = measurePerformance(async () => {
         fireEvent.click(editButton);
         await waitFor(() => {
-          expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
         });
         
-        const cancelButton = screen.getByTestId('button-outline');
+        const cancelButton = screen.getByTestId('cancel-button');
         fireEvent.click(cancelButton);
         
         await waitFor(() => {
-          expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+          expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
         });
         
         // Repeat the cycle
         fireEvent.click(editButton);
         await waitFor(() => {
-          expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
         });
       });
       
@@ -419,7 +419,7 @@ describe('ProfilePage Performance Tests', () => {
       const animationTime = measurePerformance(async () => {
         fireEvent.click(editButton);
         await waitFor(() => {
-          expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
         });
         
         // Wait for any CSS transitions
@@ -439,14 +439,14 @@ describe('ProfilePage Performance Tests', () => {
       const layoutTime = measurePerformance(async () => {
         fireEvent.click(editButton);
         await waitFor(() => {
-          expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
         });
         
-        const cancelButton = screen.getByTestId('button-outline');
+        const cancelButton = screen.getByTestId('cancel-button');
         fireEvent.click(cancelButton);
         
         await waitFor(() => {
-          expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+          expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
         });
       });
       
@@ -466,7 +466,7 @@ describe('ProfilePage Performance Tests', () => {
       fireEvent.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       const saveButton = screen.getByText('Save Changes');

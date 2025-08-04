@@ -8,6 +8,28 @@ import { SignupSchema, type SignupFormData } from '../../schemas/index.js';
 import Input from '../Input/index.js';
 import { Button } from '../ui/button.js';
 import PasswordStrength from '../PasswordStrength/index.js';
+import { FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import type { SerializedError } from '@reduxjs/toolkit';
+
+// Helper function to convert RTK Query errors to the format expected by FormLevelErrorMessage
+const convertError = (error: FetchBaseQueryError | SerializedError | undefined): string | { message?: string } | undefined => {
+  if (!error) return undefined;
+  
+  if ('status' in error) {
+    // FetchBaseQueryError
+    if (typeof error.data === 'string') {
+      return error.data;
+    }
+    if (error.data && typeof error.data === 'object' && 'message' in error.data) {
+      return { message: String(error.data.message) };
+    }
+    return `Error ${error.status}: ${error.data || 'Unknown error'}`;
+  }
+  
+  // SerializedError
+  return error.message || 'An error occurred';
+};
 
 export const SignupForm = () => {
   const { signup, isLoading, error } = useAuth();
@@ -69,9 +91,10 @@ export const SignupForm = () => {
                 {...register('firstName')}
                 className={errors.firstName ? 'border-red-500 focus:ring-red-500' : ''}
               />
-              {errors.firstName && (
-                <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
-              )}
+              <FieldErrorMessage
+                error={errors.firstName}
+                fieldName="First Name"
+              />
             </div>
             <div>
               <Input
@@ -81,9 +104,10 @@ export const SignupForm = () => {
                 {...register('lastName')}
                 className={errors.lastName ? 'border-red-500 focus:ring-red-500' : ''}
               />
-              {errors.lastName && (
-                <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
-              )}
+              <FieldErrorMessage
+                error={errors.lastName}
+                fieldName="Last Name"
+              />
             </div>
           </div>
           <div>
@@ -94,9 +118,10 @@ export const SignupForm = () => {
               {...register('email')}
               className={errors.email ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-            )}
+            <FieldErrorMessage
+              error={errors.email}
+              fieldName="Email"
+            />
           </div>
           <div>
             <Input
@@ -106,9 +131,10 @@ export const SignupForm = () => {
               {...register('password')}
               className={errors.password ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-            )}
+            <FieldErrorMessage
+              error={errors.password}
+              fieldName="Password"
+            />
             {watchedPassword && <PasswordStrength password={watchedPassword} />}
           </div>
           <div>
@@ -119,15 +145,12 @@ export const SignupForm = () => {
               {...register('confirmPassword')}
               className={errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            {errors.confirmPassword && (
-              <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
-            )}
+            <FieldErrorMessage
+              error={errors.confirmPassword}
+              fieldName="Confirm Password"
+            />
           </div>
-          {error && (
-            <div className="bg-red-900 bg-opacity-50 border border-red-500 rounded-md p-3">
-              <p className="text-red-400 text-sm">{String(error)}</p>
-            </div>
-          )}
+          <FormLevelErrorMessage error={convertError(error)} />
           <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

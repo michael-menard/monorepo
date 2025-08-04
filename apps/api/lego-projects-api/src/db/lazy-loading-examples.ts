@@ -1,18 +1,18 @@
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { db } from './client';
-import { 
-  users, 
-  galleryImages, 
-  galleryAlbums, 
-  mocInstructions, 
+import {
+  users,
+  galleryImages,
+  galleryAlbums,
+  mocInstructions,
   mocFiles,
   mocGalleryImages,
-  mocGalleryAlbums
+  mocGalleryAlbums,
 } from './schema';
 
 /**
  * Lazy Loading Examples for the MOC Instructions API
- * 
+ *
  * This file demonstrates how to use the new schema relationships
  * for efficient lazy loading and cascading deletes.
  */
@@ -29,10 +29,10 @@ export async function getUserWithGalleryImages(userId: string) {
       galleryAlbums: {
         orderBy: [desc(galleryAlbums.createdAt)],
         limit: 5, // Only load first 5 albums
-      }
-    }
+      },
+    },
   });
-  
+
   return user;
 }
 
@@ -42,7 +42,7 @@ export async function getMocWithDetails(mocId: string) {
     where: eq(mocInstructions.id, mocId),
     with: {
       files: {
-        orderBy: [desc(mocFiles.createdAt)]
+        orderBy: [desc(mocFiles.createdAt)],
       },
       galleryImages: {
         with: {
@@ -52,34 +52,34 @@ export async function getMocWithDetails(mocId: string) {
                 columns: {
                   id: true,
                   username: true,
-                  preferredName: true
-                }
-              }
-            }
-          }
-        }
+                  preferredName: true,
+                },
+              },
+            },
+          },
+        },
       },
       galleryAlbums: {
         with: {
           galleryAlbum: {
             with: {
               images: {
-                limit: 5 // Only load first 5 images from each album
-              }
-            }
-          }
-        }
-      }
-    }
+                limit: 5, // Only load first 5 images from each album
+              },
+            },
+          },
+        },
+      },
+    },
   });
-  
+
   return moc;
 }
 
 // Example 3: Get user's MOCs with pagination and lazy loading
 export async function getUserMocs(userId: string, page: number = 1, limit: number = 10) {
   const offset = (page - 1) * limit;
-  
+
   const mocs = await db.query.mocInstructions.findMany({
     where: eq(mocInstructions.userId, userId),
     orderBy: [desc(mocInstructions.createdAt)],
@@ -88,7 +88,7 @@ export async function getUserMocs(userId: string, page: number = 1, limit: numbe
     with: {
       files: {
         where: eq(mocFiles.fileType, 'thumbnail'), // Only load thumbnails initially
-        limit: 1
+        limit: 1,
       },
       galleryImages: {
         limit: 3, // Only load first 3 gallery images
@@ -97,14 +97,14 @@ export async function getUserMocs(userId: string, page: number = 1, limit: numbe
             columns: {
               id: true,
               title: true,
-              imageUrl: true
-            }
-          }
-        }
-      }
-    }
+              imageUrl: true,
+            },
+          },
+        },
+      },
+    },
   });
-  
+
   return mocs;
 }
 
@@ -117,20 +117,20 @@ export async function getAlbumWithImages(albumId: string) {
         orderBy: [desc(galleryImages.createdAt)],
         with: {
           flags: {
-            limit: 5 // Only load recent flags
-          }
-        }
+            limit: 5, // Only load recent flags
+          },
+        },
       },
       coverImage: {
         columns: {
           id: true,
           title: true,
-          imageUrl: true
-        }
-      }
-    }
+          imageUrl: true,
+        },
+      },
+    },
   });
-  
+
   return album;
 }
 
@@ -140,11 +140,11 @@ export async function searchMocs(searchTerm: string, userId?: string) {
     // Search in title and description
     // Note: This is a simple text search - for production, consider using full-text search
   ];
-  
+
   if (userId) {
     whereConditions.push(eq(mocInstructions.userId, userId));
   }
-  
+
   const mocs = await db.query.mocInstructions.findMany({
     where: whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
     orderBy: [desc(mocInstructions.createdAt)],
@@ -154,16 +154,16 @@ export async function searchMocs(searchTerm: string, userId?: string) {
         columns: {
           id: true,
           username: true,
-          preferredName: true
-        }
+          preferredName: true,
+        },
       },
       files: {
         where: eq(mocFiles.fileType, 'thumbnail'),
-        limit: 1
-      }
-    }
+        limit: 1,
+      },
+    },
   });
-  
+
   return mocs;
 }
 
@@ -176,14 +176,14 @@ export async function getGalleryImageWithMocs(imageId: string) {
         columns: {
           id: true,
           username: true,
-          preferredName: true
-        }
+          preferredName: true,
+        },
       },
       album: {
         columns: {
           id: true,
-          title: true
-        }
+          title: true,
+        },
       },
       mocGalleryImages: {
         with: {
@@ -191,14 +191,14 @@ export async function getGalleryImageWithMocs(imageId: string) {
             columns: {
               id: true,
               title: true,
-              description: true
-            }
-          }
-        }
-      }
-    }
+              description: true,
+            },
+          },
+        },
+      },
+    },
   });
-  
+
   return image;
 }
 
@@ -232,14 +232,23 @@ export async function deleteMocInstructions(mocId: string) {
 export async function getUserStats(userId: string) {
   // Load counts without loading full data
   const [mocCount, imageCount, albumCount] = await Promise.all([
-    db.select({ count: sql`count(*)` }).from(mocInstructions).where(eq(mocInstructions.userId, userId)),
-    db.select({ count: sql`count(*)` }).from(galleryImages).where(eq(galleryImages.userId, userId)),
-    db.select({ count: sql`count(*)` }).from(galleryAlbums).where(eq(galleryAlbums.userId, userId))
+    db
+      .select({ count: sql`count(*)` })
+      .from(mocInstructions)
+      .where(eq(mocInstructions.userId, userId)),
+    db
+      .select({ count: sql`count(*)` })
+      .from(galleryImages)
+      .where(eq(galleryImages.userId, userId)),
+    db
+      .select({ count: sql`count(*)` })
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.userId, userId)),
   ]);
-  
+
   return {
     mocs: mocCount[0]?.count || 0,
     images: imageCount[0]?.count || 0,
-    albums: albumCount[0]?.count || 0
+    albums: albumCount[0]?.count || 0,
   };
-} 
+}

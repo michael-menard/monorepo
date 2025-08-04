@@ -1,0 +1,196 @@
+services:
+  # Frontend React App
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/web/lego-moc-instructions-app/Dockerfile
+    container_name: lego-moc-frontend
+    ports:
+      - "3000:3001"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:9000/api
+      - VITE_LEGO_API_URL=http://localhost:3001/api
+    volumes:
+      - ./apps/web/lego-moc-instructions-app:/app/apps/web/lego-moc-instructions-app
+      - /app/node_modules
+    depends_on:
+      - auth-service
+      - lego-api
+    networks:
+      - app-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/api/auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "9000:9000"
+    environment:
+      - NODE_ENV=development
+      - PORT=9000
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/myapp?authSource=admin
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRE=24h
+      - COOKIE_EXPIRE=24
+      - SMTP_HOST=smtp.ethereal.email
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@example.com
+      - SMTP_PASS=your-email-password
+      - FROM_EMAIL=noreply@yourdomain.com
+      - FROM_NAME=LEGO MOC App
+    volumes:
+      - ./apps/api/auth-service:/app/apps/api/auth-service
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  # LEGO Projects API
+  lego-api:
+    build:
+      context: .
+      dockerfile: apps/api/lego-projects-api/Dockerfile
+    container_name: lego-projects-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/lego_projects
+      - REDIS_URL=redis://redis:6379
+      - AWS_ACCESS_KEY_ID=your-aws-access-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+      - AWS_REGION=us-east-1
+      - AWS_S3_BUCKET=your-s3-bucket-name
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+    volumes:
+      - ./apps/api/lego-projects-api:/app/apps/api/lego-projects-api
+      - /app/node_modules
+      - ./uploads:/app/apps/api/lego-projects-api/uploads
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    networks:
+      - app-network
+
+  # MongoDB for Auth Service
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: myapp
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - app-network
+
+  # PostgreSQL for LEGO Projects API
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: lego_projects
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-network
+
+  # Elasticsearch for search functionality
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-network
+
+  # MongoDB Express for database management
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  # pgAdmin for PostgreSQL management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+volumes:
+  mongodb_data:
+  mongodb_config:
+  postgres_data:
+  redis_data:
+  esdata:
+  pgadmin_data:
+
+networks:
+  app-network:
+    driver: bridge 

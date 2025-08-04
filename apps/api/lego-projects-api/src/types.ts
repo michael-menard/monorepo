@@ -8,8 +8,20 @@ export type AvatarFile = {
 };
 
 export const ProfileUpdateSchema = z.object({
-  name: z.string().min(1, 'Name must be at least 1 character').max(100, 'Name must be less than 100 characters').optional(),
-  username: z.string().min(3, 'Username must be at least 3 characters').max(30, 'Username must be less than 30 characters').regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens').optional(),
+  name: z
+    .string()
+    .min(1, 'Name must be at least 1 character')
+    .max(100, 'Name must be less than 100 characters')
+    .optional(),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(30, 'Username must be less than 30 characters')
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Username can only contain letters, numbers, underscores, and hyphens',
+    )
+    .optional(),
   bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
 });
 export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;
@@ -17,10 +29,10 @@ export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;
 export const AvatarUploadSchema = z.object({
   file: z
     .custom<AvatarFile>()
-    .refine(file => ['image/jpeg', 'image/heic'].includes(file.type), {
+    .refine((file) => ['image/jpeg', 'image/heic'].includes(file.type), {
       message: 'Only .jpg or .heic files are supported',
     })
-    .refine(file => file.size <= 10 * 1024 * 1024, {
+    .refine((file) => file.size <= 10 * 1024 * 1024, {
       message: 'File size must be less than 10MB',
     }),
 });
@@ -71,11 +83,32 @@ export type FileUpload = z.infer<typeof FileUploadSchema>;
 
 // Common LEGO categories for validation
 const LEGO_CATEGORIES = [
-  'Speed Champions', 'Modular', 'Star Wars', 'Creator Expert', 'Technic', 
-  'Architecture', 'Ideas', 'Harry Potter', 'Marvel', 'DC', 'Friends', 
-  'City', 'Ninjago', 'Minecraft', 'Disney', 'Super Mario', 'Avatar',
-  'Jurassic World', 'Batman', 'Creator 3-in-1', 'Classic', 'Duplo',
-  'Art', 'Botanical Collection', 'Seasonal', 'Other'
+  'Speed Champions',
+  'Modular',
+  'Star Wars',
+  'Creator Expert',
+  'Technic',
+  'Architecture',
+  'Ideas',
+  'Harry Potter',
+  'Marvel',
+  'DC',
+  'Friends',
+  'City',
+  'Ninjago',
+  'Minecraft',
+  'Disney',
+  'Super Mario',
+  'Avatar',
+  'Jurassic World',
+  'Batman',
+  'Creator 3-in-1',
+  'Classic',
+  'Duplo',
+  'Art',
+  'Botanical Collection',
+  'Seasonal',
+  'Other',
 ] as const;
 
 export const WishlistItemSchema = z.object({
@@ -96,16 +129,28 @@ export const CreateWishlistItemSchema = z.object({
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
   productLink: z.string().url('Product link must be a valid URL').optional(),
   imageUrl: z.string().url('Image URL must be a valid URL').optional(),
-  category: z.string().min(1, 'Category cannot be empty').max(100, 'Category must be less than 100 characters').optional(),
+  category: z
+    .string()
+    .min(1, 'Category cannot be empty')
+    .max(100, 'Category must be less than 100 characters')
+    .optional(),
   sortOrder: z.string().min(1, 'Sort order is required'),
 });
 
 export const UpdateWishlistItemSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(255, 'Title must be less than 255 characters').optional(),
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(255, 'Title must be less than 255 characters')
+    .optional(),
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
   productLink: z.string().url('Product link must be a valid URL').optional(),
   imageUrl: z.string().url('Image URL must be a valid URL').optional(),
-  category: z.string().min(1, 'Category cannot be empty').max(100, 'Category must be less than 100 characters').optional(),
+  category: z
+    .string()
+    .min(1, 'Category cannot be empty')
+    .max(100, 'Category must be less than 100 characters')
+    .optional(),
   sortOrder: z.string().min(1, 'Sort order is required').optional(),
 });
 
@@ -115,10 +160,10 @@ export const WISHLIST_CATEGORIES = LEGO_CATEGORIES;
 export const WishlistImageUploadSchema = z.object({
   file: z
     .custom<AvatarFile>()
-    .refine(file => ['image/jpeg', 'image/jpg', 'image/heic'].includes(file.type), {
+    .refine((file) => ['image/jpeg', 'image/jpg', 'image/heic'].includes(file.type), {
       message: 'Only .jpg, .jpeg, or .heic files are supported',
     })
-    .refine(file => file.size <= 20 * 1024 * 1024, {
+    .refine((file) => file.size <= 20 * 1024 * 1024, {
       message: 'File size must be less than 20MB',
     }),
 });
@@ -136,7 +181,9 @@ export const MocPartsListSchema = z.object({
   description: z.string().optional(),
   built: z.boolean(),
   purchased: z.boolean(),
-  inventoryPercentage: z.string().regex(/^\d{1,3}\.\d{2}$/, 'Must be a decimal with 2 decimal places (0.00-100.00)'),
+  inventoryPercentage: z
+    .string()
+    .regex(/^\d{1,3}\.\d{2}$/, 'Must be a decimal with 2 decimal places (0.00-100.00)'),
   totalPartsCount: z.string().optional(),
   acquiredPartsCount: z.string(),
   costEstimate: z.string().optional(),
@@ -161,7 +208,10 @@ export const UpdateMocPartsListSchema = z.object({
   description: z.string().optional(),
   built: z.boolean().optional(),
   purchased: z.boolean().optional(),
-  inventoryPercentage: z.string().regex(/^\d{1,3}\.\d{2}$/, 'Must be a decimal with 2 decimal places (0.00-100.00)').optional(),
+  inventoryPercentage: z
+    .string()
+    .regex(/^\d{1,3}\.\d{2}$/, 'Must be a decimal with 2 decimal places (0.00-100.00)')
+    .optional(),
   totalPartsCount: z.string().optional(),
   acquiredPartsCount: z.string().optional(),
   costEstimate: z.string().optional(),
@@ -172,4 +222,4 @@ export const UpdateMocPartsListSchema = z.object({
 export type MocPartsList = z.infer<typeof MocPartsListSchema>;
 export type CreateMocPartsList = z.infer<typeof CreateMocPartsListSchema>;
 export type UpdateMocPartsList = z.infer<typeof UpdateMocPartsListSchema>;
-export type WishlistImageUpload = z.infer<typeof WishlistImageUploadSchema>; 
+export type WishlistImageUpload = z.infer<typeof WishlistImageUploadSchema>;

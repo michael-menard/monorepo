@@ -214,7 +214,7 @@ export async function searchGalleryItems({
   from?: number;
   size?: number;
 }) {
-  const must: any[] = [ { term: { userId } } ];
+  const must: any[] = [{ term: { userId } }];
   if (type && type !== 'all') {
     must.push({ term: { type } });
   }
@@ -270,12 +270,12 @@ export async function searchMocs({
   from?: number;
   size?: number;
 }) {
-  const must: any[] = [ { term: { userId } } ];
-  
+  const must: any[] = [{ term: { userId } }];
+
   if (tag) {
     must.push({ term: { tags: tag } });
   }
-  
+
   if (query) {
     must.push({
       multi_match: {
@@ -286,7 +286,7 @@ export async function searchMocs({
       },
     });
   }
-  
+
   try {
     const result = await esClient.search({
       index: MOC_INDEX,
@@ -304,13 +304,17 @@ export async function searchMocs({
         'partsListFiles',
         'galleryImageIds',
         'createdAt',
-        'updatedAt'
+        'updatedAt',
       ],
     });
-    
+
     return {
       hits: result.hits.hits.map((hit: any) => hit._source),
-      total: result.hits.total ? (typeof result.hits.total === 'number' ? result.hits.total : result.hits.total.value) : 0,
+      total: result.hits.total
+        ? typeof result.hits.total === 'number'
+          ? result.hits.total
+          : result.hits.total.value
+        : 0,
     };
   } catch (err: any) {
     console.warn('MOC ES search failed, falling back to Postgres:', err.message);
@@ -332,12 +336,12 @@ export async function searchWishlistItems({
   from?: number;
   size?: number;
 }) {
-  const must: any[] = [ { term: { userId } } ];
-  
+  const must: any[] = [{ term: { userId } }];
+
   if (category) {
     must.push({ term: { category } });
   }
-  
+
   if (query) {
     must.push({
       multi_match: {
@@ -348,7 +352,7 @@ export async function searchWishlistItems({
       },
     });
   }
-  
+
   try {
     const result = await esClient.search({
       index: WISHLIST_INDEX,
@@ -365,13 +369,17 @@ export async function searchWishlistItems({
         'category',
         'sortOrder',
         'createdAt',
-        'updatedAt'
+        'updatedAt',
       ],
     });
-    
+
     return {
       hits: result.hits.hits.map((hit: any) => hit._source),
-      total: result.hits.total ? (typeof result.hits.total === 'number' ? result.hits.total : result.hits.total.value) : 0,
+      total: result.hits.total
+        ? typeof result.hits.total === 'number'
+          ? result.hits.total
+          : result.hits.total.value
+        : 0,
     };
   } catch (err: any) {
     console.warn('Wishlist ES search failed, falling back to Postgres:', err.message);
@@ -384,7 +392,7 @@ export async function initializeMocIndex() {
   try {
     // Check if index exists
     const indexExists = await esClient.indices.exists({ index: MOC_INDEX });
-    
+
     if (!indexExists) {
       await esClient.indices.create({
         index: MOC_INDEX,
@@ -392,22 +400,22 @@ export async function initializeMocIndex() {
           properties: {
             id: { type: 'keyword' },
             userId: { type: 'keyword' },
-            title: { 
+            title: {
               type: 'text',
               analyzer: 'standard',
               fields: {
-                keyword: { type: 'keyword' }
-              }
+                keyword: { type: 'keyword' },
+              },
             },
-            description: { 
+            description: {
               type: 'text',
-              analyzer: 'standard'
+              analyzer: 'standard',
             },
-            tags: { 
+            tags: {
               type: 'keyword',
               fields: {
-                text: { type: 'text', analyzer: 'standard' }
-              }
+                text: { type: 'text', analyzer: 'standard' },
+              },
             },
             thumbnailUrl: { type: 'keyword' },
             instructionFileUrl: { type: 'keyword' },
@@ -415,33 +423,33 @@ export async function initializeMocIndex() {
             galleryImageIds: { type: 'keyword' },
             type: { type: 'keyword' },
             createdAt: { type: 'date' },
-            updatedAt: { type: 'date' }
-          }
+            updatedAt: { type: 'date' },
+          },
         },
         settings: {
           analysis: {
             analyzer: {
               standard: {
                 type: 'standard',
-                stopwords: '_english_'
-              }
-            }
-          }
-        }
+                stopwords: '_english_',
+              },
+            },
+          },
+        },
       });
       console.log(`Created Elasticsearch index: ${MOC_INDEX}`);
     }
   } catch (err: any) {
     console.warn('Failed to initialize MOC index:', err.message);
   }
-} 
+}
 
 // --- INDEX INITIALIZATION ---
 export async function initializeWishlistIndex() {
   try {
     // Check if index exists
     const indexExists = await esClient.indices.exists({ index: WISHLIST_INDEX });
-    
+
     if (!indexExists) {
       await esClient.indices.create({
         index: WISHLIST_INDEX,
@@ -449,45 +457,45 @@ export async function initializeWishlistIndex() {
           properties: {
             id: { type: 'keyword' },
             userId: { type: 'keyword' },
-            title: { 
+            title: {
               type: 'text',
               analyzer: 'standard',
               fields: {
-                keyword: { type: 'keyword' }
-              }
+                keyword: { type: 'keyword' },
+              },
             },
-            description: { 
+            description: {
               type: 'text',
-              analyzer: 'standard'
+              analyzer: 'standard',
             },
             productLink: { type: 'keyword' },
             imageUrl: { type: 'keyword' },
-            category: { 
+            category: {
               type: 'keyword',
               fields: {
-                text: { type: 'text', analyzer: 'standard' }
-              }
+                text: { type: 'text', analyzer: 'standard' },
+              },
             },
             sortOrder: { type: 'keyword' },
             type: { type: 'keyword' },
             createdAt: { type: 'date' },
-            updatedAt: { type: 'date' }
-          }
+            updatedAt: { type: 'date' },
+          },
         },
         settings: {
           analysis: {
             analyzer: {
               standard: {
                 type: 'standard',
-                stopwords: '_english_'
-              }
-            }
-          }
-        }
+                stopwords: '_english_',
+              },
+            },
+          },
+        },
       });
       console.log(`Created Elasticsearch index: ${WISHLIST_INDEX}`);
     }
   } catch (err: any) {
     console.warn('Failed to initialize Wishlist index:', err.message);
   }
-} 
+}

@@ -3,6 +3,7 @@ import type { User } from '../../types/auth.js';
 
 const TanStackRouteGuardOptionsSchema = z.object({
   requireAuth: z.boolean().optional(),
+  requireGuest: z.boolean().optional(),
   requiredRole: z.string().optional(),
   requireVerified: z.boolean().optional(),
   redirectTo: z.string().optional(),
@@ -19,6 +20,7 @@ export const createTanStackRouteGuard = (
 ) => {
   const {
     requireAuth = true,
+    requireGuest = false,
     requiredRole,
     requireVerified = false,
     redirectTo = '/auth/login',
@@ -37,6 +39,18 @@ export const createTanStackRouteGuard = (
       // In TanStack Router, we can't easily show loading states in route guards
       // Loading should be handled at the component level
       return undefined;
+    }
+
+    // Check if guest access is required (redirect authenticated users)
+    if (requireGuest && isAuthenticated) {
+      console.log('Guest access required - redirecting authenticated user to home');
+      if (redirectFn) {
+        throw redirectFn({
+          to: '/',
+          replace: true,
+        });
+      }
+      throw new Error('Guest access required. Redirect to: /');
     }
 
     // Check if authentication is required

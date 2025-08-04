@@ -1,23 +1,21 @@
-import sharp from 'sharp';
 import { Request, Response, NextFunction } from 'express';
+import {
+  processImage as processImageShared,
+  createImageVariants as createImageVariantsShared,
+  getImageMetadata,
+  getOptimalFormat,
+  canProcessImage,
+  calculateOptimalQuality,
+  getPreset,
+  type ImageProcessingConfig,
+  type ImageOptimizationStats,
+} from '@repo/shared-image-utils';
 
-// Image processing configuration
-export interface ImageProcessingConfig {
-  maxWidth: number;
-  maxHeight: number;
-  quality: number;
-  format: 'jpeg' | 'png' | 'webp';
-  fit: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
-}
+// Re-export types for backward compatibility
+export type { ImageProcessingConfig } from '@repo/shared-image-utils';
 
-// Default configuration for avatar images
-export const DEFAULT_AVATAR_CONFIG: ImageProcessingConfig = {
-  maxWidth: 800,
-  maxHeight: 800,
-  quality: 85,
-  format: 'jpeg',
-  fit: 'cover'
-};
+// Default configuration for avatar images (using shared preset)
+export const DEFAULT_AVATAR_CONFIG: ImageProcessingConfig = getPreset('avatar');
 
 // High-quality configuration for profile images
 export const HIGH_QUALITY_CONFIG: ImageProcessingConfig = {
@@ -25,62 +23,27 @@ export const HIGH_QUALITY_CONFIG: ImageProcessingConfig = {
   maxHeight: 1200,
   quality: 90,
   format: 'jpeg',
-  fit: 'inside'
+  fit: 'inside',
+  progressive: true,
+  optimizeCoding: true,
+  stripMetadata: true,
+  sharpen: true,
+  rotate: true,
 };
 
-// Thumbnail configuration for previews
-export const THUMBNAIL_CONFIG: ImageProcessingConfig = {
-  maxWidth: 200,
-  maxHeight: 200,
-  quality: 80,
-  format: 'jpeg',
-  fit: 'cover'
-};
+// Thumbnail configuration for previews (using shared preset)
+export const THUMBNAIL_CONFIG: ImageProcessingConfig = getPreset('thumbnail');
 
 /**
  * Process and resize an image buffer
  */
 export async function processImage(
   buffer: Buffer,
-  config: ImageProcessingConfig = DEFAULT_AVATAR_CONFIG
+  config: ImageProcessingConfig = DEFAULT_AVATAR_CONFIG,
 ): Promise<Buffer> {
   try {
-    let sharpInstance = sharp(buffer);
-
-    // Get image metadata
-    const metadata = await sharpInstance.metadata();
-    
-    // Check if resizing is needed
-    const needsResize = metadata.width && metadata.height && 
-      (metadata.width > config.maxWidth || metadata.height > config.maxHeight);
-
-    if (needsResize) {
-      sharpInstance = sharpInstance.resize({
-        width: config.maxWidth,
-        height: config.maxHeight,
-        fit: config.fit,
-        withoutEnlargement: true
-      });
-    }
-
-    // Convert to specified format with quality settings
-    switch (config.format) {
-      case 'jpeg':
-        sharpInstance = sharpInstance.jpeg({ quality: config.quality });
-        break;
-      case 'png':
-        sharpInstance = sharpInstance.png({ quality: config.quality });
-        break;
-      case 'webp':
-        sharpInstance = sharpInstance.webp({ quality: config.quality });
-        break;
-    }
-
-    // Optimize the image
-    sharpInstance = sharpInstance.rotate(); // Auto-rotate based on EXIF
-    sharpInstance = sharpInstance.sharpen(); // Slight sharpening for better quality
-
-    return await sharpInstance.toBuffer();
+    const { buffer: processedBuffer } = await processImageShared(buffer, config);
+    return processedBuffer;
   } catch (error) {
     console.error('Image processing error:', error);
     throw new Error('Failed to process image');
@@ -92,7 +55,7 @@ export async function processImage(
  */
 export async function createImageVariants(
   buffer: Buffer,
-  baseConfig: ImageProcessingConfig = DEFAULT_AVATAR_CONFIG
+  baseConfig: ImageProcessingConfig = DEFAULT_AVATAR_CONFIG,
 ): Promise<{
   original: Buffer;
   medium?: Buffer;
@@ -103,21 +66,22 @@ export async function createImageVariants(
     medium?: Buffer;
     thumbnail?: Buffer;
   } = {
-    original: buffer
+    original: buffer,
   };
 
   try {
     // Create medium size if original is larger than medium config
     const mediumConfig = { ...baseConfig, ...HIGH_QUALITY_CONFIG };
-    const metadata = await sharp(buffer).metadata();
-    
-    if (metadata.width && metadata.height && 
-        (metadata.width > mediumConfig.maxWidth || metadata.height > mediumConfig.maxHeight)) {
-      result.medium = await processImage(buffer, mediumConfig);
+    const metadata = await getImageMetadata(buffer);
+
+    if (metadata.width > mediumConfig.maxWidth || metadata.height > mediumConfig.maxHeight) {
+      const { buffer: mediumBuffer } = await processImageShared(buffer, mediumConfig);
+      result.medium = mediumBuffer;
     }
 
     // Create thumbnail
-    result.thumbnail = await processImage(buffer, THUMBNAIL_CONFIG);
+    const { buffer: thumbnailBuffer } = await processImageShared(buffer, THUMBNAIL_CONFIG);
+    result.thumbnail = thumbnailBuffer;
 
     return result;
   } catch (error) {
@@ -130,22 +94,7 @@ export async function createImageVariants(
 /**
  * Get optimal image format based on file extension and content
  */
-export function getOptimalFormat(filename: string, mimetype: string): 'jpeg' | 'png' | 'webp' {
-  const ext = filename.toLowerCase().split('.').pop();
-  
-  // Prefer WebP for better compression if supported
-  if (ext === 'webp' || mimetype === 'image/webp') {
-    return 'webp';
-  }
-  
-  // Use PNG for images with transparency
-  if (ext === 'png' || mimetype === 'image/png') {
-    return 'png';
-  }
-  
-  // Default to JPEG for photos
-  return 'jpeg';
-}
+export { getOptimalFormat } from '@repo/shared-image-utils';
 
 /**
  * Middleware to process uploaded images
@@ -160,16 +109,16 @@ export function imageProcessingMiddleware(config?: Partial<ImageProcessingConfig
       const processingConfig: ImageProcessingConfig = {
         ...DEFAULT_AVATAR_CONFIG,
         ...config,
-        format: getOptimalFormat(req.file.originalname, req.file.mimetype)
+        format: getOptimalFormat(req.file.originalname, req.file.mimetype),
       };
 
       // Process the image
       const processedBuffer = await processImage(req.file.buffer, processingConfig);
-      
+
       // Update the file buffer with processed image
       req.file.buffer = processedBuffer;
       req.file.size = processedBuffer.length;
-      
+
       // Update filename to reflect new format
       const ext = processingConfig.format;
       const baseName = req.file.originalname.split('.')[0];
@@ -179,8 +128,8 @@ export function imageProcessingMiddleware(config?: Partial<ImageProcessingConfig
       next();
     } catch (error) {
       console.error('Image processing middleware error:', error);
-      return res.status(500).json({ 
-        error: 'Failed to process uploaded image' 
+      return res.status(500).json({
+        error: 'Failed to process uploaded image',
       });
     }
   };
@@ -189,30 +138,19 @@ export function imageProcessingMiddleware(config?: Partial<ImageProcessingConfig
 /**
  * Validate if an image can be processed
  */
-export function canProcessImage(mimetype: string): boolean {
-  const supportedTypes = [
-    'image/jpeg',
-    'image/jpg', 
-    'image/png',
-    'image/webp',
-    'image/heic'
-  ];
-  
-  return supportedTypes.includes(mimetype);
-}
+export { canProcessImage } from '@repo/shared-image-utils';
 
 /**
  * Get image dimensions from buffer
  */
-export async function getImageDimensions(buffer: Buffer): Promise<{ width: number; height: number } | null> {
+export async function getImageDimensions(
+  buffer: Buffer,
+): Promise<{ width: number; height: number } | null> {
   try {
-    const metadata = await sharp(buffer).metadata();
-    if (metadata.width && metadata.height) {
-      return { width: metadata.width, height: metadata.height };
-    }
-    return null;
+    const metadata = await getImageMetadata(buffer);
+    return { width: metadata.width, height: metadata.height };
   } catch (error) {
     console.error('Error getting image dimensions:', error);
     return null;
   }
-} 
+}

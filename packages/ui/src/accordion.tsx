@@ -4,15 +4,24 @@ import { ChevronDownIcon } from "lucide-react"
 import { cn } from "./lib/utils"
 import { getAriaAttributes, useUniqueId, KEYBOARD_KEYS } from "./lib/keyboard-navigation"
 
-export interface AccordionProps extends React.ComponentProps<typeof AccordionPrimitive.Root> {
+export interface AccordionProps {
   label?: string;
   description?: string;
+  type?: "single" | "multiple";
+  collapsible?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+  id?: string;
 }
 
 function Accordion({
   label,
   description,
   id,
+  type = "single",
+  collapsible = false,
+  className,
+  children,
   ...props
 }: AccordionProps) {
   const uniqueId = useUniqueId('accordion')
@@ -34,10 +43,15 @@ function Accordion({
       <AccordionPrimitive.Root 
         data-slot="accordion" 
         id={accordionId}
+        type={type}
+        collapsible={collapsible}
+        className={className}
         aria-describedby={description ? descriptionId : undefined}
         {...ariaAttributes}
         {...props} 
-      />
+      >
+        {children}
+      </AccordionPrimitive.Root>
       
       {description && (
         <p 

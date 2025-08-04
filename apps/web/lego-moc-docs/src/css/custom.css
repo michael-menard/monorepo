@@ -1,0 +1,157 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  /* LEGO-inspired color palette */
+  --ifm-color-primary: #e31e24; /* LEGO Red */
+  --ifm-color-primary-dark: #cc1a1f;
+  --ifm-color-primary-darker: #c1181d;
+  --ifm-color-primary-darkest: #9e1418;
+  --ifm-color-primary-light: #e6353a;
+  --ifm-color-primary-lighter: #e73d42;
+  --ifm-color-primary-lightest: #ec5a5e;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(227, 30, 36, 0.1);
+  
+  /* Additional LEGO colors */
+  --lego-yellow: #f7d117;
+  --lego-blue: #0055bf;
+  --lego-green: #237841;
+  --lego-orange: #ff8c00;
+  --lego-purple: #6b3278;
+  --lego-black: #1b1b1b;
+  --lego-white: #ffffff;
+  --lego-gray: #6b6b6b;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #ff6b6b; /* Brighter red for dark mode */
+  --ifm-color-primary-dark: #ff5252;
+  --ifm-color-primary-darker: #ff4444;
+  --ifm-color-primary-darkest: #ff3333;
+  --ifm-color-primary-light: #ff8080;
+  --ifm-color-primary-lighter: #ff8a8a;
+  --ifm-color-primary-lightest: #ffa0a0;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 107, 107, 0.2);
+}
+
+/* Custom LEGO-themed styling */
+.hero {
+  background: linear-gradient(135deg, var(--lego-red) 0%, var(--lego-blue) 100%);
+  color: white;
+}
+
+.hero__title {
+  font-size: 3rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hero__subtitle {
+  font-size: 1.5rem;
+  opacity: 0.9;
+}
+
+/* LEGO brick pattern background */
+.lego-pattern {
+  background-image: 
+    radial-gradient(circle at 25% 25%, var(--lego-red) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, var(--lego-blue) 2px, transparent 2px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+/* Custom button styling */
+.button--lego {
+  background-color: var(--lego-red);
+  border: 2px solid var(--lego-red);
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+.button--lego:hover {
+  background-color: var(--lego-red-dark);
+  border-color: var(--lego-red-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(227, 30, 36, 0.3);
+}
+
+/* LEGO-themed cards */
+.lego-card {
+  border: 3px solid var(--lego-gray);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 10px 0;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.lego-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom navbar styling */
+.navbar {
+  background: linear-gradient(90deg, var(--lego-red) 0%, var(--lego-blue) 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar__brand {
+  font-weight: bold;
+  color: white !important;
+}
+
+.navbar__link {
+  color: white !important;
+  font-weight: 500;
+}
+
+.navbar__link:hover {
+  color: var(--lego-yellow) !important;
+}
+
+/* Footer styling */
+.footer {
+  background: var(--lego-black);
+  color: white;
+}
+
+.footer__link {
+  color: var(--lego-yellow);
+}
+
+.footer__link:hover {
+  color: white;
+}
+
+/* Code block styling */
+.prism-code {
+  border-radius: 8px;
+  border-left: 4px solid var(--lego-red);
+}
+
+/* Sidebar styling */
+.theme-doc-sidebar-menu {
+  border-right: 2px solid var(--lego-gray);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .hero__title {
+    font-size: 2rem;
+  }
+  
+  .hero__subtitle {
+    font-size: 1.2rem;
+  }
+}

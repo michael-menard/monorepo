@@ -9,11 +9,16 @@ export const notFound = (req: Request, res: Response, next: NextFunction) => {
   res.status(404).json({
     success: false,
     statusCode: 404,
-    message: `Not Found - ${req.originalUrl}`
+    message: `Not Found - ${req.originalUrl}`,
   });
 };
 
-export const errorHandler: ErrorRequestHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler: ErrorRequestHandler = (
+  err: AppError,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   // Handle mongoose duplicate key error
   // @ts-ignore
   if (err.code === 11000) {
@@ -34,4 +39,4 @@ export const errorHandler: ErrorRequestHandler = (err: AppError, req: Request, r
     message: err.message || 'Internal Server Error',
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   });
-}; 
+};

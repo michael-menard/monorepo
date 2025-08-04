@@ -139,4 +139,4 @@ export const PASSWORD_RESET_SUCCESS_TEMPLATE = `
     </div>
 </body>
 </html>
-`; 
+`;

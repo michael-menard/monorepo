@@ -1,33 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import React from 'react';
+import { useTheme } from '@repo/ui';
 
 const DarkModeToggle: React.FC = () => {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    // Check if dark mode is already enabled
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setIsDark(isDarkMode);
-  }, []);
+  const { resolvedTheme, setTheme } = useTheme();
 
   const toggleDarkMode = () => {
-    const newDarkMode = !isDark;
-    setIsDark(newDarkMode);
-    
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
     <button
       onClick={toggleDarkMode}
       className="fixed top-4 right-4 z-50 p-3 bg-card border border-border rounded-lg shadow-lg hover:bg-accent transition-colors"
-      title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
     >
-      {isDark ? (
+      {resolvedTheme === 'dark' ? (
         <Sun className="h-5 w-5 text-foreground" />
       ) : (
         <Moon className="h-5 w-5 text-foreground" />

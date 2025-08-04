@@ -407,7 +407,7 @@ export const ComponentShowcase: React.FC = () => {
               <CardDescription>Accordions, tabs, and collapsible sections</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <Accordion type="single" collapsible>
+              <Accordion type="single" collapsible={true}>
                 <AccordionItem value="item-1">
                   <AccordionTrigger>Is it accessible?</AccordionTrigger>
                   <AccordionContent>

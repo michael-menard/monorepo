@@ -27,7 +27,9 @@ console.log('\n📧 Recent Test Email:');
 console.log('• Recipient: newuser123@example.com');
 console.log('• Subject: Verify your email');
 console.log('• Verification Code: 318772');
-console.log('• Preview URL: https://ethereal.email/message/aIl63afe0eT1BMRraIl9CiBpZpMT9m2NAAAAAk.5Py5iTzrV2GdSJwnlmzM');
+console.log(
+  '• Preview URL: https://ethereal.email/message/aIl63afe0eT1BMRraIl9CiBpZpMT9m2NAAAAAk.5Py5iTzrV2GdSJwnlmzM',
+);
 
 console.log('\n' + '='.repeat(50));
-console.log('🎉 Your Ethereal Email is ready for testing!'); 
+console.log('🎉 Your Ethereal Email is ready for testing!');

@@ -18,15 +18,7 @@ const meta: Meta<typeof Accordion> = {
     },
   },
   argTypes: {
-    type: {
-      control: { type: 'select' },
-      options: ['single', 'multiple'],
-      description: 'Whether to allow single or multiple items to be expanded',
-    },
-    collapsible: {
-      control: { type: 'boolean' },
-      description: 'Whether to allow all items to be collapsed',
-    },
+    // Removed problematic argTypes that don't exist in the component interface
   },
   tags: ['autodocs'],
 }

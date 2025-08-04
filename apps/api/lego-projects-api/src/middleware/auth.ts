@@ -20,14 +20,14 @@ const AUTH_API = process.env.AUTH_API as string;
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies?.token;
-    
+
     if (!token) {
       return res.status(403).json({ error: 'No authentication token provided' });
     }
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
-      
+
       if (decoded.iss !== EXPECTED_ISSUER) {
         return res.status(403).json({ error: 'Invalid token issuer' });
       }
@@ -72,7 +72,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           res.cookie('token', newToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            sameSite: 'strict',
           });
 
           req.user = newDecoded;
@@ -93,23 +93,23 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 export const canModifyProfile = (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params;
   const userId = req.user?.sub;
-  
+
   if (!userId || userId !== id) {
     return res.status(403).json({ error: 'You can only modify your own profile' });
   }
-  
+
   next();
 };
 
 // Middleware to ensure users can only access their own wishlist items
 export const wishlistOwnershipAuth = (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user?.sub;
-  
+
   if (!userId) {
     return res.status(403).json({ error: 'Authentication required' });
   }
-  
+
   // Add user ID to request for use in route handlers
   req.authenticatedUserId = userId;
   next();
-}; 
+};

@@ -22,6 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  EnhancedFormMessage,
 } from '@repo/ui';
 // import { FileUpload } from '@monorepo/fileupload';
 import {
@@ -153,7 +154,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                     <FormControl>
                       <Input placeholder="Enter item name" {...field} disabled={isLoading} />
                     </FormControl>
-                    <FormMessage />
+                    <EnhancedFormMessage />
                   </FormItem>
                 )}
               />
@@ -177,7 +178,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                         disabled={isLoading}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <EnhancedFormMessage />
                   </FormItem>
                 )}
               />
@@ -198,7 +199,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                       disabled={isLoading}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <EnhancedFormMessage />
                 </FormItem>
               )}
             />
@@ -212,7 +213,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                   <FormControl>
                     <Input type="url" placeholder="https://example.com/product" {...field} disabled={isLoading} />
                   </FormControl>
-                  <FormMessage />
+                  <EnhancedFormMessage />
                 </FormItem>
               )}
             />
@@ -238,7 +239,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <EnhancedFormMessage />
                   </FormItem>
                 )}
               />
@@ -263,7 +264,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <EnhancedFormMessage />
                   </FormItem>
                 )}
               />
@@ -299,7 +300,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                       )}
                     </div>
                   </FormControl>
-                  <FormMessage />
+                  <EnhancedFormMessage />
                 </FormItem>
               )}
             />

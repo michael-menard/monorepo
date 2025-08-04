@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3000",
-    "start": "vite --port 3000",
+    "dev": "vite --port 3001",
+    "start": "vite --port 3001",
     "build": "vite build && tsc",
     "serve": "vite preview",
     "test": "vitest run",
@@ -38,6 +38,7 @@
     "@repo/gallery": "workspace:*",
     "@repo/moc-instructions": "workspace:*",
     "@repo/profile": "workspace:*",
+    "@repo/shared-cache": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.66.5",
     "@tanstack/react-query-devtools": "^5.66.5",
@@ -72,7 +73,9 @@
     "prettier": "^3.5.3",
     "typescript": "^5.7.2",
     "vite": "^6.3.5",
+    "vite-plugin-pwa": "^1.0.2",
     "vitest": "^3.0.5",
-    "web-vitals": "^4.2.4"
+    "web-vitals": "^4.2.4",
+    "workbox-window": "^7.3.0"
   }
 }

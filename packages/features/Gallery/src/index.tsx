@@ -281,6 +281,7 @@ const Gallery: React.FC<GalleryProps> = ({
 
 // Export components
 export { Gallery, InspirationGallery, InfiniteGallery, ImageCard };
+export { default as GalleryImageLinkModal } from './components/GalleryImageLinkModal';
 export { default as GalleryWithSearch } from './components/GalleryWithSearch/index.js';
 
 // Export hooks

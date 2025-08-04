@@ -6,12 +6,13 @@ import { Plus } from 'lucide-react';
 // Import from moc-instructions package
 import {
   MocInstructionsGallery as MocInstructionsGalleryComponent,
+  
+  
+  
   useDeleteInstructionMutation,
-  useGetInstructionsQuery,
-  type MockInstructionFilter,
-  type MockInstructionSortBy,
-  type SortOrder,
+  useGetInstructionsQuery
 } from '@repo/moc-instructions';
+import type {MockInstructionFilter, MockInstructionSortBy, SortOrder} from '@repo/moc-instructions';
 
 export interface MocInstructionsGalleryProps {
   className?: string;

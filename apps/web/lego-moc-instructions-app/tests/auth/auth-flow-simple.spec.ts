@@ -136,6 +136,8 @@ test.describe('Auth Flow - E2E Tests', () => {
     test('should handle signup with existing email', async ({ page }) => {
       await authUtils.navigateToAuthPage('signup', 'Create Account');
       
+      // Use real API - no mocking needed
+      
       // Try to create account with existing email
       await page.fill('input[name="name"]', 'Test User');
       await page.fill('input[type="email"]', 'test@example.com');

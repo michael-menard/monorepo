@@ -10,7 +10,55 @@ export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, '.', '');
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Security headers plugin
+      {
+        name: 'security-headers',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            // Security headers for development
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('X-XSS-Protection', '1; mode=block');
+            res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+            res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+            res.setHeader('Content-Security-Policy', [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self'",
+              "connect-src 'self' http://localhost:* https://*",
+              "media-src 'self'",
+              "object-src 'none'",
+              "frame-src 'none'",
+              "worker-src 'self' blob:",
+              "form-action 'self'"
+            ].join('; '));
+            next();
+          });
+        },
+        generateBundle(options, bundle) {
+          // Add security headers to HTML files in production build
+          for (const fileName in bundle) {
+            const file = bundle[fileName];
+            if (file.type === 'asset' && fileName.endsWith('.html')) {
+              const html = file.source.toString();
+              const securityHeaders = `
+                <meta http-equiv="X-Content-Type-Options" content="nosniff">
+                <meta http-equiv="X-Frame-Options" content="DENY">
+                <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+                <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+                <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' http://localhost:* https://*; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self' blob:; form-action 'self'">
+              `;
+              file.source = html.replace('</head>', `${securityHeaders}</head>`);
+            }
+          }
+        }
+      }
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -46,6 +94,27 @@ export default defineConfig(({ mode, command }) => {
       open: true,
       // Enable CORS for development
       cors: true,
+      // Security headers for development server
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        'Content-Security-Policy': [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: https:",
+          "font-src 'self'",
+          "connect-src 'self' http://localhost:* https://*",
+          "media-src 'self'",
+          "object-src 'none'",
+          "frame-src 'none'",
+          "worker-src 'self' blob:",
+          "form-action 'self'"
+        ].join('; ')
+      }
     },
     define: {
       __DEV__: mode === 'development',

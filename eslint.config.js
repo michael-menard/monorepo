@@ -21,6 +21,8 @@ export default [
         browser: true,
         es2021: true,
         node: true,
+        process: true,
+        module: true,
         // DOM globals
         window: true,
         document: true,

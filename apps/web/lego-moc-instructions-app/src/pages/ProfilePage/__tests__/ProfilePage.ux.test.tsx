@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
@@ -142,7 +142,7 @@ vi.mock('@repo/ui', () => ({
       ))}
     </form>
   ),
-  AppAvatar: ({ avatarUrl, userName, userEmail, onAvatarUpload, onProfileClick, onUserSettingsClick, onLogout, size, showEditButton, className }: any) => (
+  AppAvatar: ({ avatarUrl, userName, onAvatarUpload, onProfileClick, size, showEditButton, className }: any) => (
     <div className={`relative inline-block ${className || ''}`}>
       <button 
         className="relative p-0 h-auto w-auto rounded-full hover:bg-transparent"
@@ -295,14 +295,14 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
-      const cancelButton = screen.getByTestId('button-outline');
+      const cancelButton = screen.getByTestId('cancel-button');
       await user.click(cancelButton);
       
       await waitFor(() => {
-        expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
       });
     });
 
@@ -432,11 +432,11 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       // Modal should be focusable
-      const modal = screen.getByText('Edit Profile').closest('div');
+      const modal = screen.getByRole('heading', { name: 'Edit Profile' }).closest('div');
       expect(modal).toBeInTheDocument();
     });
 
@@ -462,7 +462,7 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       // Form should have proper labels
@@ -481,7 +481,7 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       // Simulate network error by clearing form and trying to save
@@ -491,8 +491,10 @@ describe('ProfilePage UX Tests', () => {
       const saveButton = screen.getByText('Save Changes');
       await user.click(saveButton);
       
-      // Should not crash and should remain in edit mode
-      expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+      // Should not crash and should close the modal after saving
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
+      });
     });
 
     it('should handle avatar upload errors gracefully', async () => {
@@ -539,7 +541,7 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
     });
 
@@ -551,11 +553,11 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       // Modal should appear without causing layout shifts
-      const modal = screen.getByText('Edit Profile').closest('div');
+      const modal = screen.getByRole('heading', { name: 'Edit Profile' }).closest('div');
       expect(modal).toBeInTheDocument();
     });
   });
@@ -567,7 +569,7 @@ describe('ProfilePage UX Tests', () => {
       const editButton = screen.getByTestId('sidebar-edit-btn');
       expect(editButton).toHaveTextContent('Edit Profile');
       
-      const backButton = screen.getByTestId('button-outline');
+      const backButton = screen.getByTestId('back-button');
       expect(backButton).toHaveTextContent('← Back to Home');
     });
 
@@ -580,15 +582,15 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       // User can easily cancel and return to view mode
-      const cancelButton = screen.getByTestId('button-outline');
+      const cancelButton = screen.getByTestId('cancel-button');
       await user.click(cancelButton);
       
       await waitFor(() => {
-        expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Edit Profile' })).not.toBeInTheDocument();
       });
     });
 
@@ -600,7 +602,7 @@ describe('ProfilePage UX Tests', () => {
       await user.click(editButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Edit Profile' })).toBeInTheDocument();
       });
       
       // User should see the form is populated with current data

@@ -35,6 +35,9 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     navigate: mockNavigate,
   }),
+  useParams: () => ({
+    token: 'valid-token-123',
+  }),
 }))
 
 // Performance measurement utilities

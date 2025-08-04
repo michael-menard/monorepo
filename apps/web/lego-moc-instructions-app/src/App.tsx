@@ -4,7 +4,7 @@ import { config } from './config/environment.js'
 
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-r from-secondary via-tertiary to-info text-foreground flex items-center justify-center">
       <div className="text-center space-y-6">
         <h1 className="text-4xl font-bold">
           {config.app.name}

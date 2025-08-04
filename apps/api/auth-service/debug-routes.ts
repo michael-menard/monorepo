@@ -11,11 +11,11 @@ router.get('/system', (req: Request, res: Response) => {
     cpus: os.cpus().length,
     memory: {
       total: os.totalmem(),
-      free: os.freemem()
+      free: os.freemem(),
     },
     uptime: os.uptime(),
     nodeVersion: process.version,
-    processId: process.pid
+    processId: process.pid,
   });
 });
 
@@ -27,7 +27,7 @@ router.get('/env', (req: Request, res: Response) => {
     // Only show that these exist, not the actual values
     hasMongoDB: !!process.env.MONGO_URI,
     hasJwtSecret: !!process.env.JWT_SECRET,
-    hasFrontendUrl: !!process.env.FRONTEND_URL
+    hasFrontendUrl: !!process.env.FRONTEND_URL,
   });
 });
 
@@ -36,15 +36,15 @@ router.get('/db-test', async (req: Request, res: Response) => {
   try {
     // This is just a placeholder - you would import your Mongoose models here
     // and try to perform a simple query
-    res.json({ 
+    res.json({
       status: 'Database connection test not implemented yet',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
     res.status(500).json({
       status: 'error',
       message: error.message || 'Unknown error',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 });
@@ -59,7 +59,7 @@ router.all('/echo', (req: Request, res: Response) => {
     body: req.body,
     cookies: req.cookies,
     ip: req.ip,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 

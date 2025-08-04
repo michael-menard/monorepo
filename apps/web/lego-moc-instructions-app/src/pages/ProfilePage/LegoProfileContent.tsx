@@ -3,12 +3,10 @@ import {
   AppCard,
   Badge,
   Button,
-  FormSection,
   TabPanel,
 } from '@repo/ui';
 import {
   Bell,
-  Bookmark,
   Calendar,
   Download,
   Edit,
@@ -22,14 +20,13 @@ import {
   MapPin,
   Palette,
   Phone,
-  Settings,
   Shield,
   Star,
   Trash2,
   Twitter,
   User,
 } from 'lucide-react';
-import type { Profile, ProfileForm } from '@repo/profile';
+import type { Profile } from '@repo/profile';
 
 interface LegoProfileContentProps {
   profile: Profile;

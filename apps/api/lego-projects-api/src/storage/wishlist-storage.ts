@@ -15,11 +15,7 @@ if (!fs.existsSync(wishlistDir)) {
 const USE_S3 = process.env.NODE_ENV !== 'development';
 
 // Supported file types for wishlist images
-const SUPPORTED_MIME_TYPES = [
-  'image/jpeg',
-  'image/jpg', 
-  'image/heic'
-];
+const SUPPORTED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/heic'];
 
 // 20MB file size limit
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -30,11 +26,11 @@ export const wishlistLocalStorage = multer.diskStorage({
     // Create user-specific directory structure
     const userId = req.authenticatedUserId || req.user?.sub || 'unknown';
     const userDir = path.join(wishlistDir, userId);
-    
+
     if (!fs.existsSync(userDir)) {
       fs.mkdirSync(userDir, { recursive: true });
     }
-    
+
     cb(null, userDir);
   },
   filename: (req, file, cb) => {
@@ -46,48 +42,62 @@ export const wishlistLocalStorage = multer.diskStorage({
 
 // Custom error types for better error handling
 export class WishlistUploadError extends Error {
-  constructor(message: string, public statusCode: number) {
+  constructor(
+    message: string,
+    public statusCode: number,
+  ) {
     super(message);
     this.name = 'WishlistUploadError';
   }
 }
 
 // File filter with detailed validation
-export const wishlistFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+export const wishlistFileFilter = (
+  req: any,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
   // Check file type
   if (!SUPPORTED_MIME_TYPES.includes(file.mimetype)) {
-    return cb(new WishlistUploadError(
-      `Unsupported file type: ${file.mimetype}. Only JPEG and HEIC files are supported.`,
-      400
-    ));
+    return cb(
+      new WishlistUploadError(
+        `Unsupported file type: ${file.mimetype}. Only JPEG and HEIC files are supported.`,
+        400,
+      ),
+    );
   }
-  
+
   // Additional validation based on file extension
   const ext = path.extname(file.originalname).toLowerCase();
   const allowedExtensions = ['.jpg', '.jpeg', '.heic'];
-  
+
   if (!allowedExtensions.includes(ext)) {
-    return cb(new WishlistUploadError(
-      `Unsupported file extension: ${ext}. Only .jpg, .jpeg, and .heic files are supported.`,
-      400
-    ));
+    return cb(
+      new WishlistUploadError(
+        `Unsupported file extension: ${ext}. Only .jpg, .jpeg, and .heic files are supported.`,
+        400,
+      ),
+    );
   }
-  
+
   cb(null, true);
 };
 
 // Multer configuration for wishlist images
 export const wishlistImageUpload = multer({
   storage: USE_S3 ? multer.memoryStorage() : wishlistLocalStorage,
-  limits: { 
+  limits: {
     fileSize: MAX_FILE_SIZE,
-    files: 1 // Only allow one file at a time
+    files: 1, // Only allow one file at a time
   },
   fileFilter: wishlistFileFilter,
 });
 
 // Save wishlist image (handles both S3 and local storage)
-export async function saveWishlistImage(userId: string, file: Express.Multer.File): Promise<string> {
+export async function saveWishlistImage(
+  userId: string,
+  file: Express.Multer.File,
+): Promise<string> {
   if (USE_S3) {
     return uploadWishlistImageToS3(userId, file);
   } else {
@@ -113,7 +123,10 @@ export async function deleteWishlistImage(imageUrl: string): Promise<void> {
 // Delete local wishlist image file
 export function deleteLocalWishlistImage(imageUrl: string): void {
   try {
-    const filePath = path.join(process.cwd(), imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl);
+    const filePath = path.join(
+      process.cwd(),
+      imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl,
+    );
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -128,7 +141,7 @@ export function validateFileSize(fileSize: number): void {
   if (fileSize > MAX_FILE_SIZE) {
     throw new WishlistUploadError(
       `File size too large: ${Math.round(fileSize / (1024 * 1024))}MB. Maximum allowed size is ${MAX_FILE_SIZE / (1024 * 1024)}MB.`,
-      413
+      413,
     );
   }
 }
@@ -138,17 +151,17 @@ export function validateFileType(mimetype: string, originalname: string): void {
   if (!SUPPORTED_MIME_TYPES.includes(mimetype)) {
     throw new WishlistUploadError(
       `Unsupported file type: ${mimetype}. Only JPEG and HEIC files are supported.`,
-      400
+      400,
     );
   }
-  
+
   const ext = path.extname(originalname).toLowerCase();
   const allowedExtensions = ['.jpg', '.jpeg', '.heic'];
-  
+
   if (!allowedExtensions.includes(ext)) {
     throw new WishlistUploadError(
       `Unsupported file extension: ${ext}. Only .jpg, .jpeg, and .heic files are supported.`,
-      400
+      400,
     );
   }
 }
@@ -160,6 +173,6 @@ export function getFileInfo(file: Express.Multer.File) {
     mimetype: file.mimetype,
     size: file.size,
     sizeInMB: Math.round((file.size / (1024 * 1024)) * 100) / 100,
-    extension: path.extname(file.originalname).toLowerCase()
+    extension: path.extname(file.originalname).toLowerCase(),
   };
-} 
+}

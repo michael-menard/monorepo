@@ -13,7 +13,6 @@ info:
     - Password reset functionality
     - Email verification system
     - Session management
-    - Debug and monitoring endpoints
     
     ## Authentication
     Most endpoints require authentication via JWT tokens sent in HTTP-only cookies.
@@ -39,7 +38,7 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:9000
     description: Development server
   - url: https://api.lego-moc-instructions.com
     description: Production server
@@ -55,11 +54,9 @@ tags:
     description: Password reset and recovery
   - name: Health
     description: Health check and monitoring
-  - name: Debug
-    description: Debug and development endpoints
 
 paths:
-  /auth/health:
+  /api/auth/health:
     get:
       tags:
         - Health
@@ -77,7 +74,7 @@ paths:
                     type: string
                     example: "ok"
 
-  /auth/sign-up:
+  /api/auth/sign-up:
     post:
       tags:
         - User Management
@@ -147,7 +144,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/login:
+  /api/auth/login:
     post:
       tags:
         - Authentication
@@ -219,7 +216,7 @@ paths:
                     message: "Email not verified"
                     code: "EMAIL_NOT_VERIFIED"
 
-  /auth/log-out:
+  /api/auth/log-out:
     post:
       tags:
         - Authentication
@@ -236,7 +233,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /auth/check-auth:
+  /api/auth/check-auth:
     get:
       tags:
         - Authentication
@@ -283,7 +280,7 @@ paths:
                     success: false
                     message: "User not found"
 
-  /auth/verify-email:
+  /api/auth/verify-email:
     post:
       tags:
         - Email Verification
@@ -336,7 +333,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/resend-verification:
+  /api/auth/resend-verification:
     post:
       tags:
         - Email Verification
@@ -406,7 +403,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/forgot-password:
+  /api/auth/forgot-password:
     post:
       tags:
         - Password Reset
@@ -462,7 +459,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/reset-password/{token}:
+  /api/auth/reset-password/{token}:
     post:
       tags:
         - Password Reset
@@ -525,179 +522,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /debug/system:
-    get:
-      tags:
-        - Debug
-      summary: System information
-      description: Get system information for debugging purposes
-      responses:
-        '200':
-          description: System information retrieved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  platform:
-                    type: string
-                    example: "darwin"
-                  arch:
-                    type: string
-                    example: "x64"
-                  cpus:
-                    type: integer
-                    example: 8
-                  memory:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                        example: 17179869184
-                      free:
-                        type: integer
-                        example: 8589934592
-                  uptime:
-                    type: number
-                    example: 12345.67
-                  nodeVersion:
-                    type: string
-                    example: "v18.17.0"
-                  processId:
-                    type: integer
-                    example: 12345
-
-  /debug/env:
-    get:
-      tags:
-        - Debug
-      summary: Environment information
-      description: Get safe environment variable information
-      responses:
-        '200':
-          description: Environment information retrieved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  nodeEnv:
-                    type: string
-                    example: "development"
-                  port:
-                    type: string
-                    example: "5000"
-                  hasMongoDB:
-                    type: boolean
-                    example: true
-                  hasJwtSecret:
-                    type: boolean
-                    example: true
-                  hasFrontendUrl:
-                    type: boolean
-                    example: true
-
-  /debug/db-test:
-    get:
-      tags:
-        - Debug
-      summary: Database connection test
-      description: Test database connectivity
-      responses:
-        '200':
-          description: Database test completed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "Database connection test not implemented yet"
-                  timestamp:
-                    type: string
-                    format: date-time
-                    example: "2024-01-15T10:30:00Z"
-
-  /debug/echo:
-    get:
-      tags:
-        - Debug
-      summary: Echo request details
-      description: Echo back request details for debugging
-      responses:
-        '200':
-          description: Request details echoed back
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  method:
-                    type: string
-                    example: "GET"
-                  url:
-                    type: string
-                    example: "/debug/echo"
-                  headers:
-                    type: object
-                  query:
-                    type: object
-                  body:
-                    type: object
-                  cookies:
-                    type: object
-                  ip:
-                    type: string
-                    example: "127.0.0.1"
-                  timestamp:
-                    type: string
-                    format: date-time
-                    example: "2024-01-15T10:30:00Z"
-
-  /test/hello:
-    get:
-      tags:
-        - Debug
-      summary: Hello world test
-      description: Simple hello world endpoint for testing
-      responses:
-        '200':
-          description: Hello world response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Hello, world!"
-
-  /test/info:
-    get:
-      tags:
-        - Debug
-      summary: Server information
-      description: Get basic server information
-      responses:
-        '200':
-          description: Server information retrieved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  server:
-                    type: string
-                    example: "Express"
-                  time:
-                    type: string
-                    format: date-time
-                    example: "2024-01-15T10:30:00Z"
-                  environment:
-                    type: string
-                    example: "development"
 
 components:
   securitySchemes:

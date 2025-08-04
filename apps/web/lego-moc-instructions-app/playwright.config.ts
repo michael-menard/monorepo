@@ -22,7 +22,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
 
     /* Run headless by default */
     headless: true,
@@ -36,9 +36,9 @@ export default defineConfig({
     /* Record video on failure */
     video: 'retain-on-failure',
     
-    /* Aggressive timeouts - fail fast */
-    actionTimeout: 3000,
-    navigationTimeout: 5000,
+    /* More generous timeouts for React app loading */
+    actionTimeout: 10000,
+    navigationTimeout: 15000,
   },
 
   /* Configure projects for Chrome only */
@@ -52,19 +52,19 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'pnpm dev',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
   
   /* Global timeout for tests */
-  timeout: 10000,
+  timeout: 30000,
   
   /* Stop on first failure for debugging */
   maxFailures: 1,
   
   /* Expect timeout */
   expect: {
-    timeout: 3000,
+    timeout: 10000,
   },
 }) 

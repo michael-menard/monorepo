@@ -19,7 +19,7 @@ export const sendVerificationEmail = async (email: string, verificationToken: st
     console.log('✅ Verification email sent successfully');
     console.log('📧 Message ID:', info.messageId);
     console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(info));
-    
+
     // Track email for cleanup
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
@@ -31,7 +31,7 @@ export const sendVerificationEmail = async (email: string, verificationToken: st
         date: new Date().toISOString(),
       });
     }
-    
+
     return info;
   } catch (error) {
     console.error('❌ Error sending verification email:', error);
@@ -55,7 +55,7 @@ export const sendWelcomeEmail = async (email: string, name: string) => {
     console.log('✅ Welcome email sent successfully');
     console.log('📧 Message ID:', info.messageId);
     console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(info));
-    
+
     return info;
   } catch (error) {
     console.error('❌ Error sending welcome email:', error);
@@ -75,7 +75,7 @@ export const sendPasswordResetEmail = async (email: string, resetURL: string) =>
     console.log('✅ Password reset email sent successfully');
     console.log('📧 Message ID:', info.messageId);
     console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(info));
-    
+
     return info;
   } catch (error) {
     console.error('❌ Error sending password reset email:', error);
@@ -95,7 +95,7 @@ export const sendResetSuccessEmail = async (email: string) => {
     console.log('✅ Password reset success email sent successfully');
     console.log('📧 Message ID:', info.messageId);
     console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(info));
-    
+
     return info;
   } catch (error) {
     console.error('❌ Error sending password reset success email:', error);
@@ -107,11 +107,11 @@ export const sendResetSuccessEmail = async (email: string) => {
 export const testEmailConfiguration = async () => {
   try {
     console.log('🧪 Testing Ethereal Email configuration...');
-    
+
     // Verify transporter
     await transporter.verify();
     console.log('✅ Transporter verified successfully');
-    
+
     // Send test email
     const info = await transporter.sendMail({
       from: `"${sender.name}" <${sender.email}>`,
@@ -124,10 +124,10 @@ export const testEmailConfiguration = async () => {
     console.log('✅ Test email sent successfully');
     console.log('📧 Message ID:', info.messageId);
     console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(info));
-    
+
     return info;
   } catch (error) {
     console.error('❌ Email configuration test failed:', error);
     throw error;
   }
-}; 
+};

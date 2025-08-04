@@ -7,7 +7,15 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
-import { indexImage, updateImage, deleteImage as deleteImageES, indexAlbum, updateAlbum, deleteAlbum, searchGalleryItems } from '../utils/elasticsearch';
+import {
+  indexImage,
+  updateImage,
+  deleteImage as deleteImageES,
+  indexAlbum,
+  updateAlbum,
+  deleteAlbum,
+  searchGalleryItems,
+} from '../utils/elasticsearch';
 
 // POST /api/images - Upload gallery image
 export const uploadGalleryImage = async (req: Request, res: Response) => {
@@ -41,18 +49,21 @@ export const uploadGalleryImage = async (req: Request, res: Response) => {
     const imageUrl = `/${filepath.replace(/\\/g, '/')}`;
     // Insert metadata into DB
     const { title, description, tags } = req.body;
-    const [image] = await db.insert(galleryImages).values({
-      id: imageId,
-      userId,
-      title: title || filename,
-      description: description || null,
-      tags: tags ? (Array.isArray(tags) ? tags : [tags]) : null,
-      imageUrl,
-      albumId: albumId !== 'uncategorized' ? albumId : null,
-      flagged: false,
-      createdAt: new Date(),
-      lastUpdatedAt: new Date(),
-    }).returning();
+    const [image] = await db
+      .insert(galleryImages)
+      .values({
+        id: imageId,
+        userId,
+        title: title || filename,
+        description: description || null,
+        tags: tags ? (Array.isArray(tags) ? tags : [tags]) : null,
+        imageUrl,
+        albumId: albumId !== 'uncategorized' ? albumId : null,
+        flagged: false,
+        createdAt: new Date(),
+        lastUpdatedAt: new Date(),
+      })
+      .returning();
     // Index in Elasticsearch
     await indexImage(image);
     return res.status(201).json({
@@ -61,7 +72,9 @@ export const uploadGalleryImage = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('uploadGalleryImage error:', error);
-    return res.status(500).json({ error: 'Failed to upload image', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to upload image', details: (error as Error).message });
   }
 };
 
@@ -81,7 +94,9 @@ export const updateGalleryImage = async (req: Request, res: Response) => {
     }
     // Only owner or admin can edit
     if (image.userId !== userId && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden: You do not have permission to edit this image' });
+      return res
+        .status(403)
+        .json({ error: 'Forbidden: You do not have permission to edit this image' });
     }
     // Validate input
     const { title, description, tags, albumId } = req.body;
@@ -112,7 +127,8 @@ export const updateGalleryImage = async (req: Request, res: Response) => {
     }
     updateData.lastUpdatedAt = new Date();
     // Update DB
-    const [updatedImage] = await db.update(galleryImages)
+    const [updatedImage] = await db
+      .update(galleryImages)
       .set(updateData)
       .where(eq(galleryImages.id, id))
       .returning();
@@ -124,7 +140,9 @@ export const updateGalleryImage = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('updateGalleryImage error:', error);
-    return res.status(500).json({ error: 'Failed to update image', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to update image', details: (error as Error).message });
   }
 };
 
@@ -144,7 +162,9 @@ export const deleteGalleryImage = async (req: Request, res: Response) => {
     }
     // Only owner or admin can delete
     if (image.userId !== userId && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden: You do not have permission to delete this image' });
+      return res
+        .status(403)
+        .json({ error: 'Forbidden: You do not have permission to delete this image' });
     }
     // Remove file from local storage
     if (image.imageUrl && image.imageUrl.startsWith('/uploads/')) {
@@ -154,7 +174,8 @@ export const deleteGalleryImage = async (req: Request, res: Response) => {
       }
     }
     // Remove from DB
-    const [deletedImage] = await db.delete(galleryImages)
+    const [deletedImage] = await db
+      .delete(galleryImages)
       .where(eq(galleryImages.id, id))
       .returning();
     // Remove from Elasticsearch
@@ -165,7 +186,9 @@ export const deleteGalleryImage = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('deleteGalleryImage error:', error);
-    return res.status(500).json({ error: 'Failed to delete image', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to delete image', details: (error as Error).message });
   }
 };
 
@@ -187,31 +210,33 @@ export const flagImage = async (req: Request, res: Response) => {
     }
     const { imageId, reason } = parse.data;
     // Check if already flagged
-    const existing = await db.select().from(galleryFlags)
-      .where(
-        and(
-          eq(galleryFlags.imageId, imageId),
-          eq(galleryFlags.userId, userId)
-        )
-      );
+    const existing = await db
+      .select()
+      .from(galleryFlags)
+      .where(and(eq(galleryFlags.imageId, imageId), eq(galleryFlags.userId, userId)));
     if (existing.length > 0) {
       return res.status(409).json({ error: 'You have already flagged this image' });
     }
     // Insert flag
-    const [flag] = await db.insert(galleryFlags).values({
-      imageId,
-      userId,
-      reason: reason || null,
-      createdAt: new Date(),
-      lastUpdatedAt: new Date(),
-    }).returning();
+    const [flag] = await db
+      .insert(galleryFlags)
+      .values({
+        imageId,
+        userId,
+        reason: reason || null,
+        createdAt: new Date(),
+        lastUpdatedAt: new Date(),
+      })
+      .returning();
     return res.status(201).json({
       message: 'Image flagged for moderation',
       flag,
     });
   } catch (error) {
     console.error('flagImage error:', error);
-    return res.status(500).json({ error: 'Failed to flag image', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to flag image', details: (error as Error).message });
   }
 };
 
@@ -231,7 +256,9 @@ export const getAlbum = async (req: Request, res: Response) => {
     }
     // Only owner or admin can view
     if (album.userId !== userId && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden: You do not have permission to view this album' });
+      return res
+        .status(403)
+        .json({ error: 'Forbidden: You do not have permission to view this album' });
     }
     // Fetch images in album
     const images = await db.select().from(galleryImages).where(eq(galleryImages.albumId, id));
@@ -241,7 +268,9 @@ export const getAlbum = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('getAlbum error:', error);
-    return res.status(500).json({ error: 'Failed to fetch album', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to fetch album', details: (error as Error).message });
   }
 };
 
@@ -257,20 +286,23 @@ export const getAllAlbums = async (req: Request, res: Response) => {
     const albums = await db.select().from(galleryAlbums).where(eq(galleryAlbums.userId, userId));
     if (withImages) {
       // Fetch images for each album using inArray
-      const albumIds = albums.map(a => a.id);
-      const images = albumIds.length > 0
-        ? await db.select().from(galleryImages).where(inArray(galleryImages.albumId, albumIds))
-        : [];
-      const albumsWithImages = albums.map(album => ({
+      const albumIds = albums.map((a) => a.id);
+      const images =
+        albumIds.length > 0
+          ? await db.select().from(galleryImages).where(inArray(galleryImages.albumId, albumIds))
+          : [];
+      const albumsWithImages = albums.map((album) => ({
         ...album,
-        images: images.filter(img => img.albumId === album.id),
+        images: images.filter((img) => img.albumId === album.id),
       }));
       return res.json({ albums: albumsWithImages });
     }
     return res.json({ albums });
   } catch (error) {
     console.error('getAllAlbums error:', error);
-    return res.status(500).json({ error: 'Failed to fetch albums', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to fetch albums', details: (error as Error).message });
   }
 };
 
@@ -295,12 +327,14 @@ export const getAllImages = async (req: Request, res: Response) => {
     let images = await db.select().from(galleryImages).where(whereClause);
     if (tag) {
       // Filter by tag (array contains)
-      images = images.filter(img => Array.isArray(img.tags) && img.tags.includes(String(tag)));
+      images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(String(tag)));
     }
     return res.json({ images });
   } catch (error) {
     console.error('getAllImages error:', error);
-    return res.status(500).json({ error: 'Failed to fetch images', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to fetch images', details: (error as Error).message });
   }
 };
 
@@ -310,18 +344,23 @@ export const createAlbum = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const { title, description, coverImageId } = req.body;
-    const [album] = await db.insert(galleryAlbums).values({
-      userId,
-      title,
-      description,
-      coverImageId,
-      createdAt: new Date(),
-      lastUpdatedAt: new Date(),
-    }).returning();
+    const [album] = await db
+      .insert(galleryAlbums)
+      .values({
+        userId,
+        title,
+        description,
+        coverImageId,
+        createdAt: new Date(),
+        lastUpdatedAt: new Date(),
+      })
+      .returning();
     await indexAlbum(album);
     return res.status(201).json({ album });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to create album', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to create album', details: (error as Error).message });
   }
 };
 
@@ -332,14 +371,17 @@ export const updateAlbumHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const { title, description, coverImageId } = req.body;
-    const [album] = await db.update(galleryAlbums)
+    const [album] = await db
+      .update(galleryAlbums)
       .set({ title, description, coverImageId, lastUpdatedAt: new Date() })
       .where(eq(galleryAlbums.id, id))
       .returning();
     await updateAlbum(album);
     return res.json({ album });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to update album', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to update album', details: (error as Error).message });
   }
 };
 
@@ -349,13 +391,13 @@ export const deleteAlbumHandler = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const { id } = req.params;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const [album] = await db.delete(galleryAlbums)
-      .where(eq(galleryAlbums.id, id))
-      .returning();
+    const [album] = await db.delete(galleryAlbums).where(eq(galleryAlbums.id, id)).returning();
     await deleteAlbum(id);
     return res.json({ album });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to delete album', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to delete album', details: (error as Error).message });
   }
 };
 
@@ -400,12 +442,11 @@ export const getGallery = async (req: Request, res: Response) => {
         let albums = await db.select().from(galleryAlbums).where(eq(galleryAlbums.userId, userId));
         if (search) {
           const q = search.toLowerCase();
-          albums = albums.filter(a =>
-            a.title?.toLowerCase().includes(q) ||
-            a.description?.toLowerCase().includes(q)
+          albums = albums.filter(
+            (a) => a.title?.toLowerCase().includes(q) || a.description?.toLowerCase().includes(q),
           );
         }
-        items.push(...albums.map(a => ({ ...a, type: 'album' })));
+        items.push(...albums.map((a) => ({ ...a, type: 'album' })));
       }
       // Fetch images (standalone only unless albumId is specified)
       if ((type === 'image' || type === 'all') && !albumId) {
@@ -413,38 +454,46 @@ export const getGallery = async (req: Request, res: Response) => {
         if (flagged !== undefined) {
           conditions.push(eq(galleryImages.flagged, flagged === 'true'));
         }
-        let images = await db.select().from(galleryImages).where(and(...conditions));
+        let images = await db
+          .select()
+          .from(galleryImages)
+          .where(and(...conditions));
         if (tag) {
-          images = images.filter(img => Array.isArray(img.tags) && img.tags.includes(tag));
+          images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(tag));
         }
         if (search) {
           const q = search.toLowerCase();
-          images = images.filter(img =>
-            img.title?.toLowerCase().includes(q) ||
-            img.description?.toLowerCase().includes(q) ||
-            (Array.isArray(img.tags) && img.tags.some(t => t.toLowerCase().includes(q)))
+          images = images.filter(
+            (img) =>
+              img.title?.toLowerCase().includes(q) ||
+              img.description?.toLowerCase().includes(q) ||
+              (Array.isArray(img.tags) && img.tags.some((t) => t.toLowerCase().includes(q))),
           );
         }
-        items.push(...images.map(i => ({ ...i, type: 'image' })));
+        items.push(...images.map((i) => ({ ...i, type: 'image' })));
       } else if ((type === 'image' || type === 'all') && albumId) {
         // If albumId is specified, show images in that album
         const conditions = [eq(galleryImages.userId, userId), eq(galleryImages.albumId, albumId)];
         if (flagged !== undefined) {
           conditions.push(eq(galleryImages.flagged, flagged === 'true'));
         }
-        let images = await db.select().from(galleryImages).where(and(...conditions));
+        let images = await db
+          .select()
+          .from(galleryImages)
+          .where(and(...conditions));
         if (tag) {
-          images = images.filter(img => Array.isArray(img.tags) && img.tags.includes(tag));
+          images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(tag));
         }
         if (search) {
           const q = search.toLowerCase();
-          images = images.filter(img =>
-            img.title?.toLowerCase().includes(q) ||
-            img.description?.toLowerCase().includes(q) ||
-            (Array.isArray(img.tags) && img.tags.some(t => t.toLowerCase().includes(q)))
+          images = images.filter(
+            (img) =>
+              img.title?.toLowerCase().includes(q) ||
+              img.description?.toLowerCase().includes(q) ||
+              (Array.isArray(img.tags) && img.tags.some((t) => t.toLowerCase().includes(q))),
           );
         }
-        items.push(...images.map(i => ({ ...i, type: 'image' })));
+        items.push(...images.map((i) => ({ ...i, type: 'image' })));
       }
     }
 
@@ -453,12 +502,14 @@ export const getGallery = async (req: Request, res: Response) => {
 
     // Pagination (offset-based)
     const paged = items.slice(0, limit); // already paged if using ES
-    const nextCursor = items.length > limit ? (cursor + limit) : null;
+    const nextCursor = items.length > limit ? cursor + limit : null;
     const hasMore = nextCursor !== null;
 
     return res.json({ items: paged, nextCursor, hasMore });
   } catch (error) {
     console.error('getGallery error:', error);
-    return res.status(500).json({ error: 'Failed to fetch gallery', details: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: 'Failed to fetch gallery', details: (error as Error).message });
   }
-}; 
+};

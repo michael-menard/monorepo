@@ -22,10 +22,7 @@ const meta: Meta<typeof MultiSelect> = {
       control: { type: 'boolean' },
       description: 'Whether the component is disabled',
     },
-    maxSelected: {
-      control: { type: 'number' },
-      description: 'Maximum number of options that can be selected',
-    },
+    // Removed maxSelected as it doesn't exist in the component interface
   },
   tags: ['autodocs'],
 }
@@ -85,7 +82,7 @@ export const WithLabel: Story = {
   render: (args) => (
     <div className="grid w-full max-w-sm items-center gap-1.5">
       <Label htmlFor="fruits">Favorite Fruits</Label>
-      <MultiSelect {...args} id="fruits" />
+      <MultiSelect {...args} />
     </div>
   ),
   args: {
@@ -98,7 +95,7 @@ export const WithDefaultValue: Story = {
   args: {
     options: fruits,
     placeholder: 'Select fruits...',
-    defaultValue: ['apple', 'banana'],
+    selectedValues: ['apple', 'banana'],
   },
 }
 
@@ -114,7 +111,7 @@ export const WithMaxSelected: Story = {
   args: {
     options: fruits,
     placeholder: 'Select up to 3 fruits...',
-    maxSelected: 3,
+    // Removed maxSelected as it doesn't exist in the component interface
   },
 }
 

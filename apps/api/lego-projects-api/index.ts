@@ -10,12 +10,13 @@ if (!process.env.AUTH_API) {
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import profileRouter from './src/routes/index';
-import { 
-  securityHeaders, 
-  sanitizeRequest, 
-  securityLogger, 
-  createRateLimiters 
+import {
+  securityHeaders,
+  sanitizeRequest,
+  securityLogger,
+  createRateLimiters,
 } from './src/middleware/security';
+import { connectRedis } from './src/utils/redis';
 
 const app = express();
 
@@ -46,9 +47,22 @@ app.get('/', (req, res) => {
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+
+  // Initialize Redis connection
+  connectRedis()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log('Redis cache initialized');
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to connect to Redis:', error);
+      // Still start the server even if Redis fails
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT} (without Redis cache)`);
+      });
+    });
 }
 
-export default app; 
+export default app;

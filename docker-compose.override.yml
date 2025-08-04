@@ -1,0 +1,66 @@
+services:
+  frontend:
+    environment:
+      - VITE_API_URL=http://localhost:9000/api
+      - VITE_LEGO_API_URL=http://localhost:3001/api
+    volumes:
+      - ./apps/web/lego-moc-instructions-app:/app
+      - /app/node_modules
+
+  auth-service:
+    environment:
+      - NODE_ENV=development
+      - PORT=9000
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/myapp?authSource=admin
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRE=24h
+      - COOKIE_EXPIRE=24
+      - SMTP_HOST=smtp.ethereal.email
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@example.com
+      - SMTP_PASS=your-email-password
+      - FROM_EMAIL=noreply@yourdomain.com
+      - FROM_NAME=LEGO MOC App
+    volumes:
+      - ./apps/api/auth-service:/app/apps/api/auth-service
+      - /app/node_modules
+
+  lego-api:
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/lego_projects
+      - REDIS_URL=redis://redis:6379
+      - AWS_ACCESS_KEY_ID=your-aws-access-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+      - AWS_REGION=us-east-1
+      - AWS_S3_BUCKET=your-s3-bucket-name
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+    volumes:
+      - ./apps/api/lego-projects-api:/app/apps/api/lego-projects-api
+      - /app/node_modules
+      - ./uploads:/app/apps/api/lego-projects-api/uploads
+
+  mongodb:
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: myapp
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+
+  postgres:
+    environment:
+      POSTGRES_DB: lego_projects
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin 

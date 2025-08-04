@@ -1,13 +1,16 @@
 import React from 'react';
 import { Card, CardContent } from '@repo/ui';
+import ProfileTabs from '../ProfileTabs';
 
 export interface ProfileMainProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   contentClassName?: string;
   title?: string;
   description?: string;
   showCard?: boolean;
+  showTabs?: boolean;
+  defaultTab?: string;
 }
 
 export const ProfileMain: React.FC<ProfileMainProps> = ({
@@ -17,6 +20,8 @@ export const ProfileMain: React.FC<ProfileMainProps> = ({
   title,
   description,
   showCard = true,
+  showTabs = true,
+  defaultTab = 'instructions',
 }) => {
   const content = (
     <div className={`w-full ${contentClassName}`}>
@@ -30,7 +35,11 @@ export const ProfileMain: React.FC<ProfileMainProps> = ({
           {description && <p className="text-gray-600 dark:text-gray-400">{description}</p>}
         </div>
       )}
-      {children}
+      {showTabs ? (
+        <ProfileTabs defaultTab={defaultTab} />
+      ) : (
+        children
+      )}
     </div>
   );
 

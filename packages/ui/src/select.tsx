@@ -16,7 +16,7 @@ const SelectTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
 >(({ className, children, disabled, ...props }, ref) => {
   const ariaAttributes = getAriaAttributes({
-    expanded: props['aria-expanded'],
+    expanded: props['aria-expanded'] === 'true',
     disabled,
   })
 

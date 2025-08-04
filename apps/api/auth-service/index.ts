@@ -1,58 +1,62 @@
 import express, { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { connectDB } from "./db/connectDB";
+import { connectDB } from './db/connectDB';
 import { notFound, errorHandler } from './middleware/errorMiddleware';
 
 dotenv.config();
 
-const app = express()
+const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(express.json())
-app.use(cookieParser())
+app.use(express.json());
+app.use(cookieParser());
 
 // Enable CORS for all origins during development
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173', 
-    'http://localhost:5173', 
-    'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  credentials: true,
-}))
+app.use(
+  cors({
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    credentials: true,
+  }),
+);
 
 // Add security headers with Helmet
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      workerSrc: ["'self'", 'blob:'],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        workerSrc: ["'self'", 'blob:'],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-  referrerPolicy: { policy: 'no-referrer-when-downgrade' },
-}));
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'no-referrer-when-downgrade' },
+  }),
+);
 
 // Request logger middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -61,7 +65,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Enable pre-flight requests for all routes
-app.options('*', cors())
+app.options('*', cors());
 
 // Routes
 import routes from './routes/auth.routes';
@@ -79,7 +83,7 @@ const startServer = async () => {
 
   try {
     // Try to connect to MongoDB (but don't block server startup)
-    connectDB().catch(err => {
+    connectDB().catch((err) => {
       console.warn('MongoDB connection failed, but continuing server startup');
     });
 

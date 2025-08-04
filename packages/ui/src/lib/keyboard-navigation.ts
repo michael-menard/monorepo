@@ -165,7 +165,7 @@ export const useFocusTrap = (isActive: boolean = false) => {
       containerRef.current.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"], [role="button"], [role="tab"], [role="menuitem"], [role="option"]'
       )
-    ).filter(el => !el.disabled && el.offsetParent !== null && el.style.display !== 'none')
+    ).filter(el => !(el as any).disabled && el.offsetParent !== null && el.style.display !== 'none')
   }, [])
 
   const focusFirstElement = useCallback(() => {
@@ -353,7 +353,7 @@ export const isFocusable = (element: HTMLElement): boolean => {
   
   // Elements that are naturally focusable
   if (['input', 'select', 'textarea', 'button', 'a'].includes(tagName)) {
-    return !element.disabled && element.offsetParent !== null
+    return !(element as any).disabled && element.offsetParent !== null
   }
   
   // Elements with tabindex >= 0

@@ -1,17 +1,18 @@
 openapi: 3.0.3
 info:
   title: LEGO Projects API
-  version: 1.0.0
+  version: 1.0.1
   description: |
     Comprehensive API for LEGO MOC Instructions application with enhanced security features.
     
     **Core Features:**
     - User profile management with avatar uploads
-    - Gallery and album management
-    - MOC instructions and file management
-    - Wishlist functionality with reordering
+    - Gallery and album management with image optimization
+    - MOC instructions and file management with download capabilities
+    - Wishlist functionality with reordering and search
     - Full-text search via Elasticsearch
     - Image processing and optimization
+    - File upload with virus scanning and content validation
     
     **Security Features:**
     - File content validation and virus scanning
@@ -19,10 +20,11 @@ info:
     - Image processing and optimization
     - Authentication via JWT cookies
     - Request sanitization and security headers
+    - File access control and ownership validation
     
     **File Upload:**
-    - Supports JPEG, PNG, and HEIC formats
-    - Maximum file size: 20MB
+    - Supports JPEG, PNG, HEIC, and WebP formats
+    - Maximum file size: 20MB for gallery, 10MB for avatars
     - Automatic image optimization and resizing
     - Secure file storage with S3 or local fallback
     - Virus scanning and content validation
@@ -31,6 +33,13 @@ info:
     - Elasticsearch integration for full-text search
     - Real-time indexing of MOC instructions and wishlist items
     - Advanced filtering and sorting capabilities
+    - Category-based filtering for wishlist items
+    
+    **Database:**
+    - PostgreSQL with Drizzle ORM
+    - Optimized indexes for lazy loading
+    - Cascade deletes for data integrity
+    - UUID primary keys for security
     
   contact:
     name: LEGO MOC Instructions Team
@@ -44,7 +53,24 @@ servers:
     description: Development server
   - url: https://api.lego-moc-instructions.com
     description: Production server
+
 paths:
+  # Health Check
+  /:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the LEGO Projects API is running
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Lego Projects API is running"
+  
   # User Profile Management
   /api/users/{id}:
     $ref: './paths/users.yaml#/api/users/{id}'
@@ -80,16 +106,10 @@ paths:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download-info'
   /api/mocs/{id}/files/{fileId}/download:
     $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/files/{fileId}/download'
-  
-  # MOC Parts Lists (Legacy - for reference)
-  /api/moc-instructions/{mocId}/parts-lists:
-    $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists'
-  /api/moc-instructions/{mocId}/parts-lists/{partsListId}:
-    $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists/{partsListId}'
-  /api/moc-instructions/{mocId}/parts-lists/{partsListId}/status:
-    $ref: './paths/moc-parts-lists.yaml#/moc-instructions/{mocId}/parts-lists/{partsListId}/status'
-  /api/user/parts-lists/summary:
-    $ref: './paths/moc-parts-lists.yaml#/user/parts-lists/summary'
+  /api/mocs/{id}/gallery-images:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/gallery-images'
+  /api/mocs/{id}/gallery-images/{galleryImageId}:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/{id}/gallery-images/{galleryImageId}'
   
   # Wishlist Management
   /api/wishlist:
@@ -111,22 +131,6 @@ paths:
   /api/wishlist/image:
     $ref: './paths/wishlist.yaml#/api/wishlist/image'
 
-  # Health Check
-  /:
-    get:
-      tags:
-        - Health
-      summary: Health check
-      description: Check if the LEGO Projects API is running
-      responses:
-        '200':
-          description: API is healthy
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "Lego Projects API is running"
-
 tags:
   - name: Health
     description: Health check and monitoring
@@ -142,8 +146,6 @@ tags:
     description: Full-text search functionality
   - name: Files
     description: File upload, download, and management
-  - name: Security
-    description: Security and moderation features
   - name: Security
     description: Security and moderation features
 

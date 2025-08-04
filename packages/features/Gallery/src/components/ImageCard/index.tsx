@@ -16,6 +16,7 @@ export interface ImageCardProps {
   onLike?: (liked: boolean) => void;
   onAddToAlbum?: () => void;
   onDownload?: () => void;
+  onLinkToMoc?: () => void;
   draggableId?: string;
   onDragStart?: (id: string) => void;
   onDragEnd?: () => void;
@@ -25,6 +26,13 @@ export interface ImageCardProps {
   onDragLeave?: () => void;
   selected?: boolean;
   onSelect?: (checked: boolean) => void;
+  // Keyboard accessibility props
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  isKeyboardFocused?: boolean;
+  isKeyboardDragging?: boolean;
+  showKeyboardInstructions?: boolean;
 }
 
 const formatDate = (date?: string | Date) => {
@@ -60,6 +68,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
   onLike,
   onAddToAlbum,
   onDownload,
+  onLinkToMoc,
   draggableId,
   onDragStart,
   onDragEnd,
@@ -69,6 +78,13 @@ const ImageCard: React.FC<ImageCardProps> = ({
   onDragLeave,
   selected = false,
   onSelect,
+  // Keyboard accessibility props
+  onKeyDown,
+  onFocus,
+  onBlur,
+  isKeyboardFocused = false,
+  isKeyboardDragging = false,
+  showKeyboardInstructions = false,
 }) => {
   const [liked, setLiked] = useState(initialLiked);
   const [isHovered, setIsHovered] = useState(false);
@@ -93,6 +109,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
       onClick: onAddToAlbum,
       icon: '📁',
       className: 'bg-orange-500 hover:bg-orange-600',
+    },
+    {
+      label: 'Link to MOC',
+      onClick: onLinkToMoc,
+      icon: '🔗',
+      className: 'bg-indigo-500 hover:bg-indigo-600',
     },
   ].filter((button) => button.onClick);
 
@@ -128,19 +150,28 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
   return (
     <motion.div
-      className={`group relative bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer ${isDragOver ? 'ring-4 ring-blue-400' : ''} ${selected ? 'ring-2 ring-blue-600' : ''}`}
+      className={`group relative bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer ${isDragOver ? 'ring-4 ring-blue-400' : ''} ${selected ? 'ring-2 ring-blue-600' : ''} ${isKeyboardFocused ? 'ring-2 ring-blue-400 ring-offset-2' : ''} ${isKeyboardDragging ? 'ring-2 ring-blue-600 ring-offset-2 bg-blue-50' : ''}`}
       tabIndex={0}
       role="button"
-      aria-label={title}
+      aria-label={`${title}. ${showKeyboardInstructions ? 'Press Enter or Space to start moving this image. Use arrow keys to navigate.' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onView}
       onKeyDown={(e) => {
+        // Handle custom keyboard events first
+        if (onKeyDown) {
+          onKeyDown(e);
+          return;
+        }
+        
+        // Default behavior for Enter/Space
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onView?.();
         }
       }}
+      onFocus={onFocus}
+      onBlur={onBlur}
       whileHover={{ y: -4 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}

@@ -1,7 +1,12 @@
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { processImage, canProcessImage, THUMBNAIL_CONFIG } from '../utils/imageProcessor';
 import fs from 'fs';
@@ -15,17 +20,17 @@ const USE_S3 = process.env.NODE_ENV !== 'development';
 
 // Avatar file type configurations
 export const AVATAR_FILE_TYPES = {
-  AVATAR: 'avatar'
+  AVATAR: 'avatar',
 } as const;
 
-export type AvatarFileType = typeof AVATAR_FILE_TYPES[keyof typeof AVATAR_FILE_TYPES];
+export type AvatarFileType = (typeof AVATAR_FILE_TYPES)[keyof typeof AVATAR_FILE_TYPES];
 
 export const ALLOWED_AVATAR_EXTENSIONS: Record<AvatarFileType, string[]> = {
-  [AVATAR_FILE_TYPES.AVATAR]: ['.jpg', '.jpeg', '.heic']
+  [AVATAR_FILE_TYPES.AVATAR]: ['.jpg', '.jpeg', '.heic'],
 };
 
 export const ALLOWED_AVATAR_MIME_TYPES: Record<AvatarFileType, string[]> = {
-  [AVATAR_FILE_TYPES.AVATAR]: ['image/jpeg', 'image/jpg', 'image/heic']
+  [AVATAR_FILE_TYPES.AVATAR]: ['image/jpeg', 'image/jpg', 'image/heic'],
 };
 
 // Maximum file size for avatars (10MB)
@@ -42,38 +47,39 @@ const avatarLocalStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const uniqueId = uuidv4();
     cb(null, `avatar-${uniqueId}${ext}`);
-  }
+  },
 });
 
 // Multer configuration for avatar uploads
 export const avatarUpload = multer({
   storage: USE_S3 ? multer.memoryStorage() : avatarLocalStorage,
-  limits: { 
-    fileSize: MAX_AVATAR_SIZE
+  limits: {
+    fileSize: MAX_AVATAR_SIZE,
   },
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = ALLOWED_AVATAR_MIME_TYPES[AVATAR_FILE_TYPES.AVATAR];
-    
+
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error(`File type ${file.mimetype} not allowed for avatars. Only .jpg, .jpeg, and .heic files are supported.`));
+      cb(
+        new Error(
+          `File type ${file.mimetype} not allowed for avatars. Only .jpg, .jpeg, and .heic files are supported.`,
+        ),
+      );
     }
   },
 });
 
 // S3 Upload function for avatars
-export async function uploadAvatarToS3(
-  userId: string, 
-  file: Express.Multer.File
-): Promise<string> {
+export async function uploadAvatarToS3(userId: string, file: Express.Multer.File): Promise<string> {
   const ext = path.extname(file.originalname);
   const key = `users/${userId}/avatars/avatar-${uuidv4()}${ext}`;
-  
+
   let fileBuffer = file.buffer;
   let contentType = file.mimetype;
   let finalExt = ext;
-  
+
   // Process images to ensure consistent format
   if (canProcessImage(file.mimetype)) {
     try {
@@ -84,15 +90,17 @@ export async function uploadAvatarToS3(
       console.error('Image processing failed, using original:', error);
     }
   }
-  
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: fileBuffer,
-    ContentType: contentType,
-    ACL: 'private', // Avatars are private to the user
-  }));
-  
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: contentType,
+      ACL: 'private', // Avatars are private to the user
+    }),
+  );
+
   return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 }
 
@@ -100,25 +108,30 @@ export async function uploadAvatarToS3(
 export async function deleteAvatarFromS3(fileUrl: string): Promise<void> {
   const match = fileUrl.match(/\/users\/.*\/avatars\/.*$/);
   if (!match) return;
-  
+
   const key = match[0].replace(/^\//, '');
-  await s3.send(new DeleteObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  }));
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    }),
+  );
 }
 
 // Get signed URL for avatar download
-export async function getAvatarSignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
+export async function getAvatarSignedUrl(
+  fileUrl: string,
+  expiresIn: number = 3600,
+): Promise<string> {
   const match = fileUrl.match(/\/users\/.*\/avatars\/.*$/);
   if (!match) throw new Error('Invalid avatar file URL');
-  
+
   const key = match[0].replace(/^\//, '');
   const command = new GetObjectCommand({
     Bucket: BUCKET,
     Key: key,
   });
-  
+
   return await getSignedUrl(s3, command, { expiresIn });
 }
 
@@ -129,7 +142,7 @@ export function getLocalAvatarUrl(filePath: string): string {
 
 export function deleteLocalAvatar(filePath: string): void {
   const fullPath = path.join(process.cwd(), 'uploads', 'avatars', filePath);
-  
+
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
   }
@@ -145,55 +158,57 @@ export interface AvatarDownloadInfo {
 }
 
 export async function getAvatarDownloadInfo(
-  fileUrl: string, 
+  fileUrl: string,
   originalFilename: string,
   mimeType: string,
-  expiresIn: number = 3600
+  expiresIn: number = 3600,
 ): Promise<AvatarDownloadInfo> {
   if (USE_S3) {
     const signedUrl = await getAvatarSignedUrl(fileUrl, expiresIn);
     const expiresAt = new Date(Date.now() + expiresIn * 1000);
-    
+
     return {
       url: signedUrl,
       filename: originalFilename,
       mimeType,
-      expiresAt
+      expiresAt,
     };
   } else {
     // For local development, return the file path
     return {
       url: fileUrl,
       filename: originalFilename,
-      mimeType
+      mimeType,
     };
   }
 }
 
 // Stream avatar for direct download (for local files)
-export function streamLocalAvatar(fileUrl: string): { stream: fs.ReadStream; filename: string; mimeType: string } | null {
+export function streamLocalAvatar(
+  fileUrl: string,
+): { stream: fs.ReadStream; filename: string; mimeType: string } | null {
   try {
     // Extract local path from URL
     const localPath = fileUrl.replace('/uploads/avatars/', '');
     const fullPath = path.join(process.cwd(), 'uploads', 'avatars', localPath);
-    
+
     if (!fs.existsSync(fullPath)) {
       return null;
     }
-    
+
     const stream = fs.createReadStream(fullPath);
-    
+
     // Determine MIME type from file extension
     const ext = path.extname(fullPath).toLowerCase();
     let mimeType = 'image/jpeg'; // Default to JPEG
-    
+
     if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
     else if (ext === '.heic') mimeType = 'image/heic';
-    
+
     return {
       stream,
       filename: path.basename(fullPath),
-      mimeType
+      mimeType,
     };
   } catch (error) {
     console.error('Error streaming local avatar:', error);
@@ -207,12 +222,14 @@ export async function checkAvatarExists(fileUrl: string): Promise<boolean> {
     try {
       const match = fileUrl.match(/\/users\/.*\/avatars\/.*$/);
       if (!match) return false;
-      
+
       const key = match[0].replace(/^\//, '');
-      await s3.send(new GetObjectCommand({
-        Bucket: BUCKET,
-        Key: key,
-      }));
+      await s3.send(
+        new GetObjectCommand({
+          Bucket: BUCKET,
+          Key: key,
+        }),
+      );
       return true;
     } catch (error) {
       return false;
@@ -270,4 +287,4 @@ export function validateAvatarMimeType(mimetype: string, fileType: AvatarFileTyp
 // File size validation
 export function validateAvatarFileSize(fileSize: number): boolean {
   return fileSize <= MAX_AVATAR_SIZE;
-} 
+}

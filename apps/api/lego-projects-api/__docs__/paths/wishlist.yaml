@@ -11,7 +11,7 @@
     parameters:
       - name: category
         in: query
-        description: Filter wishlist items by LEGO category/theme
+        description: Filter wishlist items by LEGO category/theme (Speed Champions, Modular, Star Wars, Creator Expert, Technic, Architecture, Ideas, Harry Potter, Marvel, DC, Friends, City, Ninjago, Minecraft, Disney, Super Mario, Avatar, Jurassic World, Batman, Creator 3-in-1, Classic, Duplo, Art, Botanical Collection, Seasonal, Other)
         required: false
         schema:
           type: string
@@ -85,7 +85,7 @@
         example: "big ben"
       - name: category
         in: query
-        description: Filter by LEGO category/theme
+        description: Filter by LEGO category/theme (Speed Champions, Modular, Star Wars, Creator Expert, Technic, Architecture, Ideas, Harry Potter, Marvel, DC, Friends, City, Ninjago, Minecraft, Disney, Super Mario, Avatar, Jurassic World, Batman, Creator 3-in-1, Classic, Duplo, Art, Botanical Collection, Seasonal, Other)
         required: false
         schema:
           type: string

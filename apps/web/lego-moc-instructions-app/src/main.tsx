@@ -1,6 +1,8 @@
+import './polyfills'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
+import { ThemeProvider } from '@repo/ui'
 import {
   Outlet,
   RouterProvider,
@@ -15,13 +17,21 @@ import { mocDetailRoute } from './routes/moc-detail.tsx'
 import { mocGalleryRoute } from './routes/moc-gallery.tsx'
 import { profileRoute } from './routes/profile.tsx'
 import { wishlistRoute } from './routes/wishlist.tsx'
+import { cacheDemoRoute } from './routes/cache-demo.tsx'
 import { loginRoute } from './routes/auth/login.tsx'
 import { signupRoute } from './routes/auth/signup.tsx'
 import { forgotPasswordRoute } from './routes/auth/forgot-password.tsx'
 import { resetPasswordRoute } from './routes/auth/reset-password.tsx'
 import { verifyEmailRoute } from './routes/auth/verify-email.tsx'
+import { unauthorizedRoute } from './routes/unauthorized.tsx'
+import { notFoundRoute } from './routes/not-found.tsx'
 
 import Layout from './components/Layout'
+import { PerformanceProvider } from './providers/PerformanceProvider'
+import PerformanceMonitor from './components/PerformanceMonitor'
+import { PWAProvider } from './components/PWAProvider'
+import { PWAUpdateNotification } from './components/PWAUpdateNotification'
+import { OfflineStatusIndicator } from './components/OfflineStatusIndicator'
 
 import TanStackQueryLayout from './integrations/tanstack-query/layout.tsx'
 
@@ -31,6 +41,7 @@ import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
 
 import { store } from './store/store'
+import { offlineApi } from './services/offlineApi'
 
 export const rootRoute = createRootRoute({
   component: () => (
@@ -38,6 +49,9 @@ export const rootRoute = createRootRoute({
       <Outlet />
       <TanStackRouterDevtools />
       <TanStackQueryLayout />
+      <PerformanceMonitor />
+      <PWAUpdateNotification />
+      <OfflineStatusIndicator />
     </Layout>
   ),
 })
@@ -49,11 +63,14 @@ const routeTree = rootRoute.addChildren([
   mocDetailRoute,
   profileRoute,
   wishlistRoute,
+  cacheDemoRoute,
   loginRoute,
   signupRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   verifyEmailRoute,
+  unauthorizedRoute,
+  notFoundRoute,
 ])
 
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext()
@@ -79,11 +96,17 @@ if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <Provider store={store}>
-        <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
-          <RouterProvider router={router} />
-        </TanStackQueryProvider.Provider>
-      </Provider>
+      <ThemeProvider>
+        <Provider store={store}>
+          <PerformanceProvider>
+            <PWAProvider>
+              <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
+                <RouterProvider router={router} />
+              </TanStackQueryProvider.Provider>
+            </PWAProvider>
+          </PerformanceProvider>
+        </Provider>
+      </ThemeProvider>
     </StrictMode>,
   )
 }

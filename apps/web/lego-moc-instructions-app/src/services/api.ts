@@ -1,5 +1,10 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
+import { 
+  createCacheMonitor, 
+  createCachedBaseQuery,
+  getRTKQueryCacheConfig 
+} from '@repo/shared-cache'
 import { config } from '../config/environment.js'
 
 // Zod schemas for type safety
@@ -59,32 +64,29 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// Create cache monitor for performance tracking
+// const cacheMonitor = createCacheMonitor()
+
 // Create the API service
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery({
-    baseUrl: config.api.baseUrl,
-    prepareHeaders: (headers, { getState }) => {
-      // Add auth token if available
-      const token = (getState() as any)?.auth?.tokens?.accessToken
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`)
-      }
-      return headers
-    },
-  }),
+  baseQuery: fetchBaseQuery(createCachedBaseQuery(config.api.baseUrl, {
+    maxAge: 300, // 5 minutes cache
+  })),
   tagTypes: ['MOCInstruction'],
   endpoints: (builder) => ({
     // Get all MOC instructions
     getMOCInstructions: builder.query<ApiResponse<Array<MOCInstruction>>, void>({
       query: () => 'moc-instructions',
       providesTags: ['MOCInstruction'],
+      ...getRTKQueryCacheConfig('medium'), // 5 minutes cache
     }),
 
     // Get a single MOC instruction by ID
     getMOCInstruction: builder.query<ApiResponse<MOCInstruction>, string>({
       query: (id) => `moc-instructions/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'MOCInstruction', id }],
+      ...getRTKQueryCacheConfig('long'), // 30 minutes cache for individual items
     }),
 
     // Create a new MOC instruction
@@ -123,6 +125,7 @@ export const api = createApi({
         params: { q: query, ...filters },
       }),
       providesTags: ['MOCInstruction'],
+      ...getRTKQueryCacheConfig('short'), // Short cache for search results
     }),
   }),
 })

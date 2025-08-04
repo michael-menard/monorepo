@@ -1,5 +1,9 @@
 import type { StorybookConfig } from '@storybook/react-vite';
-import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const config: StorybookConfig = {
   stories: [
@@ -39,9 +43,9 @@ const config: StorybookConfig = {
     // Add path aliases for monorepo packages
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@repo/ui': path.resolve(__dirname, '../packages/ui/src'),
-      '@repo/auth': path.resolve(__dirname, '../packages/auth/src'),
-      '@repo/profile': path.resolve(__dirname, '../features/profile/src'),
+      '@repo/ui': resolve(__dirname, '../packages/ui/src'),
+      '@repo/auth': resolve(__dirname, '../packages/auth/src'),
+      '@repo/profile': resolve(__dirname, '../features/profile/src'),
     };
     
     return config;

@@ -1,6 +1,15 @@
 import '@testing-library/jest-dom'
-import { afterAll, afterEach, beforeAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import { server } from './mocks/server'
+
+// Mock @tanstack/react-router globally
+const mockNavigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({
+    navigate: mockNavigate,
+  }),
+  useParams: () => ({}),
+}))
 
 // Establish API mocking before all tests
 beforeAll(() => server.listen())

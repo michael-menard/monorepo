@@ -1,8 +1,6 @@
-import { 
-  Button
-} from '@repo/ui'
-import { Link } from '@tanstack/react-router'
 import { z } from 'zod'
+import { Link } from '@tanstack/react-router'
+import Navigation from '../Navigation'
 
 // Zod schema for layout props
 const LayoutPropsSchema = z.object({
@@ -13,7 +11,7 @@ type LayoutProps = z.infer<typeof LayoutPropsSchema>;
 
 function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-r from-secondary via-tertiary to-info">
       {/* Sticky Navbar */}
       <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="px-6">
@@ -30,27 +28,12 @@ function Layout({ children }: LayoutProps) {
 
             {/* Center - Navigation Menu */}
             <div className="hidden md:flex items-center">
-              {/* Navigation menu removed */}
+              <Navigation />
             </div>
 
-            {/* Right side - User Actions */}
-            <div className="flex items-center space-x-4">
-              {/* For now, always show Sign In/Sign Up since auth is not implemented */}
-              <div className="flex items-center space-x-2">
-                <Link to="/auth/login">
-                  <Button variant="outline" size="default">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/auth/signup">
-                  <Button 
-                    variant="default" 
-                    size="default"
-                  >
-                    Sign Up
-                  </Button>
-                </Link>
-              </div>
+            {/* Right side - Mobile Navigation */}
+            <div className="md:hidden">
+              <Navigation />
             </div>
           </div>
         </div>

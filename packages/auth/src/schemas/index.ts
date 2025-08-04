@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createEnhancedSchemas, validationMessages } from '@repo/ui';
 
 // User schema (PostgreSQL compatible)
 export const UserSchema = z.object({
@@ -20,45 +21,49 @@ export const AuthResponseSchema = z.object({
   expiresIn: z.number(),
 });
 
-// Login schema
+// Login schema with enhanced error messages
 export const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(100),
+  email: createEnhancedSchemas.email('Email'),
+  password: z
+    .string()
+    .min(1, validationMessages.required('Password'))
+    .min(8, validationMessages.password.minLength(8))
+    .max(100, validationMessages.maxLength('Password', 100)),
 });
 
 export type LoginFormData = z.infer<typeof LoginSchema>;
 
-// Signup schema
+// Signup schema with enhanced error messages
 export const SignupSchema = z.object({
-  email: z.string().email(),
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-  password: z.string().min(8).max(100),
-  confirmPassword: z.string().min(8).max(100),
+  email: createEnhancedSchemas.email('Email'),
+  firstName: createEnhancedSchemas.name('First Name'),
+  lastName: createEnhancedSchemas.name('Last Name'),
+  password: createEnhancedSchemas.password('Password'),
+  confirmPassword: createEnhancedSchemas.confirmPassword('Confirm Password'),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: validationMessages.password.match,
   path: ["confirmPassword"],
 });
 
 export type SignupFormData = z.infer<typeof SignupSchema>;
 
-// Forgot password schema
+// Forgot password schema with enhanced error messages
 export const ForgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: createEnhancedSchemas.email('Email'),
 });
 
-// Reset password schema
+// Reset password schema with enhanced error messages
 export const ResetPasswordSchema = z.object({
   token: z.string(),
-  newPassword: z.string().min(8).max(100),
-  confirmPassword: z.string().min(8).max(100),
+  newPassword: createEnhancedSchemas.password('New Password'),
+  confirmPassword: createEnhancedSchemas.confirmPassword('Confirm Password'),
 }).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: validationMessages.password.match,
   path: ["confirmPassword"],
 });
 
-// Verify email schema
+// Verify email schema with enhanced error messages
 export const VerifyEmailSchema = z.object({
-  email: z.string().email(),
-  code: z.string().length(6),
+  email: createEnhancedSchemas.email('Email'),
+  code: z.string().length(6, validationMessages.exactLength('Verification Code', 6)),
 }); 

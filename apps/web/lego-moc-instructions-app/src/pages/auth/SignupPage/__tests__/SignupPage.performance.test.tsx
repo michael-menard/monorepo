@@ -69,10 +69,9 @@ describe('SignupPage Performance & Security', () => {
     })
 
     // Mock router navigation
-    const mockNavigate = vi.fn()
     vi.mock('@tanstack/react-router', () => ({
       useRouter: () => ({
-        navigate: mockNavigate,
+        navigate: vi.fn(),
       }),
     }))
 

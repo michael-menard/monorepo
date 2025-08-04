@@ -53,8 +53,8 @@ describe('Auto-Save Functionality', () => {
   });
 
   it('debounces save operations with specified delay', () => {
-    const saveFunction = vi.fn();
-    const data = { test: 'data' };
+    vi.fn();
+    { test: 'data' };
     
     // Simulate multiple rapid changes
     mockSetTimeout.mockImplementation((fn) => {
@@ -67,7 +67,7 @@ describe('Auto-Save Functionality', () => {
   });
 
   it('creates backup on page unload', () => {
-    const data = { test: 'data' };
+    { test: 'data' };
     
     // Simulate page unload
     const beforeUnloadEvent = new Event('beforeunload');

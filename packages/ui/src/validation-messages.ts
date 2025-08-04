@@ -293,12 +293,9 @@ export const createFormValidationHelpers = {
     fieldName: string
   ) =>
     schema.refine(
-      (value, ctx) => {
+      (value) => {
         try {
-          if (ctx?.parent && condition(ctx.parent)) {
-            return value && value.toString().trim().length > 0;
-          }
-          return true;
+          return value && value.toString().trim().length > 0;
         } catch {
           return true;
         }

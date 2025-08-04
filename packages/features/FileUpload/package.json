@@ -1,6 +1,6 @@
 {
   "name": "@monorepo/fileupload",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reusable file upload component with drag-and-drop, progress tracking, and validation",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

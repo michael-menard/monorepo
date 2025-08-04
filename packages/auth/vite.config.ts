@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
         // Add workspace package aliases for better imports
         '@packages/ui': path.resolve(__dirname, '../ui/src'),
         '@packages/shared': path.resolve(__dirname, '../shared/src'),
+        '@packages/shared-cache': path.resolve(__dirname, '../shared-cache/src'),
         '@packages/wishlist': path.resolve(__dirname, '../wishlist/src'),
         '@packages/features': path.resolve(__dirname, '../features'),
       },
@@ -29,7 +30,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', 'zod', '@packages/ui', '@packages/shared'],
+        external: ['react', 'react-dom', 'zod', '@packages/ui', '@packages/shared', '@repo/shared-cache'],
         output: {
           globals: {
             react: 'React',
@@ -44,7 +45,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@packages/ui', '@packages/shared'],
+      exclude: ['@packages/ui', '@packages/shared', '@repo/shared-cache'],
     },
   };
 }); 

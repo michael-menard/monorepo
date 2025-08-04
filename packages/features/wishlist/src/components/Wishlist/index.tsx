@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import WishlistItemCard from '../WishlistItemCard/index.js';
 import BatchOperationsToolbar from '../BatchOperationsToolbar/index.js';
-import { useGetWishlistItemsQuery } from '../../store/wishlistApi.js';
+import { useGetWishlistItemsQuery, useReorderWishlistItemsMutation } from '../../store/wishlistApi.js';
+import { useKeyboardDragAndDrop, KeyboardDragDropArea } from '@monorepo/shared';
 import type { WishlistItem } from '../../schemas';
 
 export interface WishlistProps {
@@ -34,11 +35,35 @@ const Wishlist: React.FC<WishlistProps> = ({
   filters = {},
 }) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [reorderWishlistItems] = useReorderWishlistItemsMutation();
 
   // Fetch wishlist items
   const { data: items = [], isLoading, error } = useGetWishlistItemsQuery({
     wishlistId,
     filters,
+  });
+
+  // Keyboard drag and drop functionality
+  const [keyboardDragState, keyboardDragActions] = useKeyboardDragAndDrop({
+    totalItems: items.length,
+    onReorder: (sourceIndex, destinationIndex) => {
+      reorderWishlistItems({
+        wishlistId,
+        sourceIndex,
+        destinationIndex,
+      });
+    },
+    onMove: (itemId, sourceIndex, destinationIndex) => {
+      // This will be handled by the API call above
+    },
+    onCancel: () => {
+      // Reset any visual state if needed
+    },
+    onConfirm: () => {
+      // Success feedback could be added here
+    },
+    itemType: 'wishlist item',
+    source: 'wishlist',
   });
 
   const handleItemSelect = useCallback((itemId: string, checked: boolean) => {
@@ -97,26 +122,42 @@ const Wishlist: React.FC<WishlistProps> = ({
 
   return (
     <>
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${className}`}>
-        {items.map((item, index) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-          >
-            <WishlistItemCard
-              item={item}
-              onEdit={onItemEdit}
-              onDelete={onItemDelete}
-              onTogglePurchased={onItemTogglePurchased}
-              selected={selectedItems.includes(item.id)}
-              onSelect={(checked) => handleItemSelect(item.id, checked)}
-              showCheckbox={true}
-            />
-          </motion.div>
-        ))}
-      </div>
+      <KeyboardDragDropArea
+        state={keyboardDragState}
+        actions={keyboardDragActions}
+        className={className}
+        itemType="wishlist item"
+        showInstructions={true}
+        showControls={true}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {items.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+            >
+              <WishlistItemCard
+                item={item}
+                onEdit={onItemEdit}
+                onDelete={onItemDelete}
+                onTogglePurchased={onItemTogglePurchased}
+                selected={selectedItems.includes(item.id)}
+                onSelect={(checked) => handleItemSelect(item.id, checked)}
+                showCheckbox={true}
+                // Keyboard accessibility props
+                onKeyDown={(e) => keyboardDragActions.handleKeyDown(e, item.id, index)}
+                onFocus={() => keyboardDragActions.handleFocus(item.id, index)}
+                onBlur={keyboardDragActions.handleBlur}
+                isKeyboardFocused={keyboardDragState.isFocused && keyboardDragState.draggedItemId === item.id}
+                isKeyboardDragging={keyboardDragState.isKeyboardDragging && keyboardDragState.draggedItemId === item.id}
+                showKeyboardInstructions={keyboardDragState.isKeyboardDragging}
+              />
+            </motion.div>
+          ))}
+        </div>
+      </KeyboardDragDropArea>
 
       {/* Batch Operations Toolbar */}
       <BatchOperationsToolbar

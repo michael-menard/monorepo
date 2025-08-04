@@ -1,4 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { 
+  getRTKQueryCacheConfig
+} from '@repo/shared-cache';
 import type {
   LoginRequest,
   SignupRequest,
@@ -70,6 +73,7 @@ export const authApi = createApi({
         method: 'GET',
       }),
       providesTags: ['Auth', 'User'],
+      ...getRTKQueryCacheConfig('short'), // Short cache for auth status
     }),
     verifyEmail: builder.mutation<AuthResponse, VerifyEmailRequest>({
       query: (body) => ({

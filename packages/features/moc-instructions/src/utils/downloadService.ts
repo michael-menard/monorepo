@@ -259,15 +259,11 @@ export const getFileTypeIcon = (filename: string): string => {
   return iconMap[ext] || '📄';
 };
 
-// Utility function to format file size
-export const formatFileSize = (bytes: number): string => {
-  return formatBytes(bytes);
-};
+
 
 // Utility function to validate download info
 export const validateDownloadInfo = (info: unknown): DownloadInfo => {
   return downloadInfoSchema.parse(info);
 };
 
-// Export schemas for external use
-export { downloadProgressSchema, downloadInfoSchema, downloadResultSchema }; 
+// Schemas are already exported at the top of the file 

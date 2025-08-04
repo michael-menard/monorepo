@@ -7,6 +7,28 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { LoginSchema, type LoginFormData } from '../../schemas/index.js';
 import Input from '../Input/index.js';
 import { Button } from '../ui/button.js';
+import { FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import type { SerializedError } from '@reduxjs/toolkit';
+
+// Helper function to convert RTK Query errors to the format expected by FormLevelErrorMessage
+const convertError = (error: FetchBaseQueryError | SerializedError | undefined): string | { message?: string } | undefined => {
+  if (!error) return undefined;
+  
+  if ('status' in error) {
+    // FetchBaseQueryError
+    if (typeof error.data === 'string') {
+      return error.data;
+    }
+    if (error.data && typeof error.data === 'object' && 'message' in error.data) {
+      return { message: String(error.data.message) };
+    }
+    return `Error ${error.status}: ${error.data || 'Unknown error'}`;
+  }
+  
+  // SerializedError
+  return error.message || 'An error occurred';
+};
 
 export const LoginForm = () => {
   const { login, isLoading, error } = useAuth();
@@ -59,9 +81,10 @@ export const LoginForm = () => {
               {...register('email')}
               className={errors.email ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-            )}
+            <FieldErrorMessage
+              error={errors.email}
+              fieldName="Email"
+            />
           </div>
 
           <div>
@@ -72,9 +95,10 @@ export const LoginForm = () => {
               {...register('password')}
               className={errors.password ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-            )}
+            <FieldErrorMessage
+              error={errors.password}
+              fieldName="Password"
+            />
           </div>
 
           <div className="flex items-center mb-6">
@@ -87,11 +111,7 @@ export const LoginForm = () => {
             </button>
           </div>
 
-          {error && (
-            <div className="bg-red-900 bg-opacity-50 border border-red-500 rounded-md p-3">
-              <p className="text-red-400 text-sm">{String(error)}</p>
-            </div>
-          )}
+          <FormLevelErrorMessage error={convertError(error)} />
 
           <motion.div
             whileHover={{ scale: 1.02 }}

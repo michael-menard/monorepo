@@ -407,7 +407,7 @@ WishlistItem:
       type: string
       maxLength: 100
       nullable: true
-      description: 'LEGO category/theme (e.g., Speed Champions, Modular, Star Wars, etc.)'
+      description: 'LEGO category/theme (Speed Champions, Modular, Star Wars, Creator Expert, Technic, Architecture, Ideas, Harry Potter, Marvel, DC, Friends, City, Ninjago, Minecraft, Disney, Super Mario, Avatar, Jurassic World, Batman, Creator 3-in-1, Classic, Duplo, Art, Botanical Collection, Seasonal, Other)'
       example: 'Speed Champions'
     sortOrder:
       type: string
@@ -451,7 +451,7 @@ CreateWishlistItem:
       type: string
       maxLength: 100
       nullable: true
-      description: 'LEGO category/theme (e.g., Speed Champions, Modular, Star Wars, etc.)'
+      description: 'LEGO category/theme (Speed Champions, Modular, Star Wars, Creator Expert, Technic, Architecture, Ideas, Harry Potter, Marvel, DC, Friends, City, Ninjago, Minecraft, Disney, Super Mario, Avatar, Jurassic World, Batman, Creator 3-in-1, Classic, Duplo, Art, Botanical Collection, Seasonal, Other)'
       example: 'Speed Champions'
     sortOrder:
       type: string
@@ -491,7 +491,7 @@ UpdateWishlistItem:
       type: string
       maxLength: 100
       nullable: true
-      description: 'Updated LEGO category/theme (e.g., Speed Champions, Modular, Star Wars, etc.)'
+      description: 'Updated LEGO category/theme (Speed Champions, Modular, Star Wars, Creator Expert, Technic, Architecture, Ideas, Harry Potter, Marvel, DC, Friends, City, Ninjago, Minecraft, Disney, Super Mario, Avatar, Jurassic World, Batman, Creator 3-in-1, Classic, Duplo, Art, Botanical Collection, Seasonal, Other)'
       example: 'Modular'
     sortOrder:
       type: string
@@ -531,3 +531,32 @@ WishlistItemResponse:
       properties:
         item:
           $ref: '#/WishlistItem'
+
+MocGalleryImage:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: 'Unique identifier for the MOC-gallery image link'
+    mocId:
+      type: string
+      format: uuid
+      description: 'ID of the MOC instruction'
+    galleryImageId:
+      type: string
+      format: uuid
+      description: 'ID of the gallery image'
+  example:
+    id: "123e4567-e89b-12d3-a456-426614174000"
+    mocId: "456e7890-e89b-12d3-a456-426614174001"
+    galleryImageId: "789e0123-e89b-12d3-a456-426614174002"
+
+MocGalleryImageLink:
+  type: object
+  properties:
+    galleryImageId:
+      type: string
+      format: uuid
+      description: 'ID of the gallery image to link to the MOC'
+      example: "789e0123-e89b-12d3-a456-426614174002"

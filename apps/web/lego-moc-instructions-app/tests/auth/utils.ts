@@ -112,8 +112,25 @@ export class AuthTestUtils {
    */
   async navigateToAuthPage(page: keyof typeof AUTH_URLS, expectedTitle: string) {
     await this.page.goto(AUTH_URLS[page]);
-    // Look for the specific title in the page content
-    await expect(this.page.locator('h1, h2, h3')).toContainText(expectedTitle);
+    
+    // Wait for the React app to load by waiting for the app div to have content
+    await this.page.waitForFunction(
+      () => {
+        const appDiv = document.getElementById('app');
+        return appDiv && appDiv.children.length > 0;
+      },
+      { timeout: 15000 }
+    );
+    
+    // Wait for the title to appear - try multiple selectors
+    await this.page.waitForFunction(
+      (title) => {
+        const elements = document.querySelectorAll('h1, h2, h3, [data-testid="app-card-title"]');
+        return Array.from(elements).some(el => el.textContent?.includes(title));
+      },
+      expectedTitle,
+      { timeout: 15000 }
+    );
   }
 
   /**

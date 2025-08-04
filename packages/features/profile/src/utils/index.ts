@@ -1,4 +1,5 @@
 import type { Profile, ProfileForm } from '../schemas';
+import { processImageFile, getPreset } from '@repo/shared-image-utils';
 
 // Format full name
 export const formatFullName = (profile: Pick<Profile, 'firstName' | 'lastName'>): string => {
@@ -30,45 +31,16 @@ export const compressImage = async (
   maxWidth: number = 800,
   quality: number = 0.8
 ): Promise<File> => {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    img.onload = () => {
-      // Calculate new dimensions
-      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-      const newWidth = img.width * ratio;
-      const newHeight = img.height * ratio;
-
-      canvas.width = newWidth;
-      canvas.height = newHeight;
-
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, newWidth, newHeight);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: file.type,
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              reject(new Error('Failed to compress image'));
-            }
-          },
-          file.type,
-          quality
-        );
-      } else {
-        reject(new Error('Failed to get canvas context'));
-      }
-    };
-
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = URL.createObjectURL(file);
+  const config = getPreset('gallery');
+  config.maxWidth = maxWidth;
+  config.quality = Math.round(quality * 100);
+  
+  const { file: compressedFile } = await processImageFile({
+    file,
+    config
   });
+  
+  return compressedFile;
 };
 
 // Format date for display

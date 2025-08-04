@@ -1,5 +1,5 @@
 import React from 'react';
-import { GripVertical, ExternalLink, Edit, Trash2, CheckCircle, Circle } from 'lucide-react';
+import { GripVertical, ExternalLink, Edit, Trash2, CheckCircle, Circle, Move } from 'lucide-react';
 import type { WishlistItem } from '../../schemas';
 
 export interface WishlistItemCardProps {
@@ -14,6 +14,13 @@ export interface WishlistItemCardProps {
   selected?: boolean;
   onSelect?: (checked: boolean) => void;
   showCheckbox?: boolean;
+  // Keyboard accessibility props
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  isKeyboardFocused?: boolean;
+  isKeyboardDragging?: boolean;
+  showKeyboardInstructions?: boolean;
 }
 
 export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
@@ -28,6 +35,13 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
   selected = false,
   onSelect,
   showCheckbox = false,
+  // Keyboard accessibility props
+  onKeyDown,
+  onFocus,
+  onBlur,
+  isKeyboardFocused = false,
+  isKeyboardDragging = false,
+  showKeyboardInstructions = false,
 }) => {
   const priorityColors = {
     low: 'bg-green-100 text-green-800 border-green-200',
@@ -47,11 +61,19 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
         relative bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200
         ${isDragging ? 'opacity-50 scale-95 rotate-2' : ''}
         ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+        ${isKeyboardFocused ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
+        ${isKeyboardDragging ? 'ring-2 ring-blue-600 ring-offset-2 bg-blue-50' : ''}
         ${className}
       `}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      tabIndex={0}
+      role="button"
+      aria-label={`Wishlist item: ${item.name}. ${showKeyboardInstructions ? 'Press Enter or Space to start moving this item. Use arrow keys to navigate.' : ''}`}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
     >
       {/* Selection Checkbox */}
       {showCheckbox && onSelect && (
@@ -69,6 +91,11 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
       {/* Drag Handle */}
       <div className="absolute top-2 left-2 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+        {isKeyboardDragging && (
+          <div className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full p-1">
+            <Move className="w-3 h-3" />
+          </div>
+        )}
       </div>
 
       {/* Card Content */}

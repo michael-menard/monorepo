@@ -11,32 +11,48 @@ import { getAllAlbums, getAllImages } from '../handlers/gallery';
 import { getGallery } from '../handlers/gallery';
 import mocInstructionsRouter from './moc-instructions';
 import wishlistRouter from './wishlist';
+import {
+  galleryCache,
+  galleryCacheInvalidation,
+  mocCache,
+  mocCacheInvalidation,
+  wishlistCache,
+  wishlistCacheInvalidation,
+  profileCache,
+  profileCacheInvalidation,
+} from '../middleware/cache';
 
 const router = Router();
 
 // POST /api/images - upload gallery image
-router.post('/api/images', requireAuth, galleryUpload.single('image'), uploadGalleryImage);
+router.post(
+  '/api/images',
+  requireAuth,
+  galleryUpload.single('image'),
+  galleryCacheInvalidation,
+  uploadGalleryImage,
+);
 
 // PATCH /api/images/:id - update image metadata
-router.patch('/api/images/:id', requireAuth, updateGalleryImage);
+router.patch('/api/images/:id', requireAuth, galleryCacheInvalidation, updateGalleryImage);
 
 // DELETE /api/images/:id - delete gallery image
-router.delete('/api/images/:id', requireAuth, deleteGalleryImage);
+router.delete('/api/images/:id', requireAuth, galleryCacheInvalidation, deleteGalleryImage);
 
 // GET /api/albums/:id - get album data and images
-router.get('/api/albums/:id', requireAuth, getAlbum);
+router.get('/api/albums/:id', requireAuth, galleryCache, getAlbum);
 
 // GET /api/albums - list all albums for user
-router.get('/api/albums', requireAuth, getAllAlbums);
+router.get('/api/albums', requireAuth, galleryCache, getAllAlbums);
 
 // GET /api/images - list all images for user
-router.get('/api/images', requireAuth, getAllImages);
+router.get('/api/images', requireAuth, galleryCache, getAllImages);
 
 // GET /api/gallery - unified gallery endpoint
-router.get('/api/gallery', requireAuth, getGallery);
+router.get('/api/gallery', requireAuth, galleryCache, getGallery);
 
 // POST /api/flag - flag an image for moderation
-router.post('/api/flag', requireAuth, flagImage);
+router.post('/api/flag', requireAuth, galleryCacheInvalidation, flagImage);
 
 // Register MOC Instructions router
 router.use('/api/mocs', mocInstructionsRouter);
@@ -47,4 +63,4 @@ router.use('/api/users', profileRouter);
 // Register Wishlist router
 router.use('/api/wishlist', wishlistRouter);
 
-export default router; 
+export default router;

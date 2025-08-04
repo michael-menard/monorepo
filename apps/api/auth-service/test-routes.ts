@@ -1,5 +1,5 @@
 import express from 'express';
-import { Router } from "express";
+import { Router } from 'express';
 
 const router: Router = express.Router();
 
@@ -12,7 +12,7 @@ router.get('/info', (req, res) => {
   res.json({
     server: 'Express',
     time: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 

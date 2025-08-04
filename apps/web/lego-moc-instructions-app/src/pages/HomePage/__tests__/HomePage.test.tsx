@@ -19,6 +19,7 @@ vi.mock('@repo/ui', () => ({
   CardDescription: ({ children, ...props }: any) => <p {...props}>{children}</p>,
   CardHeader: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardTitle: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
+  useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
 }))
 
 // Mock TanStack Router Link

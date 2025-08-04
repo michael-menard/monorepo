@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../../../ui/alert";
 import { OctagonAlertIcon } from "lucide-react";
 
 export default function AlertWithBackgroundDemo() {

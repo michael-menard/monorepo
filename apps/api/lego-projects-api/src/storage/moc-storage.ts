@@ -1,7 +1,12 @@
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { processImage, canProcessImage, THUMBNAIL_CONFIG } from '../utils/imageProcessor';
 import fs from 'fs';
@@ -18,23 +23,29 @@ export const MOC_FILE_TYPES = {
   INSTRUCTION: 'instruction',
   PARTS_LIST: 'parts-list',
   THUMBNAIL: 'thumbnail',
-  GALLERY_IMAGE: 'gallery-image'
+  GALLERY_IMAGE: 'gallery-image',
 } as const;
 
-export type MocFileType = typeof MOC_FILE_TYPES[keyof typeof MOC_FILE_TYPES];
+export type MocFileType = (typeof MOC_FILE_TYPES)[keyof typeof MOC_FILE_TYPES];
 
 export const ALLOWED_FILE_EXTENSIONS: Record<MocFileType, string[]> = {
   [MOC_FILE_TYPES.INSTRUCTION]: ['.pdf', '.io'],
   [MOC_FILE_TYPES.PARTS_LIST]: ['.csv', '.json', '.txt'],
   [MOC_FILE_TYPES.THUMBNAIL]: ['.jpg', '.jpeg', '.png', '.webp', '.heic'],
-  [MOC_FILE_TYPES.GALLERY_IMAGE]: ['.jpg', '.jpeg', '.png', '.webp', '.heic']
+  [MOC_FILE_TYPES.GALLERY_IMAGE]: ['.jpg', '.jpeg', '.png', '.webp', '.heic'],
 };
 
 export const ALLOWED_MIME_TYPES: Record<MocFileType, string[]> = {
   [MOC_FILE_TYPES.INSTRUCTION]: ['application/pdf', 'application/octet-stream'],
   [MOC_FILE_TYPES.PARTS_LIST]: ['text/csv', 'application/json', 'text/plain'],
   [MOC_FILE_TYPES.THUMBNAIL]: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'],
-  [MOC_FILE_TYPES.GALLERY_IMAGE]: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic']
+  [MOC_FILE_TYPES.GALLERY_IMAGE]: [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+  ],
 };
 
 // Local storage configuration for MOC files
@@ -50,23 +61,23 @@ const mocLocalStorage = multer.diskStorage({
     const baseName = path.basename(file.originalname, ext);
     const uniqueId = uuidv4();
     cb(null, `${baseName}-${uniqueId}${ext}`);
-  }
+  },
 });
 
 // Multer configuration for MOC file uploads
 export const mocFileUpload = multer({
   storage: USE_S3 ? multer.memoryStorage() : mocLocalStorage,
-  limits: { 
-    fileSize: 100 * 1024 * 1024 // 100MB for instruction files
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB for instruction files
   },
   fileFilter: (req, file, cb) => {
     const fileType = req.body.fileType || MOC_FILE_TYPES.INSTRUCTION;
     const allowedMimeTypes = ALLOWED_MIME_TYPES[fileType as MocFileType];
-    
+
     if (!allowedMimeTypes) {
       return cb(new Error(`Invalid file type: ${fileType}`));
     }
-    
+
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -77,18 +88,18 @@ export const mocFileUpload = multer({
 
 // S3 Upload functions
 export async function uploadMocFileToS3(
-  userId: string, 
-  mocId: string, 
-  fileType: string, 
-  file: Express.Multer.File
+  userId: string,
+  mocId: string,
+  fileType: string,
+  file: Express.Multer.File,
 ): Promise<string> {
   const ext = path.extname(file.originalname);
   const key = `moc-files/${userId}/${mocId}/${fileType}/${uuidv4()}${ext}`;
-  
+
   let fileBuffer = file.buffer;
   let contentType = file.mimetype;
   let finalExt = ext;
-  
+
   // Process images if needed
   if (fileType === MOC_FILE_TYPES.THUMBNAIL || fileType === MOC_FILE_TYPES.GALLERY_IMAGE) {
     if (canProcessImage(file.mimetype)) {
@@ -101,39 +112,46 @@ export async function uploadMocFileToS3(
       }
     }
   }
-  
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: fileBuffer,
-    ContentType: contentType,
-    ACL: 'private', // MOC files are private to the user
-  }));
-  
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: contentType,
+      ACL: 'private', // MOC files are private to the user
+    }),
+  );
+
   return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 }
 
 export async function deleteMocFileFromS3(fileUrl: string): Promise<void> {
   const match = fileUrl.match(/\/moc-files\/.*$/);
   if (!match) return;
-  
+
   const key = match[0].replace(/^\//, '');
-  await s3.send(new DeleteObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  }));
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    }),
+  );
 }
 
-export async function getMocFileSignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
+export async function getMocFileSignedUrl(
+  fileUrl: string,
+  expiresIn: number = 3600,
+): Promise<string> {
   const match = fileUrl.match(/\/moc-files\/.*$/);
   if (!match) throw new Error('Invalid MOC file URL');
-  
+
   const key = match[0].replace(/^\//, '');
   const command = new GetObjectCommand({
     Bucket: BUCKET,
     Key: key,
   });
-  
+
   return await getSignedUrl(s3, command, { expiresIn });
 }
 
@@ -144,7 +162,7 @@ export function getLocalMocFileUrl(filePath: string): string {
 
 export function deleteLocalMocFile(filePath: string): void {
   const fullPath = path.join(process.cwd(), 'uploads', 'moc-files', filePath);
-  
+
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
   }
@@ -160,49 +178,51 @@ export interface FileDownloadInfo {
 }
 
 export async function getMocFileDownloadInfo(
-  fileUrl: string, 
+  fileUrl: string,
   originalFilename: string,
   mimeType: string,
-  expiresIn: number = 3600
+  expiresIn: number = 3600,
 ): Promise<FileDownloadInfo> {
   if (USE_S3) {
     const signedUrl = await getMocFileSignedUrl(fileUrl, expiresIn);
     const expiresAt = new Date(Date.now() + expiresIn * 1000);
-    
+
     return {
       url: signedUrl,
       filename: originalFilename,
       mimeType,
-      expiresAt
+      expiresAt,
     };
   } else {
     // For local development, return the file path
     return {
       url: fileUrl,
       filename: originalFilename,
-      mimeType
+      mimeType,
     };
   }
 }
 
 // Stream file for direct download (for local files)
-export function streamLocalMocFile(fileUrl: string): { stream: fs.ReadStream; filename: string; mimeType: string } | null {
+export function streamLocalMocFile(
+  fileUrl: string,
+): { stream: fs.ReadStream; filename: string; mimeType: string } | null {
   try {
     // Extract local path from URL
     const localPath = fileUrl.replace('/uploads/moc-files/', '');
     const fullPath = path.join(process.cwd(), 'uploads', 'moc-files', localPath);
-    
+
     if (!fs.existsSync(fullPath)) {
       return null;
     }
-    
+
     const stats = fs.statSync(fullPath);
     const stream = fs.createReadStream(fullPath);
-    
+
     // Determine MIME type from file extension
     const ext = path.extname(fullPath).toLowerCase();
     let mimeType = 'application/octet-stream';
-    
+
     if (ext === '.pdf') mimeType = 'application/pdf';
     else if (ext === '.csv') mimeType = 'text/csv';
     else if (ext === '.json') mimeType = 'application/json';
@@ -212,11 +232,11 @@ export function streamLocalMocFile(fileUrl: string): { stream: fs.ReadStream; fi
     else if (ext === '.webp') mimeType = 'image/webp';
     else if (ext === '.heic') mimeType = 'image/heic';
     else if (ext === '.io') mimeType = 'application/octet-stream';
-    
+
     return {
       stream,
       filename: path.basename(fullPath),
-      mimeType
+      mimeType,
     };
   } catch (error) {
     console.error('Error streaming local file:', error);
@@ -230,12 +250,14 @@ export async function checkMocFileExists(fileUrl: string): Promise<boolean> {
     try {
       const match = fileUrl.match(/\/moc-files\/.*$/);
       if (!match) return false;
-      
+
       const key = match[0].replace(/^\//, '');
-      await s3.send(new GetObjectCommand({
-        Bucket: BUCKET,
-        Key: key,
-      }));
+      await s3.send(
+        new GetObjectCommand({
+          Bucket: BUCKET,
+          Key: key,
+        }),
+      );
       return true;
     } catch (error) {
       return false;
@@ -249,10 +271,10 @@ export async function checkMocFileExists(fileUrl: string): Promise<boolean> {
 
 // Main storage interface
 export async function saveMocFile(
-  userId: string, 
-  mocId: string, 
-  fileType: string, 
-  file: Express.Multer.File
+  userId: string,
+  mocId: string,
+  fileType: string,
+  file: Express.Multer.File,
 ): Promise<string> {
   if (USE_S3) {
     return uploadMocFileToS3(userId, mocId, fileType, file);
@@ -294,4 +316,4 @@ export function validateFileExtension(filename: string, fileType: MocFileType): 
 export function validateMimeType(mimetype: string, fileType: MocFileType): boolean {
   const allowedMimeTypes = ALLOWED_MIME_TYPES[fileType];
   return allowedMimeTypes.includes(mimetype);
-} 
+}

@@ -13,4 +13,5 @@ export { default as ProfileSidebar } from './components/ProfileSidebar';
 export { AvatarUploader } from './components/AvatarUploader';
 export { default as ProtectedProfilePage } from './components/ProtectedProfilePage';
 export { default as ProfilePageWithTour } from './components/ProfilePageWithTour';
-export { default as ProfileTourExample } from './components/ProfileTourExample'; 
+export { default as ProfileTourExample } from './components/ProfileTourExample';
+export { default as ProfileTabs } from './components/ProfileTabs'; 

@@ -122,6 +122,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       <div
         className={getDragAreaClassNames()}
         onClick={!disabled ? openFileDialog : undefined}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openFileDialog();
+          }
+        }}
+        tabIndex={disabled ? -1 : 0}
+        role="button"
+        aria-label={`File upload area. Drop files here or press Enter to browse. Accepts ${Array.isArray(accept) ? accept.join(', ') : accept}. Maximum size ${maxSizeMB}MB.`}
         {...dragActions.dragAreaProps}
         onDrop={handleDrop}
       >
@@ -133,6 +142,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             {Array.isArray(accept) ? accept.join(', ') : accept} • Max {maxSizeMB}MB
             {multiple ? ' • Multiple files allowed' : ''}
           </p>
+          {!disabled && (
+            <p className="text-xs text-gray-400">
+              Press Enter or Space to browse files
+            </p>
+          )}
         </div>
       </div>
 

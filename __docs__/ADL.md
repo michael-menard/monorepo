@@ -278,4 +278,116 @@ This Architecture Decision Log (ADL) records important architectural decisions m
   - Create separate config directory (overkill)
 - **Consequences:**
   - Better project organization, standard file locations, improved developer experience
-  - Easier maintenance, follows industry standards 
+  - Easier maintenance, follows industry standards
+
+### [2024-12-15] Migrate to Tailwind CSS v4
+- **Context:**
+  - Need to upgrade to the latest Tailwind CSS version for better performance and modern features.
+- **Decision:**
+  - Migrate from Tailwind CSS v3 to v4 across the entire monorepo.
+- **Alternatives Considered:**
+  - Stay on v3 (missing new features and performance improvements)
+  - Use alternative CSS frameworks (would require significant refactoring)
+  - Custom CSS solution (more maintenance overhead)
+- **Consequences:**
+  - Better performance, modern CSS features, improved developer experience
+  - Required removal of PostCSS configuration, updated Vite plugins
+  - CSS-based configuration instead of JavaScript config files
+
+### [2024-12-15] Replace react-beautiful-dnd with @dnd-kit
+- **Context:**
+  - react-beautiful-dnd is deprecated and has compatibility issues with React 19.
+- **Decision:**
+  - Replace react-beautiful-dnd with @dnd-kit for all drag and drop functionality.
+- **Alternatives Considered:**
+  - Keep react-beautiful-dnd (deprecated, compatibility issues)
+  - Use alternative drag and drop libraries (less mature)
+  - Custom drag and drop implementation (more development time)
+- **Consequences:**
+  - Better React 19 compatibility, improved performance, modern API
+  - Required migration of existing drag and drop components
+  - Better accessibility and touch support
+
+### [2024-12-15] Implement Centralized Storybook Setup
+- **Context:**
+  - Need for component development, testing, and documentation across all packages.
+- **Decision:**
+  - Implement a centralized Storybook setup that can showcase components from all packages.
+- **Alternatives Considered:**
+  - Separate Storybook for each package (more maintenance)
+  - No Storybook (harder component development and testing)
+  - Alternative component libraries (less integrated)
+- **Consequences:**
+  - Better component development workflow, improved documentation
+  - Centralized component showcase, easier testing and accessibility validation
+  - Integration with Chromatic for visual testing
+
+### [2024-12-15] Add Semantic Versioning with Changesets
+- **Context:**
+  - Need for proper package versioning and release management in the monorepo.
+- **Decision:**
+  - Implement semantic versioning using Changesets for all packages.
+- **Alternatives Considered:**
+  - Manual versioning (error-prone, inconsistent)
+  - Lerna versioning (more complex setup)
+  - No versioning (difficult to track changes)
+- **Consequences:**
+  - Automated changelog generation, consistent versioning
+  - Better release management, improved package publishing workflow
+  - Clear change tracking and documentation
+
+### [2024-12-15] Implement Framer Motion for Enhanced Animations
+- **Context:**
+  - Need for smooth, performant animations to enhance user experience across the application.
+- **Decision:**
+  - Implement Framer Motion for all animations and transitions throughout the application.
+- **Alternatives Considered:**
+  - CSS animations (less flexible, harder to coordinate)
+  - React Spring (less intuitive API)
+  - No animations (poorer user experience)
+- **Consequences:**
+  - Smooth user interactions, professional animations, better UX
+  - Declarative animation API, excellent React integration
+  - Consistent animation patterns across components
+
+### [2024-12-15] Add react-easy-crop for Image Cropping
+- **Context:**
+  - Need for user-friendly image cropping functionality in profile avatars and other image upload features.
+- **Decision:**
+  - Implement react-easy-crop for all image cropping functionality.
+- **Alternatives Considered:**
+  - Custom cropping implementation (more development time)
+  - Alternative cropping libraries (less mature)
+  - No cropping functionality (poorer user experience)
+- **Consequences:**
+  - Intuitive image cropping experience, better user satisfaction
+  - Touch-friendly interface, responsive design
+  - Consistent cropping behavior across the application
+
+### [2024-12-15] Implement Package Template System
+- **Context:**
+  - Need for consistent package creation and structure across the monorepo.
+- **Decision:**
+  - Create standardized package templates and creation scripts for new packages.
+- **Alternatives Considered:**
+  - Manual package creation (inconsistent, error-prone)
+  - Copy-paste approach (maintenance overhead)
+  - No templates (inconsistent package structure)
+- **Consequences:**
+  - Consistent package structure, faster package creation
+  - Standardized configurations, better developer experience
+  - Easier onboarding for new team members
+
+### [2024-12-15] Add Comprehensive Testing Strategy
+- **Context:**
+  - Need for reliable testing across all packages and applications.
+- **Decision:**
+  - Implement comprehensive testing strategy with Vitest, React Testing Library, and Playwright.
+- **Alternatives Considered:**
+  - Minimal testing (poor code quality)
+  - Jest (slower, less Vite integration)
+  - Manual testing only (unreliable, time-consuming)
+- **Consequences:**
+  - Better code quality, faster development cycles
+  - Reliable automated testing, improved confidence in changes
+  - Better user experience through comprehensive test coverage 

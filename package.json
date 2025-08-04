@@ -41,7 +41,20 @@
     "auth:stop-all": "./scripts/stop-auth-dev.sh",
     "auth:test-setup": "./scripts/test-auth-setup.sh",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "docs:dev": "cd apps/web/lego-moc-docs && pnpm start",
+    "docs:build": "cd apps/web/lego-moc-docs && pnpm build",
+    "docs:serve": "cd apps/web/lego-moc-docs && pnpm serve",
+    "lego:dev": "./scripts/start-lego-apps.sh",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
+    "security:audit": "pnpm audit --audit-level=moderate",
+    "security:fix": "pnpm audit fix",
+    "security:check": "pnpm run security:audit && pnpm run security:lint",
+    "security:lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0 --config eslint.config.security.js",
+    "security:scan": "pnpm run security:check && pnpm run security:headers:test",
+    "security:headers:test": "node scripts/test-security-headers.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -58,6 +71,7 @@
   },
   "devDependencies": {
     "@axe-core/react": "^4.10.2",
+    "@changesets/cli": "^2.29.5",
     "@chromatic-com/storybook": "^4.0.1",
     "@reduxjs/toolkit": "^2.8.2",
     "@storybook/addon-a11y": "^9.0.17",
@@ -80,6 +94,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-security": "^2.1.1",
     "husky": "^9.0.0",
     "jsdom": "^26.1.0",
     "prettier": "^3.6.2",
@@ -95,6 +110,11 @@
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.21.5"
+    }
   },
   "exports": {}
 }

@@ -16,43 +16,169 @@
       "name": "Monorepo Structure",
       "quadrant": "Techniques",
       "ring": "Adopt",
-      "description": "Single repository for all apps and packages to simplify code sharing and dependency management."
+      "description": "Single repository for all apps and packages to simplify code sharing and dependency management. Enables better collaboration and reduces duplication.",
+      "moved": "in"
+    },
+    {
+      "name": "TypeScript",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Adopt",
+      "description": "Strongly typed programming language that builds on JavaScript. Provides better developer experience and catches errors at compile time.",
+      "moved": "none"
+    },
+    {
+      "name": "React",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Adopt",
+      "description": "JavaScript library for building user interfaces. Our primary frontend framework with excellent ecosystem and community support.",
+      "moved": "none"
     },
     {
       "name": "Drizzle ORM",
       "quadrant": "Tools",
       "ring": "Adopt",
-      "description": "Type-safe, modern ORM for PostgreSQL."
-    },
-    {
-      "name": "AWS Lambda",
-      "quadrant": "Platforms",
-      "ring": "Trial",
-      "description": "Serverless compute platform for scalable backend services."
+      "description": "Type-safe, modern ORM for PostgreSQL with excellent TypeScript support and performance.",
+      "moved": "in"
     },
     {
       "name": "RTK Query",
       "quadrant": "Languages & Frameworks",
       "ring": "Adopt",
-      "description": "Modern data fetching and caching for React apps."
+      "description": "Modern data fetching and caching solution for React apps. Provides automatic caching, background updates, and optimistic updates.",
+      "moved": "in"
     },
     {
       "name": "Vitest",
       "quadrant": "Tools",
       "ring": "Adopt",
-      "description": "Fast, modern test runner for TypeScript and JavaScript."
+      "description": "Fast, modern test runner for TypeScript and JavaScript. Excellent Vite integration and developer experience.",
+      "moved": "in"
     },
     {
-      "name": "GraphQL",
+      "name": "Zod",
       "quadrant": "Languages & Frameworks",
-      "ring": "Assess",
-      "description": "Query language for APIs, under consideration for future features."
+      "ring": "Adopt",
+      "description": "TypeScript-first schema validation library. Used for API validation, form validation, and type safety across the application.",
+      "moved": "in"
+    },
+    {
+      "name": "Tailwind CSS",
+      "quadrant": "Tools",
+      "ring": "Adopt",
+      "description": "Utility-first CSS framework for rapid UI development. Provides consistent design system and excellent developer experience.",
+      "moved": "none"
+    },
+    {
+      "name": "shadcn/ui",
+      "quadrant": "Tools",
+      "ring": "Adopt",
+      "description": "Re-usable components built with Radix UI and Tailwind CSS. Provides accessible, customizable components for consistent UI.",
+      "moved": "in"
+    },
+    {
+      "name": "pnpm",
+      "quadrant": "Tools",
+      "ring": "Adopt",
+      "description": "Fast, disk space efficient package manager. Perfect for monorepos with excellent workspace support.",
+      "moved": "none"
+    },
+    {
+      "name": "Vite",
+      "quadrant": "Tools",
+      "ring": "Adopt",
+      "description": "Next generation frontend tooling. Extremely fast development server and build tool with excellent plugin ecosystem.",
+      "moved": "none"
+    },
+    {
+      "name": "AWS Lambda",
+      "quadrant": "Platforms",
+      "ring": "Trial",
+      "description": "Serverless compute platform for scalable backend services. Reduces operational overhead and provides automatic scaling.",
+      "moved": "in"
     },
     {
       "name": "Serverless Framework",
       "quadrant": "Tools",
       "ring": "Trial",
-      "description": "Framework for deploying serverless applications."
+      "description": "Framework for deploying serverless applications. Simplifies AWS Lambda deployment and configuration.",
+      "moved": "none"
+    },
+    {
+      "name": "Jest",
+      "quadrant": "Tools",
+      "ring": "Trial",
+      "description": "JavaScript testing framework for backend testing. Used alongside Supertest for comprehensive API testing.",
+      "moved": "none"
+    },
+    {
+      "name": "Docker",
+      "quadrant": "Platforms",
+      "ring": "Trial",
+      "description": "Containerization platform for consistent development and deployment environments.",
+      "moved": "out"
+    },
+    {
+      "name": "GraphQL",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Assess",
+      "description": "Query language for APIs. Under consideration for future features that require flexible data fetching.",
+      "moved": "none"
+    },
+    {
+      "name": "Next.js",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Hold",
+      "description": "React framework with SSR/SSG capabilities. Not used in this project as we prefer pure React with Vite.",
+      "moved": "out"
+    },
+    {
+      "name": "Express.js",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Hold",
+      "description": "Web application framework for Node.js. Replaced by Serverless Framework for our backend needs.",
+      "moved": "out"
+    },
+    {
+      "name": "MongoDB",
+      "quadrant": "Platforms",
+      "ring": "Hold",
+      "description": "NoSQL database. Not used in this project as we prefer PostgreSQL with Drizzle ORM.",
+      "moved": "out"
+    },
+    {
+      "name": "Webpack",
+      "quadrant": "Tools",
+      "ring": "Hold",
+      "description": "JavaScript module bundler. Replaced by Vite for better performance and developer experience.",
+      "moved": "out"
+    },
+    {
+      "name": "Redux Toolkit",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Assess",
+      "description": "Official, opinionated Redux toolkit. Considering for complex state management needs.",
+      "moved": "none"
+    },
+    {
+      "name": "PostgreSQL",
+      "quadrant": "Platforms",
+      "ring": "Adopt",
+      "description": "Reliable, open-source relational database. Our primary database with excellent TypeScript support through Drizzle.",
+      "moved": "none"
+    },
+    {
+      "name": "React Hook Form",
+      "quadrant": "Languages & Frameworks",
+      "ring": "Adopt",
+      "description": "Performant, flexible forms library for React. Excellent integration with Zod for validation.",
+      "moved": "in"
+    },
+    {
+      "name": "Ethereal Email",
+      "quadrant": "Tools",
+      "ring": "Trial",
+      "description": "Fake SMTP service for email testing in development. Provides real email testing without external dependencies.",
+      "moved": "in"
     }
   ]
 } 

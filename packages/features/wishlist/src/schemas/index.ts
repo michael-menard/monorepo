@@ -1,25 +1,26 @@
 import { z } from 'zod';
+import { createEnhancedSchemas, validationMessages } from '@repo/ui';
 
-// Wishlist item schema
+// Wishlist item schema with enhanced error messages
 export const wishlistItemSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1, 'Name is required'),
-  description: z.string().optional(),
-  price: z.number().positive().optional(),
-  url: z.string().url().optional(),
-  imageUrl: z.string().url().optional(),
+  name: createEnhancedSchemas.requiredString('Name'),
+  description: createEnhancedSchemas.optionalString('Description'),
+  price: createEnhancedSchemas.price('Price'),
+  url: createEnhancedSchemas.url('Product Link'),
+  imageUrl: createEnhancedSchemas.url('Image URL'),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
-  category: z.string().optional(),
+  category: createEnhancedSchemas.optionalString('Category'),
   isPurchased: z.boolean().default(false),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
-// Wishlist schema
+// Wishlist schema with enhanced error messages
 export const wishlistSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1, 'Wishlist name is required'),
-  description: z.string().optional(),
+  name: createEnhancedSchemas.requiredString('Wishlist Name'),
+  description: createEnhancedSchemas.optionalString('Description'),
   items: z.array(wishlistItemSchema).default([]),
   isPublic: z.boolean().default(false),
   createdAt: z.date(),

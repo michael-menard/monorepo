@@ -1,0 +1,104 @@
+---
+sidebar_position: 3
+title: "Component Examples"
+description: "Examples of using custom components in Docusaurus"
+---
+
+import ExampleComponent from '@site/src/components/ExampleComponent';
+
+# Component Examples
+
+This page demonstrates how to use custom React components in your Docusaurus documentation.
+
+## Basic Usage
+
+You can import and use custom components in MDX files like this:
+
+<ExampleComponent title="Information Box">
+  This is an information box using our custom component. It uses the default 'info' variant.
+</ExampleComponent>
+
+## Different Variants
+
+The ExampleComponent supports different variants for different types of content:
+
+<ExampleComponent title="Success Message" variant="success">
+  This is a success message with green styling.
+</ExampleComponent>
+
+<ExampleComponent title="Warning Message" variant="warning">
+  This is a warning message with orange styling.
+</ExampleComponent>
+
+<ExampleComponent title="Error Message" variant="error">
+  This is an error message with red styling.
+</ExampleComponent>
+
+## Code Example
+
+Here's how to use the component in your MDX files:
+
+```mdx
+---
+title: "My Page"
+---
+
+import ExampleComponent from '@site/src/components/ExampleComponent';
+
+# My Page
+
+<ExampleComponent title="My Title" variant="info">
+  This is the content of my component.
+</ExampleComponent>
+```
+
+## Available Props
+
+The ExampleComponent accepts the following props:
+
+- **title** (string, required): The title displayed in the component
+- **children** (ReactNode, required): The content inside the component
+- **variant** (string, optional): The styling variant ('info', 'warning', 'success', 'error')
+
+## Creating Your Own Components
+
+To create your own custom components:
+
+1. Create a new file in `src/components/`
+2. Export your component
+3. Import it in your MDX files
+4. Use it in your content
+
+Example component structure:
+
+```tsx
+import React from 'react';
+
+interface MyComponentProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+export default function MyComponent({ title, children }: MyComponentProps) {
+  return (
+    <div className="lego-card">
+      <h3>{title}</h3>
+      {children}
+    </div>
+  );
+}
+```
+
+## Styling with LEGO Colors
+
+Use the LEGO color variables in your components:
+
+```css
+.my-component {
+  background-color: var(--lego-red);
+  color: var(--lego-white);
+  border: 2px solid var(--lego-blue);
+}
+```
+
+This ensures consistency with the overall LEGO theme of the documentation site. 
