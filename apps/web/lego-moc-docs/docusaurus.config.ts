@@ -109,7 +109,7 @@ const config: Config = {
             },
             {
               label: 'Tutorials',
-              to: '/docs/tutorials',
+              to: '/docs/tutorials/create-first-moc',
             },
           ],
         },

@@ -9,7 +9,10 @@ import { useState } from 'react'
 import { AuthApiError, authApi } from '../../../services/authApi'
 
 const SignupSchema = z.object({
-  name: z.string().min(2, 'Full name is required'),
+  name: z
+    .string()
+    .min(2, 'Full name is required')
+    .refine((val) => val.trim().split(/\s+/).length >= 2, 'Full name is required'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string()

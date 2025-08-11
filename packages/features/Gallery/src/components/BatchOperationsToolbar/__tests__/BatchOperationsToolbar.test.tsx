@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import BatchOperationsToolbar from '../index.js';
@@ -131,6 +131,10 @@ describe('BatchOperationsToolbar', () => {
     });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   const renderComponent = (props = {}) => {
     const defaultProps = {
       selectedImages: ['image-1', 'image-2'],
@@ -143,10 +147,12 @@ describe('BatchOperationsToolbar', () => {
       ...props,
     };
 
+    const container = document.body.appendChild(document.createElement('div'));
     return render(
       <Provider store={store}>
         <BatchOperationsToolbar {...defaultProps} />
-      </Provider>
+      </Provider>,
+      { container }
     );
   };
 
@@ -255,24 +261,17 @@ describe('BatchOperationsToolbar', () => {
 
   describe('Batch Download Operations', () => {
     it('should trigger download for selected images', async () => {
-      // Mock document.createElement and appendChild
-      const mockLink = {
-        href: '',
-        download: '',
-        click: vi.fn(),
-      };
-      const mockAppendChild = vi.fn();
-      const mockRemoveChild = vi.fn();
-      
-      Object.defineProperty(document, 'createElement', {
-        value: vi.fn().mockReturnValue(mockLink),
-      });
-      Object.defineProperty(document.body, 'appendChild', {
-        value: mockAppendChild,
-      });
-      Object.defineProperty(document.body, 'removeChild', {
-        value: mockRemoveChild,
-      });
+      // Intercept anchor creation to use real nodes and spy on click
+      const originalCreateElement = document.createElement.bind(document);
+      const createdAnchors: HTMLAnchorElement[] = [];
+      vi.spyOn(document, 'createElement').mockImplementation(((tagName: any, options?: any) => {
+        const el = originalCreateElement(tagName as any, options as any);
+        if (typeof tagName === 'string' && tagName.toLowerCase() === 'a') {
+          createdAnchors.push(el as HTMLAnchorElement);
+          vi.spyOn(el as any, 'click').mockImplementation(() => {});
+        }
+        return el as any;
+      }) as any);
 
       renderComponent();
       
@@ -280,10 +279,16 @@ describe('BatchOperationsToolbar', () => {
       fireEvent.click(downloadButton);
       
       await waitFor(() => {
-        expect(document.createElement).toHaveBeenCalledWith('a');
-        expect(mockLink.href).toBe('http://localhost:3000/api/gallery/image-1/download');
-        expect(mockLink.download).toBe('image-image-1.jpg');
-        expect(mockLink.click).toHaveBeenCalledTimes(2);
+        // Two anchors created (one per image)
+        expect(createdAnchors.length).toBe(2);
+        expect(createdAnchors[0].href).toBe('http://localhost:3000/api/gallery/image-1/download');
+        expect(createdAnchors[0].download).toBe('image-image-1.jpg');
+        expect((createdAnchors[0] as any).click).toHaveBeenCalledTimes(1);
+
+        expect(createdAnchors[1].href).toBe('http://localhost:3000/api/gallery/image-2/download');
+        expect(createdAnchors[1].download).toBe('image-image-2.jpg');
+        expect((createdAnchors[1] as any).click).toHaveBeenCalledTimes(1);
+
         expect(mockOnImagesDownloaded).toHaveBeenCalledWith(['image-1', 'image-2']);
       });
     });

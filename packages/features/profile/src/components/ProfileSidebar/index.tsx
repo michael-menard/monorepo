@@ -1,12 +1,7 @@
 import React from 'react';
 import { AppAvatar, Button, Badge } from '@repo/ui';
 import type { ProfileSidebarProps } from '../../types';
-import {
-  formatFullName,
-  getInitials,
-  generateAvatarPlaceholder,
-  getProfileCompletionPercentage,
-} from '../../utils';
+import { formatFullName, generateAvatarPlaceholder, getProfileCompletionPercentage } from '../../utils';
 
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   profile,
@@ -17,7 +12,7 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   className = '',
 }) => {
   const fullName = formatFullName(profile);
-  const initials = getInitials(profile);
+
   const avatarUrl = profile.avatar || generateAvatarPlaceholder(fullName);
   const completionPercentage = getProfileCompletionPercentage(profile);
 
@@ -56,6 +51,8 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
             size="lg"
             showEditButton={isEditable && !!onUploadAvatar}
             className="w-24 h-24"
+            disabled={false}
+            clickable={true}
           />
         </div>
         

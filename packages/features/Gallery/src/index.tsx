@@ -7,7 +7,7 @@ import BatchOperationsToolbar from './components/BatchOperationsToolbar/index.js
 import { useAlbumDragAndDrop } from './hooks/useAlbumDragAndDrop.js';
 import { useInfiniteGallery } from './hooks/useInfiniteGallery.js';
 import { useIntersectionObserver } from './hooks/useIntersectionObserver.js';
-import type { GalleryProps, GalleryImage, AnimationConfig } from './schemas/index.js';
+import type { GalleryProps, AnimationConfig } from './schemas/index.js';
 import { GalleryPropsSchema, AnimationConfigSchema } from './schemas/index.js';
 
 const Gallery: React.FC<GalleryProps> = ({
@@ -224,7 +224,7 @@ const Gallery: React.FC<GalleryProps> = ({
             layout
           >
             <AnimatePresence mode="popLayout">
-              {validatedProps.images.map((image, index) => (
+              {validatedProps.images.map((image) => (
                 <motion.div
                   key={image.id}
                   className={getItemClasses()}
@@ -290,6 +290,36 @@ export { useAlbumDragAndDrop, useInfiniteGallery, useIntersectionObserver };
 // Export schemas and types
 export * from './schemas/index.js';
 export type { GalleryFilters, GalleryItem, GalleryResponse } from './store/galleryApi.js';
+
+// Export gallery API and hooks
+export { galleryApi } from './store/galleryApi.js';
+export {
+  useGetGalleryQuery,
+  useGetImagesQuery,
+  useGetImageByIdQuery,
+  useSearchImagesQuery,
+  useGetAvailableTagsQuery,
+  useGetAvailableCategoriesQuery,
+  useUploadImageMutation,
+  useUpdateImageMutation,
+  useDeleteImageMutation,
+  useBatchDeleteImagesMutation,
+  useBatchAddImagesToAlbumMutation,
+  // Inspiration-specific hooks
+  useGetInspirationItemsQuery,
+  useGetInspirationItemByIdQuery,
+  useLikeInspirationItemMutation,
+  useCreateInspirationItemMutation,
+  useUpdateInspirationItemMutation,
+  useDeleteInspirationItemMutation,
+} from './store/galleryApi.js';
+
+// Export inspiration types
+export type {
+  InspirationItem,
+  InspirationResponse,
+  InspirationFilters,
+} from './store/galleryApi.js';
 
 // Default export
 export default Gallery;

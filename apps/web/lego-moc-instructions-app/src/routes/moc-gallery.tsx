@@ -5,7 +5,7 @@ import MocInstructionsGallery from '../pages/MocInstructionsGallery';
 
 export const mocGalleryRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/moc-instructions',
+  path: '/moc-gallery',
   // beforeLoad: createTanStackRouteGuard(
   //   { requireAuth: false }, // Public route - no auth required
   //   redirect

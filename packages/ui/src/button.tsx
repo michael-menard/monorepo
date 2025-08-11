@@ -79,6 +79,7 @@ const Button = ({
     <Comp
       className={cn(buttonVariants({ variant, size, className }))}
       onKeyDown={handleKeyDown}
+      disabled={disabled}
       {...ariaAttributes}
       {...props}
     />

@@ -120,7 +120,8 @@ describe('Auth Package', () => {
 
       renderWithProviders(<Login />);
 
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      // Loader uses data-testid; no aria-role status on button
+      expect(screen.getByTestId('loader-icon')).toBeInTheDocument();
     });
 
     it('displays error message', () => {
@@ -148,12 +149,12 @@ describe('Auth Package', () => {
 
       renderWithProviders(<SignupForm />);
 
-      expect(screen.getByText('Create Account')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your first name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your last name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Confirm your password')).toBeInTheDocument();
+      expect(screen.getAllByText('Create Account')[0]).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('First Name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Last Name')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Confirm Password')).toBeInTheDocument();
     });
   });
 
@@ -162,13 +163,11 @@ describe('Auth Package', () => {
       const store = createTestStore();
       const state = store.getState();
 
+      // Match the simplified UI-focused auth slice initial state
       expect(state.auth).toEqual({
-        user: null,
-        tokens: null,
-        isAuthenticated: false,
-        isLoading: false,
         isCheckingAuth: true,
-        error: null,
+        lastActivity: null,
+        sessionTimeout: 30 * 60 * 1000,
         message: null,
       });
     });

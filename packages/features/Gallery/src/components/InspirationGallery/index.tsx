@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageCard from '../ImageCard/index.js';
 import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
@@ -45,8 +45,8 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   columns = { sm: 2, md: 3, lg: 4, xl: 5 },
   gap = 4,
 }) => {
-  const [organizedImages, setOrganizedImages] = useState<GalleryImage[][]>([]);
-  const [imageHeights, setImageHeights] = useState<{ [key: string]: number }>({});
+
+  // const [imageHeights] = useState<{ [key: string]: number }>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { actions: dragActions } = useAlbumDragAndDrop();
@@ -73,38 +73,11 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   };
 
   // Organize images into columns for masonry layout
-  const organizeImagesIntoColumns = (images: GalleryImage[]) => {
-    const { sm = 2, md = 3, lg = 4, xl = 5 } = columns;
-    const maxColumns = Math.max(sm, md, lg, xl);
+  // const organizeImagesIntoColumns = (_images: GalleryImage[]) => [] as GalleryImage[][];
 
-    const imageColumns: GalleryImage[][] = Array.from({ length: maxColumns }, () => []);
-    const columnHeights = Array.from({ length: maxColumns }, () => 0);
 
-    images.forEach((image) => {
-      // Find the shortest column
-      const shortestColumnIndex = columnHeights.indexOf(Math.min(...columnHeights));
-      imageColumns[shortestColumnIndex].push(image);
 
-      // Estimate height (you could make this more sophisticated)
-      const estimatedHeight = imageHeights[image.id] || 300;
-      columnHeights[shortestColumnIndex] += estimatedHeight + gap;
-    });
 
-    return imageColumns;
-  };
-
-  // Handle image load to get actual heights
-  const handleImageLoad = useCallback((imageId: string, height: number) => {
-    setImageHeights((prev) => ({
-      ...prev,
-      [imageId]: height,
-    }));
-  }, []);
-
-  // Update organized images when images or heights change
-  useEffect(() => {
-    setOrganizedImages(organizeImagesIntoColumns(images));
-  }, [images, columns, imageHeights, gap]);
 
   const handleDragStart = (e: React.DragEvent, imageId: string) => {
     dragActions.handleDragStart(e, [imageId]);
@@ -137,7 +110,7 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   }
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full ${className}`} role="main">
       {/* Masonry Gallery */}
       <div
         ref={containerRef}
@@ -159,25 +132,34 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
               }}
               layout
             >
-              <ImageCard
-                src={image.url}
-                alt={image.title || image.description || 'Gallery image'}
-                title={image.title || 'Untitled'}
-                description={image.description}
-                author={image.author}
-                uploadDate={image.createdAt}
-                tags={image.tags}
-                onView={() => onImageClick?.(image)}
-                onLike={(liked) => onImageLike?.(image.id, liked)}
-                onShare={() => onImageShare?.(image.id)}
-                onDelete={() => onImageDelete?.(image.id)}
-                onDownload={() => onImageDownload?.(image.id)}
-                onAddToAlbum={() => onImageAddToAlbum?.(image.id)}
-                draggableId={image.id}
-                onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
-                selected={selectedImages.includes(image.id)}
-                onSelect={(checked) => handleImageSelect(image.id, checked)}
-              />
+              <div
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onImageClick?.(image)
+                  }
+                }}
+              >
+                <ImageCard
+                  src={image.url}
+                  alt={image.title || image.description || 'Gallery image'}
+                  title={image.title || 'Untitled'}
+                  description={image.description}
+                  author={image.author}
+                  uploadDate={image.createdAt}
+                  tags={image.tags}
+                  onView={() => onImageClick?.(image)}
+                  onLike={(liked) => onImageLike?.(image.id, liked)}
+                  onShare={() => onImageShare?.(image.id)}
+                  onDelete={() => onImageDelete?.(image.id)}
+                  onDownload={() => onImageDownload?.(image.id)}
+                  onAddToAlbum={() => onImageAddToAlbum?.(image.id)}
+                  draggableId={image.id}
+                  onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
+                  selected={selectedImages.includes(image.id)}
+                  onSelect={(checked) => handleImageSelect(image.id, checked)}
+                />
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -189,10 +171,10 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
           {loading ? (
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span className="text-gray-600">Loading more images...</span>
+              <span className="text-gray-600">Loading more inspiration...</span>
             </div>
           ) : (
-            <div className="h-8" /> // Invisible trigger element
+            <div className="h-8" data-testid="load-more-trigger" />
           )}
         </div>
       )}

@@ -82,7 +82,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
     filters.searchQuery || filters.selectedTags.length > 0 || filters.selectedCategory;
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+    <div data-testid="filter-bar" className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
       {/* Main Search Bar */}
       <div className="flex items-center p-4">
         <div className="relative flex-1">

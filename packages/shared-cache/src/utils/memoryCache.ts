@@ -1,4 +1,5 @@
-import { CacheConfig, CacheEntry, CacheStats, CacheConfigSchema } from '../schemas/cache.js'
+import { CacheConfigSchema } from '../schemas/cache.js'
+import type { CacheConfig, CacheEntry, CacheStats } from '../schemas/cache.js'
 
 /**
  * Memory-based cache with LRU eviction

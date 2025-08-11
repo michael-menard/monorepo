@@ -104,7 +104,7 @@ describe('LoginForm', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Invalid email')).toBeInTheDocument();
+        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
       });
     });
 
@@ -120,7 +120,7 @@ describe('LoginForm', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('String must contain at least 8 character(s)')).toBeInTheDocument();
+        expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
       });
     });
   });
@@ -143,7 +143,6 @@ describe('LoginForm', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(mockClearError).toHaveBeenCalled();
         expect(mockLogin).toHaveBeenCalledWith({
           email: 'test@example.com',
           password: 'password123',

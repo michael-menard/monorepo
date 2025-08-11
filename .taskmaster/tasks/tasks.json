@@ -1,8 +1,8 @@
 {
-  "Create detailed MOC page with editable forms (Step 1 of 3)": {
+  "Create detailed MOC page with editable forms": {
     "id": 15,
     "title": "Implement MocDetailPage component",
-    "description": "Create detailed MOC page with editable forms (Step 1 of 3)",
+    "description": "Create detailed MOC page with editable forms",
     "status": "ready",
     "priority": "high",
     "dependencies": [
@@ -74,7 +74,7 @@
   "Create file upload areas for different MOC file types (Step 1 of 3)": {
     "id": 18,
     "title": "Implement MOC file upload areas",
-    "description": "Create file upload areas for different MOC file types (Step 1 of 3)",
+    "description": "Create file upload areas for different MOC file types",
     "status": "ready",
     "priority": "high",
     "dependencies": [
@@ -233,10 +233,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create MOC card for gallery display (Step 1 of 3)": {
+  "Create MOC card for gallery display": {
     "id": 21,
     "title": "Implement MocCard component",
-    "description": "Create MOC card for gallery display (Step 1 of 3)",
+    "description": "Create MOC card for gallery display",
     "status": "ready",
     "priority": "high",
     "dependencies": [
@@ -286,10 +286,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Configure routing for all application pages (Step 1 of 3)": {
+  "Configure routing for all application pages": {
     "id": 24,
     "title": "Set up React Router configuration",
-    "description": "Configure routing for all application pages (Step 1 of 3)",
+    "description": "Configure routing for all application pages",
     "status": "ready",
     "priority": "high",
     "dependencies": [
@@ -339,10 +339,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add comprehensive accessibility support to all components (Step 1 of 3)": {
+  "Add comprehensive accessibility support to all components": {
     "id": 27,
     "title": "Implement accessibility features",
-    "description": "Add comprehensive accessibility support to all components (Step 1 of 3)",
+    "description": "Add comprehensive accessibility support to all components",
     "status": "ready",
     "priority": "high",
     "dependencies": [
@@ -442,10 +442,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add performance monitoring and analytics (Step 1 of 3)": {
+  "Add performance monitoring and analytics": {
     "id": 46,
     "title": "Implement performance monitoring",
-    "description": "Add performance monitoring and analytics (Step 1 of 3)",
+    "description": "Add performance monitoring and analytics",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -495,10 +495,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add dark/light theme support across all components (Step 1 of 3)": {
+  "Add dark/light theme support across all components": {
     "id": 49,
     "title": "Implement theme system support",
-    "description": "Add dark/light theme support across all components (Step 1 of 3)",
+    "description": "Add dark/light theme support across all components",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -548,10 +548,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Prepare components for internationalization support (Step 1 of 3)": {
+  "Prepare components for internationalization support": {
     "id": 52,
     "title": "Implement internationalization (i18n) setup",
-    "description": "Prepare components for internationalization support (Step 1 of 3)",
+    "description": "Prepare components for internationalization support",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -601,10 +601,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add offline functionality for critical features (Step 1 of 3)": {
+  "Add offline functionality for critical features": {
     "id": 55,
     "title": "Implement offline support",
-    "description": "Add offline functionality for critical features (Step 1 of 3)",
+    "description": "Add offline functionality for critical features",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -654,10 +654,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add PWA capabilities for mobile app-like experience (Step 1 of 3)": {
+  "Add PWA capabilities for mobile app-like experience": {
     "id": 58,
     "title": "Implement progressive web app features",
-    "description": "Add PWA capabilities for mobile app-like experience (Step 1 of 3)",
+    "description": "Add PWA capabilities for mobile app-like experience",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -707,10 +707,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Configure Storybook for isolated component development (Step 1 of 3)": {
+  "Configure Storybook for isolated component development": {
     "id": 61,
     "title": "Set up Storybook for component development",
-    "description": "Configure Storybook for isolated component development (Step 1 of 3)",
+    "description": "Configure Storybook for isolated component development",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -760,10 +760,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Set up semantic versioning for packages (Step 1 of 3)": {
+  "Set up semantic versioning for packages": {
     "id": 64,
     "title": "Implement component library versioning",
-    "description": "Set up semantic versioning for packages (Step 1 of 3)",
+    "description": "Set up semantic versioning for packages",
     "status": "ready",
     "priority": "low",
     "dependencies": [
@@ -866,10 +866,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create category filtering for wishlist items (Step 1 of 3)": {
+  "Create category filtering for wishlist items": {
     "id": 68,
     "title": "Implement CategoryFilter component",
-    "description": "Create category filtering for wishlist items (Step 1 of 3)",
+    "description": "Create category filtering for wishlist items",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -919,10 +919,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add search and filtering capabilities to MOC gallery (Step 1 of 3)": {
+  "Add search and filtering capabilities to MOC gallery": {
     "id": 72,
     "title": "Implement MOC search and filter functionality",
-    "description": "Add search and filtering capabilities to MOC gallery (Step 1 of 3)",
+    "description": "Add search and filtering capabilities to MOC gallery",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -972,10 +972,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add file download capabilities for MOC files (Step 1 of 3)": {
+  "Add file download capabilities for MOC files": {
     "id": 75,
     "title": "Implement file download functionality",
-    "description": "Add file download capabilities for MOC files (Step 1 of 3)",
+    "description": "Add file download capabilities for MOC files",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1025,10 +1025,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add functionality to link gallery images to MOC instructions (Step 1 of 3)": {
+  "Add functionality to link gallery images to MOC instructions": {
     "id": 78,
     "title": "Implement gallery image linking for MOCs",
-    "description": "Add functionality to link gallery images to MOC instructions (Step 1 of 3)",
+    "description": "Add functionality to link gallery images to MOC instructions",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1079,10 +1079,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create error boundaries for graceful error handling (Step 1 of 3)": {
+  "Create error boundaries for graceful error handling": {
     "id": 81,
     "title": "Implement error boundary components",
-    "description": "Create error boundaries for graceful error handling (Step 1 of 3)",
+    "description": "Create error boundaries for graceful error handling",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1132,10 +1132,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add consistent loading states across all components (Step 1 of 3)": {
+  "Add consistent loading states across all components": {
     "id": 84,
     "title": "Implement loading states and skeletons",
-    "description": "Add consistent loading states across all components (Step 1 of 3)",
+    "description": "Add consistent loading states across all components",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1185,10 +1185,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Ensure all components work across different screen sizes (Step 1 of 3)": {
+  "Ensure all components work across different screen sizes": {
     "id": 87,
     "title": "Implement responsive design breakpoints",
-    "description": "Ensure all components work across different screen sizes (Step 1 of 3)",
+    "description": "Ensure all components work across different screen sizes",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1238,10 +1238,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add comprehensive error messaging for all forms (Step 1 of 3)": {
+  "Add comprehensive error messaging for all forms": {
     "id": 90,
     "title": "Implement form validation error messages",
-    "description": "Add comprehensive error messaging for all forms (Step 1 of 3)",
+    "description": "Add comprehensive error messaging for all forms",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1291,10 +1291,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create toast notifications for user feedback (Step 1 of 3)": {
+  "Create toast notifications for user feedback": {
     "id": 93,
     "title": "Implement toast notification system",
-    "description": "Create toast notifications for user feedback (Step 1 of 3)",
+    "description": "Create toast notifications for user feedback",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1344,10 +1344,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add image optimization for uploads and display (Step 1 of 3)": {
+  "Add image optimization for uploads and display": {
     "id": 96,
     "title": "Implement image optimization utilities",
-    "description": "Add image optimization for uploads and display (Step 1 of 3)",
+    "description": "Add image optimization for uploads and display",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1397,10 +1397,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add caching for API calls and image assets (Step 1 of 3)": {
+  "Add caching for API calls and image assets": {
     "id": 99,
     "title": "Implement caching strategies",
-    "description": "Add caching for API calls and image assets (Step 1 of 3)",
+    "description": "Add caching for API calls and image assets",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1450,10 +1450,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create end-to-end tests for complete authentication flow (Step 1 of 3)": {
+  "Create end-to-end tests for complete authentication flow": {
     "id": 102,
     "title": "Implement integration tests for auth flow",
-    "description": "Create end-to-end tests for complete authentication flow (Step 1 of 3)",
+    "description": "Create end-to-end tests for complete authentication flow",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1503,10 +1503,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create integration tests for gallery operations (Step 1 of 3)": {
+  "Create integration tests for gallery operations": {
     "id": 105,
     "title": "Implement integration tests for gallery workflow",
-    "description": "Create integration tests for gallery operations (Step 1 of 3)",
+    "description": "Create integration tests for gallery operations",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1556,10 +1556,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Create integration tests for wishlist CRUD operations (Step 1 of 3)": {
+  "Create integration tests for wishlist CRUD operations": {
     "id": 108,
     "title": "Implement integration tests for wishlist operations",
-    "description": "Create integration tests for wishlist CRUD operations (Step 1 of 3)",
+    "description": "Create integration tests for wishlist CRUD operations",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1609,10 +1609,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Implement code splitting and bundle optimization (Step 1 of 3)": {
+  "Implement code splitting and bundle optimization": {
     "id": 111,
     "title": "Optimize bundle size and code splitting",
-    "description": "Implement code splitting and bundle optimization (Step 1 of 3)",
+    "description": "Implement code splitting and bundle optimization",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1662,10 +1662,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add comprehensive keyboard navigation to all interactive elements (Step 1 of 3)": {
+  "Add comprehensive keyboard navigation to all interactive elements": {
     "id": 114,
     "title": "Implement keyboard navigation support",
-    "description": "Add comprehensive keyboard navigation to all interactive elements (Step 1 of 3)",
+    "description": "Add comprehensive keyboard navigation to all interactive elements",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1715,10 +1715,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add keyboard alternatives for all drag-and-drop operations (Step 1 of 3)": {
+  "Add keyboard alternatives for all drag-and-drop operations": {
     "id": 117,
     "title": "Implement drag-and-drop accessibility",
-    "description": "Add keyboard alternatives for all drag-and-drop operations (Step 1 of 3)",
+    "description": "Add keyboard alternatives for all drag-and-drop operations",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1768,10 +1768,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Write documentation for all packages and components (Step 1 of 3)": {
+  "Write documentation for all packages and components": {
     "id": 120,
     "title": "Create comprehensive documentation",
-    "description": "Write documentation for all packages and components (Step 1 of 3)",
+    "description": "Write documentation for all packages and components",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1821,10 +1821,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Test compatibility across different browsers (Step 1 of 3)": {
+  "Test compatibility across different browsers": {
     "id": 123,
     "title": "Implement cross-browser testing",
-    "description": "Test compatibility across different browsers (Step 1 of 3)",
+    "description": "Test compatibility across different browsers",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1874,10 +1874,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Test mobile experience across different devices (Step 1 of 3)": {
+  "Test mobile experience across different devices": {
     "id": 126,
     "title": "Implement mobile responsiveness testing",
-    "description": "Test mobile experience across different devices (Step 1 of 3)",
+    "description": "Test mobile experience across different devices",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1927,10 +1927,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Add security measures and vulnerability scanning (Step 1 of 3)": {
+  "Add security measures and vulnerability scanning": {
     "id": 129,
     "title": "Implement security hardening",
-    "description": "Add security measures and vulnerability scanning (Step 1 of 3)",
+    "description": "Add security measures and vulnerability scanning",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -1980,10 +1980,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Set up deployment pipeline for all packages (Step 1 of 3)": {
+  "Set up deployment pipeline for all packages": {
     "id": 132,
     "title": "Create deployment configuration",
-    "description": "Set up deployment pipeline for all packages (Step 1 of 3)",
+    "description": "Set up deployment pipeline for all packages",
     "status": "ready",
     "priority": "medium",
     "dependencies": [
@@ -2033,10 +2033,10 @@
     "tags": [],
     "blockedBy": []
   },
-  "Refactor the monorepo structure to move the features directory under packages. Currently features/ is a sibling to packages/, but it should be packages/features/ to follow industry standards and improve tooling compatibility. (Step 1 of 3)": {
+  "Refactor the monorepo structure to move the features directory under packages. Currently features/ is a sibling to packages/, but it should be packages/features/ to follow industry standards and improve tooling compatibility.": {
     "id": 135,
     "title": "Refactor monorepo structure: Move features under packages",
-    "description": "Refactor the monorepo structure to move the features directory under packages. Currently features/ is a sibling to packages/, but it should be packages/features/ to follow industry standards and improve tooling compatibility. (Step 1 of 3)",
+    "description": "Refactor the monorepo structure to move the features directory under packages. Currently features/ is a sibling to packages/, but it should be packages/features/ to follow industry standards and improve tooling compatibility.",
     "status": "ready",
     "priority": "medium",
     "dependencies": [],
@@ -2084,4 +2084,559 @@
     "tags": [],
     "blockedBy": []
   },
+  "Gallery Component Refactoring": {
+    "id": 1,
+    "title": "Refactor Gallery Component System",
+    "description": "Transform existing Gallery into a production-ready component system using shadcn/ui components, maintaining backward compatibility while adding modern React patterns",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [],
+    "details": "Refactor the existing Gallery component system to improve maintainability, performance, and developer experience. The component currently handles MOC instruction cards and inspiration gallery cards with a unique stacked visual effect, but needs architectural improvements for better scalability and shadcn/ui integration.",
+    "testStrategy": "Test card display, interactions, responsive layout, and shadcn/ui integration",
+    "tag": "master",
+    "techStack": ["React", "TypeScript", "shadcn/ui", "Tailwind CSS", "Zod", "Vitest"],
+    "rules": [
+      "Use Zod schemas over TypeScript interfaces",
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command",
+      "Avoid TypeScript interfaces; prefer Zod + types",
+      "No NodeNext",
+      "Do not use watch flags in test scripts"
+    ],
+    "constraints": [
+      "Maintain backward compatibility",
+      "Support both single items and albums",
+      "Integrate with shadcn/ui components",
+      "Include comprehensive unit tests",
+      "Include accessibility tests",
+      "Include performance tests"
+    ]
+  },
+  "Gallery Package Consolidation": {
+    "id": 2,
+    "title": "Consolidate Gallery Package Implementations",
+    "description": "Unify all gallery implementations under @repo/gallery package to reduce code duplication and improve maintainability",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [1],
+    "details": "Consolidate duplicated functionality across packages, particularly in gallery components. Current state includes @repo/gallery, @repo/moc-instructions, and app-level custom implementations. Target state is a single @repo/gallery package as the source of truth with extensible architecture.",
+    "testStrategy": "Test unified API, extensibility, and backward compatibility",
+    "tag": "master",
+    "techStack": ["React", "TypeScript", "shadcn/ui", "Zod", "Vitest"],
+    "rules": [
+      "Use Zod schemas over TypeScript interfaces",
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Maintain backward compatibility",
+      "Reduce code duplication by 70%",
+      "Improve maintainability through centralized functionality",
+      "Enhance user experience consistency"
+    ]
+  },
+  "File Upload Consolidation": {
+    "id": 3,
+    "title": "Create Unified File Upload Package",
+    "description": "Consolidate file upload functionality into a single extensible @repo/FileUpload package with plugins/extensions",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [],
+    "details": "Create a single @repo/FileUpload package with plugins/extensions. Current state includes @repo/FileUpload, @repo/ImageUploadModal, and @repo/moc-instructions with duplicate drag & drop implementations. Target state is unified validation and progress tracking.",
+    "testStrategy": "Test file validation, upload progress, drag & drop behavior, and plugin system",
+    "tag": "master",
+    "techStack": ["React", "TypeScript", "shadcn/ui", "Zod", "Vitest"],
+    "rules": [
+      "Use Zod schemas over TypeScript interfaces",
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Support multiple file types",
+      "Extensible plugin system",
+      "Consistent drag & drop behavior",
+      "Shared validation and progress tracking"
+    ]
+  },
+  "Code Quality Tools Integration": {
+    "id": 4,
+    "title": "Integrate Code Quality & Analysis Tools",
+    "description": "Integrate comprehensive code quality, complexity analysis, and automated review tools to improve code maintainability",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [],
+    "details": "Integrate comprehensive code quality, complexity analysis, and automated review tools into the existing TypeScript + React + shadcn/Tailwind project to improve code maintainability, catch issues early, and establish consistent development standards.",
+    "testStrategy": "Test tool integration, pre-commit hooks, and CI/CD pipeline quality gates",
+    "tag": "master",
+    "techStack": ["TypeScript", "React", "ESLint", "Prettier", "Vitest", "Husky"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Zero high-severity security vulnerabilities",
+      "Reduced complexity scores across codebase",
+      "Automated pre-commit hooks",
+      "CI/CD pipeline with quality gates"
+    ]
+  },
+  "Prettier & Formatting Setup": {
+    "id": 5,
+    "title": "Configure Prettier and Import Organization",
+    "description": "Install and configure Prettier with import organization for consistent code formatting",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [4],
+    "details": "Install and configure Prettier with eslint-config-prettier, create .prettierrc configuration file, update ESLint config to work with Prettier, add format scripts to package.json, and configure import organization with @trivago/prettier-plugin-sort-imports.",
+    "testStrategy": "Test formatting rules, import sorting, and pre-commit hooks",
+    "tag": "master",
+    "techStack": ["Prettier", "ESLint", "TypeScript"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Consistent code formatting across project",
+      "Automated import sorting",
+      "Integration with ESLint",
+      "Pre-commit hook integration"
+    ]
+  },
+  "Complexity Analysis Setup": {
+    "id": 6,
+    "title": "Configure Complexity Analysis Tools",
+    "description": "Install and configure ESLint complexity plugins and Plato for visual complexity reports",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [4],
+    "details": "Install ESLint complexity plugins including eslint-plugin-sonarjs, configure cognitive complexity rules, set complexity thresholds (functions: 10, cognitive: 15), install Plato for visual complexity reports, create complexity reporting scripts, and generate initial complexity baseline report.",
+    "testStrategy": "Test complexity rules, reporting scripts, and baseline generation",
+    "tag": "master",
+    "techStack": ["ESLint", "Plato", "TypeScript"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Function complexity threshold: 10",
+      "Cognitive complexity threshold: 15",
+      "Visual complexity reports",
+      "Baseline complexity metrics"
+    ]
+  },
+  "Git Hooks & Pre-commit Automation": {
+    "id": 7,
+    "title": "Setup Git Hooks and Pre-commit Automation",
+    "description": "Install and configure Husky and lint-staged for automated pre-commit hooks",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [4, 5],
+    "details": "Install Husky and lint-staged, configure pre-commit hooks, set up automated formatting and linting, and test hook functionality to ensure code quality before commits.",
+    "testStrategy": "Test pre-commit hooks, formatting automation, and linting integration",
+    "tag": "master",
+    "techStack": ["Husky", "lint-staged", "Git"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Automated formatting on commit",
+      "Automated linting on commit",
+      "Prevent low-quality code commits",
+      "Integration with existing tools"
+    ]
+  },
+  "Testing Framework Integration": {
+    "id": 8,
+    "title": "Integrate Comprehensive Testing Framework",
+    "description": "Install and configure Vitest testing framework with React Testing Library and coverage reporting",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [4],
+    "details": "Install Vitest testing framework with @vitest/ui and jsdom, install React Testing Library, configure test scripts and coverage reporting, set up Node.js testing for serverless functions, create test utilities for AWS Lambda functions, add integration testing for API endpoints, and set up test coverage thresholds.",
+    "testStrategy": "Test framework integration, coverage reporting, and test utilities",
+    "tag": "master",
+    "techStack": ["Vitest", "React Testing Library", "jsdom", "TypeScript"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Minimum coverage requirements",
+      "React component testing",
+      "Node.js serverless testing",
+      "Integration test coverage"
+    ]
+  },
+  "Security Scanning Implementation": {
+    "id": 9,
+    "title": "Implement Security Vulnerability Scanning",
+    "description": "Configure security vulnerability scanning with pnpm audit integration and AWS-specific security scanning",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [4],
+    "details": "Configure pnpm audit integration, install and configure Snyk (if budget allows), install eslint-plugin-security, create security scanning scripts, add AWS-specific security scanning with @aws-sdk/client-iam for IAM policy validation, configure serverless security best practices, add Lambda function security scanning, and set up automated security monitoring.",
+    "testStrategy": "Test security scanning, vulnerability detection, and automated monitoring",
+    "tag": "master",
+    "techStack": ["pnpm", "ESLint", "AWS SDK", "Snyk"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Zero high-severity vulnerabilities",
+      "Automated security monitoring",
+      "AWS security best practices",
+      "GitHub security alerts integration"
+    ]
+  },
+  "Dependency & Architecture Analysis": {
+    "id": 10,
+    "title": "Setup Dependency and Architecture Analysis",
+    "description": "Install and configure dependency analysis tools for circular dependency detection and architecture visualization",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [4],
+    "details": "Install dependency analysis tools including madge and dependency-cruiser, configure circular dependency detection, set up architecture visualization, create dependency analysis scripts, and generate dependency reports.",
+    "testStrategy": "Test dependency analysis, circular dependency detection, and visualization",
+    "tag": "master",
+    "techStack": ["madge", "dependency-cruiser", "TypeScript"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Circular dependency detection",
+      "Architecture visualization",
+      "Dependency analysis reports",
+      "Automated dependency monitoring"
+    ]
+  },
+  "CI/CD Pipeline Setup": {
+    "id": 11,
+    "title": "Create GitHub Workflows CI/CD Pipeline",
+    "description": "Create .github/workflows/ci.yml file with comprehensive CI/CD pipeline for automated testing and deployment",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [4, 8, 9],
+    "details": "Create .github/workflows/ci.yml file that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include automated testing, linting, security scanning, and deployment stages.",
+    "testStrategy": "Test CI/CD pipeline, automated workflows, and deployment processes",
+    "tag": "master",
+    "techStack": ["GitHub Actions", "Node.js", "pnpm"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Clear, contextual purpose",
+      "Ease of use for future contributors",
+      "Professional team workflow alignment",
+      "Automated quality gates"
+    ]
+  },
+  "Testing Documentation and Coverage": {
+    "id": 12,
+    "title": "Create Comprehensive Testing Documentation",
+    "description": "Create tests/ directory with comprehensive testing documentation and coverage reports",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [8],
+    "details": "Create tests/ directory that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include testing guidelines, coverage reports, and testing best practices.",
+    "testStrategy": "Test documentation clarity, coverage reporting, and testing guidelines",
+    "tag": "master",
+    "techStack": ["Vitest", "React Testing Library", "TypeScript"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Clear, contextual purpose",
+      "Ease of use for future contributors",
+      "Professional team workflow alignment",
+      "Comprehensive testing coverage"
+    ]
+  },
+  "Performance Optimization": {
+    "id": 13,
+    "title": "Implement Performance Monitoring and Optimization",
+    "description": "Create performance monitoring and optimization documentation with Lighthouse scoring and bundle analysis",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [2, 3],
+    "details": "Create performance monitoring and optimization documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include Lighthouse scoring, bundle analysis, and performance optimization guidelines.",
+    "testStrategy": "Test performance monitoring, optimization tools, and performance metrics",
+    "tag": "master",
+    "techStack": ["Lighthouse", "Webpack Bundle Analyzer", "React"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Lighthouse score > 90",
+      "Bundle size optimization",
+      "Performance monitoring",
+      "Automated performance testing"
+    ]
+  },
+  "Security Review Documentation": {
+    "id": 14,
+    "title": "Create Security Review Documentation",
+    "description": "Create comprehensive security review documentation with vulnerability assessment and security best practices",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [9],
+    "details": "Create security review documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include vulnerability assessment, security best practices, and security review checklists.",
+    "testStrategy": "Test security documentation, vulnerability assessment, and security guidelines",
+    "tag": "master",
+    "techStack": ["Security tools", "Documentation"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Zero high-severity vulnerabilities",
+      "Security best practices documentation",
+      "Vulnerability assessment guidelines",
+      "Security review checklists"
+    ]
+  },
+  "Stakeholder Update Documentation": {
+    "id": 15,
+    "title": "Create Stakeholder Update Documentation",
+    "description": "Create stakeholder update documentation with project progress tracking and communication guidelines",
+    "status": "pending",
+    "priority": "low",
+    "dependencies": [],
+    "details": "Create stakeholder update documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include project progress tracking, communication guidelines, and stakeholder engagement strategies.",
+    "testStrategy": "Test documentation clarity, progress tracking, and communication guidelines",
+    "tag": "master",
+    "techStack": ["Documentation", "Communication tools"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Clear communication guidelines",
+      "Progress tracking mechanisms",
+      "Stakeholder engagement strategies",
+      "Professional documentation standards"
+    ]
+  },
+  "Roadmap and Backlog Documentation": {
+    "id": 16,
+    "title": "Create Project Roadmap and Backlog Documentation",
+    "description": "Create comprehensive project roadmap and backlog documentation with feature planning and prioritization",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [],
+    "details": "Create project roadmap and backlog documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include feature planning, prioritization strategies, and project timeline management.",
+    "testStrategy": "Test documentation clarity, roadmap planning, and backlog management",
+    "tag": "master",
+    "techStack": ["Documentation", "Project management tools"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Clear feature planning",
+      "Prioritization strategies",
+      "Timeline management",
+      "Professional documentation standards"
+    ]
+  },
+  "Diversity and Inclusion Documentation": {
+    "id": 17,
+    "title": "Create Diversity and Inclusion Documentation",
+    "description": "Create diversity and inclusion documentation with inclusive development practices and community guidelines",
+    "status": "pending",
+    "priority": "low",
+    "dependencies": [],
+    "details": "Create diversity and inclusion documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include inclusive development practices, community guidelines, and diversity initiatives.",
+    "testStrategy": "Test documentation clarity, inclusive practices, and community guidelines",
+    "tag": "master",
+    "techStack": ["Documentation", "Community tools"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Inclusive development practices",
+      "Community guidelines",
+      "Diversity initiatives",
+      "Professional documentation standards"
+    ]
+  },
+  "Retrospective Documentation": {
+    "id": 18,
+    "title": "Create Retrospective Documentation",
+    "description": "Create retrospective documentation with project review processes and continuous improvement guidelines",
+    "status": "pending",
+    "priority": "low",
+    "dependencies": [],
+    "details": "Create retrospective documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include project review processes, continuous improvement guidelines, and retrospective methodologies.",
+    "testStrategy": "Test documentation clarity, review processes, and improvement guidelines",
+    "tag": "master",
+    "techStack": ["Documentation", "Review tools"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Project review processes",
+      "Continuous improvement guidelines",
+      "Retrospective methodologies",
+      "Professional documentation standards"
+    ]
+  },
+  "Coverage Report and Badge": {
+    "id": 19,
+    "title": "Setup Coverage Report and Badge System",
+    "description": "Create comprehensive test coverage reporting with badges and automated coverage tracking",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [8],
+    "details": "Create comprehensive test coverage reporting that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include coverage badges, automated coverage tracking, and coverage reporting tools.",
+    "testStrategy": "Test coverage reporting, badge generation, and automated tracking",
+    "tag": "master",
+    "techStack": ["Vitest", "Coverage tools", "Badge generation"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Automated coverage tracking",
+      "Coverage badges",
+      "Coverage reporting tools",
+      "Professional documentation standards"
+    ]
+  },
+  "Pull Request Template": {
+    "id": 20,
+    "title": "Create GitHub Pull Request Template",
+    "description": "Create comprehensive pull request template with review guidelines and contribution standards",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [11],
+    "details": "Create GitHub pull request template that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include review guidelines, contribution standards, and PR best practices.",
+    "testStrategy": "Test template clarity, review guidelines, and contribution standards",
+    "tag": "master",
+    "techStack": ["GitHub", "Documentation"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Clear review guidelines",
+      "Contribution standards",
+      "PR best practices",
+      "Professional documentation standards"
+    ]
+  },
+  "Issue Template": {
+    "id": 21,
+    "title": "Create GitHub Issue Template",
+    "description": "Create comprehensive issue template with bug reporting and feature request guidelines",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": [11],
+    "details": "Create GitHub issue template that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include bug reporting guidelines, feature request templates, and issue management best practices.",
+    "testStrategy": "Test template clarity, bug reporting guidelines, and feature request templates",
+    "tag": "master",
+    "techStack": ["GitHub", "Documentation"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Bug reporting guidelines",
+      "Feature request templates",
+      "Issue management best practices",
+      "Professional documentation standards"
+    ]
+  },
+  "Deployment Documentation": {
+    "id": 22,
+    "title": "Create Deployment Documentation",
+    "description": "Create comprehensive deployment documentation with deployment processes and environment management",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": [11],
+    "details": "Create deployment documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include deployment processes, environment management, and deployment best practices.",
+    "testStrategy": "Test documentation clarity, deployment processes, and environment management",
+    "tag": "master",
+    "techStack": ["Deployment tools", "Documentation"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Clear deployment processes",
+      "Environment management",
+      "Deployment best practices",
+      "Professional documentation standards"
+    ]
+  },
+  "Automated Security Checks in CI": {
+    "id": 136,
+    "title": "Implement automated security checks in CI",
+    "description": "Add security scanning to the CI pipeline including dependency, code, and config checks",
+    "status": "ready",
+    "priority": "high",
+    "dependencies": [11, 9],
+    "details": "Integrate pnpm audit (or npm audit), eslint-plugin-security, and optional Snyk/GitHub Dependabot alerts; add CI step to fail on high severity issues; include OWASP headers checks for web app builds",
+    "testStrategy": "Run security scans in CI and verify pipeline fails on high severity; add a sample vulnerable dependency to confirm gating",
+    "tag": "master",
+    "techStack": ["pnpm", "ESLint", "eslint-plugin-security", "GitHub Actions"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use 'pnpm vitest run' as the standard test command"
+    ],
+    "constraints": [
+      "Zero high-severity vulnerabilities required to pass CI",
+      "No NodeNext",
+      "Tests run once; no watch mode in CI"
+    ],
+    "infra": {
+      "ci": "GitHub Actions",
+      "hosting": "Serverless Framework"
+    },
+    "metrics": [
+      "CI fails on high severity issues",
+      "Actionable security report generated per run"
+    ],
+    "tags": [],
+    "blockedBy": []
+  },
+  "Offline Mode for lego-moc-instructions-app": {
+    "id": 137,
+    "title": "Implement offline mode (PWA + cached API)",
+    "description": "Enable offline usage with service worker, asset caching, and RTK Query cached reads for critical views",
+    "status": "ready",
+    "priority": "high",
+    "dependencies": [58, 24],
+    "details": "Finish PWA registration, cache shell/assets via VitePWA, add RTK Query cache hydration for gallery/detail views, and add an offline status indicator; gate network mutations with queue for later sync",
+    "testStrategy": "Vitest + MSW: simulate offline (navigator.onLine=false) and assert cached reads; verify UI indicators and queued actions",
+    "tag": "frontend-ui-development",
+    "techStack": ["ESNext", "React", "Vite", "RTK Query", "VitePWA", "Vitest", "MSW"],
+    "rules": [
+      "All external dependencies must be mocked in tests",
+      "Use Zod schemas over TypeScript interfaces",
+      "Use 'pnpm vitest run' as the standard test command",
+      "No NodeNext"
+    ],
+    "constraints": [
+      "No watch flags in test scripts",
+      "Tests should run once and exit"
+    ],
+    "infra": {
+      "ci": "GitHub Actions",
+      "hosting": "Serverless Framework"
+    },
+    "metrics": [
+      "App loads and basic navigation offline",
+      "Queued mutations sync successfully after reconnect"
+    ],
+    "tags": [],
+    "blockedBy": []
+  }
 }

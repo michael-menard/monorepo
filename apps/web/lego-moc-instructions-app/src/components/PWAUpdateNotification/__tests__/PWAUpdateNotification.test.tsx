@@ -20,6 +20,10 @@ vi.mock('../../PWAProvider', () => ({
 describe('PWAUpdateNotification', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset flags to avoid multiple close buttons across tests
+    mockPWAContext.needRefresh = false
+    mockPWAContext.offlineReady = false
+    mockPWAContext.canInstall = false
   })
 
   it('renders nothing when no notifications are needed', () => {
@@ -77,7 +81,7 @@ describe('PWAUpdateNotification', () => {
     
     render(<PWAUpdateNotification />)
     
-    const closeButton = screen.getByRole('button', { name: /close/i })
+    const closeButton = screen.getByRole('button', { name: 'Close update' })
     fireEvent.click(closeButton)
     
     expect(mockPWAContext.closePrompt).toHaveBeenCalled()

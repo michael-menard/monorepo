@@ -92,7 +92,7 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Confirm Delete'));
     
     await waitFor(() => {
-      expect(defaultProps.onItemsDeleted).toHaveBeenCalledWith(['1', '2']);
+      expect(defaultProps.onItemsDeleted).toHaveBeenCalledWith(['1', '2', '3']);
     });
   });
 
@@ -102,7 +102,7 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Mark Purchased'));
     
     await waitFor(() => {
-      expect(defaultProps.onItemsToggled).toHaveBeenCalledWith(['1', '2'], true);
+      expect(defaultProps.onItemsToggled).toHaveBeenCalledWith(['1', '2', '3'], true);
     });
   });
 
@@ -112,7 +112,7 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Mark Not Purchased'));
     
     await waitFor(() => {
-      expect(defaultProps.onItemsToggled).toHaveBeenCalledWith(['1', '2'], false);
+      expect(defaultProps.onItemsToggled).toHaveBeenCalledWith(['1', '2', '3'], false);
     });
   });
 
@@ -121,7 +121,8 @@ describe('BatchOperationsToolbar', () => {
     
     fireEvent.click(screen.getByText('Update Priority'));
     
-    expect(screen.getByText('Update Priority')).toBeInTheDocument();
+    // disambiguate heading vs button label by selecting the dialog heading
+    expect(screen.getByRole('heading', { name: 'Update Priority' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Medium')).toBeInTheDocument();
   });
 
@@ -136,7 +137,7 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Update'));
     
     await waitFor(() => {
-      expect(defaultProps.onItemsUpdated).toHaveBeenCalledWith(['1', '2']);
+      expect(defaultProps.onItemsUpdated).toHaveBeenCalledWith(['1', '2', '3']);
     });
   });
 
@@ -145,7 +146,7 @@ describe('BatchOperationsToolbar', () => {
     
     fireEvent.click(screen.getByText('Update Category'));
     
-    expect(screen.getByText('Update Category')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Update Category' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter category name')).toBeInTheDocument();
   });
 
@@ -160,7 +161,7 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Update'));
     
     await waitFor(() => {
-      expect(defaultProps.onItemsUpdated).toHaveBeenCalledWith(['1', '2']);
+      expect(defaultProps.onItemsUpdated).toHaveBeenCalledWith(['1', '2', '3']);
     });
   });
 
@@ -170,7 +171,7 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Update Priority'));
     fireEvent.click(screen.getByText('Cancel'));
     
-    expect(screen.queryByText('Update Priority')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Update Priority' })).not.toBeInTheDocument();
   });
 
   it('cancels category update dialog', () => {
@@ -179,6 +180,6 @@ describe('BatchOperationsToolbar', () => {
     fireEvent.click(screen.getByText('Update Category'));
     fireEvent.click(screen.getByText('Cancel'));
     
-    expect(screen.queryByText('Update Category')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Update Category' })).not.toBeInTheDocument();
   });
 }); 

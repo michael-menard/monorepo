@@ -1,8 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DownloadManager } from '../DownloadManager';
 import type { DownloadInfo } from '../../utils/downloadService';
+import { downloadFile } from '../../utils/downloadService';
 
 // Mock the download service
 vi.mock('../../utils/downloadService', () => ({
@@ -10,6 +11,19 @@ vi.mock('../../utils/downloadService', () => ({
 }));
 
 describe('DownloadManager', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: keep downloads in downloading state briefly to render cancel buttons
+    vi.mocked(downloadFile as any).mockImplementation(async (info: any, opts: any) => {
+      opts?.onProgress?.({ loaded: 0, total: 100, percentage: 0, speed: 0, estimatedTime: 0 });
+      await new Promise((r) => setTimeout(r, 20));
+      return { success: true, filename: info?.filename ?? 'file', size: 1 };
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
   const mockFiles: DownloadInfo[] = [
     {
       url: 'https://example.com/file1.pdf',
@@ -52,8 +66,8 @@ describe('DownloadManager', () => {
     const downloadButton = screen.getByText('Download 2 Files');
     fireEvent.click(downloadButton);
     
-    expect(screen.getByText('file1.pdf')).toBeInTheDocument();
-    expect(screen.getByText('file2.pdf')).toBeInTheDocument();
+    expect(screen.getAllByText('file1.pdf').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('file2.pdf').length).toBeGreaterThanOrEqual(1);
   });
 
   it('calls onComplete callback when downloads finish', async () => {
@@ -81,9 +95,11 @@ describe('DownloadManager', () => {
     const onComplete = vi.fn();
     const onError = vi.fn();
     
-    // Mock downloadFile to throw an error
-    const { downloadFile } = await import('../../utils/downloadService');
-    vi.mocked(downloadFile).mockRejectedValue(new Error('Download failed'));
+    // Mock downloadFile to invoke onError path and reject
+    vi.mocked(downloadFile as any).mockImplementation(async (_info: any, opts: any) => {
+      opts?.onError?.('Network error')
+      throw new Error('Network error')
+    });
     
     render(
       <DownloadManager
@@ -99,18 +115,19 @@ describe('DownloadManager', () => {
     // Wait for downloads to fail
     await waitFor(() => {
       expect(onError).toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
   });
 
-  it('allows canceling downloads', () => {
+  it('allows canceling downloads', async () => {
     render(<DownloadManager files={mockFiles} />);
     
     const downloadButton = screen.getByText('Download 2 Files');
     fireEvent.click(downloadButton);
     
+    await waitFor(() => {
+      expect(screen.getAllByTitle('Cancel download').length).toBe(2);
+    });
     const cancelButtons = screen.getAllByTitle('Cancel download');
-    expect(cancelButtons).toHaveLength(2);
-    
     fireEvent.click(cancelButtons[0]);
     
     // Should show cancelled status
@@ -125,7 +142,8 @@ describe('DownloadManager', () => {
     
     expect(screen.getByText('Download Progress')).toBeInTheDocument();
     
-    const closeButton = screen.getByText('Close');
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
+    const closeButton = closeButtons[0];
     fireEvent.click(closeButton);
     
     expect(screen.queryByText('Download Progress')).not.toBeInTheDocument();

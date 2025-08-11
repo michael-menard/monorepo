@@ -1,0 +1,24 @@
+---
+description: Prefer existing shared components over creating new ones; use canonical imports
+globs: **/*
+alwaysApply: true
+---
+
+- **Reuse before create**
+  - Before proposing new UI or logic, search the codebase for an existing component/module that fits
+  - If one exists, use it; if not suitable, explain why in 1–2 bullets and propose edits to the canonical component instead of a new one
+
+- **Canonical sources (must-use import paths)**
+  - Gallery: `@features/gallery` (single source of truth)
+  - UI primitives: `@ui/*`
+  - Shared resources: `packages/**` exports should be preferred over app-local copies
+
+- **Creation guardrails**
+  - Do not create files named `*Gallery*.tsx` or folders named `*Gallery*` outside `packages/features/gallery/**` without explicit user approval
+  - Prefer updating existing exports over adding new components
+
+- **Imports**
+  - Prefer path aliases (e.g., `@features/gallery`, `@ui/*`) over deep relative paths
+
+- **Reference**
+  - See [cursor_rules.mdc](mdc:.cursor/rules/cursor_rules.mdc)

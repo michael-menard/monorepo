@@ -39,7 +39,7 @@ export default function Header() {
         </div>
 
         <div className="px-2 font-bold">
-          <Link to="/moc-instructions">MOC Gallery</Link>
+          <Link to="/moc-gallery">MOC Gallery</Link>
         </div>
 
         <div className="px-2 font-bold">
@@ -72,6 +72,7 @@ export default function Header() {
           size="sm"
           showEditButton={true}
           disabled={false}
+          clickable={true}
         />
       </div>
     </header>

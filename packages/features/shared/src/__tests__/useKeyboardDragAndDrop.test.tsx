@@ -39,6 +39,7 @@ describe('useKeyboardDragAndDrop', () => {
       sourceIndex: null,
       targetIndex: null,
       isFocused: false,
+      totalItems: defaultOptions.totalItems,
     });
   });
 
@@ -61,6 +62,7 @@ describe('useKeyboardDragAndDrop', () => {
       sourceIndex: 0,
       targetIndex: 0,
       isFocused: true,
+      totalItems: defaultOptions.totalItems,
     });
     expect(mockEvent.preventDefault).toHaveBeenCalled();
   });

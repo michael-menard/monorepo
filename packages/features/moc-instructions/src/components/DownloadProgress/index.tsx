@@ -1,6 +1,6 @@
 import React from 'react';
 import { Progress } from '@repo/ui';
-import { DownloadProgress } from '../../utils/downloadService';
+import type { DownloadProgress } from '../../utils/downloadService';
 
 interface DownloadProgressProps {
   progress: DownloadProgress;

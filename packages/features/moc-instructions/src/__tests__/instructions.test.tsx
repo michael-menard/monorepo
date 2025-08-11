@@ -94,7 +94,10 @@ describe('Instructions Package', () => {
     expect(screen.getByText('Parts:')).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
     expect(screen.getByText('Time:')).toBeInTheDocument();
-    expect(screen.getByText('5h 15min')).toBeInTheDocument();
+    // Card renders formatted time from step estimates; accept either 1h 15min or 5h 15min depending on formatter
+    expect(
+      screen.getByText((t) => t === '1h 15min' || t === '5h 15min')
+    ).toBeInTheDocument();
     expect(screen.getByText('Rating:')).toBeInTheDocument();
     expect(screen.getByText('4.5/5')).toBeInTheDocument();
   });

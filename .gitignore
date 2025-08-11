@@ -67,6 +67,10 @@ storybook-static
 # Vite
 .vite
 
+# Dependency directories
+node_modules/
+# Environment variables
+
 # Task files
-# tasks.json
-# tasks/ 
+tasks.json
+tasks/ 

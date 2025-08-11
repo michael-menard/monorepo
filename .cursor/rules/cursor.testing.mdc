@@ -1,0 +1,85 @@
+---
+description: Standardized testing rules for unit, integration, E2E, and backend across the monorepo
+globs: **/__tests__/**/*.{ts,tsx}, packages/**/src/**/*.{ts,tsx}, apps/**/src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- **Runners & Commands**
+  - Use `pnpm test:run` from the repo root to run all tests without watch
+  - Frontend unit/component tests use Vitest; backend API tests use Jest + Supertest
+  - Do not use `--watch` or persistent runners in CI/local scripts
+
+- **Unit/Component (Vitest + Testing Library)**
+  - Use JSDOM environment and React Testing Library
+  - Mock all external dependencies (network, time, storage, heavy UI like `Select`, `FileUpload`)
+  - Prefer MSW for HTTP mocking in unit tests only; never in E2E
+  - Use shared setup: [setup.ts](mdc:packages/features/gallery/src/test/setup.ts)
+  - Example (MSW + RTK Query):
+    ```ts
+    import { render, screen } from '@testing-library/react'
+    import { http, HttpResponse } from 'msw'
+    import { server } from '../../test/server'
+
+    beforeAll(() => server.listen())
+    afterAll(() => server.close())
+
+    it('renders fetched items', async () => {
+      server.use(http.get('/api/items', () => HttpResponse.json([{ id: 1, name: 'A' }])))
+      render(<ItemsList />)
+      expect(await screen.findByText('A')).toBeInTheDocument()
+    })
+    ```
+
+- **Backend API (Jest + Supertest)**
+  - Use Jest for Node services and Supertest for HTTP endpoints
+  - Mock external services and databases by default in unit/integration tests
+  - Do not include mocking logic inside handlers; keep it in tests
+  - Keep tests colocated in `__tests__` near the module
+  - Example (Supertest):
+    ```ts
+    import request from 'supertest'
+    import { app } from '../app'
+
+    it('POST /login returns 200', async () => {
+      const res = await request(app).post('/login').send({ email: 'a@b.com', password: 'x' })
+      expect(res.status).toBe(200)
+    })
+    ```
+
+- **E2E (Playwright)**
+  - Use real services and real data; do not use MSW or mocks
+  - Max test timeout: 15s per test
+  - Bring up required services (e.g., `apps/api/auth-service/docker-compose.yml`) before running
+  - Prefer Ethereal or MailHog for email testing
+
+- **Mocking Policy**
+  - Unit/Component/Jest tests: mock all external dependencies; isolate the unit
+  - E2E/Playwright: no mocks; test the real system paths end-to-end
+  - Heavy UI components should be mocked in unit tests to keep tests fast and deterministic
+
+- **Coverage**
+  - Use `@vitest/coverage-v8` for Vitest and Jest coverage defaults for backend
+  - Global thresholds: lines ≥ 90%, branches ≥ 85%, functions ≥ 90%, statements ≥ 90%
+  - Exclude generated files, build/dist, and test helpers from coverage
+
+- **Placement & Naming**
+  - Put tests in `__tests__` directories adjacent to the file under test
+  - Name files `*.test.ts` / `*.test.tsx`
+  - Snapshot test only stable, shared UI in `packages/ui`; avoid fragile snapshots for feature UIs
+
+- **Performance & Reliability**
+  - Keep unit tests under 200ms; prefer synchronous tests where possible
+  - Avoid real timers; use fake timers for time-dependent logic
+  - Avoid random data without seeds; seed or fix values for determinism
+  - Clean up DOM and restore mocks between tests
+
+- **CI Expectations**
+  - Tests must be hermetic (unit) or fully provisioned (E2E)
+  - No network calls in unit tests; only in E2E
+  - Ensure services are healthy before starting Playwright
+
+- **Troubleshooting Tips**
+  - If Playwright flaps: verify services via health checks and reduce waits; use auto-waiting, not `sleep`
+  - If Vitest fails in JSDOM: ensure node APIs are mocked and `TextEncoder/Decoder` polyfills are present if needed
+  - If coverage drops: prioritize adding unit tests around branching logic and shared utilities
+

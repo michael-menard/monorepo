@@ -5,16 +5,12 @@ import { Button } from '@repo/ui';
 import { useDeleteImageMutation } from '../../store/galleryApi.js';
 import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js';
 import CreateAlbumDialog from '../CreateAlbumDialog/index.js';
-import { z } from 'zod';
+// import { z } from 'zod';
 
-// Zod schema for batch operations
-const BatchOperationsSchema = z.object({
-  selectedImages: z.array(z.string()).min(1, 'At least one image must be selected'),
-  operation: z.enum(['delete', 'addToAlbum', 'download', 'share']),
-  albumId: z.string().optional(),
-});
 
-type BatchOperationsData = z.infer<typeof BatchOperationsSchema>;
+// Schema not used at runtime currently; remove to avoid unused var error
+
+
 
 interface BatchOperationsToolbarProps {
   selectedImages: string[];
@@ -124,7 +120,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
         await navigator.share({
           title: 'Shared Images',
           text: `Sharing ${selectedCount} images`,
-          urls: shareUrls,
+          url: shareUrls[0],
         });
       } else {
         // Fallback: copy URLs to clipboard
@@ -137,7 +133,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
     }
   };
 
-  const handleCreateAlbum = async (albumData: { title: string; description?: string }) => {
+  const handleCreateAlbum = async (albumData: { name: string; description?: string }) => {
     try {
       const result = await createAlbum(albumData).unwrap();
       await handleBatchAddToAlbum(result.album.id);
@@ -249,7 +245,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
       <CreateAlbumDialog
         isOpen={showCreateAlbumDialog}
         onClose={() => setShowCreateAlbumDialog(false)}
-        selectedImages={selectedImages.map((id) => ({ id, url: '', title: `Image ${id}` }))}
+        selectedImages={selectedImages.map((id) => ({ id, url: '', title: `Image ${id}`, createdAt: new Date(), updatedAt: new Date() }))}
         onAlbumCreated={handleCreateAlbum}
         onImagesSelected={() => {}} // Not needed for this use case
       />

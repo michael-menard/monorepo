@@ -32,6 +32,7 @@ vi.mock('@repo/ui/button', () => ({
       {children}
     </button>
   ),
+  buttonVariants: () => 'btn btn-default',
 }));
 
 // Mock lucide-react icons

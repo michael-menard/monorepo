@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { authApi, authReducer } from '@repo/auth'
 import { instructionsApi, instructionsReducer } from '@repo/moc-instructions'
+import { galleryApi } from '@repo/gallery'
 import { api } from '../services/api'
 import { offlineApi } from '../services/offlineApi'
 
@@ -10,11 +11,18 @@ export const store = configureStore({
     instructions: instructionsReducer,
     [authApi.reducerPath]: authApi.reducer,
     [instructionsApi.reducerPath]: instructionsApi.reducer,
+    [galleryApi.reducerPath]: galleryApi.reducer,
     [api.reducerPath]: api.reducer,
     [offlineApi.reducerPath]: offlineApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(authApi.middleware, instructionsApi.middleware, api.middleware, offlineApi.middleware),
+    getDefaultMiddleware().concat(
+      authApi.middleware, 
+      instructionsApi.middleware, 
+      galleryApi.middleware,
+      api.middleware, 
+      offlineApi.middleware
+    ),
 })
 
 export type RootState = ReturnType<typeof store.getState>

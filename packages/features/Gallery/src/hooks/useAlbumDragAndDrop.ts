@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { DragDropData, DragDropDataSchema } from '../schemas/index.js';
+import { DragDropDataSchema } from '../schemas/index.js';
+import type { DragDropData } from '../schemas/index.js';
 
 interface DragState {
   isDragOver: boolean;

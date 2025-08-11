@@ -1,33 +1,38 @@
 import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { useFilterBar } from '../useFilterBar';
+import React from 'react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
 
-// Mock the gallery API hooks
-const mockUseSearchImagesQuery = vi.fn();
-const mockUseGetAvailableTagsQuery = vi.fn();
-const mockUseGetAvailableCategoriesQuery = vi.fn();
-
-vi.mock('../store/galleryApi', () => ({
-  useSearchImagesQuery: mockUseSearchImagesQuery,
-  useGetAvailableTagsQuery: mockUseGetAvailableTagsQuery,
-  useGetAvailableCategoriesQuery: mockUseGetAvailableCategoriesQuery,
+// Mock the gallery API hooks BEFORE importing the hook under test
+vi.mock('../../store/galleryApi', () => ({
+  useSearchImagesQuery: vi.fn(),
+  useGetAvailableTagsQuery: vi.fn(),
+  useGetAvailableCategoriesQuery: vi.fn(),
 }));
 
+import * as GalleryApi from '../../store/galleryApi';
+
+import { useFilterBar } from '../useFilterBar';
+
 describe('useFilterBar', () => {
+  let store: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Minimal store for Provider context
+    store = configureStore({ reducer: (state = {}) => state });
     
     // Default mock implementations
-    mockUseGetAvailableTagsQuery.mockReturnValue({
+    ;(GalleryApi.useGetAvailableTagsQuery as any).mockReturnValue({
       data: ['nature', 'city', 'portrait', 'landscape'],
     });
     
-    mockUseGetAvailableCategoriesQuery.mockReturnValue({
+    ;(GalleryApi.useGetAvailableCategoriesQuery as any).mockReturnValue({
       data: ['photography', 'art', 'design'],
     });
     
-    mockUseSearchImagesQuery.mockReturnValue({
+    ;(GalleryApi.useSearchImagesQuery as any).mockReturnValue({
       data: { data: [], total: 0 },
       isLoading: false,
       error: null,
@@ -35,7 +40,8 @@ describe('useFilterBar', () => {
   });
 
   it('initializes with default state', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     expect(result.current.filters).toEqual({
       searchQuery: '',
@@ -57,14 +63,16 @@ describe('useFilterBar', () => {
       selectedCategory: 'photography',
     };
 
-    const { result } = renderHook(() => useFilterBar({ initialFilters }));
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar({ initialFilters }), { wrapper });
 
     expect(result.current.filters).toEqual(initialFilters);
     expect(result.current.hasActiveFilters).toBe(true);
   });
 
   it('updates search query', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSearchQuery('test query');
@@ -75,7 +83,8 @@ describe('useFilterBar', () => {
   });
 
   it('updates selected tags', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSelectedTags(['nature', 'city']);
@@ -86,7 +95,8 @@ describe('useFilterBar', () => {
   });
 
   it('updates selected category', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSelectedCategory('photography');
@@ -97,7 +107,8 @@ describe('useFilterBar', () => {
   });
 
   it('toggles tag selection', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     // Add tag
     act(() => {
@@ -115,7 +126,8 @@ describe('useFilterBar', () => {
   });
 
   it('adds multiple tags', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.toggleTag('nature');
@@ -132,7 +144,8 @@ describe('useFilterBar', () => {
       selectedCategory: 'photography',
     };
 
-    const { result } = renderHook(() => useFilterBar({ initialFilters }));
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar({ initialFilters }), { wrapper });
 
     act(() => {
       result.current.clearFilters();
@@ -147,7 +160,8 @@ describe('useFilterBar', () => {
   });
 
   it('computes search parameters correctly', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSearchQuery('test query');
@@ -164,7 +178,8 @@ describe('useFilterBar', () => {
   });
 
   it('omits empty search parameters', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSearchQuery('   '); // Whitespace only
@@ -178,7 +193,8 @@ describe('useFilterBar', () => {
   });
 
   it('trims search query whitespace', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSearchQuery('  test query  ');
@@ -188,13 +204,15 @@ describe('useFilterBar', () => {
   });
 
   it('uses custom page size', () => {
-    const { result } = renderHook(() => useFilterBar({ pageSize: 50 }));
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar({ pageSize: 50 }), { wrapper });
 
     expect(result.current.searchParams.size).toBe(50);
   });
 
   it('returns available tags and categories', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     expect(result.current.availableTags).toEqual(['nature', 'city', 'portrait', 'landscape']);
     expect(result.current.availableCategories).toEqual(['photography', 'art', 'design']);
@@ -209,26 +227,28 @@ describe('useFilterBar', () => {
       total: 2,
     };
 
-    mockUseSearchImagesQuery.mockReturnValue({
+    ;(GalleryApi.useSearchImagesQuery as any).mockReturnValue({
       data: mockSearchData,
       isLoading: false,
       error: null,
     });
 
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     expect(result.current.searchResults).toEqual(mockSearchData.data);
     expect(result.current.totalResults).toBe(2);
   });
 
   it('handles loading state', () => {
-    mockUseSearchImagesQuery.mockReturnValue({
+    ;(GalleryApi.useSearchImagesQuery as any).mockReturnValue({
       data: null,
       isLoading: true,
       error: null,
     });
 
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
   });
@@ -236,52 +256,57 @@ describe('useFilterBar', () => {
   it('handles error state', () => {
     const mockError = new Error('Search failed');
     
-    mockUseSearchImagesQuery.mockReturnValue({
+    ;(GalleryApi.useSearchImagesQuery as any).mockReturnValue({
       data: null,
       isLoading: false,
       error: mockError,
     });
 
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     expect(result.current.error).toBe(mockError);
   });
 
   it('skips search query when no active filters', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     // Should not call search query when no filters are active
-    expect(mockUseSearchImagesQuery).toHaveBeenCalledWith(
+    expect(GalleryApi.useSearchImagesQuery).toHaveBeenCalledWith(
       { size: 20 },
       { skip: true }
     );
   });
 
   it('performs search when filters are active', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSearchQuery('test');
     });
 
-    expect(mockUseSearchImagesQuery).toHaveBeenCalledWith(
+    expect(GalleryApi.useSearchImagesQuery).toHaveBeenCalledWith(
       { query: 'test', size: 20 },
       { skip: false }
     );
   });
 
   it('handles empty available tags and categories', () => {
-    mockUseGetAvailableTagsQuery.mockReturnValue({ data: [] });
-    mockUseGetAvailableCategoriesQuery.mockReturnValue({ data: [] });
+    ;(GalleryApi.useGetAvailableTagsQuery as any).mockReturnValue({ data: [] });
+    ;(GalleryApi.useGetAvailableCategoriesQuery as any).mockReturnValue({ data: [] });
 
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     expect(result.current.availableTags).toEqual([]);
     expect(result.current.availableCategories).toEqual([]);
   });
 
   it('maintains filter state across re-renders', () => {
-    const { result, rerender } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result, rerender } = renderHook(() => useFilterBar(), { wrapper });
 
     act(() => {
       result.current.setSearchQuery('test');
@@ -297,7 +322,8 @@ describe('useFilterBar', () => {
   });
 
   it('computes hasActiveFilters correctly', () => {
-    const { result } = renderHook(() => useFilterBar());
+    const wrapper = ({ children }: any) => React.createElement(Provider as any, { store }, children);
+    const { result } = renderHook(() => useFilterBar(), { wrapper });
 
     // Initially no active filters
     expect(result.current.hasActiveFilters).toBe(false);

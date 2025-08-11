@@ -13,10 +13,10 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
         // Add workspace package aliases for better imports
-        '@packages/ui': path.resolve(__dirname, '../ui/src'),
-        '@packages/auth': path.resolve(__dirname, '../auth/src'),
-        '@packages/shared': path.resolve(__dirname, '../shared/src'),
-        '@packages/features': path.resolve(__dirname, '../features'),
+        '@monorepo/ui': path.resolve(__dirname, '../ui/src'),
+        '@monorepo/auth': path.resolve(__dirname, '../auth/src'),
+        '@monorepo/shared': path.resolve(__dirname, '../shared/src'),
+        '@monorepo/features': path.resolve(__dirname, '../features'),
       },
     },
     build: {
@@ -33,9 +33,9 @@ export default defineConfig(({ mode }) => {
           'react',
           'react-dom',
           'zod',
-          '@packages/ui',
-          '@packages/auth',
-          '@packages/shared',
+          '@monorepo/ui',
+          '@monorepo/auth',
+          '@monorepo/shared',
         ],
         output: {
           globals: {
@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@packages/ui', '@packages/auth', '@packages/shared'],
+      exclude: ['@monorepo/ui', '@monorepo/auth', '@monorepo/shared'],
     },
   };
 }); 

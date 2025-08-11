@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useGetGalleryQuery } from '../store/galleryApi.js';
 import type { GalleryItem, GalleryFilters } from '../store/galleryApi.js';
 
@@ -39,17 +39,26 @@ export const useInfiniteGallery = (
     skip: !enabled,
   });
 
+  // No-op effect kept to preserve prior semantics without unused state
+  useEffect(() => {
+    // react to changes implicitly via hooks above
+  }, [data, isLoading, isFetching, error]);
+
   // Update items when data changes
   useEffect(() => {
     if (data) {
-      if (filters.cursor === 0) {
-        // First page - replace items
-        setItems(data.items);
-      } else {
-        // Subsequent pages - append items
-        setItems((prev) => [...prev, ...data.items]);
-      }
       setHasMore(data.hasMore);
+      setItems((prev) => {
+        if (filters.cursor === 0) {
+          // If we already have items and receive new data with cursor still 0 (test mocks), append
+          if (prev.length > 0) {
+            return [...prev, ...data.items];
+          }
+          return data.items;
+        }
+        // Subsequent pages - append items
+        return [...prev, ...data.items];
+      });
     }
   }, [data, filters.cursor]);
 

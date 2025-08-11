@@ -100,7 +100,11 @@ export const debounce = <T extends (...args: any[]) => any>(
 
 // Generate a unique ID
 export const generateId = (): string => {
-  return globalThis.crypto.randomUUID();
+  // Fallback for environments without crypto.randomUUID
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
 // Check if profile is complete
@@ -131,11 +135,11 @@ export const getProfileCompletionPercentage = (profile: Profile): number => {
 
 // Sanitize profile data for API
 export const sanitizeProfileData = (data: ProfileForm): Partial<Profile> => {
-  const sanitized: Partial<Profile> = {};
+  const sanitized: Partial<Profile> = {} as Partial<Profile>;
   
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      sanitized[key as keyof Profile] = value;
+      sanitized[key as keyof Profile] = value as any;
     }
   });
 

@@ -1,4 +1,4 @@
-import { ImageCacheEntry } from '../schemas/cache.js'
+import type { ImageCacheEntry } from '../schemas/cache.js'
 
 /**
  * Image cache utility using Cache API and data URLs

@@ -1,0 +1,30 @@
+---
+description: Enforce strict, minimal, file-scoped edits and prohibit unrelated changes
+globs: **/*
+alwaysApply: true
+---
+
+- **Never modify files outside explicitly named targets in the user prompt**
+  - If no explicit targets are listed, ask for them before editing
+  - Refuse to create, delete, or move files unless explicitly requested
+
+- **Respect selection boundaries**
+  - When the user selects text or provides markers, only edit inside that region
+  - Prefer markers: `// BEGIN AI EDIT` ... `// END AI EDIT`
+
+- **Generate an edit plan before any edits**
+  - Provide a short list of files to change and why
+  - If uncertainty exists about scope, ask for confirmation before editing
+
+- **Prefer updating existing code over creating new files**
+  - If a new file is unavoidable, propose the exact path and wait for approval
+
+- **Diff discipline**
+  - Output diffs that match the approved plan only
+  - If extra file changes become necessary, stop and present a revised plan first
+
+- **Testing policy for edit steps**
+  - Do not add or update tests unless the user explicitly asks for it in this step
+
+- **Reference**
+  - See [cursor_rules.mdc](mdc:.cursor/rules/cursor_rules.mdc) for rule formatting

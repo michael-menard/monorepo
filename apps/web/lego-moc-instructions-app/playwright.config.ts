@@ -18,7 +18,7 @@ export default defineConfig({
   /* Use only 1 worker to run tests sequentially */
   workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: 'list',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -59,9 +59,6 @@ export default defineConfig({
   
   /* Global timeout for tests */
   timeout: 30000,
-  
-  /* Stop on first failure for debugging */
-  maxFailures: 1,
   
   /* Expect timeout */
   expect: {

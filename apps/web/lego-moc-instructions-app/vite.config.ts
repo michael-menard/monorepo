@@ -134,7 +134,7 @@ export default defineConfig({
     {
       name: 'security-headers',
       configureServer(server) {
-        server.middlewares.use((req, res, next) => {
+        server.middlewares.use((_req, res, next) => {
           // Security headers for development
           res.setHeader('X-Content-Type-Options', 'nosniff');
           res.setHeader('X-Frame-Options', 'DENY');
@@ -157,7 +157,7 @@ export default defineConfig({
           next();
         });
       },
-      generateBundle(options, bundle) {
+      generateBundle(_options, bundle) {
         // Add security headers to HTML files in production build
         for (const fileName in bundle) {
           const file = bundle[fileName];

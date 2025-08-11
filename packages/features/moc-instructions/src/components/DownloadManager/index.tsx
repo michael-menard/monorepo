@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui';
-import { Download, X } from 'lucide-react';
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui';
+import { Download } from 'lucide-react';
 import { DownloadProgressComponent } from '../DownloadProgress';
-import { downloadFile, DownloadInfo, DownloadProgress, DownloadResult } from '../../utils/downloadService';
+import { downloadFile } from '../../utils/downloadService';
+import type { DownloadInfo, DownloadProgress, DownloadResult } from '../../utils/downloadService';
 
 interface DownloadItem {
   id: string;
@@ -62,9 +63,16 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
     if (isDownloading) return;
 
     setIsDownloading(true);
-    initializeDownloads();
+    // Prepare initial items synchronously to avoid relying on async state during first run
+    const initialItems: DownloadItem[] = files.map((file, index) => ({
+      id: `${file.filename}-${index}`,
+      info: file,
+      progress: null,
+      status: 'pending',
+    }));
+    setDownloads(initialItems);
 
-    const pendingDownloads = [...downloads];
+    const pendingDownloads = initialItems.length ? [...initialItems] : [...downloads];
     const results: DownloadResult[] = [];
 
     // Process downloads in batches
@@ -154,6 +162,9 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Download Progress</DialogTitle>
+            <DialogDescription>
+              Current status of your active downloads. You can cancel any in-progress download.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -167,9 +178,9 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                   <span className="text-xs text-gray-500">{getStatusText(download.status)}</span>
                 </div>
 
-                {download.status === 'downloading' && download.progress && (
+                {download.status === 'downloading' && (
                   <DownloadProgressComponent
-                    progress={download.progress}
+                    progress={download.progress ?? { loaded: 0, total: 1, percentage: 0, speed: 0, estimatedTime: 0 }}
                     filename={download.info.filename}
                     onCancel={() => cancelDownload(download.id)}
                   />

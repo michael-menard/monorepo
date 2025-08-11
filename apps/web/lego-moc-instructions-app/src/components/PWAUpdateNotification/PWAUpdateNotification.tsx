@@ -1,5 +1,5 @@
 import { Button } from '@repo/ui'
-import { Download, RefreshCw, Wifi, WifiOff, X } from 'lucide-react'
+import { Download, RefreshCw, WifiOff, X } from 'lucide-react'
 import { usePWA } from '../PWAProvider'
 
 export const PWAUpdateNotification = () => {
@@ -23,6 +23,7 @@ export const PWAUpdateNotification = () => {
               size="sm"
               onClick={closePrompt}
               className="text-white hover:bg-blue-700"
+              aria-label="Close update"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -61,6 +62,7 @@ export const PWAUpdateNotification = () => {
               size="sm"
               onClick={closePrompt}
               className="text-white hover:bg-green-700"
+              aria-label="Close offline"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -83,6 +85,7 @@ export const PWAUpdateNotification = () => {
               size="sm"
               onClick={closePrompt}
               className="text-white hover:bg-purple-700"
+              aria-label="Close install"
             >
               <X className="h-4 w-4" />
             </Button>

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { UploadProgress, UploadProgressSchema } from '../schemas';
+import type { UploadProgress } from '../schemas';
+import { UploadProgressSchema } from '../schemas';
 
 export interface UploadProgressState {
   progress: Map<File, UploadProgress>;

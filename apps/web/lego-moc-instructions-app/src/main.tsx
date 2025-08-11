@@ -3,18 +3,14 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui'
-import {
-  Outlet,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from '@tanstack/react-router'
+import { Outlet, RouterProvider, createRootRoute, createRouter } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
 import { homeRoute } from './routes/home.tsx'
 import { mocDetailRoute } from './routes/moc-detail.tsx'
 import { mocGalleryRoute } from './routes/moc-gallery.tsx'
+import { inspirationGalleryRoute } from './routes/inspiration-gallery.tsx'
+
 import { profileRoute } from './routes/profile.tsx'
 import { wishlistRoute } from './routes/wishlist.tsx'
 import { cacheDemoRoute } from './routes/cache-demo.tsx'
@@ -41,7 +37,8 @@ import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
 
 import { store } from './store/store'
-import { offlineApi } from './services/offlineApi'
+// Offline API disabled for now; will re-enable after full typing/integration
+// import { offlineApi } from './services/offlineApi'
 
 export const rootRoute = createRootRoute({
   component: () => (
@@ -59,8 +56,9 @@ export const rootRoute = createRootRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute,
   TanStackQueryDemo(rootRoute),
-  mocGalleryRoute,
   mocDetailRoute,
+  mocGalleryRoute,
+  inspirationGalleryRoute,
   profileRoute,
   wishlistRoute,
   cacheDemoRoute,

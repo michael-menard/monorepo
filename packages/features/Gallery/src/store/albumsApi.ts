@@ -1,11 +1,13 @@
 import {
   createApi,
   fetchBaseQuery,
+} from '@reduxjs/toolkit/query/react';
+import type { 
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
-} from '@reduxjs/toolkit/query/react';
-import type { EndpointBuilder } from '@reduxjs/toolkit/query';
+  EndpointBuilder 
+} from '@reduxjs/toolkit/query';
 
 export interface GalleryAlbum {
   id: string;
@@ -77,7 +79,7 @@ export const albumsApi = createApi({
     }),
     getAlbumById: builder.query<GalleryAlbumResponse, string>({
       query: (id: string) => `/albums/${id}`,
-      providesTags: (result: GalleryAlbumResponse | undefined, error: unknown, id: string) => [
+      providesTags: (_result: GalleryAlbumResponse | undefined, _error: unknown, id: string) => [
         { type: 'GalleryAlbum', id },
         { type: 'GalleryAlbum', id: 'LIST' },
       ],
@@ -100,8 +102,8 @@ export const albumsApi = createApi({
         body: data,
       }),
       invalidatesTags: (
-        result: GalleryAlbumResponse | undefined,
-        error: unknown,
+        _result: GalleryAlbumResponse | undefined,
+        _error: unknown,
         arg: { id: string; data: Partial<GalleryAlbum> },
       ) => [
         { type: 'GalleryAlbum', id: arg.id },
@@ -113,7 +115,7 @@ export const albumsApi = createApi({
         url: `/albums/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result: { message: string } | undefined, error: unknown, id: string) => [
+      invalidatesTags: (_result: { message: string } | undefined, _error: unknown, id: string) => [
         { type: 'GalleryAlbum', id },
         { type: 'GalleryAlbum', id: 'LIST' },
       ],
@@ -125,8 +127,8 @@ export const albumsApi = createApi({
         body: { imageId },
       }),
       invalidatesTags: (
-        result: GalleryAlbumResponse | undefined,
-        error: unknown,
+        _result: GalleryAlbumResponse | undefined,
+        _error: unknown,
         arg: { albumId: string; imageId: string },
       ) => [
         { type: 'GalleryAlbum', id: arg.albumId },
@@ -142,8 +144,8 @@ export const albumsApi = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: (
-        result: GalleryAlbumResponse | undefined,
-        error: unknown,
+        _result: GalleryAlbumResponse | undefined,
+        _error: unknown,
         arg: { albumId: string; imageId: string },
       ) => [
         { type: 'GalleryAlbum', id: arg.albumId },

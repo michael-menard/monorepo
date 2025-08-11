@@ -18,6 +18,7 @@ describe('KeyboardDragDropArea', () => {
     sourceIndex: null,
     targetIndex: null,
     isFocused: false,
+    totalItems: 0,
   };
 
   const mockActions: KeyboardDragActions = {

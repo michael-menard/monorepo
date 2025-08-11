@@ -116,8 +116,9 @@ export const getAriaAttributes = (options: {
   if (options.hasPopup !== undefined) {
     attributes['aria-haspopup'] = options.hasPopup
   }
+  // Deprecated aria-popup → use aria-haspopup consistently
   if (options.popup) {
-    attributes['aria-popup'] = options.popup
+    attributes['aria-haspopup'] = options.popup as any
   }
   if (options.sort) {
     attributes['aria-sort'] = options.sort

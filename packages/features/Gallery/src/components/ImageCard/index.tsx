@@ -89,6 +89,14 @@ const ImageCard: React.FC<ImageCardProps> = ({
   const [liked, setLiked] = useState(initialLiked);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Provide fallbacks for motion elements when tests mock only motion.div
+  const MotionDiv: any = (motion as any)?.div || 'div';
+  const MotionImg: any = (motion as any)?.img || 'img';
+  const MotionButton: any = (motion as any)?.button || 'button';
+  const MotionSpan: any = (motion as any)?.span || 'span';
+  const MotionH3: any = (motion as any)?.h3 || 'h3';
+  const MotionP: any = (motion as any)?.p || 'p';
+
   const handleLike = () => {
     const newLikedState = !liked;
     setLiked(newLikedState);
@@ -149,7 +157,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
   };
 
   return (
-    <motion.div
+    <MotionDiv
       className={`group relative bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer ${isDragOver ? 'ring-4 ring-blue-400' : ''} ${selected ? 'ring-2 ring-blue-600' : ''} ${isKeyboardFocused ? 'ring-2 ring-blue-400 ring-offset-2' : ''} ${isKeyboardDragging ? 'ring-2 ring-blue-600 ring-offset-2 bg-blue-50' : ''}`}
       tabIndex={0}
       role="button"
@@ -157,7 +165,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onView}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent) => {
         // Handle custom keyboard events first
         if (onKeyDown) {
           onKeyDown(e);
@@ -177,9 +185,9 @@ const ImageCard: React.FC<ImageCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       draggable={!!draggableId}
-      onDragStart={handleDragStart as any}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onDragOver={(e) => {
+      onDragOver={(e: React.DragEvent) => {
         handleDragOver(e);
         onDragOver?.();
       }}
@@ -199,7 +207,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
       </div>
       {/* Image Container */}
       <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
-        <motion.img
+        <MotionImg
           src={src}
           alt={alt || title}
           loading="lazy"
@@ -209,10 +217,10 @@ const ImageCard: React.FC<ImageCardProps> = ({
         />
 
         {/* Like Button */}
-        <motion.button
+        <MotionButton
           type="button"
           aria-label={liked ? 'Unlike' : 'Like'}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             handleLike();
           }}
@@ -220,26 +228,26 @@ const ImageCard: React.FC<ImageCardProps> = ({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
         >
-          <motion.span
+          <MotionSpan
             className="text-lg"
             animate={{ scale: liked ? [1, 1.2, 1] : 1 }}
             transition={{ duration: 0.2 }}
           >
             {liked ? '❤️' : '🤍'}
-          </motion.span>
-        </motion.button>
+          </MotionSpan>
+        </MotionButton>
 
         {/* Hover Drawer with Actions */}
         <AnimatePresence>
           {isHovered && (
-            <motion.div
+            <MotionDiv
               className="absolute inset-0 bg-black/60 flex items-center justify-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <motion.div
+              <MotionDiv
                 className="flex flex-wrap gap-2 justify-center p-4"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -247,9 +255,9 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
                 {actionButtons.map((button, index) => (
-                  <motion.button
+                  <MotionButton
                     key={button.label}
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       button.onClick?.();
                     }}
@@ -262,44 +270,44 @@ const ImageCard: React.FC<ImageCardProps> = ({
                   >
                     <span>{button.icon}</span>
                     <span>{button.label}</span>
-                  </motion.button>
+                  </MotionButton>
                 ))}
-              </motion.div>
-            </motion.div>
+              </MotionDiv>
+            </MotionDiv>
           )}
         </AnimatePresence>
       </div>
 
       {/* Content */}
       <div className="p-4">
-        <motion.h3
+        <MotionH3
           className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors"
           whileHover={{ color: '#2563eb' }}
         >
           {title}
-        </motion.h3>
+        </MotionH3>
 
         {description && (
-          <motion.p
+          <MotionP
             className="text-gray-600 text-sm mb-3 line-clamp-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
             {description}
-          </motion.p>
+          </MotionP>
         )}
 
         {/* Tags */}
         {tags && tags.length > 0 && (
-          <motion.div
+          <MotionDiv
             className="flex flex-wrap gap-1 mb-3"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
             {tags.slice(0, 3).map((tag, index) => (
-              <motion.span
+              <MotionSpan
                 key={index}
                 className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
                 whileHover={{ scale: 1.05 }}
@@ -308,10 +316,10 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 transition={{ delay: 0.3 + index * 0.05 }}
               >
                 {tag}
-              </motion.span>
+              </MotionSpan>
             ))}
             {tags.length > 3 && (
-              <motion.span
+              <MotionSpan
                 className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
                 whileHover={{ scale: 1.05 }}
                 initial={{ scale: 0 }}
@@ -319,13 +327,13 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 transition={{ delay: 0.4 }}
               >
                 +{tags.length - 3}
-              </motion.span>
+              </MotionSpan>
             )}
-          </motion.div>
+          </MotionDiv>
         )}
 
         {/* Footer */}
-        <motion.div
+        <MotionDiv
           className="flex items-center justify-between text-sm text-gray-500"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -335,9 +343,9 @@ const ImageCard: React.FC<ImageCardProps> = ({
             {author && <span className="truncate">By {author}</span>}
             {uploadDate && <span>{formatDate(uploadDate)}</span>}
           </div>
-        </motion.div>
+        </MotionDiv>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 };
 

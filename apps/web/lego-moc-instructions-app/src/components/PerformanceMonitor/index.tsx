@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@repo/ui'
 import { usePerformance } from '../../hooks/usePerformance'
 import { shouldShowMonitor } from '../../config/performance'

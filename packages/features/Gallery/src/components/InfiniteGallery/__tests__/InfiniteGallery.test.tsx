@@ -11,9 +11,13 @@ vi.mock('../../../hooks/useInfiniteGallery.js');
 vi.mock('../../../hooks/useIntersectionObserver.js');
 vi.mock('../../../hooks/useAlbumDragAndDrop.js');
 
-const mockUseInfiniteGallery = vi.mocked(require('../../../hooks/useInfiniteGallery.js').useInfiniteGallery);
-const mockUseIntersectionObserver = vi.mocked(require('../../../hooks/useIntersectionObserver.js').useIntersectionObserver);
-const mockUseAlbumDragAndDrop = vi.mocked(require('../../../hooks/useAlbumDragAndDrop.js').useAlbumDragAndDrop);
+import * as InfiniteGalleryHook from '../../../hooks/useInfiniteGallery.js';
+import * as IntersectionObserverHook from '../../../hooks/useIntersectionObserver.js';
+import * as AlbumDnDHook from '../../../hooks/useAlbumDragAndDrop.js';
+
+const mockUseInfiniteGallery = vi.mocked((InfiniteGalleryHook as any).useInfiniteGallery);
+const mockUseIntersectionObserver = vi.mocked((IntersectionObserverHook as any).useIntersectionObserver);
+const mockUseAlbumDragAndDrop = vi.mocked((AlbumDnDHook as any).useAlbumDragAndDrop);
 
 // Create a test store
 const createTestStore = () => {

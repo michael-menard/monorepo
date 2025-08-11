@@ -29,7 +29,7 @@ export const GalleryImageLinkModal: React.FC<GalleryImageLinkModalProps> = ({
   isOpen,
   onClose,
   onImageLinked,
-  className = '',
+
 }) => {
   const [mocs, setMocs] = useState<Moc[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

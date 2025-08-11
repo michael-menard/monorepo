@@ -36,6 +36,8 @@ vi.mock('lucide-react', () => ({
   BookOpen: () => <span>BookOpen</span>,
   Download: () => <span>Download</span>,
   Heart: () => <span>Heart</span>,
+  Moon: () => <span>Moon</span>,
+  Sun: () => <span>Sun</span>,
   Search: () => <span>Search</span>,
   Shield: () => <span>Shield</span>,
   Star: () => <span>Star</span>,
@@ -101,6 +103,6 @@ describe('HomePage', () => {
   it('has proper navigation links', () => {
     render(<HomePage />)
     const browseLink = screen.getByRole('link', { name: /browse mocs/i })
-    expect(browseLink).toHaveAttribute('href', '/moc-instructions')
+    expect(browseLink).toHaveAttribute('href', '/moc-gallery')
   })
 }) 

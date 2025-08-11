@@ -139,17 +139,16 @@ class PerformanceMonitor {
     
     paintObserver.observe({ entryTypes: ['paint'] })
 
-    // Observe layout shifts
+    // Observe layout shifts (use any to avoid TS lib DOM typing mismatch in some envs)
     const layoutObserver = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
+      for (const entry of list.getEntries() as any) {
         if (entry.entryType === 'layout-shift') {
-          const layoutEntry = entry as PerformanceLayoutShift
-          this.trackLayoutShift(layoutEntry)
+          this.trackLayoutShift(entry as any)
         }
       }
     })
     
-    layoutObserver.observe({ entryTypes: ['layout-shift'] })
+    layoutObserver.observe({ entryTypes: ['layout-shift'] as any })
   }
 
   // Track navigation metrics
@@ -174,7 +173,7 @@ class PerformanceMonitor {
   }
 
   // Track layout shift
-  private trackLayoutShift(entry: PerformanceLayoutShift): void {
+  private trackLayoutShift(entry: { hadRecentInput?: boolean; value: number }): void {
     if (!entry.hadRecentInput) {
       this.trackPerformanceMetric('CLS', entry.value)
     }

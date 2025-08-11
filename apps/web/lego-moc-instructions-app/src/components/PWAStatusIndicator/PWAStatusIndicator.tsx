@@ -28,11 +28,11 @@ export const PWAStatusIndicator = () => {
       )}
       
       {offlineReady && (
-        <CheckCircle className="h-4 w-4 text-green-500" title="App ready for offline use" />
+        <CheckCircle className="h-4 w-4 text-green-500" />
       )}
       
       {needRefresh && (
-        <AlertCircle className="h-4 w-4 text-yellow-500" title="Update available" />
+        <AlertCircle className="h-4 w-4 text-yellow-500" />
       )}
       
       <span className="text-muted-foreground">

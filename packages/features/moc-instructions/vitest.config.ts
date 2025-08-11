@@ -9,8 +9,11 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['../../src/test/setup.ts'],
+    setupFiles: ['../../src/test/setup.ts', './src/test/setup.ts'],
     globals: true,
+    testTimeout: 5000,
+    hookTimeout: 5000,
+    teardownTimeout: 5000,
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'html', 'lcov'],

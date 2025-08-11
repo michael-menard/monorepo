@@ -33,7 +33,7 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
 
   useEffect(() => {
     // Register service worker
-    const updateSW = registerSW({
+    registerSW({
       onNeedRefresh() {
         setNeedRefresh(true)
       },
@@ -73,8 +73,7 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
   const updateServiceWorker = () => {
     setNeedRefresh(false)
     setOfflineReady(false)
-    // The updateSW function will be available from the registerSW call
-    // This is handled by the Vite PWA plugin
+    // Handled by the Vite PWA plugin
   }
 
   const closePrompt = () => {

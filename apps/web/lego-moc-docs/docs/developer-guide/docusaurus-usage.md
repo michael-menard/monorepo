@@ -508,13 +508,6 @@ pnpm typecheck
 3. **Include captions** for complex images
 4. **Use consistent image formats** (PNG for screenshots, SVG for icons)
 
-## Related Documentation
-
-- **[Quick Reference](/docs/developer-guide/docusaurus-quick-reference)** - Common commands and quick reference
-- **[Component Examples](/docs/developer-guide/component-examples)** - Examples of custom components
-- **[Installation Guide](/docs/developer-guide/installation)** - Setup and installation
-- **[Architecture Overview](/docs/developer-guide/architecture)** - System architecture
-
 ## Resources
 
 ### Official Documentation
@@ -531,14 +524,4 @@ pnpm typecheck
 - [Image Optimization](https://squoosh.app/)
 - [Color Palette Generator](https://coolors.co/)
 
-## Contributing
-
-When contributing to the documentation:
-
-1. **Follow the existing style** and structure
-2. **Test your changes** locally before submitting
-3. **Update the sidebar** if adding new pages
-4. **Include screenshots** for UI changes
-5. **Write clear commit messages**
-
-For more information, see the [Contributing Guide](/docs/developer-guide/contributing). 
+## Contributing 

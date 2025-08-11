@@ -39,7 +39,7 @@ function HomePage() {
       title: "Browse MOC Instructions",
       description: "Explore thousands of custom LEGO MOC instructions from the community",
       action: "Browse Gallery",
-      href: "/moc-instructions"
+      href: "/moc-gallery"
     },
     {
       icon: Heart,
@@ -62,7 +62,7 @@ function HomePage() {
       title: "Share Your MOCs",
       description: "Upload and share your own custom LEGO creations",
       action: "Upload MOC",
-      href: "/moc-instructions/new",
+      href: "/moc-gallery",
       requiresAuth: true
     }
   ];
@@ -112,7 +112,7 @@ function HomePage() {
           <div className="flex justify-center space-x-4">
             {mockAuth.isAuthenticated ? (
               <>
-                <Link to="/moc-instructions">
+                 <Link to="/moc-gallery">
                   <Button size="lg" className="gap-2">
                     <Search className="h-4 w-4" />
                     Browse MOCs
@@ -127,16 +127,18 @@ function HomePage() {
               </>
             ) : (
               <>
-                <Link to="/moc-instructions">
+                 <Link to="/moc-gallery">
                   <Button size="lg" className="gap-2">
                     <Search className="h-4 w-4" />
                     Browse MOCs
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
-                  <User className="h-4 w-4" />
-                  Sign Up
-                </Button>
+                <Link to="/auth/signup">
+                  <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
+                    <User className="h-4 w-4" />
+                    Sign Up
+                  </Button>
+                </Link>
               </>
             )}
           </div>
@@ -246,7 +248,7 @@ function HomePage() {
             Join our community and discover amazing LEGO MOCs today
           </p>
           <div className="flex justify-center space-x-4">
-            <Link to="/moc-instructions">
+            <Link to="/moc-gallery">
               <Button size="lg" className="gap-2">
                 <Search className="h-4 w-4" />
                 Start Browsing

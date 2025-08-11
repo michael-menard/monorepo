@@ -1,0 +1,51 @@
+{
+  "name": "-github-pull_request_template-md",
+  "description": "Tasks for implementing PR Process enhancement in the Tech Lead portfolio.",
+  "input_file": "packages/portfolio/prds/-github-PULL_REQUEST_TEMPLATE-md.md",
+  "output_dir": "packages/portfolio/tasks/templates",
+  "task_categories": [
+    "templates",
+    "documentation"
+  ],
+  "priority_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "estimated_effort": [
+    "<1 hour",
+    "1-2 hours",
+    "1 day"
+  ],
+  "dependencies": false,
+  "acceptance_criteria": true,
+  "technical_details": true,
+  "include_test_cases": true,
+  "include_edge_cases": true,
+  "output_format": "md",
+  "group_tasks_by": "category",
+  "testing": {
+    "test_runner": "vitest",
+    "test_command": "pnpm test",
+    "mocks_required": false,
+    "component_testing": false,
+    "dom_environment": "node"
+  },
+  "npm_packages": {
+    "required": [],
+    "dev_only": [
+      "typescript",
+      "vitest",
+      "@types/node"
+    ]
+  },
+  "app_structure": {
+    "type": "documentation",
+    "framework": "none",
+    "entry_point": "README.md",
+    "components_folder": "docs",
+    "modals_folder": "",
+    "hooks_folder": "",
+    "forms_folder": ""
+  }
+}

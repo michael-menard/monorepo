@@ -24,8 +24,15 @@ export const AlbumSchema = z.object({
 
 // Album Creation Data Schema
 export const AlbumCreationDataSchema = z.object({
-  name: z.string().min(1, 'Album name is required'),
-  description: z.string().optional(),
+  title: z
+    .string()
+    .min(1, 'Album title is required')
+    .max(100, 'Title too long'),
+  description: z
+    .string()
+    .max(500, 'Description too long')
+    .optional(),
+  imageIds: z.array(z.string()).min(1, 'At least one image is required'),
 });
 
 // Drag and Drop Data Schema
@@ -43,7 +50,7 @@ export const GalleryPropsSchema = z.object({
   images: z.array(GalleryImageSchema),
   layout: GalleryLayoutSchema.optional().default('grid'),
   className: z.string().optional().default(''),
-  onImageClick: z.function().args(z.instanceof(Object)).returns(z.void()).optional(),
+  onImageClick: z.function().args(GalleryImageSchema).returns(z.void()).optional(),
   onImageLike: z.function().args(z.string(), z.boolean()).returns(z.void()).optional(),
   onImageShare: z.function().args(z.string()).returns(z.void()).optional(),
   onImageDelete: z.function().args(z.string()).returns(z.void()).optional(),
@@ -83,6 +90,8 @@ export const CreateAlbumDialogPropsSchema = z.object({
       }),
     )
     .returns(z.void()),
+  selectedImages: z.array(GalleryImageSchema),
+  onImagesSelected: z.function().args(z.array(GalleryImageSchema)).returns(z.void()),
 });
 
 // Animation Config Schema

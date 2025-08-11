@@ -1,26 +1,8 @@
 import React from 'react';
-import type {
-  Profile,
-  CreateProfile,
-  UpdateProfile,
-  AvatarUpload,
-  ProfileForm,
-  PasswordChange,
-  EmailChange,
-  DeleteAccount,
-} from '../schemas';
+import type { Profile, ProfileForm } from '../schemas';
 
 // Re-export types from schemas
-export type {
-  Profile,
-  CreateProfile,
-  UpdateProfile,
-  AvatarUpload,
-  ProfileForm,
-  PasswordChange,
-  EmailChange,
-  DeleteAccount,
-} from '../schemas';
+export type { Profile, ProfileForm } from '../schemas';
 
 // Component prop types
 export interface ProfileFormProps {
@@ -72,7 +54,7 @@ export interface ProfileHeaderProps {
 }
 
 export interface PasswordChangeFormProps {
-  onSubmit: (data: PasswordChange) => void;
+  onSubmit: (data: any) => void;
   onCancel?: () => void;
   isLoading?: boolean;
   className?: string;
@@ -80,14 +62,14 @@ export interface PasswordChangeFormProps {
 
 export interface EmailChangeFormProps {
   currentEmail: string;
-  onSubmit: (data: EmailChange) => void;
+  onSubmit: (data: any) => void;
   onCancel?: () => void;
   isLoading?: boolean;
   className?: string;
 }
 
 export interface DeleteAccountFormProps {
-  onSubmit: (data: DeleteAccount) => void;
+  onSubmit: (data: any) => void;
   onCancel?: () => void;
   isLoading?: boolean;
   className?: string;

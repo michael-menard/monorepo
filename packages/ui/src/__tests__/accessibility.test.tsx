@@ -272,7 +272,8 @@ describe('Accessibility Features', () => {
       
       const combobox = screen.getByRole('combobox', { name: 'Select options' })
       expect(combobox).toHaveAttribute('aria-expanded', 'false')
-      expect(combobox).toHaveAttribute('aria-haspopup', 'true')
+      // For combobox with a listbox popup, aria-haspopup should be "listbox"
+      expect(combobox).toHaveAttribute('aria-haspopup', 'listbox')
       expect(combobox).toHaveAttribute('aria-multiselectable', 'true')
     })
 

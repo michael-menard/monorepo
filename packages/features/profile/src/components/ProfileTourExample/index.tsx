@@ -14,7 +14,7 @@ const sampleProfile: Profile = {
   location: 'San Francisco, CA',
   website: 'https://johndoe.dev',
   dateOfBirth: new Date('1990-05-15'),
-  avatar: null,
+  avatar: undefined,
   socialLinks: {
     twitter: 'https://twitter.com/johndoe',
     linkedin: 'https://linkedin.com/in/johndoe',
@@ -102,7 +102,9 @@ export const ProfileTourExample: React.FC<ProfileTourExampleProps> = ({
       showTour={showTour}
       onTourComplete={handleTourComplete}
       onTourSkip={handleTourSkip}
-    />
+    >
+      <div>Profile content goes here</div>
+    </ProfilePageWithTour>
   );
 };
 

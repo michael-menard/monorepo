@@ -1,0 +1,133 @@
+I reviewed `.cursor/rules/cursor.ui.md` and found a few conflicts and gaps. I’ll propose a cleaned, structured rule that matches your repository standards and adds missing specifics.
+
+- Key fixes:
+  - Align Prettier with repo (single quotes, no semicolons), not “AirBnB style”.
+  - Clarify testing split: Vitest+MSW for unit; Playwright uses real services (no MSW), 15s timeouts.
+  - Remove/avoid “TanStack Start” mandate; keep it React + Vite as per repo.
+  - Enforce Tailwind-only styling (no CSS files) with DO/DON’T examples.
+  - Clarify atomic structure, location of atoms vs feature components, and path aliases.
+
+Here’s a replacement that follows your required rule format.
+
+```markdown
+---
+description: UI/UX standards for React components using Tailwind v4 and shadcn/ui across the monorepo
+globs: packages/ui/**/*, packages/features/**/src/**/*, apps/**/src/**/*.{tsx,ts}
+alwaysApply: true
+---
+
+- **Stack & Libraries**
+  - React + Vite only (no Next.js). See [ARCHITECTURE_README.md](mdc:__docs__/ARCHITECTURE_README.md)
+  - Tailwind CSS v4 for all styling; do not create CSS files
+  - Use shadcn/ui primitives for atoms; compose larger components with Tailwind utilities
+  - Prefer Framer Motion for animations over CSS animations
+
+- **Component Structure & Naming**
+  - Each component in its own directory named after the component; main file is `index.tsx`
+  - Co-locate tests in a `__tests__` folder next to the component
+  - Use path aliases for imports
+  - Component placement:
+    - Atoms: `packages/ui` (e.g., [accordion.tsx](mdc:packages/ui/accordion.tsx))
+    - Feature-scoped UI: `packages/features/<feature>/src/components`
+    - App-specific UI: inside the app only if it cannot be shared
+  - Export shared atoms from `packages/ui`; avoid duplicating atoms elsewhere
+
+- **Styling (Tailwind-only)**
+  - Use Tailwind utility classes exclusively; do not add `.css` files or CSS modules
+  - Reference the shared design tokens where applicable: [design-system.ts](mdc:packages/shared/src/design-system.ts)
+  - DO:
+    ```tsx
+    export function Button({ children }: { children: React.ReactNode }) {
+      return (
+        <button className='inline-flex items-center rounded-md bg-primary px-3 py-2 text-white hover:bg-primary/90'>
+          {children}
+        </button>
+      )
+    }
+    ```
+  - DON’T:
+    ```tsx
+    // ❌ No CSS files or modules
+    import styles from './Button.module.css'
+    export function Button() {
+      return <button className={styles.button}>Click</button>
+    }
+    ```
+
+- **Data & API Usage**
+  - Use RTK Query for all HTTP calls (no fetch/axios)
+  - Example:
+    ```ts
+    // api slice
+    export const api = createApi({
+      reducerPath: 'api',
+      baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+      endpoints: builder => ({
+        getItems: builder.query<Item[], void>({ query: () => 'items' })
+      })
+    })
+    ```
+    ```tsx
+    // component usage
+    const { data, isLoading, error } = api.useGetItemsQuery()
+    ```
+  - Co-locate lightweight hooks with the component if only used there; otherwise share via `packages/features/shared` or `packages/shared`
+
+- **Forms & Validation**
+  - Use React Hook Form + Zod for form schemas and validation
+  - Share Zod schemas when reused across components or packages
+
+- **Testing**
+  - Unit/Component tests: Vitest + Testing Library; mock all external dependencies with MSW and module mocks
+  - E2E/Playwright: Use real services and data (no MSW); keep test timeouts ≤ 15s
+  - Place tests in `__tests__` near the component under test
+  - Example unit test:
+    ```ts
+    import { render, screen } from '@testing-library/react'
+    import { Button } from '../index'
+
+    it('renders', () => {
+      render(<Button>Save</Button>)
+      expect(screen.getByText('Save')).toBeInTheDocument()
+    })
+    ```
+
+- **Accessibility**
+  - Prefer semantic HTML; use `aria-*` only when necessary
+  - Ensure keyboard navigation (focus states, Enter/Space handling)
+  - Propagate `aria-label`/`aria-describedby` and `id`/`htmlFor` pairing for inputs
+
+- **Animation**
+  - Prefer Framer Motion for transitions and micro-interactions; avoid CSS keyframes in component styles
+  - Keep animations performant and interruptible; respect `prefers-reduced-motion`
+
+- **Formatting & Linting**
+  - Prettier: single quotes, no semicolons; follow repository configuration
+  - Do not introduce PostCSS or additional CSS tooling (Tailwind v4 only)
+
+- **Performance**
+  - Avoid unnecessary re-renders; memoize expensive subtrees when needed
+  - Lazy-load large feature components; keep atoms light and tree-shakeable
+
+- **References (Examples from codebase)**
+  - Atoms: [packages/ui](mdc:packages/ui), e.g., [accordion.tsx](mdc:packages/ui/accordion.tsx)
+  - Design tokens: [design-system.ts](mdc:packages/shared/src/design-system.ts)
+  - Gallery feature: [packages/features/gallery/src](mdc:packages/features/gallery/src)
+  - Testing setup: [packages/features/gallery/src/test/setup.ts](mdc:packages/features/gallery/src/test/setup.ts)
+
+- **Maintenance**
+  - Update this rule when introducing new shared UI patterns or repeated implementations (3+ occurrences)
+  - Cross-reference related rules to stay DRY; follow formatting in [cursor_rules.mdc](mdc:.cursor/rules/cursor_rules.mdc)
+```
+
+- Optional deletions/edits you should make in the current file:
+  - Remove “Use TanStack Start for React apps” unless you intend to standardize on it.
+  - Replace “Use Prettier (AirBnB style)” with the Prettier settings above.
+  - Clarify test guidance to explicitly separate Vitest unit tests vs Playwright E2E.
+
+If you want, I can replace `.cursor/rules/cursor.ui.md` with the version above. 
+
+- Updated the rule to required structure (front matter, bold headings, examples, file references).
+- Resolved conflicts with repo standards (Prettier, Tailwind-only, React+Vite).
+- Clarified testing policy (Vitest+MSW for unit, Playwright real services).
+- Added DO/DON’T examples, RTK Query usage, accessibility, structure, and maintenance notes.

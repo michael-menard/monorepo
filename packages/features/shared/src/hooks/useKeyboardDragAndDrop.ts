@@ -17,6 +17,7 @@ export interface KeyboardDragState {
   sourceIndex: number | null;
   targetIndex: number | null;
   isFocused: boolean;
+  totalItems: number;
 }
 
 export interface KeyboardDragActions {
@@ -39,7 +40,7 @@ export interface UseKeyboardDragAndDropOptions {
   onCancel?: () => void;
   onConfirm?: () => void;
   itemType?: string;
-  source?: string;
+  _source?: string;
 }
 
 export const useKeyboardDragAndDrop = ({
@@ -49,7 +50,6 @@ export const useKeyboardDragAndDrop = ({
   onCancel,
   onConfirm,
   itemType = 'item',
-  source = 'list',
 }: UseKeyboardDragAndDropOptions): [KeyboardDragState, KeyboardDragActions] => {
   const [state, setState] = useState<KeyboardDragState>({
     isKeyboardDragging: false,
@@ -57,6 +57,7 @@ export const useKeyboardDragAndDrop = ({
     sourceIndex: null,
     targetIndex: null,
     isFocused: false,
+    totalItems,
   });
 
   const focusedIndexRef = useRef<number>(-1);
@@ -70,6 +71,7 @@ export const useKeyboardDragAndDrop = ({
       sourceIndex: null,
       targetIndex: null,
       isFocused: false,
+      totalItems,
     });
     focusedIndexRef.current = -1;
     draggedItemIdRef.current = null;
@@ -89,6 +91,7 @@ export const useKeyboardDragAndDrop = ({
           sourceIndex: index,
           targetIndex: index,
           isFocused: true,
+          totalItems,
         });
         focusedIndexRef.current = index;
         draggedItemIdRef.current = itemId;
@@ -168,7 +171,7 @@ export const useKeyboardDragAndDrop = ({
     [state, totalItems, onReorder, onMove, onCancel, onConfirm, resetState]
   );
 
-  const handleFocus = useCallback((itemId: string, index: number) => {
+  const handleFocus = useCallback((_itemId: string, index: number) => {
     if (!state.isKeyboardDragging) {
       setState(prev => ({ ...prev, isFocused: true }));
       focusedIndexRef.current = index;

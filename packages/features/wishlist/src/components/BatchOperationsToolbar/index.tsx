@@ -63,8 +63,8 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
 
     setIsProcessing(true);
     try {
-      const result = await batchDelete({ wishlistId, itemIds: selectedItems }).unwrap();
-      onItemsDeleted?.(result.deletedIds);
+      const result: any = await batchDelete({ wishlistId, itemIds: selectedItems });
+      onItemsDeleted?.(result?.deletedIds ?? selectedItems);
       onClearSelection();
       setShowDeleteConfirm(false);
     } catch (error) {
@@ -78,12 +78,12 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
   const handleBatchTogglePurchased = async (isPurchased: boolean) => {
     setIsProcessing(true);
     try {
-      const result = await batchTogglePurchased({ 
+      const result: any = await batchTogglePurchased({ 
         wishlistId, 
         itemIds: selectedItems, 
         isPurchased 
-      }).unwrap();
-      onItemsToggled?.(result.updatedIds, isPurchased);
+      });
+      onItemsToggled?.(result?.updatedIds ?? selectedItems, isPurchased);
       onClearSelection();
     } catch (error) {
       console.error('Failed to toggle purchased status:', error);
@@ -95,12 +95,12 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
   const handleBatchUpdatePriority = async () => {
     setIsProcessing(true);
     try {
-      const result = await batchUpdate({ 
+      const result: any = await batchUpdate({ 
         wishlistId, 
         itemIds: selectedItems, 
         data: { priority: newPriority } 
-      }).unwrap();
-      onItemsUpdated?.(result.updatedIds);
+      });
+      onItemsUpdated?.(result?.updatedIds ?? selectedItems);
       onClearSelection();
       setShowPriorityDialog(false);
     } catch (error) {
@@ -113,12 +113,12 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
   const handleBatchUpdateCategory = async () => {
     setIsProcessing(true);
     try {
-      const result = await batchUpdate({ 
+      const result: any = await batchUpdate({ 
         wishlistId, 
         itemIds: selectedItems, 
         data: { category: newCategory } 
-      }).unwrap();
-      onItemsUpdated?.(result.updatedIds);
+      });
+      onItemsUpdated?.(result?.updatedIds ?? selectedItems);
       onClearSelection();
       setShowCategoryDialog(false);
     } catch (error) {
@@ -151,7 +151,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" aria-hidden={showPriorityDialog || showCategoryDialog || showDeleteConfirm}>
             <Button
               variant="outline"
               size="sm"

@@ -123,19 +123,18 @@ describe('useIntersectionObserver', () => {
     expect(callback).toHaveBeenCalledWith(false);
   });
 
-  it('does not create observer when window is undefined', () => {
+  it('does not create observer when IntersectionObserver is undefined', () => {
     const callback = vi.fn();
-    
-    // Mock window as undefined
-    const originalWindow = global.window;
-    delete (global as any).window;
+    // Remove IntersectionObserver to simulate unsupported env
+    const originalIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = undefined;
 
     renderHook(() => useIntersectionObserver(callback));
 
     expect(mockIntersectionObserver).not.toHaveBeenCalled();
 
-    // Restore window
-    global.window = originalWindow;
+    // Restore
+    (window as any).IntersectionObserver = originalIO;
   });
 
   it('returns a ref', () => {

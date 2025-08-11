@@ -1,20 +1,20 @@
 import React, { useRef, useCallback } from 'react';
 import { Button, Input, Label, cn } from '@repo/ui';
 import { useFileUpload, useMetadataFields, useDragAndDrop, useUploadProgress } from './hooks';
-import { FileUploadProps, MetadataField } from './schemas';
+import type { FileUploadProps } from './schemas';
 
 export const FileUpload: React.FC<FileUploadProps> = ({
   accept = 'image/*',
   maxSizeMB = 20,
   multiple = false,
   showPreview = true,
-  showCropper = false,
-  cropAspectRatio = 1,
+  // showCropper = false,
+  // cropAspectRatio = 1,
   onUpload,
   onRemove,
   onError,
   metadataFields = [],
-  mode = 'inline',
+  // mode = 'inline',
   initialFiles = [],
   uploadButtonLabel = 'Upload Files',
   disabled = false,

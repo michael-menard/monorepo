@@ -11,15 +11,15 @@ import type {
   MockInstructionImageUpload,
   MockInstructionFileUpload,
   MockInstructionFile,
-  CreateMockInstructionFile,
+  // CreateMockInstructionFile,
   PartsListFileUpload,
   PartsListFile,
-  CreatePartsListFile,
+  // CreatePartsListFile,
 } from '../schemas';
 
 const baseUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5000/api/instructions'
-  : '/api/instructions';
+  ? 'http://localhost:3000/api/mocs'
+  : '/api/mocs';
 
 export const instructionsApi = createApi({
   reducerPath: 'instructionsApi',
@@ -32,18 +32,18 @@ export const instructionsApi = createApi({
     // Instructions
     getInstructions: builder.query<MockInstruction[], MockInstructionFilter>({
       query: (filters) => ({
-        url: '/instructions',
+        url: '/search',
         params: filters,
       }),
       providesTags: ['MockInstruction'],
     }),
     getInstruction: builder.query<MockInstruction, string>({
-      query: (id) => `/instructions/${id}`,
-      providesTags: (result, error, id) => [{ type: 'MockInstruction', id }],
+      query: (id) => `/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'MockInstruction', id }],
     }),
     createInstruction: builder.mutation<MockInstruction, CreateMockInstruction>({
       query: (body) => ({
-        url: '/instructions',
+        url: '/',
         method: 'POST',
         body,
       }),
@@ -54,15 +54,15 @@ export const instructionsApi = createApi({
       { id: string; data: UpdateMockInstruction }
     >({
       query: ({ id, data }) => ({
-        url: `/instructions/${id}`,
-        method: 'PUT',
+        url: `/${id}`,
+        method: 'PATCH',
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'MockInstruction', id }],
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'MockInstruction', id }],
     }),
     deleteInstruction: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/instructions/${id}`,
+        url: `/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['MockInstruction'],
@@ -71,7 +71,7 @@ export const instructionsApi = createApi({
     // Instructions Reviews
     getInstructionsReviews: builder.query<MockInstructionReview[], string>({
       query: (instructionsId) => `/instructions/${instructionsId}/reviews`,
-      providesTags: (result, error, instructionsId) => [{ type: 'MockInstructionReview', id: instructionsId }],
+      providesTags: (_result, _error, instructionsId) => [{ type: 'MockInstructionReview', id: instructionsId }],
     }),
     createInstructionsReview: builder.mutation<MockInstructionReview, { instructionsId: string; data: CreateMockInstructionReview }>({
       query: ({ instructionsId, data }) => ({
@@ -79,7 +79,7 @@ export const instructionsApi = createApi({
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: (result, error, { instructionsId }) => [
+      invalidatesTags: (_result, _error, { instructionsId }) => [
         { type: 'MockInstructionReview', id: instructionsId },
         { type: 'MockInstruction', id: instructionsId },
       ],
@@ -88,7 +88,7 @@ export const instructionsApi = createApi({
     // Instructions Parts Lists
     getInstructionsPartsLists: builder.query<MockInstructionPartsList[], string>({
       query: (instructionsId) => `/instructions/${instructionsId}/parts-lists`,
-      providesTags: (result, error, instructionsId) => [{ type: 'MockInstructionPartsList', id: instructionsId }],
+      providesTags: (_result, _error, instructionsId) => [{ type: 'MockInstructionPartsList', id: instructionsId }],
     }),
     createInstructionsPartsList: builder.mutation<MockInstructionPartsList, { instructionsId: string; data: CreateMockInstructionPartsList }>({
       query: ({ instructionsId, data }) => ({
@@ -96,7 +96,7 @@ export const instructionsApi = createApi({
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: (result, error, { instructionsId }) => [{ type: 'MockInstructionPartsList', id: instructionsId }],
+      invalidatesTags: (_result, _error, { instructionsId }) => [{ type: 'MockInstructionPartsList', id: instructionsId }],
     }),
 
     // Image Upload
@@ -111,7 +111,7 @@ export const instructionsApi = createApi({
     // Instructions Files
     getInstructionsFiles: builder.query<MockInstructionFile[], string>({
       query: (instructionsId) => `/instructions/${instructionsId}/files`,
-      providesTags: (result, error, instructionsId) => [{ type: 'MockInstructionFile', id: instructionsId }],
+      providesTags: (_result, _error, instructionsId) => [{ type: 'MockInstructionFile', id: instructionsId }],
     }),
     uploadInstructionsFile: builder.mutation<MockInstructionFile, MockInstructionFileUpload>({
       query: (body) => ({
@@ -119,20 +119,20 @@ export const instructionsApi = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: (result, error, body) => [{ type: 'MockInstructionFile', id: body.instructionsId }],
+      invalidatesTags: (_result, _error, body) => [{ type: 'MockInstructionFile', id: body.instructionsId }],
     }),
     deleteInstructionsFile: builder.mutation<void, { instructionsId: string; fileId: string }>({
       query: ({ instructionsId, fileId }) => ({
         url: `/instructions/${instructionsId}/files/${fileId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, { instructionsId }) => [{ type: 'MockInstructionFile', id: instructionsId }],
+      invalidatesTags: (_result, _error, { instructionsId }) => [{ type: 'MockInstructionFile', id: instructionsId }],
     }),
 
     // Parts List Files
     getPartsListFiles: builder.query<PartsListFile[], string>({
       query: (instructionsId) => `/instructions/${instructionsId}/parts-list-files`,
-      providesTags: (result, error, instructionsId) => [{ type: 'PartsListFile', id: instructionsId }],
+      providesTags: (_result, _error, instructionsId) => [{ type: 'PartsListFile', id: instructionsId }],
     }),
     uploadPartsListFile: builder.mutation<PartsListFile, PartsListFileUpload>({
       query: (body) => ({
@@ -140,14 +140,14 @@ export const instructionsApi = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: (result, error, body) => [{ type: 'PartsListFile', id: body.instructionsId }],
+      invalidatesTags: (_result, _error, body) => [{ type: 'PartsListFile', id: body.instructionsId }],
     }),
     deletePartsListFile: builder.mutation<void, { instructionsId: string; fileId: string }>({
       query: ({ instructionsId, fileId }) => ({
         url: `/instructions/${instructionsId}/parts-list-files/${fileId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, { instructionsId }) => [{ type: 'PartsListFile', id: instructionsId }],
+      invalidatesTags: (_result, _error, { instructionsId }) => [{ type: 'PartsListFile', id: instructionsId }],
     }),
 
     // Download endpoints
@@ -156,7 +156,7 @@ export const instructionsApi = createApi({
       { instructionsId: string; fileId: string }
     >({
       query: ({ instructionsId, fileId }) => `/instructions/${instructionsId}/files/${fileId}/download-info`,
-      providesTags: (result, error, { instructionsId, fileId }) => [{ type: 'MockInstructionFile', id: `${instructionsId}-${fileId}` }],
+      providesTags: (_result, _error, { instructionsId, fileId }) => [{ type: 'MockInstructionFile', id: `${instructionsId}-${fileId}` }],
     }),
 
     getPartsListFileDownloadInfo: builder.query<
@@ -164,7 +164,7 @@ export const instructionsApi = createApi({
       { instructionsId: string; fileId: string }
     >({
       query: ({ instructionsId, fileId }) => `/instructions/${instructionsId}/parts-list-files/${fileId}/download-info`,
-      providesTags: (result, error, { instructionsId, fileId }) => [{ type: 'PartsListFile', id: `${instructionsId}-${fileId}` }],
+      providesTags: (_result, _error, { instructionsId, fileId }) => [{ type: 'PartsListFile', id: `${instructionsId}-${fileId}` }],
     }),
 
     downloadInstructionsFile: builder.mutation<

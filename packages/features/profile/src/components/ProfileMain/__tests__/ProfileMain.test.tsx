@@ -11,17 +11,32 @@ vi.mock('@repo/ui', () => ({
       {children}
     </div>
   ),
+  CardHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-header" className={className}>
+      {children}
+    </div>
+  ),
   CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="card-content" className={className}>
       {children}
     </div>
+  ),
+  Tabs: ({ children }: any) => <div>{children}</div>,
+  TabsList: ({ children }: any) => <div>{children}</div>,
+  TabsTrigger: ({ children }: any) => <button>{children}</button>,
+  TabsContent: ({ children }: any) => <div>{children}</div>,
+  CardTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <h3 data-testid="card-title" className={className}>{children}</h3>
+  ),
+  ThemeToggle: ({ variant, size }: { variant?: string; size?: string }) => (
+    <button data-testid="theme-toggle" data-variant={variant} data-size={size} />
   ),
 }));
 
 describe('ProfileMain', () => {
   it('renders children content', () => {
     render(
-      <ProfileMain>
+      <ProfileMain showTabs={false}>
         <div data-testid="test-content">Test content</div>
       </ProfileMain>
     );
@@ -32,7 +47,7 @@ describe('ProfileMain', () => {
 
   it('renders with card wrapper by default', () => {
     render(
-      <ProfileMain>
+      <ProfileMain showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );
@@ -43,7 +58,7 @@ describe('ProfileMain', () => {
 
   it('renders without card wrapper when showCard is false', () => {
     render(
-      <ProfileMain showCard={false}>
+      <ProfileMain showCard={false} showTabs={false}>
         <div data-testid="test-content">Test content</div>
       </ProfileMain>
     );
@@ -55,7 +70,7 @@ describe('ProfileMain', () => {
 
   it('renders title when provided', () => {
     render(
-      <ProfileMain title="Test Title">
+      <ProfileMain title="Test Title" showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );
@@ -66,7 +81,7 @@ describe('ProfileMain', () => {
 
   it('renders description when provided', () => {
     render(
-      <ProfileMain description="Test description">
+      <ProfileMain description="Test description" showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );
@@ -76,7 +91,7 @@ describe('ProfileMain', () => {
 
   it('renders both title and description when provided', () => {
     render(
-      <ProfileMain title="Test Title" description="Test description">
+      <ProfileMain title="Test Title" description="Test description" showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );
@@ -87,7 +102,7 @@ describe('ProfileMain', () => {
 
   it('applies custom className', () => {
     render(
-      <ProfileMain className="custom-class">
+      <ProfileMain className="custom-class" showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );
@@ -98,7 +113,7 @@ describe('ProfileMain', () => {
 
   it('applies custom contentClassName', () => {
     render(
-      <ProfileMain contentClassName="content-custom-class">
+      <ProfileMain contentClassName="content-custom-class" showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );
@@ -109,7 +124,7 @@ describe('ProfileMain', () => {
 
   it('maintains consistent styling with default props', () => {
     render(
-      <ProfileMain>
+      <ProfileMain showTabs={false}>
         <div>Test content</div>
       </ProfileMain>
     );

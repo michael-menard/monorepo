@@ -1,0 +1,20 @@
+---
+description: Enforce build-first acceptance before writing or fixing tests
+globs: **/*
+alwaysApply: true
+---
+
+- **Build-First Policy**
+  - Treat "compiles + type-checks" as the first acceptance gate for any task
+  - Do not generate or enable tests until the build is green for that slice
+  - If tests exist and the build is red, skip/mark them pending; fix build first
+
+- **DoD Phases**
+  - A: Build Green (no tests required)
+  - B: Tests Green (Unit + E2E)
+
+- **Scope Discipline**
+  - Avoid broad refactors in Phase A; propose separate tasks instead
+
+- **Reference**
+  - See [cursor_rules.mdc](mdc:.cursor/rules/cursor_rules.mdc)

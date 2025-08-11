@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
 import { ThemeToggle } from '@repo/ui';
-import { Settings, User, Bell, Shield, Palette, Globe } from 'lucide-react';
+import { User, Bell, Shield, Palette } from 'lucide-react';
 
 export const SettingsTab: React.FC = () => {
   return (

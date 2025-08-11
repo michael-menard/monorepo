@@ -3,7 +3,6 @@ import { Card, CardContent } from '@repo/ui';
 import type { ProfilePageProps } from '../../types';
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
-  profile,
   sidebarContent,
   children,
   className = '',

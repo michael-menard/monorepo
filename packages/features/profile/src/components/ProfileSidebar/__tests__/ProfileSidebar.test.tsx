@@ -6,6 +6,15 @@ import type { Profile } from '../../../schemas';
 
 // Mock the UI components
 vi.mock('@repo/ui', () => ({
+  AppAvatar: ({ avatarUrl, userName, children, className, onClick }: any) => (
+    <div data-testid="app-avatar" className={className} onClick={onClick}>
+      <div data-testid="avatar">
+        <img data-testid="avatar-image" src={avatarUrl} alt={`${userName}'s avatar`} />
+        <div data-testid="avatar-fallback">{(userName || '').split(' ').map((w: string) => w[0]).join('').toUpperCase() || 'U'}</div>
+      </div>
+      {children}
+    </div>
+  ),
   Avatar: ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
     <div data-testid="avatar" className={className} onClick={onClick}>
       {children}

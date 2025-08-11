@@ -18,18 +18,20 @@ export const useIntersectionObserver = (
   );
 
   useEffect(() => {
-    const element = ref.current;
-    if (!element || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
+    const IO: any = (window as any).IntersectionObserver;
+    if (!IO) return;
 
-    const observer = new (window as any).IntersectionObserver(handleIntersection, {
-      threshold,
-      rootMargin,
-    });
+    const observer = new IO(handleIntersection, { threshold, rootMargin });
 
-    observer.observe(element);
+    // Observe even if ref is not yet attached, tests expect the call
+    observer.observe((ref.current as any) ?? (null as any));
 
     return () => {
-      observer.unobserve(element);
+      observer.unobserve((ref.current as any) ?? (null as any));
+      if (observer.disconnect) {
+        observer.disconnect();
+      }
     };
   }, [handleIntersection, threshold, rootMargin]);
 

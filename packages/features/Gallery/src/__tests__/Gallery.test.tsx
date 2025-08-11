@@ -8,6 +8,8 @@ import type { GalleryImage } from '../schemas/index.js';
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    h3: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
+    p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
   },
   AnimatePresence: ({ children }: any) => <div>{children}</div>,
   LayoutGroup: ({ children }: any) => <div>{children}</div>,
@@ -71,9 +73,9 @@ describe('Gallery Component', () => {
     
     const imageCards = screen.getAllByTestId('image-card');
     expect(imageCards).toHaveLength(2);
-    
-    const container = screen.getByTestId('image-card').parentElement;
-    expect(container).toHaveClass('grid');
+    const container = imageCards[0].closest('.grid');
+    expect(container).not.toBeNull();
+    expect(container!).toHaveClass('grid');
   });
 
   it('renders masonry layout when specified', () => {
@@ -81,9 +83,9 @@ describe('Gallery Component', () => {
     
     const imageCards = screen.getAllByTestId('image-card');
     expect(imageCards).toHaveLength(2);
-    
-    const container = screen.getByTestId('image-card').parentElement;
-    expect(container).toHaveClass('columns-1');
+    const container = imageCards[0].closest('.columns-1');
+    expect(container).not.toBeNull();
+    expect(container!).toHaveClass('columns-1');
   });
 
   it('renders empty state when no images', () => {
@@ -115,21 +117,27 @@ describe('Gallery Component', () => {
   it('applies custom className', () => {
     render(<Gallery images={mockImages} className="custom-class" />);
     
-    const container = screen.getByTestId('image-card').parentElement;
-    expect(container).toHaveClass('custom-class');
+    const imageCards = screen.getAllByTestId('image-card');
+    const container = imageCards[0].closest('.grid, .columns-1');
+    expect(container).not.toBeNull();
+    expect(container!).toHaveClass('custom-class');
   });
 
   it('handles responsive grid classes correctly', () => {
     render(<Gallery images={mockImages} layout="grid" />);
     
-    const container = screen.getByTestId('image-card').parentElement;
-    expect(container).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3');
+    const imageCards = screen.getAllByTestId('image-card');
+    const container = imageCards[0].closest('.grid');
+    expect(container).not.toBeNull();
+    expect(container!).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3');
   });
 
   it('handles responsive masonry classes correctly', () => {
     render(<Gallery images={mockImages} layout="masonry" />);
     
-    const container = screen.getByTestId('image-card').parentElement;
-    expect(container).toHaveClass('columns-1', 'sm:columns-2', 'md:columns-3');
+    const imageCards = screen.getAllByTestId('image-card');
+    const container = imageCards[0].closest('.columns-1');
+    expect(container).not.toBeNull();
+    expect(container!).toHaveClass('columns-1', 'sm:columns-2', 'md:columns-3');
   });
 }); 

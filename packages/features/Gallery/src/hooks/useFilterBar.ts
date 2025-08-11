@@ -43,7 +43,7 @@ export interface UseFilterBarReturn {
 }
 
 export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarReturn => {
-  const { initialFilters = {}, debounceMs = 300, pageSize = 20 } = options;
+  const { initialFilters = {}, pageSize = 20 } = options;
 
   // Local filter state
   const [filters, setFilters] = useState<FilterState>({

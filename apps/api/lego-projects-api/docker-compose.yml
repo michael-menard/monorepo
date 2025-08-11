@@ -3,10 +3,12 @@ services:
   db:
     image: postgres:15
     restart: always
-    env_file:
-      - .env
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=lego_projects
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - db_data:/var/lib/postgresql/data
 
@@ -14,7 +16,7 @@ services:
     image: redis:7-alpine
     restart: always
     ports:
-      - '6379:6379'
+      - '6380:6379'
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -25,14 +27,28 @@ services:
       retries: 5
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: pnpm run dev
     volumes:
       - .:/app
     ports:
-      - '3000:3000'
-    env_file:
-      - .env
+      - '3001:3000'
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/lego_projects
+      - JWT_SECRET=your-jwt-secret-here
+      - AUTH_API=http://localhost:3001
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - S3_BUCKET=your-s3-bucket-name
+      - S3_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=your-access-key
+      - AWS_SECRET_ACCESS_KEY=your-secret-key
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - PORT=3000
+      - NODE_ENV=development
     depends_on:
       - db
       - redis
@@ -45,7 +61,7 @@ services:
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - xpack.security.enabled=false
     ports:
-      - "9200:9200"
+      - "9201:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:

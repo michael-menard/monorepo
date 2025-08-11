@@ -4,6 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { AvatarUploader } from '../index';
 
+// Partially mock @repo/ui to ensure AvatarImage renders in JSDOM
+vi.mock('@repo/ui', async (importOriginal) => {
+  const actual: any = await importOriginal()
+  return {
+    ...actual,
+    Avatar: ({ children, className }: any) => <div data-testid="avatar" className={className}>{children}</div>,
+    AvatarImage: ({ src, alt }: any) => <img src={src} alt={alt} />,
+    AvatarFallback: ({ children }: any) => <div>{children}</div>,
+  }
+})
+
 // Mock react-easy-crop
 vi.mock('react-easy-crop', () => ({
   default: ({ onCropComplete, style }: any) => {
@@ -238,7 +249,7 @@ describe('AvatarUploader', () => {
     await user.click(saveButton);
     
     await waitFor(() => {
-      expect(screen.getByText('Uploading...')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
   });
 
@@ -263,7 +274,7 @@ describe('AvatarUploader', () => {
     await user.click(saveButton);
     
     await waitFor(() => {
-      expect(screen.getByText('Upload failed')).toBeInTheDocument();
+      expect(screen.getAllByText('Upload failed').length).toBeGreaterThan(0);
     });
   });
 }); 

@@ -1,4 +1,4 @@
-import { RTKQueryCacheConfig } from '../schemas/cache.js'
+import type { RTKQueryCacheConfig } from '../schemas/cache.js'
 
 /**
  * Default RTK Query cache configurations for different use cases
@@ -101,13 +101,13 @@ export function createCacheUpdate<T>(data: T, id?: string | number) {
 /**
  * Enhanced RTK Query base query with caching headers
  */
-export function createCachedBaseQuery(baseURL: string, options: {
+export function createCachedBaseQuery(baseUrl: string, options: {
   cacheControl?: string
   etag?: boolean
   maxAge?: number
 } = {}) {
   return {
-    baseURL,
+    baseUrl,
     prepareHeaders: (headers: Headers, { getState }: any) => {
       // Add cache control headers
       if (options.cacheControl) {

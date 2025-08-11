@@ -4,7 +4,7 @@ import {
   downloadMultipleFiles,
   getFileExtension,
   getFileTypeIcon,
-  formatFileSize,
+  formatBytes as formatFileSize,
   validateDownloadInfo,
   downloadProgressSchema,
   downloadInfoSchema,
@@ -14,29 +14,11 @@ import {
   type DownloadResult,
 } from '../utils/downloadService';
 
-// Mock XMLHttpRequest
-const mockXHR = {
-  open: vi.fn(),
-  send: vi.fn(),
-  setRequestHeader: vi.fn(),
-  responseType: '',
-  timeout: 0,
-  status: 200,
-  statusText: 'OK',
-  response: new Blob(['test content'], { type: 'text/plain' }),
-  addEventListener: vi.fn(),
-  upload: {
-    addEventListener: vi.fn(),
-  },
-};
-
-global.XMLHttpRequest = vi.fn(() => mockXHR) as any;
+// Use global FakeXMLHttpRequest from setup.ts; no local override here
 
 describe('Download Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockXHR.status = 200;
-    mockXHR.response = new Blob(['test content'], { type: 'text/plain' });
   });
 
   describe('downloadFile', () => {
@@ -65,9 +47,6 @@ describe('Download Service', () => {
     });
 
     it('should handle download errors', async () => {
-      mockXHR.status = 404;
-      mockXHR.statusText = 'Not Found';
-
       const downloadInfo: DownloadInfo = {
         url: 'https://example.com/missing.pdf',
         filename: 'missing.pdf',
