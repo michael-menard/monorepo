@@ -2,7 +2,16 @@
   "name": "@monorepo/tech-radar",
   "version": "1.0.0",
   "description": "Interactive Tech Radar for the monorepo",
-  "main": "index.tsx",
+  "main": "./dist/tech-radar.js",
+  "types": "./dist/tech-radar.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/tech-radar.js",
+      "require": "./dist/tech-radar.js",
+      "types": "./dist/tech-radar.d.ts"
+    }
+  },
   "scripts": {
     "build": "vite build",
     "dev": "vite",
@@ -26,4 +35,4 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }
-} 
+}

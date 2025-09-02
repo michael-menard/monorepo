@@ -22,19 +22,21 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       lib: {
-        entry: path.resolve(__dirname, 'src/index.ts'),
-        name: 'Auth',
-        fileName: 'index',
+        entry: {
+          index: path.resolve(__dirname, 'src/index.ts'),
+          'react-router': path.resolve(__dirname, 'src/react-router.ts'),
+        },
         formats: ['es', 'cjs'],
       },
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', 'zod', '@packages/ui', '@packages/shared', '@repo/shared-cache'],
+        external: ['react', 'react-dom', 'react-router-dom', 'zod', '@packages/ui', '@packages/shared', '@repo/shared-cache'],
         output: {
           globals: {
             react: 'React',
             'react-dom': 'ReactDOM',
+            'react-router-dom': 'ReactRouterDOM',
             zod: 'zod',
           },
         },
@@ -48,4 +50,4 @@ export default defineConfig(({ mode }) => {
       exclude: ['@packages/ui', '@packages/shared', '@repo/shared-cache'],
     },
   };
-}); 
+});

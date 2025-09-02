@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,47 +16,32 @@ export default defineConfig(({ mode }) => {
     build: {
       lib: {
         entry: path.resolve(__dirname, 'src/index.ts'),
-        name: 'UI',
+        name: 'SharedCache',
         fileName: 'index',
         formats: ['es', 'cjs'],
       },
       outDir: 'dist',
       sourcemap: mode === 'development',
+      emptyOutDir: true,
       rollupOptions: {
-        external: [
-          'react',
-          'react-dom',
-          /^@radix-ui\/.*/,
-          'class-variance-authority',
-          'clsx',
-          'framer-motion',
-          'lucide-react',
-          'tailwind-merge',
-          'tailwindcss',
-          'tailwindcss-animate',
-          '@reduxjs/toolkit',
-          'react-hook-form',
-          '@hookform/resolvers',
-          'zod',
-          'browser-image-compression',
-          'react-dropzone',
-          'react-easy-crop',
-          'cmdk',
-          'i18next',
-          'react-i18next',
-          'next-themes',
-          'sonner',
-        ],
+        external: ['react', 'react-dom', 'zod'],
         output: {
           globals: {
             react: 'React',
             'react-dom': 'ReactDOM',
+            zod: 'zod',
           },
         },
       },
     },
+    esbuild: {
+      target: 'esnext',
+    },
     define: {
       __DEV__: mode === 'development',
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
     },
   };
 });

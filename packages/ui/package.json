@@ -4,35 +4,104 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "import": "./dist/index.js",
+      "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./globals.css": "./src/globals.css",
-    "./avatar": "./dist/avatar.js",
-    "./badge": "./dist/badge.js",
-    "./button": "./dist/button.js",
-    "./card": "./dist/card.js",
-    "./checkbox": "./dist/checkbox.js",
-    "./code": "./dist/code.js",
-    "./dialog": "./dist/dialog.js",
-    "./dropdown-menu": "./dist/dropdown-menu.js",
-    "./form": "./dist/form.js",
-    "./input": "./dist/input.js",
-    "./label": "./dist/label.js",
-    "./popover": "./dist/popover.js",
-    "./select": "./dist/select.js",
-    "./separator": "./dist/separator.js",
-    "./switch": "./dist/switch.js",
-    "./tabs": "./dist/tabs.js",
-    "./toast": "./dist/toast.js",
-    "./tooltip": "./dist/tooltip.js",
-    "./utils": "./dist/lib/utils.js",
-    "./file-upload": "./dist/FileUpload/index.js",
-    "./FileUpload": "./dist/FileUpload/index.js",
-    "./image-upload-modal": "./dist/ImageUploadModal/index.js",
-    "./guided-tour": "./dist/guided-tour.js"
+    "./avatar": {
+      "import": "./dist/avatar.js",
+      "require": "./dist/avatar.js",
+      "types": "./dist/avatar.d.ts"
+    },
+    "./badge": {
+      "import": "./dist/badge.js",
+      "require": "./dist/badge.js",
+      "types": "./dist/badge.d.ts"
+    },
+    "./button": {
+      "import": "./dist/button.js",
+      "require": "./dist/button.js",
+      "types": "./dist/button.d.ts"
+    },
+    "./card": {
+      "import": "./dist/card.js",
+      "require": "./dist/card.js",
+      "types": "./dist/card.d.ts"
+    },
+    "./checkbox": {
+      "import": "./dist/checkbox.js",
+      "require": "./dist/checkbox.js",
+      "types": "./dist/checkbox.d.ts"
+    },
+    "./dialog": {
+      "import": "./dist/dialog.js",
+      "require": "./dist/dialog.js",
+      "types": "./dist/dialog.d.ts"
+    },
+    "./dropdown-menu": {
+      "import": "./dist/dropdown-menu.js",
+      "require": "./dist/dropdown-menu.js",
+      "types": "./dist/dropdown-menu.d.ts"
+    },
+    "./form": {
+      "import": "./dist/form.js",
+      "require": "./dist/form.js",
+      "types": "./dist/form.d.ts"
+    },
+    "./input": {
+      "import": "./dist/input.js",
+      "require": "./dist/input.js",
+      "types": "./dist/input.d.ts"
+    },
+    "./label": {
+      "import": "./dist/label.js",
+      "require": "./dist/label.js",
+      "types": "./dist/label.d.ts"
+    },
+    "./popover": {
+      "import": "./dist/popover.js",
+      "require": "./dist/popover.js",
+      "types": "./dist/popover.d.ts"
+    },
+    "./select": {
+      "import": "./dist/select.js",
+      "require": "./dist/select.js",
+      "types": "./dist/select.d.ts"
+    },
+    "./separator": {
+      "import": "./dist/separator.js",
+      "require": "./dist/separator.js",
+      "types": "./dist/separator.d.ts"
+    },
+    "./switch": {
+      "import": "./dist/switch.js",
+      "require": "./dist/switch.js",
+      "types": "./dist/switch.d.ts"
+    },
+    "./tabs": {
+      "import": "./dist/tabs.js",
+      "require": "./dist/tabs.js",
+      "types": "./dist/tabs.d.ts"
+    },
+    "./tooltip": {
+      "import": "./dist/tooltip.js",
+      "require": "./dist/tooltip.js",
+      "types": "./dist/tooltip.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/lib/utils.js",
+      "require": "./dist/lib/utils.js",
+      "types": "./dist/lib/utils.d.ts"
+    },
+    "./guided-tour": {
+      "import": "./dist/guided-tour.js",
+      "require": "./dist/guided-tour.js",
+      "types": "./dist/guided-tour.d.ts"
+    }
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -112,5 +181,9 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^4.1.11",
     "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
   }
 }

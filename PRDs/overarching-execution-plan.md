@@ -172,17 +172,17 @@ Acceptance
 ### G) Packages Hygiene & Styling Standardization — [PRD: Packages Phases A/C/D/E](PRDs/packages-improvement-prd.md)
 
 Build/Exports/Types
-- [ ] G1: Standardize builds (Vite lib or tsc) per package  
-- [ ] G2: Export compiled `dist` only; add `"types"` for subpaths; no `./src/*` in public exports  
-- [ ] G3: `"sideEffects": false` where safe; tree-shakeable APIs  
-- [ ] G4: Remove unnecessary peers (e.g., `react` in @repo/shared-cache if not needed)
+- [x] G1: Standardize builds (Vite lib or tsc) per package  
+- [x] G2: Export compiled `dist` only; add `"types"` for subpaths; no `./src/*` in public exports  
+- [x] G3: `"sideEffects": false` where safe; tree-shakeable APIs  
+- [x] G4: Remove unnecessary peers (e.g., `react` in @repo/shared-cache if not needed)
 
 Styling
-- [ ] G5: Feature packages remove `styles.css` exports → Tailwind utilities only  
-- [ ] G6: Evaluate @repo/ui `globals.css`; prefer Tailwind tokens/plugin where possible
+- [x] G5: Feature packages remove `styles.css` exports → Tailwind utilities only  
+- [x] G6: Evaluate @repo/ui `globals.css`; prefer Tailwind tokens/plugin where possible
 
 Router Adapters
-- [ ] G7: @repo/auth default TanStack adapter; optional `@repo/auth/react-router` subpath  
+- [x] G7: @repo/auth default TanStack adapter; optional `@repo/auth/react-router` subpath  
       Avoid pulling `react-router-dom` for TanStack apps
 
 Acceptance
@@ -192,13 +192,15 @@ Acceptance
 
 ### H) Docs, Versioning, Deployment — [PRD: App/Packages Phase F](PRDs/lego-moc-instructions-app-improvement-prd.md) • (PRDs/packages-improvement-prd.md)
 
-- [ ] H1: Storybook alignment with Tailwind v4 atoms (where applicable)  
-- [ ] H2: Changesets/versioning  
-- [ ] H3: Deployment docs/pipelines (internal/external)  
+- [ ] H1: Storybook alignment with Tailwind v4 atoms (where applicable)
+- [ ] H2: Changesets/versioning
+- [ ] H3: Deployment docs/pipelines (internal/external)
 - [ ] H4: READMEs updated with peer deps, examples, router adapter guidance, Tailwind tokens
+- [ ] H5: swagger docs updated for all apis
+- [ ] H6: http file with example calls for all api calls added and updated for the lego react app
 
 Tasks
-- [ ] H5: 61 (Storybook), 64 (Semantic versioning), 120 (Docs), 132 (Package deployment), 22 (Deployment docs)  
+- [ ] H7: 61 (Storybook), 64 (Semantic versioning), 120 (Docs), 132 (Package deployment), 22 (Deployment docs)
       Link: [.taskmaster/tasks/tasks.json](.taskmaster/tasks/tasks.json)
 
 Acceptance

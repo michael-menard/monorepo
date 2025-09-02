@@ -1,4 +1,15 @@
-// Components (router-agnostic)
+// React Router specific components - only export components that use react-router-dom
+export { default as Login } from './components/Login/index';
+export { default as LoginForm } from './components/LoginForm/index';
+export { SignupForm as Signup } from './components/SignupForm/index';
+export { SignupForm } from './components/SignupForm/index';
+export { default as ForgotPasswordForm } from './components/ForgotPasswordForm/index';
+export { default as ResetPasswordForm } from './components/ResetPasswordForm/index';
+export { default as ConfirmResetPasswordForm } from './components/ConfirmResetPasswordForm/index';
+export { default as EmailVerificationForm } from './components/EmailVerificationForm/index';
+export { default as RouteGuard } from './components/RouteGuard/index';
+
+// Re-export everything from main index that doesn't depend on react-router
 export { default as Input } from './components/Input/index';
 export { Button } from './components/ui/button';
 export { Card } from './components/ui/card';
@@ -7,14 +18,6 @@ export { default as LoadingSpinner } from './components/LoadingSpinner/index';
 export { default as PasswordStrength } from './components/PasswordStrength/index';
 export { default as FloatingShape } from './components/FloatingShape/index';
 export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index';
-
-// TanStack Router Components (default)
-export {
-  createTanStackRouteGuard,
-  type TanStackRouteGuardOptions,
-} from './components/TanStackRouteGuard/index';
-
-// Note: For React Router components, import from '@repo/auth/react-router'
 
 // Hooks
 export { useAuth } from './hooks/useAuth';

@@ -2,17 +2,16 @@
   "name": "@repo/moc-instructions",
   "version": "0.0.1",
   "type": "module",
-  "main": "./src/index.ts",
-  "browser": "./src/index.browser.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/moc.umd.js",
+  "module": "./dist/moc.es.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "browser": "./src/index.browser.ts",
-      "import": "./src/index.ts",
-      "require": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./styles.css": "./src/styles.css"
+      "import": "./dist/moc.es.js",
+      "require": "./dist/moc.umd.js",
+      "types": "./dist/index.d.ts"
+    }
   },
   "scripts": {
     "build": "vite build",
