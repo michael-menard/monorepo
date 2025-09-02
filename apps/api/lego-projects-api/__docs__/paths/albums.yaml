@@ -12,6 +12,20 @@
         schema:
           type: boolean
         description: If true, include images for each album
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of items to return (max 100)
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination cursor (offset)
     responses:
       '200':
         description: Albums retrieved successfully
@@ -87,4 +101,4 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas.yaml#/Error' 
+              $ref: '../components/schemas.yaml#/Error'

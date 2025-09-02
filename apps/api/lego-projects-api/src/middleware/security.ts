@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z } from 'zod';
+import fs from 'fs';
 import {
   imageProcessingMiddleware,
   canProcessImage,
@@ -105,7 +106,9 @@ export const validateFileContent = (req: Request, res: Response, next: NextFunct
     }
 
     // Validate file content using magic bytes
-    const buffer = file.buffer;
+    const buffer: Buffer | undefined =
+      (file as any).buffer ??
+      ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buffer || buffer.length < 4) {
       return res.status(400).json({ error: 'Invalid file content' });
     }
@@ -200,21 +203,12 @@ function isValidImageContent(buffer: Buffer): boolean {
 
 // Security headers middleware
 export const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Allow cross-origin requests for file uploads
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow cross-origin resources
+  contentSecurityPolicy: false,
+  hsts: process.env.NODE_ENV === 'production' ? undefined : false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: { policy: 'same-origin' },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  referrerPolicy: { policy: 'no-referrer' },
 });
 
 // Request sanitization middleware
@@ -386,7 +380,9 @@ export const processUploadedImage = (config?: any) => {
       }
 
       // Step 3: Validate magic bytes
-      const buffer = file.buffer;
+      const buffer: Buffer | undefined =
+        (file as any).buffer ??
+        ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
       if (!buffer || buffer.length < 4) {
         return res.status(400).json({ error: 'Invalid file content' });
       }

@@ -34,6 +34,17 @@ export default defineConfig({
                 statuses: [0, 200],
               },
               networkTimeoutSeconds: 3, // Fallback to cache after 3 seconds
+              plugins: [
+                {
+                  cacheKeyWillBeUsed: async ({ request }) => {
+                    // Only apply background sync to write operations (POST, PUT, DELETE)
+                    if (request.method !== 'GET' && request.method !== 'HEAD') {
+                      return `${request.url}?${Date.now()}`;
+                    }
+                    return request.url;
+                  },
+                },
+              ],
             },
           },
           // Cache MOC instruction images
@@ -169,7 +180,7 @@ export default defineConfig({
               <meta http-equiv="X-XSS-Protection" content="1; mode=block">
               <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
               <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
-              <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' http://localhost:* https://* ws://localhost:* wss://localhost:*; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self' blob:; form-action 'self'">
+              <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self' blob:; form-action 'self'; upgrade-insecure-requests">
             `;
             file.source = html.replace('</head>', `${securityHeaders}</head>`);
           }
@@ -197,6 +208,14 @@ export default defineConfig({
   server: {
     port: 3001,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        ws: true
+      }
+    },
     // Security headers for development server
     headers: {
       'X-Content-Type-Options': 'nosniff',
@@ -225,11 +244,72 @@ export default defineConfig({
     // Security headers for production build
     rollupOptions: {
       output: {
-        // Add security headers to HTML output
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@repo/ui'],
-          auth: ['@repo/auth'],
+        // Optimized manual chunks for better code splitting
+        manualChunks: (id) => {
+          // Core React libraries - loaded on every page
+          if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+            return 'react-vendor'
+          }
+          
+          // Router - needed for navigation, but can be separate
+          if (id.includes('@tanstack/react-router')) {
+            return 'router'
+          }
+          
+          // State management - used across most pages
+          if (id.includes('@reduxjs/toolkit') || id.includes('react-redux') || id.includes('redux')) {
+            return 'state'
+          }
+          
+          // Shared UI components - frequently reused
+          if (id.includes('@repo/ui') || id.includes('@monorepo/shared')) {
+            return 'shared-ui'
+          }
+          
+          // Feature-specific packages - can be lazy loaded per feature
+          if (id.includes('@repo/moc-instructions')) {
+            return 'moc-feature'
+          }
+          if (id.includes('@repo/profile')) {
+            return 'profile-feature'
+          }
+          
+          // Auth package - used in multiple places but not everywhere
+          if (id.includes('@repo/auth')) {
+            return 'auth'
+          }
+          
+          // Image utilities - used in gallery and detail pages
+          if (id.includes('@repo/shared-image-utils')) {
+            return 'image-utils'
+          }
+          
+          // Cache utilities
+          if (id.includes('@repo/shared-cache')) {
+            return 'cache-utils'
+          }
+          
+          // Large third-party libraries that don't change often
+          if (id.includes('node_modules')) {
+            // Group smaller utilities together
+            if (id.includes('clsx') || id.includes('class-variance-authority') || 
+                id.includes('tailwind-merge') || id.includes('lucide-react')) {
+              return 'ui-utils'
+            }
+            
+            // Date/time libraries
+            if (id.includes('date-fns') || id.includes('dayjs')) {
+              return 'date-utils'
+            }
+            
+            // Form libraries
+            if (id.includes('react-hook-form') || id.includes('zod')) {
+              return 'forms'
+            }
+            
+            // Other vendor libraries
+            return 'vendor'
+          }
         },
       },
     },

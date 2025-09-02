@@ -5,6 +5,7 @@
       Returns all images for the authenticated user. Supports optional filters: `albumId`, `flagged`, `tag` (all as query params).
     security:
       - cookieAuth: []
+      - bearerAuth: []
     parameters:
       - in: query
         name: albumId
@@ -25,6 +26,20 @@
         schema:
           type: string
         description: Filter images by tag
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of items to return (max 100)
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination cursor (offset)
     responses:
       '200':
         description: Images retrieved successfully
@@ -54,6 +69,9 @@
     description: Upload a new image to the gallery. Requires authentication.
     security:
       - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - $ref: '../components/parameters.yaml#/csrfToken'
     requestBody:
       required: true
       content:
@@ -143,6 +161,7 @@
           type: string
           format: uuid
         description: Image ID
+      - $ref: '../components/parameters.yaml#/csrfToken'
     requestBody:
       required: true
       content:
@@ -221,6 +240,7 @@
     description: Delete a gallery image. Only the owner or admin can delete.
     security:
       - cookieAuth: []
+      - bearerAuth: []
     parameters:
       - in: path
         name: id
@@ -229,6 +249,7 @@
           type: string
           format: uuid
         description: Image ID
+      - $ref: '../components/parameters.yaml#/csrfToken'
     responses:
       '200':
         description: Image deleted successfully
@@ -265,4 +286,4 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas.yaml#/Error' 
+              $ref: '../components/schemas.yaml#/Error'

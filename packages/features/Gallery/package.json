@@ -2,15 +2,19 @@
   "name": "@repo/gallery",
   "version": "0.0.1",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./src/index.tsx",
-      "types": "./src/index.tsx"
-    },
-    "./styles.css": "./src/styles.css"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && tsc -p tsconfig.build.json",
     "dev": "vite",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/",

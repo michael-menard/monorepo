@@ -16,7 +16,7 @@ export type TanStackRouteGuardOptions = z.infer<typeof TanStackRouteGuardOptions
 // The redirect function should be imported from @tanstack/react-router in the consuming app
 export const createTanStackRouteGuard = (
   options: TanStackRouteGuardOptions = {},
-  redirectFn?: (options: { to: string; replace?: boolean }) => never,
+  redirectFn?: (options: { to: string; replace?: boolean }) => any,
 ) => {
   const {
     requireAuth = true,
@@ -94,4 +94,4 @@ export const createTanStackRouteGuard = (
     console.log('Authentication check passed - allowing access');
     return undefined;
   };
-}; 
+};

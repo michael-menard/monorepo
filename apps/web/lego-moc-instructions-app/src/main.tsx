@@ -1,10 +1,12 @@
 import './polyfills'
+import '@repo/ui/globals.css'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui'
 import { Outlet, RouterProvider, createRootRoute, createRouter } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { initializeCSRF } from './services/csrfService'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
 import { homeRoute } from './routes/home.tsx'
 import { mocDetailRoute } from './routes/moc-detail.tsx'
@@ -33,7 +35,6 @@ import TanStackQueryLayout from './integrations/tanstack-query/layout.tsx'
 
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
 
-import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
 
 import { store } from './store/store'
@@ -88,6 +89,9 @@ declare module '@tanstack/react-router' {
     router: typeof router
   }
 }
+
+// Initialize CSRF protection
+initializeCSRF().catch(console.error)
 
 const rootElement = document.getElementById('app')
 if (rootElement && !rootElement.innerHTML) {

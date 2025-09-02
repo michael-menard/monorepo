@@ -90,6 +90,8 @@ paths:
     $ref: './paths/gallery.yaml#/api/gallery'
   /api/flag:
     $ref: './paths/flag.yaml#/api/flag'
+  /api/csrf:
+    $ref: './paths/csrf.yaml#/api/csrf'
   
   # MOC Instructions Management
   /api/mocs:
@@ -161,4 +163,4 @@ components:
 
 externalDocs:
   description: Find more info about the LEGO Projects API
-  url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/lego-projects-api 
+  url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/lego-projects-api

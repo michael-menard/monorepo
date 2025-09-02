@@ -1,5 +1,5 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "eslint.config.js", "prettier.config.js", "vite.config.js"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.d.ts", "eslint.config.js", "prettier.config.js", "vite.config.js"],
   "exclude": [
     "**/*.test.ts",
     "**/*.test.tsx",
@@ -34,6 +34,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@repo/auth": ["../../packages/auth/src"],
+      "@repo/auth/*": ["../../packages/auth/src/*"],
+      "@repo/auth/components/TanStackRouteGuard": ["../../packages/auth/src/components/TanStackRouteGuard/index.tsx"],
       "@repo/ui": ["../../packages/ui/src"],
       "@repo/profile": ["../../packages/features/profile/src"],
       "@monorepo/shared": ["../../packages/shared/src"]

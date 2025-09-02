@@ -1,0 +1,35 @@
+/api/csrf:
+  get:
+    summary: Issue CSRF token
+    description: >
+      Issues a CSRF token, sets a non-HttpOnly 'XSRF-TOKEN' cookie, and returns the token in the response body.
+      Clients should read the 'XSRF-TOKEN' cookie value and include it in the 'X-CSRF-Token' header for all state-changing requests.
+      Responses include 'Cache-Control: no-store' to prevent caching of the token response.
+    tags:
+      - Security
+    responses:
+      '200':
+        description: CSRF token issued
+        headers:
+          Set-Cookie:
+            schema:
+              type: string
+            description: >
+              Sets the 'XSRF-TOKEN' cookie containing the CSRF token.
+              Cookie is non-HttpOnly and typically SameSite=Lax; Secure in production.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: CSRF token value matching the XSRF-TOKEN cookie
+              required:
+                - token
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'

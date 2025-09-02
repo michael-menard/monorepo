@@ -5,7 +5,7 @@ import { processImage, HIGH_QUALITY_CONFIG } from '../utils/imageProcessor';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, inArray, isNull } from 'drizzle-orm';
+import { eq, and, inArray, isNull, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   indexImage,
@@ -283,7 +283,16 @@ export const getAllAlbums = async (req: Request, res: Response) => {
     }
     // Optionally include images if ?withImages=true
     const withImages = req.query.withImages === 'true';
-    const albums = await db.select().from(galleryAlbums).where(eq(galleryAlbums.userId, userId));
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100));
+    const cursor = Math.max(0, Number(req.query.cursor) || 0);
+
+    const albums = await db
+      .select()
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.userId, userId))
+      .orderBy(desc(galleryAlbums.createdAt))
+      .limit(limit)
+      .offset(cursor);
     if (withImages) {
       // Fetch images for each album using inArray
       const albumIds = albums.map((a) => a.id);
@@ -315,6 +324,11 @@ export const getAllImages = async (req: Request, res: Response) => {
     }
     // Optional filters
     const { albumId, flagged, tag } = req.query;
+
+    // Pagination (DB-level)
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100));
+    const cursor = Math.max(0, Number(req.query.cursor) || 0);
+
     // Build where clause as array
     const conditions = [eq(galleryImages.userId, userId)];
     if (albumId) {
@@ -324,7 +338,14 @@ export const getAllImages = async (req: Request, res: Response) => {
       conditions.push(eq(galleryImages.flagged, flagged === 'true'));
     }
     const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
-    let images = await db.select().from(galleryImages).where(whereClause);
+
+    let images = await db
+      .select()
+      .from(galleryImages)
+      .where(whereClause)
+      .orderBy(desc(galleryImages.createdAt))
+      .limit(limit)
+      .offset(cursor);
     if (tag) {
       // Filter by tag (array contains)
       images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(String(tag)));
@@ -370,6 +391,16 @@ export const updateAlbumHandler = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const { id } = req.params;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Ensure ownership
+    const [existing] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id));
+    if (!existing) {
+      return res.status(404).json({ error: 'Album not found' });
+    }
+    if (existing.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: You do not own this album' });
+    }
+
     const { title, description, coverImageId } = req.body;
     const [album] = await db
       .update(galleryAlbums)
@@ -391,6 +422,16 @@ export const deleteAlbumHandler = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const { id } = req.params;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Ensure ownership
+    const [existing] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id));
+    if (!existing) {
+      return res.status(404).json({ error: 'Album not found' });
+    }
+    if (existing.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: You do not own this album' });
+    }
+
     const [album] = await db.delete(galleryAlbums).where(eq(galleryAlbums.id, id)).returning();
     await deleteAlbum(id);
     return res.json({ album });
@@ -439,13 +480,22 @@ export const getGallery = async (req: Request, res: Response) => {
     if (!esResults) {
       // Fetch albums
       if (type === 'album' || type === 'all') {
-        let albums = await db.select().from(galleryAlbums).where(eq(galleryAlbums.userId, userId));
-        if (search) {
-          const q = search.toLowerCase();
-          albums = albums.filter(
-            (a) => a.title?.toLowerCase().includes(q) || a.description?.toLowerCase().includes(q),
-          );
-        }
+        const albumsQuery = db
+          .select()
+          .from(galleryAlbums)
+          .where(eq(galleryAlbums.userId, userId))
+          .orderBy(desc(galleryAlbums.createdAt));
+
+        // Apply DB-level limit/offset only when requesting albums specifically
+        const baseAlbums =
+          type === 'album' ? await albumsQuery.limit(limit).offset(cursor) : await albumsQuery;
+        const albums = search
+          ? baseAlbums.filter(
+              (a) =>
+                a.title?.toLowerCase().includes(search.toLowerCase()) ||
+                a.description?.toLowerCase().includes(search.toLowerCase()),
+            )
+          : baseAlbums;
         items.push(...albums.map((a) => ({ ...a, type: 'album' })));
       }
       // Fetch images (standalone only unless albumId is specified)
@@ -457,7 +507,10 @@ export const getGallery = async (req: Request, res: Response) => {
         let images = await db
           .select()
           .from(galleryImages)
-          .where(and(...conditions));
+          .where(and(...conditions))
+          .orderBy(desc(galleryImages.createdAt))
+          .limit(limit)
+          .offset(cursor);
         if (tag) {
           images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(tag));
         }
@@ -480,7 +533,10 @@ export const getGallery = async (req: Request, res: Response) => {
         let images = await db
           .select()
           .from(galleryImages)
-          .where(and(...conditions));
+          .where(and(...conditions))
+          .orderBy(desc(galleryImages.createdAt))
+          .limit(limit)
+          .offset(cursor);
         if (tag) {
           images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(tag));
         }

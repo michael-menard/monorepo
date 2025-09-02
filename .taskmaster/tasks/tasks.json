@@ -54,7 +54,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -108,7 +108,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -162,7 +162,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -216,7 +216,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -269,7 +269,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -322,7 +322,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -375,7 +375,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -425,7 +425,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -478,7 +478,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -531,7 +531,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -584,7 +584,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -637,7 +637,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -690,7 +690,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -743,7 +743,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -796,7 +796,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -849,7 +849,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -902,7 +902,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -955,7 +955,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1008,7 +1008,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1062,7 +1062,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1115,7 +1115,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1168,7 +1168,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1221,7 +1221,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1274,7 +1274,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1327,7 +1327,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1380,7 +1380,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1433,7 +1433,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1486,7 +1486,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1539,7 +1539,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1592,7 +1592,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1645,7 +1645,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1698,7 +1698,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1751,7 +1751,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1804,7 +1804,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1857,7 +1857,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1910,7 +1910,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -1963,7 +1963,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -2016,7 +2016,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -2067,7 +2067,7 @@
       "Avoid TypeScript interfaces; prefer Zod + types",
       "No NodeNext",
       "Do not use watch flags in test scripts; tests should run once and exit.",
-      "All test scripts in package.json must run 'pnpm vitest run' \u2014 no watch mode or persistent runners."
+      "All test scripts in package.json must run 'pnpm vitest run' — no watch mode or persistent runners."
     ],
     "infra": {
       "ci": "GitHub Actions with git hooks for lint/test/pre-push",
@@ -2094,7 +2094,14 @@
     "details": "Refactor the existing Gallery component system to improve maintainability, performance, and developer experience. The component currently handles MOC instruction cards and inspiration gallery cards with a unique stacked visual effect, but needs architectural improvements for better scalability and shadcn/ui integration.",
     "testStrategy": "Test card display, interactions, responsive layout, and shadcn/ui integration",
     "tag": "master",
-    "techStack": ["React", "TypeScript", "shadcn/ui", "Tailwind CSS", "Zod", "Vitest"],
+    "techStack": [
+      "React",
+      "TypeScript",
+      "shadcn/ui",
+      "Tailwind CSS",
+      "Zod",
+      "Vitest"
+    ],
     "rules": [
       "Use Zod schemas over TypeScript interfaces",
       "All external dependencies must be mocked in tests",
@@ -2118,11 +2125,19 @@
     "description": "Unify all gallery implementations under @repo/gallery package to reduce code duplication and improve maintainability",
     "status": "pending",
     "priority": "high",
-    "dependencies": [1],
+    "dependencies": [
+      1
+    ],
     "details": "Consolidate duplicated functionality across packages, particularly in gallery components. Current state includes @repo/gallery, @repo/moc-instructions, and app-level custom implementations. Target state is a single @repo/gallery package as the source of truth with extensible architecture.",
     "testStrategy": "Test unified API, extensibility, and backward compatibility",
     "tag": "master",
-    "techStack": ["React", "TypeScript", "shadcn/ui", "Zod", "Vitest"],
+    "techStack": [
+      "React",
+      "TypeScript",
+      "shadcn/ui",
+      "Zod",
+      "Vitest"
+    ],
     "rules": [
       "Use Zod schemas over TypeScript interfaces",
       "All external dependencies must be mocked in tests",
@@ -2145,7 +2160,13 @@
     "details": "Create a single @repo/FileUpload package with plugins/extensions. Current state includes @repo/FileUpload, @repo/ImageUploadModal, and @repo/moc-instructions with duplicate drag & drop implementations. Target state is unified validation and progress tracking.",
     "testStrategy": "Test file validation, upload progress, drag & drop behavior, and plugin system",
     "tag": "master",
-    "techStack": ["React", "TypeScript", "shadcn/ui", "Zod", "Vitest"],
+    "techStack": [
+      "React",
+      "TypeScript",
+      "shadcn/ui",
+      "Zod",
+      "Vitest"
+    ],
     "rules": [
       "Use Zod schemas over TypeScript interfaces",
       "All external dependencies must be mocked in tests",
@@ -2168,7 +2189,14 @@
     "details": "Integrate comprehensive code quality, complexity analysis, and automated review tools into the existing TypeScript + React + shadcn/Tailwind project to improve code maintainability, catch issues early, and establish consistent development standards.",
     "testStrategy": "Test tool integration, pre-commit hooks, and CI/CD pipeline quality gates",
     "tag": "master",
-    "techStack": ["TypeScript", "React", "ESLint", "Prettier", "Vitest", "Husky"],
+    "techStack": [
+      "TypeScript",
+      "React",
+      "ESLint",
+      "Prettier",
+      "Vitest",
+      "Husky"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2186,11 +2214,17 @@
     "description": "Install and configure Prettier with import organization for consistent code formatting",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [4],
+    "dependencies": [
+      4
+    ],
     "details": "Install and configure Prettier with eslint-config-prettier, create .prettierrc configuration file, update ESLint config to work with Prettier, add format scripts to package.json, and configure import organization with @trivago/prettier-plugin-sort-imports.",
     "testStrategy": "Test formatting rules, import sorting, and pre-commit hooks",
     "tag": "master",
-    "techStack": ["Prettier", "ESLint", "TypeScript"],
+    "techStack": [
+      "Prettier",
+      "ESLint",
+      "TypeScript"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2208,11 +2242,17 @@
     "description": "Install and configure ESLint complexity plugins and Plato for visual complexity reports",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [4],
+    "dependencies": [
+      4
+    ],
     "details": "Install ESLint complexity plugins including eslint-plugin-sonarjs, configure cognitive complexity rules, set complexity thresholds (functions: 10, cognitive: 15), install Plato for visual complexity reports, create complexity reporting scripts, and generate initial complexity baseline report.",
     "testStrategy": "Test complexity rules, reporting scripts, and baseline generation",
     "tag": "master",
-    "techStack": ["ESLint", "Plato", "TypeScript"],
+    "techStack": [
+      "ESLint",
+      "Plato",
+      "TypeScript"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2230,11 +2270,18 @@
     "description": "Install and configure Husky and lint-staged for automated pre-commit hooks",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [4, 5],
+    "dependencies": [
+      4,
+      5
+    ],
     "details": "Install Husky and lint-staged, configure pre-commit hooks, set up automated formatting and linting, and test hook functionality to ensure code quality before commits.",
     "testStrategy": "Test pre-commit hooks, formatting automation, and linting integration",
     "tag": "master",
-    "techStack": ["Husky", "lint-staged", "Git"],
+    "techStack": [
+      "Husky",
+      "lint-staged",
+      "Git"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2252,11 +2299,18 @@
     "description": "Install and configure Vitest testing framework with React Testing Library and coverage reporting",
     "status": "pending",
     "priority": "high",
-    "dependencies": [4],
+    "dependencies": [
+      4
+    ],
     "details": "Install Vitest testing framework with @vitest/ui and jsdom, install React Testing Library, configure test scripts and coverage reporting, set up Node.js testing for serverless functions, create test utilities for AWS Lambda functions, add integration testing for API endpoints, and set up test coverage thresholds.",
     "testStrategy": "Test framework integration, coverage reporting, and test utilities",
     "tag": "master",
-    "techStack": ["Vitest", "React Testing Library", "jsdom", "TypeScript"],
+    "techStack": [
+      "Vitest",
+      "React Testing Library",
+      "jsdom",
+      "TypeScript"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2274,11 +2328,18 @@
     "description": "Configure security vulnerability scanning with pnpm audit integration and AWS-specific security scanning",
     "status": "pending",
     "priority": "high",
-    "dependencies": [4],
+    "dependencies": [
+      4
+    ],
     "details": "Configure pnpm audit integration, install and configure Snyk (if budget allows), install eslint-plugin-security, create security scanning scripts, add AWS-specific security scanning with @aws-sdk/client-iam for IAM policy validation, configure serverless security best practices, add Lambda function security scanning, and set up automated security monitoring.",
     "testStrategy": "Test security scanning, vulnerability detection, and automated monitoring",
     "tag": "master",
-    "techStack": ["pnpm", "ESLint", "AWS SDK", "Snyk"],
+    "techStack": [
+      "pnpm",
+      "ESLint",
+      "AWS SDK",
+      "Snyk"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2296,11 +2357,17 @@
     "description": "Install and configure dependency analysis tools for circular dependency detection and architecture visualization",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [4],
+    "dependencies": [
+      4
+    ],
     "details": "Install dependency analysis tools including madge and dependency-cruiser, configure circular dependency detection, set up architecture visualization, create dependency analysis scripts, and generate dependency reports.",
     "testStrategy": "Test dependency analysis, circular dependency detection, and visualization",
     "tag": "master",
-    "techStack": ["madge", "dependency-cruiser", "TypeScript"],
+    "techStack": [
+      "madge",
+      "dependency-cruiser",
+      "TypeScript"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2318,11 +2385,19 @@
     "description": "Create .github/workflows/ci.yml file with comprehensive CI/CD pipeline for automated testing and deployment",
     "status": "pending",
     "priority": "high",
-    "dependencies": [4, 8, 9],
+    "dependencies": [
+      4,
+      8,
+      9
+    ],
     "details": "Create .github/workflows/ci.yml file that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include automated testing, linting, security scanning, and deployment stages.",
     "testStrategy": "Test CI/CD pipeline, automated workflows, and deployment processes",
     "tag": "master",
-    "techStack": ["GitHub Actions", "Node.js", "pnpm"],
+    "techStack": [
+      "GitHub Actions",
+      "Node.js",
+      "pnpm"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2340,11 +2415,17 @@
     "description": "Create tests/ directory with comprehensive testing documentation and coverage reports",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [8],
+    "dependencies": [
+      8
+    ],
     "details": "Create tests/ directory that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include testing guidelines, coverage reports, and testing best practices.",
     "testStrategy": "Test documentation clarity, coverage reporting, and testing guidelines",
     "tag": "master",
-    "techStack": ["Vitest", "React Testing Library", "TypeScript"],
+    "techStack": [
+      "Vitest",
+      "React Testing Library",
+      "TypeScript"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2362,11 +2443,18 @@
     "description": "Create performance monitoring and optimization documentation with Lighthouse scoring and bundle analysis",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [2, 3],
+    "dependencies": [
+      2,
+      3
+    ],
     "details": "Create performance monitoring and optimization documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include Lighthouse scoring, bundle analysis, and performance optimization guidelines.",
     "testStrategy": "Test performance monitoring, optimization tools, and performance metrics",
     "tag": "master",
-    "techStack": ["Lighthouse", "Webpack Bundle Analyzer", "React"],
+    "techStack": [
+      "Lighthouse",
+      "Webpack Bundle Analyzer",
+      "React"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2384,11 +2472,16 @@
     "description": "Create comprehensive security review documentation with vulnerability assessment and security best practices",
     "status": "pending",
     "priority": "high",
-    "dependencies": [9],
+    "dependencies": [
+      9
+    ],
     "details": "Create security review documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include vulnerability assessment, security best practices, and security review checklists.",
     "testStrategy": "Test security documentation, vulnerability assessment, and security guidelines",
     "tag": "master",
-    "techStack": ["Security tools", "Documentation"],
+    "techStack": [
+      "Security tools",
+      "Documentation"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2410,7 +2503,10 @@
     "details": "Create stakeholder update documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include project progress tracking, communication guidelines, and stakeholder engagement strategies.",
     "testStrategy": "Test documentation clarity, progress tracking, and communication guidelines",
     "tag": "master",
-    "techStack": ["Documentation", "Communication tools"],
+    "techStack": [
+      "Documentation",
+      "Communication tools"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2432,7 +2528,10 @@
     "details": "Create project roadmap and backlog documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include feature planning, prioritization strategies, and project timeline management.",
     "testStrategy": "Test documentation clarity, roadmap planning, and backlog management",
     "tag": "master",
-    "techStack": ["Documentation", "Project management tools"],
+    "techStack": [
+      "Documentation",
+      "Project management tools"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2454,7 +2553,10 @@
     "details": "Create diversity and inclusion documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include inclusive development practices, community guidelines, and diversity initiatives.",
     "testStrategy": "Test documentation clarity, inclusive practices, and community guidelines",
     "tag": "master",
-    "techStack": ["Documentation", "Community tools"],
+    "techStack": [
+      "Documentation",
+      "Community tools"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2476,7 +2578,10 @@
     "details": "Create retrospective documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include project review processes, continuous improvement guidelines, and retrospective methodologies.",
     "testStrategy": "Test documentation clarity, review processes, and improvement guidelines",
     "tag": "master",
-    "techStack": ["Documentation", "Review tools"],
+    "techStack": [
+      "Documentation",
+      "Review tools"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2494,11 +2599,17 @@
     "description": "Create comprehensive test coverage reporting with badges and automated coverage tracking",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [8],
+    "dependencies": [
+      8
+    ],
     "details": "Create comprehensive test coverage reporting that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include coverage badges, automated coverage tracking, and coverage reporting tools.",
     "testStrategy": "Test coverage reporting, badge generation, and automated tracking",
     "tag": "master",
-    "techStack": ["Vitest", "Coverage tools", "Badge generation"],
+    "techStack": [
+      "Vitest",
+      "Coverage tools",
+      "Badge generation"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2516,11 +2627,16 @@
     "description": "Create comprehensive pull request template with review guidelines and contribution standards",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [11],
+    "dependencies": [
+      11
+    ],
     "details": "Create GitHub pull request template that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include review guidelines, contribution standards, and PR best practices.",
     "testStrategy": "Test template clarity, review guidelines, and contribution standards",
     "tag": "master",
-    "techStack": ["GitHub", "Documentation"],
+    "techStack": [
+      "GitHub",
+      "Documentation"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2538,11 +2654,16 @@
     "description": "Create comprehensive issue template with bug reporting and feature request guidelines",
     "status": "pending",
     "priority": "medium",
-    "dependencies": [11],
+    "dependencies": [
+      11
+    ],
     "details": "Create GitHub issue template that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include bug reporting guidelines, feature request templates, and issue management best practices.",
     "testStrategy": "Test template clarity, bug reporting guidelines, and feature request templates",
     "tag": "master",
-    "techStack": ["GitHub", "Documentation"],
+    "techStack": [
+      "GitHub",
+      "Documentation"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2560,11 +2681,16 @@
     "description": "Create comprehensive deployment documentation with deployment processes and environment management",
     "status": "pending",
     "priority": "high",
-    "dependencies": [11],
+    "dependencies": [
+      11
+    ],
     "details": "Create deployment documentation that provides clear, contextual purpose, ease of use for future contributors, and alignment with professional team workflows. Include deployment processes, environment management, and deployment best practices.",
     "testStrategy": "Test documentation clarity, deployment processes, and environment management",
     "tag": "master",
-    "techStack": ["Deployment tools", "Documentation"],
+    "techStack": [
+      "Deployment tools",
+      "Documentation"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2582,11 +2708,19 @@
     "description": "Add security scanning to the CI pipeline including dependency, code, and config checks",
     "status": "ready",
     "priority": "high",
-    "dependencies": [11, 9],
+    "dependencies": [
+      11,
+      9
+    ],
     "details": "Integrate pnpm audit (or npm audit), eslint-plugin-security, and optional Snyk/GitHub Dependabot alerts; add CI step to fail on high severity issues; include OWASP headers checks for web app builds",
     "testStrategy": "Run security scans in CI and verify pipeline fails on high severity; add a sample vulnerable dependency to confirm gating",
     "tag": "master",
-    "techStack": ["pnpm", "ESLint", "eslint-plugin-security", "GitHub Actions"],
+    "techStack": [
+      "pnpm",
+      "ESLint",
+      "eslint-plugin-security",
+      "GitHub Actions"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use 'pnpm vitest run' as the standard test command"
@@ -2613,11 +2747,22 @@
     "description": "Enable offline usage with service worker, asset caching, and RTK Query cached reads for critical views",
     "status": "ready",
     "priority": "high",
-    "dependencies": [58, 24],
+    "dependencies": [
+      58,
+      24
+    ],
     "details": "Finish PWA registration, cache shell/assets via VitePWA, add RTK Query cache hydration for gallery/detail views, and add an offline status indicator; gate network mutations with queue for later sync",
     "testStrategy": "Vitest + MSW: simulate offline (navigator.onLine=false) and assert cached reads; verify UI indicators and queued actions",
     "tag": "frontend-ui-development",
-    "techStack": ["ESNext", "React", "Vite", "RTK Query", "VitePWA", "Vitest", "MSW"],
+    "techStack": [
+      "ESNext",
+      "React",
+      "Vite",
+      "RTK Query",
+      "VitePWA",
+      "Vitest",
+      "MSW"
+    ],
     "rules": [
       "All external dependencies must be mocked in tests",
       "Use Zod schemas over TypeScript interfaces",
@@ -2638,5 +2783,1055 @@
     ],
     "tags": [],
     "blockedBy": []
+  },
+  "feature-gallery-refactor": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Gallery refactor (shadcn/ui + Zod, layouts, backward-compat)",
+        "description": "Refactor Gallery into production-ready, extensible component system with stack/grid/masonry layouts and backward compatibility.",
+        "details": "- Zod schemas for base/MOC/Inspiration cards and layout/config\n- shadcn/ui primitives with Tailwind; use path aliases and canonical exports\n- Maintain v1 API by wrapper/transform if needed\n- Deliverables: updated package(s), schemas, Storybook, migration notes",
+        "testStrategy": "Phase A: build/TS + Storybook; Phase B1: Vitest unit (mock externals); Phase B2: E2E smoke in app; Phase C: axe + keyboard nav; Phase D: perf budgets; Phase E: safe patterns",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Compile and type-check; minimal smoke render or script run",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Vitest or Jest unit tests pass; externals mocked; coverage collected",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Playwright smoke path with real services passes (≤ 15s/test)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Basic axe checks; keyboard navigation; ARIA where applicable",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "No obvious layout shifts; perf budgets met for key interactions",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "No secrets; safe link targets; no unsafe HTML patterns",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:17.890Z",
+      "updated": "2025-08-11T05:25:37.256Z",
+      "description": "Gallery refactor work using shadcn/ui and Zod"
+    }
+  },
+  "code-consolidation": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Consolidate duplicated code into shared packages",
+        "description": "Unify gallery, file-upload, hooks, utils, and schemas under shared packages with clear APIs.",
+        "details": "Create @shared/schemas, @shared/hooks, @shared/utils; unify @features/gallery, add plugin system to FileUpload; migrate usages and keep v1 wrappers during rollout",
+        "testStrategy": "Phase A: compiles; Phase B1: unit; Phase B2: E2E smoke through gallery/upload; Phase D: bundle budget check; Phase E: security scan clean",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Compile and type-check; minimal smoke render or script run",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Unit tests across shared packages; mocks for externals",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Smoke flows for gallery/upload after consolidation",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "A11y checks for shared UI surfaces",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Bundle budgets enforced; no perf regressions",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "Security scans clean; safe patterns documented",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:18.737Z",
+      "updated": "2025-08-11T05:25:41.263Z",
+      "description": "Consolidate duplicated code into shared packages"
+    }
+  },
+  "code-quality": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Integrate code-quality tooling and CI quality gates",
+        "description": "Formatting, linting, complexity, security, testing, dependency and bundle analysis integrated locally and in CI.",
+        "details": "Add Prettier/ESLint + plugins; complexity (sonarjs/Plato); Husky+lint-staged; dependency analysis (madge/dependency-cruiser); bundle analysis; LHCI optional",
+        "testStrategy": "Phase A: scripts + CI; Phase B1: unit + coverage; Phase D: budgets; Phase E: security gate",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Quality scripts compile; CI workflow validates config",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Quality-related unit tests/guard checks pass with coverage",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Optional smoke to validate CI path works end-to-end",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Basic a11y unit checks wired for UI packages",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Perf budgets configured (LHCI/visualizer)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "Security gates (pnpm audit, eslint-plugin-security, optional Snyk)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:19.303Z",
+      "updated": "2025-08-11T05:25:44.947Z",
+      "description": "Code quality tooling and processes"
+    }
+  },
+  "ops-ci-cd": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Create .github/workflows/ci.yml with quality gates",
+        "description": "CI workflow running lint, type, unit (coverage), security scans; optional E2E smoke and bundle/perf stages.",
+        "details": "Parallelize jobs; cache pnpm; upload reports to reports/*; fail on high severity vulnerabilities; no watch flags",
+        "testStrategy": "Workflow self-tests via a sample branch; verify gates and artifacts",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "CI file exists; lint/type jobs succeed",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Unit jobs run with coverage; artifacts uploaded",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Optional Playwright job passes with services up",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "A11y job wired for UI packages",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Bundle/perf jobs configured; budgets checked",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "Security job fails on high severity",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:19.484Z",
+      "updated": "2025-08-11T05:25:47.766Z",
+      "description": "CI/CD workflow and quality gates"
+    }
+  },
+  "ops-testing": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Standardize testing across monorepo",
+        "description": "Vitest for frontend; Jest+Supertest for backend; deterministic tests with coverage.",
+        "details": "Set configs; sample tests; coverage scripts and thresholds; E2E smoke harness alignment",
+        "testStrategy": "Phase B1: unit coverage; Phase B2: smoke E2E ≤ 15s/test",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Vitest/Jest configs compile and run smoke",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Deterministic unit tests with mocks; coverage collected",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Playwright smoke path wired (real services)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Axe checks added to unit layer for UI",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Key component micro-budgets verified",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "Test helpers avoid unsafe patterns; secret scan clean",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:19.680Z",
+      "updated": "2025-08-11T05:25:50.302Z",
+      "description": "Testing standards and setup"
+    }
+  },
+  "ops-coverage": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Publish coverage reports and badge",
+        "description": "Generate coverage artifacts in CI and keep badge updated on default branch.",
+        "details": "Upload coverage to reports/coverage; generate badge; gate coverage thresholds in code-quality plan",
+        "testStrategy": "CI run shows artifacts and badge updated",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Coverage scripts and CI steps exist",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Unit coverage artifacts produced",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Optional E2E coverage if applicable",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "N/A or basic checks if UI badge display",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Badge updated on default branch; reporting reliable",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "Coverage job dependencies pass security scan",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:20.119Z",
+      "updated": "2025-08-11T05:25:54.721Z",
+      "description": "Coverage reports and badge"
+    }
+  },
+  "ops-security-review": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Security scanning and review",
+        "description": "Establish CI security scans and a lightweight review checklist.",
+        "details": "pnpm audit; eslint-plugin-security; optional Snyk; document client-side safe patterns (links, HTML, tokens)",
+        "testStrategy": "CI fails on high severity; checklist present",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Security scripts + CI job present",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Unit guards for unsafe patterns (client)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "CI gates high severity vulnerabilities",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:21.718Z",
+      "updated": "2025-08-11T05:25:56.995Z",
+      "description": "Security scanning and review"
+    }
+  },
+  "ops-performance": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Performance budgets and monitoring",
+        "description": "Define budgets; configure Lighthouse/bundle analyzer reporting in CI.",
+        "details": "Scripts for LHCI/visualizer; store reports; docs on thresholds and triage",
+        "testStrategy": "CI produces reports and flags regressions",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Perf scripts configured",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Unit perf checks for key components (if applicable)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Lighthouse/budget job runs",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Budgets enforced; reports stored",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:22.587Z",
+      "updated": "2025-08-11T05:25:59.036Z",
+      "description": "Performance budgets and monitoring"
+    }
+  },
+  "ops-stakeholder-update": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Stakeholder update template and cadence",
+        "description": "Create a concise template and process for stakeholder updates.",
+        "details": "Template with status/risks/next; link to roadmap/backlog",
+        "testStrategy": "Example update committed",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Template exists and is referenced",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Docs accessible (headings/contrast)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:22.993Z",
+      "updated": "2025-08-11T05:26:02.933Z",
+      "description": "Stakeholder update process"
+    }
+  },
+  "ops-roadmap": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Roadmap and backlog process",
+        "description": "Document roadmap/backlog structure, prioritization, and refresh cadence.",
+        "details": "Simple doc and example; map dependencies to tags",
+        "testStrategy": "Doc exists and referenced by updates",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Roadmap/backlog doc created and linked",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Docs accessible",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:23.811Z",
+      "updated": "2025-08-11T05:26:04.914Z",
+      "description": "Roadmap and backlog management"
+    }
+  },
+  "ops-diversity": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Diversity & inclusion contribution guidelines",
+        "description": "Add inclusive development and contribution guidelines.",
+        "details": "Language guidance, accessibility posture, review etiquette; link from CONTRIBUTING.md",
+        "testStrategy": "Doc exists and linked",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Guidelines doc added and linked from CONTRIBUTING.md",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Docs accessible",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:24.602Z",
+      "updated": "2025-08-11T05:26:07.172Z",
+      "description": "Diversity & inclusion documentation"
+    }
+  },
+  "ops-retrospective": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Retrospective process template",
+        "description": "Introduce a lightweight retrospective template and sample.",
+        "details": "Template and example with owners + action items",
+        "testStrategy": "Example retro committed",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Retro template and sample exist",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Docs accessible",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:25.780Z",
+      "updated": "2025-08-11T05:26:09.263Z",
+      "description": "Retrospective process"
+    }
+  },
+  "feature-profile-backend": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Profile page backend (per PRD)",
+        "description": "Implement profile page backend endpoints, schemas, and tests.",
+        "details": "Zod request/response; Drizzle schema if applicable; uniform response envelope; RTK Query compatibility",
+        "testStrategy": "Phase A build; B1 unit; B2 E2E smoke via auth-service",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Compile/type-check; minimal smoke; migrations/scripts ready",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Jest for handlers + Supertest for endpoints (mocks)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "E2E smoke using real auth-service (docker-compose)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "N/A",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "API latency budget documented and checked",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "Uniform response envelope; input validation; no secret leaks",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:26.574Z",
+      "updated": "2025-08-11T05:26:11.843Z",
+      "description": "Profile page backend work"
+    }
+  },
+  "feature-moc-instructions": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Remaining MOC instructions feature work",
+        "description": "Complete remaining work for MOC instructions per PRD.",
+        "details": "Upload flows, linking, downloads, search, categories; use shared FileUpload and Gallery",
+        "testStrategy": "Phase A build; B1 unit; B2 E2E smoke",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "A: Build Green",
+            "description": "Build/types; feature toggles/migrations in place",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "B1: Unit Tests Green",
+            "description": "Vitest unit tests for flows (mocks)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "B2: E2E Smoke Green",
+            "description": "Playwright smoke scenarios for uploads/linking/downloads",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 4,
+            "title": "C: Accessibility Checks Green",
+            "description": "Key flows accessible (labels/roles/keyboard)",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 5,
+            "title": "D: UX/Performance Checks Green",
+            "description": "Image/file operations within perf budgets",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 6,
+            "title": "E: Security Checks Green",
+            "description": "File type validation; secure links; no unsafe HTML",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-11T05:24:27.496Z",
+      "updated": "2025-08-11T05:26:14.609Z",
+      "description": "Remaining MOC instructions work"
+    }
   }
 }

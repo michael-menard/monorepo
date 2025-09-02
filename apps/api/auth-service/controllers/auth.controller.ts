@@ -11,6 +11,8 @@ import {
 } from '../email/ethereal.service';
 import { User } from '../models/User';
 
+const ORIGIN = process.env.APP_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
+
 export const signup = async (req: Request, res: Response) => {
   const { email, password, name } = req.body;
 
@@ -171,10 +173,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     // send email
     console.log('forgotPassword: About to send email');
-    await sendPasswordResetEmail(
-      user.email,
-      `${process.env.CLIENT_URL}/reset-password/${resetToken}`,
-    );
+    await sendPasswordResetEmail(user.email, `${ORIGIN}/reset-password/${resetToken}`);
     console.log('forgotPassword: Email sent successfully');
 
     res.status(200).json({ success: true, message: 'Password reset link sent to your email' });

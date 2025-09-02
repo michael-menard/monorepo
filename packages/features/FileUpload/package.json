@@ -2,20 +2,20 @@
   "name": "@monorepo/fileupload",
   "version": "1.0.1",
   "description": "Reusable file upload component with drag-and-drop, progress tracking, and validation",
-  "main": "./index.tsx",
-  "module": "./index.tsx",
   "type": "module",
-  "types": "./index.tsx",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./index.tsx",
-      "require": "./index.tsx",
-      "types": "./index.tsx"
-    },
-    "./styles.css": "./src/styles.css"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && tsc -p tsconfig.build.json",
     "dev": "vite build --watch",
     "check-types": "tsc --noEmit",
     "test": "vitest run",

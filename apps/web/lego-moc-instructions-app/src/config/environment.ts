@@ -1,7 +1,7 @@
 export const config = {
   api: {
     baseUrl: process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3001/api' // lego-projects-api dev server
+      ? '/api' // via Vite dev proxy to http://localhost:3000
       : '/api', // Production API endpoint
   },
   app: {
@@ -10,4 +10,4 @@ export const config = {
   },
 } as const
 
-export type Config = typeof config 
+export type Config = typeof config

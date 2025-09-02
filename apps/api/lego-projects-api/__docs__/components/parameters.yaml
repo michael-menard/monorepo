@@ -32,4 +32,14 @@ userId:
   schema:
     type: string
     format: uuid
-  description: User ID 
+  description: User ID
+
+csrfToken:
+  name: X-CSRF-Token
+  in: header
+  required: true
+  schema:
+    type: string
+  description: >
+    CSRF header token required for state-changing requests when using cookie-based authentication.
+    Must match the 'XSRF-TOKEN' cookie value. Obtain via GET /api/csrf.

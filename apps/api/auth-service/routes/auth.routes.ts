@@ -10,19 +10,116 @@ import {
   resendVerification,
 } from '../controllers/auth.controller';
 import { verifyToken } from '../middleware/authMiddleware';
+import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 
 const router: Router = express.Router();
 
+const validate = (schema: z.ZodSchema<any>) => (req: Request, res: Response, next: any) => {
+  const result = schema.safeParse({ body: req.body, query: req.query, params: req.params });
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: result.error.flatten(),
+    });
+  }
+  next();
+};
+
+const signupSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    name: z.string().min(1),
+  }),
+});
+
+const loginSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+  }),
+});
+
+const verifyEmailSchema = z.object({
+  body: z.object({
+    code: z.string().min(6).max(6),
+  }),
+});
+
+const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+  }),
+});
+
+const resetPasswordSchema = z.object({
+  params: z.object({
+    token: z.string().min(1),
+  }),
+  body: z.object({
+    password: z.string().min(8),
+  }),
+});
+
+const resendVerificationSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+  }),
+});
+
+// Per-route rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const forgotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const verifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const resendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.get('/check-auth', verifyToken, checkAuth);
 
-router.post('/sign-up', signup);
-router.post('/login', login);
+router.post('/sign-up', signupLimiter, validate(signupSchema), signup);
+router.post('/login', loginLimiter, validate(loginSchema), login);
 router.post('/log-out', logout);
 
-router.post('/verify-email', verifyEmail);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password/:token', resetPassword);
-router.post('/resend-verification', resendVerification);
+router.post('/verify-email', verifyLimiter, validate(verifyEmailSchema), verifyEmail);
+router.post('/forgot-password', forgotLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password/:token', validate(resetPasswordSchema), resetPassword);
+router.post(
+  '/resend-verification',
+  resendLimiter,
+  validate(resendVerificationSchema),
+  resendVerification,
+);
 
 // Health check route
 router.get('/health', (req: Request, res: Response) => {

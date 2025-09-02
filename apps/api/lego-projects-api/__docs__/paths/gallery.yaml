@@ -5,6 +5,7 @@
       Returns a paginated, unified list of albums and images for the authenticated user. Supports filtering by type, tag, album, flagged, and search. Used for infinite scroll in the frontend.
     security:
       - cookieAuth: []
+      - bearerAuth: []
     parameters:
       - in: query
         name: type
@@ -96,4 +97,4 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas.yaml#/Error' 
+              $ref: '../components/schemas.yaml#/Error'

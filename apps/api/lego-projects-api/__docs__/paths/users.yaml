@@ -55,6 +55,7 @@
       - Access control validation
     security:
       - cookieAuth: []
+      - bearerAuth: []
     parameters:
       - in: path
         name: id
@@ -63,6 +64,7 @@
           type: string
           format: uuid
         description: User ID
+      - $ref: '../components/parameters.yaml#/csrfToken'
     requestBody:
       required: true
       content:
@@ -188,6 +190,7 @@
     description: Update user profile information (username, email, preferredName)
     security:
       - cookieAuth: []
+      - bearerAuth: []
     parameters:
       - in: path
         name: id
@@ -196,6 +199,7 @@
           type: string
           format: uuid
         description: User ID
+      - $ref: '../components/parameters.yaml#/csrfToken'
     requestBody:
       required: true
       content:
@@ -307,6 +311,7 @@
       - Access control validation
     security:
       - cookieAuth: []
+      - bearerAuth: []
     parameters:
       - in: path
         name: id
@@ -315,6 +320,7 @@
           type: string
           format: uuid
         description: User ID
+      - $ref: '../components/parameters.yaml#/csrfToken'
     requestBody:
       required: true
       content:
@@ -434,6 +440,7 @@ delete:
   description: Remove the user's avatar image
   security:
     - cookieAuth: []
+    - bearerAuth: []
   parameters:
     - in: path
       name: id
@@ -442,6 +449,7 @@ delete:
         type: string
         format: uuid
       description: User ID
+    - $ref: '../components/parameters.yaml#/csrfToken'
   responses:
     '200':
       description: Avatar deleted successfully
@@ -505,4 +513,4 @@ delete:
       content:
         application/json:
           schema:
-            $ref: '../components/schemas.yaml#/Error' 
+            $ref: '../components/schemas.yaml#/Error'

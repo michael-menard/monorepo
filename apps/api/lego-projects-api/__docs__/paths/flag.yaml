@@ -4,6 +4,9 @@
     description: Flag a gallery image for review by moderators. Requires authentication.
     security:
       - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - $ref: '../components/parameters.yaml#/csrfToken'
     requestBody:
       required: true
       content:
@@ -74,4 +77,4 @@
         content:
           application/json:
             schema:
-              $ref: '../components/schemas.yaml#/Error' 
+              $ref: '../components/schemas.yaml#/Error'

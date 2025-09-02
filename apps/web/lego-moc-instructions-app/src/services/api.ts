@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
 import { createCachedBaseQuery, getRTKQueryCacheConfig } from '@repo/shared-cache'
 import { config } from '../config/environment.js'
+import { getCSRFHeaders } from './csrfService.js'
 
 // Zod schemas for type safety
 export const MOCInstructionSchema = z.object({
@@ -63,12 +64,49 @@ export interface ApiResponse<T> {
 // Create cache monitor for performance tracking
 // const cacheMonitor = createCacheMonitor()
 
+// Custom base query with CSRF protection for mutations
+const baseQueryWithCSRF = async (args: any, api: any, extraOptions: any) => {
+  const { method } = typeof args === 'string' ? { method: 'GET' } : args
+  const isMutation = method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())
+  
+  let requestArgs = args
+  
+  // Add CSRF headers for mutation requests
+  if (isMutation) {
+    try {
+      const csrfHeaders = await getCSRFHeaders()
+      if (typeof args === 'string') {
+        requestArgs = {
+          url: args,
+          headers: csrfHeaders,
+        }
+      } else {
+        requestArgs = {
+          ...args,
+          headers: {
+            ...csrfHeaders,
+            ...args.headers,
+          },
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add CSRF headers:', error)
+      // Continue with request without CSRF token - let server handle the error
+    }
+  }
+  
+  // Use the original cached base query
+  const cachedBaseQuery = fetchBaseQuery(createCachedBaseQuery(config.api.baseUrl, {
+    maxAge: 300, // 5 minutes cache
+  }))
+  
+  return cachedBaseQuery(requestArgs, api, extraOptions)
+}
+
 // Create the API service
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery(createCachedBaseQuery(config.api.baseUrl, {
-    maxAge: 300, // 5 minutes cache
-  })),
+  baseQuery: baseQueryWithCSRF,
   tagTypes: ['MOCInstruction'],
   endpoints: (builder) => ({
     // Get all MOC instructions
@@ -134,4 +172,4 @@ export const {
   useUpdateMOCInstructionMutation,
   useDeleteMOCInstructionMutation,
   useSearchMOCInstructionsQuery,
-} = api 
+} = api

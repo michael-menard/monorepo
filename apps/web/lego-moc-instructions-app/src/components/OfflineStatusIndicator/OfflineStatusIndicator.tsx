@@ -5,29 +5,23 @@ import { useGetOfflineStatusQuery, useProcessOfflineActionsMutation } from '../.
 
 export const OfflineStatusIndicator = () => {
   const [isVisible, setIsVisible] = useState(false)
-  const { data: offlineStatus, refetch } = useGetOfflineStatusQuery()
+  const { data: offlineStatus, refetch } = useGetOfflineStatusQuery(undefined, {
+    // Poll every 10 seconds - more frequent than default to catch status changes
+    pollingInterval: 10000,
+  })
   const [processActions, { isLoading: isProcessing }] = useProcessOfflineActionsMutation()
-
-  // Poll for status updates when offline
-  useEffect(() => {
-    if (!offlineStatus?.isOnline) {
-      const interval = setInterval(() => {
-        refetch()
-      }, 5000) // Check every 5 seconds when offline
-
-      return () => clearInterval(interval)
-    }
-  }, [offlineStatus?.isOnline, refetch])
 
   // Show indicator when offline or when there are pending actions
   useEffect(() => {
-    const shouldShow = !offlineStatus?.isOnline || (offlineStatus?.pendingActions || 0) > 0
+    const shouldShow = !offlineStatus?.isOnline || (offlineStatus.pendingActions || 0) > 0
     setIsVisible(shouldShow)
   }, [offlineStatus])
 
   const handleSync = async () => {
     try {
-      await processActions().unwrap()
+      const result = await processActions().unwrap()
+      console.log(`Sync completed: ${result.processed} processed, ${result.failed} failed`)
+      // Refetch status to get updated counts
       refetch()
     } catch (error) {
       console.error('Failed to sync offline actions:', error)
@@ -93,4 +87,4 @@ export const OfflineStatusIndicator = () => {
       </div>
     </div>
   )
-} 
+}

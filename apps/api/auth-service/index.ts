@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
+import rateLimit from 'express-rate-limit';
 import { connectDB } from './db/connectDB';
 import { notFound, errorHandler } from './middleware/errorMiddleware';
 
@@ -12,23 +15,27 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
 // Enable CORS for all origins during development
+const ORIGIN = process.env.APP_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
+const devOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+];
+const origins =
+  process.env.NODE_ENV === 'production' ? [ORIGIN] : Array.from(new Set([ORIGIN, ...devOrigins]));
+
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-    ],
+    origin: origins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
     credentials: true,
   }),
@@ -37,35 +44,30 @@ app.use(
 // Add security headers with Helmet
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:'],
-        connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-        workerSrc: ["'self'", 'blob:'],
-      },
-    },
+    contentSecurityPolicy: false,
+    hsts: process.env.NODE_ENV === 'production' ? undefined : false,
     crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    referrerPolicy: { policy: 'no-referrer-when-downgrade' },
+    referrerPolicy: { policy: 'no-referrer' },
   }),
 );
 
 // Request logger middleware
-app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
+app.use(pinoHttp({ logger }));
 
 // Enable pre-flight requests for all routes
 app.options('*', cors());
+
+// Rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/auth', authLimiter);
 
 // Routes
 import routes from './routes/auth.routes';
@@ -82,10 +84,14 @@ const startServer = async () => {
   console.log('Port:', PORT);
 
   try {
-    // Try to connect to MongoDB (but don't block server startup)
-    connectDB().catch((err) => {
-      console.warn('MongoDB connection failed, but continuing server startup');
-    });
+    if (process.env.NODE_ENV === 'production') {
+      await connectDB();
+    } else {
+      // Try to connect to MongoDB (but don't block server startup in dev/test)
+      connectDB().catch((err) => {
+        console.warn('MongoDB connection failed, but continuing server startup');
+      });
+    }
 
     // Start the Express server
     app.listen(PORT, () => {
@@ -94,7 +100,6 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error('Failed to start server:', error);
-    // Don't exit immediately, try to provide more diagnostic info
     console.error('Error details:', error instanceof Error ? error.stack : String(error));
     process.exit(1);
   }

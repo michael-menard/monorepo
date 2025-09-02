@@ -1,7 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
+import { offlineManager } from './offlineManager'
 
-// Disabled offline API stub for now. This prevents type/build errors while we
-// complete the full offline integration in a follow-up task.
 export const offlineApi = createApi({
   reducerPath: 'offlineApi',
   // No-op baseQuery; endpoints below use queryFn directly
@@ -14,23 +13,46 @@ export const offlineApi = createApi({
       dataVersion: string
     }, void>({
       queryFn: async () => {
-        return {
-          data: {
-            isOnline: true,
-            pendingActions: 0,
-            lastSync: Date.now(),
-            dataVersion: 'offline-disabled',
-          },
+        try {
+          const status = await offlineManager.getOfflineStatusAsync()
+          return { data: status }
+        } catch (error) {
+          console.error('Failed to get offline status:', error)
+          // Fallback to sync method if async fails
+          const fallbackStatus = offlineManager.getOfflineStatus()
+          return { data: fallbackStatus }
         }
       },
+      providesTags: ['OfflineStatus'],
     }),
-    processOfflineActions: builder.mutation<void, void>({
+    processOfflineActions: builder.mutation<{ processed: number; failed: number }, void>({
       queryFn: async () => {
-        // No-op while offline features are disabled
-        return { data: undefined }
+        try {
+          const initialPending = await offlineManager.getPendingActionCountAsync()
+          await offlineManager.processQueuedActions()
+          const remainingPending = await offlineManager.getPendingActionCountAsync()
+          
+          const processed = Math.max(0, initialPending - remainingPending)
+          const failed = remainingPending
+          
+          return { 
+            data: { processed, failed }
+          }
+        } catch (error) {
+          console.error('Failed to process offline actions:', error)
+          return { 
+            error: { 
+              status: 'CUSTOM_ERROR', 
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            } 
+          }
+        }
       },
+      // Invalidate offline status after processing
+      invalidatesTags: ['OfflineStatus'],
     }),
   }),
+  tagTypes: ['OfflineStatus'],
 })
 
 export const {

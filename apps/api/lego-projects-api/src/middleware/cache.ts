@@ -92,8 +92,8 @@ export const galleryCache = createCacheMiddleware({
   ttl: CACHE_TTL.MEDIUM,
   key: (req: Request) => {
     const userId = req.user?.id || 'public';
-    const { page, limit, albumId, search } = req.query;
-    return `gallery:${userId}:${page || 1}:${limit || 20}:${albumId || 'all'}:${search || ''}`;
+    const { cursor, limit, albumId, search, tag, flagged, type } = req.query as Record<string, any>;
+    return `gallery:${userId}:${cursor || 0}:${limit || 20}:${albumId || 'all'}:${tag || ''}:${flagged || ''}:${type || 'all'}:${search || ''}`;
   },
   condition: (req: Request) => req.method === 'GET',
 });

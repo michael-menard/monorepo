@@ -2,9 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@repo/ui';
 import { Filter, Plus, Search } from 'lucide-react';
-import { useGetInstructionsQuery } from '@repo/moc-instructions';
-import type { MockInstruction } from '@repo/moc-instructions';
 import { Gallery } from '@repo/gallery';
+import { useGetInstructionsQuery } from '@repo/moc-instructions';
+import { GalleryGridSkeleton, SearchFilterSkeleton } from '../../components/Skeleton';
+import type { MockInstruction } from '@repo/moc-instructions';
 import type { GalleryImage } from '@repo/gallery';
 
 // Transform MockInstruction to GalleryImage for the gallery component
@@ -106,7 +107,7 @@ const MocInstructionsGallery: React.FC = () => {
     );
   }, []);
 
-  // Loading state
+  // Loading state with skeleton
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8" data-testid="moc-gallery-page">
@@ -123,12 +124,8 @@ const MocInstructionsGallery: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading MOC instructions...</p>
-          </div>
-        </div>
+        <SearchFilterSkeleton />
+        <GalleryGridSkeleton count={8} />
       </div>
     );
   }
@@ -297,4 +294,4 @@ const MocInstructionsGallery: React.FC = () => {
   );
 };
 
-export default MocInstructionsGallery; 
+export default MocInstructionsGallery;
