@@ -8,6 +8,7 @@ import pinoHttp from 'pino-http';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './db/connectDB';
 import { notFound, errorHandler } from './middleware/errorMiddleware';
+import { csrf } from './middleware/csrf';
 
 dotenv.config();
 
@@ -68,6 +69,9 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 app.use('/api/auth', authLimiter);
+
+// CSRF protection middleware (after cookie-parser, before routes)
+app.use('/api/auth', csrf);
 
 // Routes
 import routes from './routes/auth.routes';
