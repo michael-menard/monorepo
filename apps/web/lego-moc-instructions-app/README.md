@@ -202,6 +202,117 @@ export const instructionsApi = api.injectEndpoints({
 export const { useGetInstructionsQuery, useCreateInstructionMutation } = instructionsApi;
 ```
 
+## CSRF Protection
+
+The application implements comprehensive CSRF (Cross-Site Request Forgery) protection using a **double-submit cookie pattern** with automatic retry logic.
+
+### How It Works
+
+1. **Token Generation**: The server generates a CSRF token via `GET /api/auth/csrf`
+2. **Double-Submit Pattern**: The token is both:
+   - Set as an `XSRF-TOKEN` httpOnly cookie
+   - Required in the `X-CSRF-Token` header for state-changing requests
+3. **Automatic Retry**: If a request fails with a 403 CSRF error, the system automatically:
+   - Fetches a fresh CSRF token
+   - Retries the original request with the new token
+
+### Implementation Details
+
+#### CSRF Service (`csrfService.ts`)
+
+The CSRF service manages token fetching and caching:
+
+```tsx
+import { getCSRFToken, initializeCSRF, clearCSRFToken } from '@/services/csrfService';
+
+// Initialize CSRF on app start
+useEffect(() => {
+  initializeCSRF();
+}, []);
+
+// Clear CSRF token on logout
+const handleLogout = () => {
+  clearCSRFToken();
+  // ... other logout logic
+};
+```
+
+#### RTK Query Integration
+
+All mutation requests automatically include CSRF tokens:
+
+```tsx
+// RTK Query mutations are automatically CSRF-protected
+const [createInstruction] = useCreateInstructionMutation();
+
+const handleCreate = async (data) => {
+  try {
+    // CSRF token is automatically added to the request
+    await createInstruction(data).unwrap();
+  } catch (error) {
+    // Automatic retry happens behind the scenes for CSRF failures
+    console.error('Create failed:', error);
+  }
+};
+```
+
+#### Auth API Integration
+
+Authentication endpoints are also CSRF-protected:
+
+```tsx
+import { authApi } from '@/services/authApi';
+
+// All auth mutations include CSRF protection and retry logic
+await authApi.login({ email, password });
+await authApi.signup({ name, email, password });
+await authApi.logout();
+```
+
+### Manual CSRF Token Management
+
+For custom fetch requests, you can manually handle CSRF tokens:
+
+```tsx
+import { getCSRFHeaders, refreshCSRFToken } from '@/services/csrfService';
+
+// Add CSRF headers to a custom request
+const headers = await getCSRFHeaders();
+const response = await fetch('/api/custom-endpoint', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(data),
+});
+
+// Handle CSRF failure manually
+if (response.status === 403) {
+  const errorData = await response.json();
+  if (errorData.code === 'CSRF_FAILED') {
+    const newToken = await refreshCSRFToken();
+    // Retry with new token...
+  }
+}
+```
+
+### CSRF Debugging Tools
+
+The application includes debugging utilities for CSRF verification:
+
+```tsx
+// Available in browser console during development
+window.testCSRFIntegration(); // Run CSRF integration test
+window.enableCSRFRequestLogging(); // Log CSRF token presence in requests
+window.generateCSRFAuditReport(); // Generate security audit report
+```
+
+### Security Considerations
+
+- **Automatic Protection**: All POST, PUT, PATCH, DELETE requests are automatically protected
+- **Cookie Security**: CSRF tokens are stored in httpOnly cookies to prevent XSS access
+- **Token Rotation**: Fresh tokens are fetched automatically when needed
+- **Failure Handling**: Graceful degradation when CSRF token fetch fails
+- **No Manual Management**: Developers don't need to manually handle CSRF tokens in most cases
+
 ### Error Handling
 
 Comprehensive error handling with user-friendly messages:

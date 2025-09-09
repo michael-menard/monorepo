@@ -1,5 +1,7 @@
 // Auth API service for making calls to the auth service endpoints
 
+import { getCSRFHeaders, refreshCSRFToken } from './csrfService.js'
+
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:5001'
 
 interface ApiResponse<T = any> {
@@ -51,15 +53,30 @@ class AuthApiError extends Error {
 
 async function makeApiCall<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  skipCSRFRetry = false
 ): Promise<ApiResponse<T>> {
   const url = `${AUTH_BASE_URL}${endpoint}`
+  const method = options.method?.toUpperCase() || 'GET'
+  const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+  
+  // Add CSRF headers for mutation requests
+  let headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+  
+  if (isMutation) {
+    try {
+      const csrfHeaders = await getCSRFHeaders()
+      headers = { ...headers, ...csrfHeaders }
+    } catch (error) {
+      console.warn('Failed to add CSRF token to auth request:', error)
+    }
+  }
   
   const defaultOptions: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     credentials: 'include', // Include cookies for JWT tokens
     ...options,
   }
@@ -67,6 +84,35 @@ async function makeApiCall<T>(
   try {
     const response = await fetch(url, defaultOptions)
     const data = await response.json()
+
+    // Handle CSRF failures with retry logic
+    if (
+      !response.ok &&
+      response.status === 403 &&
+      data.code === 'CSRF_FAILED' &&
+      isMutation &&
+      !skipCSRFRetry
+    ) {
+      console.log('CSRF token failed on auth request, attempting to refresh and retry')
+      
+      try {
+        // Get a fresh CSRF token
+        const newToken = await refreshCSRFToken()
+        
+        // Update headers with new token
+        const retryHeaders = {
+          ...headers,
+          'X-CSRF-Token': newToken,
+        }
+        
+        // Retry the request
+        console.log('Retrying auth request with fresh CSRF token')
+        return await makeApiCall<T>(endpoint, { ...options, headers: retryHeaders }, true)
+      } catch (refreshError) {
+        console.error('Failed to refresh CSRF token for auth retry:', refreshError)
+        // Fall through to original error handling
+      }
+    }
 
     if (!response.ok) {
       throw new AuthApiError(
@@ -155,4 +201,4 @@ export const authApi = {
 }
 
 export { AuthApiError }
-export type { ApiResponse, User, SignupData, LoginData, ResetPasswordData, VerifyEmailData } 
+export type { ApiResponse, User, SignupData, LoginData, ResetPasswordData, VerifyEmailData }

@@ -1,7 +1,15 @@
-FROM node:20-alpine
+# Multi-stage Dockerfile for Auth Service with Security Hardening
+# Build stage - Install dependencies and build the application
+FROM node:18-alpine AS builder
 
-# Install system dependencies for native modules
-RUN apk add --no-cache \
+# Set working directory
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Install build dependencies for native packages (like canvas)
+RUN apk add --no-cache --virtual .build-deps \
     python3 \
     make \
     g++ \
@@ -15,43 +23,67 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     freetype-dev
 
-# Install pnpm
-RUN npm install -g pnpm
-
-# Set working directory
-WORKDIR /app
-
-# Copy root package files for workspace setup
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-
-# Copy all package.json files from packages directory
-COPY packages/shared-image-utils/package.json ./packages/shared-image-utils/
-COPY packages/shared-cache/package.json ./packages/shared-cache/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/ui/package.json ./packages/ui/
-COPY packages/auth/package.json ./packages/auth/
-COPY packages/features/moc-instructions/package.json ./packages/features/moc-instructions/
-COPY packages/features/profile/package.json ./packages/features/profile/
-COPY packages/features/gallery/package.json ./packages/features/gallery/
-COPY packages/features/wishlist/package.json ./packages/features/wishlist/
-COPY packages/features/FileUpload/package.json ./packages/features/FileUpload/
-COPY packages/features/ImageUploadModal/package.json ./packages/features/ImageUploadModal/
-COPY packages/tech-radar/package.json ./packages/tech-radar/
-
-# Copy the specific app package.json
+# Copy package files for dependency resolution
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/auth-service/package.json ./apps/api/auth-service/
 
-# Install dependencies with workspace linking
-RUN pnpm install
+# Install all dependencies first (needed for monorepo workspace resolution)
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code
 COPY . .
 
-# Set working directory to the auth service
+# Change to the service directory and build there with proper node_modules resolution
 WORKDIR /app/apps/api/auth-service
+RUN pnpm build
 
-# Expose port
+# Create a clean production installation
+RUN rm -rf node_modules
+RUN pnpm install --prod --no-frozen-lockfile
+
+# Go back to root for remaining commands
+WORKDIR /app
+
+# Remove build dependencies to reduce image size
+RUN apk del .build-deps
+
+# Runtime stage - Create optimized production image
+FROM node:18-alpine
+
+# Install security updates and required tools for health checks
+RUN apk update && apk upgrade && \
+    apk add --no-cache wget && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy production dependencies and built application from builder stage
+COPY --from=builder --chown=appuser:appgroup /app/apps/api/auth-service/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/apps/api/auth-service/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/apps/api/auth-service/package.json ./
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=9000
+ENV NODE_OPTIONS="--enable-source-maps"
+
+# Remove unnecessary packages and clean up
+RUN apk del --purge && \
+    rm -rf /tmp/* /var/tmp/* /var/cache/apk/*
+
+# Expose port (documentation only, doesn't actually publish)
 EXPOSE 9000
 
-# Start the application
-CMD ["pnpm", "dev"] 
+# Switch to non-root user for security
+USER appuser
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:9000/api/auth/health || exit 1
+
+# Start the service
+CMD ["node", "dist/index.js"]

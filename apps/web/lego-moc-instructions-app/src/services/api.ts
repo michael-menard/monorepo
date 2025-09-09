@@ -64,7 +64,7 @@ export interface ApiResponse<T> {
 // Create cache monitor for performance tracking
 // const cacheMonitor = createCacheMonitor()
 
-// Custom base query with CSRF protection for mutations
+// Custom base query with CSRF protection and retry logic for mutations
 const baseQueryWithCSRF = async (args: any, api: any, extraOptions: any) => {
   const { method } = typeof args === 'string' ? { method: 'GET' } : args
   const isMutation = method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())
@@ -100,7 +100,54 @@ const baseQueryWithCSRF = async (args: any, api: any, extraOptions: any) => {
     maxAge: 300, // 5 minutes cache
   }))
   
-  return cachedBaseQuery(requestArgs, api, extraOptions)
+  // Make the initial request
+  let result = await cachedBaseQuery(requestArgs, api, extraOptions)
+  
+  // Handle CSRF failures with retry logic
+  if (
+    result.error &&
+    'status' in result.error &&
+    result.error.status === 403 &&
+    result.error.data &&
+    typeof result.error.data === 'object' &&
+    'code' in result.error.data &&
+    result.error.data.code === 'CSRF_FAILED' &&
+    isMutation &&
+    !extraOptions?.skipCSRFRetry // Prevent infinite retry loops
+  ) {
+    console.log('CSRF token failed, attempting to refresh and retry request')
+    
+    try {
+      // Import refreshCSRFToken dynamically to avoid circular dependencies
+      const { refreshCSRFToken } = await import('./csrfService.js')
+      
+      // Get a fresh CSRF token
+      const newToken = await refreshCSRFToken()
+      
+      // Update the request with the new CSRF token
+      const retryHeaders = {
+        ...requestArgs.headers,
+        'X-CSRF-Token': newToken,
+      }
+      
+      const retryArgs = typeof args === 'string' 
+        ? { url: args, headers: retryHeaders }
+        : { ...args, headers: retryHeaders }
+      
+      // Retry the request with skipCSRFRetry flag to prevent infinite loops
+      console.log('Retrying request with fresh CSRF token')
+      result = await cachedBaseQuery(retryArgs, api, { ...extraOptions, skipCSRFRetry: true })
+      
+      if (!result.error) {
+        console.log('Request succeeded after CSRF token refresh')
+      }
+    } catch (refreshError) {
+      console.error('Failed to refresh CSRF token for retry:', refreshError)
+      // Return original error if refresh fails
+    }
+  }
+  
+  return result
 }
 
 // Create the API service

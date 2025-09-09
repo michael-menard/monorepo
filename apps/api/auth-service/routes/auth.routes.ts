@@ -13,17 +13,14 @@ import { verifyToken } from '../middleware/authMiddleware';
 import { generateCsrfToken } from '../utils/tokenUtils';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
+import { ValidationError } from '../types/errors';
 
 const router: Router = express.Router();
 
 const validate = (schema: z.ZodSchema<any>) => (req: Request, res: Response, next: any) => {
   const result = schema.safeParse({ body: req.body, query: req.query, params: req.params });
   if (!result.success) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation error',
-      errors: result.error.flatten(),
-    });
+    throw new ValidationError('Validation failed', result.error.flatten());
   }
   next();
 };
@@ -147,9 +144,13 @@ router.post(
   resendVerification,
 );
 
-// Health check route
+// Health check route for Docker
 router.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
 });
 
 export default router;

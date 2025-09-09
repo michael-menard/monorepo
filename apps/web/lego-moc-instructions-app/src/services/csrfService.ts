@@ -2,17 +2,35 @@
  * CSRF Token Management Service
  * 
  * Handles fetching and managing CSRF tokens for secure API requests.
+ * Implements double-submit cookie pattern with automatic retry logic.
  * Implements Phase F: Client Security requirements.
  */
 
 let csrfToken: string | null = null
 
 /**
+ * Get CSRF token from cookie (double-submit cookie pattern)
+ */
+function getCSRFTokenFromCookie(): string | null {
+  try {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1]
+    
+    return cookieValue ? decodeURIComponent(cookieValue) : null
+  } catch (error) {
+    console.warn('Failed to read CSRF token from cookie:', error)
+    return null
+  }
+}
+
+/**
  * Fetch CSRF token from the server
  */
 export async function fetchCSRFToken(): Promise<string> {
   try {
-    const response = await fetch('/api/csrf', {
+    const response = await fetch('/api/auth/csrf', {
       method: 'GET',
       credentials: 'include', // Include cookies for session
     })
@@ -23,11 +41,11 @@ export async function fetchCSRFToken(): Promise<string> {
 
     const data = await response.json()
     
-    if (!data.csrfToken && !data.token) {
+    if (!data.token) {
       throw new Error('CSRF token not found in response')
     }
 
-    const token = data.csrfToken || data.token
+    const token = data.token
     csrfToken = token
     
     console.debug('CSRF token fetched successfully')
@@ -39,9 +57,18 @@ export async function fetchCSRFToken(): Promise<string> {
 }
 
 /**
- * Get current CSRF token (fetch if not available)
+ * Get current CSRF token (prioritize cookie, fallback to fetch)
  */
 export async function getCSRFToken(): Promise<string> {
+  // First, try to get token from cookie (double-submit pattern)
+  const token = getCSRFTokenFromCookie()
+  
+  if (token) {
+    csrfToken = token
+    return token
+  }
+  
+  // If no cookie token, use in-memory token or fetch new one
   if (!csrfToken) {
     await fetchCSRFToken()
   }
@@ -51,6 +78,14 @@ export async function getCSRFToken(): Promise<string> {
   }
   
   return csrfToken
+}
+
+/**
+ * Refresh CSRF token (force fetch from server)
+ */
+export async function refreshCSRFToken(): Promise<string> {
+  csrfToken = null // Clear cached token
+  return await fetchCSRFToken()
 }
 
 /**

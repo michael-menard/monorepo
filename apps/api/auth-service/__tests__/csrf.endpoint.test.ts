@@ -72,10 +72,11 @@ describe('CSRF Token Endpoint', () => {
       expect(response.body.token).toHaveLength(64); // 32 bytes hex encoded = 64 chars
 
       // Check that the XSRF-TOKEN cookie is set
-      const cookies = response.headers['set-cookie'] as string[] | undefined;
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : undefined;
       expect(cookies).toBeDefined();
       
-      const csrfCookie = cookies?.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const csrfCookie = cookies?.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       expect(csrfCookie).toBeDefined();
       expect(csrfCookie).toContain('Max-Age=7200'); // 2 hours
       expect(csrfCookie).toContain('SameSite=lax'); // Development mode
@@ -132,8 +133,9 @@ describe('CSRF Token Endpoint', () => {
       const response = await request(app).get('/api/auth/csrf');
       expect(response.status).toBe(200);
 
-      const cookies = response.headers['set-cookie'] as string[] | undefined;
-      const csrfCookie = cookies?.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : undefined;
+      const csrfCookie = cookies?.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       
       expect(csrfCookie).toContain('SameSite=lax');
       expect(csrfCookie).not.toContain('Secure'); // Not secure in development
@@ -164,10 +166,11 @@ describe('CSRF Token Endpoint', () => {
       expect(response.body.success).toBe(true);
 
       // Check that the XSRF-TOKEN cookie is set
-      const cookies = response.headers['set-cookie'] as string[] | undefined;
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : undefined;
       expect(cookies).toBeDefined();
       
-      const csrfCookie = cookies?.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const csrfCookie = cookies?.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       expect(csrfCookie).toBeDefined();
       expect(csrfCookie).toContain('Max-Age=7200'); // 2 hours
       expect(csrfCookie).toContain('SameSite=lax');
@@ -186,8 +189,9 @@ describe('CSRF Token Endpoint', () => {
       expect(response.body.success).toBe(false);
 
       // Should not have XSRF-TOKEN cookie
-      const cookies = (response.headers['set-cookie'] as string[] | undefined) || [];
-      const csrfCookie = cookies.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
+      const csrfCookie = cookies.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       expect(csrfCookie).toBeUndefined();
     });
   });
@@ -206,10 +210,11 @@ describe('CSRF Token Endpoint', () => {
       expect(response.body.success).toBe(true);
 
       // Check that the XSRF-TOKEN cookie is set
-      const cookies = response.headers['set-cookie'] as string[] | undefined;
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : undefined;
       expect(cookies).toBeDefined();
       
-      const csrfCookie = cookies?.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const csrfCookie = cookies?.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       expect(csrfCookie).toBeDefined();
       expect(csrfCookie).toContain('Max-Age=7200'); // 2 hours
       expect(csrfCookie).toContain('SameSite=lax');
@@ -233,8 +238,9 @@ describe('CSRF Token Endpoint', () => {
       expect(response.body.success).toBe(false);
 
       // Should not have XSRF-TOKEN cookie
-      const cookies = (response.headers['set-cookie'] as string[] | undefined) || [];
-      const csrfCookie = cookies.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
+      const csrfCookie = cookies.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       expect(csrfCookie).toBeUndefined();
     });
 
@@ -250,8 +256,9 @@ describe('CSRF Token Endpoint', () => {
       expect(response.status).toBe(400);
 
       // Should not have XSRF-TOKEN cookie
-      const cookies = (response.headers['set-cookie'] as string[] | undefined) || [];
-      const csrfCookie = cookies.find((cookie: string) => cookie.startsWith('XSRF-TOKEN='));
+      const setCookieHeader = response.headers['set-cookie'];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
+      const csrfCookie = cookies.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
       expect(csrfCookie).toBeUndefined();
     });
   });
@@ -281,8 +288,9 @@ describe('CSRF Token Endpoint', () => {
           password: 'password123',
         });
 
-      const loginCookies = loginResponse.headers['set-cookie'] as string[] | undefined;
-      const loginCsrfCookie = loginCookies?.find((cookie: string) => 
+      const loginSetCookieHeader = loginResponse.headers['set-cookie'];
+      const loginCookies = Array.isArray(loginSetCookieHeader) ? loginSetCookieHeader : loginSetCookieHeader ? [loginSetCookieHeader] : undefined;
+      const loginCsrfCookie = loginCookies?.find((cookie) => 
         cookie.startsWith('XSRF-TOKEN=')
       );
       const loginToken = loginCsrfCookie?.split('=')[1].split(';')[0];
@@ -296,8 +304,9 @@ describe('CSRF Token Endpoint', () => {
           password: 'password123',
         });
 
-      const signupCookies = signupResponse.headers['set-cookie'] as string[] | undefined;
-      const signupCsrfCookie = signupCookies?.find((cookie: string) => 
+      const signupSetCookieHeader = signupResponse.headers['set-cookie'];
+      const signupCookies = Array.isArray(signupSetCookieHeader) ? signupSetCookieHeader : signupSetCookieHeader ? [signupSetCookieHeader] : undefined;
+      const signupCsrfCookie = signupCookies?.find((cookie) => 
         cookie.startsWith('XSRF-TOKEN=')
       );
       const signupToken = signupCsrfCookie?.split('=')[1].split(';')[0];
