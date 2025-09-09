@@ -18,7 +18,7 @@ package: {{package}}
 - **Desired Outcome**: [What “done right” looks like in one sentence]
 
 ## Goals
-- Clear, outcome-focused bullets.
+- Clear, concice, outcome-focused bullets.
 
 ## Constraints & Standards (Must-Follow)
 - Design system: shadcn/ui, Tailwind tokens
@@ -28,6 +28,11 @@ package: {{package}}
 - A11y: WCAG 2.2 AA, keyboard nav, axe clean
 - Perf: Core Web Vitals budgets
 - Security: no unsafe HTML, vetted links
+- **Git commits**: Each phase/task completion requires conventional commit with descriptive message
+- full build must pass 
+- all unit tests must pass
+- all integration tests must pass
+- all e2e tests must pass
 
 ## Acceptance Criteria
 - Measurable, testable outcomes grouped by Phase A–E.
@@ -36,21 +41,27 @@ package: {{package}}
 
 ### Phase A — Compile + Storybook
 - Component compiles and renders stories
+- **Git Commit**: Stage and commit changes with conventional commit message for Phase A completion
 
 ### Phase B1 — Unit Tests
 - Critical logic covered
+- **Git Commit**: Stage and commit changes with conventional commit message for Phase B1 completion
 
 ### Phase B2 — E2E Smoke
 - Happy-path flows in Playwright
+- **Git Commit**: Stage and commit changes with conventional commit message for Phase B2 completion
 
 ### Phase C — Accessibility
 - Axe violations: 0, keyboard nav through all focusables
+- **Git Commit**: Stage and commit changes with conventional commit message for Phase C completion
 
 ### Phase D — Performance
 - Meets budgets; lazy/virtualize as needed
+- **Git Commit**: Stage and commit changes with conventional commit message for Phase D completion
 
 ### Phase E — Security/Hardening
 - No unsafe HTML, link policies enforced
+- **Git Commit**: Stage and commit changes with conventional commit message for Phase E completion
 
 ## Rollout / Risks
 - Flags, metrics, rollback plan.
