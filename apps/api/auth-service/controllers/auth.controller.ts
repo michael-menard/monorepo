@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import bcryptjs from 'bcryptjs';
-import crypto from 'crypto';
 
 import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie';
 import {
@@ -10,6 +9,12 @@ import {
   sendWelcomeEmail,
 } from '../email/ethereal.service';
 import { User } from '../models/User';
+import {
+  generateSecureToken,
+  generateSecureVerificationCode,
+  verifyToken,
+  generateCsrfToken,
+} from '../utils/tokenUtils';
 
 const ORIGIN = process.env.APP_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -29,13 +34,15 @@ export const signup = async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcryptjs.hash(password, 10);
-    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Generate secure verification code (6-digit code with hashed storage)
+    const { raw: rawVerificationCode, hash: hashedVerificationCode } = generateSecureVerificationCode();
 
     const user = new User({
       email,
       password: hashedPassword,
       name,
-      verificationToken,
+      verificationToken: hashedVerificationCode, // Store the hash, not the raw code
       verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
 
@@ -44,9 +51,18 @@ export const signup = async (req: Request, res: Response) => {
     // jwt
     generateTokenAndSetCookie(res, user._id);
 
-    // Try to send verification email, but don't fail if it doesn't work
+    // Set CSRF token cookie upon successful signup
+    const csrfToken = generateCsrfToken();
+    res.cookie('XSRF-TOKEN', csrfToken, {
+      maxAge: 7200000, // 2 hours
+      httpOnly: false, // Must be accessible to JavaScript for CSRF protection
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    });
+
+    // Try to send verification email with raw verification code
     try {
-      await sendVerificationEmail(user.email, verificationToken);
+      await sendVerificationEmail(user.email, rawVerificationCode);
     } catch (emailError) {
       console.warn('Failed to send verification email:', emailError);
       // Continue with signup even if email fails
@@ -68,29 +84,39 @@ export const signup = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   const { code } = req.body;
   try {
-    const user = await User.findOne({
-      verificationToken: code,
+    // Find users with non-expired verification tokens
+    const usersWithActiveTokens = await User.find({
+      verificationToken: { $exists: true },
       verificationTokenExpiresAt: { $gt: Date.now() },
     });
 
-    if (!user) {
+    // Verify the provided code against each user's stored hash
+    let matchingUser = null;
+    for (const user of usersWithActiveTokens) {
+      if (user.verificationToken && verifyToken(code, user.verificationToken)) {
+        matchingUser = user;
+        break;
+      }
+    }
+
+    if (!matchingUser) {
       return res
         .status(400)
         .json({ success: false, message: 'Invalid or expired verification code' });
     }
 
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpiresAt = undefined;
-    await user.save();
+    matchingUser.isVerified = true;
+    matchingUser.verificationToken = undefined;
+    matchingUser.verificationTokenExpiresAt = undefined;
+    await matchingUser.save();
 
-    await sendWelcomeEmail(user.email, user.name);
+    await sendWelcomeEmail(matchingUser.email, matchingUser.name);
 
     res.status(200).json({
       success: true,
       message: 'Email verified successfully',
       user: {
-        ...user.toObject(),
+        ...matchingUser.toObject(),
         password: undefined,
       },
     });
@@ -122,6 +148,15 @@ export const login = async (req: Request, res: Response) => {
     }
 
     generateTokenAndSetCookie(res, user._id);
+
+    // Set CSRF token cookie upon successful login
+    const csrfToken = generateCsrfToken();
+    res.cookie('XSRF-TOKEN', csrfToken, {
+      maxAge: 7200000, // 2 hours
+      httpOnly: false, // Must be accessible to JavaScript for CSRF protection
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    });
 
     user.lastLogin = new Date();
     await user.save();
@@ -158,22 +193,22 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     console.log('forgotPassword: User found:', user._id);
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(20).toString('hex');
+    // Generate secure reset token (hash will be stored, raw will be sent via email)
+    const { raw: rawToken, hash: hashedToken } = generateSecureToken();
     const resetTokenExpiresAt = Date.now() + 1 * 60 * 60 * 1000; // 1 hour
 
-    console.log('forgotPassword: Generated token:', resetToken);
+    console.log('forgotPassword: Generated secure token hash');
 
-    user.resetPasswordToken = resetToken;
+    user.resetPasswordToken = hashedToken; // Store the hash, not the raw token
     user.resetPasswordExpiresAt = new Date(resetTokenExpiresAt);
 
     console.log('forgotPassword: About to save user');
     await user.save();
     console.log('forgotPassword: User saved successfully');
 
-    // send email
+    // send email with raw token
     console.log('forgotPassword: About to send email');
-    await sendPasswordResetEmail(user.email, `${ORIGIN}/reset-password/${resetToken}`);
+    await sendPasswordResetEmail(user.email, `${ORIGIN}/reset-password/${rawToken}`);
     console.log('forgotPassword: Email sent successfully');
 
     res.status(200).json({ success: true, message: 'Password reset link sent to your email' });
@@ -188,24 +223,34 @@ export const resetPassword = async (req: Request, res: Response) => {
     const { token } = req.params;
     const { password } = req.body;
 
-    const user = await User.findOne({
-      resetPasswordToken: token,
+    // Find users with non-expired reset tokens
+    const usersWithActiveTokens = await User.find({
+      resetPasswordToken: { $exists: true },
       resetPasswordExpiresAt: { $gt: Date.now() },
     });
 
-    if (!user) {
+    // Verify the provided token against each user's stored hash
+    let matchingUser = null;
+    for (const user of usersWithActiveTokens) {
+      if (user.resetPasswordToken && verifyToken(token, user.resetPasswordToken)) {
+        matchingUser = user;
+        break;
+      }
+    }
+
+    if (!matchingUser) {
       return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
     }
 
     // update password
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    user.password = hashedPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpiresAt = undefined;
-    await user.save();
+    matchingUser.password = hashedPassword;
+    matchingUser.resetPasswordToken = undefined;
+    matchingUser.resetPasswordExpiresAt = undefined;
+    await matchingUser.save();
 
-    await sendResetSuccessEmail(user.email);
+    await sendResetSuccessEmail(matchingUser.email);
 
     res.status(200).json({ success: true, message: 'Password reset successful' });
   } catch (error) {
@@ -247,12 +292,16 @@ export const resendVerification = async (req: Request, res: Response) => {
         .status(400)
         .json({ success: false, message: 'User already verified', code: 'ALREADY_VERIFIED' });
     }
-    // Generate new verification code
-    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verificationToken = verificationToken;
+
+    // Generate new secure verification code (6-digit code with hashed storage)
+    const { raw: rawVerificationCode, hash: hashedVerificationCode } =
+      generateSecureVerificationCode();
+    user.verificationToken = hashedVerificationCode; // Store the hash, not the raw code
     user.verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await user.save();
-    await sendVerificationEmail(user.email, verificationToken);
+
+    // Send email with raw verification code
+    await sendVerificationEmail(user.email, rawVerificationCode);
     res.status(200).json({ success: true, message: 'Verification email resent' });
   } catch (error) {
     console.log('Error in resendVerification ', error);

@@ -82,7 +82,7 @@ define(['./workbox-6abc3855'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "/index.html",
-    "revision": "0.nmvf3h055n8"
+    "revision": "0.ndh1fiqei7g"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
@@ -96,7 +96,16 @@ define(['./workbox-6abc3855'], (function (workbox) { 'use strict';
       maxAgeSeconds: 86400
     }), new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
-    })]
+    }), {
+      cacheKeyWillBeUsed: async ({
+        request
+      }) => {
+        if (request.method !== "GET" && request.method !== "HEAD") {
+          return `${request.url}?${Date.now()}`;
+        }
+        return request.url;
+      }
+    }]
   }), 'GET');
   workbox.registerRoute(/^https:\/\/.*\/uploads\/.*\.(jpg|jpeg|png|gif|webp)$/i, new workbox.CacheFirst({
     "cacheName": "moc-images",

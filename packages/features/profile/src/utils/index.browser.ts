@@ -27,8 +27,8 @@ export const validateImageType = (file: File): boolean => {
 // Browser-specific image compression (simplified)
 export const compressImage = async (
   file: File,
-  maxWidth: number = 800,
-  quality: number = 0.8
+  _maxWidth: number = 800,
+  _quality: number = 0.8
 ): Promise<File> => {
   // For browser, return the original file for now
   // This can be enhanced with canvas-based compression if needed
@@ -160,4 +160,4 @@ export const sanitizeProfileData = (data: ProfileForm): Partial<Profile> => {
   if (data.preferences) sanitized.preferences = data.preferences;
   
   return sanitized;
-}; 
+};

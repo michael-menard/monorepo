@@ -21,7 +21,7 @@ export { useAuth } from './hooks/useAuth';
 export * from './hooks';
 
 // Store
-export { default as authReducer } from './store/authSlice';
+export { default as authReducer, authSlice } from './store/authSlice';
 export { authApi } from './store/authApi';
 export { initialState as authInitialState } from './store/authSlice';
 export type { RootState } from './store/store';

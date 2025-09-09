@@ -1,0 +1,21 @@
+import winston from 'winston';
+
+export const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.json(),
+  transports: [new winston.transports.Console()],
+});
+
+export function requestLogger(req, res, next) {
+  const start = Date.now();
+  res.on('finish', () => {
+    logger.info({
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      duration_ms: Date.now() - start,
+      user: (req as any).user?.sub
+    });
+  });
+  next();
+}

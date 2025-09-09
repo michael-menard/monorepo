@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "${PORT:-{{port}}}:{{port}}"
+    environment:
+      - PORT={{port}}
+      - HOST=0.0.0.0
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata: {}

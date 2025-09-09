@@ -1,0 +1,59 @@
+---
+id: {{id}}
+title: {{title}}
+owner: {{owner}}
+area: {{area}}
+type: {{type}}
+risk: {{risk}}
+created: {{date}}
+package: {{package}}
+---
+
+# {{title}}
+
+## Executive Summary
+- **Problem**: [Concise description of the user/business pain]
+- **Audience**: [Who is affected — personas, teams, customers]
+- **Opportunity**: [Why solving this now creates value]
+- **Desired Outcome**: [What “done right” looks like in one sentence]
+
+## Goals
+- Clear, outcome-focused bullets.
+
+## Constraints & Standards (Must-Follow)
+- Design system: shadcn/ui, Tailwind tokens
+- Types: TypeScript + Zod
+- State: RTK Query / Redux
+- Testing: Vitest (unit), Playwright (e2e)
+- A11y: WCAG 2.2 AA, keyboard nav, axe clean
+- Perf: Core Web Vitals budgets
+- Security: no unsafe HTML, vetted links
+
+## Acceptance Criteria
+- Measurable, testable outcomes grouped by Phase A–E.
+
+## Vertical Slices
+
+### Phase A — Compile + Storybook
+- Component compiles and renders stories
+
+### Phase B1 — Unit Tests
+- Critical logic covered
+
+### Phase B2 — E2E Smoke
+- Happy-path flows in Playwright
+
+### Phase C — Accessibility
+- Axe violations: 0, keyboard nav through all focusables
+
+### Phase D — Performance
+- Meets budgets; lazy/virtualize as needed
+
+### Phase E — Security/Hardening
+- No unsafe HTML, link policies enforced
+
+## Rollout / Risks
+- Flags, metrics, rollback plan.
+
+## Appendix
+- API shapes, diagrams, prior art.

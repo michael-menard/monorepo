@@ -1,0 +1,17 @@
+{
+  "name": "@tools/api-gen",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "api-gen": "./bin/api-gen.js"
+  },
+  "exports": {
+    ".": "./bin/api-gen.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "description": "Scaffold an Express + TypeScript API in Turborepo (apps/api), with JWT, Zod, Winston, Helmet, CORS, rate limiting, cookie-parser. Optional Postgres via Drizzle.",
+  "license": "MIT"
+}

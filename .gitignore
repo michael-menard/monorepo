@@ -72,5 +72,5 @@ node_modules/
 # Environment variables
 
 # Task files
-tasks.json
-tasks/ 
+# tasks.json
+# tasks/ 

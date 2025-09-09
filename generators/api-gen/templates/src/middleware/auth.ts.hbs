@@ -1,0 +1,30 @@
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+export interface JwtPayload {
+  sub: string;
+  email?: string;
+  roles?: string[];
+  [k: string]: unknown;
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const auth = req.header('authorization');
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  const token = auth.slice('Bearer '.length);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    (req as any).user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'InvalidToken' });
+  }
+}
+
+export function requireRole(role: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const roles = (req as any).user?.roles as string[] | undefined;
+    if (!roles?.includes(role)) return res.status(403).json({ error: 'Forbidden', requiredRole: role });
+    next();
+  };
+}

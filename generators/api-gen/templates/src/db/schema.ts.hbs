@@ -1,0 +1,7 @@
+import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
+export const example = pgTable('example', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull()
+});

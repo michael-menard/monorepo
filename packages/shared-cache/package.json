@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "description": "Shared caching utilities for the monorepo",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/shared-cache.js",
+  "browser": "./dist/shared-cache.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "browser": "./dist/shared-cache.js",
+      "import": "./dist/shared-cache.js",
+      "require": "./dist/shared-cache.cjs",
       "types": "./dist/index.d.ts"
     }
   },
@@ -39,8 +41,5 @@
     "typescript": "^5.7.2",
     "vite": "^5.2.10",
     "vitest": "^3.0.5"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0"
   }
 }

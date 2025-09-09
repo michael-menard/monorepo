@@ -2,13 +2,15 @@
   "name": "@repo/features-wishlist",
   "version": "0.0.1",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/wishlist.js",
+  "browser": "./dist/wishlist.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "browser": "./dist/wishlist.js",
+      "import": "./dist/wishlist.js",
+      "require": "./dist/wishlist.cjs",
       "types": "./dist/index.d.ts"
     }
   },

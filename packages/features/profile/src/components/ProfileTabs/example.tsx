@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProfileTabs } from '../index';
+import { ProfileTabs } from './index';
 
 export const ProfileTabsExample: React.FC = () => {
   return (
@@ -10,4 +10,4 @@ export const ProfileTabsExample: React.FC = () => {
   );
 };
 
-export default ProfileTabsExample; 
+export default ProfileTabsExample;

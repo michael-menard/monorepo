@@ -1,6 +1,5 @@
 import React from 'react';
 import { ProfilePage } from '../ProfilePage';
-import { ProfileCard } from '../ProfileCard';
 import { ProfileSidebar } from '../ProfileSidebar';
 import type { Profile } from '../../schemas';
 
@@ -89,4 +88,4 @@ export const ProfilePageExample: React.FC = () => {
   );
 };
 
-export default ProfilePageExample; 
+export default ProfilePageExample;

@@ -1,7 +1,7 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, type Slice } from '@reduxjs/toolkit';
 import type { Profile } from '../schemas';
 
-interface ProfileState {
+export interface ProfileState {
   profile: Profile | null;
   isLoading: boolean;
   error: string | null;
@@ -17,7 +17,7 @@ const initialState: ProfileState = {
   avatarUploadProgress: 0,
 };
 
-export const profileSlice = createSlice({
+export const profileSlice: Slice<ProfileState> = createSlice({
   name: 'profile',
   initialState,
   reducers: {
@@ -60,4 +60,4 @@ export const {
   clearProfile,
 } = profileSlice.actions;
 
-export default profileSlice.reducer; 
+export default profileSlice.reducer;

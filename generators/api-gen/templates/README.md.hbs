@@ -1,0 +1,30 @@
+# {{name}} (Express + TypeScript)
+
+## Scripts
+- `pnpm dev` — start with hot-reload (tsx)
+- `pnpm build` — compile TypeScript
+- `pnpm start` — run compiled server
+- `pnpm typecheck` — types only
+- `pnpm test` — vitest (with supertest available)
+
+## Endpoints
+- `GET /healthz` — health check
+
+## Auth
+- Use `requireAuth` and `requireRole('admin')` middleware for protected routes.
+- Tokens are **issued by your existing auth service**; this API only **verifies** JWTs and enforces roles.
+
+## Env
+- `PORT` (default: {{port}})
+- `HOST` (default: 0.0.0.0)
+- `JWT_SECRET` (required){{#if withDb}}
+- `DATABASE_URL` (required for --db){{/if}}
+
+## Docs
+- Swagger UI at `/docs`
+
+## Security
+- helmet, CORS (open by default), express-rate-limit, cookie-parser
+
+## Logging
+- winston with simple request log middleware

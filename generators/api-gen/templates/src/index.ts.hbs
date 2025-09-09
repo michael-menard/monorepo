@@ -1,0 +1,14 @@
+import './env.js';
+import { buildServer } from './server.js';
+
+const port = Number(process.env.PORT ?? {{port}});
+const host = process.env.HOST ?? '0.0.0.0';
+
+async function start() {
+  const app = await buildServer();
+  app.listen(port, host, () => {
+    console.log(`API listening at http://${host}:${port}`);
+  });
+}
+
+start();

@@ -16,10 +16,10 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
-    "declaration": false,
-    "declarationMap": false,
-    "emitDeclarationOnly": false,
-    "noEmit": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -27,4 +27,4 @@
   },
   "include": ["src/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
-} 
+}

@@ -1,0 +1,27 @@
+/* eslint config for TypeScript + Airbnb + Prettier */
+module.exports = {
+  root: true,
+  env: { es2022: true, node: true },
+  parser: '@typescript-eslint/parser',
+  parserOptions: { project: false, sourceType: 'module' },
+  plugins: ['@typescript-eslint', 'import', 'prettier'],
+  extends: [
+    'airbnb-base',
+    'airbnb-typescript/base',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:import/recommended',
+    'plugin:import/typescript',
+    'plugin:prettier/recommended'
+  ],
+  settings: {
+    'import/resolver': {
+      node: { extensions: ['.ts', '.js'] }
+    }
+  },
+  rules: {
+    'prettier/prettier': 'error',
+    'import/extensions': ['error', 'ignorePackages', { ts: 'never', js: 'never' }],
+    'no-console': 'off'
+  },
+  ignorePatterns: ['dist', 'node_modules']
+};

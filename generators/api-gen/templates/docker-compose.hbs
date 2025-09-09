@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    ports:
+      - "${PORT:-{{port}}}:{{port}}"
+    environment:
+      - PORT={{port}}
+      - HOST=0.0.0.0
+      - JWT_SECRET=${JWT_SECRET}
+    env_file:
+      - .env

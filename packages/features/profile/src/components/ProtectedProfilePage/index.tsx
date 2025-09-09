@@ -1,5 +1,5 @@
 import React from 'react';
-import { RouteGuard } from '@repo/auth';
+import { RouteGuard } from '@repo/auth/react-router';
 import { ProfilePage } from '../ProfilePage';
 import type { ProfilePageProps } from '../../types';
 
@@ -29,4 +29,4 @@ export const ProtectedProfilePage: React.FC<ProtectedProfilePageProps> = ({
   );
 };
 
-export default ProtectedProfilePage; 
+export default ProtectedProfilePage;

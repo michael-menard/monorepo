@@ -23,9 +23,9 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    resetPasswordToken: String,
+    resetPasswordToken: String, // SHA-256 hash of the reset token (raw token sent via email)
     resetPasswordExpiresAt: Date,
-    verificationToken: String,
+    verificationToken: String, // SHA-256 hash of the verification code (raw code sent via email)  
     verificationTokenExpiresAt: Date,
   },
   { timestamps: true },

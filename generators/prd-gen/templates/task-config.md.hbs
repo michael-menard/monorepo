@@ -1,0 +1,107 @@
+---
+# === Scope targets (where this PRD affects) ===
+targets:
+  package: {{package}}
+  outDirs:
+    - {{package}}/src
+  includeGlobs:
+    - "{{package}}/src/**/*.{ts,tsx,css,md}"
+  excludeGlobs:
+    - "**/__snapshots__/**"
+    - "**/*.spec.snapshot.*"
+
+# === How Taskmaster should derive tasks from the PRD ===
+derivation:
+  # Keep slices tiny and reviewable
+  sliceContract:
+    maxHours: 2
+    maxFilesTouched: 3
+    maxNewFiles: 1
+    maxLoC: 80
+
+  # Map PRD “Vertical Slices” (Phases A–E) to concrete subtasks
+  mapAcceptanceToSubtasks:
+    Phase A: ["compile", "storybook"]
+    Phase B1: ["vitest"]
+    Phase B2: ["playwright-smoke"]
+    Phase C: ["axe-checks", "kbd-nav"]
+    Phase D: ["perf-budget", "lazy-load", "virtualize"]
+    Phase E: ["link-safety", "no-unsafe-html"]
+
+  # Optional: auto-label subtasks by phase text
+  labelRules:
+    - match: "Phase A"
+      add: ["type:feature", "test:story"]
+    - match: "Phase B1"
+      add: ["type:test", "scope:unit"]
+    - match: "Phase B2"
+      add: ["type:test", "scope:e2e"]
+    - match: "Phase C"
+      add: ["a11y"]
+    - match: "Phase D"
+      add: ["perf"]
+    - match: "Phase E"
+      add: ["security"]
+
+# === Labels applied to the parent task ===
+labels:
+  area: ["{{area}}"]        # e.g. ui | api | platform
+  type: ["{{type}}"]        # e.g. feature | refactor | bug | chore | doc
+  risk: ["{{risk}}"]        # low | medium | high
+  # Optional tech stack tags for filtering boards/dashboards
+  # Remove or edit as needed per PRD:
+  stack: ["ts", "react", "tailwind", "shadcn"]
+
+# === Branch & commit hygiene ===
+branching:
+  prefix: feat/{{area}}/{{slug}}
+  conventionalCommits: true
+  requireLinearHistory: true
+
+# === Quality bars (what must pass) ===
+quality:
+  accessibility:
+    axeViolationsMax: 0
+    requireKeyboardNav: true
+  tests:
+    unitMinCoveragePct: 80
+    e2eSmokeRequired: true
+  performanceBudgets:
+    lcp_ms: 2500
+    cls: 0.1
+    tti_ms: 3500
+  security:
+    disallowUnsafeHtml: true
+    restrictExternalLinks: true
+
+# === CI integration (checks + handy scripts) ===
+ci:
+  requiredChecks:
+    - build
+    - lint
+    - typecheck
+    - test:unit
+    - test:e2e-smoke
+    - a11y
+    - perf
+  scripts:
+    build: "pnpm build"
+    lint: "pnpm lint"
+    typecheck: "pnpm typecheck"
+    testUnit: "pnpm test -w --coverage"
+    testE2E: "pnpm e2e:smoke"
+    a11y: "pnpm a11y:check"
+    perf: "pnpm perf:budget"
+
+# === Ownership & guardrails ===
+owners:
+  reviewers:
+    - "@design-systems"
+  codeownersFallback:
+    - "@design-systems"
+
+forbidChanges:
+  - "package.json#version"
+  - "apps/**/.env*"
+  - "**/tokens/**"
+  - "infrastructure/**"

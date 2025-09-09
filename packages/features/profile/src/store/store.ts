@@ -1,8 +1,8 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type EnhancedStore } from '@reduxjs/toolkit';
 import { profileApi } from './profileApi';
 import profileReducer from './profileSlice';
 
-export const store = configureStore({
+export const store: EnhancedStore = configureStore({
   reducer: {
     profile: profileReducer,
     [profileApi.reducerPath]: profileApi.reducer,
@@ -13,4 +13,4 @@ export const store = configureStore({
 });
 
 export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch; 
+export type AppDispatch = typeof store.dispatch;

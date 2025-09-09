@@ -2,14 +2,14 @@
   "name": "@repo/profile",
   "version": "0.0.1",
   "type": "module",
-  "main": "./dist/index.js",
-  "browser": "./dist/index.browser.js",
+  "main": "./dist/profile.js",
+  "browser": "./dist/profile.js", 
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "browser": "./dist/index.browser.js",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "browser": "./dist/profile.js",
+      "import": "./dist/profile.js",
+      "require": "./dist/profile.cjs",
       "types": "./dist/index.d.ts"
     }
   },

@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* pnpm-lock.yaml* ./
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm set fund false >/dev/null 2>&1 || true
+RUN npm -v >/dev/null 2>&1 || true
+# Install only prod deps inside container (monorepo users: install at root and copy workspace if needed)
+RUN npm install --omit=dev || true
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY . .
+RUN npm run build || true
+
+FROM node:20-alpine AS runner
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY package.json ./package.json
+CMD ["node", "dist/index.js"]

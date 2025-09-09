@@ -54,7 +54,9 @@
     "security:check": "pnpm run security:audit && pnpm run security:lint",
     "security:lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0 --config eslint.config.security.js",
     "security:scan": "pnpm run security:check && pnpm run security:headers:test",
-    "security:headers:test": "node scripts/test-security-headers.js"
+    "security:headers:test": "node scripts/test-security-headers.js",
+    "gen:prd": "node generators/prd-gen/bin/prd-gen.js",
+    "gen:api": "node generators/api-gen/bin/api-gen.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

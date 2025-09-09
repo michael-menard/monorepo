@@ -2,14 +2,15 @@
   "name": "@repo/moc-instructions",
   "version": "0.0.1",
   "type": "module",
-  "main": "./dist/moc.umd.js",
-  "module": "./dist/moc.es.js",
+  "main": "./dist/moc-instructions.js",
+  "browser": "./dist/moc-instructions.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/moc.es.js",
-      "require": "./dist/moc.umd.js",
+      "browser": "./dist/moc-instructions.js",
+      "import": "./dist/moc-instructions.js",
+      "require": "./dist/moc-instructions.cjs",
       "types": "./dist/index.d.ts"
     }
   },

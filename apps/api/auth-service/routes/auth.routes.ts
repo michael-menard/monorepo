@@ -10,6 +10,7 @@ import {
   resendVerification,
 } from '../controllers/auth.controller';
 import { verifyToken } from '../middleware/authMiddleware';
+import { generateCsrfToken } from '../utils/tokenUtils';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 
@@ -105,7 +106,32 @@ const resendLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const csrfLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Allow more frequent CSRF token refreshes
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.get('/check-auth', verifyToken, checkAuth);
+
+// CSRF token endpoint
+router.get('/csrf', csrfLimiter, (req: Request, res: Response) => {
+  const token = generateCsrfToken();
+
+  // Set CSRF token cookie
+  res.cookie('XSRF-TOKEN', token, {
+    maxAge: 7200000, // 2 hours in milliseconds
+    httpOnly: false, // Must be accessible to JavaScript for CSRF protection
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  });
+
+  // Set cache control to prevent caching
+  res.setHeader('Cache-Control', 'no-store');
+
+  res.json({ token });
+});
 
 router.post('/sign-up', signupLimiter, validate(signupSchema), signup);
 router.post('/login', loginLimiter, validate(loginSchema), login);
