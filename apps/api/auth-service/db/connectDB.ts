@@ -1,7 +1,11 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import pino from 'pino';
 
 dotenv.config();
+
+// Create a logger for this module
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 export const connectDB = async (): Promise<void> => {
   const isProd = process.env.NODE_ENV === 'production';
@@ -15,15 +19,15 @@ export const connectDB = async (): Promise<void> => {
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
     });
-    console.log('MongoDB Connected');
+    logger.info('MongoDB Connected');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    logger.error({ error }, 'MongoDB connection error');
     if (isProd) {
       // In production, fail fast to avoid running the API without a database
       throw error;
     } else {
       // In development/test, allow server to start without DB
-      console.warn(
+      logger.warn(
         'Starting without database connection (development/test mode). Some features may not work.',
       );
     }

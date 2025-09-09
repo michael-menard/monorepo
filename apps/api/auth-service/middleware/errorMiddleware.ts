@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { AppError, ErrorResponse, ValidationError, DatabaseError } from '../types/errors';
+import pino from 'pino';
+
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 export const notFound = (req: Request, res: Response, next: NextFunction) => {
   const errorResponse: ErrorResponse = {
@@ -31,12 +34,13 @@ export const errorHandler: ErrorRequestHandler = (
       err.message,
     );
   } else {
-    console.error(`[ERROR] ${err.message}`, {
+    logger.error({
+      err,
       url: req.originalUrl,
       method: req.method,
       userId: (req as any).userId,
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    });
+    }, err.message);
   }
 
   // Default error response

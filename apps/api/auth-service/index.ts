@@ -143,11 +143,14 @@ app.use('/api/auth', routes);
 app.use(notFound);
 app.use(errorHandler);
 
+// Export shared logger for use in other modules
+export { logger };
+
 // Start server
 const startServer = async () => {
-  console.log('Starting server...');
-  console.log('Environment:', process.env.NODE_ENV || 'development');
-  console.log('Port:', PORT);
+  logger.info('Starting server...');
+  logger.info({ environment: process.env.NODE_ENV || 'development' }, 'Server environment');
+  logger.info({ port: PORT }, 'Server port configuration');
 
   try {
     if (process.env.NODE_ENV === 'production') {
@@ -155,30 +158,32 @@ const startServer = async () => {
     } else {
       // Try to connect to MongoDB (but don't block server startup in dev/test)
       connectDB().catch((err) => {
-        console.warn('MongoDB connection failed, but continuing server startup');
+        logger.warn('MongoDB connection failed, but continuing server startup');
       });
     }
 
     // Start the Express server
     app.listen(PORT, () => {
-      console.log(`Server started successfully on port ${PORT}`);
-      console.log(`API available at: http://localhost:${PORT}/api`);
+      logger.info({ port: PORT }, 'Server started successfully');
+      logger.info({ apiUrl: `http://localhost:${PORT}/api` }, 'API available');
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
-    console.error('Error details:', error instanceof Error ? error.stack : String(error));
+    logger.error({ error }, 'Failed to start server');
+    if (error instanceof Error) {
+      logger.error({ stack: error.stack }, 'Error details');
+    }
     process.exit(1);
   }
 };
 
 // Handle server startup errors
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  logger.error({ error }, 'Uncaught Exception');
   process.exit(1);
 });
 
 process.on('unhandledRejection', (error) => {
-  console.error('Unhandled Rejection:', error);
+  logger.error({ error }, 'Unhandled Rejection');
   process.exit(1);
 });
 
