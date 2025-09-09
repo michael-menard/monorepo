@@ -29,79 +29,165 @@ A comprehensive API for managing LEGO MOC (My Own Creation) instructions, galler
 ### Prerequisites
 
 - Node.js 18+ and pnpm
-- Docker and Docker Compose
-- PostgreSQL (if not using Docker)
+- Docker and Docker Compose (for supporting services)
 
-### Environment Setup
+## Native Development Setup (Recommended)
 
-1. **Clone the repository** (if not already done)
-2. **Navigate to the API directory**:
+### 1. Start Infrastructure Services
+
+First, start the supporting services (PostgreSQL, Redis, Elasticsearch) using Docker:
+
+```bash
+# From repository root
+docker-compose -f docker-compose-dev.yml up -d
+```
+
+This starts:
+- PostgreSQL database (port 5432)
+- Redis cache (port 6379) 
+- Elasticsearch (port 9200)
+- pgAdmin (port 5050)
+- Mongo Express (port 8081)
+
+### 2. Environment Setup
+
+1. **Navigate to the API directory**:
    ```bash
    cd apps/api/lego-projects-api
    ```
 
-3. **Create environment file**:
+2. **Create environment file**:
    ```bash
    cp .env.example .env
    ```
 
-4. **Configure environment variables**:
+3. **Configure environment variables for native development**:
    ```bash
-   # Database Configuration
-   DATABASE_URL=postgresql://username:password@localhost:5432/lego_projects
+   # Database Configuration (Docker service)
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/lego_projects
 
-   # JWT Configuration
-   JWT_SECRET=your-jwt-secret-here
-   AUTH_API=http://localhost:3001
+   # JWT Configuration  
+   JWT_SECRET=your-jwt-secret-here-min-32-chars-long
+   AUTH_API=http://localhost:5000
 
-   # Redis Configuration
+   # Redis Configuration (Docker service)
    REDIS_URL=redis://localhost:6379
    REDIS_PASSWORD=
    REDIS_DB=0
 
-   # AWS S3 Configuration (for production)
-   S3_BUCKET=your-s3-bucket-name
-   S3_REGION=us-east-1
-   AWS_ACCESS_KEY_ID=your-access-key
-   AWS_SECRET_ACCESS_KEY=your-secret-key
-
-   # Elasticsearch Configuration
-   ELASTICSEARCH_URL=http://elasticsearch:9200
+   # Elasticsearch Configuration (Docker service)
+   ELASTICSEARCH_URL=http://localhost:9200
 
    # Server Configuration
    PORT=3000
    NODE_ENV=development
+   LOG_LEVEL=info
+
+   # File Storage (local development)
+   UPLOAD_PATH=./uploads
+   MAX_FILE_SIZE=20971520
+   
+   # Optional: AWS S3 Configuration (for production)
+   # S3_BUCKET=your-s3-bucket-name
+   # S3_REGION=us-east-1
+   # AWS_ACCESS_KEY_ID=your-access-key
+   # AWS_SECRET_ACCESS_KEY=your-secret-key
    ```
 
-### Running with Docker
+### 3. Install Dependencies and Setup Database
 
-1. **Start all services**:
-   ```bash
-   docker-compose up -d
-   ```
+```bash
+# Install dependencies
+pnpm install
 
-   This will start:
-   - PostgreSQL database
-   - Redis cache
-   - Elasticsearch
-   - API server
+# Run database migrations
+pnpm drizzle-kit push
 
-2. **Install dependencies** (if running locally):
-   ```bash
-   pnpm install
-   ```
+# Optional: Seed database with sample data
+pnpm seed
+```
 
-3. **Run database migrations**:
-   ```bash
-   pnpm drizzle-kit push
-   ```
+### 4. Start Native Development Server
 
-4. **Start the development server**:
-   ```bash
-   pnpm dev
-   ```
+```bash
+# Start the LEGO Projects API natively
+pnpm dev
+```
 
 The API will be available at `http://localhost:3000`
+
+### 5. Test the Setup
+
+```bash
+# Test API health
+curl http://localhost:3000/
+
+# Test with HTTP client (if you have VS Code REST Client)
+# Open __http__/lego-projects-api.http and run requests
+```
+
+## Alternative: Full Docker Development
+
+If you prefer to run everything in Docker:
+
+```bash
+# Start all services including the API
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f lego-projects-api
+```
+
+## Development Workflow
+
+### Starting a Development Session
+
+```bash
+# 1. Ensure infrastructure is running
+docker-compose -f docker-compose-dev.yml ps
+
+# 2. Start infrastructure if needed
+docker-compose -f docker-compose-dev.yml up -d
+
+# 3. Navigate to API directory
+cd apps/api/lego-projects-api
+
+# 4. Start native API server
+pnpm dev
+```
+
+### Common Development Tasks
+
+```bash
+# Install new dependency
+pnpm add package-name
+
+# Update database schema
+pnpm drizzle-kit generate
+pnpm drizzle-kit push
+
+# View database in browser
+pnpm drizzle-kit studio  # Opens at http://localhost:4983
+
+# Run tests
+pnpm test
+
+# Lint and format
+pnpm lint
+pnpm format
+```
+
+### Stopping Services
+
+```bash
+# Stop native API server (Ctrl+C in terminal)
+
+# Stop infrastructure services
+docker-compose -f docker-compose-dev.yml down
+
+# Stop and remove volumes (resets data)
+docker-compose -f docker-compose-dev.yml down -v
+```
 
 ## Redis Caching
 
@@ -374,4 +460,4 @@ For development, you can disable caching by not setting the `REDIS_URL` environm
 
 ## License
 
-This project is licensed under the ISC License. 
+This project is licensed under the ISC License.

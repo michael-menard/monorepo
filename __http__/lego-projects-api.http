@@ -1,0 +1,390 @@
+# LEGO Projects API - HTTP Test Examples
+# Base URL: http://localhost:3000
+# 
+# Before running these tests:
+# 1. Start the LEGO Projects API: cd apps/api/lego-projects-api && npm run dev
+# 2. Start infrastructure: docker-compose -f docker-compose-dev.yml up -d
+# 3. Have a valid JWT token from auth service (see auth-service.http)
+
+### Variables
+@baseUrl = http://localhost:3000
+@authToken = your-jwt-token-here
+@userId = your-user-id-here
+
+#####################
+# HEALTH CHECK
+#####################
+
+### Health Check
+GET {{baseUrl}}/
+Accept: text/plain
+
+#####################
+# CSRF PROTECTION
+#####################
+
+### Get CSRF Token
+GET {{baseUrl}}/api/csrf
+Accept: application/json
+
+#####################
+# USER PROFILE MANAGEMENT
+#####################
+
+### Get User Profile
+GET {{baseUrl}}/api/users/{{userId}}
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Update User Profile
+PATCH {{baseUrl}}/api/users/{{userId}}
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "displayName": "Updated Display Name",
+  "bio": "Updated bio information"
+}
+
+### Upload User Avatar
+POST {{baseUrl}}/api/users/{{userId}}/avatar
+Cookie: token={{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="avatar"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/avatar.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Delete User Avatar
+DELETE {{baseUrl}}/api/users/{{userId}}/avatar
+Cookie: token={{authToken}}
+
+#####################
+# GALLERY MANAGEMENT
+#####################
+
+### Get All Albums
+GET {{baseUrl}}/api/albums
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Get Specific Album
+GET {{baseUrl}}/api/albums/album-id-here
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Get All Images
+GET {{baseUrl}}/api/images
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Upload Gallery Image
+POST {{baseUrl}}/api/images
+Cookie: token={{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="image"; filename="gallery-image.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/gallery-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+My Gallery Image
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Description of my gallery image
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tags"
+
+tag1,tag2,tag3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="albumId"
+
+album-id-here
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Update Gallery Image Metadata
+PATCH {{baseUrl}}/api/images/image-id-here
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "title": "Updated Image Title",
+  "description": "Updated description",
+  "tags": ["updated", "tags"],
+  "albumId": "new-album-id"
+}
+
+### Delete Gallery Image
+DELETE {{baseUrl}}/api/images/image-id-here
+Cookie: token={{authToken}}
+
+### Get Unified Gallery View
+GET {{baseUrl}}/api/gallery
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Flag Image for Moderation
+POST {{baseUrl}}/api/flag
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "imageId": "image-id-to-flag",
+  "reason": "inappropriate content"
+}
+
+#####################
+# MOC INSTRUCTIONS MANAGEMENT
+#####################
+
+### Create New MOC
+POST {{baseUrl}}/api/mocs
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "title": "My Awesome MOC",
+  "description": "A detailed description of my MOC",
+  "tags": ["space", "technic", "large"],
+  "difficulty": "intermediate",
+  "estimatedTime": 120,
+  "pieceCount": 1500
+}
+
+### Get Specific MOC
+GET {{baseUrl}}/api/mocs/moc-id-here
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Update MOC Metadata
+PATCH {{baseUrl}}/api/mocs/moc-id-here
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "title": "Updated MOC Title",
+  "description": "Updated description",
+  "tags": ["updated", "tags"],
+  "difficulty": "advanced",
+  "estimatedTime": 180
+}
+
+### Upload MOC Instruction File
+POST {{baseUrl}}/api/mocs/moc-id-here/files
+Cookie: token={{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="instructions.pdf"
+Content-Type: application/pdf
+
+< ./test-files/instructions.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="fileType"
+
+instructions
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Building Instructions
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Step-by-step building instructions
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Upload MOC Parts List File
+POST {{baseUrl}}/api/mocs/moc-id-here/files
+Cookie: token={{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="parts-list.csv"
+Content-Type: text/csv
+
+< ./test-files/parts-list.csv
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="fileType"
+
+parts
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Parts List
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Complete parts list with quantities
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Get File Download Info
+GET {{baseUrl}}/api/mocs/moc-id-here/files/file-id-here/download-info
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Download MOC File
+GET {{baseUrl}}/api/mocs/moc-id-here/files/file-id-here/download
+Cookie: token={{authToken}}
+
+### Delete MOC File
+DELETE {{baseUrl}}/api/mocs/moc-id-here/files/file-id-here
+Cookie: token={{authToken}}
+
+### Link Gallery Image to MOC
+POST {{baseUrl}}/api/mocs/moc-id-here/gallery-images
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "galleryImageId": "image-id-here"
+}
+
+### Get MOC Gallery Images
+GET {{baseUrl}}/api/mocs/moc-id-here/gallery-images
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Unlink Gallery Image from MOC
+DELETE {{baseUrl}}/api/mocs/moc-id-here/gallery-images/image-id-here
+Cookie: token={{authToken}}
+
+### Search MOCs (Elasticsearch)
+GET {{baseUrl}}/api/mocs/search?q=space+ship&tags=technic&difficulty=intermediate&limit=20&offset=0
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Delete MOC
+DELETE {{baseUrl}}/api/mocs/moc-id-here
+Cookie: token={{authToken}}
+
+#####################
+# WISHLIST MANAGEMENT
+#####################
+
+### Get All Wishlist Items
+GET {{baseUrl}}/api/wishlist
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Create Wishlist Item
+POST {{baseUrl}}/api/wishlist
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "title": "LEGO Creator Expert Big Ben",
+  "setNumber": "10253",
+  "category": "Architecture",
+  "priority": "high",
+  "estimatedPrice": 249.99,
+  "notes": "Want this for my architecture collection",
+  "tags": ["architecture", "landmark", "expert"]
+}
+
+### Get Specific Wishlist Item
+GET {{baseUrl}}/api/wishlist/wishlist-id-here
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Update Wishlist Item
+PATCH {{baseUrl}}/api/wishlist/wishlist-id-here
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "title": "Updated Wishlist Item",
+  "priority": "medium",
+  "estimatedPrice": 199.99,
+  "notes": "Updated notes"
+}
+
+### Search Wishlist (Elasticsearch)
+GET {{baseUrl}}/api/wishlist/search?q=creator&category=Architecture&priority=high&limit=10&offset=0
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Upload Wishlist Item Image
+POST {{baseUrl}}/api/wishlist/upload-image
+Cookie: token={{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="image"; filename="wishlist-item.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/wishlist-item.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="wishlistId"
+
+wishlist-id-here
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Delete Wishlist Item Image
+DELETE {{baseUrl}}/api/wishlist/image/wishlist-id-here
+Cookie: token={{authToken}}
+
+### Reorder Wishlist Items
+POST {{baseUrl}}/api/wishlist/reorder
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "itemIds": ["id1", "id2", "id3", "id4"]
+}
+
+### Debounced Reorder (for drag & drop)
+POST {{baseUrl}}/api/wishlist/reorder/debounced
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+  "itemIds": ["id1", "id2", "id3", "id4"]
+}
+
+### Get Reorder Status
+GET {{baseUrl}}/api/wishlist/reorder/status
+Accept: application/json
+Cookie: token={{authToken}}
+
+### Cancel Pending Reorder
+POST {{baseUrl}}/api/wishlist/reorder/cancel
+Cookie: token={{authToken}}
+
+### Delete Wishlist Item
+DELETE {{baseUrl}}/api/wishlist/wishlist-id-here
+Cookie: token={{authToken}}
+
+#####################
+# ERROR TESTING
+#####################
+
+### Test 404 Not Found
+GET {{baseUrl}}/api/nonexistent-endpoint
+Accept: application/json
+
+### Test Unauthorized Access
+GET {{baseUrl}}/api/users/some-user-id
+Accept: application/json
+# Note: No Cookie header to test unauthorized access
+
+### Test Rate Limiting (send multiple requests quickly)
+GET {{baseUrl}}/api/gallery
+Accept: application/json
+Cookie: token={{authToken}}
+
+#####################
+# SAMPLE DATA PLACEHOLDERS
+# Create these test files in a test-files directory:
+# - avatar.jpg (small user avatar image)
+# - gallery-image.jpg (gallery image)
+# - instructions.pdf (MOC instructions)
+# - parts-list.csv (parts list file)
+# - wishlist-item.jpg (wishlist item image)
+#####################

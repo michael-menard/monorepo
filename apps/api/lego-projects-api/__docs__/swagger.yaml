@@ -50,7 +50,7 @@ info:
 
 servers:
   - url: http://localhost:3000
-    description: Development server
+    description: Native development server (npm run dev)
   - url: https://api.lego-moc-instructions.com
     description: Production server
 

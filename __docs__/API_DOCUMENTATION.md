@@ -11,10 +11,15 @@ This document provides comprehensive API documentation for the Lego MOC Instruct
 - [Testing](#testing)
 - [Error Handling](#error-handling)
 
-## Base URL
+## Base URLs
 
+### Auth Service
 **Development**: `http://localhost:5000/api/auth`
 **Production**: `https://your-domain.com/api/auth`
+
+### LEGO Projects API
+**Development**: `http://localhost:3000/api`
+**Production**: `https://api.lego-moc-instructions.com/api`
 
 ## Authentication
 
@@ -413,4 +418,4 @@ For API-related issues:
 
 - [EMAIL_TESTING.md](./EMAIL_TESTING.md) - Email testing setup
 - [PLAYWRIGHT_TESTING.md](./PLAYWRIGHT_TESTING.md) - E2E testing guide
-- [Auth Service README](../apps/api/auth-service/README.md) - Service-specific documentation 
+- [Auth Service README](../apps/api/auth-service/README.md) - Service-specific documentation
