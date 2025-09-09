@@ -8,10 +8,15 @@ This guide explains how to run the complete auth development environment, includ
 - **Node.js**: Version 18 or higher
 - **pnpm**: The package manager used in this monorepo
 
-## Quick Start
+## Development Options
 
-### Option 1: Automated Setup (Recommended)
+Choose between Docker-based or native development based on your preference and setup.
 
+### Option 1: Docker-Based Development (Recommended)
+
+Complete environment with database, backend, and frontend in containers.
+
+#### Automated Setup
 ```bash
 # Start all services with one command
 pnpm auth:start
@@ -20,8 +25,7 @@ pnpm auth:start
 pnpm auth:stop-all
 ```
 
-### Option 2: Manual Setup
-
+#### Manual Setup
 ```bash
 # 1. Start the database
 pnpm auth:db:up
@@ -36,11 +40,67 @@ pnpm auth:ui
 pnpm auth:stop
 ```
 
-### Option 3: Concurrent Setup
-
+#### Concurrent Setup
 ```bash
 # Start backend and frontend concurrently (database must be running)
 pnpm auth:dev
+```
+
+### Option 2: Native Development
+
+Run services directly on your machine without Docker containers.
+
+#### Prerequisites for Native Development
+- **MongoDB**: Install MongoDB Community Server locally
+- **Node.js**: Version 18 or higher
+- **pnpm**: Package manager
+
+#### Quick Native Setup
+```bash
+# 1. Start MongoDB locally (if not running as service)
+mongod --dbpath /usr/local/var/mongodb --logpath /usr/local/var/log/mongodb/mongo.log --fork
+
+# 2. Start the auth backend service natively
+cd apps/api/auth-service
+pnpm install
+pnpm dev
+
+# 3. Start the frontend app (in a new terminal)
+cd apps/web/lego-moc-instructions-app
+pnpm install
+pnpm dev
+```
+
+#### MongoDB Installation (macOS)
+```bash
+# Using Homebrew
+brew tap mongodb/brew
+brew install mongodb-community
+
+# Start MongoDB service
+brew services start mongodb-community
+
+# Or start manually
+mongod --config /usr/local/etc/mongod.conf --fork
+```
+
+#### MongoDB Installation (Windows)
+1. Download MongoDB Community Server from https://www.mongodb.com/try/download/community
+2. Run the installer and follow the setup wizard
+3. Add MongoDB to your system PATH
+4. Start MongoDB service from Services panel or command line
+
+#### MongoDB Installation (Linux)
+```bash
+# Ubuntu/Debian
+wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+
+# Start MongoDB
+sudo systemctl start mongod
+sudo systemctl enable mongod
 ```
 
 ## Available Services
@@ -202,4 +262,4 @@ To use auth components in other parts of the application:
 ```bash
 # Import from the auth package
 import { LoginForm, SignupForm, useAuth } from '@repo/auth'
-``` 
+```

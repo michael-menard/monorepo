@@ -12,6 +12,9 @@ These files can be used with REST clients like:
 
 ## Test Files
 
+### API Services
+- `auth-service.http` - Test Auth Service API endpoints (localhost:5000)
+
 ### Database Health Checks
 - `mongodb.http` - Test MongoDB connection and basic queries
 - `postgresql.http` - Test PostgreSQL connection (via pgAdmin API)

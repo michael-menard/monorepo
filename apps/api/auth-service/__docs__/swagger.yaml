@@ -38,8 +38,10 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
+  - url: http://localhost:5000
+    description: Native development server (auth service only)
   - url: http://localhost:9000
-    description: Development server
+    description: Docker development server
   - url: https://api.lego-moc-instructions.com
     description: Production server
 
@@ -671,4 +673,4 @@ components:
 
 externalDocs:
   description: Find more info about the Auth Service
-  url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/auth-service 
+  url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/auth-service
