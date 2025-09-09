@@ -1,146 +1,156 @@
 services:
   # MongoDB for Auth Service
+  # Used for user authentication, sessions, and profile data
   mongodb:
-    image: mongo:7.0
+    image: mongo:7.0                          # Latest stable MongoDB version
     container_name: mongodb
-    restart: unless-stopped
+    restart: unless-stopped                   # Auto-restart on failure, not on reboot
     ports:
-      - "27017:27017"
+      - "27017:27017"                        # Standard MongoDB port
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: myapp
+      MONGO_INITDB_ROOT_USERNAME: admin      # Default admin user (change for production)
+      MONGO_INITDB_ROOT_PASSWORD: password123 # Default password (change for production)
+      MONGO_INITDB_DATABASE: myapp           # Default database name
     volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
+      - mongodb_data:/data/db                # Persistent data storage
+      - mongodb_config:/data/configdb        # MongoDB configuration files
     networks:
-      - dev-network
+      - dev-network                          # Connect to shared dev network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"] # Verify DB is responsive
+      interval: 10s                          # Check every 10 seconds
+      timeout: 5s                           # Wait 5 seconds for response
+      retries: 5                            # Try 5 times before marking unhealthy
+      start_period: 5s                      # Wait 5 seconds before first check
 
   # PostgreSQL for LEGO Projects API
+  # Primary database for LEGO project data, instructions, and metadata
   postgres:
-    image: postgres:15
+    image: postgres:15                       # PostgreSQL 15 - stable and feature-rich
     container_name: postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: lego_projects
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lego_projects             # Default database name
+      POSTGRES_USER: postgres               # Default superuser (change for production)
+      POSTGRES_PASSWORD: password           # Default password (change for production)
     ports:
-      - "5432:5432"
+      - "5432:5432"                         # Standard PostgreSQL port
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data # Persistent database files
     networks:
       - dev-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d lego_projects"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lego_projects"] # Check DB accepts connections
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
 
   # Redis for caching
+  # High-performance in-memory cache for API responses and session data
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine                    # Lightweight Alpine-based Redis
     container_name: redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6379:6379"                         # Standard Redis port
     volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
+      - redis_data:/data                    # Persistent cache data
+    command: redis-server --appendonly yes  # Enable persistence with AOF
     networks:
       - dev-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "ping"]    # Simple ping to verify Redis is responding
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
 
   # Elasticsearch for search functionality
+  # Full-text search engine for LEGO instructions and project metadata
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4 # Official Elasticsearch image
     container_name: elasticsearch
     restart: unless-stopped
     environment:
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-      - xpack.security.enabled=false
-      - bootstrap.memory_lock=true
+      - discovery.type=single-node          # Single-node cluster for development
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m     # Heap size: 512MB min/max (adjust if needed)
+      - xpack.security.enabled=false       # Disable security for dev (enable in production)
+      - bootstrap.memory_lock=true          # Lock memory to prevent swapping
     ports:
-      - "9200:9200"
+      - "9200:9200"                        # Elasticsearch HTTP API port
     volumes:
-      - esdata:/usr/share/elasticsearch/data
+      - esdata:/usr/share/elasticsearch/data # Persistent search indices
     networks:
       - dev-network
     ulimits:
-      memlock:
+      memlock:                             # Allow unlimited memory locking
         soft: -1
         hard: -1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"] # Check cluster health
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 10s                    # Extra startup time for Elasticsearch
 
   # MongoDB Express for database management
+  # Web-based MongoDB admin interface - useful for viewing/editing auth data
   mongo-express:
-    image: mongo-express:1.0.0
+    image: mongo-express:1.0.0             # Stable web-based MongoDB admin
     container_name: mongo-express
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "8081:8081"                        # Access via http://localhost:8081
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
-      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/
-      ME_CONFIG_BASICAUTH: false
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin # Must match MongoDB admin user
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password123 # Must match MongoDB admin password
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/ # Full connection URL
+      ME_CONFIG_BASICAUTH: false           # Disable HTTP basic auth (dev only)
     depends_on:
       mongodb:
-        condition: service_healthy
+        condition: service_healthy         # Wait for MongoDB to be ready
     networks:
       - dev-network
 
   # pgAdmin for PostgreSQL management
+  # Web-based PostgreSQL admin interface - useful for viewing/editing project data
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:latest           # Latest pgAdmin 4 web interface
     container_name: pgadmin
     restart: unless-stopped
     ports:
-      - "8082:80"
+      - "8082:80"                          # Access via http://localhost:8082
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com # Login email (change for production)
+      PGADMIN_DEFAULT_PASSWORD: admin      # Login password (change for production)
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_data:/var/lib/pgadmin      # Persistent pgAdmin settings/connections
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy         # Wait for PostgreSQL to be ready
     networks:
       - dev-network
 
+# Docker volumes for persistent data storage
+# These volumes persist data between container restarts
 volumes:
-  mongodb_data:
+  mongodb_data:                            # MongoDB database files
     driver: local
-  mongodb_config:
+  mongodb_config:                          # MongoDB configuration files
     driver: local
-  postgres_data:
+  postgres_data:                           # PostgreSQL database files
     driver: local
-  redis_data:
+  redis_data:                              # Redis persistence files (AOF/RDB)
     driver: local
-  esdata:
+  esdata:                                  # Elasticsearch indices and settings
     driver: local
-  pgadmin_data:
+  pgadmin_data:                            # pgAdmin user settings and server connections
     driver: local
 
+# Custom Docker network for infrastructure services
+# Allows services to communicate using container names as hostnames
 networks:
   dev-network:
-    driver: bridge
-    name: dev-infrastructure
+    driver: bridge                         # Standard bridge network driver
+    name: dev-infrastructure               # Custom network name for clarity

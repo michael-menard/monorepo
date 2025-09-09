@@ -1,225 +1,282 @@
-# Docker Setup for Lego MOC Instructions App
+# Docker Infrastructure Setup
 
-This Docker setup includes all three services needed to run the complete Lego MOC Instructions application:
+This Docker setup provides **infrastructure-only services** needed to support local development of the Lego MOC Instructions application. The applications themselves run natively on your machine for better development experience and hot-reloading.
 
-## Services
+## Infrastructure Services
 
-1. **Auth Service** (Port 5000) - User authentication and authorization
-2. **Lego Projects API** (Port 5001) - Main API for lego projects and instructions
-3. **Lego MOC Instructions App** (Port 3000) - Frontend React application
-
-## Dependencies
-
+### Databases
 - **MongoDB** (Port 27017) - Database for auth service
-- **PostgreSQL** (Port 5432) - Database for lego projects API
-- **Redis** (Port 6379) - Caching for lego projects API
-- **Elasticsearch** (Port 9200) - Search functionality for lego projects API
+- **PostgreSQL** (Port 5432) - Database for lego projects API  
+- **Redis** (Port 6379) - Caching layer for improved performance
+
+### Search & Analytics  
+- **Elasticsearch** (Port 9200) - Full-text search functionality
+
+### Administration Tools
 - **Mongo Express** (Port 8081) - Web-based MongoDB admin interface
+- **pgAdmin** (Port 8082) - Web-based PostgreSQL admin interface
 
 ## Quick Start
 
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- At least 4GB of available RAM (Elasticsearch requires significant memory)
+- Node.js and pnpm installed for running applications locally
+- At least 2GB of available RAM (Elasticsearch requires memory)
 
-### Start All Services
+### Start Infrastructure
 
 ```bash
-# Build and start all services
-docker-compose up --build
+# Start all infrastructure services
+docker-compose -f docker-compose-dev.yml up -d
 
-# Or run in detached mode
-docker-compose up --build -d
+# Or use the convenient script
+./dev.sh
 ```
 
-### Access the Application
+### Access Infrastructure Services
 
+- **MongoDB**: `mongodb://admin:password123@localhost:27017/myapp`
+- **PostgreSQL**: `postgresql://postgres:password@localhost:5432/lego_projects`
+- **Redis**: `redis://localhost:6379`
+- **Elasticsearch**: http://localhost:9200
+- **MongoDB Admin**: http://localhost:8081
+- **pgAdmin**: http://localhost:8082 (admin@admin.com / admin)
+
+### Stop Infrastructure
+
+```bash
+# Stop all services
+docker-compose -f docker-compose-dev.yml down
+
+# Keep data volumes (recommended)
+docker-compose -f docker-compose-dev.yml down --volumes
+```
+
+## Development Workflow
+
+### 1. Start Infrastructure
+```bash
+./dev.sh
+```
+
+### 2. Run Applications Locally
+```bash
+# Terminal 1: Start auth service
+cd apps/api/auth-service
+pnpm dev
+
+# Terminal 2: Start lego projects API  
+cd apps/api/lego-projects-api
+pnpm dev
+
+# Terminal 3: Start frontend
+cd apps/web/lego-moc-instructions-app
+pnpm dev
+
+# Or run all at once from root
+pnpm dev
+```
+
+### 3. Access Your Applications
 - **Frontend**: http://localhost:3000
 - **Auth API**: http://localhost:5000/api/auth
 - **Lego Projects API**: http://localhost:5001
-- **MongoDB Admin**: http://localhost:8081
 
-### Stop All Services
+## Infrastructure Management
 
-```bash
-docker-compose down
-```
-
-## Individual Service Management
-
-### Start Specific Services
+### Individual Service Control
 
 ```bash
-# Start only the databases
-docker-compose up mongodb postgres redis elasticsearch
+# Start only databases
+docker-compose -f docker-compose-dev.yml up -d mongodb postgres redis
 
-# Start only the APIs
-docker-compose up auth-service lego-projects-api
+# Start only search services  
+docker-compose -f docker-compose-dev.yml up -d elasticsearch
 
-# Start only the frontend
-docker-compose up lego-moc-app
+# Start only admin tools
+docker-compose -f docker-compose-dev.yml up -d mongo-express pgadmin
 ```
 
 ### View Logs
 
 ```bash
-# View all logs
-docker-compose logs
+# View all infrastructure logs
+docker-compose -f docker-compose-dev.yml logs
 
 # View specific service logs
-docker-compose logs auth-service
-docker-compose logs lego-projects-api
-docker-compose logs lego-moc-app
+docker-compose -f docker-compose-dev.yml logs mongodb
+docker-compose -f docker-compose-dev.yml logs postgres
+docker-compose -f docker-compose-dev.yml logs elasticsearch
 
 # Follow logs in real-time
-docker-compose logs -f lego-moc-app
+docker-compose -f docker-compose-dev.yml logs -f redis
 ```
 
-### Rebuild Specific Services
+### Health Checks
 
 ```bash
-# Rebuild and restart a specific service
-docker-compose up --build auth-service
+# Check service status
+docker-compose -f docker-compose-dev.yml ps
 
-# Rebuild without cache
-docker-compose build --no-cache auth-service
+# Test infrastructure connectivity (see __http__ test files)
 ```
 
-## Environment Variables
+## Environment Configuration
 
-The services use the following environment variables:
+### Required Environment Variables
 
-### Auth Service
-- `MONGODB_URI` - MongoDB connection string
-- `JWT_SECRET` - Secret key for JWT tokens
-- `FRONTEND_URL` - Frontend URL for CORS
+Your applications need these environment variables to connect to the infrastructure:
 
-### Lego Projects API
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-- `ELASTICSEARCH_URL` - Elasticsearch connection string
-- `JWT_SECRET` - Secret key for JWT tokens
-- `AUTH_API` - Auth service URL
+#### Auth Service (.env)
+```env
+MONGODB_URI=mongodb://admin:password123@localhost:27017/myapp?authSource=admin
+JWT_SECRET=your_jwt_secret_here
+FRONTEND_URL=http://localhost:3000
+```
 
-### Lego MOC App
-- `VITE_API_URL` - Lego Projects API URL
-- `VITE_AUTH_API_URL` - Auth API URL
+#### Lego Projects API (.env)
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/lego_projects
+REDIS_URL=redis://localhost:6379
+ELASTICSEARCH_URL=http://localhost:9200
+JWT_SECRET=your_jwt_secret_here
+AUTH_API=http://localhost:5000
+```
 
-## Development Workflow
+#### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:5001
+VITE_AUTH_API_URL=http://localhost:5000
+```
 
-### Hot Reloading
+## Data Persistence
 
-All services are configured with hot reloading for development:
+All services use Docker volumes for data persistence:
 
-- **Auth Service**: Uses nodemon for automatic restarts
-- **Lego Projects API**: Uses nodemon for automatic restarts
-- **Frontend**: Uses Vite dev server with hot module replacement
+- `mongodb_data` - MongoDB database files
+- `mongodb_config` - MongoDB configuration files  
+- `postgres_data` - PostgreSQL database files
+- `redis_data` - Redis persistence files
+- `esdata` - Elasticsearch indices and data
+- `pgadmin_data` - pgAdmin configuration and connections
 
-### File Changes
+Data persists between container restarts unless explicitly removed with `--volumes` flag.
 
-Changes to source code will automatically trigger rebuilds and restarts in development mode.
+## Testing Infrastructure Connectivity
 
-### Database Persistence
+Use the provided HTTP test files to verify infrastructure services are working:
 
-All databases use Docker volumes for data persistence:
-
-- `mongodb_data` - MongoDB data
-- `postgres_data` - PostgreSQL data
-- `redis_data` - Redis data
-- `esdata` - Elasticsearch data
+```bash
+# Test all services (requires REST client like curl or HTTPie)
+# See __http__/ directory for test files
+```
 
 ## Troubleshooting
 
-### Memory Issues
+### Memory Issues (Elasticsearch)
 
-If you encounter memory issues with Elasticsearch:
+If Elasticsearch fails to start due to memory issues:
 
 ```bash
-# Increase virtual memory map count (Linux)
+# Linux: Increase virtual memory map count
 sudo sysctl -w vm.max_map_count=262144
 
-# Or reduce Elasticsearch memory in docker-compose.yml
+# Or reduce Elasticsearch memory in docker-compose-dev.yml:
 environment:
   - ES_JAVA_OPTS=-Xms256m -Xmx256m
 ```
 
 ### Port Conflicts
 
-If ports are already in use:
-
 ```bash
 # Check what's using the ports
-lsof -i :3000
-lsof -i :5000
-lsof -i :5001
+lsof -i :27017  # MongoDB
+lsof -i :5432   # PostgreSQL  
+lsof -i :6379   # Redis
+lsof -i :9200   # Elasticsearch
+lsof -i :8081   # Mongo Express
+lsof -i :8082   # pgAdmin
 
 # Stop conflicting services
-docker-compose down
+docker-compose -f docker-compose-dev.yml down
 ```
 
 ### Database Connection Issues
 
 ```bash
-# Check if databases are running
-docker-compose ps
+# Check if services are running and healthy
+docker-compose -f docker-compose-dev.yml ps
 
-# Restart databases
-docker-compose restart mongodb postgres redis elasticsearch
+# Restart specific service
+docker-compose -f docker-compose-dev.yml restart mongodb
+docker-compose -f docker-compose-dev.yml restart postgres
+
+# Check logs for errors
+docker-compose -f docker-compose-dev.yml logs mongodb
+docker-compose -f docker-compose-dev.yml logs postgres
 ```
 
 ### Clean Slate
 
-To start completely fresh:
+```bash
+# Stop and remove all infrastructure
+docker-compose -f docker-compose-dev.yml down -v
+
+# Remove all images (will need to re-download)
+docker-compose -f docker-compose-dev.yml down -v --rmi all
+
+# Start fresh
+docker-compose -f docker-compose-dev.yml up -d
+```
+
+## Monitoring
+
+### Resource Usage
 
 ```bash
-# Stop and remove all containers, networks, and volumes
-docker-compose down -v
+# Monitor Docker resource usage
+docker stats
 
-# Remove all images
-docker-compose down --rmi all
+# Check disk usage
+docker system df
 
-# Rebuild everything
-docker-compose up --build
+# View network information
+docker network ls
+```
+
+### Health Status
+
+All infrastructure services include health checks that verify:
+
+- **MongoDB**: Database connectivity and admin commands
+- **PostgreSQL**: Database readiness and connection acceptance  
+- **Redis**: Service ping response
+- **Elasticsearch**: Cluster health status
+
+View health status:
+```bash
+docker-compose -f docker-compose-dev.yml ps
 ```
 
 ## Production Considerations
 
-For production deployment:
+This infrastructure setup is optimized for **development only**. For production:
 
-1. Change default passwords in environment variables
-2. Use proper SSL certificates
-3. Configure proper CORS settings
-4. Set up proper logging and monitoring
-5. Use production-grade database configurations
-6. Consider using Docker Swarm or Kubernetes for orchestration
+1. **Security**: Change all default passwords and use secrets management
+2. **Networking**: Use proper network isolation and firewall rules  
+3. **SSL/TLS**: Enable encryption for all database connections
+4. **Backup**: Implement regular database backups
+5. **Monitoring**: Add proper logging, metrics, and alerting
+6. **Scaling**: Consider clustered configurations for high availability
+7. **Updates**: Regularly update container images for security patches
 
-## Monitoring
+## Network Architecture
 
-### Health Checks
+All infrastructure services run on the `dev-infrastructure` Docker network, allowing:
 
-All services include health checks. Check service health:
+- Service-to-service communication by container name
+- Isolation from other Docker networks
+- Consistent networking for development
 
-```bash
-docker-compose ps
-```
-
-### Resource Usage
-
-Monitor resource usage:
-
-```bash
-docker stats
-```
-
-### Logs
-
-Access logs for debugging:
-
-```bash
-# All services
-docker-compose logs
-
-# Specific service
-docker-compose logs lego-moc-app
-``` 
+Applications running locally connect to infrastructure via `localhost` ports.

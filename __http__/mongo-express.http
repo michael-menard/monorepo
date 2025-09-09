@@ -1,0 +1,27 @@
+### MongoDB Express Admin Interface Tests
+### Test MongoDB web-based admin interface
+
+### 1. Main Interface Health Check
+GET http://localhost:8081
+Content-Type: text/html
+
+### 2. Database List API
+GET http://localhost:8081/db/
+Content-Type: application/json
+
+### 3. Admin Database Collections
+GET http://localhost:8081/db/admin/
+Content-Type: application/json
+
+### 4. Test Database Access (myapp)
+GET http://localhost:8081/db/myapp/
+Content-Type: application/json
+
+### Expected Results:
+# 1. Should return MongoDB Express web interface HTML
+# 2. Should list available databases
+# 3. Should show admin database collections
+# 4. Should show myapp database collections (if any exist)
+
+### Note: MongoDB Express provides a web UI, most interactions are via the browser
+### These tests verify the service is accessible and responding
