@@ -3,141 +3,214 @@
     "tasks": [
       {
         "id": 1,
-        "title": "Implement CSRF Middleware",
-        "description": "Create a CSRF middleware that validates the presence and correctness of CSRF tokens for state-changing requests.",
-        "details": "Create a new file `middleware/csrf.ts` that implements the CSRF validation logic. The middleware should:\n1. Check if the request method is POST, PUT, PATCH, or DELETE\n2. For production, validate that the request origin is allowed (using APP_ORIGIN or FRONTEND_URL)\n3. Verify that the XSRF-TOKEN cookie matches the X-CSRF-Token header\n4. Reject requests with 403 and appropriate error message if validation fails\n\nImplementation should follow the pseudocode provided in the PRD:\n```typescript\nexport function csrf(req, res, next) {\n  const method = req.method.toUpperCase()\n  if (!['POST','PUT','PATCH','DELETE'].includes(method)) return next()\n\n  const allowed = new Set(['http://localhost:5173', process.env.APP_ORIGIN, process.env.FRONTEND_URL].filter(Boolean))\n  const origin = req.get('origin') || req.get('referer') || ''\n  if (process.env.NODE_ENV === 'production' && origin && ![...allowed].some(o => origin.startsWith(o))) {\n    return res.status(403).json({ success: false, code: 'CSRF_FAILED', message: 'Invalid origin' })\n  }\n\n  const cookieToken = req.cookies['XSRF-TOKEN']\n  const headerToken = req.get('x-csrf-token')\n  if (!cookieToken || !headerToken || cookieToken !== headerToken) {\n    return res.status(403).json({ success: false, code: 'CSRF_FAILED', message: 'CSRF validation failed' })\n  }\n  next()\n}\n```\n\nMount this middleware in the Express application after cookie-parser and before routes.",
-        "testStrategy": "Write unit tests using Jest to verify the middleware behavior:\n1. Test that non-state-changing methods (GET, OPTIONS) pass through without validation\n2. Test that state-changing methods without proper CSRF tokens are rejected with 403\n3. Test that state-changing methods with matching tokens pass validation\n4. Test origin validation in production mode\n5. Test that development mode properly relaxes origin checks\n\nUse supertest for integration testing to verify the middleware works in the context of the full application.",
-        "priority": "high",
-        "dependencies": [],
+        "title": "Create Infrastructure-Only Docker Setup",
+        "description": "Extract infrastructure services from main docker-compose.yml and create lightweight docker-compose-dev.yml with only databases, cache, search, and management tools",
         "status": "done",
-        "subtasks": []
+        "dependencies": [],
+        "priority": "high",
+        "details": "Create docker-compose-dev.yml containing only:\n- MongoDB (port 27017)\n- PostgreSQL (port 5432) \n- Redis (port 6379)\n- Elasticsearch (port 9200)\n- mongo-express (port 8081)\n- pgAdmin (port 8082)\n\nRemove all application services (auth-service, lego-api, frontend) from Docker. Configure proper networking, volumes, and ensure startup time <10 seconds.",
+        "testStrategy": "Test infrastructure startup independently, validate database connections, verify management tools accessibility, measure startup time"
       },
       {
         "id": 2,
-        "title": "Implement CSRF Token Generation and API Endpoint",
-        "description": "Create functionality to generate CSRF tokens and implement the /api/auth/csrf endpoint to refresh tokens.",
-        "details": "1. Create a utility function to generate cryptographically secure random tokens:\n```typescript\nimport crypto from 'crypto';\n\nexport function generateCsrfToken(): string {\n  return crypto.randomBytes(32).toString('hex');\n}\n```\n\n2. Implement the GET /api/auth/csrf endpoint:\n```typescript\nrouter.get('/csrf', (req, res) => {\n  const token = generateCsrfToken();\n  res.cookie('XSRF-TOKEN', token, {\n    maxAge: 7200000, // 2 hours in milliseconds\n    httpOnly: false, // Must be accessible to JavaScript\n    secure: process.env.NODE_ENV === 'production',\n    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'\n  });\n  \n  // Set cache control to prevent caching\n  res.setHeader('Cache-Control', 'no-store');\n  \n  res.json({ token });\n});\n```\n\n3. Modify the login and signup handlers to set the CSRF token cookie upon successful authentication:\n```typescript\n// After successful login/signup\nconst csrfToken = generateCsrfToken();\nres.cookie('XSRF-TOKEN', csrfToken, {\n  maxAge: 7200000,\n  httpOnly: false,\n  secure: process.env.NODE_ENV === 'production',\n  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'\n});\n```",
-        "testStrategy": "1. Unit test the token generation function to ensure it produces random, unique tokens of expected length\n2. Test the /api/auth/csrf endpoint using supertest:\n   - Verify it returns a token in the response body\n   - Verify it sets the XSRF-TOKEN cookie with correct attributes\n   - Verify the Cache-Control header is set correctly\n3. Test that login and signup endpoints set the CSRF token cookie\n4. Verify that subsequent calls generate different tokens",
-        "priority": "high",
+        "title": "Configure Auth Service for Native Execution",
+        "description": "Update auth service package.json scripts and environment configuration to run natively while connecting to containerized MongoDB",
+        "status": "pending",
         "dependencies": [
           1
         ],
-        "status": "done",
-        "subtasks": []
+        "priority": "high",
+        "details": "Update apps/api/auth-service/package.json scripts for native execution. Configure environment variables to connect to localhost:27017 MongoDB. Test hot reload with nodemon. Ensure proper TypeScript compilation and source maps.",
+        "testStrategy": "Verify MongoDB connection from native Node.js process, test all auth endpoints, validate hot reload functionality, run all unit and integration tests"
       },
       {
         "id": 3,
-        "title": "Implement Token Hashing for Password Reset and Email Verification",
-        "description": "Replace plaintext tokens in the database with SHA-256 hashes for password reset and email verification tokens.",
-        "details": "1. Create utility functions for token generation and verification:\n```typescript\nimport crypto from 'crypto';\n\nexport function generateSecureToken(): { raw: string, hash: string } {\n  const raw = crypto.randomBytes(32).toString('hex');\n  const hash = crypto.createHash('sha256').update(raw).digest('hex');\n  return { raw, hash };\n}\n\nexport function verifyToken(rawToken: string, hashedToken: string): boolean {\n  const hash = crypto.createHash('sha256').update(rawToken).digest('hex');\n  return hash === hashedToken;\n}\n```\n\n2. Update the password reset flow:\n   - Modify the forgot-password controller to generate and store hashed tokens\n   - Update the reset-password controller to verify using the hash comparison\n\n3. Update the email verification flow:\n   - Modify the signup and resend-verification controllers to generate and store hashed tokens\n   - Update the verify-email controller to verify using the hash comparison\n\n4. Update the User model schema to ensure it's clear these fields contain hashed values\n\n5. Maintain the existing expiry windows (reset: 1h, verify: 24h)",
-        "testStrategy": "1. Unit test the token generation and verification functions\n2. Test the forgot-password and reset-password flow:\n   - Verify that only hashed tokens are stored in the database\n   - Verify that reset works with the raw token\n   - Verify that incorrect tokens are rejected\n   - Verify that expired tokens are rejected\n3. Test the email verification flow similarly\n4. Test edge cases like token reuse attempts",
-        "priority": "high",
-        "dependencies": [],
-        "status": "done",
-        "subtasks": []
-      },
-      {
-        "id": 4,
-        "title": "Standardize Error Response Format and Codes",
-        "description": "Normalize error responses across all auth endpoints with consistent structure and error codes.",
-        "details": "1. Define an error response interface:\n```typescript\ninterface ErrorResponse {\n  success: false;\n  code: 'VALIDATION_ERROR' | 'INVALID_CREDENTIALS' | 'CSRF_FAILED' | 'TOKEN_EXPIRED' | 'USER_NOT_FOUND' | 'ALREADY_VERIFIED' | 'UNAUTHORIZED' | 'FORBIDDEN';\n  message: string;\n  [key: string]: any; // For additional context if needed\n}\n```\n\n2. Create a centralized error handler middleware:\n```typescript\nexport function errorHandler(err, req, res, next) {\n  // Log the error (using pino)\n  req.log.error({ err, userId: req.user?.id }, err.message);\n  \n  // Default error response\n  const errorResponse: ErrorResponse = {\n    success: false,\n    code: 'INTERNAL_SERVER_ERROR',\n    message: 'An unexpected error occurred'\n  };\n  \n  // Handle known error types\n  if (err.name === 'ValidationError') {\n    errorResponse.code = 'VALIDATION_ERROR';\n    errorResponse.message = 'Validation failed';\n    errorResponse.details = err.details || err.errors;\n    res.status(400).json(errorResponse);\n    return;\n  }\n  \n  // Handle other specific error types...\n  \n  // Default to 500 for unhandled errors\n  res.status(500).json(errorResponse);\n}\n```\n\n3. Update all controllers to use consistent error handling:\n   - Use try/catch blocks and pass errors to next(err)\n   - For known errors, create custom error classes or attach properties\n   - Ensure all error responses follow the standardized format\n\n4. Refactor existing error handling in routes to use this centralized approach",
-        "testStrategy": "1. Unit test the error handler with various error types\n2. Test each endpoint to verify it returns the correct error format and status code for different error scenarios:\n   - Validation errors\n   - Authentication failures\n   - CSRF failures\n   - Token expiration\n   - User not found\n   - Already verified accounts\n   - Unauthorized access\n   - Forbidden actions\n3. Verify that error responses don't include sensitive information",
-        "priority": "medium",
+        "title": "Configure LEGO API Service for Native Execution",
+        "description": "Update LEGO API service to run natively while connecting to containerized PostgreSQL, Redis, and Elasticsearch",
+        "status": "pending",
         "dependencies": [
           1
         ],
+        "priority": "high",
+        "details": "Configure native execution for apps/api/lego-projects-api. Set up connections to PostgreSQL (localhost:5432), Redis (localhost:6379), and Elasticsearch (localhost:9200). Update package.json scripts and environment variables.",
+        "testStrategy": "Test PostgreSQL connection, Redis caching, Elasticsearch search functionality, API endpoints, file upload features. Run all unit, integration, and E2E tests"
+      },
+      {
+        "id": 4,
+        "title": "Configure Frontend Applications for Native Development",
+        "description": "Update React frontend applications to run with native Vite dev servers connecting to native backend services",
         "status": "pending",
-        "subtasks": []
+        "dependencies": [
+          2,
+          3
+        ],
+        "priority": "high",
+        "details": "Configure apps/web/lego-moc-instructions-app to connect to native auth service (localhost:9000) and LEGO API (localhost:3001). Update CORS configuration, environment variables, and Vite dev server setup.",
+        "testStrategy": "Test authentication flow end-to-end, verify hot reload, validate API connections, run Playwright E2E tests with native backend"
       },
       {
         "id": 5,
-        "title": "Enhance Logging with Request ID and User Context",
-        "description": "Improve logging by adding request IDs, including user context when available, and removing sensitive information from logs.",
-        "details": "1. Configure pino-http to generate request IDs:\n```typescript\nimport pino from 'pino';\nimport pinoHttp from 'pino-http';\n\nconst logger = pino({\n  level: process.env.LOG_LEVEL || 'info',\n  redact: ['req.headers.authorization', 'req.headers.cookie', 'body.password']\n});\n\nconst httpLogger = pinoHttp({\n  logger,\n  genReqId: (req) => req.id || req.headers['x-request-id'] || uuidv4(),\n  customProps: (req, res) => {\n    return {\n      userId: req.user?.id, // Include userId when available\n      correlationId: req.headers['x-correlation-id']\n    };\n  }\n});\n```\n\n2. Update existing log statements to remove sensitive information:\n   - Remove full user object logs\n   - Never log passwords or tokens\n   - Use redaction for sensitive fields\n\n3. Add context to logs where appropriate:\n```typescript\nreq.log.info({ userId: user.id, action: 'login' }, 'User logged in successfully');\n```\n\n4. Create a utility to standardize log messages:\n```typescript\nexport function logAuthEvent(req, event, details = {}) {\n  req.log.info({\n    ...details,\n    userId: req.user?.id,\n    event,\n    requestId: req.id\n  }, `Auth event: ${event}`);\n}\n```",
-        "testStrategy": "1. Test that request IDs are generated and included in logs\n2. Verify that sensitive information is properly redacted\n3. Test that user context is included when available\n4. Verify log format and content across different auth flows\n5. Test that error logs include appropriate context without sensitive data",
-        "priority": "medium",
-        "dependencies": [],
+        "title": "Create Enhanced Development Scripts with Turbo",
+        "description": "Implement orchestrated startup commands using Turbo with proper service dependency management and health checks",
         "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 6,
-        "title": "Update Frontend Integration for CSRF Protection",
-        "description": "Document and implement the required frontend changes to support CSRF token validation.",
-        "details": "Create documentation and example code for frontend integration:\n\n1. Axios interceptor example:\n```typescript\nimport axios from 'axios';\n\n// Create axios instance\nconst api = axios.create({\n  baseURL: '/api',\n  withCredentials: true // Important for cookies\n});\n\n// Function to get CSRF token\nasync function refreshCsrfToken() {\n  try {\n    const response = await axios.get('/api/auth/csrf', { withCredentials: true });\n    return response.data.token;\n  } catch (error) {\n    console.error('Failed to refresh CSRF token:', error);\n    throw error;\n  }\n}\n\n// Request interceptor\napi.interceptors.request.use(async (config) => {\n  // Only add for state-changing methods\n  if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {\n    // Try to get token from cookie first\n    let token = document.cookie.split('; ')\n      .find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1];\n    \n    // If no token in cookie, fetch a new one\n    if (!token) {\n      token = await refreshCsrfToken();\n    }\n    \n    // Set the header\n    config.headers['X-CSRF-Token'] = token;\n  }\n  return config;\n});\n\n// Response interceptor for 403 CSRF failures\napi.interceptors.response.use(\n  response => response,\n  async (error) => {\n    const originalRequest = error.config;\n    \n    // If 403 with CSRF failure and not already retrying\n    if (error.response?.status === 403 && \n        error.response?.data?.code === 'CSRF_FAILED' && \n        !originalRequest._retry) {\n      \n      originalRequest._retry = true;\n      \n      // Get fresh token\n      await refreshCsrfToken();\n      \n      // Retry the request\n      return api(originalRequest);\n    }\n    \n    return Promise.reject(error);\n  }\n);\n\nexport default api;\n```\n\n2. Create a README section explaining the CSRF protection strategy:\n   - Explain the double-submit cookie pattern\n   - Document the need for X-CSRF-Token header\n   - Explain the retry mechanism for 403 responses\n   - Provide examples for different frontend frameworks\n\n3. Update any existing frontend code in the repository to use this approach",
-        "testStrategy": "1. Test the axios interceptor with various request types\n2. Verify that state-changing requests include the CSRF token header\n3. Test the retry mechanism with expired tokens\n4. Verify that the documentation is clear and accurate\n5. If possible, create a simple demo page that shows the CSRF protection in action",
-        "priority": "high",
-        "dependencies": [
-          1,
-          2
-        ],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 7,
-        "title": "Update Postman/HTTP Collection for CSRF Flows",
-        "description": "Update the API testing collection to include CSRF token handling for testing the new security measures.",
-        "details": "1. Create a pre-request script for Postman to fetch and set CSRF token:\n```javascript\n// Pre-request Script for Postman\nif (pm.request.method !== 'GET') {\n  // Get CSRF token if needed\n  pm.sendRequest({\n    url: pm.variables.get('baseUrl') + '/api/auth/csrf',\n    method: 'GET',\n    header: {\n      'Content-Type': 'application/json'\n    }\n  }, function (err, res) {\n    if (err) {\n      console.error(err);\n    } else {\n      // Set the token as a variable\n      const token = res.json().token;\n      pm.variables.set('csrfToken', token);\n      \n      // Also store the cookie value for reference\n      const cookies = res.headers.find(h => h.key.toLowerCase() === 'set-cookie');\n      if (cookies) {\n        const xsrfCookie = cookies.value.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));\n        if (xsrfCookie) {\n          const tokenValue = xsrfCookie.split('=')[1];\n          pm.variables.set('xsrfCookie', tokenValue);\n        }\n      }\n    }\n  });\n}\n```\n\n2. Update all state-changing requests in the collection to include the CSRF header:\n```\nX-CSRF-Token: {{csrfToken}}\n```\n\n3. Create test cases for CSRF validation:\n   - Test successful requests with valid tokens\n   - Test failed requests with missing tokens\n   - Test failed requests with mismatched tokens\n   - Test the CSRF refresh endpoint\n\n4. Document the CSRF flow in the collection description",
-        "testStrategy": "1. Run the updated collection against the development environment\n2. Verify that all state-changing requests succeed with proper CSRF tokens\n3. Verify that requests fail appropriately without tokens\n4. Test the collection against different environments (dev, test, prod if available)\n5. Share the collection with the team and ensure it works across different setups",
-        "priority": "medium",
-        "dependencies": [
-          1,
-          2
-        ],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 8,
-        "title": "Implement Docker Hardening",
-        "description": "Create a multi-stage Dockerfile that follows security best practices and optimizes the container image.",
-        "details": "1. Create a multi-stage Dockerfile:\n```dockerfile\n# Build stage\nFROM node:18-alpine AS builder\n\nWORKDIR /app\n\n# Install pnpm\nRUN npm install -g pnpm\n\n# Copy package files\nCOPY package.json pnpm-lock.yaml ./\nCOPY apps/api/auth-service/package.json ./apps/api/auth-service/\n\n# Install dependencies for auth service only\nRUN pnpm --filter @repo/api-auth-service... install --frozen-lockfile\n\n# Copy source code\nCOPY . .\n\n# Build the service\nRUN pnpm --filter @repo/api-auth-service build\n\n# Prune dependencies for production\nRUN pnpm --filter @repo/api-auth-service... --prod deploy pruned\n\n# Runtime stage\nFROM node:18-alpine\n\n# Create non-root user\nRUN addgroup -S appgroup && adduser -S appuser -G appgroup\n\nWORKDIR /app\n\n# Copy from build stage\nCOPY --from=builder /app/pruned/node_modules ./node_modules\nCOPY --from=builder /app/apps/api/auth-service/dist ./dist\nCOPY --from=builder /app/apps/api/auth-service/package.json ./\n\n# Set environment variables\nENV NODE_ENV=production\nENV PORT=3000\n\n# Expose port\nEXPOSE 3000\n\n# Switch to non-root user\nUSER appuser\n\n# Add healthcheck\nHEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \\\n  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/auth/healthz || exit 1\n\n# Start the service\nCMD [\"node\", \"dist/index.js\"]\n```\n\n2. Create a simple health check endpoint (to be expanded in Phase 5):\n```typescript\nrouter.get('/healthz', (req, res) => {\n  res.status(200).json({ status: 'ok' });\n});\n```\n\n3. Update docker-compose.yml (if applicable):\n```yaml\nservices:\n  auth-service:\n    build:\n      context: .\n      dockerfile: apps/api/auth-service/Dockerfile\n    ports:\n      - \"3000:3000\"\n    environment:\n      - NODE_ENV=production\n      - MONGO_URI=mongodb://mongo:27017/auth\n      - JWT_SECRET=your-secret-here\n      - APP_ORIGIN=http://localhost:5173\n    depends_on:\n      - mongo\n    healthcheck:\n      test: [\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\", \"http://localhost:3000/api/auth/healthz\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 5s\n```",
-        "testStrategy": "1. Build the Docker image and verify it completes successfully\n2. Run the container and verify it starts correctly\n3. Test the health check endpoint\n4. Verify the container runs as a non-root user\n5. Check the image size is optimized\n6. Verify that the container has only production dependencies\n7. Test the container with docker-compose (if applicable)",
-        "priority": "medium",
-        "dependencies": [],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 9,
-        "title": "Implement Integration Tests for Auth Flows",
-        "description": "Create comprehensive integration tests for all authentication flows including CSRF validation and token hashing.",
-        "details": "1. Set up test environment with mongodb-memory-server:\n```typescript\n// test/setup.ts\nimport { MongoMemoryServer } from 'mongodb-memory-server';\nimport mongoose from 'mongoose';\n\nlet mongoServer: MongoMemoryServer;\n\nbeforeAll(async () => {\n  mongoServer = await MongoMemoryServer.create();\n  const mongoUri = mongoServer.getUri();\n  await mongoose.connect(mongoUri);\n});\n\nafterAll(async () => {\n  await mongoose.disconnect();\n  await mongoServer.stop();\n});\n\nafterEach(async () => {\n  const collections = mongoose.connection.collections;\n  for (const key in collections) {\n    await collections[key].deleteMany({});\n  }\n});\n```\n\n2. Create test helpers for common operations:\n```typescript\n// test/helpers.ts\nimport request from 'supertest';\nimport { app } from '../src/app';\n\nexport async function registerUser(email = 'test@example.com', password = 'Password123!') {\n  return request(app)\n    .post('/api/auth/sign-up')\n    .send({ email, password, name: 'Test User' });\n}\n\nexport async function loginUser(email = 'test@example.com', password = 'Password123!') {\n  return request(app)\n    .post('/api/auth/login')\n    .send({ email, password });\n}\n\nexport async function getCsrfToken() {\n  const response = await request(app).get('/api/auth/csrf');\n  return {\n    token: response.body.token,\n    cookies: response.headers['set-cookie']\n  };\n}\n```\n\n3. Write integration tests for all flows:\n   - Signup/login/check-auth flow\n   - Forgot password + reset flow (with hashed tokens)\n   - Email verification + resend flow (with hashed tokens)\n   - CSRF validation (pass/fail cases)\n\n4. Example test for CSRF protection:\n```typescript\ndescribe('CSRF Protection', () => {\n  it('should reject state-changing requests without CSRF token', async () => {\n    // Register a user first\n    await registerUser();\n    \n    // Try to login without CSRF token\n    const response = await request(app)\n      .post('/api/auth/login')\n      .send({ email: 'test@example.com', password: 'Password123!' });\n    \n    expect(response.status).toBe(403);\n    expect(response.body.code).toBe('CSRF_FAILED');\n  });\n  \n  it('should accept requests with valid CSRF token', async () => {\n    // Register a user first\n    await registerUser();\n    \n    // Get CSRF token\n    const { token, cookies } = await getCsrfToken();\n    \n    // Login with CSRF token\n    const response = await request(app)\n      .post('/api/auth/login')\n      .set('Cookie', cookies)\n      .set('X-CSRF-Token', token)\n      .send({ email: 'test@example.com', password: 'Password123!' });\n    \n    expect(response.status).toBe(200);\n    expect(response.body.success).toBe(true);\n  });\n});\n```",
-        "testStrategy": "1. Run tests with Jest and ensure they pass consistently\n2. Verify test coverage meets the goals (≥90% lines, ≥85% branches, ≥90% functions, ≥90% statements)\n3. Ensure tests are deterministic and don't rely on external services\n4. Test both success and failure paths for each flow\n5. Verify that tests run in a reasonable time (<30s for the service)",
-        "priority": "high",
         "dependencies": [
           1,
           2,
           3,
           4
         ],
+        "priority": "medium",
+        "details": "Add to root package.json:\n- dev:infra: docker-compose -f docker-compose-dev.yml up -d\n- dev:all: pnpm dev:infra && turbo dev --parallel\n- dev:auth: pnpm dev:infra && turbo dev --filter=@repo/api-auth-service\n- dev:lego: pnpm dev:infra && turbo dev --filter=@repo/api-lego-projects\n- dev:frontend: turbo dev --filter=@repo/lego-moc-instructions-app\n- dev:stop: docker-compose -f docker-compose-dev.yml down\n\nImplement health check scripts for all services.",
+        "testStrategy": "Test single command startup (pnpm dev:all), verify individual service commands, validate health checks, measure startup time <30 seconds"
+      },
+      {
+        "id": 6,
+        "title": "Configure Native Debugging and Developer Experience",
+        "description": "Set up VS Code launch configurations, source maps, enhanced logging, and validate monorepo workspace linking",
         "status": "pending",
-        "subtasks": []
+        "dependencies": [
+          2,
+          3,
+          4
+        ],
+        "priority": "medium",
+        "details": "Create .vscode/launch.json configurations for native Node.js debugging of auth and LEGO API services. Ensure proper source map generation. Implement enhanced error handling and logging. Test monorepo workspace linking for shared packages.",
+        "testStrategy": "Verify native debugging works for all Node.js services, test hot reload, validate shared package changes propagate instantly, confirm IDE TypeScript resolution"
+      },
+      {
+        "id": 7,
+        "title": "Update Documentation - Infrastructure Setup",
+        "description": "Update __docs__/DOCKER_SETUP.md with new infrastructure-only approach and create HTTP test files",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "medium",
+        "details": "Update documentation to reflect infrastructure-only Docker setup. Add inline comments to docker-compose-dev.yml. Create/update __http__ files for testing infrastructure connectivity. Update example configurations and startup scripts.",
+        "testStrategy": "Verify all documentation accuracy, test example configurations work, validate HTTP test files connect successfully"
+      },
+      {
+        "id": 8,
+        "title": "Update Documentation - Auth Service Native Setup",
+        "description": "Update Swagger/OpenAPI docs and __docs__/AUTH-DEV-SETUP.md for native development workflow",
+        "status": "pending",
+        "dependencies": [
+          2
+        ],
+        "priority": "medium",
+        "details": "Update Swagger/OpenAPI docs for auth service endpoints with localhost URLs. Update __docs__/AUTH-DEV-SETUP.md with native development setup instructions. Update all __http__ files with new localhost endpoints. Update authentication examples and demo scripts.",
+        "testStrategy": "Validate all auth documentation accuracy, verify examples work correctly, test HTTP request files, confirm demo scripts function properly"
+      },
+      {
+        "id": 9,
+        "title": "Update Documentation - LEGO API Native Setup",
+        "description": "Update Swagger/OpenAPI docs and README with native LEGO API development setup",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "medium",
+        "details": "Update Swagger/OpenAPI docs for LEGO API endpoints. Update __docs__ README with native LEGO API development setup. Update all __http__ request files with new native endpoints. Update file upload examples and search functionality demos.",
+        "testStrategy": "Validate all LEGO API documentation accuracy, test examples work correctly, verify HTTP request files, confirm search and upload demos function"
       },
       {
         "id": 10,
-        "title": "Update Documentation and Migration Guide",
-        "description": "Create comprehensive documentation for the auth service hardening changes and a migration guide for frontend integration.",
-        "details": "1. Update the README-AUTH document with:\n   - Overview of security improvements\n   - CSRF protection strategy\n   - Token hashing approach\n   - Error response format\n   - API changes and additions\n   - Environment variable requirements\n\n2. Create a migration guide for frontend developers:\n   - Step-by-step instructions for adding CSRF token handling\n   - Code examples for different frontend frameworks (React, Vue, etc.)\n   - Testing instructions\n   - Common issues and troubleshooting\n\n3. Update API documentation:\n   - Document the new /api/auth/csrf endpoint\n   - Update error response documentation\n   - Document required headers for state-changing requests\n\n4. Create a changelog detailing all changes from Phase 2\n\n5. Update the PRD to mark completed items and add any implementation notes",
-        "testStrategy": "1. Review documentation with team members to ensure clarity\n2. Verify all API endpoints are correctly documented\n3. Test the migration guide by having a frontend developer follow it\n4. Ensure all environment variables are documented\n5. Check that the documentation is accessible and well-formatted",
+        "title": "Update Documentation - Frontend Native Setup",
+        "description": "Update frontend documentation with new development setup and API service configuration examples",
+        "status": "pending",
+        "dependencies": [
+          4
+        ],
         "priority": "medium",
+        "details": "Update frontend documentation with new development setup instructions. Update API service configuration examples in documentation. Update environment configuration examples. Update frontend example components and demo pages.",
+        "testStrategy": "Verify frontend documentation accuracy, test configuration examples, validate demo pages work with native backends"
+      },
+      {
+        "id": 11,
+        "title": "Update Tests - Infrastructure and Health Checks",
+        "description": "Add unit tests for infrastructure health checks and update integration tests for native execution",
+        "status": "pending",
         "dependencies": [
           1,
-          2,
-          3,
-          4,
-          6,
-          7
+          5
         ],
+        "priority": "medium",
+        "details": "Add unit tests for infrastructure health check functionality. Update integration tests to work with native service execution. Add tests for new npm scripts and health check functionality. Ensure all tests pass with new architecture.",
+        "testStrategy": "Run all unit tests, integration tests, verify health check tests work correctly, confirm test coverage maintained"
+      },
+      {
+        "id": 12,
+        "title": "Update Tests - Auth and LEGO API Native Execution",
+        "description": "Update auth service and LEGO API unit, integration, and E2E tests for native execution",
         "status": "pending",
-        "subtasks": []
+        "dependencies": [
+          2,
+          3
+        ],
+        "priority": "medium",
+        "details": "Update auth service unit and integration tests for native execution. Update LEGO API tests (unit, integration, E2E) for native execution. Ensure all tests connect properly to containerized infrastructure while testing native applications.",
+        "testStrategy": "Run all auth service tests, run all LEGO API tests, verify E2E tests work with native services, confirm 100% test pass rate"
+      },
+      {
+        "id": 13,
+        "title": "Update Tests - Frontend E2E with Native Backend",
+        "description": "Update Playwright E2E tests to work with native backend services",
+        "status": "pending",
+        "dependencies": [
+          4
+        ],
+        "priority": "medium",
+        "details": "Update E2E tests (Playwright) for native backend connections. Ensure tests connect to localhost:9000 (auth) and localhost:3001 (LEGO API). Update test configuration and environment variables.",
+        "testStrategy": "Run complete Playwright test suite, verify authentication flows work, confirm API interactions function correctly with native backends"
+      },
+      {
+        "id": 14,
+        "title": "Create Migration Guide and Performance Metrics",
+        "description": "Write comprehensive migration guide from old Docker setup and document performance improvements",
+        "status": "pending",
+        "dependencies": [
+          5,
+          6
+        ],
+        "priority": "low",
+        "details": "Create comprehensive setup and troubleshooting guides. Document performance comparison metrics (startup time, iteration speed, resource usage). Create rollback procedures and team training materials.",
+        "testStrategy": "Validate migration guide accuracy by testing with fresh setup, measure and document actual performance improvements, test rollback procedures"
+      },
+      {
+        "id": 15,
+        "title": "Final Validation and Documentation Review",
+        "description": "Complete final validation of all documentation accuracy, examples functionality, and system integration",
+        "status": "pending",
+        "dependencies": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "priority": "low",
+        "details": "Update all __docs__ files with comprehensive migration guide. Update Swagger/OpenAPI docs with final configuration. Update all __http__ request collections with final endpoints. Update all examples, demos, and sample configurations. Final validation of all documentation accuracy and examples functionality.",
+        "testStrategy": "Complete system integration test, validate all documentation is accurate, test all examples work as expected, confirm development environment meets <30 second startup goal"
       }
     ],
     "metadata": {
-      "created": "2025-09-07T03:37:59.412Z",
-      "updated": "2025-09-09T01:09:37.540Z",
-      "description": "Tasks for master context"
+      "name": "Backend Docker Modernization",
+      "description": "Modernize backend development by removing Docker from application services while keeping infrastructure containerized",
+      "created": "2025-01-09T03:12:20Z",
+      "lastModified": "2025-01-09T03:12:20Z",
+      "updated": "2025-09-09T03:18:59.998Z"
+    }
+  },
+  "global": {
+    "defaultTag": "master"
+  },
+  "tags": {
+    "master": {
+      "description": "Main development tasks for backend Docker modernization",
+      "created": "2025-01-09T03:12:20Z"
     }
   }
 }
