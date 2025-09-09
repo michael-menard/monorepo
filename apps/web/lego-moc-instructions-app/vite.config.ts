@@ -209,8 +209,17 @@ export default defineConfig({
     port: 3001,
     host: true,
     proxy: {
+      // Auth service routes - proxy to auth-service on port 9000
+      '/api/auth': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path // Keep the /api/auth prefix
+      },
+      // All other API routes - proxy to lego-projects-api on port 3000  
       '/api': {
-        target: 'http://localhost:9800',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
         ws: true

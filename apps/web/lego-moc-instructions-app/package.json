@@ -27,6 +27,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "1.4.0",
     "@hookform/resolvers": "^5.2.1",
     "@monorepo/fileupload": "workspace:*",
     "@monorepo/shared": "workspace:*",
