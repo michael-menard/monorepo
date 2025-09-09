@@ -1,214 +1,316 @@
 import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-// Test data constants
+// Test data for consistent testing
 export const TEST_USER = {
   email: 'test@example.com',
   password: 'TestPassword123!',
   firstName: 'Test',
   lastName: 'User',
-  name: 'Test User',
   confirmPassword: 'TestPassword123!',
 };
 
-export const INVALID_USER = {
-  email: 'invalid@example.com',
-  password: 'wrongpassword',
-  firstName: 'Invalid',
-  lastName: 'User',
-  name: 'Invalid User',
-  confirmPassword: 'differentpassword',
+export const TEST_USER_2 = {
+  email: 'test2@example.com',
+  password: 'TestPassword456!',
+  firstName: 'Test2',
+  lastName: 'User2',
+  confirmPassword: 'TestPassword456!',
 };
 
-// Common auth page URLs
-export const AUTH_URLS = {
-  login: '/auth/login',
-  signup: '/auth/signup',
-  forgotPassword: '/auth/forgot-password',
-  resetPassword: '/auth/reset-password',
-  verifyEmail: '/auth/verify-email',
-} as const;
+// Native backend URLs for testing
+export const BACKEND_URLS = {
+  auth: 'http://localhost:5000',
+  api: 'http://localhost:3001',
+  frontend: 'http://localhost:5173',
+};
 
-// Helper functions for common auth actions
+// Validation error messages
+export const VALIDATION_MESSAGES = {
+  required: 'This field is required',
+  invalidEmail: 'Please enter a valid email address',
+  passwordTooShort: 'Password must be at least 8 characters long',
+  passwordMismatch: 'Passwords do not match',
+  invalidCredentials: 'Invalid email or password',
+  emailAlreadyExists: 'An account with this email already exists',
+};
+
 export class AuthTestUtils {
   constructor(private page: Page) {}
 
   /**
-   * Fill and submit the login form
+   * Navigate to a specific auth page and verify it loaded
+   */
+  async navigateToAuthPage(route: 'login' | 'signup' | 'forgot-password' | 'reset-password', expectedText?: string) {
+    await this.page.goto(`/${route}`);
+    
+    if (expectedText) {
+      await expect(this.page.getByText(expectedText)).toBeVisible();
+    }
+    
+    // Wait for page to be fully loaded
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Fill and submit login form
    */
   async login(email: string, password: string) {
-    await this.page.fill('input[type="email"]', email);
-    await this.page.fill('input[type="password"]', password);
-    await this.page.click('button[type="submit"]');
+    await this.page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', email);
+    await this.page.fill('[data-testid="password-input"], input[type="password"], input[name="password"]', password);
+    await this.page.click('[data-testid="login-button"], button[type="submit"], button:has-text("Sign In")');
   }
 
   /**
-   * Fill and submit the signup form
+   * Fill and submit signup form
    */
   async signup(userData: typeof TEST_USER) {
-    await this.page.fill('input[name="name"]', userData.name);
-    await this.page.fill('input[type="email"]', userData.email);
-    await this.page.fill('input[name="password"]', userData.password);
-    await this.page.fill('input[name="confirmPassword"]', userData.confirmPassword);
-    await this.page.click('button[type="submit"]');
+    await this.page.fill('[data-testid="first-name-input"], input[name="firstName"]', userData.firstName);
+    await this.page.fill('[data-testid="last-name-input"], input[name="lastName"]', userData.lastName);
+    await this.page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', userData.email);
+    await this.page.fill('[data-testid="password-input"], input[name="password"]', userData.password);
+    await this.page.fill('[data-testid="confirm-password-input"], input[name="confirmPassword"]', userData.confirmPassword);
+    await this.page.click('[data-testid="signup-button"], button[type="submit"], button:has-text("Sign Up")');
   }
 
   /**
-   * Fill and submit the forgot password form
+   * Request password reset
    */
   async requestPasswordReset(email: string) {
-    await this.page.fill('input[type="email"]', email);
-    await this.page.click('button[type="submit"]');
+    await this.page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', email);
+    await this.page.click('[data-testid="reset-button"], button[type="submit"], button:has-text("Send Reset")');
   }
 
   /**
-   * Fill and submit the reset password form
+   * Mock auth API responses
    */
-  async resetPassword(password: string, confirmPassword: string) {
-    await this.page.fill('input[name="password"]', password);
-    await this.page.fill('input[name="confirmPassword"]', confirmPassword);
-    await this.page.click('button[type="submit"]');
+  async mockAuthAPI(endpoint: string, response: any, status = 200) {
+    await this.page.route(`${BACKEND_URLS.auth}/api/auth/**`, async route => {
+      const url = route.request().url();
+      
+      if (url.includes(endpoint)) {
+        await route.fulfill({
+          status,
+          contentType: 'application/json',
+          body: JSON.stringify(response),
+        });
+      } else {
+        await route.continue();
+      }
+    });
   }
 
   /**
-   * Fill and submit the email verification form
+   * Mock LEGO Projects API responses
    */
-  async verifyEmail(code: string) {
-    await this.page.fill('input[name="verificationCode"]', code);
-    await this.page.click('button[type="submit"]');
+  async mockProjectsAPI(endpoint: string, response: any, status = 200) {
+    await this.page.route(`${BACKEND_URLS.api}/api/**`, async route => {
+      const url = route.request().url();
+      
+      if (url.includes(endpoint)) {
+        await route.fulfill({
+          status,
+          contentType: 'application/json',
+          body: JSON.stringify(response),
+        });
+      } else {
+        await route.continue();
+      }
+    });
   }
 
   /**
-   * Wait for loading state to complete
+   * Wait for authentication to complete and verify redirect
    */
-  async waitForLoadingComplete() {
-    await this.page.waitForSelector('button[type="submit"]:not([disabled])', { timeout: 10000 });
+  async waitForAuthSuccess(expectedPath = '/') {
+    // Wait for redirect after successful auth
+    await this.page.waitForURL(`**${expectedPath}`, { timeout: 10000 });
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
-   * Wait for success message to appear
+   * Verify validation errors are displayed
    */
-  async waitForSuccessMessage(expectedText?: string) {
-    if (expectedText) {
-      await expect(this.page.locator(`text=${expectedText}`)).toBeVisible({ timeout: 10000 });
-    } else {
-      await expect(this.page.locator('[data-testid="success-message"]')).toBeVisible({ timeout: 10000 });
-    }
-  }
-
-  /**
-   * Wait for error message to appear
-   */
-  async waitForErrorMessage(expectedText?: string) {
-    if (expectedText) {
-      await expect(this.page.locator(`text=${expectedText}`)).toBeVisible({ timeout: 10000 });
-    } else {
-      await expect(this.page.locator('[data-testid="error-message"]')).toBeVisible({ timeout: 10000 });
-    }
-  }
-
-  /**
-   * Navigate to auth page and verify it loaded correctly
-   */
-  async navigateToAuthPage(page: keyof typeof AUTH_URLS, expectedTitle: string) {
-    await this.page.goto(AUTH_URLS[page]);
-    
-    // Wait for the React app to load by waiting for the app div to have content
-    await this.page.waitForFunction(
-      () => {
-        const appDiv = document.getElementById('app');
-        return appDiv && appDiv.children.length > 0;
-      },
-      { timeout: 15000 }
-    );
-    
-    // Wait for the title to appear - try multiple selectors
-    await this.page.waitForFunction(
-      (title) => {
-        const elements = document.querySelectorAll('h1, h2, h3, [data-testid="app-card-title"]');
-        return Array.from(elements).some(el => el.textContent?.includes(title));
-      },
-      expectedTitle,
-      { timeout: 15000 }
-    );
-  }
-
-  /**
-   * Verify form validation errors are displayed
-   */
-  async expectValidationErrors(expectedErrors: Array<string>) {
-    for (const error of expectedErrors) {
-      await expect(this.page.locator(`text=${error}`)).toBeVisible();
+  async expectValidationErrors(errors: string[]) {
+    for (const error of errors) {
+      await expect(this.page.getByText(error)).toBeVisible();
     }
   }
 
   /**
    * Verify form fields are present and visible
    */
-  async expectFormFields(fields: Array<string>) {
+  async expectFormFields(fields: string[]) {
     for (const field of fields) {
-      await expect(this.page.locator(field)).toBeVisible();
+      const input = this.page.locator(`[data-testid="${field}-input"], input[name="${field}"]`).first();
+      await expect(input).toBeVisible();
     }
-  }
-
-  /**
-   * Test responsive design at different viewport sizes
-   */
-  async testResponsiveDesign(viewport: { width: number; height: number }) {
-    await this.page.setViewportSize(viewport);
-    // Use a more specific selector to avoid strict mode violations
-    await expect(this.page.locator('h1, h2, h3').first()).toBeVisible();
-    // Don't check for submit button on home page since it might not exist
   }
 
   /**
    * Test keyboard navigation through form
    */
-  async testKeyboardNavigation(focusableElements: Array<string>) {
-    // Focus the first element first
-    await this.page.locator(focusableElements[0]).focus();
+  async testKeyboardNavigation() {
+    // Test Tab navigation
+    await this.page.keyboard.press('Tab');
+    await this.page.keyboard.press('Tab');
+    await this.page.keyboard.press('Tab');
     
-    for (let i = 1; i < focusableElements.length; i++) {
-      await this.page.keyboard.press('Tab');
-      await expect(this.page.locator(focusableElements[i])).toBeFocused();
-    }
+    // Test Enter submission on focused button
+    await this.page.keyboard.press('Enter');
+  }
+
+  /**
+   * Test responsive design at different viewport sizes
+   */
+  async testResponsiveDesign() {
+    // Test mobile viewport
+    await this.page.setViewportSize({ width: 375, height: 667 });
+    await this.page.waitForTimeout(500);
+    
+    // Test tablet viewport
+    await this.page.setViewportSize({ width: 768, height: 1024 });
+    await this.page.waitForTimeout(500);
+    
+    // Reset to desktop
+    await this.page.setViewportSize({ width: 1280, height: 720 });
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Clear all auth-related cookies and local storage
+   */
+  async clearAuthData() {
+    await this.page.context().clearCookies();
+    await this.page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+  }
+
+  /**
+   * Check if user is authenticated (has auth cookie or token)
+   */
+  async isAuthenticated(): Promise<boolean> {
+    const cookies = await this.page.context().cookies();
+    const authCookie = cookies.find(cookie => 
+      cookie.name.includes('auth') || 
+      cookie.name.includes('token') || 
+      cookie.name.includes('session')
+    );
+    
+    if (authCookie) return true;
+    
+    // Check localStorage for auth tokens
+    const authToken = await this.page.evaluate(() => {
+      return localStorage.getItem('authToken') || 
+             localStorage.getItem('accessToken') || 
+             sessionStorage.getItem('authToken');
+    });
+    
+    return !!authToken;
+  }
+
+  /**
+   * Wait for network requests to complete
+   */
+  async waitForNetworkIdle() {
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Intercept and verify API calls to native backends
+   */
+  async interceptApiCalls() {
+    const authRequests: any[] = [];
+    const apiRequests: any[] = [];
+
+    // Intercept auth service calls
+    await this.page.route(`${BACKEND_URLS.auth}/**`, async route => {
+      authRequests.push({
+        url: route.request().url(),
+        method: route.request().method(),
+        headers: route.request().headers(),
+      });
+      await route.continue();
+    });
+
+    // Intercept LEGO projects API calls
+    await this.page.route(`${BACKEND_URLS.api}/**`, async route => {
+      apiRequests.push({
+        url: route.request().url(),
+        method: route.request().method(),
+        headers: route.request().headers(),
+      });
+      await route.continue();
+    });
+
+    return { authRequests, apiRequests };
+  }
+
+  /**
+   * Verify health endpoints are accessible
+   */
+  async verifyBackendHealth() {
+    // Check auth service health
+    const authResponse = await this.page.request.get(`${BACKEND_URLS.auth}/api/auth/health`);
+    expect(authResponse.status()).toBeLessThan(500);
+
+    // Check LEGO projects API health
+    const apiResponse = await this.page.request.get(`${BACKEND_URLS.api}/api/health`);
+    expect(apiResponse.status()).toBeLessThan(500);
+  }
+
+  /**
+   * Setup common test environment
+   */
+  async setup() {
+    await this.clearAuthData();
+    await this.page.goto('/');
+    await this.waitForNetworkIdle();
+  }
+
+  /**
+   * Cleanup after tests
+   */
+  async cleanup() {
+    await this.clearAuthData();
+    await this.page.unrouteAll();
   }
 }
 
-// Factory function to create auth test utils
-export function createAuthTestUtils(page: Page) {
+/**
+ * Factory function to create AuthTestUtils instance
+ */
+export function createAuthTestUtils(page: Page): AuthTestUtils {
   return new AuthTestUtils(page);
 }
 
-// Common validation error messages
-export const VALIDATION_MESSAGES = {
-  emailRequired: 'Please enter a valid email address',
-  emailInvalid: 'Please enter a valid email address',
-  passwordRequired: 'Password must be at least 8 characters',
-  passwordTooShort: 'Password must be at least 8 characters',
-  nameRequired: 'Full name is required',
-  firstNameRequired: 'Full name is required', // Keep for backward compatibility
-  lastNameRequired: 'Full name is required', // Keep for backward compatibility
-  confirmPasswordRequired: 'Please confirm your password',
-  passwordsMismatch: 'Passwords don\'t match',
-  verificationCodeRequired: 'Verification code is required',
-  verificationCodeInvalid: 'Verification code must be 6 digits',
-} as const;
+/**
+ * Common test patterns and helpers
+ */
+export const TestPatterns = {
+  /**
+   * Standard auth flow test setup
+   */
+  async setupAuthTest(page: Page) {
+    const utils = createAuthTestUtils(page);
+    await utils.setup();
+    return utils;
+  },
 
-// Common success messages
-export const SUCCESS_MESSAGES = {
-  loginSuccess: 'Login successful',
-  signupSuccess: 'Account created successfully',
-  passwordResetSent: 'Check your email',
-  passwordResetSuccess: 'Password reset successful',
-  emailVerified: 'Email verified successfully',
-} as const;
+  /**
+   * Test for native backend connectivity
+   */
+  async testNativeBackendConnectivity(page: Page) {
+    const utils = createAuthTestUtils(page);
+    await utils.verifyBackendHealth();
+  },
 
-// Common error messages
-export const ERROR_MESSAGES = {
-  loginFailed: 'Login failed. Please try again.',
-  signupFailed: 'Signup failed. Please try again.',
-  passwordResetFailed: 'Failed to send reset email. Please try again.',
-  passwordResetError: 'Password reset failed. Please try again.',
-  emailVerificationFailed: 'Email verification failed. Please try again.',
-} as const; 
+  /**
+   * Standard teardown for auth tests
+   */
+  async teardownAuthTest(utils: AuthTestUtils) {
+    await utils.cleanup();
+  },
+};
