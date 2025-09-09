@@ -15,6 +15,16 @@ import {
   verifyToken,
   generateCsrfToken,
 } from '../utils/tokenUtils';
+import {
+  logAuthEvent,
+  logSecurityEvent,
+  logUserAction,
+  logAuthError,
+  logDatabaseOperation,
+  logEmailEvent,
+  logValidationError,
+  sanitizeUserForLogging,
+} from '../utils/logger';
 
 const ORIGIN = process.env.APP_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -23,16 +33,21 @@ export const signup = async (req: Request, res: Response) => {
 
   try {
     if (!email || !password || !name) {
+      logValidationError(req as any, 'required_fields', 'All fields are required', {
+        missingFields: { email: !email, password: !password, name: !name },
+      });
       throw new Error('All fields are required');
     }
 
+    logDatabaseOperation(req as any, 'findOne', 'users', { lookupField: 'email' });
     const userAlreadyExists = await User.findOne({ email });
-    console.log('userAlreadyExists', userAlreadyExists);
 
     if (userAlreadyExists) {
+      logSecurityEvent(req as any, 'signup_attempt_duplicate_email', { email });
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
+    logUserAction(req as any, 'password_hash_start', { email });
     const hashedPassword = await bcryptjs.hash(password, 10);
     
     // Generate secure verification code (6-digit code with hashed storage)
@@ -46,9 +61,13 @@ export const signup = async (req: Request, res: Response) => {
       verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
 
+    logDatabaseOperation(req as any, 'create', 'users', { email });
     await user.save();
 
-    // jwt
+    // Set user context for subsequent logs
+    (req as any).userId = user._id;
+
+    logUserAction(req as any, 'jwt_token_generation', { userId: user._id });
     generateTokenAndSetCookie(res, user._id);
 
     // Set CSRF token cookie upon successful signup
@@ -60,13 +79,25 @@ export const signup = async (req: Request, res: Response) => {
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     });
 
+    logUserAction(req as any, 'csrf_token_set', { userId: user._id });
+
     // Try to send verification email with raw verification code
     try {
       await sendVerificationEmail(user.email, rawVerificationCode);
+      logEmailEvent(req as any, 'verification', user.email, true, { userId: user._id });
     } catch (emailError) {
-      console.warn('Failed to send verification email:', emailError);
+      logEmailEvent(req as any, 'verification', user.email, false, { 
+        userId: user._id,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      });
       // Continue with signup even if email fails
     }
+
+    logUserAction(req as any, 'signup_completed', { 
+      userId: user._id,
+      email: user.email,
+      isVerified: user.isVerified,
+    });
 
     res.status(201).json({
       success: true,
@@ -77,6 +108,7 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    logAuthError(req as any, error as Error, { email, action: 'signup' });
     res.status(400).json({ success: false, message: (error as any).message });
   }
 };
@@ -84,10 +116,21 @@ export const signup = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   const { code } = req.body;
   try {
+    if (!code) {
+      logValidationError(req as any, 'verification_code', 'Verification code is required');
+      return res.status(400).json({ success: false, message: 'Verification code is required' });
+    }
+
+    logDatabaseOperation(req as any, 'find', 'users', { query: 'active_verification_tokens' });
     // Find users with non-expired verification tokens
     const usersWithActiveTokens = await User.find({
       verificationToken: { $exists: true },
       verificationTokenExpiresAt: { $gt: Date.now() },
+    });
+
+    logUserAction(req as any, 'verification_code_attempt', {
+      providedCodeLength: code.length,
+      activeTokensCount: usersWithActiveTokens.length,
     });
 
     // Verify the provided code against each user's stored hash
@@ -100,17 +143,38 @@ export const verifyEmail = async (req: Request, res: Response) => {
     }
 
     if (!matchingUser) {
+      logSecurityEvent(req as any, 'verification_code_invalid', {
+        providedCodeLength: code.length,
+        activeTokensChecked: usersWithActiveTokens.length,
+      });
       return res
         .status(400)
         .json({ success: false, message: 'Invalid or expired verification code' });
     }
 
+    // Set user context for subsequent logs
+    (req as any).userId = matchingUser._id;
+
+    logDatabaseOperation(req as any, 'update', 'users', { userId: matchingUser._id });
     matchingUser.isVerified = true;
     matchingUser.verificationToken = undefined;
     matchingUser.verificationTokenExpiresAt = undefined;
     await matchingUser.save();
 
-    await sendWelcomeEmail(matchingUser.email, matchingUser.name);
+    try {
+      await sendWelcomeEmail(matchingUser.email, matchingUser.name);
+      logEmailEvent(req as any, 'welcome', matchingUser.email, true, { userId: matchingUser._id });
+    } catch (emailError) {
+      logEmailEvent(req as any, 'welcome', matchingUser.email, false, {
+        userId: matchingUser._id,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      });
+    }
+
+    logUserAction(req as any, 'email_verified_successfully', {
+      userId: matchingUser._id,
+      email: matchingUser.email,
+    });
 
     res.status(200).json({
       success: true,
@@ -121,7 +185,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.log('error in verifyEmail ', error);
+    logAuthError(req as any, error as Error, { action: 'verify_email' });
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -129,24 +193,50 @@ export const verifyEmail = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   try {
+    if (!email || !password) {
+      logValidationError(req as any, 'login_credentials', 'Email and password are required', {
+        missingFields: { email: !email, password: !password },
+      });
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    logDatabaseOperation(req as any, 'findOne', 'users', { lookupField: 'email' });
     const user = await User.findOne({ email });
+
     if (!user) {
+      logSecurityEvent(req as any, 'login_attempt_user_not_found', { email });
       return res
         .status(400)
         .json({ success: false, message: 'Invalid credentials', code: 'INVALID_CREDENTIALS' });
     }
+
+    // Set user context for subsequent logs
+    (req as any).userId = user._id;
+
+    logUserAction(req as any, 'password_verification_attempt', { userId: user._id });
     const isPasswordValid = await bcryptjs.compare(password, user.password);
+
     if (!isPasswordValid) {
+      logSecurityEvent(req as any, 'login_attempt_invalid_password', {
+        userId: user._id,
+        email,
+      });
       return res
         .status(400)
         .json({ success: false, message: 'Invalid credentials', code: 'INVALID_CREDENTIALS' });
     }
+
     if (!user.isVerified) {
+      logSecurityEvent(req as any, 'login_attempt_unverified_email', {
+        userId: user._id,
+        email,
+      });
       return res
         .status(403)
         .json({ success: false, message: 'Email not verified', code: 'EMAIL_NOT_VERIFIED' });
     }
 
+    logUserAction(req as any, 'jwt_token_generation', { userId: user._id });
     generateTokenAndSetCookie(res, user._id);
 
     // Set CSRF token cookie upon successful login
@@ -158,8 +248,17 @@ export const login = async (req: Request, res: Response) => {
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     });
 
+    logUserAction(req as any, 'csrf_token_set', { userId: user._id });
+
+    logDatabaseOperation(req as any, 'update', 'users', { userId: user._id });
     user.lastLogin = new Date();
     await user.save();
+
+    logUserAction(req as any, 'login_successful', {
+      userId: user._id,
+      email: user.email,
+      lastLogin: user.lastLogin,
+    });
 
     res.status(200).json({
       success: true,
@@ -170,50 +269,80 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.log('Error in login ', error);
+    logAuthError(req as any, error as Error, { email, action: 'login' });
     res.status(400).json({ success: false, message: (error as any).message, code: 'LOGIN_ERROR' });
   }
 };
 
 export const logout = async (req: Request, res: Response) => {
+  logUserAction(req as any, 'logout_initiated', {
+    userId: (req as any).userId,
+  });
+
   res.clearCookie('token');
+  res.clearCookie('XSRF-TOKEN');
+
+  logUserAction(req as any, 'logout_successful', {
+    userId: (req as any).userId,
+  });
+
   res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
-    console.log('forgotPassword: Starting with email:', email);
+    if (!email) {
+      logValidationError(req as any, 'email', 'Email is required for password reset');
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    logUserAction(req as any, 'forgot_password_initiated', { email });
+    logDatabaseOperation(req as any, 'findOne', 'users', { lookupField: 'email' });
     const user = await User.findOne({ email });
 
     if (!user) {
-      console.log('forgotPassword: User not found');
+      logSecurityEvent(req as any, 'forgot_password_user_not_found', { email });
       return res.status(400).json({ success: false, message: 'User not found' });
     }
 
-    console.log('forgotPassword: User found:', user._id);
+    // Set user context for subsequent logs
+    (req as any).userId = user._id;
+
+    logUserAction(req as any, 'reset_token_generation_start', { userId: user._id });
 
     // Generate secure reset token (hash will be stored, raw will be sent via email)
     const { raw: rawToken, hash: hashedToken } = generateSecureToken();
     const resetTokenExpiresAt = Date.now() + 1 * 60 * 60 * 1000; // 1 hour
 
-    console.log('forgotPassword: Generated secure token hash');
+    logUserAction(req as any, 'reset_token_generated', {
+      userId: user._id,
+      tokenExpiresIn: '1 hour',
+    });
 
     user.resetPasswordToken = hashedToken; // Store the hash, not the raw token
     user.resetPasswordExpiresAt = new Date(resetTokenExpiresAt);
 
-    console.log('forgotPassword: About to save user');
+    logDatabaseOperation(req as any, 'update', 'users', { userId: user._id });
     await user.save();
-    console.log('forgotPassword: User saved successfully');
 
     // send email with raw token
-    console.log('forgotPassword: About to send email');
-    await sendPasswordResetEmail(user.email, `${ORIGIN}/reset-password/${rawToken}`);
-    console.log('forgotPassword: Email sent successfully');
+    try {
+      await sendPasswordResetEmail(user.email, `${ORIGIN}/reset-password/${rawToken}`);
+      logEmailEvent(req as any, 'password_reset', user.email, true, { userId: user._id });
+    } catch (emailError) {
+      logEmailEvent(req as any, 'password_reset', user.email, false, {
+        userId: user._id,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      });
+      throw emailError;
+    }
+
+    logUserAction(req as any, 'forgot_password_completed', { userId: user._id });
 
     res.status(200).json({ success: true, message: 'Password reset link sent to your email' });
   } catch (error) {
-    console.log('Error in forgotPassword ', error);
+    logAuthError(req as any, error as Error, { email, action: 'forgot_password' });
     res.status(400).json({ success: false, message: (error as any).message });
   }
 };
@@ -223,10 +352,24 @@ export const resetPassword = async (req: Request, res: Response) => {
     const { token } = req.params;
     const { password } = req.body;
 
+    if (!token || !password) {
+      logValidationError(req as any, 'reset_password_fields', 'Token and password are required', {
+        missingFields: { token: !token, password: !password },
+      });
+      return res.status(400).json({ success: false, message: 'Token and password are required' });
+    }
+
+    logUserAction(req as any, 'password_reset_attempt', { tokenProvided: !!token });
+    logDatabaseOperation(req as any, 'find', 'users', { query: 'active_reset_tokens' });
+
     // Find users with non-expired reset tokens
     const usersWithActiveTokens = await User.find({
       resetPasswordToken: { $exists: true },
       resetPasswordExpiresAt: { $gt: Date.now() },
+    });
+
+    logUserAction(req as any, 'reset_token_verification', {
+      activeTokensCount: usersWithActiveTokens.length,
     });
 
     // Verify the provided token against each user's stored hash
@@ -239,36 +382,73 @@ export const resetPassword = async (req: Request, res: Response) => {
     }
 
     if (!matchingUser) {
+      logSecurityEvent(req as any, 'reset_token_invalid', {
+        activeTokensChecked: usersWithActiveTokens.length,
+      });
       return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
     }
 
+    // Set user context for subsequent logs
+    (req as any).userId = matchingUser._id;
+
+    logUserAction(req as any, 'password_hash_for_reset', { userId: matchingUser._id });
     // update password
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     matchingUser.password = hashedPassword;
     matchingUser.resetPasswordToken = undefined;
     matchingUser.resetPasswordExpiresAt = undefined;
+
+    logDatabaseOperation(req as any, 'update', 'users', { userId: matchingUser._id });
     await matchingUser.save();
 
-    await sendResetSuccessEmail(matchingUser.email);
+    try {
+      await sendResetSuccessEmail(matchingUser.email);
+      logEmailEvent(req as any, 'password_reset_success', matchingUser.email, true, {
+        userId: matchingUser._id,
+      });
+    } catch (emailError) {
+      logEmailEvent(req as any, 'password_reset_success', matchingUser.email, false, {
+        userId: matchingUser._id,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      });
+    }
+
+    logUserAction(req as any, 'password_reset_completed', { userId: matchingUser._id });
 
     res.status(200).json({ success: true, message: 'Password reset successful' });
   } catch (error) {
-    console.log('Error in resetPassword ', error);
+    logAuthError(req as any, error as Error, { action: 'reset_password' });
     res.status(400).json({ success: false, message: (error as any).message });
   }
 };
 
 export const checkAuth = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById((req as any).userId).select('-password');
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      logSecurityEvent(req as any, 'check_auth_no_user_id', {});
+      return res.status(401).json({ success: false, message: 'No user ID in request' });
+    }
+
+    logDatabaseOperation(req as any, 'findById', 'users', { userId });
+    const user = await User.findById(userId).select('-password');
+
     if (!user) {
+      logSecurityEvent(req as any, 'check_auth_user_not_found', { userId });
       return res.status(400).json({ success: false, message: 'User not found' });
     }
 
+    logUserAction(req as any, 'auth_check_successful', {
+      userId: user._id,
+      email: user.email,
+      isVerified: user.isVerified,
+    });
+
     res.status(200).json({ success: true, user });
   } catch (error) {
-    console.log('Error in checkAuth ', error);
+    logAuthError(req as any, error as Error, { action: 'check_auth' });
     res.status(400).json({ success: false, message: (error as any).message });
   }
 };
@@ -277,34 +457,64 @@ export const resendVerification = async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
     if (!email) {
+      logValidationError(req as any, 'email', 'Email is required for resending verification');
       return res
         .status(400)
         .json({ success: false, message: 'Email is required', code: 'EMAIL_REQUIRED' });
     }
+
+    logUserAction(req as any, 'resend_verification_initiated', { email });
+    logDatabaseOperation(req as any, 'findOne', 'users', { lookupField: 'email' });
     const user = await User.findOne({ email });
+
     if (!user) {
+      logSecurityEvent(req as any, 'resend_verification_user_not_found', { email });
       return res
         .status(404)
         .json({ success: false, message: 'User not found', code: 'USER_NOT_FOUND' });
     }
+
+    // Set user context for subsequent logs
+    (req as any).userId = user._id;
+
     if (user.isVerified) {
+      logSecurityEvent(req as any, 'resend_verification_already_verified', {
+        userId: user._id,
+        email,
+      });
       return res
         .status(400)
         .json({ success: false, message: 'User already verified', code: 'ALREADY_VERIFIED' });
     }
+
+    logUserAction(req as any, 'new_verification_code_generation', { userId: user._id });
 
     // Generate new secure verification code (6-digit code with hashed storage)
     const { raw: rawVerificationCode, hash: hashedVerificationCode } =
       generateSecureVerificationCode();
     user.verificationToken = hashedVerificationCode; // Store the hash, not the raw code
     user.verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    logDatabaseOperation(req as any, 'update', 'users', { userId: user._id });
     await user.save();
 
-    // Send email with raw verification code
-    await sendVerificationEmail(user.email, rawVerificationCode);
+    try {
+      // Send email with raw verification code
+      await sendVerificationEmail(user.email, rawVerificationCode);
+      logEmailEvent(req as any, 'verification_resent', user.email, true, { userId: user._id });
+    } catch (emailError) {
+      logEmailEvent(req as any, 'verification_resent', user.email, false, {
+        userId: user._id,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      });
+      throw emailError;
+    }
+
+    logUserAction(req as any, 'resend_verification_completed', { userId: user._id });
+
     res.status(200).json({ success: true, message: 'Verification email resent' });
   } catch (error) {
-    console.log('Error in resendVerification ', error);
+    logAuthError(req as any, error as Error, { email, action: 'resend_verification' });
     res
       .status(500)
       .json({ success: false, message: (error as any).message, code: 'RESEND_VERIFICATION_ERROR' });

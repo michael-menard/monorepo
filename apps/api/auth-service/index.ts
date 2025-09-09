@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
+import { v4 as uuidv4 } from 'uuid';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './db/connectDB';
 import { notFound, errorHandler } from './middleware/errorMiddleware';
@@ -54,9 +55,70 @@ app.use(
   }),
 );
 
-// Request logger middleware
-const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-app.use(pinoHttp({ logger }));
+// Enhanced request logger middleware with sensitive data redaction
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'req.body.password',
+      'req.body.token',
+      'req.body.refreshToken',
+      'res.headers["set-cookie"]',
+      'user.password',
+      'user.resetPasswordToken',
+      'user.verificationToken',
+    ],
+    remove: true,
+  },
+  serializers: {
+    req: (req) => ({
+      id: req.id,
+      method: req.method,
+      url: req.url,
+      query: req.query,
+      params: req.params,
+      headers: {
+        host: req.headers.host,
+        'user-agent': req.headers['user-agent'],
+        'content-type': req.headers['content-type'],
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-correlation-id': req.headers['x-correlation-id'],
+      },
+      remoteAddress: req.remoteAddress,
+      remotePort: req.remotePort,
+    }),
+    res: (res) => ({
+      statusCode: res.statusCode,
+      headers: {
+        'content-type': res.getHeader('content-type'),
+        'content-length': res.getHeader('content-length'),
+      },
+    }),
+  },
+});
+
+const httpLogger = pinoHttp({
+  logger,
+  genReqId: (req) => req.headers['x-request-id'] || uuidv4(),
+  customProps: (req: any, res) => {
+    return {
+      userId: req.user?.id || req.userId,
+      correlationId: req.headers['x-correlation-id'],
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection.remoteAddress,
+    };
+  },
+  customSuccessMessage: (req, res) => {
+    return `${req.method} ${req.url} completed`;
+  },
+  customErrorMessage: (req, res, err) => {
+    return `${req.method} ${req.url} errored - ${err.message}`;
+  },
+});
+
+app.use(httpLogger);
 
 // Enable pre-flight requests for all routes
 app.options('*', cors());
