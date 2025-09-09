@@ -11,10 +11,12 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "types": ["jest", "node"],
-    "noEmit": true,
+    "noEmit": false,
+    "sourceMap": true,
+    "inlineSourceMap": false,
     "declaration": false,
     "declarationMap": false
   },
   "include": ["**/*"],
   "exclude": ["node_modules", "dist"]
-} 
+}
