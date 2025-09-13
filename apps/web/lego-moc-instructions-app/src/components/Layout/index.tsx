@@ -26,13 +26,8 @@ function Layout({ children }: LayoutProps) {
               </Link>
             </div>
 
-            {/* Center - Navigation Menu */}
-            <div className="hidden md:flex items-center">
-              <Navigation />
-            </div>
-
-            {/* Right side - Mobile Navigation */}
-            <div className="md:hidden">
+            {/* Right side - Navigation */}
+            <div className="flex items-center">
               <Navigation />
             </div>
           </div>

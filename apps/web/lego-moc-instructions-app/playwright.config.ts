@@ -18,7 +18,7 @@ export default defineConfig({
   /* Use only 1 worker to run tests sequentially */
   workers: 1,
   /* Global test timeout - fail test if it runs longer than this */
-  timeout: 60000, // 60 seconds per test
+  timeout: 30000, // 30 seconds per test
   /* Global expect timeout for assertions */
   expect: {
     timeout: 10000, // 10 seconds for expect assertions
@@ -28,7 +28,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3004',
+    baseURL: 'http://localhost:3006',
 
     /* Run headless by default */
     headless: true,
@@ -43,14 +43,11 @@ export default defineConfig({
     video: 'retain-on-failure',
     
     /* More generous timeouts for React app loading */
-    actionTimeout: 15000,        // 15 seconds for actions (click, fill, etc.)
-    navigationTimeout: 15000,    // 30 seconds for page navigation
+    actionTimeout: 10000,        // 10 seconds for actions (click, fill, etc.)
+    navigationTimeout: 15000,    // 15 seconds for page navigation
 
     /* Additional timeout configurations */
     testIdAttribute: 'data-testid', // Use data-testid for element selection
-
-    /* Timeout for waiting for elements */
-    timeout: 10000,              // 10 seconds for element waits
   },
 
   /* Configure projects for Chrome only */
@@ -63,17 +60,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3004',
+    command: 'pnpm dev --port 3006',
+    url: 'http://localhost:3006',
     reuseExistingServer: true, // Always reuse existing server
     timeout: 120 * 1000,
-  },
-  
-  /* Global timeout for tests */
-  timeout: 30000,
-  
-  /* Expect timeout */
-  expect: {
-    timeout: 10000,
   },
 })

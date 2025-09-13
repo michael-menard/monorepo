@@ -1,0 +1,175 @@
+# Page snapshot
+
+```yaml
+- navigation:
+  - link "M MOC Builder":
+    - /url: /
+  - navigation:
+    - link "Browse MOCs":
+      - /url: /moc-gallery
+      - img
+      - text: Browse MOCs
+    - link "Sign In":
+      - /url: /auth/login
+      - button "Sign In"
+    - link "Sign Up":
+      - /url: /auth/signup
+      - button "Sign Up"
+- main:
+  - button "Switch to dark mode":
+    - img
+  - heading "Tailwind CSS Test" [level=2]
+  - paragraph: If you can see this styled text, Tailwind CSS is working!
+  - text: Red background Green background Yellow background
+  - heading "Color Test Results" [level=3]
+  - text: Primary Secondary Accent Destructive Primary Gradient Secondary Gradient Check the browser console for detailed color values.
+  - heading "Button Customization Examples" [level=2]
+  - heading "Standard Button Variants" [level=3]
+  - button "Default"
+  - button "Secondary"
+  - button "Tertiary"
+  - button "Success"
+  - button "Warning"
+  - button "Error"
+  - button "Info"
+  - button "Destructive"
+  - button "Outline"
+  - button "Ghost"
+  - button "Link"
+  - heading "Custom Button Styles" [level=3]
+  - button "Gradient"
+  - button "Glass"
+  - button "Neon"
+  - button "Soft"
+  - button "Bold"
+  - heading "Custom className Overrides" [level=3]
+  - button "Gradient Override"
+  - button "Glass Override"
+  - button "Neon Override"
+  - button "Soft Override"
+  - button "Bold Override"
+  - heading "Size Variations" [level=3]
+  - button "Small"
+  - button "Default"
+  - button "Large"
+  - button "🔍"
+  - heading "Sign Up Button Examples" [level=3]
+  - button "Sign Up (Default)"
+  - button "Sign Up (Gradient)"
+  - button "Sign Up (Bold)"
+  - button "Sign Up (Custom)"
+  - heading "Interactive Examples" [level=3]
+  - heading "Hover Effects" [level=4]
+  - button "Scale on Hover"
+  - heading "Focus States" [level=4]
+  - button "Enhanced Focus"
+  - heading "Design System" [level=1]
+  - paragraph: Complete color palette and design tokens from the centralized design system
+  - heading "Color Tokens" [level=2]
+  - text: background bg-background foreground bg-foreground card bg-card card-foreground bg-card-foreground popover bg-popover popover-foreground bg-popover-foreground primary bg-primary primary-foreground bg-primary-foreground secondary bg-secondary secondary-foreground bg-secondary-foreground tertiary bg-tertiary tertiary-foreground bg-tertiary-foreground muted bg-muted muted-foreground bg-muted-foreground accent bg-accent accent-foreground bg-accent-foreground destructive bg-destructive destructive-foreground bg-destructive-foreground success bg-success success-foreground bg-success-foreground warning bg-warning warning-foreground bg-warning-foreground error bg-error error-foreground bg-error-foreground info bg-info info-foreground bg-info-foreground border bg-border input bg-input ring bg-ring
+  - heading "Gradients" [level=2]
+  - text: Primary Gradient bg-gradient-to-r from-primary to-primary/80 Secondary Gradient bg-gradient-to-r from-secondary to-secondary/80 Tertiary Gradient bg-gradient-to-r from-tertiary to-tertiary/80 Accent Gradient bg-gradient-to-r from-accent to-accent/80 Success Gradient bg-gradient-to-r from-success to-success/80 Warning Gradient bg-gradient-to-r from-warning to-warning/80 Error Gradient bg-gradient-to-r from-error to-error/80 Info Gradient bg-gradient-to-r from-info to-info/80 Muted Gradient bg-gradient-to-r from-muted to-muted/80 Rainbow Gradient bg-gradient-to-r from-primary via-secondary to-tertiary Sunset Gradient bg-gradient-to-r from-primary via-destructive to-accent Ocean Gradient bg-gradient-to-r from-secondary via-tertiary to-info Neutral Gradient bg-gradient-to-r from-background via-muted to-border Diagonal Primary bg-gradient-to-br from-primary to-primary/60 Diagonal Secondary bg-gradient-to-br from-secondary to-secondary/60 Destructive Gradient bg-gradient-to-r from-destructive to-destructive/80 Glass Effect bg-gradient-to-r from-background/80 to-background/40 backdrop-blur-sm
+  - heading "Border Radius" [level=2]
+  - text: sm rounded-sm md rounded-md lg rounded-lg xl rounded-xl 2xl rounded-2xl full rounded-full
+  - heading "Interactive Examples" [level=2]
+  - heading "Buttons" [level=3]
+  - button "Primary Button"
+  - button "Secondary Button"
+  - button "Tertiary Button"
+  - button "Success Button"
+  - button "Warning Button"
+  - button "Error Button"
+  - button "Info Button"
+  - button "Destructive Button"
+  - heading "Cards" [level=3]
+  - heading "Card Title" [level=4]
+  - paragraph: This is a card example using the design tokens.
+  - heading "Form Elements" [level=3]
+  - textbox "Input field"
+  - text: Muted text example
+  - heading "CSS Variables" [level=2]
+  - text: "--background:hsl(var(--background)) --foreground:hsl(var(--foreground)) --card:hsl(var(--card)) --card-foreground:hsl(var(--card-foreground)) --popover:hsl(var(--popover)) --popover-foreground:hsl(var(--popover-foreground)) --primary:hsl(var(--primary)) --primary-foreground:hsl(var(--primary-foreground)) --secondary:hsl(var(--secondary)) --secondary-foreground:hsl(var(--secondary-foreground)) --tertiary:hsl(var(--tertiary)) --tertiary-foreground:hsl(var(--tertiary-foreground))"
+  - heading "HSL Values (Light Mode)" [level=2]
+  - text: "--background:40 20% 97% --foreground:0 0% 10% --primary:120 15% 33% --primary-foreground:0 0% 100% --secondary:25 40% 52% --secondary-foreground:0 0% 100% --tertiary:190 30% 40% --tertiary-foreground:0 0% 100% --accent:30 35% 65% --accent-foreground:0 0% 20% --success:160 50% 40% --warning:45 70% 60% --error:0 50% 50% --info:210 30% 45% --destructive:0 50% 50% --muted:35 25% 85% --muted-foreground:0 0% 33%"
+  - heading "Dark Mode Support" [level=3]
+  - paragraph:
+    - text: All colors automatically adapt to dark mode when the
+    - code: .dark
+    - text: class is applied to the HTML element.
+  - heading "LEGO MOC Instructions App" [level=1]
+  - paragraph: Discover, build, and share custom LEGO MOC instructions. Join our community of builders and explore thousands of unique creations from around the world.
+  - link "Browse MOCs":
+    - /url: /moc-gallery
+    - button "Browse MOCs":
+      - img
+      - text: Browse MOCs
+  - link "Sign Up":
+    - /url: /auth/signup
+    - button "Sign Up":
+      - img
+      - text: Sign Up
+  - img
+  - text: 10,000+ MOC Instructions
+  - img
+  - text: 5,000+ Active Users
+  - img
+  - text: 50,000+ Downloads
+  - img
+  - text: 4.8★ Community Rating
+  - heading "Everything You Need to Build" [level=2]
+  - paragraph: From browsing to building, we've got you covered
+  - img
+  - heading "Browse MOC Instructions" [level=3]
+  - paragraph: Explore thousands of custom LEGO MOC instructions from the community
+  - link "Browse Gallery":
+    - /url: /moc-gallery
+    - button "Browse Gallery"
+  - img
+  - heading "Personal Wishlist" [level=3]
+  - paragraph: Save your favorite MOCs and track your building progress
+  - button "Login Required" [disabled]
+  - img
+  - heading "User Profiles" [level=3]
+  - paragraph: Manage your profile, uploads, and building history
+  - button "Login Required" [disabled]
+  - img
+  - heading "Share Your MOCs" [level=3]
+  - paragraph: Upload and share your own custom LEGO creations
+  - button "Login Required" [disabled]
+  - heading "Why Choose Our Platform?" [level=2]
+  - paragraph: Built by builders, for builders
+  - img
+  - heading "Secure & Reliable" [level=3]
+  - paragraph: Your creations and data are protected with enterprise-grade security
+  - img
+  - heading "Lightning Fast" [level=3]
+  - paragraph: Optimized for speed with instant search and quick downloads
+  - img
+  - heading "Community Driven" [level=3]
+  - paragraph: Join thousands of builders sharing their passion for LEGO
+  - heading "Ready to Start Building?" [level=2]
+  - paragraph: Join our community and discover amazing LEGO MOCs today
+  - link "Start Browsing":
+    - /url: /moc-gallery
+    - button "Start Browsing":
+      - img
+      - text: Start Browsing
+  - button "Create Account":
+    - img
+    - text: Create Account
+  - button "Open TanStack Router Devtools":
+    - img
+    - img
+    - text: "- TanStack Router"
+  - button "Open Tanstack query devtools":
+    - img
+  - heading "Performance Monitor" [level=3]
+  - button "×"
+  - text: "Session ID: 7zydl0ss... Page Views: 0 Interactions: 0 Performance Metrics FP: 176.00ms avg TTFB: 1.60ms avg FCP: 260.00ms avg CLS: 0.02ms avg TTFB: 1.60ms good FCP: 260.00ms good FCP: 260.00ms good CLS: 0.01ms good CLS: 0.02ms good"
+  - button "Log to Console"
+  - img
+  - text: Ready for offline use
+  - button "Close offline":
+    - img
+  - paragraph: The app is now ready to work offline.
+```
