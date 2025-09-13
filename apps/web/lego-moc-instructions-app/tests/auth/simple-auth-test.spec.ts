@@ -22,7 +22,7 @@ test.describe('Simple Auth Flow Test', () => {
     await page.goto('/auth/login', { waitUntil: 'networkidle', timeout: 15000 });
 
     // Verify the page loads with timeout
-    await expect(page).toHaveTitle(/LEGO MOC Instructions/, { timeout: 10000 });
+    await expect(page).toHaveTitle(/Lego MOC Instructions/, { timeout: 10000 });
 
     // Verify auth form elements are present (from shared auth package)
     await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 8000 });

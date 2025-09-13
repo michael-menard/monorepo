@@ -207,11 +207,25 @@ export class AuthTestUtils {
    * Clear all auth-related cookies and local storage
    */
   async clearAuthData() {
-    await this.page.context().clearCookies();
-    await this.page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-    });
+    try {
+      await this.page.context().clearCookies();
+    } catch (error) {
+      console.log('Could not clear cookies:', error);
+    }
+
+    try {
+      await this.page.evaluate(() => {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (error) {
+          // Handle SecurityError for localStorage access
+          console.log('Could not clear localStorage/sessionStorage:', error);
+        }
+      });
+    } catch (error) {
+      console.log('Could not evaluate localStorage clear:', error);
+    }
   }
 
   /**
