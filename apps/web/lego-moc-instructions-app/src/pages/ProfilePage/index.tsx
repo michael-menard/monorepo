@@ -10,6 +10,7 @@ import {
   ProfilePage as ProfilePageComponent,
   ProfileSidebar,
 } from '@repo/profile';
+import { ProfileLayout, ProfileLayoutSidebar, ProfileAvatar, ProfileAvatarInfo } from '@repo/shared';
 import { LegoProfileContent } from './LegoProfileContent';
 import type { Profile, ProfileForm } from '@repo/profile';
 
@@ -97,13 +98,122 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  // Create the sidebar content using ProfileSidebar component
+  // Create the sidebar content using new shared layout components
   const sidebarContent = (
-    <ProfileSidebar
-      profile={profile}
-      onEdit={handleEdit}
-      onUploadAvatar={handleAvatarUpload}
-      isEditable={true}
+    <ProfileLayoutSidebar
+      avatar={
+        <div className="flex flex-col items-center space-y-4">
+          <ProfileAvatar
+            avatarUrl={profile.avatar}
+            userName={`${profile.firstName} ${profile.lastName}`}
+            userEmail={profile.email}
+            size="2xl"
+            editable={true}
+            onAvatarUpload={handleAvatarUpload}
+            onEdit={handleEdit}
+            showStatus={true}
+            isOnline={true}
+            showVerified={true}
+            isVerified={true}
+          />
+        </div>
+      }
+      profileInfo={
+        <ProfileAvatarInfo
+          userName={`${profile.firstName} ${profile.lastName}`}
+          userEmail={profile.email}
+          username={profile.username}
+          title="LEGO Builder"
+          location={profile.location}
+          joinDate={profile.createdAt}
+          badges={[
+            { label: 'Verified Builder', variant: 'default' },
+            { label: 'Active Member', variant: 'secondary' },
+          ]}
+        />
+      }
+      additionalContent={
+        <div className="space-y-6">
+          {/* Bio Section */}
+          {profile.bio && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">About</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">{profile.bio}</p>
+            </div>
+          )}
+
+          {/* Social Links */}
+          {profile.socialLinks && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Connect</h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.socialLinks.twitter && (
+                  <a
+                    href={profile.socialLinks.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:text-blue-600 text-sm"
+                  >
+                    Twitter
+                  </a>
+                )}
+                {profile.socialLinks.linkedin && (
+                  <a
+                    href={profile.socialLinks.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700 text-sm"
+                  >
+                    LinkedIn
+                  </a>
+                )}
+                {profile.socialLinks.github && (
+                  <a
+                    href={profile.socialLinks.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground hover:text-foreground/80 text-sm"
+                  >
+                    GitHub
+                  </a>
+                )}
+                {profile.socialLinks.instagram && (
+                  <a
+                    href={profile.socialLinks.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-pink-600 hover:text-pink-700 text-sm"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Website */}
+          {profile.website && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Website</h3>
+              <a
+                href={profile.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 text-sm font-medium"
+              >
+                Visit Website
+              </a>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-4 border-t border-border/50">
+            <Button onClick={handleEdit} className="w-full" variant="default">
+              Edit Profile
+            </Button>
+          </div>
+        </div>
+      }
     />
   );
 
@@ -122,22 +232,28 @@ export const ProfilePage: React.FC = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
+    <div className="min-h-screen">
+      {/* Back Button */}
+      <div className="container mx-auto px-4 pt-8">
         <Button variant="outline" onClick={handleBack} className="mb-4" data-testid="back-button">
           ← Back to Home
         </Button>
       </div>
 
-      <ProfilePageComponent
-        profile={profile}
+      {/* New Profile Layout */}
+      <ProfileLayout
         sidebarContent={sidebarContent}
+        sidebarWidth="wide"
+        leftOffset="medium"
+        stickysidebar={true}
+        sidebarBackground="default"
+        className="bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50 dark:from-background dark:via-muted/20 dark:to-accent/10"
       >
-        {/* Hide nested h1 from accessibility tree to avoid duplicate level-1 headings in tests */}
+        {/* Main Content */}
         <div aria-hidden>
           {mainContent}
         </div>
-      </ProfilePageComponent>
+      </ProfileLayout>
 
       {/* Edit Profile Modal */}
       {isEditing && (

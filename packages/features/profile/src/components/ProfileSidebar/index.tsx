@@ -1,5 +1,6 @@
 import React from 'react';
-import { AppAvatar, Button, Badge } from '@repo/ui';
+import { Button, Badge } from '@repo/ui';
+import { ProfileLayoutSidebar, ProfileAvatar, ProfileAvatarInfo } from '@repo/shared';
 import type { ProfileSidebarProps } from '../../types';
 import { formatFullName, generateAvatarPlaceholder, getProfileCompletionPercentage } from '../../utils';
 
@@ -34,144 +35,140 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   };
 
   return (
-    <div className={`profile-sidebar ${className}`}>
-      {/* Avatar Section */}
-      <div className="flex flex-col items-center mb-6">
-        <div className="relative">
-          <AppAvatar
+    <ProfileLayoutSidebar
+      className={className}
+      avatar={
+        <div className="flex flex-col items-center space-y-4">
+          <ProfileAvatar
             avatarUrl={avatarUrl}
             userName={fullName}
             userEmail={profile.email}
-            onAvatarUpload={isEditable && onUploadAvatar ? async (file: File) => {
-              onUploadAvatar(file);
-            } : undefined}
-            onProfileClick={handleProfileClick}
-            onUserSettingsClick={handleUserSettingsClick}
-            onLogout={handleLogout}
-            size="lg"
-            showEditButton={isEditable && !!onUploadAvatar}
-            className="w-24 h-24"
-            disabled={false}
-            clickable={true}
+            size="2xl"
+            editable={isEditable}
+            onAvatarUpload={isEditable && onUploadAvatar ? onUploadAvatar : undefined}
+            onEdit={isEditable && onEdit ? onEdit : undefined}
+            showStatus={true}
+            isOnline={true}
+            showVerified={profile.isVerified}
+            isVerified={profile.isVerified}
           />
-        </div>
-        
-        {/* Profile Completion Badge */}
-        <div className="mt-3">
+
+          {/* Profile Completion Badge */}
           <Badge variant={completionPercentage >= 80 ? 'default' : 'secondary'}>
             {completionPercentage}% Complete
           </Badge>
         </div>
-      </div>
+      }
+      profileInfo={
+        <ProfileAvatarInfo
+          userName={fullName}
+          userEmail={profile.email}
+          username={profile.username}
+          title={profile.title}
+          location={profile.location}
+          joinDate={profile.createdAt ? new Date(profile.createdAt) : undefined}
+          badges={[
+            ...(profile.isVerified ? [{ label: 'Verified', variant: 'default' as const }] : []),
+            ...(profile.isPremium ? [{ label: 'Premium', variant: 'secondary' as const }] : []),
+          ]}
+        />
+      }
+      additionalContent={
+        <div className="space-y-6">
 
-      {/* User Information */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">{fullName}</h2>
-        {profile.username && <p className="text-gray-600 text-sm mb-2">@{profile.username}</p>}
-        {profile.email && <p className="text-gray-500 text-sm">{profile.email}</p>}
-      </div>
-
-      {/* Bio Section */}
-      {profile.bio && (
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Bio</h3>
-          <p className="text-gray-600 text-sm leading-relaxed">{profile.bio}</p>
-        </div>
-      )}
-
-      {/* Stats Section */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Profile Stats</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Location</span>
-            <span className="text-gray-900 font-medium">{profile.location || 'Not specified'}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Member since</span>
-            <span className="text-gray-900 font-medium">
-              {profile.createdAt ? new Date(profile.createdAt).getFullYear() : 'N/A'}
-            </span>
-          </div>
-          {profile.website && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Website</span>
-              <a
-                href={profile.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Visit
-              </a>
+          {/* Bio Section */}
+          {profile.bio && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Bio</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">{profile.bio}</p>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Social Links */}
-      {profile.socialLinks && (
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Social Links</h3>
-          <div className="flex flex-wrap gap-2">
-            {profile.socialLinks.twitter && (
-              <a
-                href={profile.socialLinks.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-600 text-sm"
-              >
-                Twitter
-              </a>
+          {/* Stats Section */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">Profile Stats</h3>
+            <div className="space-y-2">
+              {profile.website && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Website</span>
+                  <a
+                    href={profile.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary/80 font-medium"
+                  >
+                    Visit
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Social Links */}
+          {profile.socialLinks && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Social Links</h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.socialLinks.twitter && (
+                  <a
+                    href={profile.socialLinks.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:text-blue-600 text-sm"
+                  >
+                    Twitter
+                  </a>
+                )}
+                {profile.socialLinks.linkedin && (
+                  <a
+                    href={profile.socialLinks.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700 text-sm"
+                  >
+                    LinkedIn
+                  </a>
+                )}
+                {profile.socialLinks.github && (
+                  <a
+                    href={profile.socialLinks.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground hover:text-foreground/80 text-sm"
+                  >
+                    GitHub
+                  </a>
+                )}
+                {profile.socialLinks.instagram && (
+                  <a
+                    href={profile.socialLinks.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-pink-600 hover:text-pink-700 text-sm"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            {isEditable && onEdit && (
+              <Button onClick={onEdit} className="w-full" variant="default">
+                Edit Profile
+              </Button>
             )}
-            {profile.socialLinks.linkedin && (
-              <a
-                href={profile.socialLinks.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                LinkedIn
-              </a>
-            )}
-            {profile.socialLinks.github && (
-              <a
-                href={profile.socialLinks.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-700 hover:text-gray-900 text-sm"
-              >
-                GitHub
-              </a>
-            )}
-            {profile.socialLinks.instagram && (
-              <a
-                href={profile.socialLinks.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-pink-600 hover:text-pink-800 text-sm"
-              >
-                Instagram
-              </a>
+            {onViewProfile && (
+              <Button onClick={onViewProfile} className="w-full" variant="outline">
+                View Profile
+              </Button>
             )}
           </div>
         </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="space-y-3">
-        {isEditable && onEdit && (
-          <Button onClick={onEdit} className="w-full" variant="default">
-            Edit Profile
-          </Button>
-        )}
-        {onViewProfile && (
-          <Button onClick={onViewProfile} className="w-full" variant="outline">
-            View Profile
-          </Button>
-        )}
-      </div>
-    </div>
+      }
+    />
   );
 };
 

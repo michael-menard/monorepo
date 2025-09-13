@@ -4,9 +4,19 @@ import {
   Badge,
   Button,
   TabPanel,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@repo/ui';
 import {
   Bell,
+  Blocks,
+  BookOpen,
   Calendar,
   Download,
   Edit,
@@ -23,8 +33,11 @@ import {
   Shield,
   Star,
   Trash2,
+  Trophy,
   Twitter,
   User,
+  Users,
+  Zap,
 } from 'lucide-react';
 import type { Profile } from '@repo/profile';
 
@@ -369,23 +382,146 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <p className="text-gray-600">Manage your account settings and preferences</p>
-        </div>
-        <Button onClick={onEdit} disabled={isEditing}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Profile
-        </Button>
-      </div>
+      {/* Welcome Header */}
+      <Card className="border-0 bg-gradient-to-r from-orange-500 to-red-500 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">
+                Welcome to {profile.firstName}'s LEGO Workshop!
+              </h1>
+              <p className="text-orange-100">
+                Discover amazing MOCs, detailed instructions, and creative building techniques.
+              </p>
+            </div>
+            <div className="hidden md:block">
+              <Blocks className="h-16 w-16 text-orange-200" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <TabPanel
-        tabs={tabs}
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
-      />
+      {/* Content Tabs */}
+      <Tabs defaultValue="mocs" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="mocs" className="flex items-center gap-2">
+            <Blocks className="h-4 w-4" />
+            MOCs
+          </TabsTrigger>
+          <TabsTrigger value="instructions" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Instructions
+          </TabsTrigger>
+          <TabsTrigger value="favorites" className="flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            Favorites
+          </TabsTrigger>
+          <TabsTrigger value="achievements" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            Achievements
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="mocs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Blocks className="h-5 w-5" />
+                My Original Creations (12)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* MOC cards would go here */}
+                <div className="text-center py-12 text-muted-foreground col-span-full">
+                  <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>MOC gallery will be displayed here</p>
+                  <p className="text-sm">Upload your first MOC to get started!</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="instructions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Building Instructions (8)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Instruction sets will be displayed here</p>
+                <p className="text-sm">Create detailed building guides for your MOCs!</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="favorites" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5" />
+                Favorite MOCs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Favorite MOCs will be displayed here</p>
+                <p className="text-sm">Heart MOCs you love to save them here!</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="achievements" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Building Achievements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Trophy className="h-8 w-8 text-yellow-500" />
+                  <div>
+                    <h4 className="font-semibold">First MOC</h4>
+                    <p className="text-sm text-muted-foreground">Created your first original design</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Zap className="h-8 w-8 text-blue-500" />
+                  <div>
+                    <h4 className="font-semibold">Quick Builder</h4>
+                    <p className="text-sm text-muted-foreground">Completed 10 builds in one month</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Users className="h-8 w-8 text-green-500" />
+                  <div>
+                    <h4 className="font-semibold">Community Favorite</h4>
+                    <p className="text-sm text-muted-foreground">Received 100+ likes on a MOC</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Star className="h-8 w-8 text-purple-500" />
+                  <div>
+                    <h4 className="font-semibold">Master Builder</h4>
+                    <p className="text-sm text-muted-foreground">Created 50+ original MOCs</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }; 
