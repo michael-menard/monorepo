@@ -29,14 +29,16 @@
   "dependencies": {
     "@emotion/is-prop-valid": "1.4.0",
     "@hookform/resolvers": "^5.2.1",
-    "@monorepo/fileupload": "workspace:*",
-    "@monorepo/shared": "workspace:*",
+    "@monorepo/upload": "workspace:*",
+    "@monorepo/gallery": "workspace:*",
+    "@repo/shared": "workspace:*",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@reduxjs/toolkit": "^2.8.2",
     "@repo/auth": "workspace:*",
     "@repo/features-wishlist": "workspace:*",
     "@repo/gallery": "workspace:*",
+
     "@repo/moc-instructions": "workspace:*",
     "@repo/profile": "workspace:*",
     "@repo/shared-cache": "workspace:*",

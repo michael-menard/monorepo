@@ -44,7 +44,7 @@ Replaced simple object-based chunks with intelligent function-based chunking:
   - profile-feature (@repo/profile)  
 - **Specialized utility chunks**:
   - auth (@repo/auth)
-  - image-utils (@repo/shared-image-utils)
+  - image-utils (@monorepo/upload)
   - cache-utils (@repo/shared-cache)
   - ui-utils (clsx, class-variance-authority, tailwind-merge, lucide-react)
   - forms (react-hook-form, zod)

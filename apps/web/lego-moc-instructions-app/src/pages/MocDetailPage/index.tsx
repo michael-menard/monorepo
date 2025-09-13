@@ -11,7 +11,7 @@ import {
 } from '@repo/moc-instructions';
 import { Gallery } from '@repo/gallery';
 import type { GalleryImage } from '@repo/gallery';
-import { FileUpload } from '@monorepo/fileupload';
+import { Upload as FileUpload } from '@monorepo/upload';
 
 // Mock data for development/testing when API is not available
 const mockInstruction = {

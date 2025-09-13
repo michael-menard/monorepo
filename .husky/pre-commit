@@ -1,0 +1,103 @@
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/h"
+
+# Pre-commit Hook: Lint-staged + Auggie Code Review
+echo "🚀 Running pre-commit checks on staged changes..."
+
+# Step 1: Run lint-staged
+echo "🔧 Running lint-staged to format and lint staged files..."
+pnpm lint-staged
+
+# Check if lint-staged failed
+if [ $? -ne 0 ]; then
+    echo "❌ lint-staged failed. Please fix the issues and try again."
+    exit 1
+fi
+
+echo "✅ lint-staged completed successfully!"
+echo ""
+
+# Step 2: Run Auggie Code Review (optional)
+echo "🤖 Running Auggie code review on staged changes..."
+
+# Check if auggie is available
+if ! command -v auggie &> /dev/null; then
+    echo "⚠️  Auggie not found. Skipping code review."
+    echo "   Install Auggie to enable automated code review: https://docs.augmentcode.com/"
+    echo "✅ Pre-commit checks completed successfully!"
+    exit 0
+fi
+
+# Get staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "ℹ️  No staged files to review."
+    echo "✅ Pre-commit checks completed successfully!"
+    exit 0
+fi
+
+echo "📁 Files to review:"
+echo "$STAGED_FILES" | sed 's/^/   - /'
+
+# Create temporary file for review results
+REVIEW_FILE=$(mktemp)
+
+# Run Auggie code review on staged changes
+echo "🔍 Analyzing staged changes with Auggie..."
+git diff --cached | auggie --print "Please review these staged changes for:
+1. Code quality and best practices
+2. Potential bugs or issues
+3. Security vulnerabilities
+4. Performance concerns
+5. Adherence to project conventions
+
+Provide a concise summary with:
+- ✅ APPROVED: If changes look good
+- ⚠️  WARNINGS: For minor issues that should be addressed
+- ❌ BLOCKED: For critical issues that must be fixed before commit
+
+Focus on actionable feedback." > "$REVIEW_FILE" 2>&1
+
+# Check if review was successful
+if [ $? -ne 0 ]; then
+    echo "❌ Auggie code review failed. Check your setup."
+    cat "$REVIEW_FILE"
+    rm "$REVIEW_FILE"
+    exit 1
+fi
+
+# Display review results
+echo ""
+echo "📋 Auggie Code Review Results:"
+echo "================================"
+cat "$REVIEW_FILE"
+echo "================================"
+
+# Check if review contains blocking issues
+if grep -q "❌ BLOCKED" "$REVIEW_FILE"; then
+    echo ""
+    echo "🚫 Commit blocked due to critical issues identified by Auggie."
+    echo "   Please address the issues above before committing."
+    rm "$REVIEW_FILE"
+    exit 1
+fi
+
+# Check for warnings
+if grep -q "⚠️  WARNINGS" "$REVIEW_FILE"; then
+    echo ""
+    echo "⚠️  Warnings found. Consider addressing them before committing."
+    echo "   Continue anyway? (y/N)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        echo "   Commit cancelled."
+        rm "$REVIEW_FILE"
+        exit 1
+    fi
+fi
+
+# Clean up
+rm "$REVIEW_FILE"
+
+echo ""
+echo "✅ Pre-commit review completed successfully!"

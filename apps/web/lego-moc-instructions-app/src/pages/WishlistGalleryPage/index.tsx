@@ -23,194 +23,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-// Gallery component for wishlist items
-interface GalleryImage {
-  id: string;
-  url: string;
-  title?: string;
-  description?: string;
-  author?: string;
-  tags?: Array<string>;
-  createdAt: Date;
-  liked?: boolean;
-}
-
-interface GalleryProps {
-  images: Array<GalleryImage>;
-  layout?: 'grid' | 'masonry';
-  className?: string;
-  onImageClick?: (image: GalleryImage) => void;
-  onImageLike?: (imageId: string, liked: boolean) => void;
-  onImageDelete?: (imageId: string) => void;
-  onImagesSelected?: (imageIds: Array<string>) => void;
-  selectedImages?: Array<string>;
-  onImagesDeleted?: (deletedIds: Array<string>) => void;
-}
-
-const Gallery: React.FC<GalleryProps> = ({
-  images,
-  layout = 'grid',
-  className = '',
-  onImageClick,
-  onImageLike,
-  onImageDelete,
-  onImagesSelected,
-  selectedImages = [],
-  onImagesDeleted,
-}) => {
-  const handleImageSelect = (imageId: string, checked: boolean) => {
-    const newSelected = checked
-      ? [...selectedImages, imageId]
-      : selectedImages.filter((id) => id !== imageId);
-    onImagesSelected?.(newSelected);
-  };
-
-  if (images.length === 0) {
-    return (
-      <div className={`flex items-center justify-center min-h-[200px] ${className}`}>
-        <div className="text-center">
-          <div className="text-6xl mb-4">🖼️</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No images yet</h3>
-          <p className="text-gray-600">Add some images to get started!</p>
-        </div>
-      </div>
-    );
-  }
-
-  const getLayoutClasses = () => {
-    switch (layout) {
-      case 'grid':
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
-      case 'masonry':
-        return 'columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4';
-      default:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
-    }
-  };
-
-  const getItemClasses = () => {
-    return layout === 'masonry' ? 'break-inside-avoid mb-4' : '';
-  };
-
-  return (
-    <>
-      <div className={`${getLayoutClasses()} ${className}`}>
-        {images.map((image) => (
-          <div
-            key={image.id}
-            className={`${getItemClasses()} relative group cursor-pointer`}
-            onClick={() => onImageClick?.(image)}
-          >
-            {/* Selection Checkbox */}
-            <div className="absolute top-2 right-2 z-10">
-              <input
-                type="checkbox"
-                checked={selectedImages.includes(image.id)}
-                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                   e.stopPropagation();
-                   handleImageSelect(image.id, e.target.checked);
-                 }}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            </div>
-
-            {/* Image Card */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-              <div className="aspect-square relative">
-                <img
-                  src={image.url}
-                  alt={image.title || 'Gallery image'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                                             onClick={(e: React.MouseEvent) => {
-                         e.stopPropagation();
-                         onImageLike?.(image.id, !image.liked);
-                       }}
-                      className="bg-white/90 hover:bg-white"
-                    >
-                      {image.liked ? (
-                        <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                      ) : (
-                        <Heart className="w-4 h-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                                             onClick={(e: React.MouseEvent) => {
-                         e.stopPropagation();
-                         onImageDelete?.(image.id);
-                       }}
-                      className="bg-white/90 hover:bg-white text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-3">
-                <h3 className="font-medium text-gray-900 truncate">{image.title || 'Untitled'}</h3>
-                {image.description && (
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{image.description}</p>
-                )}
-                {image.author && (
-                  <p className="text-xs text-gray-500 mt-1">{image.author}</p>
-                )}
-                {image.tags && image.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {image.tags.slice(0, 3).map((tag, tagIndex) => (
-                      <Badge key={tagIndex} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Batch Operations Toolbar */}
-      {selectedImages.length > 0 && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">
-              {selectedImages.length} items selected
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onImagesSelected?.([])}
-              >
-                Clear Selection
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => onImagesDeleted?.(selectedImages)}
-              >
-                Delete Selected
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-};
-
+import { Gallery, GalleryAdapters } from '@monorepo/gallery';
 // Define types locally to avoid import issues
 interface WishlistItem {
   id: string;
@@ -1309,25 +1122,28 @@ export const WishlistGalleryPage: React.FC = () => {
             />
           ) : viewMode === 'gallery' ? (
             <Gallery
-              images={galleryItems}
-              layout="grid"
+              items={filteredItems}
+              preset="wishlist"
+              adapter={GalleryAdapters.wishlist}
+              selectedItems={selectedItems}
+              actions={{
+                onItemClick: (item) => {
+                  const wishlistItem = filteredItems.find(i => i.id === item.id);
+                  if (wishlistItem) handleEdit(wishlistItem);
+                },
+                onItemLike: (itemId, liked) => {
+                  handleTogglePurchased(itemId);
+                },
+                onItemDelete: (itemId) => {
+                  handleDeleteItem(itemId);
+                },
+                onItemsSelected: setSelectedItems,
+                onBatchDelete: (deletedIds) => {
+                  setWishlistItems(prev => prev.filter(item => !deletedIds.includes(item.id)));
+                  setSelectedItems([]);
+                },
+              }}
               className="bg-white rounded-lg border p-4"
-              onImageClick={(image) => {
-                const item = filteredItems.find(item => item.id === image.id);
-                if (item) handleEdit(item);
-              }}
-              onImageLike={(imageId) => {
-                handleTogglePurchased(imageId);
-              }}
-              onImageDelete={(imageId) => {
-                handleDeleteItem(imageId);
-              }}
-              onImagesSelected={setSelectedItems}
-              selectedImages={selectedItems}
-              onImagesDeleted={(deletedIds) => {
-                setWishlistItems(prev => prev.filter(item => !deletedIds.includes(item.id)));
-                setSelectedItems([]);
-              }}
             />
           ) : (
             <div className={viewMode === 'grid' 

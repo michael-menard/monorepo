@@ -37,11 +37,10 @@ Monorepo/
 
 ### Prerequisites
 
-- **Node.js** 18+ 
+- **Node.js** 18+
 - **pnpm** 8+
 - **Git**
-- **Docker** & **Docker Compose** (for local development)
-- **PostgreSQL** 14+ (or use Docker)
+- **Docker** & **Docker Compose** (for external services only)
 
 ### Installation
 
@@ -66,13 +65,10 @@ cp apps/web/lego-moc-instructions-app/env.example apps/web/lego-moc-instructions
 
 4. **Start development services:**
 ```bash
-# Start databases and services
-docker-compose up -d
+# Start external services (databases, search, admin tools)
+pnpm dev:infra
 
-# Run database migrations
-pnpm db:migrate
-
-# Start all applications
+# Start all applications natively
 pnpm dev
 ```
 
@@ -169,23 +165,17 @@ MOC instruction creation and management.
 - Version control
 - Collaboration tools
 
-#### `@repo/features/ImageUploadModal`
-Reusable image upload modal component.
+#### `@monorepo/upload`
+Unified file and image upload system with comprehensive functionality.
 
 **Features:**
 - Drag and drop support
-- Image preview
+- Image preview and processing
 - Progress tracking
-- Validation
-
-#### `@repo/features/FileUpload`
-File upload utilities and components.
-
-**Features:**
 - File validation
-- Upload progress
+- Multiple upload modes (inline, modal, avatar)
+- Image compression and optimization
 - Error handling
-- Multiple file support
 
 ### Utility Packages
 
@@ -198,13 +188,15 @@ Caching utilities for improved performance.
 - Cache invalidation
 - Performance optimization
 
-#### `@repo/shared-image-utils`
-Image processing and optimization utilities.
+#### `@monorepo/upload` (Consolidated)
+Unified file and image upload system with comprehensive functionality.
 
 **Features:**
-- Image compression
-- Format conversion
-- Thumbnail generation
+- File upload with drag-and-drop support
+- Image processing and optimization
+- Progress tracking and validation
+- Multiple upload modes (inline, modal, avatar)
+- Image compression and format conversion
 - Metadata extraction
 
 #### `@repo/tech-radar`
@@ -339,14 +331,14 @@ pnpm build
 pnpm --filter lego-moc-instructions-app build
 ```
 
-### Docker Deployment
+### Production Deployment
 
 ```bash
-# Build Docker images
-docker-compose -f docker-compose.prod.yml build
+# Build all applications for production
+pnpm build
 
-# Deploy to production
-docker-compose -f docker-compose.prod.yml up -d
+# Deploy using your preferred method (Vercel, Netlify, etc.)
+# External services can still use Docker in production
 ```
 
 ### Environment Configuration

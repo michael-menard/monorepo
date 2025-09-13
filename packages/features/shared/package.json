@@ -1,5 +1,5 @@
 {
-  "name": "@monorepo/features-shared",
+  "name": "@repo/features-shared",
   "version": "1.0.0",
   "description": "Shared features and utilities for the monorepo",
   "main": "src/index.ts",

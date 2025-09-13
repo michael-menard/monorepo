@@ -117,7 +117,7 @@
         "id": 10,
         "title": "Update Documentation - Frontend Native Setup",
         "description": "Update frontend documentation with new development setup and API service configuration examples",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4
         ],
@@ -142,7 +142,7 @@
         "id": 12,
         "title": "Update Tests - Auth and LEGO API Native Execution",
         "description": "Update auth service and LEGO API unit, integration, and E2E tests for native execution",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           2,
           3
@@ -155,7 +155,7 @@
         "id": 13,
         "title": "Update Tests - Frontend E2E with Native Backend",
         "description": "Update Playwright E2E tests to work with native backend services",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4
         ],
@@ -201,7 +201,7 @@
       "description": "Modernize backend development by removing Docker from application services while keeping infrastructure containerized",
       "created": "2025-01-09T03:12:20Z",
       "lastModified": "2025-01-09T03:12:20Z",
-      "updated": "2025-09-09T04:21:04.667Z"
+      "updated": "2025-09-09T04:59:47.905Z"
     }
   },
   "global": {

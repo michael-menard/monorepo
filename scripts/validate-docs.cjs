@@ -22,8 +22,8 @@ const requiredFiles = [
   '__docs__/API_DOCUMENTATION.md',
   
   // Infrastructure
-  'test-infrastructure.sh',
-  'docker-compose-dev.yml'
+  'scripts/test-infrastructure.sh',
+  'docker-compose.dev.yml'
 ];
 
 let allValid = true;
@@ -123,7 +123,7 @@ if (allValid) {
   console.log('🎉 All documentation validation checks passed!');
   console.log('\n✅ LEGO Projects API documentation is complete and ready for native development');
   console.log('\nNext steps for developers:');
-  console.log('1. Start infrastructure: docker-compose -f docker-compose-dev.yml up -d');
+  console.log('1. Start infrastructure: docker-compose -f docker-compose.dev.yml up -d');
   console.log('2. Navigate to API: cd apps/api/lego-projects-api');
   console.log('3. Install deps: pnpm install');
   console.log('4. Setup DB: pnpm drizzle-kit push');

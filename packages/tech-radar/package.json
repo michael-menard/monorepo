@@ -1,5 +1,5 @@
 {
-  "name": "@monorepo/tech-radar",
+  "name": "@repo/tech-radar",
   "version": "1.0.0",
   "description": "Interactive Tech Radar for the monorepo",
   "main": "./dist/tech-radar.js",
@@ -16,23 +16,36 @@
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "generate": "tsx generate-radar.ts"
+    "generate": "tsx generate-radar.ts",
+    "check-types": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.294.0"
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "lucide-react": "^0.468.0",
+    "framer-motion": "^12.23.3",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.30.0",
+    "jsdom": "^25.0.1",
     "tsx": "^4.6.2",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "typescript": "5.8.3",
+    "vite": "^5.2.10",
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   }
 }

@@ -11,7 +11,7 @@ Choose your preferred development setup:
 **Prerequisites:**
 - Node.js 18+
 - pnpm 8+
-- MongoDB (for auth service)
+- Docker & Docker Compose (for external services)
 
 **Steps:**
 1. **Clone the repository**

@@ -335,4 +335,33 @@ export { FormErrorExample } from './form-error-example';
 
 // Theme components
 export { ThemeProvider, useTheme } from './providers/ThemeProvider';
-export { ThemeToggle } from './components/ThemeToggle'; 
+export { ThemeToggle } from './components/ThemeToggle';
+
+// Secure App Components (with DOMPurify sanitization)
+export { AppInput } from './AppInput';
+export { AppTextarea } from './AppTextarea';
+export { AppSelect } from './AppSelect';
+export { AppLabel } from './AppLabel';
+export { AppForm } from './AppForm';
+export { AppSafeContent } from './AppSafeContent';
+
+// Sanitization utilities
+export {
+  sanitizeInput,
+  sanitizeByInputType,
+  sanitizeFormData,
+  createSanitizationHook,
+  validateSanitizedInput,
+  isDOMPurifyAvailable,
+  safeSanitizeInput,
+  SANITIZATION_PROFILES,
+  INPUT_TYPE_PROFILES,
+} from './lib/sanitization';
+
+export type { SanitizationConfig } from './lib/sanitization';
+export type { AppInputProps } from './AppInput';
+export type { AppTextareaProps } from './AppTextarea';
+export type { AppSelectProps, AppSelectOption } from './AppSelect';
+export type { AppLabelProps } from './AppLabel';
+export type { AppFormProps } from './AppForm';
+export type { AppSafeContentProps } from './AppSafeContent';

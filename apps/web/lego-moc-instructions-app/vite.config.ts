@@ -196,8 +196,8 @@ export default defineConfig({
       '@repo/moc-instructions': resolve(__dirname, '../../../packages/features/moc-instructions/src'),
       '@repo/profile': resolve(__dirname, '../../../packages/features/profile/src'),
       '@repo/shared-cache': resolve(__dirname, '../../../packages/shared-cache/src'),
-      '@repo/shared-image-utils': resolve(__dirname, '../../../packages/shared-image-utils'),
-      '@monorepo/shared': resolve(__dirname, '../../../packages/shared/src'),
+      '@monorepo/upload': resolve(__dirname, '../../../packages/upload/src'),
+      '@repo/shared': resolve(__dirname, '../../../packages/shared/src'),
     },
   },
   define: {
@@ -271,7 +271,7 @@ export default defineConfig({
           }
           
           // Shared UI components - frequently reused
-          if (id.includes('@repo/ui') || id.includes('@monorepo/shared')) {
+          if (id.includes('@repo/ui') || id.includes('@repo/shared')) {
             return 'shared-ui'
           }
           
@@ -289,7 +289,7 @@ export default defineConfig({
           }
           
           // Image utilities - used in gallery and detail pages
-          if (id.includes('@repo/shared-image-utils')) {
+          if (id.includes('@monorepo/upload')) {
             return 'image-utils'
           }
           

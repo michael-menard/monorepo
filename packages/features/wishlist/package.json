@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
-    "@monorepo/fileupload": "workspace:*",
+    "@monorepo/upload": "workspace:*",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@reduxjs/toolkit": "^2.8.2",
@@ -44,7 +44,7 @@
     "tailwindcss": "^4.1.11",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.22.4",
-    "@monorepo/shared": "workspace:*"
+    "@repo/shared": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.11",

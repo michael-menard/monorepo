@@ -14,6 +14,7 @@ These files can be used with REST clients like:
 
 ### API Services
 - `auth-service.http` - Test Auth Service API endpoints (localhost:5000)
+- `lego-projects-api.http` - Test LEGO Projects API endpoints (localhost:3000)
 
 ### Database Health Checks
 - `mongodb.http` - Test MongoDB connection and basic queries
@@ -39,9 +40,9 @@ These files can be used with REST clients like:
 ### Quick Health Check Script
 ```bash
 # Run all health checks quickly
-./test-infrastructure.sh
+./scripts/test-infrastructure.sh
 ```
 
 ## Expected Results
 
-All services should return healthy responses when the infrastructure is running correctly via `docker-compose -f docker-compose-dev.yml up -d`.
+All services should return healthy responses when the infrastructure is running correctly via `docker-compose -f docker-compose.dev.yml up -d`.

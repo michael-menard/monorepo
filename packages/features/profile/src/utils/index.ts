@@ -1,5 +1,5 @@
 import type { Profile, ProfileForm } from '../schemas';
-import { processImageFile, getPreset } from '@repo/shared-image-utils';
+import { processImageBrowser, getPreset } from '@monorepo/upload';
 
 // Format full name
 export const formatFullName = (profile: Pick<Profile, 'firstName' | 'lastName'>): string => {
@@ -31,16 +31,18 @@ export const compressImage = async (
   maxWidth: number = 800,
   quality: number = 0.8
 ): Promise<File> => {
-  const config = getPreset('gallery');
-  config.maxWidth = maxWidth;
-  config.quality = Math.round(quality * 100);
-  
-  const { file: compressedFile } = await processImageFile({
-    file,
-    config
+  const blob = await processImageBrowser(file, {
+    width: maxWidth,
+    quality: Math.round(quality * 100),
+    format: 'jpeg',
+    fit: 'inside'
   });
-  
-  return compressedFile;
+
+  // Convert blob back to File
+  return new File([blob], file.name, {
+    type: blob.type,
+    lastModified: Date.now(),
+  });
 };
 
 // Format date for display

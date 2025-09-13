@@ -47,35 +47,45 @@ check_memory() {
     fi
 }
 
-# Start all services
+# Start all external services
 start_all() {
-    print_header "Starting All Services"
+    print_header "Starting External Services"
     check_docker
     check_memory
-    
-    print_status "Building and starting all services..."
-    docker-compose up --build -d
-    
-    print_status "Services are starting up. This may take a few minutes..."
+
+    print_status "Starting external services (databases, search, admin tools)..."
+    docker-compose -f docker-compose.dev.yml up -d
+
+    print_status "External services are starting up. This may take a few minutes..."
     print_status "You can monitor the logs with: ./docker-scripts.sh logs"
-    
+
     echo ""
-    print_status "Service URLs:"
-    echo "  Frontend: http://localhost:3000"
-    echo "  Auth API: http://localhost:5000/api/auth"
-    echo "  Lego API: http://localhost:5001"
+    print_status "External Service URLs:"
+    echo "  MongoDB: mongodb://localhost:27017"
+    echo "  PostgreSQL: postgresql://localhost:5432"
+    echo "  Redis: redis://localhost:6379"
+    echo "  Elasticsearch: http://localhost:9200"
     echo "  MongoDB Admin: http://localhost:8081"
+    echo "  pgAdmin: http://localhost:8082"
+    echo ""
+    print_status "Next Steps:"
+    echo "  1. Start applications natively: pnpm dev"
+    echo "  2. Or start specific apps:"
+    echo "     - Frontend: cd apps/web/lego-moc-instructions-app && pnpm dev"
+    echo "     - Auth API: cd apps/api/auth-service && pnpm dev"
+    echo "     - LEGO API: cd apps/api/lego-projects-api && pnpm dev"
 }
 
-# Stop all services
+# Stop all external services
 stop_all() {
-    print_header "Stopping All Services"
+    print_header "Stopping External Services"
     check_docker
-    
-    print_status "Stopping all services..."
-    docker-compose down
-    
-    print_status "All services stopped."
+
+    print_status "Stopping external services..."
+    docker-compose -f docker-compose.dev.yml down
+
+    print_status "External services stopped."
+    print_status "Note: Application services should be stopped manually (Ctrl+C in their terminals)"
 }
 
 # Restart all services
@@ -88,60 +98,60 @@ restart_all() {
 # Show logs
 show_logs() {
     local service=${1:-""}
-    
+
     if [ -z "$service" ]; then
-        print_header "All Service Logs"
-        docker-compose logs -f
+        print_header "All External Service Logs"
+        docker-compose -f docker-compose.dev.yml logs -f
     else
         print_header "Logs for $service"
-        docker-compose logs -f "$service"
+        docker-compose -f docker-compose.dev.yml logs -f "$service"
     fi
 }
 
 # Show status
 show_status() {
-    print_header "Service Status"
-    docker-compose ps
+    print_header "External Service Status"
+    docker-compose -f docker-compose.dev.yml ps
 }
 
 # Clean up everything
 clean_all() {
-    print_header "Cleaning All Docker Resources"
+    print_header "Cleaning External Service Docker Resources"
     check_docker
-    
-    print_warning "This will remove all containers, networks, volumes, and images!"
+
+    print_warning "This will remove all external service containers, networks, volumes, and images!"
     read -p "Are you sure? (y/N): " -n 1 -r
     echo
-    
+
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        print_status "Stopping and removing all containers..."
-        docker-compose down -v --rmi all
-        
+        print_status "Stopping and removing external service containers..."
+        docker-compose -f docker-compose.dev.yml down -v --rmi all
+
         print_status "Removing unused Docker resources..."
         docker system prune -f
-        
+
         print_status "Cleanup complete."
     else
         print_status "Cleanup cancelled."
     fi
 }
 
-# Rebuild specific service
+# Rebuild specific external service
 rebuild_service() {
     local service=$1
-    
+
     if [ -z "$service" ]; then
-        print_error "Please specify a service to rebuild"
-        echo "Available services: auth-service, lego-projects-api, lego-moc-app"
+        print_error "Please specify an external service to rebuild"
+        echo "Available services: mongodb, postgres, redis, elasticsearch, mongo-express, pgadmin"
         exit 1
     fi
-    
+
     print_header "Rebuilding $service"
     check_docker
-    
+
     print_status "Rebuilding $service..."
-    docker-compose up --build -d "$service"
-    
+    docker-compose -f docker-compose.dev.yml up --build -d "$service"
+
     print_status "$service rebuilt and restarted."
 }
 
@@ -149,57 +159,71 @@ rebuild_service() {
 start_databases() {
     print_header "Starting Databases Only"
     check_docker
-    
+
     print_status "Starting databases..."
-    docker-compose up -d mongodb postgres redis elasticsearch
-    
+    docker-compose -f docker-compose.dev.yml up -d mongodb postgres redis
+
     print_status "Databases started."
+    echo "  MongoDB: mongodb://localhost:27017"
+    echo "  PostgreSQL: postgresql://localhost:5432"
+    echo "  Redis: redis://localhost:6379"
 }
 
-# Start only APIs
-start_apis() {
-    print_header "Starting APIs Only"
+# Start only search services
+start_search() {
+    print_header "Starting Search Services Only"
     check_docker
-    
-    print_status "Starting APIs..."
-    docker-compose up -d auth-service lego-projects-api
-    
-    print_status "APIs started."
+
+    print_status "Starting search services..."
+    docker-compose -f docker-compose.dev.yml up -d elasticsearch
+
+    print_status "Search services started."
+    echo "  Elasticsearch: http://localhost:9200"
 }
 
-# Start only frontend
-start_frontend() {
-    print_header "Starting Frontend Only"
+# Start only admin tools
+start_admin() {
+    print_header "Starting Admin Tools Only"
     check_docker
-    
-    print_status "Starting frontend..."
-    docker-compose up -d lego-moc-app
-    
-    print_status "Frontend started."
+
+    print_status "Starting admin tools..."
+    docker-compose -f docker-compose.dev.yml up -d mongo-express pgadmin
+
+    print_status "Admin tools started."
+    echo "  MongoDB Admin: http://localhost:8081"
+    echo "  pgAdmin: http://localhost:8082"
 }
 
 # Show help
 show_help() {
-    print_header "Docker Management Script"
+    print_header "External Services Management Script"
     echo "Usage: $0 [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  start           Start all services"
-    echo "  stop            Stop all services"
-    echo "  restart         Restart all services"
+    echo "  start           Start all external services"
+    echo "  stop            Stop all external services"
+    echo "  restart         Restart all external services"
     echo "  logs [service]  Show logs (all or specific service)"
     echo "  status          Show service status"
     echo "  clean           Clean all Docker resources"
     echo "  rebuild <service> Rebuild specific service"
-    echo "  databases       Start only databases"
-    echo "  apis            Start only APIs"
-    echo "  frontend        Start only frontend"
+    echo "  databases       Start only databases (MongoDB, PostgreSQL, Redis)"
+    echo "  search          Start only search services (Elasticsearch)"
+    echo "  admin           Start only admin tools (Mongo Express, pgAdmin)"
     echo "  help            Show this help message"
     echo ""
+    echo "Available Services:"
+    echo "  mongodb, postgres, redis, elasticsearch, mongo-express, pgadmin"
+    echo ""
     echo "Examples:"
-    echo "  $0 start"
-    echo "  $0 logs lego-moc-app"
-    echo "  $0 rebuild auth-service"
+    echo "  $0 start                    # Start all external services"
+    echo "  $0 databases                # Start only databases"
+    echo "  $0 logs mongodb             # Show MongoDB logs"
+    echo "  $0 rebuild elasticsearch    # Rebuild Elasticsearch"
+    echo ""
+    echo "Note: Application services (frontend, APIs) should be run natively:"
+    echo "  pnpm dev                    # Start all applications"
+    echo "  cd apps/api/auth-service && pnpm dev    # Start auth service"
 }
 
 # Main script logic
@@ -228,11 +252,11 @@ case "${1:-help}" in
     databases)
         start_databases
         ;;
-    apis)
-        start_apis
+    search)
+        start_search
         ;;
-    frontend)
-        start_frontend
+    admin)
+        start_admin
         ;;
     help|--help|-h)
         show_help

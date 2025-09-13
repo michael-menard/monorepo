@@ -9,10 +9,10 @@ import {
   getPreset,
   type ImageProcessingConfig,
   type ImageOptimizationStats,
-} from '@repo/shared-image-utils';
+} from '@monorepo/upload';
 
 // Re-export types for backward compatibility
-export type { ImageProcessingConfig } from '@repo/shared-image-utils';
+export type { ImageProcessingConfig } from '@monorepo/upload';
 
 // Default configuration for avatar images (using shared preset)
 export const DEFAULT_AVATAR_CONFIG: ImageProcessingConfig = getPreset('avatar');
@@ -94,7 +94,7 @@ export async function createImageVariants(
 /**
  * Get optimal image format based on file extension and content
  */
-export { getOptimalFormat } from '@repo/shared-image-utils';
+export { getOptimalFormat } from '@monorepo/upload';
 
 /**
  * Middleware to process uploaded images
@@ -138,7 +138,7 @@ export function imageProcessingMiddleware(config?: Partial<ImageProcessingConfig
 /**
  * Validate if an image can be processed
  */
-export { canProcessImage } from '@repo/shared-image-utils';
+export { canProcessImage } from '@monorepo/upload';
 
 /**
  * Get image dimensions from buffer

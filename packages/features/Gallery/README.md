@@ -223,4 +223,4 @@ pnpm test
 
 - `@repo/ui` - Base UI components
 - `@repo/features/ImageUploadModal` - Image upload modal
-- `@repo/shared-image-utils` - Image processing utilities 
+- `@monorepo/upload` - Image processing and upload utilities

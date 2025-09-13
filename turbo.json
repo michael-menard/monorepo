@@ -2,37 +2,100 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "concurrency": "16",
+  "remoteCache": {
+    "signature": true
+  },
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**", ".docusaurus/**"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "inputs": ["$TURBO_DEFAULT$", "eslint.config.*", ".eslintrc*"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig*.json"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "start": {
-      "cache": false
+      "cache": false,
+      "persistent": true
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "vitest.config.*", "jest.config.*"],
+      "outputs": ["coverage/**"]
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:ui": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "vitest.config.*", "jest.config.*"],
+      "outputs": ["coverage/**"]
     },
     "test:e2e": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "playwright.config.*"],
+      "outputs": ["test-results/**", "playwright-report/**"],
       "cache": false
     },
     "preview": {
       "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
       "cache": false
+    },
+    "format": {
+      "inputs": ["$TURBO_DEFAULT$", ".prettierrc*", "prettier.config.*"],
+      "outputs": []
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    },
+    "build-storybook": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".storybook/**"],
+      "outputs": ["storybook-static/**"]
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:seed": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "deploy": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "serve": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
     }
   }
 }
