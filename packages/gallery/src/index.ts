@@ -71,6 +71,26 @@ export {
   mergePresetConfig,
 } from './presets/index.js';
 
+// Import presets, adapters, and Gallery for use in convenience objects
+import {
+  inspirationGalleryPreset,
+  instructionsGalleryPreset,
+  wishlistGalleryPreset,
+  compactGalleryPreset,
+  tableGalleryPreset,
+  carouselGalleryPreset,
+} from './presets/index.js';
+
+import {
+  imageAdapter,
+  inspirationAdapter,
+  instructionAdapter,
+  wishlistAdapter,
+  createAdapter,
+} from './utils/adapters.js';
+
+import { Gallery } from './components/Gallery/Gallery.js';
+
 // Convenience exports for common use cases
 export const GalleryPresets = {
   inspiration: inspirationGalleryPreset,
