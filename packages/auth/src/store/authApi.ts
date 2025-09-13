@@ -1,26 +1,78 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { 
+import {
   getRTKQueryCacheConfig
 } from '@repo/shared-cache';
 import type {
   LoginRequest,
   SignupRequest,
-  ResetPasswordRequest,
+  ForgotPasswordRequest,
   ConfirmResetRequest,
   AuthResponse,
   VerifyEmailRequest,
 } from '../types/auth.js';
+import { getCSRFHeaders, refreshCSRFToken, isCSRFError } from '../utils/csrf.js';
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 const baseUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5000/api/auth'
+  ? 'http://localhost:5001/api/auth'
   : '/api/auth';
+
+// Create a base query with CSRF retry logic
+const baseQuery = fetchBaseQuery({
+  baseUrl,
+  credentials: 'include', // for cookies
+  prepareHeaders: async (headers, { endpoint }) => {
+    // Add CSRF headers for mutation requests
+    const isMutation = ['login', 'signup', 'logout', 'refresh', 'resetPassword',
+                       'confirmReset', 'verifyEmail', 'resendVerificationCode',
+                       'socialLogin'].includes(endpoint);
+
+    if (isMutation) {
+      try {
+        const csrfHeaders = await getCSRFHeaders();
+        Object.entries(csrfHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+      } catch (error) {
+        console.warn('Failed to add CSRF token to auth request:', error);
+      }
+    }
+
+    return headers;
+  },
+});
+
+// Enhanced base query with CSRF retry logic
+const baseQueryWithCSRFRetry: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
+
+  // Check if this is a CSRF failure and we can retry
+  if (result.error && isCSRFError(result.error)) {
+    console.log('CSRF token failed on auth request, attempting to refresh and retry');
+
+    try {
+      // Get a fresh CSRF token
+      await refreshCSRFToken();
+
+      // Retry the request
+      console.log('Retrying auth request with fresh CSRF token');
+      result = await baseQuery(args, api, extraOptions);
+    } catch (refreshError) {
+      console.error('Failed to refresh CSRF token for auth retry:', refreshError);
+      // Return the original error if refresh fails
+    }
+  }
+
+  return result;
+};
 
 export const authApi = createApi({
   reducerPath: 'authApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl,
-    credentials: 'include', // for cookies
-  }),
+  baseQuery: baseQueryWithCSRFRetry,
   tagTypes: ['Auth', 'User'],
   endpoints: (builder) => ({
     login: builder.mutation<AuthResponse, LoginRequest>({
@@ -52,11 +104,18 @@ export const authApi = createApi({
         method: 'POST',
       }),
     }),
-    resetPassword: builder.mutation<AuthResponse, ResetPasswordRequest>({
+    forgotPassword: builder.mutation<AuthResponse, ForgotPasswordRequest>({
       query: (body) => ({
-        url: '/reset-password',
+        url: '/forgot-password',
         method: 'POST',
         body,
+      }),
+    }),
+    resetPassword: builder.mutation<AuthResponse, { token: string; password: string }>({
+      query: ({ token, password }) => ({
+        url: `/reset-password/${token}`,
+        method: 'POST',
+        body: { password },
       }),
     }),
     confirmReset: builder.mutation<AuthResponse, ConfirmResetRequest>({
@@ -83,10 +142,17 @@ export const authApi = createApi({
       }),
       invalidatesTags: ['User'],
     }),
-    resendVerificationCode: builder.mutation<AuthResponse, void>({
-      query: () => ({
+    resendVerificationCode: builder.mutation<AuthResponse, { email: string }>({
+      query: (body) => ({
         url: '/resend-verification',
         method: 'POST',
+        body,
+      }),
+    }),
+    fetchCSRFToken: builder.query<{ token: string }, void>({
+      query: () => ({
+        url: '/csrf',
+        method: 'GET',
       }),
     }),
     socialLogin: builder.mutation<AuthResponse, { provider: 'google' | 'twitter' | 'facebook' | 'github' }>({
@@ -104,10 +170,12 @@ export const {
   useSignupMutation,
   useLogoutMutation,
   useRefreshMutation,
+  useForgotPasswordMutation,
   useResetPasswordMutation,
   useConfirmResetMutation,
   useCheckAuthQuery,
   useVerifyEmailMutation,
   useResendVerificationCodeMutation,
+  useFetchCSRFTokenQuery,
   useSocialLoginMutation,
-} = authApi; 
+} = authApi;

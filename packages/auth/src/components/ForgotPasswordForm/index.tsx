@@ -10,7 +10,7 @@ import { Button } from '../ui/button';
 
 const ForgotPasswordForm = () => {
   const navigate = useNavigate();
-  const { resetPassword, isLoading, message, error } = useAuth();
+  const { forgotPassword, isLoading, message, error } = useAuth();
 
   const {
     register,
@@ -21,7 +21,7 @@ const ForgotPasswordForm = () => {
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    await resetPassword(data);
+    await forgotPassword(data);
   };
 
   const handleBackToLogin = () => {

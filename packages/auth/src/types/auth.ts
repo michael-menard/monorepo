@@ -36,12 +36,16 @@ export const LoginRequestSchema = z.object({
 export const SignupRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export const ForgotPasswordRequestSchema = z.object({
+  email: z.string().email(),
 });
 
 export const ResetPasswordRequestSchema = z.object({
-  email: z.string().email(),
+  token: z.string(),
+  password: z.string().min(6),
 });
 
 export const ConfirmResetRequestSchema = z.object({
@@ -79,8 +83,9 @@ export interface AuthTokens extends z.infer<typeof AuthTokensSchema> {}
 export interface AuthResponse extends z.infer<typeof AuthResponseSchema> {}
 export interface LoginRequest extends z.infer<typeof LoginRequestSchema> {}
 export interface SignupRequest extends z.infer<typeof SignupRequestSchema> {}
+export interface ForgotPasswordRequest extends z.infer<typeof ForgotPasswordRequestSchema> {}
 export interface ResetPasswordRequest extends z.infer<typeof ResetPasswordRequestSchema> {}
 export interface ConfirmResetRequest extends z.infer<typeof ConfirmResetRequestSchema> {}
 export interface VerifyEmailRequest extends z.infer<typeof VerifyEmailRequestSchema> {}
 export interface AuthError extends z.infer<typeof AuthErrorSchema> {}
-export interface AuthState extends z.infer<typeof AuthStateSchema> {} 
+export interface AuthState extends z.infer<typeof AuthStateSchema> {}

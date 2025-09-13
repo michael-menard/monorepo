@@ -74,7 +74,11 @@ const OTPInput = ({ register, watch, setValue }: any) => {
   );
 };
 
-const EmailVerificationForm = () => {
+interface EmailVerificationFormProps {
+  email: string;
+}
+
+const EmailVerificationForm = ({ email }: EmailVerificationFormProps) => {
   const navigate = useNavigate();
   const { verifyEmail, resendVerificationCode, isLoading, error } = useAuth();
   const [resendDisabled, setResendDisabled] = useState(false);
@@ -97,7 +101,7 @@ const EmailVerificationForm = () => {
 
   const handleResend = async () => {
     if (!resendDisabled) {
-      await resendVerificationCode();
+      await resendVerificationCode({ email });
       setResendDisabled(true);
       setCountdown(60);
     }

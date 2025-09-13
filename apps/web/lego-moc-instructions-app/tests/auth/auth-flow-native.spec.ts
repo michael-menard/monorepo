@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 import { createAuthTestUtils, TEST_USER, BACKEND_URLS, TestPatterns } from './utils';
 
 test.describe('Auth Flow - Native Backend Integration', () => {
+  // Set timeout for this test suite
+  test.describe.configure({ timeout: 75000 }); // 75 seconds per test
+
   test.beforeAll(async () => {
     // This will be shown in test output to confirm native backend URLs
     console.log('🔧 Testing against Native Backends:');

@@ -33,6 +33,7 @@ export * from './types';
 export {
   SignupRequestSchema,
   LoginRequestSchema,
+  ForgotPasswordRequestSchema,
   ResetPasswordRequestSchema,
   ConfirmResetRequestSchema,
   VerifyEmailRequestSchema,
@@ -46,9 +47,24 @@ export {
   useSignupMutation,
   useLogoutMutation,
   useRefreshMutation,
+  useForgotPasswordMutation,
   useResetPasswordMutation,
   useConfirmResetMutation,
   useCheckAuthQuery,
   useVerifyEmailMutation,
+  useResendVerificationCodeMutation,
+  useFetchCSRFTokenQuery,
   useSocialLoginMutation,
 } from './store/authApi';
+
+// CSRF utilities
+export {
+  fetchCSRFToken,
+  getCSRFToken,
+  refreshCSRFToken,
+  clearCSRFToken,
+  hasCSRFToken,
+  initializeCSRF,
+  getCSRFHeaders,
+  isCSRFError,
+} from './utils/csrf';

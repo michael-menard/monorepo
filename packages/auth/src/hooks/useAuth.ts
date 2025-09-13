@@ -15,6 +15,7 @@ import {
   useVerifyEmailMutation,
   useResendVerificationCodeMutation,
   useCheckAuthQuery,
+  useForgotPasswordMutation,
   useResetPasswordMutation,
   useConfirmResetMutation,
   useSocialLoginMutation,
@@ -41,17 +42,18 @@ export const useAuth = () => {
   const [logoutMutation, { isLoading: isLogoutLoading }] = useLogoutMutation();
   const [verifyEmailMutation, { isLoading: isVerifyLoading, error: verifyError }] = useVerifyEmailMutation();
   const [resendVerificationCodeMutation, { isLoading: isResendLoading }] = useResendVerificationCodeMutation();
+  const [forgotPasswordMutation, { isLoading: isForgotLoading, error: forgotError }] = useForgotPasswordMutation();
   const [resetPasswordMutation, { isLoading: isResetLoading, error: resetError }] = useResetPasswordMutation();
   const [confirmResetMutation, { isLoading: isConfirmLoading, error: confirmError }] = useConfirmResetMutation();
   const [socialLoginMutation, { isLoading: isSocialLoading, error: socialError }] = useSocialLoginMutation();
 
   // Combine all loading states
-  const isLoading = isCheckAuthLoading || isLoginLoading || isSignupLoading || isLogoutLoading || 
-    isVerifyLoading || isResendLoading || isResetLoading || isConfirmLoading || 
+  const isLoading = isCheckAuthLoading || isLoginLoading || isSignupLoading || isLogoutLoading ||
+    isVerifyLoading || isResendLoading || isForgotLoading || isResetLoading || isConfirmLoading ||
     isSocialLoading;
 
   // Combine all errors (RTK Query errors take precedence)
-  const error = loginError || signupError || verifyError || resetError || 
+  const error = loginError || signupError || verifyError || forgotError || resetError ||
     confirmError || socialError || checkAuthError;
 
   // Update checking auth state when checkAuth query completes
@@ -82,6 +84,7 @@ export const useAuth = () => {
     verifyEmail: verifyEmailMutation,
     resendVerificationCode: resendVerificationCodeMutation,
     checkAuth: () => {}, // This is handled by the query
+    forgotPassword: forgotPasswordMutation,
     resetPassword: resetPasswordMutation,
     confirmReset: confirmResetMutation,
     socialLogin: socialLoginMutation,

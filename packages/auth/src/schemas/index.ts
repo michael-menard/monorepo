@@ -36,8 +36,7 @@ export type LoginFormData = z.infer<typeof LoginSchema>;
 // Signup schema with enhanced error messages
 export const SignupSchema = z.object({
   email: createEnhancedSchemas.email('Email'),
-  firstName: createEnhancedSchemas.name('First Name'),
-  lastName: createEnhancedSchemas.name('Last Name'),
+  name: createEnhancedSchemas.name('Name'),
   password: createEnhancedSchemas.password('Password'),
   confirmPassword: createEnhancedSchemas.confirmPassword('Confirm Password'),
 }).refine((data) => data.password === data.confirmPassword, {

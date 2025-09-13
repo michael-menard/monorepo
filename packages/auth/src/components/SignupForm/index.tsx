@@ -54,8 +54,7 @@ export const SignupForm = () => {
       await signup({
         email: data.email,
         password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        name: data.name,
       });
     } catch (err) {
       // Handle any additional errors here if needed
@@ -82,33 +81,18 @@ export const SignupForm = () => {
           <p className="text-gray-400 mt-2">Join us and start your journey</p>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Input
-                icon={User}
-                type="text"
-                placeholder="First Name"
-                {...register('firstName')}
-                className={errors.firstName ? 'border-red-500 focus:ring-red-500' : ''}
-              />
-              <FieldErrorMessage
-                error={errors.firstName}
-                fieldName="First Name"
-              />
-            </div>
-            <div>
-              <Input
-                icon={User}
-                type="text"
-                placeholder="Last Name"
-                {...register('lastName')}
-                className={errors.lastName ? 'border-red-500 focus:ring-red-500' : ''}
-              />
-              <FieldErrorMessage
-                error={errors.lastName}
-                fieldName="Last Name"
-              />
-            </div>
+          <div>
+            <Input
+              icon={User}
+              type="text"
+              placeholder="Full Name"
+              {...register('name')}
+              className={errors.name ? 'border-red-500 focus:ring-red-500' : ''}
+            />
+            <FieldErrorMessage
+              error={errors.name}
+              fieldName="Name"
+            />
           </div>
           <div>
             <Input

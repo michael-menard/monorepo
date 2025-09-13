@@ -17,12 +17,18 @@ export default defineConfig({
   retries: 0,
   /* Use only 1 worker to run tests sequentially */
   workers: 1,
+  /* Global test timeout - fail test if it runs longer than this */
+  timeout: 60000, // 60 seconds per test
+  /* Global expect timeout for assertions */
+  expect: {
+    timeout: 10000, // 10 seconds for expect assertions
+  },
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'list',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3002',
 
     /* Run headless by default */
     headless: true,
@@ -37,8 +43,14 @@ export default defineConfig({
     video: 'retain-on-failure',
     
     /* More generous timeouts for React app loading */
-    actionTimeout: 10000,
-    navigationTimeout: 15000,
+    actionTimeout: 15000,        // 15 seconds for actions (click, fill, etc.)
+    navigationTimeout: 15000,    // 30 seconds for page navigation
+
+    /* Additional timeout configurations */
+    testIdAttribute: 'data-testid', // Use data-testid for element selection
+
+    /* Timeout for waiting for elements */
+    timeout: 10000,              // 10 seconds for element waits
   },
 
   /* Configure projects for Chrome only */

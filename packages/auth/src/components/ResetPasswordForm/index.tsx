@@ -8,7 +8,11 @@ import { resetPasswordSchema, type ResetPasswordFormData } from './schema.js';
 import { Input } from '@repo/ui';
 import { Button } from '@repo/ui';
 
-const ResetPasswordForm = () => {
+interface ResetPasswordFormProps {
+  token: string;
+}
+
+const ResetPasswordForm = ({ token }: ResetPasswordFormProps) => {
   const navigate = useNavigate();
   const { resetPassword, isLoading, message, error } = useAuth();
 
@@ -21,7 +25,7 @@ const ResetPasswordForm = () => {
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    await resetPassword(data);
+    await resetPassword({ token, password: data.password });
   };
 
   const handleBackToLogin = () => {
@@ -54,10 +58,19 @@ const ResetPasswordForm = () => {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" role="form">
         <div className="space-y-2">
           <Input
-            type="email"
-            placeholder="Email Address"
-            {...register('email')}
-            error={errors.email?.message}
+            type="password"
+            placeholder="New Password"
+            {...register('password')}
+            error={errors.password?.message}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Input
+            type="password"
+            placeholder="Confirm New Password"
+            {...register('confirmPassword')}
+            error={errors.confirmPassword?.message}
           />
         </div>
 
@@ -66,10 +79,10 @@ const ResetPasswordForm = () => {
             {isLoading ? (
               <div className="flex items-center gap-2" role="status">
                 <div className="w-4 h-4 border-2 border-white rounded-full animate-spin border-t-transparent" />
-                <span>Sending Reset Email...</span>
+                <span>Resetting Password...</span>
               </div>
             ) : (
-              'Send Reset Email'
+              'Reset Password'
             )}
           </Button>
           <Button type="button" variant="outline" onClick={handleBackToLogin}>
