@@ -28,12 +28,15 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', 'zod'],
+        external: ['react', 'react-dom', 'zod', '@repo/ui', '@repo/ui/lib/utils', '@repo/profile', 'lucide-react'],
         output: {
           globals: {
             react: 'React',
             'react-dom': 'ReactDOM',
             zod: 'zod',
+            '@repo/ui': 'RepoUI',
+            '@repo/profile': 'RepoProfile',
+            'lucide-react': 'LucideReact',
           },
         },
       },
