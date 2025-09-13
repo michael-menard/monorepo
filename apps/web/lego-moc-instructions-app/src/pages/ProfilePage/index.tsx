@@ -110,11 +110,11 @@ export const ProfilePage: React.FC = () => {
             size="2xl"
             editable={true}
             onAvatarUpload={handleAvatarUpload}
-            onEdit={handleEdit}
             showStatus={true}
             isOnline={true}
             showVerified={true}
             isVerified={true}
+            className="hover:scale-105 transition-transform duration-200"
           />
         </div>
       }

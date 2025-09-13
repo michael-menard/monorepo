@@ -1,6 +1,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@repo/ui';
-import { Camera, Edit, User } from 'lucide-react';
+import { AvatarUploader } from '@repo/profile';
+import { Camera, Edit, User, Pencil } from 'lucide-react';
 import { cn } from '@repo/ui/lib/utils';
 
 export interface ProfileAvatarProps {
@@ -105,6 +106,92 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
     fileInputRef.current?.click();
   };
 
+  // If editable and has upload handler, use AvatarUploader with custom styling
+  if (editable && onAvatarUpload) {
+    return (
+      <div className={cn('relative inline-block', className)}>
+        <div className="relative group">
+          <Avatar className={cn(
+            sizeClasses[size],
+            'ring-4 ring-background shadow-xl',
+            'transition-all duration-300',
+            'hover:ring-primary/50 cursor-pointer',
+          )}>
+            <AvatarImage
+              src={avatarUrl}
+              alt={`${userName}'s avatar`}
+              className="object-cover"
+            />
+            <AvatarFallback className={cn(
+              'bg-gradient-to-br from-primary to-secondary',
+              'text-primary-foreground font-bold',
+              size === 'sm' && 'text-xs',
+              size === 'md' && 'text-sm',
+              size === 'lg' && 'text-lg',
+              size === 'xl' && 'text-xl',
+              size === '2xl' && 'text-2xl',
+            )}>
+              {getInitials(userName)}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Hover Overlay with Pencil Icon */}
+          <div className={cn(
+            'absolute inset-0 flex items-center justify-center',
+            'bg-black/50 opacity-0 group-hover:opacity-100',
+            'transition-opacity duration-200',
+            'rounded-full cursor-pointer',
+          )}
+          onClick={handleUploadClick}
+          >
+            <Pencil className={cn(
+              'text-white',
+              size === 'sm' && 'h-3 w-3',
+              size === 'md' && 'h-4 w-4',
+              size === 'lg' && 'h-5 w-5',
+              size === 'xl' && 'h-6 w-6',
+              size === '2xl' && 'h-7 w-7',
+            )} />
+          </div>
+
+          {/* Online Status Indicator */}
+          {showStatus && (
+            <div className={cn(
+              'absolute bottom-1 right-1',
+              'rounded-full border-2 border-background',
+              statusSizes[size],
+              isOnline ? 'bg-green-500' : 'bg-gray-400',
+            )} />
+          )}
+
+          {/* Verification Badge */}
+          {showVerified && isVerified && (
+            <div className="absolute -top-1 -right-1">
+              <Badge
+                variant="default"
+                className="h-6 w-6 rounded-full p-0 flex items-center justify-center bg-blue-500 hover:bg-blue-600"
+              >
+                <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+      </div>
+    );
+  }
+
+  // Non-editable avatar or no upload handler
   return (
     <div className={cn('relative inline-block', className)}>
       {/* Main Avatar */}
@@ -113,10 +200,9 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
           sizeClasses[size],
           'ring-4 ring-background shadow-xl',
           'transition-all duration-300',
-          editable && 'hover:ring-primary/50 cursor-pointer',
         )}>
-          <AvatarImage 
-            src={avatarUrl} 
+          <AvatarImage
+            src={avatarUrl}
             alt={`${userName}'s avatar`}
             className="object-cover"
           />
@@ -124,7 +210,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
             'bg-gradient-to-br from-primary to-secondary',
             'text-primary-foreground font-bold',
             size === 'sm' && 'text-xs',
-            size === 'md' && 'text-sm', 
+            size === 'md' && 'text-sm',
             size === 'lg' && 'text-lg',
             size === 'xl' && 'text-xl',
             size === '2xl' && 'text-2xl',
@@ -146,8 +232,8 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
         {/* Verification Badge */}
         {showVerified && isVerified && (
           <div className="absolute -top-1 -right-1">
-            <Badge 
-              variant="default" 
+            <Badge
+              variant="default"
               className="h-6 w-6 rounded-full p-0 flex items-center justify-center bg-blue-500 hover:bg-blue-600"
             >
               <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -157,8 +243,8 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
           </div>
         )}
 
-        {/* Edit Button */}
-        {editable && (
+        {/* Edit Button for non-upload editable avatars */}
+        {editable && onEdit && !onAvatarUpload && (
           <Button
             size="sm"
             variant="secondary"
@@ -169,27 +255,12 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
               editButtonSizes[size],
               'p-0 flex items-center justify-center',
             )}
-            onClick={onAvatarUpload ? handleUploadClick : onEdit}
+            onClick={onEdit}
           >
-            {onAvatarUpload ? (
-              <Camera className="h-4 w-4" />
-            ) : (
-              <Edit className="h-4 w-4" />
-            )}
+            <Edit className="h-4 w-4" />
           </Button>
         )}
       </div>
-
-      {/* Hidden File Input */}
-      {onAvatarUpload && (
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-      )}
     </div>
   );
 };

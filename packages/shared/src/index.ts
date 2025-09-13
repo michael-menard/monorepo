@@ -8,3 +8,4 @@ export * from './layouts/ProfileLayout';
 
 // Shared Components
 export * from './components/ProfileAvatar';
+export * from './components/EnhancedProfileAvatar';
