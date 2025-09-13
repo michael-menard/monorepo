@@ -10,6 +10,9 @@ This document lists all available commands for starting and managing the develop
 pnpm dev:full
 # or
 pnpm start:full
+
+# Seed test users (South Park characters + test users)
+pnpm seed:users
 ```
 
 This single command will start:
@@ -73,6 +76,35 @@ pnpm auth:dev
 
 # All services via Turbo (may start extra services)
 pnpm dev:all
+```
+
+## 👥 User Management
+
+### Seed Test Users
+```bash
+# Seed South Park characters + test users
+pnpm seed:users
+
+# Clear existing users and reseed
+pnpm seed:users:clear
+
+# View available users
+cat apps/api/auth-service/SEED_USERS.md
+```
+
+### Sample Login Credentials
+```bash
+# Standard test user
+Email: test@example.com
+Password: TestPassword123!
+
+# Fun South Park character
+Email: stan.marsh@southpark.co
+Password: SouthPark123!
+
+# Admin user
+Email: admin@example.com
+Password: AdminPassword123!
 ```
 
 ## 📝 Logs and Monitoring

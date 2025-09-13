@@ -49,6 +49,8 @@
     "start:full": "./scripts/start-full-dev.sh",
     "logs:auth": "tail -f logs/auth-service.log",
     "logs:lego": "tail -f logs/lego-projects-api.log",
+    "seed:users": "cd apps/api/auth-service && pnpm seed:users",
+    "seed:users:clear": "cd apps/api/auth-service && pnpm seed:users:clear",
     "storybook": "turbo run storybook",
     "build-storybook": "turbo run build-storybook",
     "docs:dev": "turbo run dev --filter=@repo/lego-moc-docs",

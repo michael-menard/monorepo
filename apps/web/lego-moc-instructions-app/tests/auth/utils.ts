@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { DEFAULT_TEST_USER, DEFAULT_ADMIN_USER, DEFAULT_FUN_USER, SOUTH_PARK_USERS } from './test-users';
 
 // Test data for consistent testing
 export const TEST_USER = {
@@ -16,6 +17,31 @@ export const TEST_USER_2 = {
   firstName: 'Test2',
   lastName: 'User2',
   confirmPassword: 'TestPassword456!',
+};
+
+// Additional test users from seed data
+export const ADMIN_USER = {
+  email: DEFAULT_ADMIN_USER.email,
+  password: DEFAULT_ADMIN_USER.password,
+  firstName: DEFAULT_ADMIN_USER.name.split(' ')[0],
+  lastName: DEFAULT_ADMIN_USER.name.split(' ')[1] || 'User',
+  confirmPassword: DEFAULT_ADMIN_USER.password,
+};
+
+export const STAN_USER = {
+  email: SOUTH_PARK_USERS.STAN.email,
+  password: SOUTH_PARK_USERS.STAN.password,
+  firstName: SOUTH_PARK_USERS.STAN.name.split(' ')[0],
+  lastName: SOUTH_PARK_USERS.STAN.name.split(' ')[1] || 'User',
+  confirmPassword: SOUTH_PARK_USERS.STAN.password,
+};
+
+export const KYLE_USER = {
+  email: SOUTH_PARK_USERS.KYLE.email,
+  password: SOUTH_PARK_USERS.KYLE.password,
+  firstName: SOUTH_PARK_USERS.KYLE.name.split(' ')[0],
+  lastName: SOUTH_PARK_USERS.KYLE.name.split(' ')[1] || 'User',
+  confirmPassword: SOUTH_PARK_USERS.KYLE.password,
 };
 
 // Native backend URLs for testing
