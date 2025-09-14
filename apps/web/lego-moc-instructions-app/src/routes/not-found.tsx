@@ -1,5 +1,5 @@
 import { createRoute } from '@tanstack/react-router';
-import { rootRoute } from '../main';
+import { rootRoute } from './root';
 import NotFoundPage from '../pages/NotFoundPage';
 
 export const notFoundRoute = createRoute({

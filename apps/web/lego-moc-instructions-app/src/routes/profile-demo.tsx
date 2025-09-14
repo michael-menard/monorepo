@@ -1,6 +1,6 @@
 import { createRoute, redirect } from '@tanstack/react-router'
 import { createTanStackRouteGuard } from '../lib/auth-guard'
-import { rootRoute } from '../main'
+import { rootRoute } from './root'
 import ProfileContentDemo from '../pages/ProfileContentDemo'
 
 export const profileDemoRoute = createRoute({

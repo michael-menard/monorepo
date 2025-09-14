@@ -1,6 +1,6 @@
 import { createRoute, redirect } from '@tanstack/react-router';
 import { createTanStackRouteGuard } from '../lib/auth-guard';
-import { rootRoute } from '../main';
+import { rootRoute } from './root';
 import WishlistGalleryPage from '../pages/WishlistGalleryPage';
 
 export const wishlistRoute = createRoute({

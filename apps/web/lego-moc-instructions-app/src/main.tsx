@@ -4,9 +4,9 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui'
-import { Outlet, RouterProvider, createRootRoute, createRouter } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { initializeCSRF } from '@repo/auth'
+import { rootRoute } from './routes/root'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
 import { homeRoute } from './routes/home.tsx'
 import { mocDetailRoute } from './routes/moc-detail.tsx'
@@ -26,14 +26,8 @@ import { verifyEmailRoute } from './routes/auth/verify-email.tsx'
 import { unauthorizedRoute } from './routes/unauthorized.tsx'
 import { notFoundRoute } from './routes/not-found.tsx'
 
-import Layout from './components/Layout'
 import { PerformanceProvider } from './providers/PerformanceProvider'
-import PerformanceMonitor from './components/PerformanceMonitor'
 import { PWAProvider } from './components/PWAProvider'
-import { PWAUpdateNotification } from './components/PWAUpdateNotification'
-import { OfflineStatusIndicator } from './components/OfflineStatusIndicator'
-
-import TanStackQueryLayout from './integrations/tanstack-query/layout.tsx'
 
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
 
@@ -42,19 +36,6 @@ import reportWebVitals from './reportWebVitals.ts'
 import { store } from './store/store'
 // Offline API disabled for now; will re-enable after full typing/integration
 // import { offlineApi } from './services/offlineApi'
-
-export const rootRoute = createRootRoute({
-  component: () => (
-    <Layout>
-      <Outlet />
-      <TanStackRouterDevtools />
-      <TanStackQueryLayout />
-      <PerformanceMonitor />
-      <PWAUpdateNotification />
-      <OfflineStatusIndicator />
-    </Layout>
-  ),
-})
 
 const routeTree = rootRoute.addChildren([
   homeRoute,

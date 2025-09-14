@@ -1,5 +1,5 @@
 import { createRoute } from '@tanstack/react-router';
-import { rootRoute } from '../main';
+import { rootRoute } from './root';
 import UnauthorizedPage from '../pages/UnauthorizedPage';
 
 export const unauthorizedRoute = createRoute({
