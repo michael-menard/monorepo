@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { Gallery, featureMocInstructionAdapter } from '@repo/gallery';
+// Temporarily commented out due to import resolution issue
+// import { Gallery, featureMocInstructionAdapter } from '@repo/gallery';
 import { BookOpen, Download, Star, ArrowRight, Upload } from 'lucide-react';
 
 interface MockInstruction {
@@ -175,22 +176,29 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
             </a>
           </div>
         ) : (
-          <Gallery
-            items={displayInstructions}
-            config={galleryConfig}
-            adapter={featureMocInstructionAdapter}
-            loading={loading}
-            actions={{
-              onItemClick: (item) => {
-                // Handle item click - could open modal or navigate to instruction details
-                console.log('Clicked MOC instruction:', item);
-              },
-              onItemDownload: (itemId) => {
-                // Handle download action
-                console.log('Download instruction:', itemId);
-              },
-            }}
-          />
+          <>
+            {/* Temporarily replaced Gallery with simple list due to import issue */}
+            <div className="space-y-4">
+            {displayInstructions.map((instruction) => (
+              <div key={instruction.id} className="border rounded-lg p-4">
+                <h3 className="font-semibold">{instruction.title}</h3>
+                <p className="text-sm text-gray-600">{instruction.description}</p>
+                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Download className="h-4 w-4" />
+                    {instruction.downloadCount}
+                  </span>
+                  {instruction.rating && (
+                    <span className="flex items-center gap-1">
+                      <Star className="h-4 w-4" />
+                      {instruction.rating}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

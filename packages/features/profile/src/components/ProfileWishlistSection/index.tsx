@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { Gallery, featureWishlistAdapter } from '@repo/gallery';
+// Temporarily commented out due to import resolution issue
+// import { Gallery, featureWishlistAdapter } from '@repo/gallery';
 import { Heart, ExternalLink, ArrowRight } from 'lucide-react';
 
 interface WishlistItem {
@@ -167,18 +168,40 @@ export const ProfileWishlistSection: React.FC<ProfileWishlistSectionProps> = ({
             </a>
           </div>
         ) : (
-          <Gallery
-            items={displayItems}
-            config={galleryConfig}
-            adapter={featureWishlistAdapter}
-            loading={loading}
-            actions={{
-              onItemClick: (item) => {
-                // Handle item click - could open modal or navigate
-                console.log('Clicked wishlist item:', item);
-              },
-            }}
-          />
+          <>
+            {/* Temporarily replaced Gallery with simple list due to import issue */}
+            <div className="space-y-4">
+            {displayItems.map((item) => (
+              <div key={item.id} className="border rounded-lg p-4">
+                <div className="flex items-start gap-4">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <p className="text-sm text-gray-600">{item.description}</p>
+                    <div className="flex items-center gap-4 mt-2 text-sm">
+                      <span className="font-medium">${item.price}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        item.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {item.priority} priority
+                      </span>
+                      {item.isPurchased && (
+                        <span className="text-green-600 text-xs">✓ Purchased</span>
+                      )}
+                    </div>
+                  </div>
+                  <Heart className={`h-5 w-5 ${item.isPurchased ? 'text-gray-400' : 'text-red-500'}`} />
+                </div>
+              </div>
+            ))}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

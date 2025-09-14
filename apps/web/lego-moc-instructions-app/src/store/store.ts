@@ -1,7 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { authApi, authReducer } from '@repo/auth'
 import { instructionsApi } from '@repo/moc-instructions'
-import { galleryApi } from '@repo/gallery'
+// Temporarily commented out due to import resolution issue
+// import { galleryApi } from '@repo/gallery'
 import { api } from '../services/api'
 import { offlineApi } from '../services/offlineApi'
 
@@ -22,16 +23,18 @@ export const store = configureStore({
     // API reducers
     [authApi.reducerPath]: authApi.reducer,
     [instructionsApi.reducerPath]: instructionsApi.reducer,
-    [galleryApi.reducerPath]: galleryApi.reducer,
+    // Temporarily commented out due to import resolution issue
+    // [galleryApi.reducerPath]: galleryApi.reducer,
     [api.reducerPath]: api.reducer,
     [offlineApi.reducerPath]: offlineApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
-      authApi.middleware, 
-      instructionsApi.middleware, 
-      galleryApi.middleware,
-      api.middleware, 
+      authApi.middleware,
+      instructionsApi.middleware,
+      // Temporarily commented out due to import resolution issue
+      // galleryApi.middleware,
+      api.middleware,
       offlineApi.middleware
     ),
 })

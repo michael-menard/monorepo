@@ -2,7 +2,8 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@repo/ui';
 import { Plus } from 'lucide-react';
-import { Gallery, GalleryAdapters } from '@monorepo/gallery';
+// Temporarily commented out due to import resolution issue
+// import { Gallery, GalleryAdapters } from '@repo/gallery';
 
 // Import RTK hooks and actions from centralized store
 import {
