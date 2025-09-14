@@ -38,9 +38,9 @@ function LoginPage() {
       const response = await authApi.login(data)
       
       console.log('Login successful:', response)
-      
-      // Navigate to home page on success
-      router.navigate({ to: '/' })
+
+      // Navigate to profile page on success
+      router.navigate({ to: '/profile' })
     } catch (err) {
       if (err instanceof AuthApiError) {
         setError(err.message)

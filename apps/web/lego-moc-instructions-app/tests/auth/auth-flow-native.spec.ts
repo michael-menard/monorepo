@@ -92,8 +92,8 @@ test.describe('Auth Flow - Native Backend Integration', () => {
     // Attempt login
     await authUtils.login(TEST_USER.email, TEST_USER.password);
     
-    // Should redirect to home page on success
-    await authUtils.waitForAuthSuccess('/');
+    // Should redirect to profile page on success
+    await authUtils.waitForAuthSuccess('/profile');
     
     // Verify API calls were made to native auth service
     await page.waitForTimeout(1000); // Allow time for requests

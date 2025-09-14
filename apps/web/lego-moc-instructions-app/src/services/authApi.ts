@@ -2,7 +2,7 @@
 
 import { getCSRFHeaders, refreshCSRFToken } from './csrfService.js'
 
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:5001'
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:9000'
 
 interface ApiResponse<T = any> {
   success: boolean

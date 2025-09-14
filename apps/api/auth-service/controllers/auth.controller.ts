@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcryptjs from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie';
 import {
@@ -114,9 +115,11 @@ export const signup = async (req: Request, res: Response, next: any) => {
   res.status(201).json({
     success: true,
     message: 'User created successfully',
-    user: {
-      ...user.toObject(),
-      password: undefined,
+    data: {
+      user: {
+        ...user.toObject(),
+        password: undefined,
+      },
     },
   });
 };
@@ -186,9 +189,11 @@ export const verifyEmail = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Email verified successfully',
-    user: {
-      ...matchingUser.toObject(),
-      password: undefined,
+    data: {
+      user: {
+        ...matchingUser.toObject(),
+        password: undefined,
+      },
     },
   });
 };
@@ -262,9 +267,11 @@ export const login = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Logged in successfully',
-    user: {
-      ...user.toObject(),
-      password: undefined,
+    data: {
+      user: {
+        ...user.toObject(),
+        password: undefined,
+      },
     },
   });
 };
@@ -413,28 +420,48 @@ export const resetPassword = async (req: Request, res: Response) => {
 };
 
 export const checkAuth = async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+  // Extract token from cookies or Authorization header
+  const bearer = req.headers.authorization;
+  const token =
+    (req as any).cookies?.token ||
+    (bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : undefined);
 
-  if (!userId) {
-    logSecurityEvent(req as any, 'check_auth_no_user_id', {});
-    throw new AuthorizationError('No user ID in request');
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Not authorized, no token' });
   }
 
-  logDatabaseOperation(req as any, 'findById', 'users', { userId });
-  const user = await User.findById(userId).select('-password');
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const userId = decoded.userId || decoded.sub;
 
-  if (!user) {
-    logSecurityEvent(req as any, 'check_auth_user_not_found', { userId });
-    throw new NotFoundError('User not found');
+    if (!userId) {
+      logSecurityEvent(req as any, 'check_auth_invalid_token', {});
+      return res.status(401).json({ success: false, message: 'Not authorized, token invalid' });
+    }
+
+    logDatabaseOperation(req as any, 'findById', 'users', { userId });
+    const user = await User.findById(userId).select('-password');
+
+    if (!user) {
+      logSecurityEvent(req as any, 'check_auth_user_not_found', { userId });
+      return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+    }
+
+    logUserAction(req as any, 'auth_check_successful', {
+      userId: user._id,
+      email: user.email,
+      isVerified: user.isVerified,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { user }
+    });
+  } catch (error) {
+    logSecurityEvent(req as any, 'check_auth_token_verification_failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+    return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
   }
-
-  logUserAction(req as any, 'auth_check_successful', {
-    userId: user._id,
-    email: user.email,
-    isVerified: user.isVerified,
-  });
-
-  res.status(200).json({ success: true, user });
 };
 
 export const resendVerification = async (req: Request, res: Response) => {

@@ -98,6 +98,21 @@ vi.mock('lucide-react', () => ({
   Heart: () => <div data-testid="heart-icon" />,
 }));
 
+// Mock the useAuth hook
+vi.mock('@repo/auth', () => ({
+  useAuth: () => ({
+    user: {
+      _id: 'test-user-id',
+      email: 'john.doe@example.com',
+      name: 'John Doe',
+      isVerified: true,
+      createdAt: '2023-01-01T00:00:00Z',
+      updatedAt: '2023-01-01T00:00:00Z',
+    },
+    isLoading: false,
+  }),
+}));
+
 const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };

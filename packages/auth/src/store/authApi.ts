@@ -14,7 +14,7 @@ import { getCSRFHeaders, refreshCSRFToken, isCSRFError } from '../utils/csrf.js'
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 const baseUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5001/api/auth'
+  ? 'http://localhost:9000/api/auth'
   : '/api/auth';
 
 // Create a base query with CSRF retry logic

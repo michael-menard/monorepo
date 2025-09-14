@@ -209,9 +209,9 @@ export default defineConfig({
     port: 5173, // Updated to standard Vite port for consistency with docs
     host: true,
     proxy: {
-      // Auth service routes - proxy to auth-service on native port 5000
+      // Auth service routes - proxy to auth-service on native port 9000
       '/api/auth': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:9000',
         changeOrigin: true,
         secure: false,
         ws: true,

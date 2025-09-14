@@ -13,7 +13,7 @@ import authReducer from '../../store/authSlice';
 // Mock environment variables for testing
 export const TEST_ENV = {
   NODE_ENV: 'test',
-  API_BASE_URL: 'http://localhost:5001',
+  API_BASE_URL: 'http://localhost:9000',
   FRONTEND_URL: 'http://localhost:5173',
 };
 

@@ -164,6 +164,7 @@ const startServer = async () => {
 
     // Start the Express server
     app.listen(PORT, () => {
+      app.locals.serverStarted = true; // Mark server as started
       logger.info({ port: PORT }, 'Server started successfully');
       logger.info({ apiUrl: `http://localhost:${PORT}/api` }, 'API available');
     });
@@ -179,12 +180,23 @@ const startServer = async () => {
 // Handle server startup errors
 process.on('uncaughtException', (error) => {
   logger.error({ error }, 'Uncaught Exception');
-  process.exit(1);
+  // Only exit on startup errors, not runtime errors
+  if (!app.locals.serverStarted) {
+    process.exit(1);
+  }
 });
 
-process.on('unhandledRejection', (error) => {
-  logger.error({ error }, 'Unhandled Rejection');
-  process.exit(1);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({
+    error: reason,
+    promise: promise.toString()
+  }, 'Unhandled Rejection');
+
+  // Don't exit the process for unhandled rejections during runtime
+  // This prevents the server from crashing on async errors
+  if (!app.locals.serverStarted) {
+    process.exit(1);
+  }
 });
 
 // Start the server

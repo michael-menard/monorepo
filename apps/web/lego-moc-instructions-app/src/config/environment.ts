@@ -5,7 +5,7 @@ export const config = {
     baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
     
     // Auth Service API URL - separate auth service
-    authUrl: import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5000',
+    authUrl: import.meta.env.VITE_AUTH_API_URL || 'http://localhost:9000',
     
     // API request timeout
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),

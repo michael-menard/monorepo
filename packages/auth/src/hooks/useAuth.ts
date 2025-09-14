@@ -30,6 +30,15 @@ export const useAuth = () => {
   const tokens = authData?.data?.tokens || null;
   const isAuthenticated = !!user;
 
+  // Filter out expected authentication errors (401 responses are normal when not logged in)
+  const isAuthError = checkAuthError &&
+    (checkAuthError as any)?.status === 401 &&
+    ((checkAuthError as any)?.data?.message?.includes('Not authorized') ||
+     (checkAuthError as any)?.data?.message?.includes('User not found'));
+
+  // Only show unexpected errors, not normal "not authenticated" responses
+  const filteredError = isAuthError ? null : checkAuthError;
+
   // Auth slice state (UI-specific)
   const isCheckingAuth = useSelector(selectIsCheckingAuth);
   const message = useSelector(selectMessage);
@@ -52,9 +61,9 @@ export const useAuth = () => {
     isVerifyLoading || isResendLoading || isForgotLoading || isResetLoading || isConfirmLoading ||
     isSocialLoading;
 
-  // Combine all errors (RTK Query errors take precedence)
+  // Combine all errors (RTK Query errors take precedence, exclude expected auth errors)
   const error = loginError || signupError || verifyError || forgotError || resetError ||
-    confirmError || socialError || checkAuthError;
+    confirmError || socialError || filteredError;
 
   // Update checking auth state when checkAuth query completes
   React.useEffect(() => {

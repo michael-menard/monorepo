@@ -29,8 +29,8 @@ function getCSRFTokenFromCookie(): string | null {
  * Fetch CSRF token from the server
  */
 export async function fetchCSRFToken(baseUrl?: string): Promise<string> {
-  const url = baseUrl || (process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:5001' 
+  const url = baseUrl || (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:9000'
     : '');
   
   try {

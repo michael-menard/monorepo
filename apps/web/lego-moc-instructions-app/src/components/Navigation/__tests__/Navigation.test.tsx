@@ -2,7 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
 import Navigation from '../index';
+import { clearCSRFToken, clearRefreshState } from '@repo/auth';
 
 // Mock TanStack Router
 const mockNavigate = vi.fn();
@@ -18,8 +21,8 @@ vi.mock('@tanstack/react-router', () => ({
 // Mock UI components
 vi.mock('@repo/ui', () => ({
   Button: ({ children, onClick, variant, size, className, ...props }: any) => (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       className={className}
       data-variant={variant}
       data-size={size}
@@ -28,6 +31,19 @@ vi.mock('@repo/ui', () => ({
     >
       {children}
     </button>
+  ),
+  Avatar: ({ children, className, ...props }: any) => (
+    <div data-testid="avatar" className={className} {...props}>
+      {children}
+    </div>
+  ),
+  AvatarImage: ({ src, alt, className, ...props }: any) => (
+    <img data-testid="avatar-image" src={src} alt={alt} className={className} {...props} />
+  ),
+  AvatarFallback: ({ children, className, ...props }: any) => (
+    <div data-testid="avatar-fallback" className={className} {...props}>
+      {children}
+    </div>
   ),
 }));
 
@@ -53,13 +69,54 @@ vi.mock('lucide-react', () => ({
       <title>User</title>
     </svg>
   ),
+  Settings: ({ className }: { className?: string }) => (
+    <svg data-testid="settings-icon" className={className}>
+      <title>Settings</title>
+    </svg>
+  ),
+  ChevronDown: ({ className }: { className?: string }) => (
+    <svg data-testid="chevron-down-icon" className={className}>
+      <title>ChevronDown</title>
+    </svg>
+  ),
+  Lightbulb: ({ className }: { className?: string }) => (
+    <svg data-testid="lightbulb-icon" className={className}>
+      <title>Lightbulb</title>
+    </svg>
+  ),
 }));
 
+// Mock auth hook
+const mockAuthHook = {
+  isAuthenticated: false,
+  user: null,
+  logout: vi.fn(),
+};
+
+vi.mock('@repo/auth', () => ({
+  useAuth: () => mockAuthHook,
+  clearCSRFToken: vi.fn(),
+  clearRefreshState: vi.fn(),
+}));
+
+// Create a mock Redux store for testing
+const createMockStore = () => {
+  return configureStore({
+    reducer: {
+      // Add minimal reducer for testing
+      test: (state = {}) => state,
+    },
+  });
+};
+
 const renderNavigation = (props = {}) => {
+  const store = createMockStore();
   return render(
-    <BrowserRouter>
-      <Navigation {...props} />
-    </BrowserRouter>
+    <Provider store={store}>
+      <BrowserRouter>
+        <Navigation {...props} />
+      </BrowserRouter>
+    </Provider>
   );
 };
 
@@ -114,10 +171,18 @@ describe('Navigation Component', () => {
 
     it('should show Browse MOCs link for unauthenticated users', () => {
       renderNavigation();
-      
+
       const browseMocsLink = screen.getByRole('link', { name: /browse mocs/i });
       expect(browseMocsLink).toBeInTheDocument();
       expect(browseMocsLink).toHaveAttribute('href', '/moc-gallery');
+    });
+
+    it('should show all public navigation links', () => {
+      renderNavigation();
+
+      // Public links that should always be visible
+      expect(screen.getByRole('link', { name: /browse mocs/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /inspiration/i })).toBeInTheDocument();
     });
 
     it('should not show authenticated-only links', () => {
@@ -294,37 +359,182 @@ describe('Navigation Component', () => {
     });
   });
 
+  describe('Authenticated State', () => {
+    beforeEach(() => {
+      // Set up authenticated state
+      mockAuthHook.isAuthenticated = true;
+      mockAuthHook.user = {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        avatarUrl: 'https://example.com/avatar.jpg',
+      };
+    });
+
+    afterEach(() => {
+      // Reset to unauthenticated state
+      mockAuthHook.isAuthenticated = false;
+      mockAuthHook.user = null;
+    });
+
+    it('should show avatar when authenticated', () => {
+      renderNavigation();
+
+      const avatar = screen.getByTestId('avatar');
+      expect(avatar).toBeInTheDocument();
+
+      const avatarImage = screen.getByTestId('avatar-image');
+      expect(avatarImage).toHaveAttribute('src', 'https://example.com/avatar.jpg');
+      expect(avatarImage).toHaveAttribute('alt', 'John Doe');
+    });
+
+    it('should show user initials in avatar fallback when no avatar URL', () => {
+      // Test with user that has no avatar URL
+      mockAuthHook.user = {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        avatarUrl: undefined,
+      };
+
+      renderNavigation();
+
+      const avatarFallback = screen.getByTestId('avatar-fallback');
+      expect(avatarFallback).toBeInTheDocument();
+      expect(avatarFallback).toHaveTextContent('JD');
+
+      // Should not render avatar image when no URL
+      expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
+    });
+
+    it('should show user initials when avatar URL is empty string', () => {
+      // Test with user that has empty string avatar URL
+      mockAuthHook.user = {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        avatarUrl: '',
+      };
+
+      renderNavigation();
+
+      const avatarFallback = screen.getByTestId('avatar-fallback');
+      expect(avatarFallback).toBeInTheDocument();
+      expect(avatarFallback).toHaveTextContent('JD');
+
+      // Should not render avatar image when URL is empty string
+      expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
+    });
+
+    it('should show email initial when no name provided', () => {
+      mockAuthHook.user = {
+        id: '1',
+        name: undefined,
+        email: 'john@example.com',
+        avatarUrl: undefined,
+      };
+
+      renderNavigation();
+
+      const avatarFallback = screen.getByTestId('avatar-fallback');
+      expect(avatarFallback).toHaveTextContent('J');
+    });
+
+    it('should show dropdown menu when avatar is clicked', async () => {
+      renderNavigation();
+
+      const avatarButton = screen.getByRole('button');
+      fireEvent.click(avatarButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('John Doe')).toBeInTheDocument();
+        expect(screen.getByText('john@example.com')).toBeInTheDocument();
+        expect(screen.getByText('Profile')).toBeInTheDocument();
+        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Logout')).toBeInTheDocument();
+      });
+    });
+
+    it('should call logout when logout button is clicked', async () => {
+      renderNavigation();
+
+      const avatarButton = screen.getByRole('button');
+      fireEvent.click(avatarButton);
+
+      await waitFor(() => {
+        const logoutButton = screen.getByText('Logout');
+        fireEvent.click(logoutButton);
+        expect(mockAuthHook.logout).toHaveBeenCalled();
+      });
+    });
+
+    it('should clear authentication state during logout', async () => {
+      renderNavigation();
+
+      const avatarButton = screen.getByRole('button');
+      fireEvent.click(avatarButton);
+
+      // Wait for dropdown to appear, then click logout
+      await waitFor(() => {
+        expect(screen.getByText('Logout')).toBeInTheDocument();
+      });
+
+      const logoutButton = screen.getByText('Logout');
+      fireEvent.click(logoutButton);
+
+      // Wait for logout to be called and verify cleanup functions
+      await waitFor(() => {
+        expect(mockAuthHook.logout).toHaveBeenCalled();
+        expect(clearCSRFToken).toHaveBeenCalled();
+        expect(clearRefreshState).toHaveBeenCalled();
+      });
+    });
+
+    it('should not show sign in/up buttons when authenticated', () => {
+      renderNavigation();
+
+      expect(screen.queryByText('Sign In')).not.toBeInTheDocument();
+      expect(screen.queryByText('Sign Up')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Performance', () => {
     it('should render efficiently', () => {
+      const store = createMockStore();
       const { rerender } = renderNavigation();
-      
+
       // Initial render
       expect(screen.getByRole('navigation')).toBeInTheDocument();
-      
+
       // Re-render with same props
       rerender(
-        <BrowserRouter>
-          <Navigation />
-        </BrowserRouter>
+        <Provider store={store}>
+          <BrowserRouter>
+            <Navigation />
+          </BrowserRouter>
+        </Provider>
       );
-      
+
       // Should still be present
       expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
     it('should handle className changes efficiently', () => {
+      const store = createMockStore();
       const { rerender } = renderNavigation({ className: 'initial-class' });
-      
+
       let nav = screen.getByRole('navigation');
       expect(nav).toHaveClass('initial-class');
-      
+
       // Re-render with different className
       rerender(
-        <BrowserRouter>
-          <Navigation className="updated-class" />
-        </BrowserRouter>
+        <Provider store={store}>
+          <BrowserRouter>
+            <Navigation className="updated-class" />
+          </BrowserRouter>
+        </Provider>
       );
-      
+
       nav = screen.getByRole('navigation');
       expect(nav).toHaveClass('updated-class');
       expect(nav).not.toHaveClass('initial-class');

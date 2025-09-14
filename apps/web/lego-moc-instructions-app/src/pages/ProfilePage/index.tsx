@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from '@tanstack/react-router';
 import {
   Button,
   FormSection,
@@ -11,6 +11,7 @@ import {
   ProfileSidebar,
 } from '@repo/profile';
 import { ProfileLayout, ProfileLayoutSidebar, ProfileAvatar, ProfileAvatarInfo } from '@repo/shared';
+import { useAuth } from '@repo/auth';
 import { LegoProfileContent } from './LegoProfileContent';
 import type { Profile, ProfileForm } from '@repo/profile';
 
@@ -44,21 +45,76 @@ const mockProfile: Profile = {
 };
 
 export const ProfilePage: React.FC = () => {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile>(mockProfile);
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading, isAuthenticated, error } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
+  // Convert authenticated user data to profile format
+  const profile: Profile = user ? {
+    id: user._id || user.id || '1',
+    firstName: user.name?.split(' ')[0] || 'User',
+    lastName: user.name?.split(' ').slice(1).join(' ') || 'Builder',
+    email: user.email || '',
+    username: user.username || user.email?.split('@')[0] || '',
+    bio: user.bio || 'LEGO enthusiast and MOC creator. Welcome to my profile!',
+    avatar: user.avatar || '',
+    phone: user.phone || '',
+    dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date('1990-01-01'),
+    location: user.location || '',
+    website: user.website || '',
+    socialLinks: user.socialLinks || {},
+    preferences: {
+      emailNotifications: true,
+      pushNotifications: false,
+      publicProfile: true,
+      theme: 'system',
+    },
+    createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+    updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+  } : mockProfile;
+
+  const [profileState, setProfileState] = useState<Profile>(profile);
+
   const handleBack = () => {
-    navigate('/');
+    router.navigate({ to: '/' });
   };
 
   const handleEdit = () => {
     setIsEditing(true);
   };
 
+  // Update profile state when user data changes
+  useEffect(() => {
+    if (user) {
+      const updatedProfile: Profile = {
+        id: user._id || user.id || '1',
+        firstName: user.name?.split(' ')[0] || 'User',
+        lastName: user.name?.split(' ').slice(1).join(' ') || 'Builder',
+        email: user.email || '',
+        username: user.username || user.email?.split('@')[0] || '',
+        bio: user.bio || 'LEGO enthusiast and MOC creator. Welcome to my profile!',
+        avatar: user.avatar || '',
+        phone: user.phone || '',
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date('1990-01-01'),
+        location: user.location || '',
+        website: user.website || '',
+        socialLinks: user.socialLinks || {},
+        preferences: {
+          emailNotifications: true,
+          pushNotifications: false,
+          publicProfile: true,
+          theme: 'system',
+        },
+        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+      };
+      setProfileState(updatedProfile);
+    }
+  }, [user]);
+
   const handleSave = (data: ProfileForm) => {
     // In a real app, this would call an API to update the profile
-    setProfile((prev: Profile) => ({
+    setProfileState((prev: Profile) => ({
       ...prev,
       ...data,
       updatedAt: new Date(),
@@ -86,7 +142,7 @@ export const ProfilePage: React.FC = () => {
     try {
       // In a real app, this would upload to a server and return a URL
       const url = URL.createObjectURL(file);
-      setProfile((prev: Profile) => ({
+      setProfileState((prev: Profile) => ({
         ...prev,
         avatar: url,
         updatedAt: new Date(),
@@ -104,9 +160,9 @@ export const ProfilePage: React.FC = () => {
       avatar={
         <div className="flex flex-col items-center space-y-4">
           <ProfileAvatar
-            avatarUrl={profile.avatar}
-            userName={`${profile.firstName} ${profile.lastName}`}
-            userEmail={profile.email}
+            avatarUrl={profileState.avatar}
+            userName={`${profileState.firstName} ${profileState.lastName}`}
+            userEmail={profileState.email}
             size="2xl"
             editable={true}
             onAvatarUpload={handleAvatarUpload}
@@ -120,12 +176,12 @@ export const ProfilePage: React.FC = () => {
       }
       profileInfo={
         <ProfileAvatarInfo
-          userName={`${profile.firstName} ${profile.lastName}`}
-          userEmail={profile.email}
-          username={profile.username}
+          userName={`${profileState.firstName} ${profileState.lastName}`}
+          userEmail={profileState.email}
+          username={profileState.username}
           title="LEGO Builder"
-          location={profile.location}
-          joinDate={profile.createdAt}
+          location={profileState.location}
+          joinDate={profileState.createdAt}
           badges={[
             { label: 'Verified Builder', variant: 'default' },
             { label: 'Active Member', variant: 'secondary' },
@@ -135,21 +191,21 @@ export const ProfilePage: React.FC = () => {
       additionalContent={
         <div className="space-y-6">
           {/* Bio Section */}
-          {profile.bio && (
+          {profileState.bio && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">About</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{profile.bio}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">{profileState.bio}</p>
             </div>
           )}
 
           {/* Social Links */}
-          {profile.socialLinks && (
+          {profileState.socialLinks && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Connect</h3>
               <div className="flex flex-wrap gap-2">
-                {profile.socialLinks.twitter && (
+                {profileState.socialLinks.twitter && (
                   <a
-                    href={profile.socialLinks.twitter}
+                    href={profileState.socialLinks.twitter}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:text-blue-600 text-sm"
@@ -157,9 +213,9 @@ export const ProfilePage: React.FC = () => {
                     Twitter
                   </a>
                 )}
-                {profile.socialLinks.linkedin && (
+                {profileState.socialLinks.linkedin && (
                   <a
-                    href={profile.socialLinks.linkedin}
+                    href={profileState.socialLinks.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 text-sm"
@@ -167,9 +223,9 @@ export const ProfilePage: React.FC = () => {
                     LinkedIn
                   </a>
                 )}
-                {profile.socialLinks.github && (
+                {profileState.socialLinks.github && (
                   <a
-                    href={profile.socialLinks.github}
+                    href={profileState.socialLinks.github}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-foreground hover:text-foreground/80 text-sm"
@@ -177,9 +233,9 @@ export const ProfilePage: React.FC = () => {
                     GitHub
                   </a>
                 )}
-                {profile.socialLinks.instagram && (
+                {profileState.socialLinks.instagram && (
                   <a
-                    href={profile.socialLinks.instagram}
+                    href={profileState.socialLinks.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-pink-600 hover:text-pink-700 text-sm"
@@ -192,11 +248,11 @@ export const ProfilePage: React.FC = () => {
           )}
 
           {/* Website */}
-          {profile.website && (
+          {profileState.website && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Website</h3>
               <a
-                href={profile.website}
+                href={profileState.website}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:text-primary/80 text-sm font-medium"
@@ -224,12 +280,41 @@ export const ProfilePage: React.FC = () => {
       description="Manage your account settings and preferences"
     >
       <LegoProfileContent
-        profile={profile}
+        profile={profileState}
         onEdit={handleEdit}
         isEditing={isEditing}
       />
     </ProfileMain>
   );
+
+  // Show loading state while fetching user data
+  if (isAuthLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Authentication Error</h2>
+          <p className="text-muted-foreground mb-4">
+            {error ? `Error: ${error}` : 'You are not authenticated. Please log in again.'}
+          </p>
+          <Button onClick={() => router.navigate({ to: '/auth/login' })}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -267,7 +352,7 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-6">
               <div className="text-center">
                 <AvatarUploader
-                  currentAvatar={profile.avatar}
+                  currentAvatar={profileState.avatar}
                   onUpload={handleAvatarUpload}
                   className="mx-auto"
                 />
@@ -279,52 +364,52 @@ export const ProfilePage: React.FC = () => {
                     name: 'firstName',
                     label: 'First Name *',
                     type: 'text',
-                    value: profile.firstName,
+                    value: profileState.firstName,
                     required: true,
                   },
                   {
                     name: 'lastName',
                     label: 'Last Name *',
                     type: 'text',
-                    value: profile.lastName,
+                    value: profileState.lastName,
                     required: true,
                   },
                   {
                     name: 'email',
                     label: 'Email *',
                     type: 'email',
-                    value: profile.email,
+                    value: profileState.email,
                     required: true,
                   },
                   {
                     name: 'username',
                     label: 'Username',
                     type: 'text',
-                    value: profile.username || '',
+                    value: profileState.username || '',
                   },
                   {
                     name: 'bio',
                     label: 'Bio',
                     type: 'textarea',
-                    value: profile.bio || '',
+                    value: profileState.bio || '',
                   },
                   {
                     name: 'phone',
                     label: 'Phone',
                     type: 'text',
-                    value: profile.phone || '',
+                    value: profileState.phone || '',
                   },
                   {
                     name: 'location',
                     label: 'Location',
                     type: 'text',
-                    value: profile.location || '',
+                    value: profileState.location || '',
                   },
                   {
                     name: 'website',
                     label: 'Website',
                     type: 'url',
-                    value: profile.website || '',
+                    value: profileState.website || '',
                   },
                 ]}
                 className="space-y-4"

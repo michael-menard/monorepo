@@ -9,7 +9,7 @@ export const profileRoute = createRoute({
   beforeLoad: createTanStackRouteGuard(
     {
       requireAuth: true, // Requires authentication
-      requireVerified: true // Requires email verification
+      requireVerified: false // Temporarily disable email verification requirement
     },
     redirect
   ),

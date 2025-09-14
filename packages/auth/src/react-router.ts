@@ -71,3 +71,18 @@ export {
   getCSRFHeaders,
   isCSRFError,
 } from './utils/csrf';
+
+// Token utilities
+export {
+  clearRefreshState,
+  parseTokenPayload,
+  isTokenExpired,
+  getTokenExpiry,
+  shouldRefreshToken,
+  getTimeUntilExpiry,
+  isTokenValid,
+  getTokenSubject,
+  getTokenIssuer,
+  getTokenConfig,
+  updateTokenConfig,
+} from './utils/token';

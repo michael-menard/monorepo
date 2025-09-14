@@ -3,6 +3,11 @@ import { ZodError } from 'zod';
 import { AppError, ErrorResponse, ValidationError, DatabaseError } from '../types/errors';
 import pino from 'pino';
 
+// Async error handler wrapper to catch async errors and pass them to error middleware
+export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 export const notFound = (req: Request, res: Response, next: NextFunction) => {

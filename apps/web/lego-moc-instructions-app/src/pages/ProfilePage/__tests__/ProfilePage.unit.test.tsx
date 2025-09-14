@@ -23,6 +23,21 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({}),
 }));
 
+// Mock the useAuth hook
+vi.mock('@repo/auth', () => ({
+  useAuth: () => ({
+    user: {
+      _id: 'test-user-id',
+      email: 'john.doe@example.com',
+      name: 'John Doe',
+      isVerified: true,
+      createdAt: '2023-01-01T00:00:00Z',
+      updatedAt: '2023-01-01T00:00:00Z',
+    },
+    isLoading: false,
+  }),
+}));
+
 // Mock the profile components
 vi.mock('@repo/profile', () => ({
   ProfilePage: ({ children, sidebarContent }: any) => (
@@ -93,13 +108,16 @@ vi.mock('@repo/profile', () => ({
 }));
 
 // Mock the UI components
-vi.mock('@repo/ui', () => ({
-  Button: ({ children, onClick, variant, className, ...props }: any) => (
-    <button onClick={onClick} className={className} data-testid={`button-${variant || 'default'}`} {...props}>
-      {children}
-    </button>
-  ),
-  FormSection: ({ fields, className }: any) => (
+vi.mock('@repo/ui', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    Button: ({ children, onClick, variant, className, ...props }: any) => (
+      <button onClick={onClick} className={className} data-testid={`button-${variant || 'default'}`} {...props}>
+        {children}
+      </button>
+    ),
+    FormSection: ({ fields, className }: any) => (
     <form className={className} data-testid="form-section">
       {fields.map((field: any) => (
         <div key={field.name} data-testid={`field-${field.name}`}>
@@ -114,8 +132,8 @@ vi.mock('@repo/ui', () => ({
         </div>
       ))}
     </form>
-  ),
-  AppAvatar: ({ avatarUrl, userName, userEmail, onAvatarUpload, onProfileClick, onUserSettingsClick, onLogout, size, showEditButton, className }: any) => (
+    ),
+    AppAvatar: ({ avatarUrl, userName, userEmail, onAvatarUpload, onProfileClick, onUserSettingsClick, onLogout, size, showEditButton, className }: any) => (
     <div className={`relative inline-block ${className || ''}`}>
       <button 
         className="relative p-0 h-auto w-auto rounded-full hover:bg-transparent"
@@ -143,8 +161,9 @@ vi.mock('@repo/ui', () => ({
         </div>
       )}
     </div>
-  ),
-}));
+    ),
+  };
+});
 
 // Mock the LegoProfileContent component
 vi.mock('../LegoProfileContent', () => ({

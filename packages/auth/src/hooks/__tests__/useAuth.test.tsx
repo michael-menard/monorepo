@@ -134,7 +134,7 @@ describe('useAuth Hook', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'user',
-      emailVerified: true,
+      isVerified: true,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01',
     };

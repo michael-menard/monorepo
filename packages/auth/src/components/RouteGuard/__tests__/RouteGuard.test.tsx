@@ -73,7 +73,7 @@ describe('RouteGuard', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'admin',
-      emailVerified: true,
+      isVerified: true,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01',
     };
@@ -141,7 +141,7 @@ describe('RouteGuard', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'user',
-      emailVerified: true,
+      isVerified: true,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01',
     };
@@ -191,7 +191,7 @@ describe('RouteGuard', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'user',
-      emailVerified: false,
+      isVerified: false,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01',
     };
@@ -216,7 +216,7 @@ describe('RouteGuard', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'user',
-      emailVerified: true,
+      isVerified: true,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01',
     };
@@ -256,7 +256,7 @@ describe('RouteGuard', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'user',
-      emailVerified: true,
+      isVerified: true,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01',
     };

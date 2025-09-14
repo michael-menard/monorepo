@@ -148,8 +148,8 @@ test.describe('Consolidated Auth Flow - Shared Package Integration', () => {
       // Should have made 2 requests (original + retry)
       expect(requestCount).toBe(2);
 
-      // Should eventually succeed and redirect
-      await expect(page).toHaveURL(/.*\/(dashboard|home|\/)$/);
+      // Should eventually succeed and redirect to profile
+      await expect(page).toHaveURL(/.*\/(profile|dashboard|home|\/)$/);
     });
   });
 
@@ -188,11 +188,11 @@ test.describe('Consolidated Auth Flow - Shared Package Integration', () => {
       // Perform login
       await authUtils.login(TEST_USER.email, TEST_USER.password);
 
-      // Should redirect to home page on success
-      await authUtils.waitForAuthSuccess('/');
-      
+      // Should redirect to profile page on success
+      await authUtils.waitForAuthSuccess('/profile');
+
       // Verify user is authenticated
-      await expect(page).toHaveURL(/.*\/(dashboard|home|\/)$/);
+      await expect(page).toHaveURL(/.*\/(profile|dashboard|home|\/)$/);
     });
 
     test('should display validation errors from shared package', async ({ page }) => {

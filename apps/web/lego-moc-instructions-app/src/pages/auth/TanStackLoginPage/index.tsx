@@ -42,9 +42,9 @@ function TanStackLoginPage() {
       await login(data).unwrap()
       
       console.log('Login successful')
-      
-      // Navigate to home page on success
-      router.navigate({ to: '/' })
+
+      // Navigate to profile page on success
+      router.navigate({ to: '/profile' })
     } catch (err: any) {
       console.error('Login error:', err)
       
@@ -69,8 +69,9 @@ function TanStackLoginPage() {
     router.navigate({ to: '/auth/signup' })
   }
 
-  // Combine form error with auth error
-  const displayError = formError || (error as any)?.data?.message || (error as any)?.message
+  // Only show form errors on login page, not auth check errors
+  // Auth check errors are expected when user is not logged in
+  const displayError = formError
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

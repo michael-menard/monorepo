@@ -10,6 +10,7 @@ import {
   resendVerification,
 } from '../controllers/auth.controller';
 import { verifyToken } from '../middleware/authMiddleware';
+import { asyncHandler } from '../middleware/errorMiddleware';
 import { generateCsrfToken } from '../utils/tokenUtils';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
@@ -17,13 +18,13 @@ import { ValidationError } from '../types/errors';
 
 const router: Router = express.Router();
 
-const validate = (schema: z.ZodSchema<any>) => (req: Request, res: Response, next: any) => {
+const validate = (schema: z.ZodSchema<any>) => asyncHandler((req: Request, res: Response, next: any) => {
   const result = schema.safeParse({ body: req.body, query: req.query, params: req.params });
   if (!result.success) {
     throw new ValidationError('Validation failed', result.error.flatten());
   }
   next();
-};
+});
 
 const signupSchema = z.object({
   body: z.object({
@@ -110,7 +111,7 @@ const csrfLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.get('/check-auth', verifyToken, checkAuth);
+router.get('/check-auth', asyncHandler(checkAuth));
 
 // CSRF token endpoint
 router.get('/csrf', csrfLimiter, (req: Request, res: Response) => {
@@ -130,18 +131,18 @@ router.get('/csrf', csrfLimiter, (req: Request, res: Response) => {
   res.json({ token });
 });
 
-router.post('/sign-up', signupLimiter, validate(signupSchema), signup);
-router.post('/login', loginLimiter, validate(loginSchema), login);
-router.post('/log-out', logout);
+router.post('/sign-up', signupLimiter, validate(signupSchema), asyncHandler(signup));
+router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(login));
+router.post('/log-out', asyncHandler(logout));
 
-router.post('/verify-email', verifyLimiter, validate(verifyEmailSchema), verifyEmail);
-router.post('/forgot-password', forgotLimiter, validate(forgotPasswordSchema), forgotPassword);
-router.post('/reset-password/:token', validate(resetPasswordSchema), resetPassword);
+router.post('/verify-email', verifyLimiter, validate(verifyEmailSchema), asyncHandler(verifyEmail));
+router.post('/forgot-password', forgotLimiter, validate(forgotPasswordSchema), asyncHandler(forgotPassword));
+router.post('/reset-password/:token', validate(resetPasswordSchema), asyncHandler(resetPassword));
 router.post(
   '/resend-verification',
   resendLimiter,
   validate(resendVerificationSchema),
-  resendVerification,
+  asyncHandler(resendVerification),
 );
 
 // Health check route for Docker
