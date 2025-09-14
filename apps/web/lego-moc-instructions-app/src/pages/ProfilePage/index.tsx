@@ -6,11 +6,7 @@ import {
 } from '@repo/ui';
 import {
   AvatarUploader,
-  ProfileMain,
-  ProfilePage as ProfilePageComponent,
-  ProfileSidebar,
 } from '@repo/profile';
-import { ProfileLayout, ProfileLayoutSidebar, ProfileAvatar, ProfileAvatarInfo } from '@repo/shared';
 import { useAuth } from '@repo/auth';
 import { LegoProfileContent } from './LegoProfileContent';
 import type { Profile, ProfileForm } from '@repo/profile';
@@ -82,10 +78,6 @@ export const ProfilePage: React.FC = () => {
   } : mockProfile;
 
   const [profileState, setProfileState] = useState<Profile>(profile);
-
-  const handleBack = () => {
-    router.navigate({ to: '/' });
-  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -162,138 +154,7 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  // Create the sidebar content using new shared layout components
-  const sidebarContent = (
-    <ProfileLayoutSidebar
-      avatar={
-        <div className="flex flex-col items-center space-y-4">
-          <ProfileAvatar
-            avatarUrl={profileState.avatar}
-            userName={`${profileState.firstName} ${profileState.lastName}`}
-            userEmail={profileState.email}
-            size="2xl"
-            editable={true}
-            onAvatarUpload={handleAvatarUpload}
-            showStatus={true}
-            isOnline={true}
-            showVerified={true}
-            isVerified={true}
-            className="hover:scale-105 transition-transform duration-200"
-          />
-        </div>
-      }
-      profileInfo={
-        <ProfileAvatarInfo
-          userName={`${profileState.firstName} ${profileState.lastName}`}
-          userEmail={profileState.email}
-          username={profileState.username}
-          title="LEGO Builder"
-          location={profileState.location}
-          joinDate={profileState.createdAt}
-          badges={[
-            { label: 'Verified Builder', variant: 'default' },
-            { label: 'Active Member', variant: 'secondary' },
-          ]}
-        />
-      }
-      additionalContent={
-        <div className="space-y-6">
-          {/* Bio Section */}
-          {profileState.bio && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">About</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{profileState.bio}</p>
-            </div>
-          )}
-
-          {/* Social Links */}
-          {profileState.socialLinks && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Connect</h3>
-              <div className="flex flex-wrap gap-2">
-                {profileState.socialLinks.twitter && (
-                  <a
-                    href={profileState.socialLinks.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-600 text-sm"
-                  >
-                    Twitter
-                  </a>
-                )}
-                {profileState.socialLinks.linkedin && (
-                  <a
-                    href={profileState.socialLinks.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 text-sm"
-                  >
-                    LinkedIn
-                  </a>
-                )}
-                {profileState.socialLinks.github && (
-                  <a
-                    href={profileState.socialLinks.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-foreground hover:text-foreground/80 text-sm"
-                  >
-                    GitHub
-                  </a>
-                )}
-                {profileState.socialLinks.instagram && (
-                  <a
-                    href={profileState.socialLinks.instagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-pink-600 hover:text-pink-700 text-sm"
-                  >
-                    Instagram
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Website */}
-          {profileState.website && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Website</h3>
-              <a
-                href={profileState.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:text-primary/80 text-sm font-medium"
-              >
-                Visit Website
-              </a>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="space-y-3 pt-4 border-t border-border/50">
-            <Button onClick={handleEdit} className="w-full" variant="default">
-              Edit Profile
-            </Button>
-          </div>
-        </div>
-      }
-    />
-  );
-
-  // Create the main content using ProfileMain component
-  const mainContent = (
-    <ProfileMain
-      title="Profile"
-      description="Manage your account settings and preferences"
-    >
-      <LegoProfileContent
-        profile={profileState}
-        onEdit={handleEdit}
-        isEditing={isEditing}
-      />
-    </ProfileMain>
-  );
+  // Simplified layout - no sidebar, just main content
 
   // Show loading state only while initially checking auth (not after logout)
   if (isAuthLoading && isAuthenticated !== false) {
@@ -330,28 +191,13 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Back Button */}
-      <div className="container mx-auto px-4 pt-8">
-        <Button variant="outline" onClick={handleBack} className="mb-4" data-testid="back-button">
-          ← Back to Home
-        </Button>
-      </div>
-
-      {/* New Profile Layout */}
-      <ProfileLayout
-        sidebarContent={sidebarContent}
-        sidebarWidth="wide"
-        leftOffset="medium"
-        stickysidebar={true}
-        sidebarBackground="default"
-        className="bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50 dark:from-background dark:via-muted/20 dark:to-accent/10"
-      >
-        {/* Main Content */}
-        <div aria-hidden>
-          {mainContent}
-        </div>
-      </ProfileLayout>
+    <>
+      {/* Profile Content */}
+      <LegoProfileContent
+        profile={profileState}
+        onEdit={handleEdit}
+        isEditing={isEditing}
+      />
 
       {/* Edit Profile Modal */}
       {isEditing && (
@@ -456,7 +302,7 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

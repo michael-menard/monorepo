@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from '@tanstack/react-router';
 import {
   AppCard,
   Badge,
@@ -52,7 +53,25 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
   onEdit,
   isEditing,
 }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Navigation handlers for the cards
+  const handleInstructionsClick = () => {
+    router.navigate({ to: '/moc-gallery' });
+  };
+
+  const handleSetsClick = () => {
+    router.navigate({ to: '/moc-gallery' }); // For now, both go to MOC gallery
+  };
+
+  const handleWishlistClick = () => {
+    router.navigate({ to: '/wishlist' });
+  };
+
+  const handleInspirationClick = () => {
+    router.navigate({ to: '/inspiration-gallery' });
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -382,24 +401,76 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <Card className="border-0 bg-gradient-to-r from-orange-500 to-red-500 text-white">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">
-                Welcome to {profile.firstName}'s LEGO Workshop!
-              </h1>
-              <p className="text-orange-100">
-                Discover amazing MOCs, detailed instructions, and creative building techniques.
-              </p>
+      {/* Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Instructions Card */}
+        <Card
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-blue-300"
+          onClick={handleInstructionsClick}
+        >
+          <CardContent className="p-6 text-center">
+            <div className="mb-4">
+              <BookOpen className="h-12 w-12 mx-auto text-blue-600 group-hover:text-blue-700" />
             </div>
-            <div className="hidden md:block">
-              <Blocks className="h-16 w-16 text-orange-200" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Instructions</h3>
+            <p className="text-gray-600 mb-4">Browse detailed building guides and MOC instructions</p>
+            <div className="bg-blue-50 group-hover:bg-blue-100 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-blue-700 font-medium">View Instructions →</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Sets Card */}
+        <Card
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-green-300"
+          onClick={handleSetsClick}
+        >
+          <CardContent className="p-6 text-center">
+            <div className="mb-4">
+              <Blocks className="h-12 w-12 mx-auto text-green-600 group-hover:text-green-700" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Sets</h3>
+            <p className="text-gray-600 mb-4">Explore LEGO sets and MOC collections</p>
+            <div className="bg-green-50 group-hover:bg-green-100 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-green-700 font-medium">Browse Sets →</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Wishlist Card */}
+        <Card
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-red-300"
+          onClick={handleWishlistClick}
+        >
+          <CardContent className="p-6 text-center">
+            <div className="mb-4">
+              <Heart className="h-12 w-12 mx-auto text-red-600 group-hover:text-red-700" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Wishlist</h3>
+            <p className="text-gray-600 mb-4">Manage your wanted sets and parts</p>
+            <div className="bg-red-50 group-hover:bg-red-100 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-red-700 font-medium">View Wishlist →</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Inspiration Gallery Card */}
+        <Card
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-purple-300"
+          onClick={handleInspirationClick}
+        >
+          <CardContent className="p-6 text-center">
+            <div className="mb-4">
+              <Zap className="h-12 w-12 mx-auto text-purple-600 group-hover:text-purple-700" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Inspiration</h3>
+            <p className="text-gray-600 mb-4">Discover creative ideas and trending MOCs</p>
+            <div className="bg-purple-50 group-hover:bg-purple-100 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-purple-700 font-medium">Get Inspired →</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Content Tabs */}
       <Tabs defaultValue="mocs" className="w-full">
