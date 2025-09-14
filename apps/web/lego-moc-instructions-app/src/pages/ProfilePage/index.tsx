@@ -49,6 +49,14 @@ export const ProfilePage: React.FC = () => {
   const { user, isLoading: isAuthLoading, isAuthenticated, error } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
+  // Redirect to login if not authenticated (after logout)
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      console.log('🔄 ProfilePage: User not authenticated, redirecting to login');
+      router.navigate({ to: '/auth/login', replace: true });
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
+
   // Convert authenticated user data to profile format
   const profile: Profile = user ? {
     id: user._id || user.id || '1',
@@ -287,8 +295,8 @@ export const ProfilePage: React.FC = () => {
     </ProfileMain>
   );
 
-  // Show loading state while fetching user data
-  if (isAuthLoading || !user) {
+  // Show loading state only while initially checking auth (not after logout)
+  if (isAuthLoading && isAuthenticated !== false) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -297,6 +305,11 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // If not authenticated, don't render anything (redirect will happen)
+  if (!isAuthenticated || !user) {
+    return null;
   }
 
   // Show error state if not authenticated

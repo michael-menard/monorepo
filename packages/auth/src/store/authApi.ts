@@ -132,7 +132,8 @@ export const authApi = createApi({
         method: 'GET',
       }),
       providesTags: ['Auth', 'User'],
-      ...getRTKQueryCacheConfig('short'), // Short cache for auth status
+      // Disable caching for auth check to prevent stale data
+      ...getRTKQueryCacheConfig('realtime'), // No cache, always refetch
     }),
     verifyEmail: builder.mutation<AuthResponse, VerifyEmailRequest>({
       query: (body) => ({

@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Lock, Mail } from 'lucide-react'
 import { useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { z } from 'zod'
 import {
   useAuth,
@@ -22,8 +22,9 @@ type LoginFormData = z.infer<typeof LoginSchema>
 
 function TanStackLoginPage() {
   const router = useRouter()
-  const { login, isLoading, error } = useAuth()
+  const { login, isLoading, error, isAuthenticated, user } = useAuth()
   const [formError, setFormError] = useState<string | null>(null)
+  const [loginSuccess, setLoginSuccess] = useState(false)
 
   const {
     register,
@@ -34,17 +35,26 @@ function TanStackLoginPage() {
     mode: 'onChange',
   })
 
+  // Navigate to profile when authentication is successful
+  useEffect(() => {
+    if (loginSuccess && isAuthenticated && user) {
+      console.log('Auth state updated, navigating to profile')
+      router.navigate({ to: '/profile' })
+    }
+  }, [loginSuccess, isAuthenticated, user, router])
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       setFormError(null)
-      
+
       // Call the auth API using the shared auth package
       await login(data).unwrap()
-      
-      console.log('Login successful')
 
-      // Navigate to profile page on success
-      router.navigate({ to: '/profile' })
+      console.log('Login successful, waiting for auth state update')
+
+      // Set flag to indicate login was successful
+      // Navigation will happen in useEffect when auth state updates
+      setLoginSuccess(true)
     } catch (err: any) {
       console.error('Login error:', err)
       

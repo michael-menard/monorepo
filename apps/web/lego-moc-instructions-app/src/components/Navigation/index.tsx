@@ -3,7 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
 import { useAuth, clearCSRFToken, clearRefreshState } from '@repo/auth'
 import { useDispatch } from 'react-redux'
-import { authApi } from '@repo/auth/store/authApi'
+import { authApi, useCheckAuthQuery } from '@repo/auth/store/authApi'
 import {
   Heart,
   LogOut,
@@ -43,6 +43,18 @@ function Navigation({ className = '' }: NavigationProps) {
   const dispatch = useDispatch()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Debug the raw auth query data
+  const { data: rawAuthData, isLoading: authLoading, error: authError } = useCheckAuthQuery()
+  useEffect(() => {
+    console.log('🔍 Raw auth query data:', {
+      rawAuthData,
+      authLoading,
+      authError,
+      isAuthenticated,
+      user: user ? { name: user.name, email: user.email } : null
+    })
+  }, [rawAuthData, authLoading, authError, isAuthenticated, user])
 
   // Debug authentication state changes (can be removed in production)
   useEffect(() => {
@@ -85,9 +97,27 @@ function Navigation({ className = '' }: NavigationProps) {
       clearRefreshState()        // Clear token refresh state
       console.log('🧹 Client-side tokens cleared')
 
-      // Force reset the entire auth API cache to ensure clean state
+      // Step 1: Manually update the checkAuth cache to indicate logged out state
+      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (draft) => {
+        return null; // Set to null to indicate no user
+      }))
+      console.log('🔄 Auth cache manually cleared')
+
+      // Step 2: Remove the specific checkAuth query from cache
+      dispatch(authApi.util.removeQueryData('checkAuth', undefined))
+      console.log('🗑️ CheckAuth query removed from cache')
+
+      // Step 3: Invalidate specific auth tags
+      dispatch(authApi.util.invalidateTags(['Auth', 'User']))
+      console.log('🏷️ Auth tags invalidated')
+
+      // Step 4: Reset the entire auth API cache to ensure clean state
       dispatch(authApi.util.resetApiState())
       console.log('🔄 RTK Query cache reset')
+
+      // Step 5: Force a new auth check with error state
+      dispatch(authApi.endpoints.checkAuth.initiate(undefined, { forceRefetch: true }))
+      console.log('🔄 Forced auth recheck initiated')
 
       // Clear any user-specific localStorage data
       try {
@@ -99,11 +129,16 @@ function Navigation({ className = '' }: NavigationProps) {
       }
 
       // Additional delay to ensure all cleanup completes
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       // Navigate to home page
       console.log('🏠 Navigating to home page')
       navigate({ to: '/' })
+
+      // Final verification - log auth state after navigation
+      setTimeout(() => {
+        console.log('🔍 Final auth state check after logout')
+      }, 1000)
 
     } catch (error) {
       console.error('❌ Logout failed:', error)
@@ -111,7 +146,13 @@ function Navigation({ className = '' }: NavigationProps) {
       // Even if logout fails, clear all client-side state for security
       clearCSRFToken()
       clearRefreshState()
+      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (draft) => {
+        return null; // Set to null to indicate no user
+      }))
+      dispatch(authApi.util.removeQueryData('checkAuth', undefined))
+      dispatch(authApi.util.invalidateTags(['Auth', 'User']))
       dispatch(authApi.util.resetApiState())
+      dispatch(authApi.endpoints.checkAuth.initiate(undefined, { forceRefetch: true }))
 
       try {
         localStorage.removeItem('user-preferences')
@@ -128,36 +169,34 @@ function Navigation({ className = '' }: NavigationProps) {
 
   return (
     <nav className={`flex items-center space-x-4 ${className}`}>
-      {/* Main Navigation Links */}
-      <div className="hidden md:flex items-center space-x-6">
-        <Link
-          to="/moc-gallery"
-          className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Search className="h-4 w-4" />
-          <span>Browse MOCs</span>
-        </Link>
+      {/* Main Navigation Links - Only show when authenticated */}
+      {isAuthenticated && (
+        <div className="hidden md:flex items-center space-x-6">
+          <Link
+            to="/moc-gallery"
+            className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Search className="h-4 w-4" />
+            <span>Browse MOCs</span>
+          </Link>
 
-        <Link
-          to="/inspiration-gallery"
-          className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Lightbulb className="h-4 w-4" />
-          <span>Inspiration</span>
-        </Link>
+          <Link
+            to="/inspiration-gallery"
+            className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Lightbulb className="h-4 w-4" />
+            <span>Inspiration</span>
+          </Link>
 
-        {isAuthenticated && (
-          <>
-            <Link
-              to="/wishlist"
-              className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Heart className="h-4 w-4" />
-              <span>Wishlist</span>
-            </Link>
-          </>
-        )}
-      </div>
+          <Link
+            to="/wishlist"
+            className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Heart className="h-4 w-4" />
+            <span>Wishlist</span>
+          </Link>
+        </div>
+      )}
 
       {/* User Actions */}
       <div className="flex items-center space-x-2">

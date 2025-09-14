@@ -23,12 +23,26 @@ import {
 
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
-  
+
   // Get auth data from RTK Query cache
   const { data: authData, isLoading: isCheckAuthLoading, error: checkAuthError } = useCheckAuthQuery();
   const user = authData?.data?.user || null;
   const tokens = authData?.data?.tokens || null;
   const isAuthenticated = !!user;
+
+  // Debug logging for auth state
+  React.useEffect(() => {
+    console.log('🔍 useAuth debug:', {
+      authData,
+      user,
+      tokens,
+      isAuthenticated,
+      isCheckAuthLoading,
+      checkAuthError,
+      errorStatus: (checkAuthError as any)?.status,
+      errorMessage: (checkAuthError as any)?.data?.message,
+    });
+  }, [authData, user, tokens, isAuthenticated, isCheckAuthLoading, checkAuthError]);
 
   // Filter out expected authentication errors (401 responses are normal when not logged in)
   const isAuthError = checkAuthError &&
