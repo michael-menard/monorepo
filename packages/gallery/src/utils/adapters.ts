@@ -1,4 +1,34 @@
-import type { DataAdapter, GalleryItem } from '../types/index.js';
+import type { DataAdapter, GalleryItem } from '../types/index';
+
+// Import types from feature packages
+type WishlistItem = {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  url: string;
+  imageUrl: string;
+  priority: 'low' | 'medium' | 'high';
+  category?: string;
+  isPurchased: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type MockInstruction = {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  category: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  tags: string[];
+  coverImageUrl?: string;
+  rating?: number;
+  downloadCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // Generic adapter for basic image data
 export const imageAdapter: DataAdapter<{
@@ -273,11 +303,91 @@ export function createAdapter<T>(config: {
   };
 }
 
+// Feature-specific adapters
+export const featureWishlistAdapter: DataAdapter<WishlistItem> = {
+  transform: (data) => ({
+    id: data.id,
+    title: data.name,
+    description: data.description,
+    imageUrl: data.imageUrl,
+    author: undefined, // Wishlist items don't have authors
+    tags: [data.category, data.priority].filter(Boolean) as string[],
+    category: data.category || 'LEGO Set',
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+    type: 'wishlist',
+    originalData: data,
+    metadata: {
+      price: data.price,
+      priority: data.priority,
+      isPurchased: data.isPurchased,
+      url: data.url,
+    },
+  }),
+  validate: (data): data is WishlistItem => {
+    return typeof data === 'object' &&
+           data !== null &&
+           'id' in data &&
+           'name' in data &&
+           'price' in data &&
+           typeof (data as any).id === 'string' &&
+           typeof (data as any).name === 'string' &&
+           typeof (data as any).price === 'number';
+  },
+  getSearchableText: (data) => [
+    data.name,
+    data.description,
+    data.category,
+    data.priority,
+  ].filter(Boolean).join(' '),
+};
+
+export const featureMocInstructionAdapter: DataAdapter<MockInstruction> = {
+  transform: (data) => ({
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    imageUrl: data.coverImageUrl || '/placeholder-instruction.jpg',
+    author: data.author,
+    tags: [...data.tags, data.difficulty, data.category],
+    category: data.category,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+    type: 'instruction',
+    originalData: data,
+    metadata: {
+      difficulty: data.difficulty,
+      rating: data.rating,
+      downloadCount: data.downloadCount,
+    },
+  }),
+  validate: (data): data is MockInstruction => {
+    return typeof data === 'object' &&
+           data !== null &&
+           'id' in data &&
+           'title' in data &&
+           'author' in data &&
+           typeof (data as any).id === 'string' &&
+           typeof (data as any).title === 'string' &&
+           typeof (data as any).author === 'string';
+  },
+  getSearchableText: (data) => [
+    data.title,
+    data.description,
+    data.author,
+    data.difficulty,
+    data.category,
+    ...data.tags,
+  ].filter(Boolean).join(' '),
+};
+
 // Export all adapters
 export const adapters = {
   image: imageAdapter,
   inspiration: inspirationAdapter,
   instruction: instructionAdapter,
   wishlist: wishlistAdapter,
+  featureWishlist: featureWishlistAdapter,
+  featureMocInstruction: featureMocInstructionAdapter,
   create: createAdapter,
 };

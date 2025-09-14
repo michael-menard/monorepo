@@ -11,7 +11,7 @@ import {
   CheckSquare,
   Square
 } from 'lucide-react';
-import type { GalleryConfig, GalleryActions } from '../../types/index.js';
+import type { GalleryConfig, GalleryActions } from '../../types/index';
 
 interface GalleryToolbarProps {
   config: GalleryConfig;

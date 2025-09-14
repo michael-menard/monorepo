@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@repo/ui';
 import { ChevronUp, ChevronDown, MoreHorizontal } from 'lucide-react';
-import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index.js';
+import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index';
 
 interface TableLayoutProps {
   items: GalleryItem[];

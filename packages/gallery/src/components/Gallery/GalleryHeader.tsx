@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@repo/ui';
 import { Search, Filter, X } from 'lucide-react';
-import type { GalleryConfig, GalleryActions } from '../../types/index.js';
+import type { GalleryConfig, GalleryActions } from '../../types/index';
 
 interface GalleryHeaderProps {
   config: GalleryConfig;

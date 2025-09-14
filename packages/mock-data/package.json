@@ -1,0 +1,51 @@
+{
+  "name": "@repo/mock-data",
+  "version": "0.1.0",
+  "description": "Centralized mock data for LEGO MOC Instructions App",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.0.1",
+    "react-redux": "^9.0.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
+    "eslint": "^9.30.1"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./wishlist": {
+      "import": "./dist/wishlist.mjs",
+      "require": "./dist/wishlist.js",
+      "types": "./dist/wishlist.d.ts"
+    },
+    "./moc-instructions": {
+      "import": "./dist/moc-instructions.mjs",
+      "require": "./dist/moc-instructions.js",
+      "types": "./dist/moc-instructions.d.ts"
+    },
+    "./profile": {
+      "import": "./dist/profile.mjs",
+      "require": "./dist/profile.js",
+      "types": "./dist/profile.d.ts"
+    }
+  }
+}

@@ -14,6 +14,8 @@ import { mocGalleryRoute } from './routes/moc-gallery.tsx'
 import { inspirationGalleryRoute } from './routes/inspiration-gallery.tsx'
 
 import { profileRoute } from './routes/profile.tsx'
+import { profileDemoRoute } from './routes/profile-demo.tsx'
+import { profileRTKDemoRoute } from './routes/profile-rtk-demo.tsx'
 import { wishlistRoute } from './routes/wishlist.tsx'
 import { cacheDemoRoute } from './routes/cache-demo.tsx'
 import { loginRoute } from './routes/auth/login.tsx'
@@ -61,6 +63,8 @@ const routeTree = rootRoute.addChildren([
   mocGalleryRoute,
   inspirationGalleryRoute,
   profileRoute,
+  profileDemoRoute,
+  profileRTKDemoRoute,
   wishlistRoute,
   cacheDemoRoute,
   loginRoute,

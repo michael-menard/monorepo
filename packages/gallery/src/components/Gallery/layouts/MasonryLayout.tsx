@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@repo/ui';
-import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index.js';
-import { GalleryCard } from '../GalleryCard.js';
+import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index';
+import { GalleryCard } from '../GalleryCard';
 
 interface MasonryLayoutProps {
   items: GalleryItem[];

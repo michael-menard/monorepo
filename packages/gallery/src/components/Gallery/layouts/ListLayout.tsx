@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@repo/ui';
-import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index.js';
-import { GalleryListItem } from '../GalleryListItem.js';
+import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index';
+import { GalleryListItem } from '../GalleryListItem';
 
 interface ListLayoutProps {
   items: GalleryItem[];

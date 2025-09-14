@@ -7,7 +7,7 @@ export const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/profile',
   beforeLoad: createTanStackRouteGuard(
-    { 
+    {
       requireAuth: true, // Requires authentication
       requireVerified: true // Requires email verification
     },

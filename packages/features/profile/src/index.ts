@@ -14,4 +14,10 @@ export { AvatarUploader } from './components/AvatarUploader';
 export { default as ProtectedProfilePage } from './components/ProtectedProfilePage';
 export { default as ProfilePageWithTour } from './components/ProfilePageWithTour';
 export { default as ProfileTourExample } from './components/ProfileTourExample';
-export { default as ProfileTabs } from './components/ProfileTabs'; 
+export { default as ProfileTabs } from './components/ProfileTabs';
+
+// Export new profile content components
+export { ProfileContent } from './components/ProfileContent';
+export { ProfileDashboard } from './components/ProfileDashboard';
+export { ProfileWishlistSection } from './components/ProfileWishlistSection';
+export { ProfileMocInstructionsSection } from './components/ProfileMocInstructionsSection';

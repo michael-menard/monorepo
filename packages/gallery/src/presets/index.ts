@@ -1,5 +1,5 @@
-import type { GalleryPreset } from '../types/index.js';
-import { adapters } from '../utils/adapters.js';
+import type { GalleryPreset } from '../types/index';
+import { adapters } from '../utils/adapters';
 
 // Inspiration Gallery Preset
 export const inspirationGalleryPreset: GalleryPreset = {

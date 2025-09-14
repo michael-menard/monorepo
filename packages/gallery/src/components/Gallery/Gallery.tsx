@@ -1,19 +1,19 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { cn } from '@repo/ui';
-import type { GalleryProps, GalleryItem, GalleryConfig } from '../../types/index.js';
-import { GalleryConfigSchema } from '../../types/index.js';
-import { getPreset, mergePresetConfig } from '../../presets/index.js';
-import { GridLayout } from './layouts/GridLayout.js';
-import { MasonryLayout } from './layouts/MasonryLayout.js';
-import { ListLayout } from './layouts/ListLayout.js';
-import { TableLayout } from './layouts/TableLayout.js';
-import { CarouselLayout } from './layouts/CarouselLayout.js';
-import { GalleryHeader } from './GalleryHeader.js';
-import { GalleryToolbar } from './GalleryToolbar.js';
-import { LoadingState } from './LoadingState.js';
-import { ErrorState } from './ErrorState.js';
-import { EmptyState } from './EmptyState.js';
+import type { GalleryProps, GalleryItem, GalleryConfig } from '../../types/index';
+import { GalleryConfigSchema } from '../../types/index';
+import { getPreset, mergePresetConfig } from '../../presets/index';
+import { GridLayout } from './layouts/GridLayout';
+import { MasonryLayout } from './layouts/MasonryLayout';
+import { ListLayout } from './layouts/ListLayout';
+import { TableLayout } from './layouts/TableLayout';
+import { CarouselLayout } from './layouts/CarouselLayout';
+import { GalleryHeader } from './GalleryHeader';
+import { GalleryToolbar } from './GalleryToolbar';
+import { LoadingState } from './LoadingState';
+import { ErrorState } from './ErrorState';
+import { EmptyState } from './EmptyState';
 
 export const Gallery: React.FC<GalleryProps> = ({
   items: rawItems = [],

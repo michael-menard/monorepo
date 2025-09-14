@@ -2,16 +2,51 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { Button } from '@repo/ui';
 import { ArrowLeft, Download, Heart, Plus, Share, Upload } from 'lucide-react';
-import {
-  calculateTotalParts,
-  calculateTotalTime,
-  formatDate,
-  formatTime,
-  getDifficultyLabel,
-} from '@repo/moc-instructions';
 import { Gallery } from '@repo/gallery';
 import type { GalleryImage } from '@repo/gallery';
 import { Upload as FileUpload } from '@monorepo/upload';
+
+// Import RTK hooks and actions from centralized store
+import {
+  useAppDispatch,
+  useAppSelector,
+  fetchMocInstructionById,
+  incrementDownloadCount,
+  selectSelectedMocInstruction,
+  selectMocInstructionsLoading,
+  selectMocInstructionsError,
+  type MockInstruction,
+} from '../../store';
+
+// Helper functions for MOC data
+const calculateTotalParts = (instruction: MockInstruction): number => {
+  return instruction.totalParts || instruction.partsList.reduce((total, part) => total + part.quantity, 0);
+};
+
+const calculateTotalTime = (instruction: MockInstruction): number => {
+  return instruction.estimatedTime || instruction.steps.reduce((total, step) => total + (step.estimatedTime || 0), 0);
+};
+
+const formatDate = (date: Date): string => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+};
+
+const formatTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  return `${mins}m`;
+};
+
+const getDifficultyLabel = (difficulty: string): string => {
+  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+};
 
 // Mock data for development/testing when API is not available
 const mockInstruction = {
@@ -95,21 +130,80 @@ const convertStepsToGalleryImages = (steps: typeof mockInstruction.steps): Array
 export const MocDetailPage: React.FC = (): React.JSX.Element => {
   const { id } = useParams({ from: '/moc-detail/$id' });
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  // RTK state
+  const instruction = useAppSelector(selectSelectedMocInstruction);
+  const isLoading = useAppSelector(selectMocInstructionsLoading);
+  const error = useAppSelector(selectMocInstructionsError);
+
+  // Local state
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(89);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<Array<GalleryImage>>(() => 
-    convertStepsToGalleryImages(mockInstruction.steps)
-  );
+
+  // Fetch instruction on mount
+  useEffect(() => {
+    if (id) {
+      dispatch(fetchMocInstructionById(id));
+    }
+  }, [dispatch, id]);
+  const [galleryImages, setGalleryImages] = useState<Array<GalleryImage>>([]);
   const [selectedImages, setSelectedImages] = useState<Array<string>>([]);
 
-  // For testing, always use mock data
-  const instruction = mockInstruction;
+  // Update gallery images when instruction changes
+  useEffect(() => {
+    if (instruction?.steps) {
+      setGalleryImages(convertStepsToGalleryImages(instruction.steps));
+    }
+  }, [instruction]);
 
   // Update document title
   useEffect(() => {
-    document.title = `${instruction.title} - MOC Details`;
-  }, [instruction.title]);
+    if (instruction) {
+      document.title = `${instruction.title} - MOC Details`;
+    }
+  }, [instruction]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading MOC details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading MOC details: {error}</p>
+          <Button onClick={() => navigate({ to: '/moc-gallery' })}>
+            Back to Gallery
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
+  if (!instruction) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">MOC instruction not found</p>
+          <Button onClick={() => navigate({ to: '/moc-gallery' })}>
+            Back to Gallery
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleBack = () => {
     navigate({ to: '/moc-gallery' });
@@ -126,9 +220,16 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     console.log('Link copied to clipboard');
   };
 
-  const handleDownload = () => {
-    console.log('Downloading instructions for:', id);
-    // Implement download functionality using the download service from @repo/moc-instructions
+  const handleDownload = async () => {
+    if (instruction) {
+      try {
+        await dispatch(incrementDownloadCount(instruction.id)).unwrap();
+        console.log('Download count incremented for:', instruction.id);
+        // Here you would also trigger the actual file download
+      } catch (error) {
+        console.error('Failed to increment download count:', error);
+      }
+    }
   };
 
   // Gallery event handlers

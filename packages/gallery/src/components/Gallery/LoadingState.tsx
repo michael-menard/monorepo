@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@repo/ui';
-import type { GalleryLayout } from '../../types/index.js';
+import type { GalleryLayout } from '../../types/index';
 
 interface LoadingStateProps {
   layout: GalleryLayout;

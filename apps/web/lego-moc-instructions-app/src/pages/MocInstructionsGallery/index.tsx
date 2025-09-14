@@ -1,19 +1,38 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@repo/ui';
 import { Plus } from 'lucide-react';
 import { Gallery, GalleryAdapters } from '@monorepo/gallery';
-import { useGetInstructionsQuery } from '@repo/moc-instructions';
-import type { MockInstruction } from '@repo/moc-instructions';
+
+// Import RTK hooks and actions from centralized store
+import {
+  useAppDispatch,
+  useAppSelector,
+  fetchMocInstructions,
+  selectMocInstructions,
+  selectMocInstructionsLoading,
+  selectMocInstructionsError,
+  selectFilteredMocInstructions,
+  incrementDownloadCount,
+  type MockInstruction,
+} from '../../store';
 
 const MocInstructionsGallery: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
-  // Fetch instructions using RTK Query
-  const { data: instructions = [], isLoading, error } = useGetInstructionsQuery({
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-  });
+  // Use centralized RTK state
+  const instructions = useAppSelector(selectFilteredMocInstructions);
+  const isLoading = useAppSelector(selectMocInstructionsLoading);
+  const error = useAppSelector(selectMocInstructionsError);
+
+  // Fetch instructions on mount
+  useEffect(() => {
+    dispatch(fetchMocInstructions({
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    }));
+  }, [dispatch]);
 
   const handleInstructionClick = useCallback((instruction: any) => {
     navigate({ to: '/moc-detail/$id', params: { id: instruction.id } });
@@ -33,10 +52,14 @@ const MocInstructionsGallery: React.FC = () => {
     // TODO: Implement share functionality
   }, []);
 
-  const handleImageDownload = useCallback((imageId: string) => {
+  const handleImageDownload = useCallback(async (imageId: string) => {
     console.log(`Downloading image ${imageId}`);
-    // TODO: Implement download functionality
-  }, []);
+    try {
+      await dispatch(incrementDownloadCount(imageId)).unwrap();
+    } catch (error) {
+      console.error('Failed to increment download count:', error);
+    }
+  }, [dispatch]);
 
   const handleImageDelete = useCallback((imageId: string) => {
     console.log(`Deleting image ${imageId}`);

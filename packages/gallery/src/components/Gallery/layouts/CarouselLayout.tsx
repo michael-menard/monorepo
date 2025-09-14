@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@repo/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index.js';
-import { GalleryCard } from '../GalleryCard.js';
+import type { GalleryItem, GalleryConfig, GalleryActions } from '../../../types/index';
+import { GalleryCard } from '../GalleryCard';
 
 interface CarouselLayoutProps {
   items: GalleryItem[];

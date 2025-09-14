@@ -1,7 +1,7 @@
 import { type VariantProps } from "class-variance-authority";
 declare const buttonVariants: (props?: ({
-    variant?: "link" | "error" | "default" | "destructive" | "outline" | "secondary" | "tertiary" | "success" | "warning" | "info" | "ghost" | null | undefined;
-    size?: "default" | "sm" | "lg" | "icon" | null | undefined;
+    variant?: "link" | "outline" | "error" | "default" | "destructive" | "secondary" | "tertiary" | "success" | "warning" | "info" | "ghost" | null | undefined;
+    size?: "sm" | "lg" | "default" | "icon" | null | undefined;
 } & import("class-variance-authority/types").ClassProp) | undefined) => string;
 export interface ButtonProps extends VariantProps<typeof buttonVariants> {
     asChild?: boolean;

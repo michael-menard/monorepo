@@ -2,7 +2,7 @@ import * as React from "react";
 import { type VariantProps } from "class-variance-authority";
 declare const progressVariants: (props?: ({
     variant?: "default" | "destructive" | "success" | "warning" | "primary" | null | undefined;
-    size?: "default" | "sm" | "lg" | "xl" | null | undefined;
+    size?: "sm" | "lg" | "xl" | "default" | null | undefined;
 } & import("class-variance-authority/types").ClassProp) | undefined) => string;
 declare const progressBarVariants: (props?: ({
     variant?: "default" | "destructive" | "success" | "warning" | "primary" | null | undefined;

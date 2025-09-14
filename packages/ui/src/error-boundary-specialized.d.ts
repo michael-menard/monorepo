@@ -8,14 +8,14 @@ export declare const ApiErrorSchema: z.ZodObject<{
     method: z.ZodOptional<z.ZodString>;
     response: z.ZodOptional<z.ZodAny>;
 }, "strip", z.ZodTypeAny, {
-    status?: number | undefined;
     url?: string | undefined;
+    status?: number | undefined;
     method?: string | undefined;
     statusText?: string | undefined;
     response?: any;
 }, {
-    status?: number | undefined;
     url?: string | undefined;
+    status?: number | undefined;
     method?: string | undefined;
     statusText?: string | undefined;
     response?: any;

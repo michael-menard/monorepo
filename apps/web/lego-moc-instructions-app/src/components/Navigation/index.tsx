@@ -36,12 +36,28 @@ function Navigation({ className = '' }: NavigationProps) {
     <nav className={`flex items-center space-x-4 ${className}`}>
       {/* Main Navigation Links */}
       <div className="hidden md:flex items-center space-x-6">
-        <Link 
-          to="/moc-gallery" 
+        <Link
+          to="/moc-gallery"
           className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <Search className="h-4 w-4" />
           <span>Browse MOCs</span>
+        </Link>
+
+        <Link
+          to="/profile-demo"
+          className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <User className="h-4 w-4" />
+          <span>Profile Demo</span>
+        </Link>
+
+        <Link
+          to="/profile-rtk-demo"
+          className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <User className="h-4 w-4" />
+          <span>Profile RTK</span>
         </Link>
         
         {isAuthenticated && (

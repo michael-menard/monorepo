@@ -55,9 +55,11 @@
     "@repo/auth": "workspace:*",
     "@repo/features-wishlist": "workspace:*",
     "@repo/gallery": "workspace:*",
-
+    "@repo/mock-data": "workspace:*",
     "@repo/moc-instructions": "workspace:*",
     "@repo/profile": "workspace:*",
+    "@reduxjs/toolkit": "^2.0.1",
+    "react-redux": "^9.0.4",
     "@repo/shared-cache": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.66.5",

@@ -13,7 +13,7 @@ import {
   User,
   Tag
 } from 'lucide-react';
-import type { GalleryItem, GalleryConfig } from '../../types/index.js';
+import type { GalleryItem, GalleryConfig } from '../../types/index';
 
 interface GalleryCardProps {
   item: GalleryItem;

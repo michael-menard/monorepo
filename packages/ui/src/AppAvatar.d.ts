@@ -21,7 +21,7 @@ declare const AppAvatarSchema: z.ZodObject<{
     disabled: z.ZodDefault<z.ZodBoolean>;
     clickable: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
-    size: "sm" | "lg" | "md";
+    size: "sm" | "md" | "lg";
     disabled: boolean;
     showEditButton: boolean;
     clickable: boolean;
@@ -34,8 +34,8 @@ declare const AppAvatarSchema: z.ZodObject<{
     onLogout?: ((...args: unknown[]) => void) | undefined;
     onUserSettingsClick?: ((...args: unknown[]) => void) | undefined;
 }, {
-    size?: "sm" | "lg" | "md" | undefined;
     className?: string | undefined;
+    size?: "sm" | "md" | "lg" | undefined;
     disabled?: boolean | undefined;
     avatarUrl?: string | undefined;
     userName?: string | undefined;

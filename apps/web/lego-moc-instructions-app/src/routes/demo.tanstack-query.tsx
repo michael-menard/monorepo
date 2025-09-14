@@ -1,5 +1,6 @@
-import { createRoute } from '@tanstack/react-router'
+import { createRoute, redirect } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { createTanStackRouteGuard } from '../lib/auth-guard'
 
 import type { RootRoute } from '@tanstack/react-router'
 
@@ -26,6 +27,13 @@ function TanStackQueryDemo() {
 export default (parentRoute: RootRoute) =>
   createRoute({
     path: '/demo/tanstack-query',
+    beforeLoad: createTanStackRouteGuard(
+      {
+        requireAuth: true, // Requires authentication
+        requireVerified: true // Requires email verification
+      },
+      redirect
+    ),
     component: TanStackQueryDemo,
     getParentRoute: () => parentRoute,
   })
