@@ -1,19 +1,21 @@
 # Development Commands
 
-This document lists all available commands for starting and managing the development environment.
+This document describes the **single, unified way** to start the development environment.
 
 ## 🚀 Quick Start
 
-### Start Everything
+### Start Everything (Single Command)
 ```bash
 # Start all services (Docker + APIs + Web App)
-pnpm dev:full
+pnpm dev
 # or
-pnpm start:full
+pnpm start
 
 # Seed test users (South Park characters + test users)
 pnpm seed:users
 ```
+
+**That's it!** There is only one way to start the development environment to keep things simple.
 
 This single command will start:
 - 🐳 Docker infrastructure services (MongoDB, PostgreSQL, Redis, Elasticsearch)
@@ -23,7 +25,7 @@ This single command will start:
 
 ## 📋 Service URLs
 
-After running `pnpm dev:full`, you'll have access to:
+After running `pnpm dev`, you'll have access to:
 
 ### Application Services
 - **Web App**: http://localhost:3002
@@ -40,43 +42,22 @@ After running `pnpm dev:full`, you'll have access to:
 - **Mongo Express**: http://localhost:8081 (MongoDB admin)
 - **pgAdmin**: http://localhost:8082 (PostgreSQL admin)
 
-## 🔧 Individual Service Commands
+## 🔧 Infrastructure Management
 
-### Infrastructure Only
+If you need to manage Docker services separately:
+
 ```bash
-# Start Docker services only
-pnpm dev:infra
-
-# Stop Docker services
-pnpm dev:infra:stop
+# Stop Docker services (if needed)
+docker-compose -f docker-compose.dev.yml down
 
 # View Docker service logs
-pnpm dev:infra:logs
+docker-compose -f docker-compose.dev.yml logs -f
 
 # Check Docker service status
-pnpm dev:infra:status
+docker-compose -f docker-compose.dev.yml ps
 ```
 
-### API Services
-```bash
-# Auth service only
-pnpm dev:auth
-
-# LEGO Projects API only  
-pnpm dev:lego
-
-# Frontend only
-pnpm dev:frontend
-```
-
-### Combined Services
-```bash
-# Infrastructure + Auth + Frontend (no LEGO API)
-pnpm auth:dev
-
-# All services via Turbo (may start extra services)
-pnpm dev:all
-```
+**Note**: The main `pnpm dev` command handles all infrastructure automatically.
 
 ## 👥 User Management
 
@@ -118,11 +99,11 @@ tail -f logs/auth-service.log
 
 # LEGO Projects API logs
 pnpm logs:lego
-# or  
+# or
 tail -f logs/lego-projects-api.log
 
 # Docker service logs
-pnpm dev:infra:logs
+docker-compose -f docker-compose.dev.yml logs -f
 ```
 
 ### Check Service Health
@@ -132,9 +113,6 @@ docker-compose -f docker-compose.dev.yml ps
 
 # Test auth service
 curl http://localhost:9000/api/auth/csrf
-
-# Check infrastructure status
-pnpm dev:infra:status
 ```
 
 ## 🧪 Testing Commands
@@ -174,7 +152,7 @@ pnpm test:e2e:ui
 ### Typical Development Session
 1. **Start all services**:
    ```bash
-   pnpm dev:full
+   pnpm dev
    ```
 
 2. **Open your browser**:
@@ -187,19 +165,7 @@ pnpm test:e2e:ui
    ```
 
 4. **Stop everything**:
-   - Press `Ctrl+C` in the terminal running `pnpm dev:full`
-
-### Working on Specific Components
-```bash
-# Just auth development
-pnpm auth:dev
-
-# Just frontend development (with mocked APIs)
-pnpm dev:frontend
-
-# Just infrastructure for external API testing
-pnpm dev:infra
-```
+   - Press `Ctrl+C` in the terminal running `pnpm dev`
 
 ## 🔍 Troubleshooting
 
@@ -227,8 +193,8 @@ pnpm logs:auth
 pnpm dev:infra:logs
 
 # Restart everything
-pnpm dev:infra:stop
-pnpm dev:full
+docker-compose -f docker-compose.dev.yml down
+pnpm dev
 ```
 
 #### Missing Dependencies
@@ -240,7 +206,7 @@ pnpm install
 pnpm build
 
 # Try starting again
-pnpm dev:full
+pnpm dev
 ```
 
 ### Service Dependencies
@@ -264,9 +230,8 @@ Make sure infrastructure services are healthy before starting API services.
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev:full` | Start everything (recommended) |
-| `pnpm dev:infra` | Docker services only |
-| `pnpm auth:dev` | Auth development setup |
+| `pnpm dev` | Start everything (only way) |
+| `pnpm start` | Same as `pnpm dev` |
 | `pnpm test:e2e:auth` | Run auth tests |
 | `pnpm logs:auth` | View auth service logs |
 | `Ctrl+C` | Stop all services |

@@ -17,8 +17,8 @@ export interface MockInstructionStep {
   notes?: string;
   estimatedTime?: number;
   difficulty: 'easy' | 'medium' | 'hard';
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // ISO string instead of Date
+  updatedAt: string; // ISO string instead of Date
 }
 
 /**
@@ -48,8 +48,8 @@ export interface MockInstruction {
   downloadCount: number;
   estimatedTime?: number; // in hours
   totalParts?: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // ISO string instead of Date
+  updatedAt: string; // ISO string instead of Date
 }
 
 /**
@@ -101,8 +101,8 @@ export const mockMocInstructions: MockInstruction[] = [
         notes: 'Make sure all connections are secure before proceeding.',
         estimatedTime: 15,
         difficulty: 'medium',
-        createdAt: new Date('2024-01-01T10:00:00Z'),
-        updatedAt: new Date('2024-01-01T10:00:00Z'),
+        createdAt: '2024-01-01T10:00:00Z',
+        updatedAt: '2024-01-01T10:00:00Z',
       },
       {
         id: 'step-2',
@@ -117,8 +117,8 @@ export const mockMocInstructions: MockInstruction[] = [
         ],
         estimatedTime: 20,
         difficulty: 'medium',
-        createdAt: new Date('2024-01-01T10:15:00Z'),
-        updatedAt: new Date('2024-01-01T10:15:00Z'),
+        createdAt: '2024-01-01T10:15:00Z',
+        updatedAt: '2024-01-01T10:15:00Z',
       },
     ],
     partsList: [
@@ -131,8 +131,8 @@ export const mockMocInstructions: MockInstruction[] = [
     isPublished: true,
     rating: 4.8,
     downloadCount: 1250,
-    createdAt: new Date('2024-01-01T09:00:00Z'),
-    updatedAt: new Date('2024-01-15T14:30:00Z'),
+    createdAt: '2024-01-01T09:00:00Z',
+    updatedAt: '2024-01-15T14:30:00Z',
   },
   {
     id: '2',
@@ -159,8 +159,8 @@ export const mockMocInstructions: MockInstruction[] = [
         ],
         estimatedTime: 45,
         difficulty: 'easy',
-        createdAt: new Date('2024-01-02T10:00:00Z'),
-        updatedAt: new Date('2024-01-02T10:00:00Z'),
+        createdAt: '2024-01-02T10:00:00Z',
+        updatedAt: '2024-01-02T10:00:00Z',
       },
     ],
     partsList: [
@@ -171,8 +171,8 @@ export const mockMocInstructions: MockInstruction[] = [
     isPublished: true,
     rating: 4.9,
     downloadCount: 890,
-    createdAt: new Date('2024-01-02T09:00:00Z'),
-    updatedAt: new Date('2024-01-10T16:20:00Z'),
+    createdAt: '2024-01-02T09:00:00Z',
+    updatedAt: '2024-01-10T16:20:00Z',
   },
   {
     id: '3',
@@ -199,8 +199,8 @@ export const mockMocInstructions: MockInstruction[] = [
         ],
         estimatedTime: 30,
         difficulty: 'medium',
-        createdAt: new Date('2024-01-03T10:00:00Z'),
-        updatedAt: new Date('2024-01-03T10:00:00Z'),
+        createdAt: '2024-01-03T10:00:00Z',
+        updatedAt: '2024-01-03T10:00:00Z',
       },
     ],
     partsList: [
@@ -211,8 +211,8 @@ export const mockMocInstructions: MockInstruction[] = [
     isPublished: true,
     rating: 4.6,
     downloadCount: 567,
-    createdAt: new Date('2024-01-03T09:00:00Z'),
-    updatedAt: new Date('2024-01-08T11:15:00Z'),
+    createdAt: '2024-01-03T09:00:00Z',
+    updatedAt: '2024-01-08T11:15:00Z',
   },
   {
     id: '4',

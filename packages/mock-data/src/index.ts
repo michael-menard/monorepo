@@ -25,3 +25,10 @@ export {
   mockQuickActions,
   getProfileDashboardData,
 } from './profile';
+
+// Explicitly export store actions that might not be picked up by export *
+export {
+  setFilter,
+  clearFilters,
+  clearError,
+} from './store/mocInstructionsSlice';

@@ -14,7 +14,7 @@ import { csrf } from './middleware/csrf';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 9000;
 
 // Middleware
 app.use(express.json({ limit: '100kb' }));
@@ -27,8 +27,10 @@ const devOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:3002',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
 ];
 const origins =
   process.env.NODE_ENV === 'production' ? [ORIGIN] : Array.from(new Set([ORIGIN, ...devOrigins]));

@@ -1,11 +1,15 @@
 #!/bin/bash
 
 # Start Full Development Environment
-# This script starts all services needed for development:
+# This is the SINGLE entry point for starting the complete development environment.
+# It starts all services needed for development:
 # - Docker infrastructure services (MongoDB, PostgreSQL, Redis, Elasticsearch)
 # - Auth API service
-# - LEGO Projects API service  
+# - LEGO Projects API service
 # - LEGO MOC Instructions web app
+#
+# Usage: ./scripts/start-full-dev.sh
+# Or via npm: pnpm dev or pnpm start
 
 set -e  # Exit on any error
 

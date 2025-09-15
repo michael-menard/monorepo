@@ -202,9 +202,20 @@ class PerformanceMonitor {
       const target = event.target as HTMLElement
       if (!target) return
 
+      // Safely get className - handle SVG elements and other edge cases
+      let className = ''
+      if (target.className) {
+        if (typeof target.className === 'string') {
+          className = target.className.split(' ')[0]
+        } else if (target.className.baseVal) {
+          // SVG elements have className as SVGAnimatedString
+          className = target.className.baseVal.split(' ')[0]
+        }
+      }
+
       this.analytics.interactions.push({
         type: event.type,
-        target: target.tagName.toLowerCase() + (target.id ? `#${target.id}` : '') + (target.className ? `.${target.className.split(' ')[0]}` : ''),
+        target: target.tagName.toLowerCase() + (target.id ? `#${target.id}` : '') + (className ? `.${className}` : ''),
         timestamp: Date.now(),
       })
     }

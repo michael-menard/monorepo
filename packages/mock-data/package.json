@@ -46,6 +46,11 @@
       "import": "./dist/profile.mjs",
       "require": "./dist/profile.js",
       "types": "./dist/profile.d.ts"
+    },
+    "./store": {
+      "import": "./dist/store.mjs",
+      "require": "./dist/store.js",
+      "types": "./dist/store.d.ts"
     }
   }
 }

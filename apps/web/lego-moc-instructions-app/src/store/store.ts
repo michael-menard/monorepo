@@ -29,7 +29,20 @@ export const store = configureStore({
     [offlineApi.reducerPath]: offlineApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
+    getDefaultMiddleware({
+      serializableCheck: {
+        // Ignore these action types
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+        // Ignore these field paths in all actions
+        ignoredActionsPaths: ['meta.arg', 'payload.timestamp'],
+        // Ignore these paths in the state - specifically for Date objects
+        ignoredPaths: [
+          'mocInstructions.instructions',
+          'profile.recentActivities',
+          'wishlist.items',
+        ],
+      },
+    }).concat(
       authApi.middleware,
       instructionsApi.middleware,
       // Temporarily commented out due to import resolution issue
