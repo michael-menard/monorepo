@@ -264,13 +264,18 @@ export async function searchMocs({
   from = 0,
   size = 20,
 }: {
-  userId: string;
+  userId: string | null;
   query?: string;
   tag?: string;
   from?: number;
   size?: number;
 }) {
-  const must: any[] = [{ term: { userId } }];
+  const must: any[] = [];
+
+  // Only filter by userId if provided (for authenticated users)
+  if (userId) {
+    must.push({ term: { userId } });
+  }
 
   if (tag) {
     must.push({ term: { tags: tag } });

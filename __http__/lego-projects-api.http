@@ -1,5 +1,5 @@
 # LEGO Projects API - HTTP Test Examples
-# Base URL: http://localhost:3000
+# Base URL: http://localhost:9000
 # 
 # Before running these tests:
 # 1. Start the LEGO Projects API: cd apps/api/lego-projects-api && npm run dev
@@ -7,7 +7,7 @@
 # 3. Have a valid JWT token from auth service (see auth-service.http)
 
 ### Variables
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:9000
 @authToken = your-jwt-token-here
 @userId = your-user-id-here
 

@@ -188,4 +188,7 @@ export {
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,
-}; 
+};
+
+// Export the props type for use in other components
+export type SelectProps = React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>;

@@ -15,20 +15,11 @@ const debounce = (func: Function, wait: number) => {
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui';
 import { Plus, Search, Grid, List, LayoutGrid, Table } from 'lucide-react';
-import { Gallery, GalleryAdapters } from '@repo/gallery';
+import { Gallery } from '@repo/gallery';
+import { CreateMocModal, type CreateMocData } from '../../components/CreateMocModal';
 
-// Import RTK hooks and actions from centralized store
-import {
-  useAppDispatch,
-  useAppSelector,
-  fetchMocInstructions,
-  selectMocInstructions,
-  selectMocInstructionsLoading,
-  selectMocInstructionsError,
-  selectFilteredMocInstructions,
-  incrementDownloadCount,
-  type MockInstruction,
-} from '../../store';
+// Import real API hooks instead of mock data
+import { useGetInstructionsQuery, useCreateInstructionWithFilesMutation } from '@repo/moc-instructions';
 
 // Note: Avoiding setFilter import issues by implementing filtering locally
 
@@ -37,7 +28,6 @@ const MocInstructionsGallery: React.FC = () => {
   console.log('🎯 Component mounted at:', new Date().toISOString());
 
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   // Local state for search and filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,10 +35,72 @@ const MocInstructionsGallery: React.FC = () => {
   const [sortBy, setSortBy] = useState('recent');
   const [currentLayout, setCurrentLayout] = useState<'grid' | 'list' | 'masonry' | 'table'>('grid');
 
-  // Use centralized RTK state
-  const allInstructions = useAppSelector(selectMocInstructions); // Get all instructions
-  const isLoading = useAppSelector(selectMocInstructionsLoading);
-  const error = useAppSelector(selectMocInstructionsError);
+  // Modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Use real API instead of mock data
+  // Since the API only has search endpoint, we'll search with empty query to get all MOCs
+  const {
+    data: apiResponse,
+    isLoading,
+    error,
+    refetch: refetchInstructions
+  } = useGetInstructionsQuery({
+    q: '', // Empty query to get all MOCs
+    from: 0,
+    size: 100, // Get first 100 MOCs
+  });
+
+  // RTK Query mutation for creating MOCs
+  const [createMocWithFiles, { isLoading: isCreating }] = useCreateInstructionWithFilesMutation();
+
+  // Helper function to extract error message from RTK Query error
+  const getErrorMessage = useCallback((error: any): string => {
+    if (!error) return 'An unexpected error occurred';
+
+    // RTK Query error structure
+    if (error.status && error.data) {
+      return error.data.message || error.data.error || `Error ${error.status}`;
+    }
+
+    // Network error
+    if (error.message) {
+      return error.message;
+    }
+
+    // Fallback
+    return String(error);
+  }, []);
+
+  // Extract MOCs from API response and transform to expected format
+  const allInstructions = useMemo(() => {
+    console.log('🔍 API Response:', apiResponse);
+    if (!apiResponse?.mocs) {
+      console.log('⚠️ No mocs found in API response');
+      return [];
+    }
+
+    console.log('📋 Found', apiResponse.mocs.length, 'MOCs');
+    // Transform backend MOC data to match gallery expectations
+    return apiResponse.mocs.map((moc: any) => ({
+      id: moc.id,
+      title: moc.title,
+      description: moc.description || '',
+      author: 'User', // TODO: Get actual user name from user ID
+      category: moc.tags?.[0] || 'Other', // Use first tag as category
+      difficulty: 'intermediate', // TODO: Add difficulty to backend
+      pieces: 0, // TODO: Calculate from parts lists
+      estimatedTime: 60, // TODO: Add to backend
+      tags: moc.tags || [],
+      coverImageUrl: moc.thumbnailUrl,
+      rating: 4.5, // TODO: Calculate from reviews
+      downloadCount: 0, // TODO: Add to backend
+      createdAt: moc.createdAt,
+      updatedAt: moc.updatedAt,
+      isPublic: true,
+      isPublished: true,
+    }));
+  }, [apiResponse]);
 
   // Extract unique categories from the actual data
   const availableCategories = useMemo(() => {
@@ -141,22 +193,13 @@ const MocInstructionsGallery: React.FC = () => {
     );
   }
 
-  // Fetch instructions on mount
-  useEffect(() => {
-    console.log('🚀 Fetching MOC instructions...');
-    dispatch(fetchMocInstructions({
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    }));
-  }, [dispatch]);
+  // Real API automatically fetches data, no need for manual useEffect
 
   const handleInstructionClick = useCallback((instruction: any) => {
     navigate({ to: '/moc-detail/$id', params: { id: instruction.id } });
   }, [navigate]);
 
-  const handleCreateNew = useCallback(() => {
-    navigate({ to: '/moc-gallery' });
-  }, [navigate]);
+
 
   const handleImageLike = useCallback((imageId: string, liked: boolean) => {
     console.log(`Image ${imageId} ${liked ? 'liked' : 'unliked'}`);
@@ -170,12 +213,14 @@ const MocInstructionsGallery: React.FC = () => {
 
   const handleImageDownload = useCallback(async (imageId: string) => {
     console.log(`Downloading image ${imageId}`);
+    // TODO: Implement download count increment with real API
     try {
-      await dispatch(incrementDownloadCount(imageId)).unwrap();
+      // For now, just log the download
+      console.log('Download count would be incremented for image:', imageId);
     } catch (error) {
       console.error('Failed to increment download count:', error);
     }
-  }, [dispatch]);
+  }, []);
 
   const handleImageDelete = useCallback((imageId: string) => {
     console.log(`Deleting image ${imageId}`);
@@ -209,6 +254,50 @@ const MocInstructionsGallery: React.FC = () => {
     console.log('🎨 Layout changed to:', layout);
     setCurrentLayout(layout);
   }, []);
+
+  // Modal handlers
+  const handleCreateNew = useCallback(() => {
+    console.log('🔘 Create New MOC button clicked');
+    console.log('🔘 Current modal state:', isCreateModalOpen);
+    setIsCreateModalOpen(true);
+    console.log('🔘 Modal state should now be true');
+  }, [isCreateModalOpen]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsCreateModalOpen(false);
+  }, []);
+
+  const handleSubmitMoc = useCallback(async (mocData: CreateMocData) => {
+    console.log('📝 New MOC submitted:', mocData);
+
+    try {
+      // For now, send just JSON data (files temporarily disabled)
+      const jsonData = {
+        title: mocData.title,
+        description: mocData.description,
+        // Note: Files are temporarily disabled
+        filesDisabled: true
+      };
+
+      console.log('📤 Sending JSON data to API via RTK Query...');
+
+      // Use RTK Query mutation (automatically handles cache invalidation)
+      const result = await createMocWithFiles(jsonData).unwrap();
+      console.log('✅ MOC created successfully:', result);
+
+      // Show success message
+      alert('MOC created successfully! 🎉');
+
+      // Manually refetch the gallery data to ensure it updates
+      console.log('🔄 Manually refreshing gallery...');
+      refetchInstructions();
+
+    } catch (error: any) {
+      console.error('❌ Error creating MOC:', error);
+      const errorMessage = error?.data?.error || error?.message || 'Unknown error';
+      alert(`Failed to create MOC: ${errorMessage}`);
+    }
+  }, [createMocWithFiles]);
 
   const handleFilter = useCallback((filters: any) => {
     console.log('Filters applied:', filters);
@@ -404,36 +493,22 @@ const MocInstructionsGallery: React.FC = () => {
 
           {/* Gallery with filtered instructions */}
           <Gallery
-            items={filteredInstructions}
-            preset="instructions"
-            loading={isLoading}
-            error={error ? 'Error loading instructions' : null}
-            adapter={GalleryAdapters.instruction}
-            config={{
-              filterConfig: {
-                searchable: false, // Disable built-in search since we have custom
-                tagFilter: false,
-                categoryFilter: false,
-              },
-              sortable: false, // Disable built-in sorting since we have custom
-              selectable: currentLayout === 'table', // Enable selection for table layout
-              layout: currentLayout, // Use dynamic layout
-              columns: {
-                xs: 1,
-                sm: 2,
-                md: 3,
-                lg: 4,
-                xl: 4,
-              },
-            }}
-            actions={{
-              onItemClick: handleInstructionClick,
-              onItemLike: handleImageLike,
-              onItemShare: handleImageShare,
-              onItemDownload: handleImageDownload,
-              onItemDelete: handleImageDelete,
-              onItemsSelected: handleImagesSelected,
-              onRefresh: () => window.location.reload(),
+            images={filteredInstructions.map(instruction => ({
+              id: instruction.id,
+              url: instruction.coverImageUrl || '/placeholder-instruction.jpg',
+              title: instruction.title,
+              description: instruction.description,
+              author: instruction.author,
+              tags: instruction.tags,
+              createdAt: new Date(instruction.createdAt),
+              updatedAt: new Date(instruction.updatedAt),
+            }))}
+            layout={currentLayout === 'masonry' ? 'masonry' : 'grid'}
+            onImageClick={(image) => {
+              const instruction = filteredInstructions.find(i => i.id === image.id);
+              if (instruction) {
+                navigate({ to: `/moc-instructions/${instruction.id}` });
+              }
             }}
             data-testid="moc-gallery"
           />
@@ -462,7 +537,7 @@ const MocInstructionsGallery: React.FC = () => {
                 Create First MOC
               </Button>
               <Button
-                onClick={() => window.location.reload()}
+                onClick={() => refetchInstructions()}
                 variant="outline"
                 size="lg"
                 className="border-slate-200 hover:bg-slate-50 font-semibold px-8 py-3 rounded-xl text-slate-600"
@@ -498,7 +573,9 @@ const MocInstructionsGallery: React.FC = () => {
               <div className="text-4xl">⚠️</div>
             </div>
             <h3 className="text-2xl font-bold text-red-700 mb-3">Oops! Something went wrong</h3>
-            <p className="text-red-600 mb-2 font-medium">{error}</p>
+            <p className="text-red-600 mb-2 font-medium">
+              {getErrorMessage(error)}
+            </p>
             <p className="text-slate-600 mb-8">
               Don't worry, this happens sometimes. Try refreshing the page or check back later.
             </p>
@@ -522,6 +599,14 @@ const MocInstructionsGallery: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Create MOC Modal */}
+      <CreateMocModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmitMoc}
+        isLoading={isCreating}
+      />
 
       </div>
     </div>

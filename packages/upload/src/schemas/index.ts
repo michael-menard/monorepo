@@ -56,7 +56,7 @@ export const UploadProgressSchema = z.object({
 export const UploadFileSchema = z.object({
   id: z.string().uuid(),
   file: z.any(), // File object can't be validated with Zod
-  status: z.enum(['pending', 'uploading', 'processing', 'completed', 'error']),
+  status: z.enum(['pending', 'uploading', 'processing', 'completed', 'error', 'cancelled']),
   progress: z.number().min(0).max(100),
   error: z.string().optional(),
   url: z.string().url().optional(),

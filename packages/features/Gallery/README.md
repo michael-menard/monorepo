@@ -1,4 +1,4 @@
-# @repo/features/gallery
+# @repo/features-gallery
 
 A comprehensive gallery component package for displaying and managing image collections with advanced filtering, search, and upload capabilities.
 
@@ -18,7 +18,7 @@ A comprehensive gallery component package for displaying and managing image coll
 This package is part of the monorepo and should be installed as a dependency in your app:
 
 ```bash
-pnpm add @repo/features/gallery
+pnpm add @repo/features-gallery
 ```
 
 ## Quick Start
@@ -26,7 +26,7 @@ pnpm add @repo/features/gallery
 ### 1. Basic Gallery Usage
 
 ```tsx
-import { Gallery } from '@repo/features/gallery';
+import { Gallery } from '@repo/features-gallery';
 
 function MyGallery() {
   const images = [

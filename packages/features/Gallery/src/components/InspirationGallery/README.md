@@ -17,16 +17,16 @@ A responsive masonry layout gallery component with infinite scroll, loading stat
 The component is part of the `@repo/gallery` package and is automatically available when you import from the gallery package.
 
 ```bash
-# The component is already included in the gallery package
-import { InspirationGallery } from '@repo/gallery';
+# The component is already included in the features gallery package
+import { InspirationGallery } from '@repo/features-gallery';
 ```
 
 ## Basic Usage
 
 ```tsx
 import React, { useState, useCallback } from 'react';
-import { InspirationGallery } from '@repo/gallery';
-import type { GalleryImage } from '@repo/gallery';
+import { InspirationGallery } from '@repo/features-gallery';
+import type { GalleryImage } from '@repo/features-gallery';
 
 const MyGallery = () => {
   const [images, setImages] = useState<GalleryImage[]>([

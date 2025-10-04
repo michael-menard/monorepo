@@ -127,7 +127,7 @@ export const mockImageProcessing = () => {
     }),
   };
 
-  global.HTMLCanvasElement.prototype.getContext = mockCanvas.getContext;
+  global.HTMLCanvasElement.prototype.getContext = mockCanvas.getContext as any;
   global.HTMLCanvasElement.prototype.toBlob = mockCanvas.toBlob;
 
   // Mock Image constructor
@@ -150,9 +150,27 @@ export const mockImageProcessing = () => {
 
 // Mock drag and drop API
 export const mockDragAndDrop = () => {
+  // Create a proper FileList mock
+  const createFileList = (files: File[]): FileList => {
+    const fileList = files as any;
+    fileList.item = (index: number) => files[index] || null;
+    fileList.length = files.length;
+    return fileList as FileList;
+  };
+
+  // Create a proper DataTransferItemList mock
+  const createDataTransferItemList = (): DataTransferItemList => {
+    const items = Object.assign([], {
+      add: vi.fn(),
+      clear: vi.fn(),
+      remove: vi.fn(),
+    });
+    return items as DataTransferItemList;
+  };
+
   const mockDataTransfer = {
-    files: [],
-    items: [],
+    files: createFileList([]),
+    items: createDataTransferItemList(),
     types: [],
     dropEffect: 'none',
     effectAllowed: 'uninitialized',
@@ -165,7 +183,7 @@ export const mockDragAndDrop = () => {
   global.DataTransfer = vi.fn(() => mockDataTransfer) as any;
 
   const createDragEvent = (type: string, files: File[] = []) => {
-    const dataTransfer = { ...mockDataTransfer, files };
+    const dataTransfer = { ...mockDataTransfer, files: createFileList(files) };
     return new DragEvent(type, { dataTransfer: dataTransfer as DataTransfer });
   };
 

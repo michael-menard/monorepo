@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
 import { createCachedBaseQuery, getRTKQueryCacheConfig } from '@repo/shared-cache'
 import { config } from '../config/environment.js'
-import { getCSRFHeaders } from './csrfService.js'
+import { getCSRFHeaders } from '@repo/auth'
 
 // Zod schemas for type safety
 export const MOCInstructionSchema = z.object({
@@ -119,7 +119,7 @@ const baseQueryWithCSRF = async (args: any, api: any, extraOptions: any) => {
     
     try {
       // Import refreshCSRFToken dynamically to avoid circular dependencies
-      const { refreshCSRFToken } = await import('./csrfService.js')
+      const { refreshCSRFToken } = await import('@repo/auth')
       
       // Get a fresh CSRF token
       const newToken = await refreshCSRFToken()

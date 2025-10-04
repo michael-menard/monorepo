@@ -5,13 +5,14 @@
  * in various scenarios throughout the application.
  */
 
-import { 
+import {
   clearCSRFToken,
   getCSRFHeaders,
-  getCSRFToken, 
+  getCSRFToken,
   initializeCSRF,
-  refreshCSRFToken
-} from './csrfService'
+  refreshCSRFToken,
+  useFetchCSRFTokenQuery
+} from '@repo/auth'
 import { api } from './api'
 import { authApi } from './authApi'
 

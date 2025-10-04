@@ -9,7 +9,7 @@
     "clean": "rm -rf node_modules",
     "reinstall": "pnpm run clean && pnpm install",
     "killport": "chmod +x killport.sh && ./killport.sh",
-    "reset": "pnpm run killport 5000 && pnpm run killport 5001 && pnpm run dev",
+    "reset": "pnpm run killport 9300 && pnpm run killport 9301 && pnpm run dev",
     "check-types": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",

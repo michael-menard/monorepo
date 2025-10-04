@@ -1,4 +1,13 @@
 import * as React from 'react';
+
+// Ensure JSX namespace is available
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
 import { 
   sanitizeInput, 
   SANITIZATION_PROFILES,
@@ -84,13 +93,13 @@ export const AppSafeContent: React.FC<AppSafeContentProps> = ({
   const containsHTML = sanitizedContent !== sanitizedContent.replace(/<[^>]*>/g, '');
   
   if (containsHTML) {
-    return React.createElement(Component, {
+    return React.createElement(Component as string, {
       ...props,
       dangerouslySetInnerHTML: { __html: sanitizedContent }
     });
   }
-  
-  return React.createElement(Component, props, sanitizedContent);
+
+  return React.createElement(Component as string, props, sanitizedContent);
 };
 
 AppSafeContent.displayName = 'AppSafeContent';

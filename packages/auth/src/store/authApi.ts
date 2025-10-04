@@ -15,6 +15,8 @@ import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolk
 
 const baseUrl = process.env.NODE_ENV === 'development'
   ? 'http://localhost:9000/api/auth'
+  : process.env.NODE_ENV === 'test'
+  ? 'http://localhost:9000/api/auth' // Use full URL for tests too
   : '/api/auth';
 
 // Create a base query with CSRF retry logic

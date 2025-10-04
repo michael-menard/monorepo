@@ -61,6 +61,16 @@ export const CreateMocSchema = z.object({
   galleryImageIds: z.array(z.string().uuid()).optional(),
 });
 
+// Enhanced schema for modal data with file uploads
+export const CreateMocWithFilesSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().min(1, 'Description is required'),
+  tags: z.array(z.string()).optional(),
+  category: z.string().optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
+  // File uploads will be handled separately via multer
+});
+
 export const UpdateMocSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
@@ -76,6 +86,7 @@ export const FileUploadSchema = z.object({
 
 export type MocInstruction = z.infer<typeof MocInstructionSchema>;
 export type CreateMoc = z.infer<typeof CreateMocSchema>;
+export type CreateMocWithFiles = z.infer<typeof CreateMocWithFilesSchema>;
 export type UpdateMoc = z.infer<typeof UpdateMocSchema>;
 export type FileUpload = z.infer<typeof FileUploadSchema>;
 

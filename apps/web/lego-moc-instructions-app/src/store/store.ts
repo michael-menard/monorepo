@@ -1,8 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { authApi, authReducer } from '@repo/auth'
 import { instructionsApi } from '@repo/moc-instructions'
-// Temporarily commented out due to import resolution issue
-// import { galleryApi } from '@repo/gallery'
+import { galleryApi } from '@repo/gallery'
 import { api } from '../services/api'
 import { offlineApi } from '../services/offlineApi'
 

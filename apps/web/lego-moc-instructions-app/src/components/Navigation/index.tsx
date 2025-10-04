@@ -169,25 +169,26 @@ function Navigation({ className = '' }: NavigationProps) {
 
   return (
     <nav className={`flex items-center space-x-4 ${className}`}>
-      {/* Main Navigation Links - Only show when authenticated */}
-      {isAuthenticated && (
-        <div className="hidden md:flex items-center space-x-6">
-          <Link
-            to="/moc-gallery"
-            className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Search className="h-4 w-4" />
-            <span>Browse MOCs</span>
-          </Link>
+      {/* Public Navigation Links - Always visible */}
+      <div className="hidden md:flex items-center space-x-6">
+        <Link
+          to="/moc-gallery"
+          className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Search className="h-4 w-4" data-testid="search-icon" />
+          <span>Browse MOCs</span>
+        </Link>
 
-          <Link
-            to="/inspiration-gallery"
-            className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Lightbulb className="h-4 w-4" />
-            <span>Inspiration</span>
-          </Link>
+        <Link
+          to="/inspiration-gallery"
+          className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Lightbulb className="h-4 w-4" />
+          <span>Inspiration</span>
+        </Link>
 
+        {/* Private Navigation Links - Only show when authenticated */}
+        {isAuthenticated && (
           <Link
             to="/wishlist"
             className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -195,8 +196,8 @@ function Navigation({ className = '' }: NavigationProps) {
             <Heart className="h-4 w-4" />
             <span>Wishlist</span>
           </Link>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* User Actions */}
       <div className="flex items-center space-x-2">

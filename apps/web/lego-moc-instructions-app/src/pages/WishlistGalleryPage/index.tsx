@@ -23,8 +23,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-// Temporarily commented out due to import resolution issue
-// import { Gallery, GalleryAdapters } from '@repo/gallery';
+import { Gallery, GalleryAdapters } from '@repo/gallery';
 // Define types locally to avoid import issues
 interface WishlistItem {
   id: string;

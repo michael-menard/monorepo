@@ -2,19 +2,11 @@ import React, { useState } from 'react';
 // import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@repo/ui';
 import { Plus } from 'lucide-react';
-// Temporarily commented out due to import resolution issue
-// import { Gallery, GalleryAdapters } from '@repo/gallery';
-// Temporarily commented out due to import resolution issue
-// import { useGetInspirationItemsQuery, useLikeInspirationItemMutation } from '@repo/gallery';
-// Temporarily commented out due to import resolution issue
-// import type { InspirationFilters } from '@repo/gallery';
+import { Gallery } from '@repo/gallery';
+import { useGetInspirationItemsQuery, useLikeInspirationItemMutation } from '@repo/gallery';
+import type { InspirationFilters } from '@repo/gallery';
 
-// Local type definition
-interface InspirationFilters {
-  limit: number;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-}
+
 
 const InspirationGallery: React.FC = () => {
   // const navigate = useNavigate();
@@ -84,16 +76,22 @@ const InspirationGallery: React.FC = () => {
 
       {/* Gallery Component */}
       <Gallery
-        items={inspirationItems}
-        preset="inspiration"
-        loading={isLoading}
-        error={error ? 'Failed to load inspiration items' : null}
-        adapter={GalleryAdapters.inspiration}
-        actions={{
-          onItemClick: handleInspirationClick,
-          onItemLike: handleLike,
-          onItemShare: handleShare,
-          onRefresh: refetch,
+        images={inspirationItems?.map(item => ({
+          id: item.id,
+          url: item.imageUrl || '/placeholder-inspiration.jpg',
+          title: item.title,
+          description: item.description,
+          author: item.author,
+          tags: item.tags || [],
+          createdAt: new Date(item.createdAt),
+          updatedAt: new Date(item.updatedAt),
+        })) || []}
+        layout="masonry"
+        onImageClick={(image) => {
+          const item = inspirationItems?.find(i => i.id === image.id);
+          if (item) {
+            handleInspirationClick(item);
+          }
         }}
         className="mb-8"
       />

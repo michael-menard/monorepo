@@ -5,7 +5,7 @@
  * across unit tests, integration tests, and E2E tests.
  */
 
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { authApi } from '../../store/authApi';
 import authReducer from '../../store/authSlice';
@@ -106,8 +106,8 @@ export function createTestStore(preloadedState?: any) {
     reducer: {
       auth: authReducer,
       [authApi.reducerPath]: authApi.reducer,
-    },
-    middleware: (getDefaultMiddleware) =>
+    } as any, // Type assertion to bypass Redux Toolkit type mismatch
+    middleware: (getDefaultMiddleware: any) =>
       getDefaultMiddleware({
         serializableCheck: {
           ignoredActions: [authApi.util.resetApiState.type],

@@ -193,6 +193,7 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
       '@repo/auth': resolve(__dirname, '../../../packages/auth/src'),
       '@repo/ui': resolve(__dirname, '../../../packages/ui/src'),
+      '@repo/gallery': resolve(__dirname, '../../../packages/features/gallery/src'),
       '@repo/moc-instructions': resolve(__dirname, '../../../packages/features/moc-instructions/src'),
       '@repo/profile': resolve(__dirname, '../../../packages/features/profile/src'),
       '@repo/shared-cache': resolve(__dirname, '../../../packages/shared-cache/src'),
@@ -206,20 +207,20 @@ export default defineConfig({
   },
 
   server: {
-    port: 5173, // Updated to standard Vite port for consistency with docs
+    port: parseInt(process.env.WEB_APP_PORT || '3002'), // Port from environment or default
     host: true,
     proxy: {
-      // Auth service routes - proxy to auth-service on native port 9000
+      // Auth service routes - proxy to auth-service on configured port
       '/api/auth': {
-        target: 'http://localhost:9000',
+        target: `http://localhost:${process.env.AUTH_API_PORT || '9300'}`,
         changeOrigin: true,
         secure: false,
         ws: true,
         rewrite: (path) => path // Keep the /api/auth prefix
       },
-      // All other API routes - proxy to lego-projects-api on native port 3001
+      // All other API routes - proxy to lego-projects-api on configured port
       '/api': {
-        target: 'http://localhost:3001',
+        target: `http://localhost:${process.env.LEGO_API_PORT || '9000'}`,
         changeOrigin: true,
         secure: false,
         ws: true

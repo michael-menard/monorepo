@@ -38,7 +38,6 @@ export const createTanStackRouteGuard = (
       // This is a temporary fix until we properly integrate with the app's store
       const isAuthenticated = true; // Temporary - should be replaced with proper auth check
       const user = { isVerified: true } as User; // Temporary - should be replaced with real user data
-      const isCheckingAuth = false;
 
       // Continue with the rest of the logic using these temporary values
       if (requireAuth && !isAuthenticated) {

@@ -74,3 +74,6 @@ node_modules/
 # Task files
 # tasks.json
 # tasks/ 
+
+
+apps/api/lego-projects-api/uploads/**/*.jpg

@@ -37,8 +37,8 @@ lsof -ti:5432 | xargs kill -9  # Kill whatever is on port 5432
 
 ### Current Port Assignments:
 - **Web App**: 3002
-- **Auth API**: 9000  
-- **LEGO Projects API**: 5000
+- **Auth API**: 9300
+- **LEGO Projects API**: 9000
 - **MongoDB**: 27017
 - **PostgreSQL**: 5432
 - **Redis**: 6379

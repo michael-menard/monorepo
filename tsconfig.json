@@ -19,7 +19,7 @@
       "@/*": ["src/*"],
       "@repo/ui": ["packages/ui/src"],
       "@repo/auth": ["packages/auth/src"],
-      "@repo/gallery": ["packages/features/gallery/src"],
+      "@repo/gallery": ["packages/gallery/src"],
       "@repo/wishlist": ["packages/wishlist/src"],
       "@repo/profile": ["packages/features/profile/src"],
       "@repo/moc-instructions": ["packages/features/moc-instructions/src"]

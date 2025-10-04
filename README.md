@@ -57,10 +57,17 @@ pnpm install
 
 3. **Set up environment variables:**
 ```bash
-# Copy environment files
+# Copy main environment file (includes port configuration)
+cp .env.example .env
+
+# Copy service-specific environment files
 cp apps/api/auth-service/.env.example apps/api/auth-service/.env
 cp apps/api/lego-projects-api/.env.example apps/api/lego-projects-api/.env
 cp apps/web/lego-moc-instructions-app/env.example apps/web/lego-moc-instructions-app/.env.local
+
+# Optional: Create local port overrides
+cp .env.ports .env.ports.local
+# Edit .env.ports.local to customize ports for your setup
 ```
 
 4. **Start development services:**
@@ -73,10 +80,55 @@ pnpm dev
 ```
 
 5. **Access the applications:**
-- **Main Web App**: http://localhost:5173
+- **Main Web App**: http://localhost:3002
 - **Documentation**: http://localhost:3000
-- **Auth API**: http://localhost:3000
-- **Main API**: http://localhost:3001
+- **Auth API**: http://localhost:9300
+- **Main API**: http://localhost:9000
+
+### 🔧 Troubleshooting
+
+#### Port Conflicts
+If you encounter port conflicts, the development script automatically cleans up ports before starting. You can also manually clean ports:
+
+```bash
+# Kill processes on all application ports
+pnpm kill-ports
+
+# Kill processes on specific ports
+pnpm kill-port 3002
+./scripts/kill-ports.sh 9300 9000
+
+# Check what's running on a port (macOS/Linux)
+lsof -ti:3002
+```
+
+#### Port Configuration
+The monorepo uses centralized port configuration through environment variables:
+
+- **Default ports** are defined in `.env.ports`
+- **Local overrides** can be set in `.env.ports.local` (gitignored)
+- **Environment variables** are used throughout the system:
+  - `WEB_APP_PORT=3002` - Frontend application
+  - `AUTH_API_PORT=9300` - Authentication service
+  - `LEGO_API_PORT=9000` - Main API service
+  - `DOCS_PORT=3000` - Documentation site
+
+To change ports system-wide:
+```bash
+# Create local port configuration
+cp .env.ports .env.ports.local
+
+# Edit the ports in .env.ports.local
+WEB_APP_PORT=4000
+AUTH_API_PORT=9400
+LEGO_API_PORT=9100
+```
+
+#### Common Issues
+- **"Port already in use"**: Run `pnpm kill-ports` before starting development
+- **Docker not running**: Ensure Docker Desktop is running before starting
+- **Services not responding**: Check logs with `pnpm logs:auth` or `pnpm logs:lego`
+- **Port conflicts**: Customize ports in `.env.ports.local`
 
 ## 📦 Packages Overview
 
@@ -214,9 +266,13 @@ Technology radar visualization for tracking tech decisions.
 
 ```bash
 # Development
-pnpm dev              # Start all applications
+pnpm dev              # Start all applications (with automatic port cleanup)
 pnpm dev:web          # Start web applications only
 pnpm dev:api          # Start API services only
+
+# Port Management
+pnpm kill-ports       # Kill processes on all application ports (uses .env.ports config)
+pnpm kill-port 3002   # Kill processes on a specific port
 
 # Building
 pnpm build            # Build all packages and apps

@@ -1,7 +1,7 @@
 ### Auth Service API Test Requests
-### Base URL: http://localhost:5000
+### Base URL: http://localhost:9300
 
-@baseUrl = http://localhost:5000
+@baseUrl = http://localhost:9300
 @email = testuser@example.com
 @password = SecurePassword123!
 

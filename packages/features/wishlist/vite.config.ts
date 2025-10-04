@@ -17,7 +17,15 @@ export default defineConfig({
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: [
+        'react',
+        'react-dom',
+        '@repo/ui',
+        '@repo/shared',
+        '@reduxjs/toolkit',
+        '@reduxjs/toolkit/query/react',
+        'framer-motion'
+      ],
       output: {
         globals: {
           react: 'React',

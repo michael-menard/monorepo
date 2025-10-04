@@ -138,6 +138,7 @@ export const getUploadStats = (files: UploadFile[]) => {
     processing: 0,
     completed: 0,
     error: 0,
+    cancelled: 0,
   };
 
   files.forEach(file => {

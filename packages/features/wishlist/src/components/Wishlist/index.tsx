@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import WishlistItemCard from '../WishlistItemCard/index.js';
 import BatchOperationsToolbar from '../BatchOperationsToolbar/index.js';
 import { useGetWishlistItemsQuery, useReorderWishlistItemsMutation } from '../../store/wishlistApi.js';
-import { useKeyboardDragAndDrop, KeyboardDragDropArea } from '@monorepo/shared';
+import { useKeyboardDragAndDrop, KeyboardDragDropArea } from '@repo/shared';
 import type { WishlistItem } from '../../schemas';
 
 export interface WishlistProps {

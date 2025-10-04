@@ -18,29 +18,56 @@ vi.mock('../db/connectDB', () => ({
   connectDB: vi.fn().mockResolvedValue({}),
 }));
 
-// Fix express Router mock
+// Mock the routes module to prevent Router() call at import time
+vi.mock('../routes/auth.routes', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    patch: vi.fn(),
+    use: vi.fn(),
+  },
+}));
+
+// Fix express Router mock - COMPREHENSIVE
 vi.mock('express', async () => {
   const actual = await vi.importActual('express');
+
+  const mockRouter = {
+    get: vi.fn().mockReturnThis(),
+    post: vi.fn().mockReturnThis(),
+    put: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    patch: vi.fn().mockReturnThis(),
+    options: vi.fn().mockReturnThis(),
+    use: vi.fn().mockReturnThis(),
+  };
+
+  const mockApp = {
+    use: vi.fn().mockReturnThis(),
+    listen: vi.fn().mockReturnThis(),
+    get: vi.fn().mockReturnThis(),
+    post: vi.fn().mockReturnThis(),
+    put: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    patch: vi.fn().mockReturnThis(),
+    options: vi.fn().mockReturnThis(),
+  };
+
+  const mockExpress = vi.fn(() => mockApp);
+  mockExpress.Router = vi.fn(() => mockRouter);
+  mockExpress.json = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.urlencoded = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.static = vi.fn(() => (req: any, res: any, next: any) => next());
+
   return {
     ...actual,
-    default: vi.fn(() => ({
-      use: vi.fn(),
-      listen: vi.fn(),
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      options: vi.fn(),
-      patch: vi.fn(),
-    })),
-    Router: vi.fn(() => ({
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      patch: vi.fn(),
-      use: vi.fn(),
-    })),
+    default: mockExpress,
+    Router: mockExpress.Router,
+    json: mockExpress.json,
+    urlencoded: mockExpress.urlencoded,
+    static: mockExpress.static,
   };
 });
 

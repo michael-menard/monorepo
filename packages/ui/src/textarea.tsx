@@ -16,3 +16,6 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
 }
 
 export { Textarea }
+
+// Export the props type for use in other components
+export type TextareaProps = React.ComponentProps<"textarea">

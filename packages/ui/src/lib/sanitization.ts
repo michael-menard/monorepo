@@ -1,5 +1,23 @@
 import DOMPurify from 'dompurify';
 
+// Ensure DOMPurify types are available
+declare global {
+  namespace DOMPurify {
+    interface Config {
+      ALLOWED_TAGS?: readonly string[];
+      ALLOWED_ATTR?: readonly string[];
+      KEEP_CONTENT?: boolean;
+      RETURN_DOM?: boolean;
+      RETURN_DOM_FRAGMENT?: boolean;
+      RETURN_DOM_IMPORT?: boolean;
+      RETURN_TRUSTED_TYPE?: boolean;
+      SANITIZE_DOM?: boolean;
+      WHOLE_DOCUMENT?: boolean;
+      [key: string]: any;
+    }
+  }
+}
+
 /**
  * Sanitization configuration for different input types
  */
@@ -9,9 +27,9 @@ export interface SanitizationConfig {
   /** Allow links */
   allowLinks?: boolean;
   /** Allow specific attributes */
-  allowedAttributes?: string[];
+  allowedAttributes?: readonly string[];
   /** Allow specific tags */
-  allowedTags?: string[];
+  allowedTags?: readonly string[];
   /** Custom DOMPurify configuration */
   customConfig?: DOMPurify.Config;
 }
@@ -113,9 +131,11 @@ export function sanitizeInput(
   if (stringInput.trim() === '') return stringInput;
   
   // Apply DOMPurify sanitization
-  const sanitized = DOMPurify.sanitize(stringInput, config.customConfig);
-  
-  return sanitized;
+  // Cast to any to handle readonly array compatibility
+  const sanitized = DOMPurify.sanitize(stringInput, config.customConfig as any);
+
+  // Ensure we always return a string, not TrustedHTML
+  return typeof sanitized === 'string' ? sanitized : String(sanitized);
 }
 
 /**

@@ -34,6 +34,7 @@
       "@repo/auth/*": ["../../packages/auth/src/*"],
       "@repo/auth/components/TanStackRouteGuard": ["../../packages/auth/src/components/TanStackRouteGuard/index.tsx"],
       "@repo/ui": ["../../packages/ui/src"],
+      "@repo/gallery": ["../../packages/features/gallery/src"],
       "@repo/profile": ["../../packages/features/profile/src"],
       "@repo/shared": ["../../packages/shared/src"]
     }

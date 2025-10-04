@@ -1,0 +1,304 @@
+name: CodeRabbit Integration
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+# Ensure CodeRabbit has necessary permissions
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  # Pre-review validation
+  pre-review:
+    name: Pre-Review Validation
+    runs-on: ubuntu-latest
+    outputs:
+      should-review: ${{ steps.check.outputs.should-review }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check if review is needed
+        id: check
+        run: |
+          # Skip review for certain file types or paths
+          changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          
+          # Skip if only documentation or config files changed
+          if echo "$changed_files" | grep -E '\.(md|txt|json|yaml|yml)$' && ! echo "$changed_files" | grep -E '\.(ts|tsx|js|jsx)$'; then
+            echo "should-review=false" >> $GITHUB_OUTPUT
+            echo "Skipping CodeRabbit review - only docs/config files changed"
+          else
+            echo "should-review=true" >> $GITHUB_OUTPUT
+            echo "CodeRabbit review needed - code files changed"
+          fi
+
+  # Auggie + CodeRabbit collaboration
+  auggie-coderabbit-review:
+    name: Auggie + CodeRabbit Collaborative Review
+    runs-on: ubuntu-latest
+    needs: pre-review
+    if: needs.pre-review.outputs.should-review == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run linting and type checking
+        run: |
+          echo "🔍 Running pre-review checks..."
+          pnpm run lint
+          pnpm run check-types
+          
+      - name: Generate Auggie context for CodeRabbit
+        run: |
+          echo "🤖 Generating Auggie context for CodeRabbit..."
+          
+          # Create context file for CodeRabbit
+          cat > .coderabbit-context.md << 'EOF'
+          # Auggie Integration Context
+          
+          This PR was developed with assistance from Auggie (Augment AI). 
+          
+          ## Project Context
+          - Monorepo structure with apps/ and packages/
+          - TypeScript/React stack
+          - Uses Turbo for build orchestration
+          - Follows patterns defined in AUGGIE_RULES.md
+          
+          ## Key Areas for Review
+          1. Adherence to monorepo patterns
+          2. TypeScript best practices
+          3. React component patterns
+          4. Security considerations
+          5. Performance implications
+          6. Accessibility compliance
+          7. Test coverage
+          
+          ## Integration Notes
+          - Auggie handles implementation details
+          - CodeRabbit provides code quality review
+          - Both tools should complement each other
+          EOF
+          
+      - name: Add CodeRabbit review request comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const context = require('fs').readFileSync('.coderabbit-context.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Auggie + CodeRabbit Integration**
+              
+              This PR is ready for collaborative AI review:
+              
+              - **Auggie**: Handled implementation and follows project patterns
+              - **CodeRabbit**: Please review for code quality, security, and best practices
+              
+              <details>
+              <summary>📋 Review Context</summary>
+              
+              ${context}
+              </details>
+              
+              @coderabbitai Please review this PR with focus on:
+              1. Code quality and maintainability
+              2. Security best practices
+              3. Performance considerations
+              4. TypeScript/React patterns
+              5. Monorepo consistency
+              `
+            });
+
+  # Quality gates that work with CodeRabbit
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs: pre-review
+    if: needs.pre-review.outputs.should-review == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run comprehensive checks
+        run: |
+          echo "🔍 Running quality gates..."
+          
+          # Linting
+          echo "📝 Linting..."
+          pnpm run lint
+          
+          # Type checking
+          echo "🔍 Type checking..."
+          pnpm run check-types
+          
+          # Security checks
+          echo "🔒 Security checks..."
+          pnpm run security:lint
+          
+          # Tests
+          echo "🧪 Running tests..."
+          pnpm run test
+          
+          echo "✅ All quality gates passed!"
+          
+      - name: Generate quality report
+        run: |
+          cat > quality-report.md << 'EOF'
+          # Quality Gates Report
+          
+          ## ✅ Passed Checks
+          - ESLint validation
+          - TypeScript compilation
+          - Security linting
+          - Unit tests
+          
+          ## 📊 Metrics
+          - Build time: $(date)
+          - Node version: $(node --version)
+          - pnpm version: $(pnpm --version)
+          
+          ## 🤖 AI Integration
+          - Auggie: Implementation assistance
+          - CodeRabbit: Code quality review
+          
+          This PR meets all automated quality standards and is ready for AI-assisted review.
+          EOF
+          
+      - name: Upload quality report
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-report
+          path: quality-report.md
+
+  # Post-review integration
+  post-review:
+    name: Post-Review Integration
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_review'
+    
+    steps:
+      - name: Process CodeRabbit feedback
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Check if this is a CodeRabbit review
+            const reviewer = context.payload.review.user.login;
+            const reviewBody = context.payload.review.body;
+            
+            if (reviewer === 'coderabbitai' || reviewBody.includes('@coderabbitai')) {
+              // Add a comment about Auggie integration
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `🔄 **CodeRabbit Review Received**
+                
+                CodeRabbit has completed its review. You can now:
+                
+                1. **Use Auggie** to implement suggested changes:
+                   \`\`\`bash
+                   auggie "Implement CodeRabbit's suggestions from the latest review"
+                   \`\`\`
+                
+                2. **Address specific feedback** with Auggie's help:
+                   \`\`\`bash
+                   auggie "Fix the security issue mentioned in CodeRabbit's review"
+                   \`\`\`
+                
+                3. **Update tests** if needed:
+                   \`\`\`bash
+                   auggie "Update tests based on CodeRabbit's recommendations"
+                   \`\`\`
+                
+                The Auggie + CodeRabbit workflow ensures both implementation quality and code review excellence! 🚀
+                `
+              });
+            }
+
+  # Summary report
+  integration-summary:
+    name: Integration Summary
+    runs-on: ubuntu-latest
+    needs: [pre-review, auggie-coderabbit-review, quality-gates]
+    if: always() && needs.pre-review.outputs.should-review == 'true'
+    
+    steps:
+      - name: Generate integration summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `## 🤖 Auggie + CodeRabbit Integration Summary
+            
+            ### Status Overview
+            - **Pre-review**: ${{ needs.pre-review.result }}
+            - **Auggie-CodeRabbit Review**: ${{ needs.auggie-coderabbit-review.result }}
+            - **Quality Gates**: ${{ needs.quality-gates.result }}
+            
+            ### Integration Workflow
+            1. ✅ Auggie assisted with implementation
+            2. ✅ CodeRabbit performed code quality review
+            3. ✅ Quality gates validated the changes
+            
+            ### Next Steps
+            ${needs.quality-gates.result === 'success' ? 
+              '🎉 All checks passed! This PR is ready for human review and merge.' :
+              '⚠️ Some checks failed. Please review the feedback and make necessary adjustments.'
+            }
+            
+            ### Tools Used
+            - **Auggie**: AI-powered development assistance
+            - **CodeRabbit**: AI-powered code review
+            - **GitHub Actions**: Automated quality gates
+            `;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

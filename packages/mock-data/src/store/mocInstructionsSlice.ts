@@ -205,8 +205,8 @@ export const createMocInstruction = createAsyncThunk(
         id: Date.now().toString(),
         downloadCount: 0,
         rating: undefined,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       
       return newInstruction;
@@ -227,7 +227,7 @@ export const updateMocInstruction = createAsyncThunk(
         id,
         updates: {
           ...updates,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         },
       };
     } catch (error) {
@@ -267,7 +267,7 @@ export const togglePublishStatus = createAsyncThunk(
         id,
         updates: {
           isPublished: !instruction.isPublished,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         },
       };
     } catch (error) {
@@ -294,7 +294,7 @@ export const incrementDownloadCount = createAsyncThunk(
         id,
         updates: {
           downloadCount: instruction.downloadCount + 1,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         },
       };
     } catch (error) {

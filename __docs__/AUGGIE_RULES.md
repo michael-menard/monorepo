@@ -121,6 +121,26 @@ For detailed rules on specific topics, see:
 - `.clinerules/dev_workflow.md` - Development workflow
 - `.clinerules/taskmaster.md` - Task management integration
 
+## CodeRabbit Integration
+
+**AI Collaboration Workflow:**
+- Auggie handles implementation and development tasks
+- CodeRabbit provides code quality review and feedback
+- Both tools work together for comprehensive development assistance
+
+**CodeRabbit Considerations:**
+- Write code that will pass CodeRabbit's quality checks
+- Follow security best practices that CodeRabbit validates
+- Ensure accessibility compliance for CodeRabbit's a11y checks
+- Maintain consistent patterns that CodeRabbit can recognize
+- Document complex logic for CodeRabbit's understanding
+
+**Responding to CodeRabbit Feedback:**
+- Use Auggie to implement CodeRabbit's suggestions
+- Address security concerns highlighted by CodeRabbit
+- Refactor code based on CodeRabbit's maintainability feedback
+- Update tests when CodeRabbit identifies coverage gaps
+
 ## Usage with Auggie
 
 Reference this file when starting Auggie sessions:
@@ -131,4 +151,16 @@ auggie --rules AUGGIE_RULES.md "Your task description"
 Or combine with specific rule files:
 ```bash
 auggie --rules AUGGIE_RULES.md --rules .cursor/rules/cursor.testing.mdc "Implement tests for new feature"
+```
+
+**CodeRabbit Integration Commands:**
+```bash
+# Implement CodeRabbit suggestions
+auggie --rules AUGGIE_RULES.md "Implement the security improvements suggested by CodeRabbit"
+
+# Address specific CodeRabbit feedback
+auggie --rules AUGGIE_RULES.md "Fix the performance issues identified in CodeRabbit's review"
+
+# Prepare code for CodeRabbit review
+auggie --rules AUGGIE_RULES.md "Optimize this code for CodeRabbit's quality standards"
 ```

@@ -43,21 +43,24 @@ echo "$STAGED_FILES" | sed 's/^/   - /'
 # Create temporary file for review results
 REVIEW_FILE=$(mktemp)
 
-# Run Auggie code review on staged changes
+# Run Auggie code review on staged changes (optimized for CodeRabbit integration)
 echo "🔍 Analyzing staged changes with Auggie..."
-git diff --cached | auggie --print "Please review these staged changes for:
+git diff --cached | auggie --print "Please review these staged changes for CodeRabbit compatibility:
+
 1. Code quality and best practices
-2. Potential bugs or issues
-3. Security vulnerabilities
-4. Performance concerns
-5. Adherence to project conventions
+2. Security vulnerabilities (CodeRabbit will also check these)
+3. Performance concerns
+4. TypeScript/React patterns
+5. Accessibility compliance
+6. Monorepo structure adherence
+7. Test coverage considerations
 
 Provide a concise summary with:
-- ✅ APPROVED: If changes look good
-- ⚠️  WARNINGS: For minor issues that should be addressed
+- ✅ APPROVED: If changes look good and will pass CodeRabbit review
+- ⚠️  WARNINGS: For minor issues that should be addressed before CodeRabbit review
 - ❌ BLOCKED: For critical issues that must be fixed before commit
 
-Focus on actionable feedback." > "$REVIEW_FILE" 2>&1
+Focus on preparing code for successful CodeRabbit review." > "$REVIEW_FILE" 2>&1
 
 # Check if review was successful
 if [ $? -ne 0 ]; then

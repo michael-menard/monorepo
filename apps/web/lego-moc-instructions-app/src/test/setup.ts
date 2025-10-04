@@ -30,7 +30,28 @@ beforeAll(() => server.listen())
 
 // Reset any request handlers that we may add during the tests,
 // so they don't affect other tests
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+
+  // Clean up DOM between tests to prevent accumulation
+  document.body.innerHTML = ''
+  document.head.innerHTML = ''
+
+  // Clear any remaining timers
+  vi.clearAllTimers()
+
+  // Reset any global state
+  if (typeof window !== 'undefined') {
+    // Clear localStorage and sessionStorage
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+
+    // Reset location if it was modified
+    if (window.location.href !== 'http://localhost:3000/') {
+      window.history.replaceState({}, '', '/')
+    }
+  }
+})
 
 // Clean up after the tests are finished
-afterAll(() => server.close()) 
+afterAll(() => server.close())

@@ -2,10 +2,10 @@
 export const config = {
   api: {
     // Main LEGO Projects API URL - uses env var for native backend support
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
-    
+    baseUrl: import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_LEGO_API_PORT || '9000'}`,
+
     // Auth Service API URL - separate auth service
-    authUrl: import.meta.env.VITE_AUTH_API_URL || 'http://localhost:9000',
+    authUrl: import.meta.env.VITE_AUTH_API_URL || `http://localhost:${import.meta.env.VITE_AUTH_API_PORT || '9300'}`,
     
     // API request timeout
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
@@ -21,7 +21,7 @@ export const config = {
     name: 'LEGO MOC Instructions App',
     version: import.meta.env.VITE_APP_VERSION || '0.1.0',
     environment: import.meta.env.VITE_ENVIRONMENT || 'development',
-    clientUrl: import.meta.env.VITE_CLIENT_URL || 'http://localhost:5173',
+    clientUrl: import.meta.env.VITE_CLIENT_URL || `http://localhost:${import.meta.env.VITE_WEB_APP_PORT || '3002'}`,
   },
   
   auth: {

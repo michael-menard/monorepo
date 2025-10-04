@@ -1,6 +1,6 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import type { UploadFile, UploadConfig, ValidationError } from '../types/index.js';
 
 // Enhanced render function with common providers
@@ -11,7 +11,7 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
 const customRender = (
   ui: ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllTheProviders, ...options });
+): ReturnType<typeof render> => render(ui, { wrapper: AllTheProviders, ...options });
 
 export * from '@testing-library/react';
 export { customRender as render };
@@ -217,7 +217,7 @@ export const generateImageFiles = (count: number = 3): File[] => {
 
 // Assertion helpers
 export const expectFileToBeValid = (file: File, config: UploadConfig) => {
-  expect(file.size).toBeLessThanOrEqual(config.maxFileSize);
+  expect(file.size).toBeLessThanOrEqual(config.maxFileSize || 10 * 1024 * 1024);
   if (config.acceptedFileTypes && !config.acceptedFileTypes.includes('*/*')) {
     const isAccepted = config.acceptedFileTypes.some(type => {
       if (type.endsWith('/*')) {

@@ -60,8 +60,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'pnpm dev --port 3006',
-    url: 'http://localhost:3006',
+    command: 'pnpm dev --port 3002',
+    url: 'http://localhost:3002',
     reuseExistingServer: true, // Always reuse existing server
     timeout: 120 * 1000,
   },

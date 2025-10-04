@@ -1,6 +1,6 @@
 // Auth API service for making calls to the auth service endpoints
 
-import { getCSRFHeaders, refreshCSRFToken } from './csrfService.js'
+import { getCSRFHeaders, refreshCSRFToken } from '@repo/auth'
 
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:9000'
 

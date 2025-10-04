@@ -16,12 +16,55 @@ set -e  # Exit on any error
 echo "🚀 Starting Full Development Environment..."
 echo ""
 
+# Load port configuration
+source scripts/load-ports.sh
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Function to kill processes on specific ports
+kill_port() {
+    local port=$1
+    local service_name=$2
+
+    echo -e "${YELLOW}🔍 Checking for processes on port ${port} (${service_name})...${NC}"
+
+    # Check if lsof is available
+    if ! command -v lsof &> /dev/null; then
+        echo -e "${RED}❌ lsof command not available, cannot check port ${port}${NC}"
+        echo ""
+        return 1
+    fi
+
+    # Find processes using the port
+    local pids=$(lsof -ti:$port 2>/dev/null || true)
+
+    if [ ! -z "$pids" ]; then
+        echo -e "${YELLOW}⚠️  Found processes on port ${port}: ${pids}${NC}"
+        echo -e "${YELLOW}🛑 Killing processes on port ${port}...${NC}"
+
+        # Kill the processes
+        echo "$pids" | xargs kill -9 2>/dev/null || true
+
+        # Wait a moment for processes to die
+        sleep 1
+
+        # Verify they're gone
+        local remaining=$(lsof -ti:$port 2>/dev/null || true)
+        if [ -z "$remaining" ]; then
+            echo -e "${GREEN}✅ Port ${port} is now free${NC}"
+        else
+            echo -e "${RED}❌ Some processes on port ${port} could not be killed${NC}"
+        fi
+    else
+        echo -e "${GREEN}✅ Port ${port} is already free${NC}"
+    fi
+    echo ""
+}
 
 # Function to cleanup background processes on exit
 cleanup() {
@@ -56,14 +99,36 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+# Check if lsof is available (needed for port killing)
+if ! command -v lsof &> /dev/null; then
+    echo -e "${YELLOW}⚠️  lsof command not found. Port cleanup will be skipped.${NC}"
+    echo -e "${YELLOW}   To install lsof on macOS: brew install lsof${NC}"
+    echo -e "${YELLOW}   To install lsof on Ubuntu/Debian: sudo apt-get install lsof${NC}"
+    echo ""
+    SKIP_PORT_CLEANUP=true
+else
+    SKIP_PORT_CLEANUP=false
+fi
+
+# Step 0: Kill any processes running on our application ports
+if [ "$SKIP_PORT_CLEANUP" = false ]; then
+    echo -e "${BLUE}🧹 Cleaning up ports for application services...${NC}"
+    kill_port $WEB_APP_PORT "Web App"
+    kill_port $AUTH_API_PORT "Auth API"
+    kill_port $LEGO_API_PORT "LEGO Projects API"
+else
+    echo -e "${YELLOW}⏭️  Skipping port cleanup (lsof not available)${NC}"
+    echo ""
+fi
+
 # Step 1: Start Docker infrastructure services
 echo -e "${BLUE}🐳 Starting Docker infrastructure services...${NC}"
-echo "   - MongoDB (port 27017)"
-echo "   - PostgreSQL (port 5432)" 
-echo "   - Redis (port 6379)"
-echo "   - Elasticsearch (port 9200)"
-echo "   - Mongo Express (port 8081)"
-echo "   - pgAdmin (port 8082)"
+echo "   - MongoDB (port $MONGODB_PORT)"
+echo "   - PostgreSQL (port $POSTGRESQL_PORT)"
+echo "   - Redis (port $REDIS_PORT)"
+echo "   - Elasticsearch (port $ELASTICSEARCH_PORT)"
+echo "   - Mongo Express (port $MONGO_EXPRESS_PORT)"
+echo "   - pgAdmin (port $PGADMIN_PORT)"
 echo ""
 
 docker-compose -f docker-compose.dev.yml up -d
@@ -79,7 +144,7 @@ docker-compose -f docker-compose.dev.yml ps
 echo ""
 
 # Step 2: Start Auth API service
-echo -e "${GREEN}🔐 Starting Auth API service (port 9000)...${NC}"
+echo -e "${GREEN}🔐 Starting Auth API service (port $AUTH_API_PORT)...${NC}"
 cd apps/api/auth-service
 pnpm dev > ../../../logs/auth-service.log 2>&1 &
 AUTH_PID=$!
@@ -89,8 +154,8 @@ cd ../../..
 sleep 5
 
 # Test auth service
-if curl -s http://localhost:9000/api/auth/csrf > /dev/null; then
-    echo -e "${GREEN}✅ Auth service is running on http://localhost:9000${NC}"
+if curl -s http://localhost:$AUTH_API_PORT/api/auth/csrf > /dev/null; then
+    echo -e "${GREEN}✅ Auth service is running on http://localhost:$AUTH_API_PORT${NC}"
 else
     echo -e "${YELLOW}⚠️  Auth service may still be starting...${NC}"
 fi
@@ -98,7 +163,7 @@ fi
 echo ""
 
 # Step 3: Start LEGO Projects API service
-echo -e "${BLUE}🧱 Starting LEGO Projects API service (port 5000)...${NC}"
+echo -e "${BLUE}🧱 Starting LEGO Projects API service (port $LEGO_API_PORT)...${NC}"
 cd apps/api/lego-projects-api
 pnpm dev > ../../../logs/lego-projects-api.log 2>&1 &
 LEGO_API_PID=$!
@@ -123,17 +188,17 @@ echo ""
 echo -e "${GREEN}🎉 Full Development Environment Started!${NC}"
 echo ""
 echo -e "${BLUE}📋 Service URLs:${NC}"
-echo "   🌐 Web App:              http://localhost:3002 (or check terminal output)"
-echo "   🔐 Auth API:             http://localhost:9000/api"
-echo "   🧱 LEGO Projects API:    http://localhost:5000/api (if running)"
+echo "   🌐 Web App:              http://localhost:$WEB_APP_PORT (or check terminal output)"
+echo "   🔐 Auth API:             http://localhost:$AUTH_API_PORT/api"
+echo "   🧱 LEGO Projects API:    http://localhost:$LEGO_API_PORT/api (if running)"
 echo ""
 echo -e "${BLUE}📊 Infrastructure Services:${NC}"
-echo "   🍃 MongoDB:              mongodb://localhost:27017"
-echo "   🐘 PostgreSQL:           postgresql://localhost:5432"
-echo "   🔴 Redis:                redis://localhost:6379"
-echo "   🔍 Elasticsearch:        http://localhost:9200"
-echo "   🌿 Mongo Express:        http://localhost:8081"
-echo "   🐘 pgAdmin:              http://localhost:8082"
+echo "   🍃 MongoDB:              mongodb://localhost:$MONGODB_PORT"
+echo "   🐘 PostgreSQL:           postgresql://localhost:$POSTGRESQL_PORT"
+echo "   🔴 Redis:                redis://localhost:$REDIS_PORT"
+echo "   🔍 Elasticsearch:        http://localhost:$ELASTICSEARCH_PORT"
+echo "   🌿 Mongo Express:        http://localhost:$MONGO_EXPRESS_PORT"
+echo "   🐘 pgAdmin:              http://localhost:$PGADMIN_PORT"
 echo ""
 echo -e "${BLUE}📝 Logs:${NC}"
 echo "   📄 Auth Service:         tail -f logs/auth-service.log"

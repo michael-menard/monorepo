@@ -49,6 +49,17 @@ export const instructionsApi = createApi({
       }),
       invalidatesTags: ['MockInstruction'],
     }),
+    createInstructionWithFiles: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/with-files',
+        method: 'POST',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+      invalidatesTags: ['MockInstruction'],
+    }),
     updateInstruction: builder.mutation<
       MockInstruction,
       { id: string; data: UpdateMockInstruction }
@@ -241,6 +252,7 @@ export const {
   useGetInstructionsQuery,
   useGetInstructionQuery,
   useCreateInstructionMutation,
+  useCreateInstructionWithFilesMutation,
   useUpdateInstructionMutation,
   useDeleteInstructionMutation,
   useGetInstructionsReviewsQuery,

@@ -48,8 +48,8 @@ export function auditRTKQueryMutations(): Array<CSRFAuditResult> {
  */
 export async function testCSRFIntegration(): Promise<void> {
   try {
-    // Import CSRF service
-    const { getCSRFToken, hasCSRFToken } = await import('../services/csrfService')
+    // Import CSRF service from auth package
+    const { getCSRFToken, hasCSRFToken } = await import('@repo/auth')
     
     console.log('🔒 CSRF Integration Test')
     console.log('========================')
@@ -140,7 +140,7 @@ export function generateCSRFAuditReport(): string {
   report += `- CSRF tokens are fetched from \`GET /api/csrf\`\n`
   report += `- Tokens are automatically attached to all POST/PUT/PATCH/DELETE requests via \`baseQueryWithCSRF\`\n`
   report += `- Tokens are included in \`X-CSRF-Token\` header\n`
-  report += `- Token management handled by \`csrfService.ts\`\n`
+  report += `- Token management handled by \`@repo/auth\` package\n`
   
   report += `\n## Manual Verification Steps\n\n`
   report += `1. Open browser developer tools\n`

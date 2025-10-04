@@ -86,6 +86,79 @@ export const mocFileUpload = multer({
   },
 });
 
+// Enhanced multer configuration for modal file uploads (multiple file types)
+export const mocModalUpload = multer({
+  storage: USE_S3 ? multer.memoryStorage() : multer.diskStorage({
+    destination: (req, file, cb) => {
+      const userId = req.user?.id;
+      let subDir = 'misc';
+
+      // Determine subdirectory based on field name
+      if (file.fieldname === 'instructionsFile') {
+        subDir = 'instructions';
+      } else if (file.fieldname === 'partsLists') {
+        subDir = 'parts-lists';
+      } else if (file.fieldname === 'images') {
+        subDir = 'images';
+      }
+
+      const uploadPath = `uploads/moc-files/${userId}/${subDir}`;
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, ext);
+      const uniqueId = uuidv4();
+      cb(null, `${baseName}-${uniqueId}${ext}`);
+    },
+  }),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max file size
+    files: 15, // Max 15 files total (1 instruction + 10 parts lists + 3 images + buffer)
+  },
+  fileFilter: (req, file, cb) => {
+    console.log('🔍 File filter - fieldname:', file.fieldname, 'mimetype:', file.mimetype);
+
+    // Validate based on field name
+    if (file.fieldname === 'instructionsFile') {
+      // Instructions: PDF and .io files
+      if (['application/pdf', 'application/octet-stream'].includes(file.mimetype) ||
+          file.originalname.endsWith('.io')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Instructions file must be PDF or .io format'));
+      }
+    } else if (file.fieldname === 'partsLists') {
+      // Parts lists: PDF, CSV, Excel, Text
+      if ([
+        'application/pdf',
+        'text/csv',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+      ].includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Parts list files must be PDF, CSV, Excel, or text format'));
+      }
+    } else if (file.fieldname === 'images') {
+      // Images: JPEG, JPG, HEIC, PNG
+      if ([
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/heic'
+      ].includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Images must be JPEG, JPG, PNG, or HEIC format'));
+      }
+    } else {
+      cb(new Error(`Unexpected field: ${file.fieldname}`));
+    }
+  },
+});
+
 // S3 Upload functions
 export async function uploadMocFileToS3(
   userId: string,

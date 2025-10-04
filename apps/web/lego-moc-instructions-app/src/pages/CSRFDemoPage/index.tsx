@@ -17,7 +17,7 @@ import {
   hasCSRFToken, 
   initializeCSRF,
   refreshCSRFToken
-} from '../../services/csrfService'
+} from '@repo/auth'
 import { authApi } from '../../services/authApi'
 import { useCreateMOCInstructionMutation } from '../../services/api'
 

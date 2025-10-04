@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-// Temporarily commented out due to import resolution issue
-// import { Gallery, featureWishlistAdapter } from '@repo/gallery';
+import { Gallery, featureWishlistAdapter } from '@repo/gallery';
 import { Heart, ExternalLink, ArrowRight } from 'lucide-react';
 
 interface WishlistItem {

@@ -86,26 +86,54 @@ vi.mock('lucide-react', () => ({
   ),
 }));
 
-// Mock auth hook
+// Create mockAuthHook object that can be modified in tests
 const mockAuthHook = {
   isAuthenticated: false,
   user: null,
   logout: vi.fn(),
 };
 
+// Mock auth hook
 vi.mock('@repo/auth', () => ({
   useAuth: () => mockAuthHook,
   clearCSRFToken: vi.fn(),
   clearRefreshState: vi.fn(),
 }));
 
-// Create a mock Redux store for testing
+// Mock the authApi and useCheckAuthQuery hook
+vi.mock('@repo/auth/store/authApi', () => ({
+  authApi: {
+    reducerPath: 'authApi',
+    reducer: (state = {}) => state,
+    middleware: () => (next: any) => (action: any) => next(action),
+    util: {
+      resetApiState: { type: 'authApi/resetApiState' },
+    },
+  },
+  useCheckAuthQuery: () => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+// Create a mock Redux store for testing with proper authApi setup
 const createMockStore = () => {
+  const mockAuthApiConfig = {
+    reducerPath: 'authApi',
+    reducer: (state = {}) => state,
+    middleware: () => (next: any) => (action: any) => next(action),
+  };
+
   return configureStore({
     reducer: {
+      // Add authApi reducer to prevent middleware errors
+      [mockAuthApiConfig.reducerPath]: mockAuthApiConfig.reducer,
       // Add minimal reducer for testing
       test: (state = {}) => state,
     },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(mockAuthApiConfig.middleware),
   });
 };
 

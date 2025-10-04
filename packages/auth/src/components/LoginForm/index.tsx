@@ -129,7 +129,7 @@ export const LoginForm = () => {
             </button>
           </div>
 
-          <FormLevelErrorMessage error={convertError(error)} />
+          <FormLevelErrorMessage error={error ? convertError(error) : undefined} />
 
           <motion.div
             whileHover={{ scale: 1.02 }}

@@ -8,7 +8,7 @@ Auggie is a terminal-based AI coding assistant by Augment Code that provides aut
 
 ✅ **Auggie is now successfully set up and ready to use!**
 
-- **Version**: 0.5.4 (commit 6faf2fad)
+- **Version**: 0.5.7 (commit cc2b329c)
 - **Installation Method**: ASDF version manager
 - **Location**: `/Users/michaelmenard/.asdf/shims/auggie`
 

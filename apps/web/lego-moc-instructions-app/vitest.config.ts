@@ -6,6 +6,23 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Memory management
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true, // Run tests in single process to reduce memory overhead
+      }
+    },
+    // Reduce parallel execution to manage memory
+    maxConcurrency: 1,
+    // Timeout settings
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    // Test isolation - ensure clean DOM between tests
+    isolate: true,
+    // Clear mocks and DOM between tests
+    clearMocks: true,
+    restoreMocks: true,
   },
   resolve: {
     alias: {

@@ -86,16 +86,20 @@ vi.mock('crypto', () => ({
   },
 }));
 
-// Mock express
-vi.mock('express', () => {
+// Mock express - FIXED to properly handle Router constructor
+vi.mock('express', async () => {
+  const actual = await vi.importActual('express');
+
   const mockRouter = {
     get: vi.fn().mockReturnThis(),
     post: vi.fn().mockReturnThis(),
     put: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
+    patch: vi.fn().mockReturnThis(),
+    options: vi.fn().mockReturnThis(),
     use: vi.fn().mockReturnThis(),
   };
-  
+
   const mockApp = {
     use: vi.fn().mockReturnThis(),
     listen: vi.fn().mockReturnThis(),
@@ -103,13 +107,28 @@ vi.mock('express', () => {
     post: vi.fn().mockReturnThis(),
     put: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
+    patch: vi.fn().mockReturnThis(),
+    options: vi.fn().mockReturnThis(),
   };
 
+  // Create a proper Router constructor function
   const mockRouterConstructor = vi.fn(() => mockRouter);
 
+  // Create a mock express function that returns the app
+  const mockExpress = vi.fn(() => mockApp);
+
+  // Attach all express methods and properties
+  mockExpress.Router = mockRouterConstructor;
+  mockExpress.json = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.urlencoded = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.static = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.raw = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.text = vi.fn(() => (req: any, res: any, next: any) => next());
+
   return {
+    ...actual,
     __esModule: true,
-    default: vi.fn(() => mockApp),
+    default: mockExpress,
     Router: mockRouterConstructor,
     json: vi.fn(() => (req: any, res: any, next: any) => next()),
     urlencoded: vi.fn(() => (req: any, res: any, next: any) => next()),
