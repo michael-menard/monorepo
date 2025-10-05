@@ -56,31 +56,41 @@ jobs:
         with:
           fetch-depth: 0
           
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
+          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          # Temporarily disable cache to force fresh installation
+          # cache: 'pnpm'
+          # cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Verify pnpm installation
+      - name: Verify and fix pnpm installation
         run: |
           echo "Verifying pnpm installation..."
-          which pnpm || echo "pnpm not found in PATH"
-          pnpm --version || echo "pnpm version check failed"
           echo "PATH: $PATH"
+          echo "Node version: $(node --version)"
 
-      - name: Fallback pnpm installation
-        if: failure()
-        run: |
-          echo "Installing pnpm as fallback..."
-          npm install -g pnpm@9.0.0
-          which pnpm
+          # Check if pnpm is available
+          if ! command -v pnpm &> /dev/null; then
+            echo "pnpm not found, installing globally..."
+            npm install -g pnpm@9.0.0
+          else
+            echo "pnpm found: $(which pnpm)"
+            echo "pnpm version: $(pnpm --version)"
+          fi
+
+          # Verify final installation
           pnpm --version
+          echo "Final pnpm location: $(which pnpm)"
           
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -167,31 +177,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
+          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          # Temporarily disable cache to force fresh installation
+          # cache: 'pnpm'
+          # cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Verify pnpm installation
+      - name: Verify and fix pnpm installation
         run: |
           echo "Verifying pnpm installation..."
-          which pnpm || echo "pnpm not found in PATH"
-          pnpm --version || echo "pnpm version check failed"
           echo "PATH: $PATH"
+          echo "Node version: $(node --version)"
 
-      - name: Fallback pnpm installation
-        if: failure()
-        run: |
-          echo "Installing pnpm as fallback..."
-          npm install -g pnpm@9.0.0
-          which pnpm
+          # Check if pnpm is available
+          if ! command -v pnpm &> /dev/null; then
+            echo "pnpm not found, installing globally..."
+            npm install -g pnpm@9.0.0
+          else
+            echo "pnpm found: $(which pnpm)"
+            echo "pnpm version: $(pnpm --version)"
+          fi
+
+          # Verify final installation
           pnpm --version
+          echo "Final pnpm location: $(which pnpm)"
           
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
