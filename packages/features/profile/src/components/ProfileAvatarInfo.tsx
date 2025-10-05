@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@repo/ui';
 import { MapPin, Calendar, User } from 'lucide-react';
-import { cn } from '@repo/ui/utils';
+import { cn } from '@repo/ui';
 
 export interface ProfileAvatarInfoProps {
   /** User's full name */

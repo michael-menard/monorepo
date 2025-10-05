@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
-import { createCachedBaseQuery, getRTKQueryCacheConfig } from '@repo/shared-cache'
+import { createCachedBaseQuery, getRTKQueryCacheConfig } from '@repo/cache'
 import { config } from '../config/environment.js'
 import { getCSRFHeaders } from '@repo/auth'
 

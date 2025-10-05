@@ -51,7 +51,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 // Mock utils
-vi.mock('@repo/ui/utils', () => ({
+vi.mock('@repo/ui', () => ({
   cn: (...classes: any[]) => classes.filter(Boolean).join(' '),
 }));
 

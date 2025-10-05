@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@repo/ui';
-import { cn } from '@repo/ui/utils';
+import { cn } from '@repo/ui';
 
 export interface ProfileLayoutProps {
   /** Content for the left sidebar - typically profile information */

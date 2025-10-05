@@ -6,11 +6,19 @@
     "apps/*",
     "apps/api/*",
     "apps/web/*",
-    "packages/*",
-    "packages/features/*",
+    "packages/shared",
+    "packages/core/ui",
+    "packages/core/auth",
     "packages/core/accessibility",
     "packages/core/cache",
-    "packages/core/design-system"
+    "packages/core/design-system",
+    "packages/features/gallery",
+    "packages/features/moc-instructions",
+    "packages/features/profile",
+    "packages/features/wishlist",
+    "packages/tools/upload",
+    "packages/tools/mock-data",
+    "packages/dev/tech-radar"
   ],
   "scripts": {
     "build": "turbo run build",

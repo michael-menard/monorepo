@@ -5,8 +5,8 @@ import {
   MemoryCache, 
   StorageCache,
   useImageCache 
-} from '@repo/shared-cache'
-import type {CacheStats} from '@repo/shared-cache';
+} from '@repo/cache'
+import type {CacheStats} from '@repo/cache';
 
 /**
  * Hook for managing all caching strategies in the application

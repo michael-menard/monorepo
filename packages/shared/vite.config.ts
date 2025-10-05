@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
         // Add workspace package aliases for better imports
-        '@packages/ui': path.resolve(__dirname, '../ui/src'),
-        '@packages/auth': path.resolve(__dirname, '../auth/src'),
+        '@repo/ui': path.resolve(__dirname, '../core/ui/src'),
+        '@repo/auth': path.resolve(__dirname, '../core/auth/src'),
         '@packages/wishlist': path.resolve(__dirname, '../wishlist/src'),
         '@packages/features': path.resolve(__dirname, '../features'),
       },

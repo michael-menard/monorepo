@@ -2,7 +2,7 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@repo/ui';
 import { AvatarUploader } from '@repo/profile';
 import { Camera, Edit, User, Pencil } from 'lucide-react';
-import { cn } from '@repo/ui/utils';
+import { cn } from '@repo/ui';
 
 export interface ProfileAvatarProps {
   /** Avatar image URL */

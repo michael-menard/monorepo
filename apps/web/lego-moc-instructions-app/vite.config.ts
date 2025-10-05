@@ -191,13 +191,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@repo/auth': resolve(__dirname, '../../../packages/auth/src'),
-      '@repo/ui': resolve(__dirname, '../../../packages/ui/src'),
+      '@repo/auth': resolve(__dirname, '../../../packages/core/auth/src'),
+      '@repo/ui': resolve(__dirname, '../../../packages/core/ui/src'),
       '@repo/gallery': resolve(__dirname, '../../../packages/features/gallery/src'),
       '@repo/moc-instructions': resolve(__dirname, '../../../packages/features/moc-instructions/src'),
       '@repo/profile': resolve(__dirname, '../../../packages/features/profile/src'),
       '@repo/cache': resolve(__dirname, '../../../packages/core/cache/src'),
-      '@repo/upload': resolve(__dirname, '../../../packages/upload/src'),
+      '@repo/upload': resolve(__dirname, '../../../packages/tools/upload/src'),
       '@repo/shared': resolve(__dirname, '../../../packages/shared/src'),
     },
   },

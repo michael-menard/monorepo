@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { CacheStatus, CachedImage, ImageGallery } from '@repo/shared-cache'
+import { CacheStatus, CachedImage, ImageGallery } from '@repo/cache'
 import { CacheManager } from '../../components/CacheManager'
 import { useCacheManager } from '../../hooks/useCacheManager'
 
