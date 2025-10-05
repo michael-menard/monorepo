@@ -1,6 +1,6 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage, Badge } from '@repo/ui';
-import { AvatarUploader } from '@repo/profile';
+import { AvatarUploader } from './AvatarUploader';
 import { Pencil } from 'lucide-react';
 import { cn } from '@repo/ui';
 
