@@ -1,13 +1,12 @@
 import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+// import { useState } from 'react'; // Removed - not needed
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+// import { Mail, Lock } from 'lucide-react'; // Removed - icons not used with shadcn Input
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { LoginSchema, type LoginFormData } from '../../schemas/index.js';
-import Input from '../Input/index.js';
-import { Button } from '../ui/button.js';
+import { Input, Button } from '@repo/ui';
 import { FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 import type { SerializedError } from '@reduxjs/toolkit';
@@ -34,7 +33,7 @@ const convertError = (error: FetchBaseQueryError | SerializedError | undefined):
 export const LoginForm = () => {
   const { login, isLoading, error } = useAuth();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
+  // Removed showPassword state - using simple password input
 
   const {
     register,
@@ -77,7 +76,6 @@ export const LoginForm = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" role="form">
           <div>
             <Input
-              icon={Mail}
               type="email"
               placeholder="Email Address"
               {...register('email')}
@@ -90,29 +88,12 @@ export const LoginForm = () => {
           </div>
 
           <div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <Lock className="w-5 h-5" />
-              </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                {...register('password')}
-                className={`w-full py-2 pl-10 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors duration-200 bg-white text-gray-900 placeholder-gray-400 ${errors.password ? 'border-red-500 focus:ring-red-500' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+            <Input
+              type="password"
+              placeholder="Password"
+              {...register('password')}
+              className={errors.password ? 'border-red-500 focus:ring-red-500' : ''}
+            />
             <FieldErrorMessage
               error={errors.password}
               fieldName="Password"

@@ -5,8 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '../../hooks/useAuth.js';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from './schema.js';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
+import { Input, Button } from '@repo/ui';
 
 const ForgotPasswordForm = () => {
   const navigate = useNavigate();

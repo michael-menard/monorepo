@@ -1,12 +1,11 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User } from 'lucide-react';
+// import { Mail, Lock, User } from 'lucide-react'; // Removed - icons not used with shadcn Input
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { SignupSchema, type SignupFormData } from '../../schemas/index.js';
-import Input from '../Input/index.js';
-import { Button } from '../ui/button.js';
+import { Input, Button } from '@repo/ui';
 import PasswordStrength from '../PasswordStrength/index.js';
 import { FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
@@ -83,7 +82,6 @@ export const SignupForm = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Input
-              icon={User}
               type="text"
               placeholder="Full Name"
               {...register('name')}
@@ -96,7 +94,6 @@ export const SignupForm = () => {
           </div>
           <div>
             <Input
-              icon={Mail}
               type="email"
               placeholder="Email Address"
               {...register('email')}
@@ -109,7 +106,6 @@ export const SignupForm = () => {
           </div>
           <div>
             <Input
-              icon={Lock}
               type="password"
               placeholder="Password"
               {...register('password')}
@@ -123,7 +119,6 @@ export const SignupForm = () => {
           </div>
           <div>
             <Input
-              icon={Lock}
               type="password"
               placeholder="Confirm Password"
               {...register('confirmPassword')}

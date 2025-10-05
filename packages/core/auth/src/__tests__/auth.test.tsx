@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import authReducer from '../store/authSlice.js';
 import { authApi } from '../store/authApi.js';
 import { useAuth } from '../hooks/useAuth.js';
-import Login from '../components/Login/index.js';
+import LoginForm from '../components/LoginForm/index.js';
 import { SignupForm } from '../components/SignupForm/index.js';
 
 // Mock the auth hook
@@ -65,7 +65,7 @@ describe('Auth Package', () => {
     vi.clearAllMocks();
   });
 
-  describe('Login Component', () => {
+  describe('LoginForm Component', () => {
     it('renders login form correctly', () => {
       const mockUseAuth = useAuth as any;
       mockUseAuth.mockReturnValue({
@@ -74,7 +74,7 @@ describe('Auth Package', () => {
         error: null,
       });
 
-      renderWithProviders(<Login />);
+      renderWithProviders(<LoginFormForm />);
 
       expect(screen.getByText('Welcome Back')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('Auth Package', () => {
         error: null,
       });
 
-      renderWithProviders(<Login />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByPlaceholderText('Email Address');
       const passwordInput = screen.getByPlaceholderText('Password');
@@ -118,7 +118,7 @@ describe('Auth Package', () => {
         error: null,
       });
 
-      renderWithProviders(<Login />);
+      renderWithProviders(<LoginForm />);
 
       // Loader uses data-testid; no aria-role status on button
       expect(screen.getByTestId('loader-icon')).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe('Auth Package', () => {
         error: 'Invalid credentials',
       });
 
-      renderWithProviders(<Login />);
+      renderWithProviders(<LoginForm />);
 
       expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
     });

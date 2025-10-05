@@ -1,9 +1,5 @@
 // Components (router-agnostic)
-export { default as Input } from './components/Input/index';
-export { Button } from './components/ui/button';
-export { Card } from './components/ui/card';
-export { Label } from './components/ui/label';
-export { default as LoadingSpinner } from './components/LoadingSpinner/index';
+// Note: Input, Button, Card, Label, LoadingSpinner now imported from @repo/ui
 export { default as PasswordStrength } from './components/PasswordStrength/index';
 export { default as FloatingShape } from './components/FloatingShape/index';
 export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index';
