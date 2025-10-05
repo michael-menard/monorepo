@@ -56,19 +56,36 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-          
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Verifying pnpm installation..."
+          which pnpm || echo "pnpm not found in PATH"
+          pnpm --version || echo "pnpm version check failed"
+          echo "PATH: $PATH"
+
+      - name: Fallback pnpm installation
+        if: failure()
+        run: |
+          echo "Installing pnpm as fallback..."
+          npm install -g pnpm@9.0.0
+          which pnpm
+          pnpm --version
           
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
         
       - name: Run linting and type checking
         run: |
@@ -150,19 +167,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-          
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Verifying pnpm installation..."
+          which pnpm || echo "pnpm not found in PATH"
+          pnpm --version || echo "pnpm version check failed"
+          echo "PATH: $PATH"
+
+      - name: Fallback pnpm installation
+        if: failure()
+        run: |
+          echo "Installing pnpm as fallback..."
+          npm install -g pnpm@9.0.0
+          which pnpm
+          pnpm --version
           
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
         
       - name: Run comprehensive checks
         run: |
