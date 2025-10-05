@@ -20,20 +20,31 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
   // Calculate positions for entries
   const positionedEntries = useMemo(() => {
     return entries.map(entry => {
-      const quadrant = quadrants.find(q => q.name === entry.quadrant)!
-      const ring = rings.find(r => r.name === entry.ring)!
-      
+      const quadrant = quadrants.find(q => q.name === entry.quadrant)
+      const ring = rings.find(r => r.name === entry.ring)
+
+      // Handle missing quadrant or ring gracefully
+      if (!quadrant || !ring) {
+        return {
+          entry,
+          quadrant: quadrant || { name: entry.quadrant, index: 0 },
+          ring: ring || { name: entry.ring, index: 0, color: '#gray' },
+          x: 50, // Center position as fallback
+          y: 50
+        }
+      }
+
       // Calculate position within the quadrant
       const quadrantAngle = (quadrant.index * Math.PI) / 2
       const ringRadius = 0.2 + (ring.index * 0.2) // 0.2 to 0.8
-      
+
       // Add some randomness to prevent overlap
       const randomAngle = (Math.random() - 0.5) * 0.3
       const angle = quadrantAngle + randomAngle
-      
+
       const x = 50 + Math.cos(angle) * ringRadius * 40
       const y = 50 + Math.sin(angle) * ringRadius * 40
-      
+
       return {
         entry,
         quadrant,
@@ -50,6 +61,8 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
         viewBox="0 0 100 100"
         className="radar-svg"
         preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Technology radar visualization showing quadrants and rings"
       >
         {/* Background grid */}
         <defs>

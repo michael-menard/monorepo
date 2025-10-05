@@ -13,7 +13,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
-    "test:watch": "vitest watch",
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
     "test:coverage": "vitest run --coverage",
     "seed:users": "tsx scripts/seed-users.ts",
     "seed:users:clear": "tsx scripts/seed-users.ts --clear",

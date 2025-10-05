@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['../../../src/test/setup.ts'],
+    setupFiles: ['../../../__tests__/setup.ts'],
     globals: true,
     coverage: {
       provider: 'istanbul',

@@ -29,7 +29,7 @@
     "test:unit": "vitest run --run src/utils src/store src/hooks",
     "test:integration": "vitest run --run src/__tests__/integration",
     "test:components": "vitest run --run src/components",
-    "test:watch": "vitest",
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
     "test:verbose": "tsx scripts/test-runner.ts --verbose",
     "test:ci": "tsx scripts/test-runner.ts --coverage",
     "lint": "eslint . --max-warnings 0",

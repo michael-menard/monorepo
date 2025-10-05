@@ -20,18 +20,23 @@ export const TechRadar: React.FC = () => {
       try {
         const response = await fetch('/radar.json')
         const data = await response.json()
-        
+
+        // Validate data structure
+        if (!data || !data.quadrants || !data.rings || !data.entries) {
+          throw new Error('Invalid radar data structure')
+        }
+
         // Add indices to quadrants and rings
         const quadrants = data.quadrants.map((q: any, index: number) => ({
           ...q,
           index
         }))
-        
+
         const rings = data.rings.map((r: any, index: number) => ({
           ...r,
           index
         }))
-        
+
         setRadarData({ ...data, quadrants, rings })
         setFilteredEntries(data.entries)
       } catch (error) {

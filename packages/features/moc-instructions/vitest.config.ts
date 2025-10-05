@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['../../src/test/setup.ts', './src/test/setup.ts'],
+    setupFiles: ['../../../__tests__/setup.ts', './src/test/setup.ts'],
     globals: true,
     testTimeout: 5000,
     hookTimeout: 5000,

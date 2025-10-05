@@ -29,7 +29,7 @@ export default defineConfig({
       '**/src/pages/auth/EmailVerificationPage/__tests__/**'
     ],
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./__tests__/setup.ts'],
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'html', 'lcov'],

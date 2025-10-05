@@ -8,9 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: 'jsdom', // Tech radar has React components for visualization
     setupFiles: ['../../../__tests__/setup.ts'],
     globals: true,
+    testTimeout: 5000,
+    hookTimeout: 5000,
+    teardownTimeout: 5000,
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'html', 'lcov'],
@@ -23,6 +26,14 @@ export default defineConfig({
         '**/*.d.ts',
         '**/coverage/**',
       ],
+      thresholds: {
+        global: {
+          branches: 75,
+          functions: 75,
+          lines: 75,
+          statements: 75,
+        },
+      },
     },
   },
   resolve: {
@@ -30,4 +41,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-}); 
+});

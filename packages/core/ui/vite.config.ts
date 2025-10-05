@@ -25,16 +25,11 @@ export default defineConfig(({ mode }) => {
         entry: path.resolve(__dirname, 'src/index.ts'),
         name: 'UI',
         fileName: 'index',
-        formats: ['es', 'cjs'],
+        formats: ['es'],
       },
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        output: {
-          // Ensure proper file extensions for ES modules
-          entryFileNames: '[name].js',
-          chunkFileNames: '[name].js',
-        },
         external: [
           'react',
           'react-dom',
@@ -60,6 +55,9 @@ export default defineConfig(({ mode }) => {
           'sonner',
         ],
         output: {
+          // Ensure proper file extensions for ES modules
+          entryFileNames: '[name].js',
+          chunkFileNames: '[name].js',
           globals: {
             react: 'React',
             'react-dom': 'ReactDOM',

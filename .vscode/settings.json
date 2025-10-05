@@ -4,5 +4,54 @@
       "mode": "auto"
     }
   ],
-  "vitest.disableWorkspaceWarning": true
+  "vitest.disableWorkspaceWarning": true,
+  // Stop file watching explosions
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.turbo/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true,
+    "**/.cache/**": true
+  },
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/.turbo/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true,
+    "**/.cache/**": true
+  },
+
+  // TypeScript: use workspace TS & fewer watchers
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsserver.useSeparateSyntaxServer": true,
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "tsserver.watchOptions": { "watchFile": "useFsEvents", "watchDirectory": "useFsEvents" },
+
+  // ESLint across multiple packages
+  // "eslint.experimental.useFlatConfig": true,
+
+  // Tailwind/Stylelint (optional, reduce churn)
+  "tailwindCSS.files.exclude": [
+    "**/node_modules/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/build/**",``
+    "**/.next/**"
+  ],
+
+  // Testing UX: don’t autostart watchers
+  "testing.automaticallyOpenPeekView": "never",
+  "vitest.commandLine": "pnpm vitest",
+  "vitest.enable": true,
+  "vitest.autoRun": "off",
+
+  // Git in huge repos
+  "git.autoRepositoryDetection": "openEditors",
+  "git.scanRepositories": ["."]
 }

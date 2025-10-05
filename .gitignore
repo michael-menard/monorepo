@@ -70,10 +70,16 @@ storybook-static
 # Dependency directories
 node_modules/
 # Environment variables
+.env
+.env*
 
-# Task files
-# tasks.json
-# tasks/ 
+# build outputs
+dist/
+build/
+.turbo/
+.next/
+coverage/
+.cache/
 
 
 apps/api/lego-projects-api/uploads/**/*.jpg

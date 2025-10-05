@@ -26,7 +26,7 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
     "test": "vitest run",
-    "test:watch": "vitest",
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "storybook": "storybook dev -p 6006",

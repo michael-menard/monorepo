@@ -1,12 +1,14 @@
 {
   "name": "@repo/ui",
   "version": "0.0.1",
+  "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
@@ -108,7 +110,7 @@
     "check-types": "tsc --noEmit",
     "build": "vite build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4"
   },
   "devDependencies": {
     "@storybook/addon-actions": "^9.0.8",
