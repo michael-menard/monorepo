@@ -4,7 +4,7 @@ import { Button } from '@repo/ui';
 import { ArrowLeft, Download, Heart, Plus, Share, Upload } from 'lucide-react';
 import { Gallery } from '@repo/gallery';
 import type { GalleryImage } from '@repo/gallery';
-import { Upload as FileUpload } from '@monorepo/upload';
+import { Upload as FileUpload } from '@repo/upload';
 
 // Import RTK hooks and actions from centralized store
 import {

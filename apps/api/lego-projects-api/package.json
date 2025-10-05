@@ -22,7 +22,7 @@
     "@aws-sdk/client-s3": "^3.848.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
     "@elastic/elasticsearch": "^9.0.3",
-    "@monorepo/upload": "workspace:*",
+    "@repo/upload": "workspace:*",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^24.0.14",

@@ -197,7 +197,7 @@ export default defineConfig({
       '@repo/moc-instructions': resolve(__dirname, '../../../packages/features/moc-instructions/src'),
       '@repo/profile': resolve(__dirname, '../../../packages/features/profile/src'),
       '@repo/cache': resolve(__dirname, '../../../packages/core/cache/src'),
-      '@monorepo/upload': resolve(__dirname, '../../../packages/upload/src'),
+      '@repo/upload': resolve(__dirname, '../../../packages/upload/src'),
       '@repo/shared': resolve(__dirname, '../../../packages/shared/src'),
     },
   },
@@ -290,7 +290,7 @@ export default defineConfig({
           }
           
           // Image utilities - used in gallery and detail pages
-          if (id.includes('@monorepo/upload')) {
+          if (id.includes('@repo/upload')) {
             return 'image-utils'
           }
           

@@ -1,5 +1,5 @@
 {
-  "name": "@monorepo/upload",
+  "name": "@repo/upload",
   "version": "1.0.0",
   "description": "Unified file and image upload system with drag-and-drop, progress tracking, validation, and image processing",
   "type": "module",

@@ -14,9 +14,9 @@ import {
   FormErrorMessage,
 } from '@repo/ui';
 import { Button, Input, Label, Textarea } from '@repo/ui';
-// import { Upload } from '@monorepo/upload'; // Temporarily disabled
+// import { Upload } from '@repo/upload'; // Temporarily disabled
 import { X, FileText, Image, List, Plus } from 'lucide-react';
-import type { UploadFile } from '@monorepo/upload';
+import type { UploadFile } from '@repo/upload';
 
 interface CreateMocModalProps {
   isOpen: boolean;

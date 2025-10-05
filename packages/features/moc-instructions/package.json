@@ -30,7 +30,7 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@reduxjs/toolkit": "^2.8.2",
-    "@monorepo/upload": "workspace:*",
+    "@repo/upload": "workspace:*",
     "@repo/ui": "workspace:*",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",

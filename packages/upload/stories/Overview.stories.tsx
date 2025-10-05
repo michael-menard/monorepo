@@ -12,7 +12,7 @@ const OverviewDemo = () => {
   return (
     <div className="space-y-8 p-6 max-w-4xl">
       <div>
-        <h2 className="text-2xl font-bold mb-4">@monorepo/upload Package</h2>
+        <h2 className="text-2xl font-bold mb-4">@repo/upload Package</h2>
         <p className="text-gray-600 mb-6">
           A comprehensive upload system with drag-and-drop, progress tracking, validation, and image processing.
         </p>
@@ -159,7 +159,7 @@ const meta: Meta<typeof OverviewDemo> = {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'Complete overview of the @monorepo/upload package components and features.',
+        component: 'Complete overview of the @repo/upload package components and features.',
       },
     },
   },

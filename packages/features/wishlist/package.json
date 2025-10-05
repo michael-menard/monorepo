@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
-    "@monorepo/upload": "workspace:*",
+    "@repo/upload": "workspace:*",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@reduxjs/toolkit": "^2.8.2",

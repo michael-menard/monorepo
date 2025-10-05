@@ -1,5 +1,5 @@
 import type { MockInstruction, MockInstructionFilter } from '../schemas';
-import { processImageBrowser, getPreset } from '@monorepo/upload';
+import { processImageBrowser, getPreset } from '@repo/upload';
 
 // Format time in minutes to human readable format
 export const formatTime = (minutes: number): string => {

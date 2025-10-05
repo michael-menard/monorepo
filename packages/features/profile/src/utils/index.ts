@@ -1,5 +1,5 @@
 import type { Profile, ProfileForm } from '../schemas';
-import { processImageBrowser, getPreset } from '@monorepo/upload';
+import { processImageBrowser, getPreset } from '@repo/upload';
 
 // Format full name
 export const formatFullName = (profile: Pick<Profile, 'firstName' | 'lastName'>): string => {

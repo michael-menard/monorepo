@@ -11,7 +11,7 @@ import { Request, Response, NextFunction } from 'express';
 //   getPreset,
 //   type ImageProcessingConfig,
 //   type ImageOptimizationStats,
-// } from '@monorepo/upload';
+// } from '@repo/upload';
 
 // Temporary stub types and functions
 export interface ImageProcessingConfig {
@@ -120,7 +120,7 @@ export async function createImageVariants(
  * Get optimal image format based on file extension and content
  */
 // TEMPORARILY DISABLED - Upload package needs to be fixed
-// export { getOptimalFormat } from '@monorepo/upload';
+// export { getOptimalFormat } from '@repo/upload';
 // Stub function already declared above
 
 /**
@@ -166,7 +166,7 @@ export function imageProcessingMiddleware(config?: Partial<ImageProcessingConfig
  * Validate if an image can be processed
  */
 // TEMPORARILY DISABLED - Upload package needs to be fixed
-// export { canProcessImage } from '@monorepo/upload';
+// export { canProcessImage } from '@repo/upload';
 
 /**
  * Get image dimensions from buffer
