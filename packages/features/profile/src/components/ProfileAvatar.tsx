@@ -109,28 +109,33 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   // If editable and has upload handler, use AvatarUploader with custom styling
   if (editable && onAvatarUpload) {
     return (
-      <div className={cn('relative inline-block', className)}>
-        <div className="relative group">
-          <Avatar className={cn(
-            sizeClasses[size],
-            'ring-4 ring-background shadow-xl',
-            'transition-all duration-300',
-            'hover:ring-primary/50 cursor-pointer',
-          )}>
+      <div className="relative inline-block">
+        <div className={cn('relative group', className)}>
+          <Avatar
+            data-testid="avatar"
+            className={cn(
+              sizeClasses[size],
+              'ring-4 ring-background shadow-xl',
+              'transition-all duration-300',
+              'hover:ring-primary/50 cursor-pointer',
+            )}>
             <AvatarImage
+              data-testid="avatar-image"
               src={avatarUrl}
               alt={`${userName}'s avatar`}
               className="object-cover"
             />
-            <AvatarFallback className={cn(
-              'bg-gradient-to-br from-primary to-secondary',
-              'text-primary-foreground font-bold',
-              size === 'sm' && 'text-xs',
-              size === 'md' && 'text-sm',
-              size === 'lg' && 'text-lg',
-              size === 'xl' && 'text-xl',
-              size === '2xl' && 'text-2xl',
-            )}>
+            <AvatarFallback
+              data-testid="avatar-fallback"
+              className={cn(
+                'bg-gradient-to-br from-primary to-secondary',
+                'text-primary-foreground font-bold',
+                size === 'sm' && 'text-xs',
+                size === 'md' && 'text-sm',
+                size === 'lg' && 'text-lg',
+                size === 'xl' && 'text-xl',
+                size === '2xl' && 'text-2xl',
+              )}>
               {getInitials(userName)}
             </AvatarFallback>
           </Avatar>
@@ -144,24 +149,28 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
           )}
           onClick={handleUploadClick}
           >
-            <Pencil className={cn(
-              'text-white',
-              size === 'sm' && 'h-3 w-3',
-              size === 'md' && 'h-4 w-4',
-              size === 'lg' && 'h-5 w-5',
-              size === 'xl' && 'h-6 w-6',
-              size === '2xl' && 'h-7 w-7',
-            )} />
+            <Pencil
+              data-testid="pencil-icon"
+              className={cn(
+                'text-white',
+                size === 'sm' && 'h-3 w-3',
+                size === 'md' && 'h-4 w-4',
+                size === 'lg' && 'h-5 w-5',
+                size === 'xl' && 'h-6 w-6',
+                size === '2xl' && 'h-7 w-7',
+              )} />
           </div>
 
           {/* Online Status Indicator */}
           {showStatus && (
-            <div className={cn(
-              'absolute bottom-1 right-1',
-              'rounded-full border-2 border-background',
-              statusSizes[size],
-              isOnline ? 'bg-green-500' : 'bg-gray-400',
-            )} />
+            <div
+              data-testid="status-indicator"
+              className={cn(
+                'absolute bottom-1 right-1',
+                'rounded-full border-2 border-background',
+                statusSizes[size],
+                isOnline ? 'bg-green-500' : 'bg-gray-400',
+              )} />
           )}
 
           {/* Verification Badge */}
@@ -181,6 +190,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
 
         {/* Hidden File Input */}
         <input
+          data-testid="file-input"
           ref={fileInputRef}
           type="file"
           accept="image/*"
@@ -193,40 +203,47 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
 
   // Non-editable avatar or no upload handler
   return (
-    <div className={cn('relative inline-block', className)}>
+    <div className="relative inline-block">
       {/* Main Avatar */}
-      <div className="relative">
-        <Avatar className={cn(
-          sizeClasses[size],
-          'ring-4 ring-background shadow-xl',
-          'transition-all duration-300',
-        )}>
+      <div className={cn('relative', className)}>
+        <Avatar
+          data-testid="avatar"
+          className={cn(
+            sizeClasses[size],
+            'ring-4 ring-background shadow-xl',
+            'transition-all duration-300',
+          )}>
           <AvatarImage
+            data-testid="avatar-image"
             src={avatarUrl}
             alt={`${userName}'s avatar`}
             className="object-cover"
           />
-          <AvatarFallback className={cn(
-            'bg-gradient-to-br from-primary to-secondary',
-            'text-primary-foreground font-bold',
-            size === 'sm' && 'text-xs',
-            size === 'md' && 'text-sm',
-            size === 'lg' && 'text-lg',
-            size === 'xl' && 'text-xl',
-            size === '2xl' && 'text-2xl',
-          )}>
+          <AvatarFallback
+            data-testid="avatar-fallback"
+            className={cn(
+              'bg-gradient-to-br from-primary to-secondary',
+              'text-primary-foreground font-bold',
+              size === 'sm' && 'text-xs',
+              size === 'md' && 'text-sm',
+              size === 'lg' && 'text-lg',
+              size === 'xl' && 'text-xl',
+              size === '2xl' && 'text-2xl',
+            )}>
             {getInitials(userName)}
           </AvatarFallback>
         </Avatar>
 
         {/* Online Status Indicator */}
         {showStatus && (
-          <div className={cn(
-            'absolute bottom-1 right-1',
-            'rounded-full border-2 border-background',
-            statusSizes[size],
-            isOnline ? 'bg-green-500' : 'bg-gray-400',
-          )} />
+          <div
+            data-testid="status-indicator"
+            className={cn(
+              'absolute bottom-1 right-1',
+              'rounded-full border-2 border-background',
+              statusSizes[size],
+              isOnline ? 'bg-green-500' : 'bg-gray-400',
+            )} />
         )}
 
         {/* Verification Badge */}

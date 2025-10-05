@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button, Badge } from '@repo/ui';
 import { ProfileAvatar } from '../ProfileAvatar';
-// TODO: Need to check if ProfileLayoutSidebar and ProfileAvatarInfo exist or need to be created
+import { ProfileLayoutSidebar } from '../ProfileLayout';
+import { ProfileAvatarInfo } from '../ProfileAvatarInfo';
 import type { ProfileSidebarProps } from '../../types';
 import { formatFullName, generateAvatarPlaceholder, getProfileCompletionPercentage } from '../../utils';
 

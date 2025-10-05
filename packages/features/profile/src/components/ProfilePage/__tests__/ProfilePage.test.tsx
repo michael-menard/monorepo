@@ -118,7 +118,7 @@ describe('ProfilePage', () => {
       </ProfilePage>
     );
 
-    const profilePageContainer = container.querySelector('.max-w-7xl');
+    const profilePageContainer = container.querySelector('.container');
     expect(profilePageContainer).toBeInTheDocument();
 
     const sidebar = container.querySelector('aside');

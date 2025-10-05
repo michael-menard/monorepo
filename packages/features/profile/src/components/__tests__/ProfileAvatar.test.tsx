@@ -323,7 +323,8 @@ describe('ProfileAvatar', () => {
         />
       );
 
-      const container = screen.getByTestId('avatar').closest('div');
+      const avatar = screen.getByTestId('avatar');
+      const container = avatar.parentElement;
       expect(container).toHaveClass('custom-avatar-class');
     });
 
