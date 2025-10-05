@@ -1,94 +1,107 @@
 @import "tailwindcss";
-
-/* Tailwind CSS v4 Configuration */
-@theme {
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  
-  --border-radius-lg: var(--radius);
-  --border-radius-md: calc(var(--radius) - 2px);
-  --border-radius-sm: calc(var(--radius) - 4px);
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Your Enhanced Color Palette - Pure shadcn/ui approach */
+    --background: 45 67% 97%;         /* #FAF8F1 - Your warm cream background */
+    --foreground: 188 45% 15%;        /* Very dark teal - high contrast */
+
+    --primary: 178 79% 32%;           /* #129990 - Your vibrant teal */
+    --primary-foreground: 0 0% 100%;  /* Pure white for maximum contrast */
+
+    --secondary: 45 67% 84%;          /* #FAEAB1 - Your warm cream */
+    --secondary-foreground: 178 79% 20%; /* Darker version of vibrant teal */
+
+    --accent: 168 18% 43%;            /* #5A827E - Your muted sage teal */
+    --accent-foreground: 0 0% 100%;   /* White text for good contrast */
+
+    --muted: 0 17% 96%;               /* #F6F0F0 - Your surface color */
+    --muted-foreground: 168 18% 35%;  /* Darker sage for secondary text */
+
+    --card: 0 17% 96%;                /* #F6F0F0 - Your surface color for cards */
+    --card-foreground: 188 45% 15%;   /* Dark teal text */
+
+    --popover: 0 17% 96%;             /* #F6F0F0 - Surface color */
+    --popover-foreground: 188 45% 15%; /* Dark teal text */
+
+    --border: 0 17% 90%;              /* Slightly darker than surface */
+    --input: 0 17% 90%;               /* Input borders */
+    --ring: 178 79% 32%;              /* Focus ring - vibrant teal */
+
+    --destructive: 0 89% 26%;         /* #7D0A0A - Your deep burgundy */
+    --destructive-foreground: 0 0% 100%; /* White text */
+
     --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 168 18% 15%;        /* Very dark sage teal */
+    --foreground: 0 17% 96%;          /* Your surface color as light text */
+
+    --primary: 178 79% 45%;           /* Brighter version of your vibrant teal */
+    --primary-foreground: 168 18% 15%; /* Dark sage background */
+
+    --secondary: 168 18% 25%;         /* Darker sage teal */
+    --secondary-foreground: 0 17% 96%; /* Light surface color */
+
+    --accent: 45 67% 84%;             /* Your warm cream as accent */
+    --accent-foreground: 168 18% 15%; /* Dark sage text */
+
+    --muted: 168 18% 20%;             /* Slightly lighter than background */
+    --muted-foreground: 0 17% 80%;    /* Medium light for secondary text */
+
+    --card: 168 18% 20%;              /* Elevated surface in dark mode */
+    --card-foreground: 0 17% 96%;     /* Light surface color text */
+
+    --popover: 168 18% 20%;           /* Elevated surface */
+    --popover-foreground: 0 17% 96%;  /* Light surface color text */
+
+    --border: 168 18% 25%;            /* Subtle sage borders */
+    --input: 168 18% 25%;             /* Input backgrounds */
+    --ring: 178 79% 45%;              /* Bright vibrant teal focus */
+
+    --destructive: 0 89% 45%;         /* Brighter burgundy for dark mode */
+    --destructive-foreground: 0 17% 96%; /* Light text */
   }
 }
 
-/* Global styles */
-* {
-  border-color: hsl(var(--border));
-}
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Inter font classes for different weights */
+  .font-light {
+    font-weight: 300;
+  }
+
+  .font-normal {
+    font-weight: 400;
+  }
+
+  .font-medium {
+    font-weight: 500;
+  }
+
+  .font-semibold {
+    font-weight: 600;
+  }
+
+  .font-bold {
+    font-weight: 700;
+  }
+
+  .font-extrabold {
+    font-weight: 800;
+  }
 }

@@ -17,7 +17,7 @@ import DesignSystemGrid from '../../components/DesignSystemGrid'
 import DarkModeToggle from '../../components/DarkModeToggle'
 import ColorTest from '../../components/ColorTest'
 import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo'
-import TailwindTest from '../../components/TailwindTest'
+import TypographyShowcase from '../../components/TypographyShowcase'
 
 
 function HomePage() {
@@ -75,28 +75,28 @@ function HomePage() {
   ];
 
     return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
       {/* Dark Mode Toggle */}
       <DarkModeToggle />
-      
-      {/* Tailwind Test - Remove this after verification */}
+
+      {/* Typography Showcase - Inter Font & Color Palette */}
       <div className="container mx-auto px-4 py-8">
-        <TailwindTest />
+        <TypographyShowcase />
       </div>
-      
-      {/* Color Test - Remove this after verification */}
+
+      {/* Color Test - Your Beautiful Palette */}
       <div className="container mx-auto px-4 py-8">
         <ColorTest />
       </div>
-      
-      {/* Button Customization Demo - Remove this after viewing */}
+
+      {/* Button Customization Demo - Component Showcase */}
       <div className="container mx-auto px-4 py-8">
         <ButtonCustomizationDemo />
       </div>
-      
-      {/* Design System Grid - Remove this after viewing */}
+
+      {/* Design System Grid - Complete Component Library */}
       <DesignSystemGrid />
-      
+
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center space-y-6">
@@ -104,10 +104,10 @@ function HomePage() {
             {config.app.name}
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Discover, build, and share custom LEGO MOC instructions. Join our community of builders 
+            Discover, build, and share custom LEGO MOC instructions. Join our community of builders
             and explore thousands of unique creations from around the world.
           </p>
-          
+
           {/* Call to Action Buttons */}
           <div className="flex justify-center space-x-4">
             {mockAuth.isAuthenticated ? (
@@ -145,7 +145,7 @@ function HomePage() {
 
           {mockAuth.isAuthenticated && (
             <p className="text-sm text-muted-foreground">
-              Welcome back, {mockAuth.user.name}! 
+              Welcome back, {mockAuth.user.name}!
               <Link to="/profile" className="text-primary hover:underline ml-1">
                 View Profile
               </Link>
@@ -221,7 +221,7 @@ function HomePage() {
               Your creations and data are protected with enterprise-grade security
             </p>
           </div>
-          
+
           <div className="text-center space-y-4">
             <Zap className="h-12 w-12 mx-auto text-primary" />
             <h3 className="text-xl font-semibold">Lightning Fast</h3>
@@ -229,7 +229,7 @@ function HomePage() {
               Optimized for speed with instant search and quick downloads
             </p>
           </div>
-          
+
           <div className="text-center space-y-4">
             <Users className="h-12 w-12 mx-auto text-primary" />
             <h3 className="text-xl font-semibold">Community Driven</h3>
@@ -263,7 +263,7 @@ function HomePage() {
           </div>
         </div>
       </section>
-    </div>
+    </>
   )
 }
 
