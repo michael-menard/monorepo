@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import {
   getRTKQueryCacheConfig
-} from '@repo/shared-cache';
+} from '@repo/cache';
 import type {
   LoginRequest,
   SignupRequest,

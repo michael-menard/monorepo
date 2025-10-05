@@ -57,7 +57,8 @@
     "@repo/mock-data": "workspace:*",
     "@repo/moc-instructions": "workspace:*",
     "@repo/profile": "workspace:*",
-    "@repo/shared-cache": "workspace:*",
+    "@repo/cache": "workspace:*",
+
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.66.5",
     "@tanstack/react-query-devtools": "^5.66.5",

@@ -7,7 +7,10 @@
     "apps/api/*",
     "apps/web/*",
     "packages/*",
-    "packages/features/*"
+    "packages/features/*",
+    "packages/core/accessibility",
+    "packages/core/cache",
+    "packages/core/design-system"
   ],
   "scripts": {
     "build": "turbo run build",

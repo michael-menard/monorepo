@@ -1,5 +1,5 @@
 {
-  "name": "@repo/shared-cache",
+  "name": "@repo/cache",
   "version": "1.0.0",
   "description": "Shared caching utilities for the monorepo",
   "type": "module",

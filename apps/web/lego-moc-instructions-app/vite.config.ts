@@ -196,7 +196,7 @@ export default defineConfig({
       '@repo/gallery': resolve(__dirname, '../../../packages/features/gallery/src'),
       '@repo/moc-instructions': resolve(__dirname, '../../../packages/features/moc-instructions/src'),
       '@repo/profile': resolve(__dirname, '../../../packages/features/profile/src'),
-      '@repo/shared-cache': resolve(__dirname, '../../../packages/shared-cache/src'),
+      '@repo/cache': resolve(__dirname, '../../../packages/core/cache/src'),
       '@monorepo/upload': resolve(__dirname, '../../../packages/upload/src'),
       '@repo/shared': resolve(__dirname, '../../../packages/shared/src'),
     },
@@ -295,7 +295,7 @@ export default defineConfig({
           }
           
           // Cache utilities
-          if (id.includes('@repo/shared-cache')) {
+          if (id.includes('@repo/cache')) {
             return 'cache-utils'
           }
           

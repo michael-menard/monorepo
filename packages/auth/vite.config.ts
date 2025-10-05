@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', 'react-router-dom', 'zod', '@packages/ui', '@packages/shared', '@repo/shared-cache'],
+        external: ['react', 'react-dom', 'react-router-dom', 'zod', '@packages/ui', '@packages/shared', '@repo/cache'],
         output: {
           globals: {
             react: 'React',
@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@packages/ui', '@packages/shared', '@repo/shared-cache'],
+      exclude: ['@packages/ui', '@packages/shared', '@repo/cache'],
     },
   };
 });
