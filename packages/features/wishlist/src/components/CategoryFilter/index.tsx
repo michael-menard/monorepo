@@ -1,8 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { X, Plus, Tag } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Button } from '@repo/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button } from '@repo/ui';
 import { categoryFilterSchema } from '../../schemas';
 import type { CategoryFilterProps } from '../../types';
 

@@ -1,11 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Card,
   CardContent,
   CardDescription,
@@ -15,7 +9,7 @@ import {
 } from '@repo/ui';
 import { Button, Input, Label, Textarea } from '@repo/ui';
 // import { Upload } from '@repo/upload'; // Temporarily disabled
-import { X, FileText, Image, List, Plus } from 'lucide-react';
+import { X, FileText, Image, List } from 'lucide-react';
 import type { UploadFile } from '@repo/upload';
 
 interface CreateMocModalProps {
@@ -108,25 +102,7 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
   }, [errors.description]);
 
   // Upload handlers
-  const handleInstructionsUpload = useCallback((files: UploadFile[]) => {
-    if (files.length > 0) {
-      setFormData(prev => ({ ...prev, instructionsFile: files[0] }));
-      if (errors.instructionsFile) {
-        setErrors(prev => ({ ...prev, instructionsFile: '' }));
-      }
-    }
-  }, [errors.instructionsFile]);
-
-  const handlePartsListUpload = useCallback((files: UploadFile[]) => {
-    setFormData(prev => ({ ...prev, partsLists: files }));
-  }, []);
-
-  const handleImagesUpload = useCallback((files: UploadFile[]) => {
-    setFormData(prev => ({ ...prev, images: files }));
-    if (errors.images) {
-      setErrors(prev => ({ ...prev, images: '' }));
-    }
-  }, [errors.images]);
+  // Upload handlers removed - not currently used
 
   // Remove uploaded file handlers
   const removeInstructionsFile = useCallback(() => {

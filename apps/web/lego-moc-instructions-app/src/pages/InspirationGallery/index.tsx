@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 // import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@repo/ui';
 import { Plus } from 'lucide-react';
 import { Gallery } from '@repo/gallery';
-import { useGetInspirationItemsQuery, useLikeInspirationItemMutation } from '@repo/gallery';
-import type { InspirationFilters } from '@repo/gallery';
+// import { useGetInspirationItemsQuery, useLikeInspirationItemMutation } from '@repo/gallery';
+// import type { InspirationFilters } from '@repo/gallery';
 
 
 
 const InspirationGallery: React.FC = () => {
   // const navigate = useNavigate();
-  const [filters, setFilters] = useState<InspirationFilters>({
-    limit: 12,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-  });
+  // const [filters, setFilters] = useState<InspirationFilters>({
+  //   limit: 12,
+  //   sortBy: 'createdAt',
+  //   sortOrder: 'desc',
+  // });
 
   // RTK Query hooks - temporarily commented out due to import issues
   // const {

@@ -12,7 +12,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Mock UI components with simpler implementation
-vi.mock('@repo/ui/select', () => ({
+vi.mock('@repo/ui', () => ({
   Select: ({ children, value, onValueChange }: any) => (
     <div data-testid="select-wrapper">
       <select value={value} onChange={(e) => onValueChange(e.target.value)} data-testid="category-select">
@@ -24,9 +24,6 @@ vi.mock('@repo/ui/select', () => ({
   SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
   SelectTrigger: ({ children }: any) => <div>{children}</div>,
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-}));
-
-vi.mock('@repo/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}

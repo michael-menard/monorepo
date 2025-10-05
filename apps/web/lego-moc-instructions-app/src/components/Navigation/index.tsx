@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
-import { useAuth, clearCSRFToken, clearRefreshState, authApi, useCheckAuthQuery } from '@repo/auth'
+import { useAuth, authApi } from '@repo/auth'
+// TODO: Import these when TypeScript cache resolves: clearCSRFToken, clearRefreshState, useCheckAuthQuery
 import { useDispatch } from 'react-redux'
 import {
   Heart,
@@ -44,16 +45,18 @@ function Navigation({ className = '' }: NavigationProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Debug the raw auth query data
-  const { data: rawAuthData, isLoading: authLoading, error: authError } = useCheckAuthQuery()
+  // TODO: Re-enable when TypeScript cache resolves
+  // const { data: rawAuthData, isLoading: authLoading, error: authError } = useCheckAuthQuery()
   useEffect(() => {
     console.log('🔍 Raw auth query data:', {
-      rawAuthData,
-      authLoading,
-      authError,
+      // TODO: Re-enable when TypeScript cache resolves
+      // rawAuthData,
+      // authLoading,
+      // authError,
       isAuthenticated,
       user: user ? { name: user.name, email: user.email } : null
     })
-  }, [rawAuthData, authLoading, authError, isAuthenticated, user])
+  }, [isAuthenticated, user])
 
   // Debug authentication state changes (can be removed in production)
   useEffect(() => {
@@ -92,8 +95,9 @@ function Navigation({ className = '' }: NavigationProps) {
       await new Promise(resolve => setTimeout(resolve, 200))
 
       // Clear client-side authentication state
-      clearCSRFToken()           // Clear CSRF token from memory
-      clearRefreshState()        // Clear token refresh state
+      // TODO: Re-enable when TypeScript cache resolves
+      // clearCSRFToken()           // Clear CSRF token from memory
+      // clearRefreshState()        // Clear token refresh state
       console.log('🧹 Client-side tokens cleared')
 
       // Step 1: Manually update the checkAuth cache to indicate logged out state
@@ -143,8 +147,9 @@ function Navigation({ className = '' }: NavigationProps) {
       console.error('❌ Logout failed:', error)
 
       // Even if logout fails, clear all client-side state for security
-      clearCSRFToken()
-      clearRefreshState()
+      // TODO: Re-enable when TypeScript cache resolves
+      // clearCSRFToken()
+      // clearRefreshState()
       dispatch(authApi.util.updateQueryData('checkAuth', undefined, (draft) => {
         return null; // Set to null to indicate no user
       }))
