@@ -1,0 +1,178 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      auth-service: ${{ steps.changes.outputs.auth-service }}
+      lego-projects-api: ${{ steps.changes.outputs.lego-projects-api }}
+      lego-moc-instructions-app: ${{ steps.changes.outputs.lego-moc-instructions-app }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          base: ${{ github.event.before }}
+          filters: |
+            auth-service:
+              - 'apps/api/auth-service/**'
+              - 'packages/**'
+            lego-projects-api:
+              - 'apps/api/lego-projects-api/**'
+              - 'packages/**'
+            lego-moc-instructions-app:
+              - 'apps/web/lego-moc-instructions-app/**'
+              - 'packages/**'
+
+  deploy-auth-service:
+    name: Deploy Auth Service
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.auth-service == 'true' || github.event_name == 'workflow_dispatch'
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm turbo build --filter="@repo/api-auth-service^..."
+
+      - name: Build Auth Service
+        run: pnpm turbo build --filter="@repo/api-auth-service"
+
+      - name: Deploy to Railway/Vercel/AWS
+        id: deploy
+        run: |
+          echo "Deploying Auth Service to ${{ github.event.inputs.environment || 'production' }}"
+          # Add your deployment commands here
+          # Example for Railway:
+          # railway deploy --service auth-service
+          # Example for Vercel:
+          # vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+          # Example for AWS:
+          # aws deploy create-deployment ...
+          echo "url=https://auth-service.yourdomain.com" >> $GITHUB_OUTPUT
+
+  deploy-lego-projects-api:
+    name: Deploy LEGO Projects API
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.lego-projects-api == 'true' || github.event_name == 'workflow_dispatch'
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm turbo build --filter="lego-projects-api^..."
+
+      - name: Build LEGO Projects API
+        run: pnpm turbo build --filter="lego-projects-api"
+
+      - name: Deploy to Railway/Vercel/AWS
+        id: deploy
+        run: |
+          echo "Deploying LEGO Projects API to ${{ github.event.inputs.environment || 'production' }}"
+          # Add your deployment commands here
+          echo "url=https://api.yourdomain.com" >> $GITHUB_OUTPUT
+
+  deploy-web-app:
+    name: Deploy Web App
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.lego-moc-instructions-app == 'true' || github.event_name == 'workflow_dispatch'
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app^..."
+
+      - name: Build Web App
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app"
+
+      - name: Deploy to Vercel/Netlify/AWS
+        id: deploy
+        run: |
+          echo "Deploying Web App to ${{ github.event.inputs.environment || 'production' }}"
+          # Add your deployment commands here
+          # Example for Vercel:
+          # vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+          # Example for Netlify:
+          # netlify deploy --prod --auth ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          echo "url=https://yourdomain.com" >> $GITHUB_OUTPUT

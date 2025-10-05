@@ -1,0 +1,200 @@
+name: LEGO MOC Instructions App CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/web/lego-moc-instructions-app/**'
+      - 'packages/**'
+      - '.github/workflows/lego-moc-instructions-app.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/web/lego-moc-instructions-app/**'
+      - 'packages/**'
+      - '.github/workflows/lego-moc-instructions-app.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  NODE_OPTIONS: '--max-old-space-size=4096'
+
+jobs:
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app^..."
+
+      - name: Run unit tests
+        run: pnpm turbo test --filter="@repo/lego-moc-instructions-app"
+
+      - name: Run tests with coverage
+        run: pnpm turbo test:coverage --filter="@repo/lego-moc-instructions-app"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./apps/web/lego-moc-instructions-app/coverage/lcov.info
+          flags: lego-moc-instructions-app
+          name: lego-moc-instructions-app-coverage
+
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+        working-directory: apps/web/lego-moc-instructions-app
+
+      - name: Build dependencies
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app^..."
+
+      - name: Build app
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app"
+
+      - name: Run E2E tests
+        run: pnpm turbo test:e2e --filter="@repo/lego-moc-instructions-app"
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/lego-moc-instructions-app/playwright-report/
+          retention-days: 30
+
+  build:
+    name: Build App
+    runs-on: ubuntu-latest
+    needs: [test-unit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app^..."
+
+      - name: Build app
+        run: pnpm turbo build --filter="@repo/lego-moc-instructions-app"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lego-moc-instructions-app-build
+          path: apps/web/lego-moc-instructions-app/dist/
+          retention-days: 7
+
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm turbo lint --filter="@repo/lego-moc-instructions-app"
+
+      - name: Type check
+        run: pnpm turbo check-types --filter="@repo/lego-moc-instructions-app"
+
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lego-moc-instructions-app-build
+          path: apps/web/lego-moc-instructions-app/dist/
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.12.x
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
