@@ -29,14 +29,7 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@repo/auth": ["../../packages/core/auth/src"],
-      "@repo/auth/*": ["../../packages/core/auth/src/*"],
-      "@repo/auth/components/TanStackRouteGuard": ["../../packages/core/auth/src/components/TanStackRouteGuard/index.tsx"],
-      "@repo/ui": ["../../packages/core/ui/src"],
-      "@repo/gallery": ["../../packages/features/gallery/src"],
-      "@repo/profile": ["../../packages/features/profile/src"],
-      "@repo/shared": ["../../packages/shared/src"]
+      "@/*": ["./src/*"]
     }
   }
 }

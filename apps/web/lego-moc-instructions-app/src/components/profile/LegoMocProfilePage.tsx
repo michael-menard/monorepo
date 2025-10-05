@@ -61,8 +61,8 @@ export const LegoMocProfilePage: React.FC<LegoMocProfilePageProps> = ({
 }) => {
   // Create sidebar content with LEGO-specific information
   const sidebarContent = (
-    <ProfileLayoutSidebar
-      avatar={
+    <div className="space-y-6">
+      {/* Avatar Section */}
         <div className="flex flex-col items-center space-y-4">
           <ProfileAvatar
             avatarUrl={user.avatar}
@@ -87,23 +87,16 @@ export const LegoMocProfilePage: React.FC<LegoMocProfilePageProps> = ({
             {stats.buildingLevel} Builder
           </Badge>
         </div>
-      }
-      profileInfo={
-        <ProfileAvatarInfo
-          userName={user.name}
-          userEmail={user.email}
-          username={user.username}
-          title={`${stats.buildingLevel} LEGO Builder`}
-          location={user.location}
-          joinDate={user.joinDate}
-          badges={[
-            ...(user.isVerified ? [{ label: 'Verified Builder', variant: 'default' as const }] : []),
-            ...(user.isPremium ? [{ label: 'Premium Member', variant: 'secondary' as const }] : []),
-            ...(stats.totalMocs > 50 ? [{ label: 'Prolific Creator', variant: 'outline' as const }] : []),
-          ]}
-        />
-      }
-      additionalContent={
+
+      {/* Profile Info Section */}
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">{user.name}</h2>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <p className="text-sm">{`${stats.buildingLevel} LEGO Builder`}</p>
+          {user.location && <p className="text-sm text-muted-foreground">{user.location}</p>}
+        </div>
+
+      {/* Additional Content */}
         <div className="space-y-6">
           {/* Bio Section */}
           {user.bio && (
@@ -232,8 +225,7 @@ export const LegoMocProfilePage: React.FC<LegoMocProfilePageProps> = ({
             </Button>
           </div>
         </div>
-      }
-    />
+    </div>
   );
 
   return (

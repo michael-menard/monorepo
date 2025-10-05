@@ -101,7 +101,7 @@ function Navigation({ className = '' }: NavigationProps) {
       console.log('🧹 Client-side tokens cleared')
 
       // Step 1: Manually update the checkAuth cache to indicate logged out state
-      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (draft) => {
+      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (_draft) => {
         return null; // Set to null to indicate no user
       }))
       console.log('🔄 Auth cache manually cleared')
@@ -150,7 +150,7 @@ function Navigation({ className = '' }: NavigationProps) {
       // TODO: Re-enable when TypeScript cache resolves
       // clearCSRFToken()
       // clearRefreshState()
-      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (draft) => {
+      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (_draft) => {
         return null; // Set to null to indicate no user
       }))
       dispatch(authApi.util.removeQueryData('checkAuth', undefined))
@@ -184,7 +184,7 @@ function Navigation({ className = '' }: NavigationProps) {
         </Link>
 
         <Link
-          to="/inspiration-gallery"
+          to="/inspiration"
           className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <Lightbulb className="h-4 w-4" />

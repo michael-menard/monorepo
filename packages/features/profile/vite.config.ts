@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import dts from 'vite-plugin-dts';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
@@ -8,7 +9,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      dts({
+        insertTypesEntry: true,
+        exclude: ['**/*.test.*', '**/*.spec.*', '**/test/**', '**/tests/**'],
+      }),
+    ],
     build: {
       lib: {
         entry: path.resolve(__dirname, 'src/index.ts'),

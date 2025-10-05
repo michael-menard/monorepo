@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/profile.js",
-  "browser": "./dist/profile.js", 
+  "browser": "./dist/profile.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -31,8 +31,8 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@reduxjs/toolkit": "^2.8.2",
     "@repo/auth": "workspace:*",
-    "@repo/upload": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@repo/upload": "workspace:*",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "framer-motion": "^12.23.3",
@@ -59,6 +59,7 @@
     "jsdom": "^26.1.0",
     "typescript": "^5.8.3",
     "vite": "^5.2.10",
+    "vite-plugin-dts": "4.5.4",
     "vitest": "^3.2.4"
   },
   "peerDependencies": {

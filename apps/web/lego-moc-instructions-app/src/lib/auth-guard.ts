@@ -10,13 +10,10 @@ export const createTanStackRouteGuard = (
   options: Omit<TanStackRouteGuardOptions, 'store'> = {},
   redirectFn?: (options: { to: string; replace?: boolean }) => any,
 ) => {
-  return baseCreateTanStackRouteGuard(
-    {
-      ...options,
-      store, // Automatically provide the store
-    },
-    redirectFn
-  );
+  return baseCreateTanStackRouteGuard({
+    ...options,
+    store, // Automatically provide the store
+  });
 };
 
 export type { TanStackRouteGuardOptions };

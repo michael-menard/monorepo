@@ -10,14 +10,15 @@
  */
 
 import { useEffect, useState } from 'react'
-import { 
-  clearCSRFToken,
-  getCSRFHeaders,
-  getCSRFToken, 
-  hasCSRFToken, 
-  initializeCSRF,
-  refreshCSRFToken
-} from '@repo/auth'
+// TODO: Fix CSRF imports
+// import {
+//   clearCSRFToken,
+//   getCSRFHeaders,
+//   getCSRFToken,
+//   hasCSRFToken,
+//   initializeCSRF,
+//   refreshCSRFToken
+// } from '@repo/auth'
 import { authApi } from '../../services/authApi'
 import { useCreateMOCInstructionMutation } from '../../services/api'
 
