@@ -1,9 +1,8 @@
 import { z } from 'zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
-import { useAuth, clearCSRFToken, clearRefreshState } from '@repo/auth'
+import { useAuth, clearCSRFToken, clearRefreshState, authApi, useCheckAuthQuery } from '@repo/auth'
 import { useDispatch } from 'react-redux'
-import { authApi, useCheckAuthQuery } from '@repo/auth/store/authApi'
 import {
   Heart,
   LogOut,

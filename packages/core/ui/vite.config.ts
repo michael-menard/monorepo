@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import dts from 'vite-plugin-dts';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -7,7 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      dts({
+        insertTypesEntry: true,
+        exclude: ['**/*.stories.ts', '**/*.stories.tsx', '**/*.test.ts', '**/*.test.tsx']
+      })
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -23,6 +30,11 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
+        output: {
+          // Ensure proper file extensions for ES modules
+          entryFileNames: '[name].js',
+          chunkFileNames: '[name].js',
+        },
         external: [
           'react',
           'react-dom',
