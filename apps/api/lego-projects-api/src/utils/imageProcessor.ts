@@ -17,8 +17,16 @@ import { Request, Response, NextFunction } from 'express';
 export interface ImageProcessingConfig {
   width?: number;
   height?: number;
+  maxWidth?: number;
+  maxHeight?: number;
   quality?: number;
   format?: string;
+  fit?: string;
+  progressive?: boolean;
+  optimizeCoding?: boolean;
+  stripMetadata?: boolean;
+  sharpen?: boolean;
+  rotate?: boolean;
 }
 
 export interface ImageOptimizationStats {
@@ -30,7 +38,7 @@ export interface ImageOptimizationStats {
 // Stub functions
 const getPreset = (preset: string): ImageProcessingConfig => ({ width: 200, height: 200, quality: 80 });
 export const canProcessImage = (file: any): boolean => true;
-export const getOptimalFormat = (file: any): string => 'jpeg';
+export const getOptimalFormat = (filename: string, mimetype?: string): string => 'jpeg';
 
 // Default configuration for avatar images (using shared preset)
 export const DEFAULT_AVATAR_CONFIG: ImageProcessingConfig = getPreset('avatar');

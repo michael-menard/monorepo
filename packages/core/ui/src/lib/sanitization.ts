@@ -31,7 +31,12 @@ export interface SanitizationConfig {
   /** Allow specific tags */
   allowedTags?: readonly string[];
   /** Custom DOMPurify configuration */
-  customConfig?: DOMPurify.Config;
+  customConfig?: {
+    ALLOWED_TAGS?: readonly string[];
+    ALLOWED_ATTR?: readonly string[];
+    KEEP_CONTENT?: boolean;
+    [key: string]: any;
+  };
 }
 
 /**
