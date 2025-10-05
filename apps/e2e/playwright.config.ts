@@ -28,7 +28,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3006',
+    baseURL: 'http://localhost:3002',
 
     /* Run headless by default */
     headless: true,
@@ -64,5 +64,6 @@ export default defineConfig({
     url: 'http://localhost:3002',
     reuseExistingServer: true, // Always reuse existing server
     timeout: 120 * 1000,
+    cwd: '../web/lego-moc-instructions-app',
   },
 })

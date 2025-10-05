@@ -97,14 +97,17 @@ pnpm test:auth:setup
 
 ### Individual Test Files
 ```bash
+# From e2e app directory
+cd apps/e2e
+
 # Specific test files
-pnpm playwright test tests/auth/complete-auth-flow.spec.ts
-pnpm playwright test tests/auth/profile-routing.spec.ts
-pnpm playwright test tests/auth/simple-auth-test.spec.ts
+pnpm test tests/auth/complete-auth-flow.spec.ts
+pnpm test tests/auth/profile-routing.spec.ts
+pnpm test tests/auth/simple-auth-test.spec.ts
 
 # With options
-pnpm playwright test tests/auth/complete-auth-flow.spec.ts --headed
-pnpm playwright test tests/auth/profile-routing.spec.ts --debug
+pnpm test tests/auth/complete-auth-flow.spec.ts --headed
+pnpm test tests/auth/profile-routing.spec.ts --debug
 ```
 
 ## 🔧 Prerequisites

@@ -2,6 +2,14 @@
 
 This document describes how to run Playwright tests in the monorepo using the custom test runner script.
 
+## Overview
+
+All Playwright end-to-end tests are now centralized in the `apps/e2e` directory. This provides:
+- A single location for all E2E tests across the monorepo
+- Better test organization and maintenance
+- Simplified configuration and setup
+- Easier test discovery and execution
+
 ## Quick Start
 
 ### Run All Tests
@@ -37,7 +45,7 @@ pnpm playwright --ui
 
 ### Root Level Scripts (package.json)
 - `pnpm test:e2e` - Run all e2e tests via turbo
-- `pnpm test:e2e:all` - Run all Playwright tests for the lego app
+- `pnpm test:e2e:all` - Run all Playwright tests from the e2e app
 - `pnpm test:e2e:auth` - Run auth flow tests
 - `pnpm test:e2e:login` - Run login tests
 - `pnpm test:e2e:signup` - Run signup tests
@@ -99,12 +107,17 @@ node scripts/run-playwright.js --retries 3
 
 ### Test Files Location
 ```
-apps/web/lego-moc-instructions-app/tests/
+apps/e2e/tests/
 ├── auth/
-│   ├── auth-flow.spec.ts
-│   ├── auth-flow-simple.spec.ts
-│   └── utils.ts
-└── README.md
+│   ├── complete-auth-flow.spec.ts
+│   ├── simple-auth-test.spec.ts
+│   ├── utils.ts
+│   └── test-users.ts
+├── navigation/
+├── pages/
+├── profile/
+├── fixtures/
+└── helpers/
 ```
 
 ### Test Categories
@@ -116,7 +129,7 @@ apps/web/lego-moc-instructions-app/tests/
 ## Configuration
 
 ### Playwright Config
-Located at: `apps/web/lego-moc-instructions-app/playwright.config.ts`
+Located at: `apps/e2e/playwright.config.ts`
 
 Key settings:
 - Test timeout: 30 seconds

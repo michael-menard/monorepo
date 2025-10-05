@@ -50,8 +50,12 @@ E2E tests use Playwright and are configured to run headless on Chrome by default
 
 #### Run All Tests
 ```bash
-cd apps/web/lego-moc-instructions-app
+# From monorepo root
 pnpm test:e2e
+
+# Or from e2e app directory
+cd apps/e2e
+pnpm test
 ```
 
 #### Run Specific Test Suite
@@ -78,10 +82,10 @@ pnpm test:e2e --grep "should handle successful email verification" --timeout=100
 #### Debug Mode
 ```bash
 # Run in headed mode for debugging
-npx playwright test --headed
+pnpm test:e2e:headed
 
 # Run with debug logs
-DEBUG=pw:api npx playwright test
+pnpm test:e2e:debug
 
 # Open Playwright Inspector
 npx playwright test --debug

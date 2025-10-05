@@ -1,6 +1,6 @@
 # Playwright Test Suite
 
-This directory contains end-to-end tests for the LEGO MOC Instructions App using Playwright.
+This directory contains centralized end-to-end tests for the monorepo using Playwright.
 
 ## Test Structure
 
@@ -49,23 +49,27 @@ The `AuthTestUtils` class provides helper methods for common auth testing tasks:
 ### Test Commands
 
 ```bash
-# Run all Playwright tests
+# From monorepo root
 pnpm test:e2e
 
+# From e2e app directory
+cd apps/e2e
+pnpm test
+
 # Run tests with UI mode (interactive)
-pnpm test:e2e:ui
+pnpm test:ui
 
 # Run tests in headed mode (see browser)
-pnpm test:e2e:headed
+pnpm test:headed
 
 # Run tests in debug mode
-pnpm test:e2e:debug
+pnpm test:debug
 
 # Run specific test file
-pnpm test:e2e tests/auth/auth-flow.spec.ts
+pnpm test tests/auth/complete-auth-flow.spec.ts
 
 # Run tests in specific browser
-pnpm test:e2e --project=chromium
+pnpm test --project=chromium
 ```
 
 ### Test Configuration

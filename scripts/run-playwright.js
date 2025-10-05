@@ -8,7 +8,6 @@
  *   node scripts/run-playwright.js [options]
  *
  * Options:
- *   --app <app-name>           Run tests for specific app (default: lego-moc-instructions-app)
  *   --grep <pattern>           Filter tests by pattern
  *   --headed                   Run tests in headed mode
  *   --debug                    Run tests in debug mode
@@ -24,7 +23,7 @@
  * Examples:
  *   node scripts/run-playwright.js --grep "Auth Flow"
  *   node scripts/run-playwright.js --headed --browser chromium
- *   node scripts/run-playwright.js --app lego-moc-instructions-app --grep "Login"
+ *   node scripts/run-playwright.js --grep "Login"
  *   node scripts/run-playwright.js --ui
  */
 
@@ -43,7 +42,6 @@ const __dirname = dirname(__filename);
 // Parse command line arguments
 const args = process.argv.slice(2);
 const options = {
-  app: 'lego-moc-instructions-app',
   grep: null,
   headed: false,
   debug: false,
@@ -63,10 +61,6 @@ for (let i = 0; i < args.length; i++) {
   const nextArg = args[i + 1];
 
   switch (arg) {
-    case '--app':
-      options.app = nextArg;
-      i++;
-      break;
     case '--grep':
       options.grep = nextArg;
       i++;
@@ -119,7 +113,6 @@ Usage:
   node scripts/run-playwright.js [options]
 
 Options:
-  --app <app-name>           Run tests for specific app (default: lego-moc-instructions-app)
   --grep <pattern>           Filter tests by pattern
   --headed                   Run tests in headed mode
   --debug                    Run tests in debug mode
@@ -135,7 +128,7 @@ Options:
 Examples:
   node scripts/run-playwright.js --grep "Auth Flow"
   node scripts/run-playwright.js --headed --browser chromium
-  node scripts/run-playwright.js --app lego-moc-instructions-app --grep "Login"
+  node scripts/run-playwright.js --grep "Login"
   node scripts/run-playwright.js --ui
 `);
   process.exit(0);
@@ -143,8 +136,8 @@ Examples:
 
 // Build Playwright command
 function buildPlaywrightCommand() {
-  const appPath = join(__dirname, '..', 'apps', 'web', options.app);
-  const baseCommand = ['pnpm', 'playwright', 'test'];
+  const appPath = join(__dirname, '..', 'apps', 'e2e');
+  const baseCommand = ['pnpm', 'test'];
 
   // Add options
   if (options.list) {
@@ -186,7 +179,7 @@ function buildPlaywrightCommand() {
 function runPlaywright() {
   const { command, args, cwd } = buildPlaywrightCommand();
 
-  console.log(`Running Playwright tests for app: ${options.app}`);
+  console.log('Running Playwright E2E tests');
   console.log(`Command: ${command} ${args.join(' ')}`);
   console.log(`Working directory: ${cwd}`);
   console.log('');

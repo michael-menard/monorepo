@@ -41,7 +41,7 @@
     "**/node_modules/**",
     "**/.turbo/**",
     "**/dist/**",
-    "**/build/**",``
+    "**/build/**",
     "**/.next/**"
   ],
 

@@ -248,8 +248,12 @@ The application uses Ethereal Email for testing email functionality. See [EMAIL_
 
 **Run E2E Tests**:
 ```bash
-cd apps/web/lego-moc-instructions-app
-pnpm test:e2e --grep "email verification"
+# From monorepo root
+pnpm test:e2e:auth
+
+# Or specific email verification tests
+cd apps/e2e
+pnpm test --grep "email verification"
 ```
 
 **Run Unit Tests**:

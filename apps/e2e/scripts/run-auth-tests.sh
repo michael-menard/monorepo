@@ -128,7 +128,7 @@ if ! check_service "http://localhost:3004" "Web App" && ! check_service "http://
 fi
 
 # Check Docker services
-if ! docker-compose -f ../../../docker-compose.dev.yml ps | grep -q "Up"; then
+if ! docker-compose -f ../../docker-compose.dev.yml ps | grep -q "Up"; then
     echo -e "${RED}❌ Docker infrastructure services not running${NC}"
     SERVICES_OK=false
 fi
@@ -140,9 +140,9 @@ if [ "$SERVICES_OK" = false ]; then
     
     # Start Docker infrastructure
     echo -e "${BLUE}🐳 Starting Docker infrastructure...${NC}"
-    cd ../../..
+    cd ../..
     docker-compose -f docker-compose.dev.yml up -d
-    cd apps/web/lego-moc-instructions-app
+    cd apps/e2e
     
     # Wait for infrastructure
     sleep 10
@@ -150,10 +150,10 @@ if [ "$SERVICES_OK" = false ]; then
     # Start auth service if not running
     if ! check_service "http://localhost:9000/api/auth/csrf" "Auth Service"; then
         echo -e "${BLUE}🔐 Starting Auth Service...${NC}"
-        cd ../../api/auth-service
-        pnpm dev > ../../../../logs/auth-service.log 2>&1 &
+        cd ../api/auth-service
+        pnpm dev > ../../../logs/auth-service.log 2>&1 &
         AUTH_PID=$!
-        cd ../../web/lego-moc-instructions-app
+        cd ../../e2e
         
         # Wait for auth service
         wait_for_service "http://localhost:9000/api/auth/csrf" "Auth Service"
@@ -175,7 +175,7 @@ fi
 # Seed users if needed
 echo ""
 echo -e "${BLUE}👥 Checking test users...${NC}"
-cd ../../..
+cd ../..
 USER_COUNT=$(mongosh mongodb://admin:password123@localhost:27017/backend?authSource=admin --quiet --eval "db.users.countDocuments()" 2>/dev/null || echo "0")
 
 if [ "$USER_COUNT" -lt 10 ]; then
@@ -185,7 +185,7 @@ else
     echo -e "${GREEN}✅ Test users already seeded ($USER_COUNT users)${NC}"
 fi
 
-cd apps/web/lego-moc-instructions-app
+cd apps/e2e
 
 # If setup-only flag is set, exit here
 if [ "$SETUP_ONLY" = true ]; then
@@ -199,12 +199,12 @@ if [ "$SETUP_ONLY" = true ]; then
     echo "   👥 Test Users: Seeded and ready"
     echo ""
     echo "You can now run tests manually:"
-    echo "   pnpm playwright test tests/auth/"
+    echo "   pnpm test tests/auth/"
     exit 0
 fi
 
 # Build test command
-PLAYWRIGHT_CMD="pnpm playwright test"
+PLAYWRIGHT_CMD="pnpm test"
 
 if [ "$SPECIFIC_TEST" != "" ]; then
     PLAYWRIGHT_CMD="$PLAYWRIGHT_CMD tests/auth/$SPECIFIC_TEST"

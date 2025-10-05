@@ -2,7 +2,7 @@
 
 import { getCSRFHeaders, refreshCSRFToken } from '@repo/auth'
 
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:9000'
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_SERVICE_BASE_URL || 'http://localhost:9300'
 
 interface ApiResponse<T = any> {
   success: boolean

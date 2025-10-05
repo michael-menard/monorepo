@@ -82,29 +82,38 @@ This directory contains comprehensive end-to-end tests for all pages in the Lego
 
 ### Run All Page Tests
 ```bash
-cd apps/web/lego-moc-instructions-app
-pnpm test:run
+# From monorepo root
+pnpm test:e2e:pages
+
+# From e2e app directory
+cd apps/e2e
+pnpm test:pages
 ```
 
 ### Run Specific Page Tests
 ```bash
-# Run only home page tests
-pnpm test:run tests/pages/home-page.spec.ts
+# From e2e app directory
+cd apps/e2e
 
-# Run only MOC gallery tests
-pnpm test:run tests/pages/moc-gallery.spec.ts
+# Run only home page tests
+pnpm test tests/pages/app-pages-native.spec.ts
+
+# Run only specific page tests
+pnpm test tests/pages/ --grep "homepage"
 
 # Run only error page tests
-pnpm test:run tests/pages/error-pages.spec.ts
+pnpm test tests/pages/ --grep "error"
 ```
 
 ### Run Tests with UI
 ```bash
+cd apps/e2e
 pnpm test:ui
 ```
 
 ### Run Tests in Debug Mode
 ```bash
+cd apps/e2e
 pnpm test:debug
 ```
 

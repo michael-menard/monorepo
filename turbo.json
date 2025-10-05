@@ -29,8 +29,8 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*", "vitest.config.*", "jest.config.*"],
-      "outputs": ["coverage/**"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "vitest.config.*", "jest.config.*", "playwright.config.*"],
+      "outputs": ["coverage/**", "test-results/**", "playwright-report/**"]
     },
     "test:watch": {
       "cache": false,

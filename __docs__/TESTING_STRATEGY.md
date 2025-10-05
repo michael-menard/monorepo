@@ -154,21 +154,23 @@ describe('Auth API Integration', () => {
 ### 3. End-to-End Tests (6+ tests)
 **Purpose**: Test complete user workflows through the entire application stack
 
-**Location**: `tests/` directory in the main web application
+**Location**: Centralized in the dedicated e2e app
 ```
-apps/web/lego-moc-instructions-app/tests/
+apps/e2e/tests/
 ├── auth/
-│   ├── auth-flow.spec.ts
-│   ├── auth-flow-simple.spec.ts
-│   ├── forgot-password.spec.ts
-│   ├── forgot-password-e2e.spec.ts
-│   └── reset-password-e2e.spec.ts
-└── simple-test.spec.ts
+│   ├── complete-auth-flow.spec.ts
+│   ├── simple-auth-test.spec.ts
+│   ├── password-reset-flow.spec.ts
+│   ├── email-verification-flow.spec.ts
+│   └── session-management.spec.ts
+├── navigation/
+├── pages/
+└── profile/
 ```
 
 **Example E2E Test**:
 ```tsx
-// apps/web/lego-moc-instructions-app/tests/auth/auth-flow.spec.ts
+// apps/e2e/tests/auth/complete-auth-flow.spec.ts
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication Flow', () => {
@@ -221,7 +223,7 @@ export default defineConfig({
 
 ### Playwright Configuration
 ```typescript
-// apps/web/lego-moc-instructions-app/playwright.config.ts
+// apps/e2e/playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({

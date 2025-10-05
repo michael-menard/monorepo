@@ -68,8 +68,8 @@ export class AuthTestUtils {
    * Navigate to a specific auth page and verify it loaded
    */
   async navigateToAuthPage(route: 'login' | 'signup' | 'forgot-password' | 'reset-password', expectedText?: string) {
-    await this.page.goto(`/${route}`);
-    
+    await this.page.goto(`/auth/${route}`, { waitUntil: 'networkidle', timeout: 15000 });
+
     if (expectedText) {
       await expect(this.page.getByText(expectedText)).toBeVisible();
     }
@@ -108,41 +108,95 @@ export class AuthTestUtils {
   }
 
   /**
-   * Mock auth API responses
+   * Monitor real API calls for E2E testing (no mocking)
+   * This function tracks actual network requests to verify real API integration
    */
-  async mockAuthAPI(endpoint: string, response: any, status = 200) {
-    await this.page.route(`${BACKEND_URLS.auth}/api/auth/**`, async route => {
-      const url = route.request().url();
-      
-      if (url.includes(endpoint)) {
-        await route.fulfill({
-          status,
-          contentType: 'application/json',
-          body: JSON.stringify(response),
+  async monitorRealApiCalls() {
+    const authRequests: any[] = [];
+    const apiRequests: any[] = [];
+    const errors: any[] = [];
+
+    // Monitor auth service calls (no mocking - just observation)
+    this.page.on('request', request => {
+      const url = request.url();
+      if (url.includes('/api/auth/')) {
+        authRequests.push({
+          url,
+          method: request.method(),
+          timestamp: new Date().toISOString(),
         });
-      } else {
-        await route.continue();
+        console.log(`📡 Real Auth API Request: ${request.method()} ${url}`);
+      }
+      if (url.includes('/api/') && !url.includes('/api/auth/')) {
+        apiRequests.push({
+          url,
+          method: request.method(),
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`📡 Real API Request: ${request.method()} ${url}`);
       }
     });
+
+    // Monitor responses for errors
+    this.page.on('response', response => {
+      if (response.status() >= 400) {
+        errors.push({
+          url: response.url(),
+          status: response.status(),
+          statusText: response.statusText(),
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`❌ API Error: ${response.status()} ${response.url()}`);
+      }
+    });
+
+    return { authRequests, apiRequests, errors };
   }
 
   /**
-   * Mock LEGO Projects API responses
+   * Monitor real API calls for E2E testing (no mocking)
+   * This function tracks actual network requests to verify real API integration
    */
-  async mockProjectsAPI(endpoint: string, response: any, status = 200) {
-    await this.page.route(`${BACKEND_URLS.api}/api/**`, async route => {
-      const url = route.request().url();
-      
-      if (url.includes(endpoint)) {
-        await route.fulfill({
-          status,
-          contentType: 'application/json',
-          body: JSON.stringify(response),
+  async monitorRealApiCalls() {
+    const authRequests: any[] = [];
+    const apiRequests: any[] = [];
+    const errors: any[] = [];
+
+    // Monitor auth service calls (no mocking - just observation)
+    this.page.on('request', request => {
+      const url = request.url();
+      if (url.includes('/api/auth/')) {
+        authRequests.push({
+          url,
+          method: request.method(),
+          timestamp: new Date().toISOString(),
         });
-      } else {
-        await route.continue();
+        console.log(`📡 Real Auth API Request: ${request.method()} ${url}`);
+      }
+      if (url.includes('/api/') && !url.includes('/api/auth/')) {
+        apiRequests.push({
+          url,
+          method: request.method(),
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`📡 Real API Request: ${request.method()} ${url}`);
       }
     });
+
+    // Monitor responses for errors
+    this.page.on('response', response => {
+      if (response.status() >= 400) {
+        errors.push({
+          url: response.url(),
+          status: response.status(),
+          statusText: response.statusText(),
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`❌ API Error: ${response.status()} ${response.url()}`);
+      }
+    });
+
+    return { authRequests, apiRequests, errors };
   }
 
   /**

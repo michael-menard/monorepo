@@ -64,32 +64,38 @@ npx playwright test tests/profile/
 
 ### Run Individual Test Suites
 ```bash
+# From e2e app directory
+cd apps/e2e
+
 # Layout and structure tests
-npx playwright test tests/profile/profile-rtk-layout.spec.ts
+pnpm test tests/profile/profile-rtk-layout.spec.ts
 
 # RTK integration tests
-npx playwright test tests/profile/profile-rtk-integration.spec.ts
+pnpm test tests/profile/profile-rtk-integration.spec.ts
 
 # Enhanced avatar upload tests
-npx playwright test tests/profile/profile-avatar-enhanced.spec.ts
+pnpm test tests/profile/profile-avatar-enhanced.spec.ts
 
 # LEGO-themed content tests
-npx playwright test tests/profile/profile-lego-content.spec.ts
+pnpm test tests/profile/profile-lego-content.spec.ts
 ```
 
 ### Run Tests with UI Mode
 ```bash
-npx playwright test tests/profile/ --ui
+cd apps/e2e
+pnpm test tests/profile/ --ui
 ```
 
 ### Run Tests in Debug Mode
 ```bash
-npx playwright test tests/profile/ --debug
+cd apps/e2e
+pnpm test tests/profile/ --debug
 ```
 
 ### Generate Test Report
 ```bash
-npx playwright test tests/profile/
+cd apps/e2e
+pnpm test tests/profile/
 npx playwright show-report
 ```
 
