@@ -14,7 +14,6 @@ export {
 
 // Hooks
 export { useAuth } from './hooks/useAuth';
-export * from './hooks';
 
 // Store
 export { default as authReducer, authSlice } from './store/authSlice';
