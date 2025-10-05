@@ -363,9 +363,6 @@ __tests__/           # Test directories
 # Unit tests
 pnpm test
 
-# Integration tests
-pnpm test:integration
-
 # E2E tests
 pnpm test:e2e
 
@@ -379,7 +376,6 @@ pnpm --filter @repo/ui test
 ### Test Coverage
 
 - **Unit Tests**: 90%+ coverage required
-- **Integration Tests**: API endpoints and database operations
 - **E2E Tests**: Critical user journeys
 - **Visual Regression**: UI component testing
 
