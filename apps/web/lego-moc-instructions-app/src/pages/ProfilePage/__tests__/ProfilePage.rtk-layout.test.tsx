@@ -24,7 +24,7 @@ const createTestStore = () => {
 };
 
 // Mock the shared layout components
-vi.mock('@repo/shared', () => ({
+vi.mock('@repo/profile', () => ({
   ProfileLayout: ({ children, sidebarContent, className }: any) => (
     <div data-testid="profile-layout" className={className}>
       <div data-testid="profile-sidebar">{sidebarContent}</div>

@@ -78,7 +78,7 @@ vi.mock('../LegoProfileContent', () => ({
 }));
 
 // Mock all the layout and UI components
-vi.mock('@repo/shared', () => ({
+vi.mock('@repo/profile', () => ({
   ProfileLayout: ({ children, sidebarContent }: any) => (
     <div data-testid="profile-layout">
       <div data-testid="sidebar">{sidebarContent}</div>

@@ -21,3 +21,8 @@ export { ProfileContent } from './components/ProfileContent';
 export { ProfileDashboard } from './components/ProfileDashboard';
 export { ProfileWishlistSection } from './components/ProfileWishlistSection';
 export { ProfileMocInstructionsSection } from './components/ProfileMocInstructionsSection';
+
+// Export profile avatar and layout components (moved from shared)
+export { ProfileAvatar } from './components/ProfileAvatar';
+export { EnhancedProfileAvatar } from './components/EnhancedProfileAvatar';
+export { ProfileLayout } from './components/ProfileLayout';

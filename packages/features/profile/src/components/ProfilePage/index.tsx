@@ -1,5 +1,7 @@
 import React from 'react';
-import { ProfileLayout, ProfileLayoutSidebar, ProfileAvatar, ProfileAvatarInfo } from '@repo/shared';
+import { ProfileLayout } from '../ProfileLayout';
+import { ProfileAvatar } from '../ProfileAvatar';
+// TODO: Need to check if ProfileLayoutSidebar and ProfileAvatarInfo exist or need to be created
 import type { ProfilePageProps } from '../../types';
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({

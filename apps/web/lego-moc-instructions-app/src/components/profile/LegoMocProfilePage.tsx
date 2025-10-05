@@ -1,5 +1,6 @@
 import React from 'react';
-import { ProfileLayout, ProfileLayoutSidebar, ProfileAvatar, ProfileAvatarInfo } from '@repo/shared';
+import { ProfileLayout, ProfileAvatar } from '@repo/profile';
+// TODO: Need to check if ProfileLayoutSidebar and ProfileAvatarInfo exist or need to be created
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui';
 import { Blocks, BookOpen, Heart, Settings, Trophy, Users, Zap } from 'lucide-react';
 

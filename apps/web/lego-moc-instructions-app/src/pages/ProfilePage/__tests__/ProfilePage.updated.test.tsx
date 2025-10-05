@@ -16,7 +16,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock the shared layout components (new system)
-vi.mock('@repo/shared', () => ({
+vi.mock('@repo/profile', () => ({
   ProfileLayout: ({ children, sidebarContent, className, sidebarWidth, leftOffset, stickysidebar, sidebarBackground }: any) => (
     <div 
       data-testid="profile-layout" 

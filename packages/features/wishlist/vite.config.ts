@@ -21,7 +21,7 @@ export default defineConfig({
         'react',
         'react-dom',
         '@repo/ui',
-        '@repo/shared',
+        '@repo/accessibility',
         '@reduxjs/toolkit',
         '@reduxjs/toolkit/query/react',
         'framer-motion'

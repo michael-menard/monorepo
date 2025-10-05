@@ -26,7 +26,7 @@ const mockFileUpload = vi.fn();
 global.URL.createObjectURL = vi.fn(() => 'mocked-avatar-url');
 
 // Mock shared components with realistic implementations
-vi.mock('@repo/shared', () => ({
+vi.mock('@repo/profile', () => ({
   ProfileLayout: ({ children, sidebarContent, className }: any) => (
     <div className={`profile-layout ${className}`} data-testid="profile-layout">
       <aside className="profile-sidebar" data-testid="profile-sidebar">
