@@ -8,6 +8,8 @@
 
 A comprehensive monorepo for the LEGO MOC (My Own Creation) platform, featuring web applications, API services, and shared packages for building, managing, and sharing LEGO instructions with automated testing and quality assurance.
 
+🚀 **CI/CD Status**: GitHub Actions workflows active for automated testing, security scanning, and quality assurance.
+
 ## 🏗️ Architecture Overview
 
 This monorepo is organized into a modern, scalable architecture with clear separation of concerns:
