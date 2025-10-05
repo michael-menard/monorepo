@@ -37,8 +37,22 @@ export {
   VerifyEmailRequestSchema,
 } from './types/auth';
 
+// Enhanced Schemas (from schemas directory)
+export {
+  UserSchema,
+  AuthResponseSchema,
+  LoginSchema,
+  SignupSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+  VerifyEmailSchema,
+  type LoginFormData,
+  type SignupFormData,
+} from './schemas';
+
 // Utils
 export * from './utils/date';
+export { cn } from './lib/utils';
 
 export {
   useLoginMutation,

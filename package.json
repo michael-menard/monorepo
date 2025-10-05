@@ -150,7 +150,6 @@
     "vitest": "^3.2.4",
     "vitest-axe": "^0.1.0"
   },
-  "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18"
   },

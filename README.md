@@ -19,7 +19,7 @@ Monorepo/
 │   ├── auth/              # Authentication components
 │   ├── ui/                # Base UI components
 │   ├── shared/            # Core utilities
-│   ├── shared-cache/      # Caching utilities
+│   ├── cache/            # Caching utilities
 │   ├── shared-image-utils/ # Image processing
 │   ├── tech-radar/        # Technology radar
 │   └── features/          # Feature packages
@@ -231,7 +231,7 @@ Unified file and image upload system with comprehensive functionality.
 
 ### Utility Packages
 
-#### `@repo/shared-cache`
+#### `@repo/cache`
 Caching utilities for improved performance.
 
 **Features:**

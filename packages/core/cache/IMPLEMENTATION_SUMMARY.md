@@ -6,9 +6,9 @@ This document summarizes the comprehensive caching implementation for the fronte
 
 ## What Was Implemented
 
-### 1. Shared Cache Package (`@repo/shared-cache`)
+### 1. Cache Package (`@repo/cache`)
 
-**Location**: `packages/shared-cache/`
+**Location**: `packages/core/cache/`
 
 **Key Features**:
 - **Multiple Cache Types**: Memory, localStorage, sessionStorage, and Cache API
@@ -225,7 +225,7 @@ const cached = getCachedData('user-preferences', 'localStorage')
 
 ### Image Caching
 ```typescript
-import { CachedImage } from '@repo/shared-cache'
+import { CachedImage } from '@repo/cache'
 
 <CachedImage
   src="https://example.com/image.jpg"
@@ -237,7 +237,7 @@ import { CachedImage } from '@repo/shared-cache'
 
 ### RTK Query Enhancement
 ```typescript
-import { getRTKQueryCacheConfig } from '@repo/shared-cache'
+import { getRTKQueryCacheConfig } from '@repo/cache'
 
 getMOCInstructions: builder.query({
   query: () => 'moc-instructions',
