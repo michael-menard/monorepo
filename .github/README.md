@@ -43,9 +43,9 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
 
 ### Deployment & Maintenance
 
-#### 5. **Deploy (`deploy.yml`)**
-- **Triggers**: Push to `main`, tags, or manual dispatch
-- **Features**:
+#### 5. **Deploy (`deploy.yml`)** - *Currently Disabled*
+- **Status**: Template ready, but disabled until deployment is configured
+- **Features** (when enabled):
   - Environment-specific deployments (staging/production)
   - Smart deployment based on changes
   - Support for multiple deployment platforms

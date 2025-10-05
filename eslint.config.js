@@ -48,9 +48,9 @@ export default [
     },
     rules: {
       'prettier/prettier': 'error',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': 'error',
       '@typescript-eslint/no-explicit-any': 'warn',
-      'no-unused-vars': 'off',
+      'no-unused-vars': 'warn',
       'no-console': 'warn',
       'prefer-const': 'error',
     },

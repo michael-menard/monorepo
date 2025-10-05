@@ -1,4 +1,4 @@
-name: LEGO MOC Instructions App CI/CD
+name: LEGO MOC Instructions App CI
 
 on:
   push:

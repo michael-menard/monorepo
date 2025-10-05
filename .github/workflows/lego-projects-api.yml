@@ -1,4 +1,4 @@
-name: LEGO Projects API CI/CD
+name: LEGO Projects API CI
 
 on:
   push:

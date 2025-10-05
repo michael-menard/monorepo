@@ -1,9 +1,9 @@
 # LEGO MOC Platform Monorepo
 
 [![CI](https://github.com/yourusername/yourrepo/workflows/CI/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/ci.yml)
-[![Auth Service](https://github.com/yourusername/yourrepo/workflows/Auth%20Service%20CI%2FCD/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/auth-service.yml)
-[![LEGO Projects API](https://github.com/yourusername/yourrepo/workflows/LEGO%20Projects%20API%20CI%2FCD/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/lego-projects-api.yml)
-[![LEGO MOC Instructions App](https://github.com/yourusername/yourrepo/workflows/LEGO%20MOC%20Instructions%20App%20CI%2FCD/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/lego-moc-instructions-app.yml)
+[![Auth Service](https://github.com/yourusername/yourrepo/workflows/Auth%20Service%20CI/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/auth-service.yml)
+[![LEGO Projects API](https://github.com/yourusername/yourrepo/workflows/LEGO%20Projects%20API%20CI/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/lego-projects-api.yml)
+[![LEGO MOC Instructions App](https://github.com/yourusername/yourrepo/workflows/LEGO%20MOC%20Instructions%20App%20CI/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/lego-moc-instructions-app.yml)
 [![Security](https://github.com/yourusername/yourrepo/workflows/Dependencies%20%26%20Security/badge.svg)](https://github.com/yourusername/yourrepo/actions/workflows/dependencies.yml)
 
 A comprehensive monorepo for the LEGO MOC (My Own Creation) platform, featuring web applications, API services, and shared packages for building, managing, and sharing LEGO instructions with automated testing and quality assurance.
