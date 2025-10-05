@@ -1,6 +1,6 @@
 # LEGO MOC Platform Monorepo
 
-A comprehensive monorepo for the LEGO MOC (My Own Creation) platform, featuring web applications, API services, and shared packages for building, managing, and sharing LEGO instructions.
+A comprehensive monorepo for the LEGO MOC (My Own Creation) platform, featuring web applications, API services, and shared packages for building, managing, and sharing LEGO instructions with automated testing and quality assurance.
 
 ## 🏗️ Architecture Overview
 
