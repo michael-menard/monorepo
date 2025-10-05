@@ -158,5 +158,17 @@
       "esbuild": "^0.21.5"
     }
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{css,scss}": [
+      "prettier --write"
+    ]
+  },
   "exports": {}
 }

@@ -4,7 +4,7 @@ import { designTokensCss, tailwindPreset as indexTailwindPreset } from '../index
 
 describe('Design System Package', () => {
   describe('Core Exports', () => {
-    it('should export design tokens path', () => {
+    it('should export design tokens path correctly', () => {
       expect(designTokens).toBeDefined();
       expect(typeof designTokens).toBe('string');
       expect(designTokens).toBe('./design-tokens.css');

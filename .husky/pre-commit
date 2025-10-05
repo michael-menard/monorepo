@@ -17,7 +17,20 @@ fi
 echo "✅ lint-staged completed successfully!"
 echo ""
 
-# Step 2: Run Auggie Code Review (optional)
+# Step 2: Run tests on affected packages
+echo "🧪 Running tests on affected packages..."
+./scripts/run-affected-tests.sh
+
+# Check if tests failed
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed on affected packages. Please fix the issues and try again."
+    exit 1
+fi
+
+echo "✅ Tests completed successfully on affected packages!"
+echo ""
+
+# Step 3: Run Auggie Code Review (optional)
 echo "🤖 Running Auggie code review on staged changes..."
 
 # Check if auggie is available
