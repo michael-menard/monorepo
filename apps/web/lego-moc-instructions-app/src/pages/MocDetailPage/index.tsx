@@ -6,10 +6,9 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
-  Badge
+  CardTitle
 } from '@repo/ui';
-import { ArrowLeft, Download, Heart, Share, Calendar, User, Tag, Package, FileText, ExternalLink, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, Download, Calendar, User, Package, FileText, ExternalLink, Plus, Upload } from 'lucide-react';
 
 // Import RTK Query hooks for fetching MOC data and uploading parts list
 import { useGetMOCInstructionQuery, useUploadPartsListMutation } from '../../services/api';
@@ -255,37 +254,9 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                   className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
                 />
                 <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={instruction.type === 'moc' ? 'default' : 'secondary'}>
-                        {instruction.type === 'moc' ? 'My Own Creation' : 'Official Set'}
-                      </Badge>
-                      {instruction.tags && instruction.tags.length > 0 && (
-                        <div className="flex gap-1">
-                          {instruction.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {instruction.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{instruction.tags.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
+                  <div className="flex items-center justify-end">
                     {/* Action Buttons */}
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Heart className="h-4 w-4 mr-1" />
-                        Like
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Share className="h-4 w-4 mr-1" />
-                        Share
-                      </Button>
                       <Button variant="default" size="sm" className="bg-orange-500 hover:bg-orange-600">
                         <Download className="h-4 w-4 mr-1" />
                         Download
@@ -339,27 +310,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Tags Card */}
-            {instruction.tags && instruction.tags.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Tags
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {instruction.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Parts List Files Card */}
             {(() => {
