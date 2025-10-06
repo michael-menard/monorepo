@@ -253,17 +253,7 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                   alt={instruction.title}
                   className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
                 />
-                <div className="p-6">
-                  <div className="flex items-center justify-end">
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <Button variant="default" size="sm" className="bg-orange-500 hover:bg-orange-600">
-                        <Download className="h-4 w-4 mr-1" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
           </div>
@@ -310,6 +300,14 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Download Button */}
+            <div className="flex justify-center">
+              <Button variant="default" size="lg" className="bg-orange-500 hover:bg-orange-600 px-8 py-3">
+                <Download className="h-5 w-5 mr-2" />
+                Download Instructions
+              </Button>
+            </div>
 
             {/* Parts List Files Card */}
             {(() => {
