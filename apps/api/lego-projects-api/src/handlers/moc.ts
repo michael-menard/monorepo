@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from '../db/client';
 import { mocInstructions, mocFiles, mocGalleryImages, galleryImages } from '../db/schema';
+import { apiResponse } from '../utils/response';
 import {
   indexMoc,
   updateMoc as updateMocES,
@@ -80,8 +81,19 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // Parse tags if they're sent as JSON string
+    let parsedBody = { ...req.body };
+    if (typeof req.body.tags === 'string') {
+      try {
+        parsedBody.tags = JSON.parse(req.body.tags);
+      } catch (error) {
+        console.warn('Failed to parse tags JSON:', error);
+        parsedBody.tags = [];
+      }
+    }
+
     // Validate input
-    const parse = CreateMocWithFilesSchema.safeParse(req.body);
+    const parse = CreateMocWithFilesSchema.safeParse(parsedBody);
     if (!parse.success) {
       return res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
     }
@@ -98,61 +110,120 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
 
     // Validate required files
     if (!files?.instructionsFile || files.instructionsFile.length === 0) {
-      return res.status(400).json({ error: 'Instructions file is required' });
+      return res.status(400).json({ error: 'At least one instructions file is required (PDF or .io format)' });
     }
 
-    if (!files?.images || files.images.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required' });
-    }
+    // Images are optional (0-3 allowed)
+    // Parts lists are optional (0-10 allowed)
+    // Instructions files: 1 or more allowed (up to 10)
 
-    // Insert MOC metadata into database
+    // Insert MOC/Set metadata into database
+    const baseValues = {
+      id: mocId,
+      userId,
+      title: mocData.title,
+      description: mocData.description || null,
+      type: mocData.type,
+      tags: mocData.tags || null,
+      thumbnailUrl: null, // Will be set from first uploaded image
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Add type-specific fields
+    const values = mocData.type === 'moc'
+      ? {
+          ...baseValues,
+          author: mocData.author,
+          brand: null,
+          theme: null,
+          setNumber: null,
+          releaseYear: null,
+          retired: null,
+        }
+      : {
+          ...baseValues,
+          author: null,
+          brand: mocData.brand,
+          theme: mocData.theme,
+          setNumber: mocData.setNumber || null,
+          releaseYear: mocData.releaseYear || null,
+          retired: mocData.retired || false,
+        };
+
     const [moc] = await db
       .insert(mocInstructions)
-      .values({
-        id: mocId,
-        userId,
-        title: mocData.title,
-        description: mocData.description || null,
-        tags: mocData.tags || null,
-        thumbnailUrl: null, // Will be set from first uploaded image
-        createdAt: now,
-        updatedAt: now,
-      })
+      .values(values)
       .returning();
 
     // Process and save files
     const savedFiles: any[] = [];
 
-    // Save instructions file
-    const instructionsFile = files.instructionsFile[0];
-    const instructionsFileId = uuidv4();
-    // Use the actual file path from multer for local storage
-    const instructionsFileUrl = instructionsFile.path ?
-      instructionsFile.path.replace(/^uploads\//, '/uploads/') :
-      `/uploads/moc-files/${userId}/instructions/${instructionsFile.filename}`;
+    // Save instruction files (1 or more)
+    for (const instructionsFile of files.instructionsFile) {
+      const instructionsFileId = uuidv4();
 
-    const [savedInstructionsFile] = await db
-      .insert(mocFiles)
-      .values({
-        id: instructionsFileId,
-        mocId,
-        fileType: 'instruction',
-        fileUrl: instructionsFileUrl,
-        originalFilename: instructionsFile.originalname,
-        mimeType: instructionsFile.mimetype,
-        createdAt: now,
-      })
-      .returning();
+      // Generate filename if not provided (happens with memory storage)
+      let filename = instructionsFile.filename;
+      if (!filename) {
+        const ext = instructionsFile.originalname ?
+          instructionsFile.originalname.split('.').pop() : 'bin';
+        const baseName = instructionsFile.originalname ?
+          instructionsFile.originalname.replace(/\.[^/.]+$/, '') : 'file';
+        // Sanitize filename: replace spaces and special characters with hyphens
+        const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
+        filename = `${sanitizedBaseName}-${uuidv4()}.${ext}`;
+      }
 
-    savedFiles.push(savedInstructionsFile);
+      // Use the actual file path from multer for local storage, or generate URL for memory storage
+      const instructionsFileUrl = instructionsFile.path ?
+        instructionsFile.path.replace(/^uploads\//, '/uploads/') :
+        `/uploads/moc-files/${userId}/instructions/${filename}`;
+
+      console.log('🔍 Processing instruction file:', {
+        originalname: instructionsFile.originalname,
+        filename: instructionsFile.filename,
+        generatedFilename: filename,
+        path: instructionsFile.path,
+        finalUrl: instructionsFileUrl
+      });
+
+      const [savedInstructionsFile] = await db
+        .insert(mocFiles)
+        .values({
+          id: instructionsFileId,
+          mocId,
+          fileType: 'instruction',
+          fileUrl: instructionsFileUrl,
+          originalFilename: instructionsFile.originalname,
+          mimeType: instructionsFile.mimetype,
+          createdAt: now,
+        })
+        .returning();
+
+      savedFiles.push(savedInstructionsFile);
+    }
 
     // Save parts list files (if any)
     if (files.partsLists && files.partsLists.length > 0) {
       for (const partsListFile of files.partsLists) {
         const partsListFileId = uuidv4();
+
+        // Generate filename if not provided (happens with memory storage)
+        let filename = partsListFile.filename;
+        if (!filename) {
+          const ext = partsListFile.originalname ?
+            partsListFile.originalname.split('.').pop() : 'bin';
+          const baseName = partsListFile.originalname ?
+            partsListFile.originalname.replace(/\.[^/.]+$/, '') : 'file';
+          // Sanitize filename: replace spaces and special characters with hyphens
+          const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
+          filename = `${sanitizedBaseName}-${uuidv4()}.${ext}`;
+        }
+
         const partsListFileUrl = partsListFile.path ?
           partsListFile.path.replace(/^uploads\//, '/uploads/') :
-          `/uploads/moc-files/${userId}/parts-lists/${partsListFile.filename}`;
+          `/uploads/moc-files/${userId}/parts-lists/${filename}`;
 
         const [savedPartsListFile] = await db
           .insert(mocFiles)
@@ -171,14 +242,28 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
       }
     }
 
-    // Save image files
+    // Save image files (optional - 0 to 3 images)
     let thumbnailUrl = null;
-    for (let i = 0; i < files.images.length; i++) {
-      const imageFile = files.images[i];
-      const imageFileId = uuidv4();
-      const imageFileUrl = imageFile.path ?
-        imageFile.path.replace(/^uploads\//, '/uploads/') :
-        `/uploads/moc-files/${userId}/images/${imageFile.filename}`;
+    if (files.images && files.images.length > 0) {
+      for (let i = 0; i < files.images.length; i++) {
+        const imageFile = files.images[i];
+        const imageFileId = uuidv4();
+
+        // Generate filename if not provided (happens with memory storage)
+        let filename = imageFile.filename;
+        if (!filename) {
+          const ext = imageFile.originalname ?
+            imageFile.originalname.split('.').pop() : 'bin';
+          const baseName = imageFile.originalname ?
+            imageFile.originalname.replace(/\.[^/.]+$/, '') : 'file';
+          // Sanitize filename: replace spaces and special characters with hyphens
+          const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
+          filename = `${sanitizedBaseName}-${uuidv4()}.${ext}`;
+        }
+
+        const imageFileUrl = imageFile.path ?
+          imageFile.path.replace(/^uploads\//, '/uploads/') :
+          `/uploads/moc-files/${userId}/images/${filename}`;
 
       // Use first image as thumbnail
       if (i === 0) {
@@ -198,7 +283,8 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
         })
         .returning();
 
-      savedFiles.push(savedImageFile);
+        savedFiles.push(savedImageFile);
+      }
     }
 
     // Update MOC with thumbnail URL
@@ -214,11 +300,22 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
     // Index in Elasticsearch
     await indexMoc(moc);
 
+    // Create images array for frontend consistency (same format as search endpoint)
+    const images = savedFiles
+      .filter(file => file.fileType === 'thumbnail' || file.fileType === 'gallery-image')
+      .map(file => ({
+        id: file.id,
+        url: file.fileUrl,
+        alt: file.originalFilename || 'MOC Image',
+        caption: file.originalFilename || 'MOC Image'
+      }));
+
     return res.status(201).json({
       message: 'MOC created successfully with files',
       moc: {
         ...moc,
         files: savedFiles,
+        images: images, // Add images array for frontend consistency
       },
     });
   } catch (error) {
@@ -323,7 +420,7 @@ export const uploadMocFile = async (req: Request, res: Response) => {
     // Enforce file type restrictions
     const allowedTypes = {
       instruction: ['application/pdf', 'application/octet-stream'], // .io files
-      'parts-list': ['text/csv', 'application/json'],
+      'parts-list': ['text/csv', 'application/json', 'text/plain', 'application/xml', 'text/xml', 'application/octet-stream'], // CSV, JSON, TXT, XML files
       thumbnail: ['image/jpeg', 'image/png', 'image/heic'],
     };
 
@@ -537,12 +634,10 @@ export const getMoc = async (req: Request, res: Response) => {
     // Fetch associated files
     const files = await db.select().from(mocFiles).where(eq(mocFiles.mocId, id));
 
-    return res.json({
-      moc: {
-        ...moc,
-        files,
-      },
-    });
+    return res.json(apiResponse(200, 'MOC retrieved successfully', {
+      ...moc,
+      files,
+    }));
   } catch (error) {
     console.error('getMoc error:', error);
     return res.status(500).json({ error: 'Failed to get MOC', details: (error as Error).message });
@@ -760,5 +855,60 @@ export const getMocGalleryImages = async (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ error: 'Failed to get linked gallery images', details: (error as Error).message });
+  }
+};
+
+// POST /api/mocs/upload-parts-list - Upload parts list file
+export const uploadPartsList = async (req: Request, res: Response) => {
+  try {
+    console.log('🚀 uploadPartsList handler called');
+    console.log('📋 Request headers:', req.headers);
+    console.log('📋 Request body keys:', Object.keys(req.body));
+    console.log('📋 Request file:', req.file ? 'Present' : 'Missing');
+
+    const { mocId, fileType } = req.body;
+    const partsListFile = req.file;
+
+    if (!mocId || !partsListFile) {
+      console.log('❌ Missing required fields:', { mocId: !!mocId, partsListFile: !!partsListFile });
+      return res.status(400).json({ error: 'Missing required fields: mocId and partsListFile' });
+    }
+
+    console.log('📤 Uploading parts list file:', {
+      mocId,
+      fileName: partsListFile.originalname,
+      fileSize: partsListFile.size,
+      mimeType: partsListFile.mimetype
+    });
+
+    // Check if MOC exists
+    const [moc] = await db.select().from(mocInstructions).where(eq(mocInstructions.id, mocId));
+    if (!moc) {
+      return res.status(404).json({ error: 'MOC not found' });
+    }
+
+    // Create file record in database
+    const fileUrl = partsListFile.path ? `/${partsListFile.path}` : `/uploads/moc-files/${req.user?.sub}/parts-list/${partsListFile.filename}`;
+    const [fileRecord] = await db.insert(mocFiles).values({
+      mocId,
+      fileType: 'parts-list',
+      fileUrl,
+      originalFilename: partsListFile.originalname,
+      mimeType: partsListFile.mimetype,
+    }).returning();
+
+    console.log('✅ Parts list file uploaded successfully:', fileRecord);
+
+    return res.status(201).json({
+      message: 'Parts list uploaded successfully',
+      file: fileRecord
+    });
+
+  } catch (error) {
+    console.error('❌ Parts list upload error:', error);
+    return res.status(500).json({
+      error: 'Failed to upload parts list',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };

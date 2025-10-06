@@ -21,10 +21,39 @@ This document outlines the database schema updates implemented to support proper
 - **Safe delete function** for MOC instructions
 - **Partial indexes** for flagged content
 
-### 4. `20240611_add_profile_fields.sql` ⭐ **NEW**
+### 4. `20240611_add_profile_fields.sql`
 - **Profile fields** (bio, avatar_url) added to users table
 - **Indexes** for profile queries (username, email)
 - **Backward compatibility** with existing avatar field
+
+### 5. `20240612_add_wishlist_schema.sql`
+- **Wishlist tables** for user LEGO set wishlists
+- **Foreign key constraints** and indexes
+
+### 6. `20241230_add_moc_parts_lists_table.sql`
+- **MOC parts lists** table for detailed parts information
+- **Relationships** to MOC instructions
+
+### 7. `20250102_add_wishlist_category.sql`
+- **Category field** added to wishlist items
+
+### 8. `20250106_add_author_theme_to_moc_instructions.sql`
+- **Author field** (TEXT NOT NULL) - Name or username of MOC creator
+- **Theme field** (TEXT NOT NULL) - LEGO theme category
+- **Updated schema** to match frontend form requirements
+- **Backward compatibility** with default values for existing records
+
+### 9. `20250106_add_moc_set_discrimination.sql`
+- **Type field** (TEXT NOT NULL) - Discriminator for 'moc' vs 'set'
+- **Set-specific fields** - brand, theme, setNumber, releaseYear, retired
+- **Database constraints** - Ensures proper field requirements per type
+- **Indexes** - Performance optimization for type-specific queries
+
+### 10. `20250106_add_set_unique_constraints.sql` ⭐ **NEW**
+- **Unique Set Constraint** - Prevents duplicate official LEGO sets (brand + setNumber)
+- **Set Number Format** - Validates LEGO set number format (4-5 digits + optional letter)
+- **Performance Indexes** - Optimized queries for Sets by brand, theme, year, retirement status
+- **Data Integrity** - Ensures each official LEGO set exists only once in the system
 
 ## Cascading Delete Behavior
 

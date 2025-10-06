@@ -1,4 +1,4 @@
-module.exports = {
+exports = {
   ci: {
     collect: {
       staticDistDir: './dist',

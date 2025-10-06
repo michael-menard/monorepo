@@ -30,9 +30,9 @@ function getCSRFTokenFromCookie(): string | null {
  */
 export async function fetchCSRFToken(baseUrl?: string): Promise<string> {
   const url = baseUrl || (process.env.NODE_ENV === 'development'
-    ? 'http://localhost:9000'
+    ? 'http://localhost:9300'
     : '');
-  
+
   try {
     const response = await fetch(`${url}/api/auth/csrf`, {
       method: 'GET',

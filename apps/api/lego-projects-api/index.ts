@@ -1,4 +1,5 @@
-import 'dotenv/config';
+// Load centralized environment configuration first
+require('../../../shared/config/env-loader');
 
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET is not set in environment variables!');
@@ -41,6 +42,9 @@ app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 // CORS configuration
 const ORIGIN = process.env.APP_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
 const devOrigins = [
@@ -60,14 +64,42 @@ const origins =
 
 app.use(
   cors({
-    origin: origins,
+    // For local development, allow all origins
+    origin: process.env.NODE_ENV === 'production'
+      ? (origin, callback) => {
+          console.log('🌐 CORS request from origin:', origin);
+          console.log('🌐 Allowed origins:', origins);
+
+          // Allow requests with no origin (like mobile apps or curl requests)
+          if (!origin) return callback(null, true);
+
+          if (origins.includes(origin)) {
+            console.log('✅ Origin allowed:', origin);
+            return callback(null, true);
+          } else {
+            console.log('❌ Origin blocked:', origin);
+            return callback(new Error('Not allowed by CORS'), false);
+          }
+        }
+      : true, // Allow all origins in development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token', 'Cache-Control'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
   }),
 );
 // Enable pre-flight for all routes
 app.options('*', cors());
+
+// Explicit OPTIONS handler for upload endpoint
+app.options('/api/mocs/upload-parts-list', (req, res) => {
+  console.log('🔄 OPTIONS request for upload-parts-list');
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // CSRF: issue token and enforce header on state-changing requests (when using cookies)
 app.get('/api/csrf', issueCsrfToken);

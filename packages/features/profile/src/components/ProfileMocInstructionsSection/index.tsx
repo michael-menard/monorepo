@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-// Temporarily commented out due to import resolution issue
-// import { Gallery, featureMocInstructionAdapter } from '@repo/gallery';
+import { Gallery } from '@repo/gallery';
 import { BookOpen, Download, Star, ArrowRight, Upload } from 'lucide-react';
 
 interface MockInstruction {
@@ -9,8 +8,7 @@ interface MockInstruction {
   title: string;
   description: string;
   author: string;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  theme: 'modular' | 'Automobile' | 'ideas' | 'creator expert' | 'Lord Of The Rings' | 'city';
   tags: string[];
   coverImageUrl?: string;
   rating?: number;
@@ -176,29 +174,24 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
             </a>
           </div>
         ) : (
-          <>
-            {/* Temporarily replaced Gallery with simple list due to import issue */}
-            <div className="space-y-4">
-            {displayInstructions.map((instruction) => (
-              <div key={instruction.id} className="border rounded-lg p-4">
-                <h3 className="font-semibold">{instruction.title}</h3>
-                <p className="text-sm text-gray-600">{instruction.description}</p>
-                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Download className="h-4 w-4" />
-                    {instruction.downloadCount}
-                  </span>
-                  {instruction.rating && (
-                    <span className="flex items-center gap-1">
-                      <Star className="h-4 w-4" />
-                      {instruction.rating}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            </div>
-          </>
+          <Gallery
+            images={displayInstructions.map(instruction => ({
+              id: instruction.id,
+              url: instruction.coverImageUrl || '/placeholder-instruction.jpg',
+              title: instruction.title,
+              description: instruction.description,
+              author: instruction.author,
+              tags: instruction.tags,
+              createdAt: instruction.createdAt,
+              updatedAt: instruction.updatedAt,
+            }))}
+            layout="grid"
+            onImageClick={(image) => {
+              // Navigate to MOC detail page
+              window.location.href = `/moc-detail/${image.id}`;
+            }}
+            className="mt-4"
+          />
         )}
       </CardContent>
     </Card>

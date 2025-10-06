@@ -3,7 +3,7 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import Layout from '../components/Layout'
 import TanStackQueryLayout from '../integrations/tanstack-query/layout'
 import PerformanceMonitor from '../components/PerformanceMonitor'
-import { PWAUpdateNotification } from '../components/PWAUpdateNotification'
+
 import { OfflineStatusIndicator } from '../components/OfflineStatusIndicator'
 
 export const rootRoute = createRootRoute({
@@ -13,7 +13,7 @@ export const rootRoute = createRootRoute({
       <TanStackRouterDevtools />
       <TanStackQueryLayout />
       <PerformanceMonitor />
-      <PWAUpdateNotification />
+
       <OfflineStatusIndicator />
     </Layout>
   ),

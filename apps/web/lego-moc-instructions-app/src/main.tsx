@@ -6,6 +6,11 @@ import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { initializeCSRF } from '@repo/auth'
+
+// Import test auth utilities for development
+if (import.meta.env.DEV) {
+  import('./utils/testAuth.ts');
+}
 import { rootRoute } from './routes/root'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
 import { homeRoute } from './routes/home.tsx'
@@ -17,6 +22,7 @@ import { profileRoute } from './routes/profile.tsx'
 import { profileDemoRoute } from './routes/profile-demo.tsx'
 import { profileRTKDemoRoute } from './routes/profile-rtk-demo.tsx'
 import { wishlistRoute } from './routes/wishlist.tsx'
+import { settingsRoute } from './routes/settings.tsx'
 import { cacheDemoRoute } from './routes/cache-demo.tsx'
 import { loginRoute } from './routes/auth/login.tsx'
 import { signupRoute } from './routes/auth/signup.tsx'
@@ -27,6 +33,7 @@ import { unauthorizedRoute } from './routes/unauthorized.tsx'
 import { notFoundRoute } from './routes/not-found.tsx'
 
 import { PerformanceProvider } from './providers/PerformanceProvider'
+import { UserPreferencesProvider } from './providers/UserPreferencesProvider'
 import { PWAProvider } from './components/PWAProvider'
 
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
@@ -47,6 +54,7 @@ const routeTree = rootRoute.addChildren([
   profileDemoRoute,
   profileRTKDemoRoute,
   wishlistRoute,
+  settingsRoute,
   cacheDemoRoute,
   loginRoute,
   signupRoute,
@@ -84,15 +92,17 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <ThemeProvider>
-        <Provider store={store}>
-          <PerformanceProvider>
-            <PWAProvider>
-              <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
-                <RouterProvider router={router} />
-              </TanStackQueryProvider.Provider>
-            </PWAProvider>
-          </PerformanceProvider>
-        </Provider>
+        <UserPreferencesProvider>
+          <Provider store={store}>
+            <PerformanceProvider>
+              <PWAProvider>
+                <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
+                  <RouterProvider router={router} />
+                </TanStackQueryProvider.Provider>
+              </PWAProvider>
+            </PerformanceProvider>
+          </Provider>
+        </UserPreferencesProvider>
       </ThemeProvider>
     </StrictMode>,
   )

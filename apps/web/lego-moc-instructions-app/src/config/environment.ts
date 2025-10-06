@@ -1,8 +1,8 @@
 // Native backend configuration for development and production
 export const config = {
   api: {
-    // Main LEGO Projects API URL - uses env var for native backend support
-    baseUrl: import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_LEGO_API_PORT || '9000'}`,
+    // Main LEGO Projects API URL - uses relative URL in development to leverage Vite proxy
+    baseUrl: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : `http://localhost:${import.meta.env.VITE_LEGO_API_PORT || '9000'}`),
 
     // Auth Service API URL - separate auth service
     authUrl: import.meta.env.VITE_AUTH_API_URL || `http://localhost:${import.meta.env.VITE_AUTH_API_PORT || '9300'}`,
@@ -135,13 +135,18 @@ export const getStorageUrl = (path: string = '') => {
   return cleanPath ? `${baseUrl}/${cleanPath}` : baseUrl
 }
 
-// Debug configuration in development
-if (isDevelopment && config.development.verboseLogging) {
-  console.group('🔧 Application Configuration')
+// Debug configuration in development - ALWAYS LOG FOR DEBUGGING
+if (isDevelopment) {
+  console.group('🔧 Application Configuration DEBUG')
   console.log('Environment:', config.app.environment)
-  console.log('API Base URL:', config.api.baseUrl)
-  console.log('Auth API URL:', config.api.authUrl)
+  console.log('🚨 API Base URL:', config.api.baseUrl)
+  console.log('🚨 Auth API URL:', config.api.authUrl)
   console.log('Client URL:', config.app.clientUrl)
+  console.log('🔍 Raw Environment Variables:')
+  console.log('  VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
+  console.log('  VITE_LEGO_API_PORT:', import.meta.env.VITE_LEGO_API_PORT)
+  console.log('  VITE_AUTH_API_URL:', import.meta.env.VITE_AUTH_API_URL)
+  console.log('  VITE_AUTH_API_PORT:', import.meta.env.VITE_AUTH_API_PORT)
   console.log('Features:', config.features)
   console.log('Storage Provider:', config.storage.provider)
   console.groupEnd()

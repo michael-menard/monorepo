@@ -23,11 +23,13 @@ info:
     - File access control and ownership validation
     
     **File Upload:**
-    - Supports JPEG, PNG, HEIC, and WebP formats
-    - Maximum file size: 20MB for gallery, 10MB for avatars
+    - **Images**: JPEG, PNG, HEIC, and WebP formats (10MB max, 0-3 per MOC)
+    - **Instructions**: PDF and .io formats (50MB max, 1+ required per MOC)
+    - **Parts Lists**: CSV, XML, JSON, PDF, TXT formats (10MB max, 0-10 per MOC)
     - Automatic image optimization and resizing
     - Secure file storage with S3 or local fallback
     - Virus scanning and content validation
+    - Environment-aware storage (local in dev, S3 in production)
     
     **Search & Indexing:**
     - Elasticsearch integration for full-text search
@@ -96,6 +98,10 @@ paths:
   # MOC Instructions Management
   /api/mocs:
     $ref: './paths/moc-instructions.yaml#/api/mocs'
+  /api/mocs/with-files:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/with-files'
+  /api/mocs/test-auth:
+    $ref: './paths/moc-instructions.yaml#/api/mocs/test-auth'
   /api/mocs/search:
     $ref: './paths/moc-instructions.yaml#/api/mocs/search'
   /api/mocs/{id}:
@@ -164,3 +170,79 @@ components:
 externalDocs:
   description: Find more info about the LEGO Projects API
   url: https://github.com/your-org/lego-moc-instructions/tree/main/apps/api/lego-projects-api
+
+# Example Usage
+x-examples:
+  create-moc-with-files:
+    summary: Create MOC with multiple instruction files
+    description: |
+      Example showing how to create a MOC instruction with multiple files using curl.
+
+      **Step 1: Get test authentication token**
+      ```bash
+      curl -X POST http://localhost:9000/api/mocs/test-auth \
+        -H "Content-Type: application/json"
+      ```
+
+      **Step 2: Create MOC with files**
+      ```bash
+      curl -X POST http://localhost:9000/api/mocs/with-files \
+        -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+        -F "title=Medieval Castle MOC" \
+        -F "description=A detailed medieval castle with working drawbridge" \
+        -F "tags=[\"castle\", \"medieval\", \"architecture\"]" \
+        -F "difficulty=advanced" \
+        -F "instructionsFile=@castle-part1.pdf" \
+        -F "instructionsFile=@castle-part2.pdf" \
+        -F "instructionsFile=@castle-details.io" \
+        -F "partsLists=@parts-list.csv" \
+        -F "partsLists=@parts-inventory.json" \
+        -F "images=@castle-front.jpg" \
+        -F "images=@castle-side.jpg" \
+        -F "images=@castle-interior.jpg"
+      ```
+
+      **Step 3: Search for MOCs**
+      ```bash
+      curl -X GET "http://localhost:9000/api/mocs/search?q=castle&tags=medieval&limit=10" \
+        -H "Authorization: Bearer YOUR_TOKEN_HERE"
+      ```
+
+  file-requirements:
+    summary: File upload requirements and limits
+    description: |
+      **Instructions Files (Required):**
+      - Formats: PDF, .io
+      - Size limit: 50MB per file
+      - Quantity: 1-10 files
+      - Examples: building-instructions.pdf, castle.io, part1.pdf, part2.pdf
+
+      **Parts Lists (Optional):**
+      - Formats: CSV, XML, JSON, PDF, TXT
+      - Size limit: 10MB per file
+      - Quantity: 0-10 files
+      - Examples: parts-list.csv, inventory.json, bom.xml
+
+      **Images (Optional):**
+      - Formats: JPEG, PNG, WebP
+      - Size limit: 10MB per file
+      - Quantity: 0-3 files
+      - Note: First image becomes the MOC thumbnail
+      - Examples: front-view.jpg, side-view.png, detail.webp
+
+      **Storage:**
+      - Development: Local storage in `uploads/moc-files/{userId}/`
+      - Production: AWS S3 bucket with CloudFront CDN
+
+      **File Organization:**
+      ```
+      uploads/moc-files/{userId}/
+      ├── instructions/
+      │   ├── castle-part1-{uuid}.pdf
+      │   └── castle-part2-{uuid}.pdf
+      ├── parts-lists/
+      │   └── parts-list-{uuid}.csv
+      └── images/
+          ├── castle-front-{uuid}.jpg (thumbnail)
+          └── castle-side-{uuid}.jpg
+      ```

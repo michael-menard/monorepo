@@ -7,37 +7,22 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  integer,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
-export const users = pgTable(
-  'users',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    username: text('username'),
-    email: text('email'),
-    preferredName: text('preferred_name'),
-    bio: text('bio'),
-    avatarUrl: text('avatar_url'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  },
-  (table) => ({
-    // Indexes for profile queries
-    usernameIdx: index('idx_users_username').on(table.username),
-    emailIdx: index('idx_users_email').on(table.email),
-  }),
-);
+// Note: Users are managed in MongoDB via the auth service, not in PostgreSQL
 
 // Gallery Images Table
 export const galleryImages = pgTable(
   'gallery_images',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull(),
+      // Note: No foreign key constraint - user exists in auth service MongoDB
     title: text('title').notNull(),
     description: text('description'),
     tags: jsonb('tags').$type<string[]>(),
@@ -61,9 +46,9 @@ export const galleryAlbums = pgTable(
   'gallery_albums',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull(),
+      // Note: No foreign key constraint - user exists in auth service MongoDB
     title: text('title').notNull(),
     description: text('description'),
     coverImageId: uuid('cover_image_id'), // Will reference galleryImages.id - added in migration
@@ -85,9 +70,9 @@ export const galleryFlags = pgTable(
     imageId: uuid('image_id')
       .notNull()
       .references(() => galleryImages.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull(),
+      // Note: No foreign key constraint - user exists in auth service MongoDB
     reason: text('reason'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     lastUpdatedAt: timestamp('last_updated_at').notNull().defaultNow(),
@@ -106,11 +91,21 @@ export const mocInstructions = pgTable(
   'moc_instructions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull(),
+      // Note: No foreign key constraint - user exists in auth service MongoDB
     title: text('title').notNull(),
     description: text('description'),
+    type: text('type').notNull(), // 'moc' or 'set'
+    // MOC-specific fields
+    author: text('author'), // Required for MOCs, null for Sets
+    // Set-specific fields
+    brand: text('brand'), // Required for Sets, null for MOCs
+    theme: text('theme'), // Required for Sets, null for MOCs
+    setNumber: text('set_number'), // Optional for Sets
+    releaseYear: integer('release_year'), // Optional for Sets
+    retired: boolean('retired'), // Optional for Sets (default false)
+    // Common fields
     tags: jsonb('tags').$type<string[]>(),
     thumbnailUrl: text('thumbnail_url'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -120,6 +115,30 @@ export const mocInstructions = pgTable(
     // Indexes for lazy fetching and performance
     userIdx: index('idx_moc_instructions_user_id_lazy').on(table.userId),
     userCreatedIdx: index('idx_moc_instructions_user_created').on(table.userId, table.createdAt),
+
+    // Title search index - for searching across all MOCs and Sets
+    titleIdx: index('idx_moc_instructions_title').on(table.title),
+
+    // Business constraint: Unique MOC title per user
+    uniqueUserTitle: uniqueIndex('moc_instructions_user_title_unique').on(table.userId, table.title),
+
+    // Set-specific constraints and indexes
+    // Note: Unique constraint for Sets (brand + setNumber) is handled via EXCLUDE constraint in migration
+    // This ensures each official LEGO set can only exist once in the system
+
+    // Performance indexes for Set queries
+    setBrandSetNumberIdx: index('idx_sets_brand_set_number')
+      .on(table.brand, table.setNumber)
+      .where(sql`type = 'set' AND brand IS NOT NULL AND set_number IS NOT NULL`),
+    setBrandThemeIdx: index('idx_sets_brand_theme')
+      .on(table.brand, table.theme)
+      .where(sql`type = 'set'`),
+    setReleaseYearIdx: index('idx_sets_release_year')
+      .on(table.releaseYear)
+      .where(sql`type = 'set' AND release_year IS NOT NULL`),
+    setRetiredIdx: index('idx_sets_retired')
+      .on(table.retired)
+      .where(sql`type = 'set' AND retired IS NOT NULL`),
   }),
 );
 
@@ -141,6 +160,9 @@ export const mocFiles = pgTable(
     // Indexes for lazy fetching and performance
     mocIdx: index('idx_moc_files_moc_id_lazy').on(table.mocId),
     mocTypeIdx: index('idx_moc_files_moc_type').on(table.mocId, table.fileType),
+    // Business constraints
+    uniqueMocFileType: uniqueIndex('moc_files_moc_filetype_unique').on(table.mocId, table.fileType),
+    uniqueMocFilename: uniqueIndex('moc_files_moc_filename_unique').on(table.mocId, table.originalFilename),
   }),
 );
 
@@ -186,9 +208,9 @@ export const wishlistItems = pgTable(
   'wishlist_items',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull(),
+      // Note: No foreign key constraint - user exists in auth service MongoDB
     title: text('title').notNull(),
     description: text('description'),
     productLink: text('product_link'),
@@ -242,19 +264,9 @@ export const mocPartsLists = pgTable(
 );
 
 // Define relationships for lazy loading
-export const usersRelations = relations(users, ({ many }) => ({
-  galleryImages: many(galleryImages),
-  galleryAlbums: many(galleryAlbums),
-  galleryFlags: many(galleryFlags),
-  mocInstructions: many(mocInstructions),
-  wishlistItems: many(wishlistItems),
-}));
+// Note: User relations removed - users are managed in MongoDB via auth service
 
 export const galleryImagesRelations = relations(galleryImages, ({ one, many }) => ({
-  user: one(users, {
-    fields: [galleryImages.userId],
-    references: [users.id],
-  }),
   album: one(galleryAlbums, {
     fields: [galleryImages.albumId],
     references: [galleryAlbums.id],
@@ -264,10 +276,6 @@ export const galleryImagesRelations = relations(galleryImages, ({ one, many }) =
 }));
 
 export const galleryAlbumsRelations = relations(galleryAlbums, ({ one, many }) => ({
-  user: one(users, {
-    fields: [galleryAlbums.userId],
-    references: [users.id],
-  }),
   coverImage: one(galleryImages, {
     fields: [galleryAlbums.coverImageId],
     references: [galleryImages.id],
@@ -281,17 +289,9 @@ export const galleryFlagsRelations = relations(galleryFlags, ({ one }) => ({
     fields: [galleryFlags.imageId],
     references: [galleryImages.id],
   }),
-  user: one(users, {
-    fields: [galleryFlags.userId],
-    references: [users.id],
-  }),
 }));
 
 export const mocInstructionsRelations = relations(mocInstructions, ({ one, many }) => ({
-  user: one(users, {
-    fields: [mocInstructions.userId],
-    references: [users.id],
-  }),
   files: many(mocFiles),
   galleryImages: many(mocGalleryImages),
   galleryAlbums: many(mocGalleryAlbums),
@@ -339,9 +339,4 @@ export const mocPartsListsRelations = relations(mocPartsLists, ({ one }) => ({
   }),
 }));
 
-export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
-  user: one(users, {
-    fields: [wishlistItems.userId],
-    references: [users.id],
-  }),
-}));
+// Wishlist relations removed - users are managed in MongoDB via auth service

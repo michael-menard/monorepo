@@ -1,39 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from '@tanstack/react-router';
-import { Button } from '@repo/ui';
-import { ArrowLeft, Download, Heart, Plus, Share, Upload } from 'lucide-react';
-import { Gallery } from '@repo/gallery';
-import type { GalleryImage } from '@repo/gallery';
-import { Upload as FileUpload } from '@repo/upload';
-
-// Import RTK hooks and actions from centralized store
 import {
-  useAppDispatch,
-  useAppSelector,
-  fetchMocInstructionById,
-  incrementDownloadCount,
-  // Temporarily commented out due to export issue
-  // selectSelectedMocInstruction,
-  selectMocInstructionsLoading,
-  selectMocInstructionsError,
-  type MockInstruction,
-} from '../../store';
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge
+} from '@repo/ui';
+import { ArrowLeft, Download, Heart, Share, Calendar, User, Tag, Package, FileText, ExternalLink, Plus, Upload } from 'lucide-react';
+
+// Import RTK Query hooks for fetching MOC data and uploading parts list
+import { useGetMOCInstructionQuery, useUploadPartsListMutation } from '../../services/api';
+import type { MockInstruction } from '@repo/moc-instructions';
 
 // Helper functions for MOC data
-const calculateTotalParts = (instruction: MockInstruction): number => {
-  return instruction.totalParts || instruction.partsList.reduce((total, part) => total + part.quantity, 0);
+const getFileTypeLabel = (mimeType: string): string => {
+  const typeMap: Record<string, string> = {
+    'text/csv': 'CSV',
+    'application/xml': 'XML',
+    'text/xml': 'XML',
+    'text/plain': 'TXT',
+    'application/json': 'JSON',
+    'application/vnd.ms-excel': 'Excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+  };
+  return typeMap[mimeType] || 'File';
 };
 
-const calculateTotalTime = (instruction: MockInstruction): number => {
-  return instruction.estimatedTime || instruction.steps.reduce((total, step) => total + (step.estimatedTime || 0), 0);
-};
+const formatDate = (date: Date | string | null | undefined): string => {
+  if (!date) return 'Unknown date';
 
-const formatDate = (date: Date): string => {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid date';
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(dateObj);
+  } catch (error) {
+    console.warn('Error formatting date:', date, error);
+    return 'Invalid date';
+  }
 };
 
 const formatTime = (minutes: number): string => {
@@ -50,130 +65,124 @@ const getDifficultyLabel = (difficulty: string): string => {
 };
 
 // Mock data for development/testing when API is not available
-const mockInstruction = {
-  id: 'test-id',
-  title: 'Amazing Space Station MOC',
-  description: 'A stunning space station design that showcases advanced building techniques and creative design. This MOC features multiple modules, detailed interiors, and realistic space station elements.',
-  author: 'Space Builder Pro',
-  category: 'space',
-  difficulty: 'intermediate' as const,
-  tags: ['space', 'station', 'futuristic', 'advanced'],
-  coverImageUrl: 'https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=Space+Station+MOC',
-  steps: [
-    {
-      id: 'step-1',
-      instructionsId: 'test-id',
-      stepNumber: 1,
-      title: 'Base Structure',
-      description: 'Start with the central core structure using 2x4 bricks',
-      difficulty: 'easy' as const,
-      estimatedTime: 30,
-      imageUrl: 'https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Step+1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'step-2',
-      instructionsId: 'test-id',
-      stepNumber: 2,
-      title: 'Solar Panels',
-      description: 'Add the solar panel arrays to the sides',
-      difficulty: 'medium' as const,
-      estimatedTime: 45,
-      imageUrl: 'https://via.placeholder.com/400x300/059669/FFFFFF?text=Step+2',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'step-3',
-      instructionsId: 'test-id',
-      stepNumber: 3,
-      title: 'Command Module',
-      description: 'Build the command module with detailed interior',
-      difficulty: 'hard' as const,
-      estimatedTime: 60,
-      imageUrl: 'https://via.placeholder.com/400x300/DC2626/FFFFFF?text=Step+3',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ],
-  partsList: [
-    { partNumber: '3001', quantity: 50, color: 'white', description: '2x4 brick' },
-    { partNumber: '3002', quantity: 30, color: 'gray', description: '2x3 brick' },
-    { partNumber: '3003', quantity: 20, color: 'black', description: '2x2 brick' },
-    { partNumber: '3024', quantity: 15, color: 'transparent', description: '1x1 brick' },
-    { partNumber: '3069', quantity: 10, color: 'blue', description: '1x2 brick' },
-  ],
-  isPublic: true,
-  isPublished: true,
-  rating: 4.8,
-  downloadCount: 1250,
-  createdAt: new Date('2024-01-15'),
-  updatedAt: new Date('2024-01-20'),
-};
-
-// Convert step images to gallery format
-const convertStepsToGalleryImages = (steps: typeof mockInstruction.steps): Array<GalleryImage> => {
-  return steps
-    .filter(step => step.imageUrl)
-    .map((step) => ({
-      id: step.id,
-      url: step.imageUrl,
-      title: `Step ${step.stepNumber}: ${step.title}`,
-      description: step.description,
-      author: mockInstruction.author,
-      tags: [step.difficulty, `step-${step.stepNumber}`],
-      createdAt: step.createdAt,
-      updatedAt: step.updatedAt,
-    }));
+// Convert MOC images to gallery format
+const convertMocImagesToGalleryImages = (images: any[]): Array<GalleryImage> => {
+  return images?.map((image) => ({
+    id: image.id,
+    url: image.url,
+    title: image.alt || 'MOC Image',
+    description: image.caption || '',
+    author: 'MOC Image',
+    tags: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })) || [];
 };
 
 export const MocDetailPage: React.FC = (): React.JSX.Element => {
   const { id } = useParams({ from: '/moc-detail/$id' });
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
-  // RTK state - temporarily using fallback due to export issue
-  // const instruction = useAppSelector(selectSelectedMocInstruction);
-  const instruction = null; // Fallback until export is fixed
-  const isLoading = useAppSelector(selectMocInstructionsLoading);
-  const error = useAppSelector(selectMocInstructionsError);
+  console.log('🔍 MocDetailPage rendered with ID:', id);
 
-  // Local state
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(89);
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  // Local state for parts list upload
+  const [showPartsListUpload, setShowPartsListUpload] = useState(false);
 
-  // Fetch instruction on mount
-  useEffect(() => {
-    if (id) {
-      dispatch(fetchMocInstructionById(id));
+  // RTK Query mutation for uploading parts list
+  const [uploadPartsList, { isLoading: isUploadingPartsList, error: uploadError }] = useUploadPartsListMutation();
+
+  // Handle parts list file upload using RTK Query
+  const handlePartsListUpload = async (files: FileList) => {
+    console.log('🚀 handlePartsListUpload called with:', files.length, 'files');
+
+    if (!files.length || !id) {
+      console.log('❌ No files or no ID:', { filesLength: files.length, id });
+      return;
     }
-  }, [dispatch, id]);
-  const [galleryImages, setGalleryImages] = useState<Array<GalleryImage>>([]);
-  const [selectedImages, setSelectedImages] = useState<Array<string>>([]);
 
-  // Update gallery images when instruction changes
-  useEffect(() => {
-    if (instruction?.steps) {
-      setGalleryImages(convertStepsToGalleryImages(instruction.steps));
-    }
-  }, [instruction]);
+    const file = files[0];
+    console.log('📁 File details:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified
+    });
 
-  // Update document title
-  useEffect(() => {
-    if (instruction) {
-      document.title = `${instruction.title} - MOC Details`;
+    try {
+      console.log('📤 Uploading parts list file using RTK Query...');
+
+      // Use RTK Query mutation
+      const result = await uploadPartsList({
+        mocId: id,
+        file: file
+      }).unwrap();
+
+      console.log('✅ Parts list uploaded successfully:', result);
+      alert('Parts list uploaded successfully! The file should now appear in the list.');
+
+      // RTK Query will automatically invalidate and refetch the MOC data
+      setShowPartsListUpload(false);
+
+    } catch (error) {
+      console.error('❌ Parts list upload failed:', error);
+      alert(`Failed to upload parts list: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowPartsListUpload(false);
     }
-  }, [instruction]);
+  };
+
+  // Early return for debugging - remove this once working
+  if (!id) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1>Error: No MOC ID provided</h1>
+        <Button onClick={() => navigate({ to: '/moc-gallery' })}>
+          Back to Gallery
+        </Button>
+      </div>
+    );
+  }
+
+
+
+  // Fetch MOC data using RTK Query
+  let instruction, isLoading, error, result;
+  try {
+    result = useGetMOCInstructionQuery(id);
+    instruction = result.data?.data; // Extract data from standard API response
+    isLoading = result.isLoading;
+    error = result.error;
+    console.log('📊 RTK Query state:', {
+      instruction,
+      isLoading,
+      error,
+      rawData: result.data,
+      dataExists: !!result.data,
+      dataDataExists: !!result.data?.data,
+      extractedInstruction: result.data?.data
+    });
+  } catch (hookError) {
+    console.error('❌ RTK Query hook error:', hookError);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1>RTK Query Hook Error</h1>
+        <p>Error: {String(hookError)}</p>
+        <Button onClick={() => navigate({ to: '/moc-gallery' })}>
+          Back to Gallery
+        </Button>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8">
+        <Button onClick={() => navigate({ to: '/moc-gallery' })} className="mb-4">
+          ← Back to Gallery
+        </Button>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading MOC details...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading MOC details...</p>
         </div>
       </div>
     );
@@ -182,472 +191,350 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8">
+        <Button onClick={() => navigate({ to: '/moc-gallery' })} className="mb-4">
+          ← Back to Gallery
+        </Button>
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading MOC details: {error}</p>
-          <Button onClick={() => navigate({ to: '/moc-gallery' })}>
-            Back to Gallery
-          </Button>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading MOC</h1>
+          <p className="text-red-600 mb-4">Error: {JSON.stringify(error)}</p>
         </div>
       </div>
     );
   }
 
-  // Not found state
+  // Not found state - with debugging info
   if (!instruction) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8">
+        <Button onClick={() => navigate({ to: '/moc-gallery' })} className="mb-4">
+          ← Back to Gallery
+        </Button>
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">MOC instruction not found</p>
-          <Button onClick={() => navigate({ to: '/moc-gallery' })}>
-            Back to Gallery
-          </Button>
+          <h1 className="text-2xl font-bold mb-4">MOC Not Found</h1>
+          <p className="text-gray-600 mb-4">The requested MOC instruction could not be found.</p>
+          <div className="mt-4 p-4 bg-gray-100 rounded text-left text-sm">
+            <h3 className="font-bold mb-2">Debug Info:</h3>
+            <p><strong>MOC ID:</strong> {id}</p>
+            <p><strong>Is Loading:</strong> {isLoading ? 'Yes' : 'No'}</p>
+            <p><strong>Has Error:</strong> {error ? 'Yes' : 'No'}</p>
+            <p><strong>Raw Data:</strong> {JSON.stringify(result?.data, null, 2)}</p>
+            <p><strong>Extracted Instruction:</strong> {JSON.stringify(instruction, null, 2)}</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  const handleBack = () => {
-    navigate({ to: '/moc-gallery' });
-  };
-
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
-  };
-
-  const handleShare = async () => {
-    await navigator.clipboard.writeText(window.location.href);
-    // Show toast notification
-    console.log('Link copied to clipboard');
-  };
-
-  const handleDownload = async () => {
-    if (instruction) {
-      try {
-        await dispatch(incrementDownloadCount(instruction.id)).unwrap();
-        console.log('Download count incremented for:', instruction.id);
-        // Here you would also trigger the actual file download
-      } catch (error) {
-        console.error('Failed to increment download count:', error);
-      }
-    }
-  };
-
-  // Gallery event handlers
-  const handleImageClick = (image: any) => {
-    console.log('Image clicked:', image);
-    // Could open a modal or navigate to image detail
-  };
-
-  const handleImageLike = (imageId: string, liked: boolean) => {
-    console.log('Image liked:', imageId, liked);
-    // Update image like status
-  };
-
-  const handleImageShare = (imageId: string) => {
-    console.log('Image shared:', imageId);
-    // Share image functionality
-  };
-
-  const handleImageDelete = (imageId: string) => {
-    console.log('Image deleted:', imageId);
-    setGalleryImages(prev => prev.filter(img => img.id !== imageId));
-  };
-
-  const handleImageDownload = (imageId: string) => {
-    console.log('Image downloaded:', imageId);
-    // Download image functionality
-  };
-
-  const handleImagesSelected = (imageIds: Array<string>) => {
-    setSelectedImages(imageIds);
-  };
-
-  // File upload handlers
-  const handleFileUpload = async (files: File | Array<File>, metadata?: Record<string, any>) => {
-    console.log('Files uploaded:', files, metadata);
-    
-    // Convert uploaded files to gallery images
-    const fileArray = Array.isArray(files) ? files : [files];
-    const newImages: Array<GalleryImage> = fileArray.map((file, index) => ({
-      id: `uploaded-${Date.now()}-${index}`,
-      url: URL.createObjectURL(file),
-      title: metadata?.title || file.name,
-      description: metadata?.description || `Uploaded image for ${instruction.title}`,
-      author: instruction.author,
-      tags: metadata?.tags ? metadata.tags.split(',').map((tag: string) => tag.trim()) : ['uploaded'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-
-    setGalleryImages(prev => [...prev, ...newImages]);
-    setShowUploadModal(false);
-  };
-
-  const handleUploadError = (error: string) => {
-    console.error('Upload error:', error);
-    // Show error notification
-  };
-
+  // Success state - show MOC details
   return (
-    <div className="container mx-auto px-4 py-8" data-testid="moc-detail-page">
-      {/* Header */}
-      <div className="mb-8">
-              <Button
-                variant="ghost"
-          onClick={handleBack}
-          className="mb-4 flex items-center gap-2"
-              >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Gallery
-              </Button>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header with Back Button */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate({ to: '/moc-gallery' })}
+            className="mb-4 hover:bg-muted"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Gallery
+          </Button>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Image */}
-          <div className="lg:col-span-2">
-            <img
-              src={instruction.coverImageUrl || 'https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=No+Image'}
-              alt={instruction.title}
-              className="w-full h-64 lg:h-96 object-cover rounded-lg shadow-lg"
-              data-testid="moc-main-image"
-            />
-            </div>
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Image and Actions */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Hero Image Card */}
+            <Card>
+              <CardContent className="p-0">
+                <img
+                  src={instruction.thumbnailUrl || 'https://via.placeholder.com/800x400/F97316/FFFFFF?text=No+Image'}
+                  alt={instruction.title}
+                  className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
+                />
+                <div className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={instruction.type === 'moc' ? 'default' : 'secondary'}>
+                        {instruction.type === 'moc' ? 'My Own Creation' : 'Official Set'}
+                      </Badge>
+                      {instruction.tags && instruction.tags.length > 0 && (
+                        <div className="flex gap-1">
+                          {instruction.tags.slice(0, 3).map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {instruction.tags.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{instruction.tags.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-          {/* MOC Info */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="moc-title">
-                {instruction.title}
-              </h1>
-              <p className="text-gray-600 mb-4" data-testid="moc-description">
-                {instruction.description}
-              </p>
-              </div>
-
-            {/* Author and Metadata */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2" data-testid="moc-author">
-                <span className="text-sm text-gray-500">By</span>
-                <span className="font-medium text-gray-900">{instruction.author}</span>
-              </div>
-              
-              <div className="flex items-center gap-4 text-sm">
-                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded" data-testid="moc-difficulty">
-                  {getDifficultyLabel(instruction.difficulty)}
-                </span>
-                <span className="text-gray-500" data-testid="moc-pieces">
-                  {calculateTotalParts(instruction)} pieces
-                </span>
-                <span className="text-gray-500">
-                  {formatTime(calculateTotalTime(instruction))}
-                </span>
-              </div>
-
-              {/* Rating and Downloads */}
-              <div className="flex items-center gap-4 text-sm">
-                {instruction.rating && (
-                  <span className="flex items-center gap-1">
-                    <span className="text-yellow-500">★</span>
-                    <span>{instruction.rating}/5</span>
-                  </span>
-                )}
-                <span className="text-gray-500">{instruction.downloadCount} downloads</span>
-              </div>
-            </div>
-
-            {/* Tags */}
-              <div className="flex flex-wrap gap-2">
-              {instruction.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
-                >
-                    {tag}
-                </span>
-                ))}
-              </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={isLiked ? "default" : "outline"}
-                size="sm"
-                onClick={handleLike}
-                className="flex items-center gap-2"
-              >
-                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                {likeCount}
-              </Button>
-              
-                      <Button
-                        variant="outline"
-                        size="sm"
-                onClick={handleShare}
-                className="flex items-center gap-2"
-                      >
-                <Share className="h-4 w-4" />
-                Share
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Heart className="h-4 w-4 mr-1" />
+                        Like
                       </Button>
-              
-                      <Button
-                        variant="outline"
-                        size="sm"
-                onClick={handleDownload}
-                className="flex items-center gap-2"
-                      >
-                <Download className="h-4 w-4" />
+                      <Button variant="outline" size="sm">
+                        <Share className="h-4 w-4 mr-1" />
+                        Share
+                      </Button>
+                      <Button variant="default" size="sm" className="bg-orange-500 hover:bg-orange-600">
+                        <Download className="h-4 w-4 mr-1" />
                         Download
                       </Button>
                     </div>
                   </div>
-              </div>
-          </div>
-          
-      {/* Content Sections */}
-      <div className="space-y-8">
-        {/* Overview Section */}
-        <section className="space-y-6">
-          <h2 className="text-2xl font-semibold">About this MOC</h2>
-          <p className="text-gray-600 leading-relaxed">{instruction.description}</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Statistics</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Total Pieces:</span>
-                  <span className="font-medium">{calculateTotalParts(instruction)}</span>
-                  </div>
-                <div className="flex justify-between">
-                  <span>Build Time:</span>
-                  <span className="font-medium">{formatTime(calculateTotalTime(instruction))}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Difficulty:</span>
-                  <span className="font-medium">{getDifficultyLabel(instruction.difficulty)}</span>
-                    </div>
-                {instruction.rating && (
-                  <div className="flex justify-between">
-                    <span>Rating:</span>
-                    <span className="font-medium">{instruction.rating}/5</span>
-                  </div>
-            )}
+              </CardContent>
+            </Card>
           </div>
-        </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Details</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Category:</span>
-                  <span className="font-medium capitalize">{instruction.category}</span>
-        </div>
-                <div className="flex justify-between">
-                  <span>Downloads:</span>
-                  <span className="font-medium">{instruction.downloadCount}</span>
-            </div>
-                <div className="flex justify-between">
-                  <span>Likes:</span>
-                  <span className="font-medium">{likeCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Created:</span>
-                  <span className="font-medium">{formatDate(instruction.createdAt)}</span>
-              </div>
-        </div>
-      </div>
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {instruction.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-block bg-white text-gray-700 text-xs px-2 py-1 rounded border"
-                  >
-                    {tag}
-                    </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Instructions Section */}
-        <section className="space-y-6" data-testid="instructions">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Build Steps</h2>
-            <Button className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload Instructions
-                </Button>
-            </div>
-
+          {/* Right Column - MOC Information */}
           <div className="space-y-6">
-            {instruction.steps.map((step) => (
-              <div
-                key={step.id}
-                className="border rounded-lg p-6"
-                data-testid="instruction-step"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Step {step.stepNumber}: {step.title}
-                    </h3>
-                    <p className="text-gray-600 mb-4">{step.description}</p>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span>Difficulty: {getDifficultyLabel(step.difficulty)}</span>
-                      {step.estimatedTime && (
-                        <span>Time: {formatTime(step.estimatedTime)}</span>
-                      )}
-            </div>
-          </div>
-                  {step.imageUrl && (
+            {/* Basic Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">{instruction.title}</CardTitle>
+                <CardDescription>
+                  {instruction.description || 'No description available'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Author */}
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Created by</span>
+                  <span className="font-medium">{instruction.author}</span>
+                </div>
+
+                {/* Creation Date */}
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="font-medium">{formatDate(instruction.createdAt)}</span>
+                </div>
+
+                {/* Stats */}
+                <div className="pt-4 border-t">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <img
-                        src={step.imageUrl}
-                        alt={`Step ${step.stepNumber}`}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-            </div>
-                  )}
-            </div>
-            </div>
-            ))}
-          </div>
-        </section>
+                      <span className="text-muted-foreground">Downloads</span>
+                      <p className="font-semibold">{instruction.downloadCount || 0}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Rating</span>
+                      <p className="font-semibold">
+                        {instruction.rating ? `${instruction.rating}/5` : 'Not rated'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Parts List Section */}
-        <section className="space-y-6" data-testid="parts-list">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Required Parts</h2>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Part
-                          </Button>
+            {/* Tags Card */}
+            {instruction.tags && instruction.tags.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Tags
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {instruction.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Parts List Files Card */}
+            {(() => {
+              const partsListFiles = instruction.files?.filter(file => file.fileType === 'parts-list') || [];
+              console.log('🔍 All files:', instruction.files);
+              console.log('🔍 Parts list files:', partsListFiles);
+
+              // Always show the card for debugging
+              return (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          Parts Lists
+                        </CardTitle>
+                        <CardDescription>
+                          {partsListFiles.length > 0
+                            ? `${partsListFiles.length} parts list ${partsListFiles.length === 1 ? 'file' : 'files'} available`
+                            : 'No parts list files available'
+                          }
+                        </CardDescription>
                       </div>
-
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Part Number
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Color
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {instruction.partsList.map((part, index) => (
-                  <tr key={index} data-testid="part-item">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {part.partNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {part.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className="capitalize">{part.color}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {part.quantity}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowPartsListUpload(true)}
+                        disabled={isUploadingPartsList}
+                        className="flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add Parts List
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Upload Interface */}
+                    {showPartsListUpload && (
+                      <div className="mb-6 p-4 border-2 border-dashed border-primary/20 rounded-lg bg-primary/5">
+                        <div className="text-center">
+                          <Upload className="h-8 w-8 mx-auto mb-3 text-primary" />
+                          <h3 className="font-medium mb-2">Upload Parts List</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Upload CSV, XML, TXT, or JSON files containing LEGO parts information
+                          </p>
+                          <div className="flex items-center gap-2 justify-center">
+                            <input
+                              type="file"
+                              accept=".csv,.xml,.txt,.json,.xlsx,.xls"
+                              onChange={(e) => {
+                                console.log('📁 File input changed:', e.target.files);
+                                if (e.target.files && e.target.files.length > 0) {
+                                  console.log('📁 Calling handlePartsListUpload...');
+                                  handlePartsListUpload(e.target.files);
+                                } else {
+                                  console.log('❌ No files selected');
+                                }
+                              }}
+                              disabled={isUploadingPartsList}
+                              className="hidden"
+                              id="parts-list-upload"
+                            />
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => document.getElementById('parts-list-upload')?.click()}
+                              disabled={isUploadingPartsList}
+                              className="flex items-center gap-1"
+                            >
+                              {isUploadingPartsList ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-white" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-3 w-3" />
+                                  Choose File
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowPartsListUpload(false)}
+                              disabled={isUploadingPartsList}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-        </section>
+                    )}
 
-        {/* Gallery Section */}
-        <section className="space-y-6" data-testid="moc-gallery">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Images</h2>
-            <Button 
-              className="flex items-center gap-2"
-              onClick={() => setShowUploadModal(true)}
-            >
-              <Upload className="h-4 w-4" />
-              Upload Image
-            </Button>
-          </div>
+                    {partsListFiles.length > 0 ? (
+                      <div className="space-y-3">
+                        {partsListFiles.map((file) => (
+                          <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary/10 rounded-lg">
+                                <FileText className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {file.originalFilename || 'Parts List'}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{getFileTypeLabel(file.mimeType)}</span>
+                                  <span>•</span>
+                                  <span>{formatDate(file.createdAt)}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(file.fileUrl, '_blank')}
+                                className="flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = file.fileUrl;
+                                  link.download = file.originalFilename || 'parts-list';
+                                  link.click();
+                                }}
+                                className="flex items-center gap-1"
+                              >
+                                <Download className="h-3 w-3" />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No parts list files have been uploaded for this MOC.</p>
+                        <p className="text-sm mt-2">Parts lists typically include CSV, XML, or TXT files with LEGO part information.</p>
 
-          {/* Gallery Component */}
-          <div className="bg-white border rounded-lg p-6">
-            <Gallery
-              images={galleryImages}
-              layout="grid"
-              className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-              selectedImages={selectedImages}
-              onImageClick={handleImageClick}
-              onImageLike={handleImageLike}
-              onImageShare={handleImageShare}
-              onImageDelete={handleImageDelete}
-              onImageDownload={handleImageDownload}
-              onImagesSelected={handleImagesSelected}
-            />
-          </div>
-        </section>
-      </div>
+                        {/* Debug info */}
+                        <div className="mt-4 p-3 bg-muted/50 rounded text-xs text-left">
+                          <p><strong>Debug:</strong></p>
+                          <p>Total files: {instruction.files?.length || 0}</p>
+                          <p>File types: {instruction.files?.map(f => f.fileType).join(', ') || 'none'}</p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Upload Images for {instruction.title}</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowUploadModal(false)}
-              >
-                ✕
-              </Button>
-            </div>
-            
-            <FileUpload
-              accept="image/*"
-              multiple={true}
-              maxSizeMB={10}
-              onUpload={handleFileUpload}
-              onError={handleUploadError}
-              metadataFields={[
-                {
-                  name: 'title',
-                  label: 'Image Title',
-                  type: 'text',
-                  required: true,
-                },
-                {
-                  name: 'description',
-                  label: 'Description',
-                  type: 'text',
-                  required: false,
-                },
-                {
-                  name: 'tags',
-                  label: 'Tags (comma-separated)',
-                  type: 'text',
-                  required: false,
-                },
-              ]}
-              uploadButtonLabel="Upload to MOC Gallery"
-            />
+            {/* Debug Card - Remove this in production */}
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">Debug Info</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs overflow-auto max-h-40 text-muted-foreground">
+                  {JSON.stringify(instruction, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
-
-export default MocDetailPage; 

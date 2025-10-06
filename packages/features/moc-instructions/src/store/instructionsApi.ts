@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { getCSRFHeaders } from '@repo/auth';
 import type {
   MockInstruction,
   CreateMockInstruction,
@@ -18,7 +19,7 @@ import type {
 } from '../schemas';
 
 const baseUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:3000/api/mocs'
+  ? '/api/mocs'  // Use relative URL to leverage Vite proxy (proxies to port 9000)
   : '/api/mocs';
 
 export const instructionsApi = createApi({
@@ -26,6 +27,23 @@ export const instructionsApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl,
     credentials: 'include',
+    prepareHeaders: async (headers, { endpoint }) => {
+      // Add CSRF headers for mutation requests
+      const isMutation = ['createInstruction', 'createInstructionWithFiles', 'updateInstruction', 'deleteInstruction'].includes(endpoint);
+
+      if (isMutation) {
+        try {
+          const csrfHeaders = await getCSRFHeaders();
+          Object.entries(csrfHeaders).forEach(([key, value]) => {
+            headers.set(key, value);
+          });
+        } catch (error) {
+          console.warn('Failed to add CSRF token to instructions API request:', error);
+        }
+      }
+
+      return headers;
+    },
   }),
   tagTypes: ['MockInstruction', 'MockInstructionReview', 'MockInstructionPartsList', 'MockInstructionFile', 'PartsListFile'],
   endpoints: (builder) => ({
@@ -39,6 +57,7 @@ export const instructionsApi = createApi({
     }),
     getInstruction: builder.query<MockInstruction, string>({
       query: (id) => `/${id}`,
+      transformResponse: (response: { moc: MockInstruction }) => response.moc,
       providesTags: (_result, _error, id) => [{ type: 'MockInstruction', id }],
     }),
     createInstruction: builder.mutation<MockInstruction, CreateMockInstruction>({
@@ -50,14 +69,19 @@ export const instructionsApi = createApi({
       invalidatesTags: ['MockInstruction'],
     }),
     createInstructionWithFiles: builder.mutation<any, any>({
-      query: (data) => ({
-        url: '/with-files',
-        method: 'POST',
-        body: data,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }),
+      query: (data) => {
+        // If data is FormData, don't set Content-Type (let browser handle it)
+        // If data is regular object, set JSON content type
+        const isFormData = data instanceof FormData;
+
+        return {
+          url: '/with-files',
+          method: 'POST',
+          body: data,
+          // Don't set Content-Type for FormData - browser will set multipart/form-data with boundary
+          ...(isFormData ? {} : { headers: { 'Content-Type': 'application/json' } }),
+        };
+      },
       invalidatesTags: ['MockInstruction'],
     }),
     updateInstruction: builder.mutation<

@@ -89,13 +89,35 @@ describe('PWAUpdateNotification', () => {
 
   it('calls installPrompt when install button is clicked', () => {
     mockPWAContext.canInstall = true
-    
+
     render(<PWAUpdateNotification />)
-    
+
     const installButton = screen.getByText('Install')
     fireEvent.click(installButton)
-    
+
     expect(mockPWAContext.installPrompt).toHaveBeenCalled()
+  })
+
+  it('calls closePrompt when install close button is clicked', () => {
+    mockPWAContext.canInstall = true
+
+    render(<PWAUpdateNotification />)
+
+    const closeButton = screen.getByRole('button', { name: 'Close install' })
+    fireEvent.click(closeButton)
+
+    expect(mockPWAContext.closePrompt).toHaveBeenCalled()
+  })
+
+  it('calls closePrompt when install "Not now" button is clicked', () => {
+    mockPWAContext.canInstall = true
+
+    render(<PWAUpdateNotification />)
+
+    const notNowButton = screen.getByText('Not now')
+    fireEvent.click(notNowButton)
+
+    expect(mockPWAContext.closePrompt).toHaveBeenCalled()
   })
 
   it('displays multiple notifications when multiple states are true', () => {

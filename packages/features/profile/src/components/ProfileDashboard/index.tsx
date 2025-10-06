@@ -143,63 +143,67 @@ export const ProfileDashboard: React.FC<ProfileDashboardProps> = ({
     <div className="space-y-8">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center space-x-2">
-              <Heart className="h-5 w-5 text-red-600" />
-              <CardTitle className="text-lg">Wishlist</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-red-600">{stats.totalWishlistItems}</span>
-                <span className="text-sm text-gray-500">Items</span>
+        <Card className="hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-accent/10 to-accent/5 dark:from-accent/20 dark:to-accent/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-accent/20 dark:bg-accent/30 rounded-lg">
+                  <Heart className="h-6 w-6 text-accent dark:text-accent" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-semibold text-foreground">Wishlist</CardTitle>
+                  <p className="text-sm text-muted-foreground">Total value: {formatCurrency(stats.totalSpent)}</p>
+                </div>
               </div>
-              <div className="text-sm text-gray-600">
-                Total value: {formatCurrency(stats.totalSpent)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-lg">Instructions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-blue-600">{stats.totalMocInstructions}</span>
-                <span className="text-sm text-gray-500">MOCs</span>
-              </div>
-              <div className="flex items-center space-x-1 text-sm text-gray-600">
-                <Star className="h-3 w-3 text-yellow-500" />
-                <span>{stats.averageRating} avg rating</span>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-accent">{stats.totalWishlistItems}</div>
+                <div className="text-sm text-muted-foreground">Items</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-lg">Activity</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-green-600">{stats.totalDownloads}</span>
-                <span className="text-sm text-gray-500">Downloads</span>
+        <Card className="hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/20 dark:bg-primary/30 rounded-lg">
+                  <BookOpen className="h-6 w-6 text-primary dark:text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-semibold text-foreground">Instructions</CardTitle>
+                  <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                    <Star className="h-3 w-3 text-warning" />
+                    <span>{stats.averageRating.toFixed(1)} avg rating</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center space-x-1 text-sm text-gray-600">
-                <Calendar className="h-3 w-3" />
-                <span>Member since {formatDate(stats.memberSince)}</span>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-primary">{stats.totalMocInstructions}</div>
+                <div className="text-sm text-muted-foreground">MOCs</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-200 border-0 bg-gradient-to-br from-success/10 to-success/5 dark:from-success/20 dark:to-success/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-success/20 dark:bg-success/30 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-success dark:text-success" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-semibold text-foreground">Activity</CardTitle>
+                  <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span>Since {formatDate(stats.memberSince)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-success">{stats.totalDownloads}</div>
+                <div className="text-sm text-muted-foreground">Downloads</div>
               </div>
             </div>
           </CardContent>

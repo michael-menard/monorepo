@@ -1,107 +1,87 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --radius: var(--radius);
+}
 
 @layer base {
   :root {
-    /* Your Enhanced Color Palette - Pure shadcn/ui approach */
+    /* Your Enhanced Color Palette */
     --background: 45 67% 97%;         /* #FAF8F1 - Your warm cream background */
     --foreground: 188 45% 15%;        /* Very dark teal - high contrast */
-
     --primary: 178 79% 32%;           /* #129990 - Your vibrant teal */
     --primary-foreground: 0 0% 100%;  /* Pure white for maximum contrast */
-
     --secondary: 45 67% 84%;          /* #FAEAB1 - Your warm cream */
     --secondary-foreground: 178 79% 20%; /* Darker version of vibrant teal */
-
     --accent: 168 18% 43%;            /* #5A827E - Your muted sage teal */
     --accent-foreground: 0 0% 100%;   /* White text for good contrast */
-
     --muted: 0 17% 96%;               /* #F6F0F0 - Your surface color */
     --muted-foreground: 168 18% 35%;  /* Darker sage for secondary text */
-
     --card: 0 17% 96%;                /* #F6F0F0 - Your surface color for cards */
     --card-foreground: 188 45% 15%;   /* Dark teal text */
-
     --popover: 0 17% 96%;             /* #F6F0F0 - Surface color */
     --popover-foreground: 188 45% 15%; /* Dark teal text */
-
     --border: 0 17% 90%;              /* Slightly darker than surface */
     --input: 0 17% 90%;               /* Input borders */
     --ring: 178 79% 32%;              /* Focus ring - vibrant teal */
-
     --destructive: 0 89% 26%;         /* #7D0A0A - Your deep burgundy */
     --destructive-foreground: 0 0% 100%; /* White text */
-
     --radius: 0.5rem;
   }
 
   .dark {
     --background: 168 18% 15%;        /* Very dark sage teal */
     --foreground: 0 17% 96%;          /* Your surface color as light text */
-
     --primary: 178 79% 45%;           /* Brighter version of your vibrant teal */
     --primary-foreground: 168 18% 15%; /* Dark sage background */
-
     --secondary: 168 18% 25%;         /* Darker sage teal */
     --secondary-foreground: 0 17% 96%; /* Light surface color */
-
     --accent: 45 67% 84%;             /* Your warm cream as accent */
     --accent-foreground: 168 18% 15%; /* Dark sage text */
-
     --muted: 168 18% 20%;             /* Slightly lighter than background */
     --muted-foreground: 0 17% 80%;    /* Medium light for secondary text */
-
     --card: 168 18% 20%;              /* Elevated surface in dark mode */
     --card-foreground: 0 17% 96%;     /* Light surface color text */
-
     --popover: 168 18% 20%;           /* Elevated surface */
     --popover-foreground: 0 17% 96%;  /* Light surface color text */
-
     --border: 168 18% 25%;            /* Subtle sage borders */
     --input: 168 18% 25%;             /* Input backgrounds */
     --ring: 178 79% 45%;              /* Bright vibrant teal focus */
-
     --destructive: 0 89% 45%;         /* Brighter burgundy for dark mode */
     --destructive-foreground: 0 17% 96%; /* Light text */
   }
-}
 
-@layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
+
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-  }
-
-  /* Inter font classes for different weights */
-  .font-light {
-    font-weight: 300;
-  }
-
-  .font-normal {
-    font-weight: 400;
-  }
-
-  .font-medium {
-    font-weight: 500;
-  }
-
-  .font-semibold {
-    font-weight: 600;
-  }
-
-  .font-bold {
-    font-weight: 700;
-  }
-
-  .font-extrabold {
-    font-weight: 800;
   }
 }

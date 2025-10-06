@@ -280,6 +280,7 @@ describe('Routing Configuration', () => {
       expect(routePaths).toContain('/moc-gallery')
       expect(routePaths).toContain('/profile')
       expect(routePaths).toContain('/wishlist')
+      expect(routePaths).toContain('/settings')
       expect(routePaths).toContain('/auth/login')
       expect(routePaths).toContain('/auth/signup')
       expect(routePaths).toContain('/unauthorized')

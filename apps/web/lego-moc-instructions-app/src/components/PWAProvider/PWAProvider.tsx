@@ -79,6 +79,7 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
   const closePrompt = () => {
     setNeedRefresh(false)
     setOfflineReady(false)
+    setCanInstall(false)
   }
 
   const installPrompt = async () => {

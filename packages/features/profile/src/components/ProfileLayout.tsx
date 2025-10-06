@@ -169,7 +169,7 @@ export const ProfileLayoutSidebar: React.FC<ProfileLayoutSidebarProps> = ({
 
       {/* Additional Content */}
       {additionalContent && (
-        <div className="w-full pt-4 border-t border-border/50">
+        <div className="w-full pt-4 border-t border-gray-200/50">
           {additionalContent}
         </div>
       )}

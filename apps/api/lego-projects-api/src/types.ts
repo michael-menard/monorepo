@@ -44,6 +44,8 @@ export const MocInstructionSchema = z.object({
   userId: z.string().uuid(),
   title: z.string().min(1).max(255),
   description: z.string().optional(),
+  author: z.string().min(1).max(255),
+  theme: z.enum(['modular', 'Automobile', 'ideas', 'creator expert', 'Lord Of The Rings', 'city']),
   tags: z.array(z.string()).optional(),
   thumbnailUrl: z.string().url().optional(),
   instructionFileUrl: z.string().url().optional(),
@@ -61,15 +63,38 @@ export const CreateMocSchema = z.object({
   galleryImageIds: z.array(z.string().uuid()).optional(),
 });
 
-// Enhanced schema for modal data with file uploads
-export const CreateMocWithFilesSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().min(1, 'Description is required'),
+// Base schema for file uploads
+const BaseCreateWithFilesSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  category: z.string().optional(),
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
   // File uploads will be handled separately via multer
+  // Required: instructionsFile (PDF or .io)
+  // Optional: partsLists (0 or more files)
+  // Optional: images (up to 3 images)
 });
+
+// MOC-specific schema for file uploads
+const CreateMocWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
+  type: z.literal('moc'),
+  author: z.string().min(1, 'Author is required for MOCs').max(255),
+});
+
+// Set-specific schema for file uploads
+const CreateSetWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
+  type: z.literal('set'),
+  brand: z.string().min(1, 'Brand is required for Sets').max(255),
+  theme: z.enum(['modular', 'Automobile', 'ideas', 'creator expert', 'Lord Of The Rings', 'city']),
+  setNumber: z.string().optional(),
+  releaseYear: z.number().int().min(1950).max(new Date().getFullYear() + 2).optional(),
+  retired: z.boolean().default(false),
+});
+
+// Unified schema (discriminated union)
+export const CreateMocWithFilesSchema = z.discriminatedUnion('type', [
+  CreateMocWithFilesSchemaBase,
+  CreateSetWithFilesSchemaBase,
+]);
 
 export const UpdateMocSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -80,8 +105,39 @@ export const UpdateMocSchema = z.object({
 });
 
 export const FileUploadSchema = z.object({
-  fileType: z.enum(['instruction', 'parts-list', 'thumbnail']),
+  fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
   file: z.custom<AvatarFile>(),
+});
+
+// Validation for MOC instruction files (PDF or .io) - 1 or more allowed
+export const MocInstructionFileSchema = z.object({
+  originalname: z.string(),
+  mimetype: z.enum(['application/pdf', 'application/octet-stream']),
+  size: z.number().max(50 * 1024 * 1024), // 50MB max
+}).refine((file) => {
+  // Allow .io files (they might come as application/octet-stream)
+  return file.mimetype === 'application/pdf' || file.originalname.endsWith('.io');
+}, {
+  message: 'File must be a PDF or .io file'
+});
+
+// Validation for parts list files (CSV, XML, JSON, PDF)
+export const MocPartsListFileSchema = z.object({
+  originalname: z.string(),
+  mimetype: z.enum(['text/csv', 'application/xml', 'application/json', 'application/pdf', 'text/plain']),
+  size: z.number().max(10 * 1024 * 1024), // 10MB max
+}).refine((file) => {
+  const allowedExtensions = ['.csv', '.xml', '.json', '.pdf', '.txt'];
+  return allowedExtensions.some(ext => file.originalname.toLowerCase().endsWith(ext));
+}, {
+  message: 'Parts list file must be CSV, XML, JSON, PDF, or TXT'
+});
+
+// Validation for gallery images (JPEG, PNG, WebP)
+export const MocGalleryImageSchema = z.object({
+  originalname: z.string(),
+  mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  size: z.number().max(10 * 1024 * 1024), // 10MB max
 });
 
 export type MocInstruction = z.infer<typeof MocInstructionSchema>;

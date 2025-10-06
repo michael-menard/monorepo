@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ProfileLayout, ProfileAvatar } from '@repo/profile';
 // TODO: Need to check if ProfileLayoutSidebar and ProfileAvatarInfo exist or need to be created
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui';
+import { Gallery } from '@repo/gallery';
+import { useGetInstructionsQuery } from '@repo/moc-instructions';
 import { Blocks, BookOpen, Heart, Settings, Trophy, Users, Zap } from 'lucide-react';
 
 export interface LegoMocProfilePageProps {
@@ -59,6 +61,34 @@ export const LegoMocProfilePage: React.FC<LegoMocProfilePageProps> = ({
   onEditProfile,
   onUploadAvatar,
 }) => {
+  // Fetch user's MOC instructions
+  const {
+    data: apiResponse,
+    isLoading: mocsLoading,
+    error: mocsError,
+  } = useGetInstructionsQuery({
+    q: '', // Empty query to get all MOCs
+    from: 0,
+    size: 100, // Get user's MOCs
+  });
+
+  // Transform MOCs data for the gallery
+  const userMocs = useMemo(() => {
+    if (!apiResponse?.mocs) return [];
+
+    return apiResponse.mocs.map((moc: any) => ({
+      id: moc.id,
+      title: moc.title,
+      description: moc.description || '',
+      author: moc.author || 'User',
+      theme: moc.theme || 'modular',
+      tags: moc.tags || [],
+      coverImageUrl: moc.thumbnailUrl,
+      createdAt: moc.createdAt,
+      updatedAt: moc.updatedAt,
+    }));
+  }, [apiResponse]);
+
   // Create sidebar content with LEGO-specific information
   const sidebarContent = (
     <div className="space-y-6">
@@ -284,17 +314,47 @@ export const LegoMocProfilePage: React.FC<LegoMocProfilePageProps> = ({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Blocks className="h-5 w-5" />
-                  My Original Creations ({stats.totalMocs})
+                  My Original Creations ({userMocs.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* MOC cards would go here */}
+                {mocsLoading ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
+                    <p>Loading your MOCs...</p>
+                  </div>
+                ) : mocsError ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>MOC gallery will be displayed here</p>
+                    <p>Error loading MOCs</p>
+                    <p className="text-sm">Please try again later</p>
                   </div>
-                </div>
+                ) : userMocs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No MOCs created yet</p>
+                    <p className="text-sm">Upload your first MOC to get started!</p>
+                  </div>
+                ) : (
+                  <Gallery
+                    images={userMocs.map(moc => ({
+                      id: moc.id,
+                      url: moc.coverImageUrl || '/placeholder-instruction.jpg',
+                      title: moc.title,
+                      description: moc.description,
+                      author: moc.author,
+                      tags: moc.tags,
+                      createdAt: new Date(moc.createdAt),
+                      updatedAt: new Date(moc.updatedAt),
+                    }))}
+                    layout="grid"
+                    onImageClick={(image) => {
+                      // Navigate to MOC detail page
+                      window.location.href = `/moc-detail/${image.id}`;
+                    }}
+                    className="mt-4"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>

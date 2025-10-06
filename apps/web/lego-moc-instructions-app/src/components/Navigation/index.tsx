@@ -244,7 +244,7 @@ function Navigation({ className = '' }: NavigationProps) {
                       Profile
                     </Link>
                     <Link
-                      to="/profile"
+                      to="/settings"
                       className="flex items-center px-3 py-2 text-sm hover:bg-accent transition-colors"
                       onClick={() => setIsUserMenuOpen(false)}
                     >

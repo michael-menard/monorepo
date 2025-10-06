@@ -14,7 +14,6 @@ import {
 } from 'lucide-react'
 import { config } from '../../config/environment.js'
 import DesignSystemGrid from '../../components/DesignSystemGrid'
-import DarkModeToggle from '../../components/DarkModeToggle'
 import ColorTest from '../../components/ColorTest'
 import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo'
 import TypographyShowcase from '../../components/TypographyShowcase'
@@ -76,9 +75,6 @@ function HomePage() {
 
     return (
     <>
-      {/* Dark Mode Toggle */}
-      <DarkModeToggle />
-
       {/* Typography Showcase - Inter Font & Color Palette */}
       <div className="container mx-auto px-4 py-8">
         <TypographyShowcase />

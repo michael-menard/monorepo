@@ -207,12 +207,12 @@ export default defineConfig({
   },
 
   server: {
-    port: parseInt(process.env.WEB_APP_PORT || '3002'), // Port from environment or default
+    port: parseInt(process.env.FRONTEND_PORT || process.env.WEB_APP_PORT || '3002'), // Use centralized port config
     host: true,
     proxy: {
       // Auth service routes - proxy to auth-service on configured port
       '/api/auth': {
-        target: `http://localhost:${process.env.AUTH_API_PORT || '9300'}`,
+        target: `http://localhost:${process.env.AUTH_SERVICE_PORT || process.env.AUTH_API_PORT || '9300'}`,
         changeOrigin: true,
         secure: false,
         ws: true,
@@ -224,6 +224,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true
+      },
+      // Static file uploads - proxy to lego-projects-api for file serving
+      '/uploads': {
+        target: `http://localhost:${process.env.LEGO_API_PORT || '9000'}`,
+        changeOrigin: true,
+        secure: false
       }
     },
     // Security headers for development server

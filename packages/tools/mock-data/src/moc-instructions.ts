@@ -29,8 +29,7 @@ export interface MockInstruction {
   title: string;
   description: string;
   author: string;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  theme: 'modular' | 'Automobile' | 'ideas' | 'creator expert' | 'Lord Of The Rings' | 'city';
   tags: string[];
   coverImageUrl?: string;
   coverImageFile?: File;

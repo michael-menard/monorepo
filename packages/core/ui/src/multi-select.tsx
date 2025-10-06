@@ -264,11 +264,11 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
             id={dropdownId}
             role="listbox"
             aria-multiselectable={true}
-            className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg"
+            className="absolute z-50 w-full mt-1 bg-popover border border-gray-200 rounded-md shadow-lg"
           >
             {/* Search Input */}
             {searchable && (
-              <div className="p-2 border-b border-border">
+              <div className="p-2 border-b border-gray-200">
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -283,7 +283,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 
             {/* Select All/None Button */}
             {filteredOptions.length > 0 && (
-              <div className="p-2 border-b border-border">
+              <div className="p-2 border-b border-gray-200">
                 <div
                   className="flex items-center w-full px-3 py-2 text-sm cursor-pointer hover:bg-accent rounded-md"
                   onClick={handleSelectAll}
@@ -301,7 +301,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 
             {/* Clear All Button */}
             {showClearButton && selectedValues.length > 0 && (
-              <div className="p-2 border-b border-border">
+              <div className="p-2 border-b border-gray-200">
                 <Button
                   variant="ghost"
                   size="sm"

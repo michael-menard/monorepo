@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import {
   AppCard,
@@ -14,6 +14,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '@repo/ui';
+import { Gallery } from '@repo/gallery';
+import { useGetInstructionsQuery } from '@repo/moc-instructions';
 import {
   Bell,
   Blocks,
@@ -55,6 +57,34 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
 }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Fetch user's MOC instructions
+  const {
+    data: apiResponse,
+    isLoading: mocsLoading,
+    error: mocsError,
+  } = useGetInstructionsQuery({
+    q: '', // Empty query to get all MOCs
+    from: 0,
+    size: 100, // Get user's MOCs
+  });
+
+  // Transform MOCs data for the gallery
+  const userMocs = useMemo(() => {
+    if (!apiResponse?.mocs) return [];
+
+    return apiResponse.mocs.map((moc: any) => ({
+      id: moc.id,
+      title: moc.title,
+      description: moc.description || '',
+      author: moc.author || 'User',
+      theme: moc.theme || 'modular',
+      tags: moc.tags || [],
+      coverImageUrl: moc.thumbnailUrl,
+      createdAt: moc.createdAt,
+      updatedAt: moc.updatedAt,
+    }));
+  }, [apiResponse]);
 
   // Navigation handlers for the cards
   const handleInstructionsClick = () => {
@@ -405,68 +435,89 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Instructions Card */}
         <Card
-          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-blue-300"
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-0 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10"
           onClick={handleInstructionsClick}
         >
           <CardContent className="p-6 text-center">
             <div className="mb-4">
-              <BookOpen className="h-12 w-12 mx-auto text-blue-600 group-hover:text-blue-700" />
+              <div className="p-3 bg-primary/20 dark:bg-primary/30 rounded-xl mx-auto w-fit">
+                <BookOpen className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Instructions</h3>
-            <p className="text-gray-600 mb-4">Browse detailed building guides and MOC instructions</p>
-            <div className="bg-blue-50 group-hover:bg-blue-100 rounded-lg py-2 px-4 transition-colors">
-              <span className="text-blue-700 font-medium">View Instructions →</span>
+            <h3 className="text-xl font-bold text-foreground mb-2">Instructions</h3>
+            <p className="text-muted-foreground mb-4 text-sm">Browse detailed building guides and MOC instructions</p>
+            <div className="bg-primary/20 dark:bg-primary/30 group-hover:bg-primary/30 dark:group-hover:bg-primary/40 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-primary font-medium">View Instructions →</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Sets Card */}
         <Card
-          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-green-300"
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-0"
           onClick={handleSetsClick}
+          style={{
+            backgroundColor: 'hsl(198 42% 82% / 0.2)',
+            backgroundImage: 'linear-gradient(135deg, hsl(198 42% 82% / 0.2) 0%, hsl(198 42% 82% / 0.1) 100%)'
+          }}
         >
           <CardContent className="p-6 text-center">
             <div className="mb-4">
-              <Blocks className="h-12 w-12 mx-auto text-green-600 group-hover:text-green-700" />
+              <div
+                className="p-3 rounded-xl mx-auto w-fit"
+                style={{ backgroundColor: 'hsl(198 42% 82% / 0.2)' }}
+              >
+                <Blocks
+                  className="h-8 w-8 group-hover:scale-110 transition-transform"
+                  style={{ color: 'hsl(198 42% 42%)' }}
+                />
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Sets</h3>
-            <p className="text-gray-600 mb-4">Explore LEGO sets and MOC collections</p>
-            <div className="bg-green-50 group-hover:bg-green-100 rounded-lg py-2 px-4 transition-colors">
-              <span className="text-green-700 font-medium">Browse Sets →</span>
+            <h3 className="text-xl font-bold text-foreground mb-2">Sets</h3>
+            <p className="text-muted-foreground mb-4 text-sm">Explore LEGO sets and MOC collections</p>
+            <div
+              className="rounded-lg py-2 px-4 transition-colors group-hover:opacity-90"
+              style={{ backgroundColor: 'hsl(198 42% 82% / 0.2)' }}
+            >
+              <span className="font-medium" style={{ color: 'hsl(198 42% 32%)' }}>Browse Sets →</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Wishlist Card */}
         <Card
-          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-red-300"
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-0 bg-gradient-to-br from-accent/10 to-accent/5 dark:from-accent/20 dark:to-accent/10"
           onClick={handleWishlistClick}
         >
           <CardContent className="p-6 text-center">
             <div className="mb-4">
-              <Heart className="h-12 w-12 mx-auto text-red-600 group-hover:text-red-700" />
+              <div className="p-3 bg-accent/20 dark:bg-accent/30 rounded-xl mx-auto w-fit">
+                <Heart className="h-8 w-8 text-accent group-hover:scale-110 transition-transform" />
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Wishlist</h3>
-            <p className="text-gray-600 mb-4">Manage your wanted sets and parts</p>
-            <div className="bg-red-50 group-hover:bg-red-100 rounded-lg py-2 px-4 transition-colors">
-              <span className="text-red-700 font-medium">View Wishlist →</span>
+            <h3 className="text-xl font-bold text-foreground mb-2">Wishlist</h3>
+            <p className="text-muted-foreground mb-4 text-sm">Manage your wanted sets and parts</p>
+            <div className="bg-accent/20 dark:bg-accent/30 group-hover:bg-accent/30 dark:group-hover:bg-accent/40 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-accent font-medium">View Wishlist →</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Inspiration Gallery Card */}
         <Card
-          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-purple-300"
+          className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-0 bg-gradient-to-br from-secondary/20 to-secondary/10 dark:from-secondary/10 dark:to-secondary/5"
           onClick={handleInspirationClick}
         >
           <CardContent className="p-6 text-center">
             <div className="mb-4">
-              <Zap className="h-12 w-12 mx-auto text-purple-600 group-hover:text-purple-700" />
+              <div className="p-3 bg-secondary/30 dark:bg-secondary/20 rounded-xl mx-auto w-fit">
+                <Zap className="h-8 w-8 text-warning group-hover:scale-110 transition-transform" />
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Inspiration</h3>
-            <p className="text-gray-600 mb-4">Discover creative ideas and trending MOCs</p>
-            <div className="bg-purple-50 group-hover:bg-purple-100 rounded-lg py-2 px-4 transition-colors">
-              <span className="text-purple-700 font-medium">Get Inspired →</span>
+            <h3 className="text-xl font-bold text-foreground mb-2">Inspiration</h3>
+            <p className="text-muted-foreground mb-4 text-sm">Discover creative ideas and trending MOCs</p>
+            <div className="bg-secondary/30 dark:bg-secondary/20 group-hover:bg-secondary/40 dark:group-hover:bg-secondary/30 rounded-lg py-2 px-4 transition-colors">
+              <span className="text-warning font-medium">Get Inspired →</span>
             </div>
           </CardContent>
         </Card>
@@ -498,18 +549,52 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Blocks className="h-5 w-5" />
-                My Original Creations (12)
+                My Original Creations ({userMocs.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* MOC cards would go here */}
-                <div className="text-center py-12 text-muted-foreground col-span-full">
-                  <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>MOC gallery will be displayed here</p>
-                  <p className="text-sm">Upload your first MOC to get started!</p>
+              {mocsLoading ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
+                  <p>Loading your MOCs...</p>
                 </div>
-              </div>
+              ) : mocsError ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Error loading MOCs</p>
+                  <p className="text-sm">Please try again later</p>
+                </div>
+              ) : userMocs.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Blocks className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No MOCs created yet</p>
+                  <p className="text-sm">Upload your first MOC to get started!</p>
+                  <Button
+                    className="mt-4"
+                    onClick={() => router.navigate({ to: '/moc-gallery' })}
+                  >
+                    Create Your First MOC
+                  </Button>
+                </div>
+              ) : (
+                <Gallery
+                  images={userMocs.map(moc => ({
+                    id: moc.id,
+                    url: moc.coverImageUrl || '/placeholder-instruction.jpg',
+                    title: moc.title,
+                    description: moc.description,
+                    author: moc.author,
+                    tags: moc.tags,
+                    createdAt: new Date(moc.createdAt),
+                    updatedAt: new Date(moc.updatedAt),
+                  }))}
+                  layout="grid"
+                  onImageClick={(image) => {
+                    router.navigate({ to: `/moc-detail/${image.id}` });
+                  }}
+                  className="mt-4"
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

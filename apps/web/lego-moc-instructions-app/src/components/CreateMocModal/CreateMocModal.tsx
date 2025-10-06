@@ -7,10 +7,11 @@ import {
   CardTitle,
   FormErrorMessage,
 } from '@repo/ui';
-import { Button, Input, Label, Textarea } from '@repo/ui';
-// import { Upload } from '@repo/upload'; // Temporarily disabled
-import { X, FileText, Image, List } from 'lucide-react';
+import { Button, Input, Label, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Badge } from '@repo/ui';
+import { Upload } from '@repo/upload';
+import { X, FileText, Image, List, User, Tag, Hash } from 'lucide-react';
 import type { UploadFile } from '@repo/upload';
+import type { CreateMocInstruction } from '@repo/moc-instructions';
 
 interface CreateMocModalProps {
   isOpen: boolean;
@@ -19,12 +20,18 @@ interface CreateMocModalProps {
   isLoading?: boolean;
 }
 
-export interface CreateMocData {
-  title: string;
-  description: string;
+// MOC data type that extends the Zod schema with file upload fields
+export type CreateMocData = Omit<CreateMocInstruction, 'coverImageFile'> & {
   instructionsFile: UploadFile | null;
   partsLists: UploadFile[];
   images: UploadFile[];
+};
+
+interface CreateMocModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: CreateMocData) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export const CreateMocModal: React.FC<CreateMocModalProps> = ({
@@ -35,8 +42,11 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
 }) => {
   console.log('🔧 CreateMocModal rendered with isOpen:', isOpen);
   const [formData, setFormData] = useState<CreateMocData>({
+    type: 'moc',
     title: '',
     description: '',
+    author: '',
+    tags: [],
     instructionsFile: null,
     partsLists: [],
     images: [],
@@ -56,14 +66,19 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
       newErrors.description = 'Description is required';
     }
 
-    // Temporarily disable file requirements for testing
-    // if (!formData.instructionsFile) {
-    //   newErrors.instructionsFile = 'Instructions file is required';
-    // }
+    if (!formData.author.trim()) {
+      newErrors.author = 'Author is required';
+    }
 
-    // if (formData.images.length === 0) {
-    //   newErrors.images = 'At least one image is required';
-    // }
+    // Instructions file is required
+    if (!formData.instructionsFile) {
+      newErrors.instructionsFile = 'At least one instructions file is required (PDF or .io format)';
+    }
+
+    // Images are optional (0-3 allowed)
+    // Parts lists are optional (0-10 allowed)
+    // Tags are optional
+    // Theme has a default value
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -75,8 +90,11 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
       onSubmit(formData);
       // Reset form
       setFormData({
+        type: 'moc',
         title: '',
         description: '',
+        author: '',
+        tags: [],
         instructionsFile: null,
         partsLists: [],
         images: [],
@@ -101,8 +119,57 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
     }
   }, [errors.description]);
 
+  const handleAuthorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, author: e.target.value }));
+    if (errors.author) {
+      setErrors(prev => ({ ...prev, author: '' }));
+    }
+  }, [errors.author]);
+
+  const handleTagsChange = useCallback((newTags: string[]) => {
+    setFormData(prev => ({ ...prev, tags: newTags }));
+  }, []);
+
   // Upload handlers
-  // Upload handlers removed - not currently used
+  const handleInstructionsFileUpload = useCallback((files: UploadFile[]) => {
+    if (files.length > 0) {
+      setFormData(prev => ({ ...prev, instructionsFile: files[0] }));
+      // Clear any existing error
+      if (errors.instructionsFile) {
+        setErrors(prev => ({ ...prev, instructionsFile: '' }));
+      }
+    }
+  }, [errors.instructionsFile]);
+
+  const handlePartsListsUpload = useCallback((files: UploadFile[]) => {
+    setFormData(prev => ({ ...prev, partsLists: files }));
+  }, []);
+
+  const handleImagesUpload = useCallback((files: UploadFile[]) => {
+    setFormData(prev => ({ ...prev, images: files }));
+  }, []);
+
+  // Tags input handlers
+  const [tagInput, setTagInput] = useState('');
+
+  const addTag = useCallback((tag: string) => {
+    const trimmedTag = tag.trim();
+    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
+      handleTagsChange([...formData.tags, trimmedTag]);
+    }
+    setTagInput('');
+  }, [formData.tags, handleTagsChange]);
+
+  const removeTag = useCallback((tagToRemove: string) => {
+    handleTagsChange(formData.tags.filter(tag => tag !== tagToRemove));
+  }, [formData.tags, handleTagsChange]);
+
+  const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(tagInput);
+    }
+  }, [tagInput, addTag]);
 
   // Remove uploaded file handlers
   const removeInstructionsFile = useCallback(() => {
@@ -131,44 +198,49 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal Content using shadcn components */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto z-10">
+      <div className="relative bg-background rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto z-10">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+          {/* Header with gradient background */}
+          <div className="flex items-center justify-between mb-6 -m-6 p-6 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-2xl">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Create New MOC Instructions</h2>
-              <p className="text-slate-600 mt-1">Upload your MOC instructions, parts lists, and images to share with the community.</p>
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-white text-sm font-medium mb-3">
+                🧱 New Creation
+              </div>
+              <h2 className="text-2xl font-bold">Create New MOC Instructions</h2>
+              <p className="text-orange-100 mt-1">Upload your MOC instructions, parts lists, and images to share with the community.</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 flex-shrink-0"
+              className="text-white/80 hover:text-white hover:bg-white/20 flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </Button>
           </div>
 
         {/* Form Content */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-800">
+          <Card className="border-0 shadow-sm bg-[var(--secondary)]">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"></div>
                 Basic Information
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-muted-foreground">
                 Provide the essential details about your MOC
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Title */}
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm font-medium text-slate-700">
+                <Label htmlFor="title" className="text-sm font-medium text-foreground">
                   MOC Title *
                 </Label>
                 <Input
@@ -176,7 +248,7 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
                   value={formData.title}
                   onChange={handleTitleChange}
                   placeholder="Enter your MOC title..."
-                  className={`${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={`${errors.title ? 'border-destructive focus:ring-destructive' : 'focus:ring-orange-500'}`}
                 />
                 {errors.title && (
                   <FormErrorMessage message={errors.title} />
@@ -185,7 +257,7 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium text-slate-700">
+                <Label htmlFor="description" className="text-sm font-medium text-foreground">
                   Description *
                 </Label>
                 <Textarea
@@ -194,60 +266,105 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
                   onChange={handleDescriptionChange}
                   placeholder="Describe your MOC, building techniques, inspiration..."
                   rows={4}
-                  className={`${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={`${errors.description ? 'border-destructive focus:ring-destructive' : 'focus:ring-orange-500'}`}
                 />
                 {errors.description && (
                   <FormErrorMessage message={errors.description} />
                 )}
               </div>
+
+              {/* Author */}
+              <div className="space-y-2">
+                <Label htmlFor="author" className="text-sm font-medium text-foreground">
+                  Author *
+                </Label>
+                <Input
+                  id="author"
+                  value={formData.author}
+                  onChange={handleAuthorChange}
+                  placeholder="Enter your name or username..."
+                  className={`${errors.author ? 'border-destructive focus:ring-destructive' : 'focus:ring-orange-500'}`}
+                />
+                {errors.author && (
+                  <FormErrorMessage message={errors.author} />
+                )}
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label htmlFor="tags" className="text-sm font-medium text-foreground">
+                  Tags
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    id="tags"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Add tags (press Enter or comma to add)..."
+                    className="focus:ring-orange-500"
+                  />
+                  {formData.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.tags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="flex items-center gap-1 px-2 py-1"
+                        >
+                          <Hash className="w-3 h-3" />
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Instructions File */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-800">
+          <Card className="border-0 shadow-sm bg-[var(--secondary)]">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"></div>
                 Instructions File *
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-muted-foreground">
                 Upload your building instructions as a PDF or .io file
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
 
             {!formData.instructionsFile ? (
-              <div className={`border-2 border-dashed rounded-lg p-6 text-center ${
-                errors.instructionsFile ? 'border-red-500' : 'border-slate-300'
-              }`}>
-                <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 mb-2">File uploads temporarily disabled</p>
-                <p className="text-sm text-slate-500">Upload functionality will be restored soon</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    // Mock file selection for testing
-                    setFormData(prev => ({
-                      ...prev,
-                      instructionsFile: {
-                        id: 'mock-file',
-                        file: new File([''], 'mock-instructions.pdf', { type: 'application/pdf' }),
-                        url: '',
-                        uploadProgress: 100
-                      }
-                    }));
-                  }}
-                >
-                  Simulate File Upload (for testing)
-                </Button>
-              </div>
+              <Upload
+                mode="inline"
+                config={{
+                  maxFiles: 1,
+                  maxFileSize: 50 * 1024 * 1024, // 50MB
+                  acceptedFileTypes: ['application/pdf', 'application/octet-stream'],
+                  multiple: false,
+                  autoUpload: false,
+                }}
+                onFilesChange={handleInstructionsFileUpload}
+                className={errors.instructionsFile ? 'border-destructive' : ''}
+              />
             ) : (
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-gray-200">
                 <div className="flex items-center space-x-3">
-                  <FileText className="w-8 h-8 text-blue-600" />
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
                   <div>
-                    <p className="font-medium text-slate-800">{formData.instructionsFile.file.name}</p>
-                    <p className="text-sm text-slate-600">
+                    <p className="font-medium text-foreground">{formData.instructionsFile.file.name}</p>
+                    <p className="text-sm text-muted-foreground">
                       {(formData.instructionsFile.file.size / (1024 * 1024)).toFixed(2)} MB
                     </p>
                   </div>
@@ -256,7 +373,7 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={removeInstructionsFile}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -269,34 +386,43 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
           </Card>
 
           {/* Parts Lists */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-800">
+          <Card className="border-0 shadow-sm bg-[var(--secondary)]">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"></div>
                 Parts Lists (Optional)
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-muted-foreground">
                 Upload multiple parts lists or inventory files to help builders
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
 
-            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
-              <List className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 mb-2">Parts list uploads temporarily disabled</p>
-              <p className="text-sm text-slate-500">This feature will be restored soon</p>
-            </div>
+            <Upload
+              mode="inline"
+              config={{
+                maxFiles: 10,
+                maxFileSize: 10 * 1024 * 1024, // 10MB
+                acceptedFileTypes: ['text/csv', 'application/xml', 'application/json', 'application/pdf', 'text/plain'],
+                multiple: true,
+                autoUpload: false,
+              }}
+              onFilesChange={handlePartsListsUpload}
+            />
 
             {/* Display uploaded parts lists */}
             {formData.partsLists.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-slate-700">Uploaded Parts Lists:</h4>
+              <div className="space-y-3">
+                <h4 className="font-medium text-foreground">Uploaded Parts Lists:</h4>
                 {formData.partsLists.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                  <div key={file.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-gray-200">
                     <div className="flex items-center space-x-3">
-                      <List className="w-6 h-6 text-green-600" />
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                        <List className="w-5 h-5 text-white" />
+                      </div>
                       <div>
-                        <p className="font-medium text-slate-800">{file.file.name}</p>
-                        <p className="text-sm text-slate-600">
+                        <p className="font-medium text-foreground">{file.file.name}</p>
+                        <p className="text-sm text-muted-foreground">
                           {(file.file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </div>
@@ -305,7 +431,7 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => removePartsListFile(file.id)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -317,51 +443,39 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
           </Card>
 
           {/* Images */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-800">
+          <Card className="border-0 shadow-sm bg-[var(--surface)]">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"></div>
                 Images * (Up to 3)
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-muted-foreground">
                 Upload up to 3 high-quality images of your MOC (JPEG, HEIC supported)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
 
-            <div className={`border-2 border-dashed rounded-lg p-6 text-center ${
-              errors.images ? 'border-red-500' : 'border-slate-300'
-            }`}>
-              <Image className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 mb-2">Image uploads temporarily disabled</p>
-              <p className="text-sm text-slate-500">Upload functionality will be restored soon</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  // Mock image selection for testing
-                  setFormData(prev => ({
-                    ...prev,
-                    images: [{
-                      id: 'mock-image',
-                      file: new File([''], 'mock-image.jpg', { type: 'image/jpeg' }),
-                      url: '',
-                      uploadProgress: 100
-                    }]
-                  }));
-                }}
-              >
-                Simulate Image Upload (for testing)
-              </Button>
-            </div>
+            <Upload
+              mode="inline"
+              config={{
+                maxFiles: 3,
+                maxFileSize: 10 * 1024 * 1024, // 10MB
+                acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
+                multiple: true,
+                autoUpload: false,
+              }}
+              onFilesChange={handleImagesUpload}
+              className={errors.images ? 'border-destructive' : ''}
+            />
 
             {/* Display uploaded images */}
             {formData.images.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-slate-700">Uploaded Images:</h4>
+              <div className="space-y-3">
+                <h4 className="font-medium text-foreground">Uploaded Images:</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {formData.images.map((file) => (
                     <div key={file.id} className="relative group">
-                      <div className="aspect-square bg-slate-100 rounded-lg border overflow-hidden">
+                      <div className="aspect-square bg-muted rounded-xl border border-gray-200 overflow-hidden">
                         {file.url ? (
                           <img
                             src={file.url}
@@ -370,7 +484,7 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Image className="w-12 h-12 text-slate-400" />
+                            <Image className="w-12 h-12 text-muted-foreground" />
                           </div>
                         )}
                       </div>
@@ -378,11 +492,11 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => removeImageFile(file.id)}
-                        className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-600 hover:text-red-800 rounded-full p-1"
+                        className="absolute top-2 right-2 bg-background/90 hover:bg-background text-destructive hover:text-destructive rounded-full p-1 shadow-sm"
                       >
                         <X className="w-4 h-4" />
                       </Button>
-                      <p className="mt-1 text-xs text-slate-600 truncate">{file.file.name}</p>
+                      <p className="mt-2 text-xs text-muted-foreground truncate">{file.file.name}</p>
                     </div>
                   ))}
                 </div>
@@ -396,15 +510,15 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-200 px-6 py-4 mt-6">
-          <div className="flex justify-between">
+        <div className="px-6 py-4 mt-6 rounded-b-2xl bg-[var(--secondary)]">
+          <div className="flex justify-between items-center">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50"
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating...' : 'Create MOC Instructions'}
             </Button>

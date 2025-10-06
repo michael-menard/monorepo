@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 
 // Debounce function removed - not currently used
 import { useNavigate } from '@tanstack/react-router';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui';
-import { Plus, Search, Grid, List, LayoutGrid, Table } from 'lucide-react';
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Card, CardContent } from '@repo/ui';
+import { Plus, Search, Grid, List, LayoutGrid, Table, Blocks } from 'lucide-react';
 import { Gallery } from '@repo/gallery';
 import { CreateMocModal, type CreateMocData } from '../../components/CreateMocModal';
 
@@ -260,22 +260,55 @@ const MocInstructionsGallery: React.FC = () => {
     console.log('📝 New MOC submitted:', mocData);
 
     try {
-      // For now, send just JSON data (files temporarily disabled)
-      const jsonData = {
-        title: mocData.title,
-        description: mocData.description,
-        // Note: Files are temporarily disabled
-        filesDisabled: true
-      };
+      // Validate required files
+      if (!mocData.instructionsFile) {
+        throw new Error('At least one instructions file is required');
+      }
 
-      console.log('📤 Sending JSON data to API via RTK Query...');
+      // Create FormData for file upload
+      const formData = new FormData();
+
+      // Add metadata
+      formData.append('type', mocData.type);
+      formData.append('title', mocData.title);
+      if (mocData.description) {
+        formData.append('description', mocData.description);
+      }
+      formData.append('author', mocData.author);
+
+      // Add tags as JSON string (if any)
+      if (mocData.tags && mocData.tags.length > 0) {
+        formData.append('tags', JSON.stringify(mocData.tags));
+      }
+
+      // Add required instructions file
+      formData.append('instructionsFile', mocData.instructionsFile.file);
+
+      // Add optional parts lists
+      mocData.partsLists.forEach((partsList) => {
+        formData.append('partsLists', partsList.file);
+      });
+
+      // Add optional images
+      mocData.images.forEach((image) => {
+        formData.append('images', image.file);
+      });
+
+      console.log('📤 Sending FormData to API via RTK Query...');
+      console.log('📋 Metadata being sent:');
+      console.log('  - Type:', mocData.type);
+      console.log('  - Title:', mocData.title);
+      console.log('  - Description:', mocData.description);
+      console.log('  - Author:', mocData.author);
+      console.log('  - Tags:', mocData.tags);
+      console.log('📁 Files being sent:');
+      console.log('  - Instructions:', mocData.instructionsFile.file.name);
+      console.log('  - Parts Lists:', mocData.partsLists.map(p => p.file.name));
+      console.log('  - Images:', mocData.images.map(i => i.file.name));
 
       // Use RTK Query mutation (automatically handles cache invalidation)
-      const result = await createMocWithFiles(jsonData).unwrap();
+      const result = await createMocWithFiles(formData).unwrap();
       console.log('✅ MOC created successfully:', result);
-
-      // Show success message
-      alert('MOC created successfully! 🎉');
 
       // Manually refetch the gallery data to ensure it updates
       console.log('🔄 Manually refreshing gallery...');
@@ -301,116 +334,122 @@ const MocInstructionsGallery: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50" data-testid="moc-gallery-page">
-      {/* Hero Header Section */}
-      <div className="relative bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-white/5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
-        </div>
-
-        <div className="relative container mx-auto px-4 py-16">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
-                🧱 Community Creations
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50 dark:from-background dark:via-muted/20 dark:to-accent/10" data-testid="moc-gallery-page">
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Header Card - Matching Profile Page Style */}
+        <Card className="border-0 bg-gradient-to-r from-orange-500 to-red-500 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
+                  🧱 Community Creations
+                </div>
+                <h1 className="text-3xl font-bold mb-2">
+                  MOC Gallery
+                </h1>
+                <p className="text-orange-100 max-w-2xl">
+                  Discover incredible LEGO MOC instructions crafted by passionate builders worldwide.
+                  Get inspired, learn new techniques, and share your own creations.
+                </p>
               </div>
-              <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-                MOC Gallery
-              </h1>
-              <p className="text-xl text-blue-100 mb-6 max-w-2xl">
-                Discover incredible LEGO MOC instructions crafted by passionate builders worldwide.
-                Get inspired, learn new techniques, and share your own creations.
-              </p>
+              <div className="hidden md:block">
+                <Blocks className="h-16 w-16 text-orange-200" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Bar Card */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={handleCreateNew}
                   size="lg"
-                  className="bg-white text-emerald-600 hover:bg-emerald-50 font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                  className="gap-2"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <Plus className="h-5 w-5" />
                   Create New MOC
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-white/30 text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-xl backdrop-blur-sm"
+                  className="gap-2"
                 >
+                  <Grid className="h-5 w-5" />
                   Browse Featured
                 </Button>
               </div>
-            </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 gap-4 lg:gap-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20">
-                <div className="text-3xl font-bold text-white mb-1">{filteredInstructions?.length || 0}</div>
-                <div className="text-blue-100 text-sm">MOC Instructions</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20">
-                <div className="text-3xl font-bold text-white mb-1">12K+</div>
-                <div className="text-blue-100 text-sm">Downloads</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20">
-                <div className="text-3xl font-bold text-white mb-1">850+</div>
-                <div className="text-blue-100 text-sm">Builders</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20">
-                <div className="text-3xl font-bold text-white mb-1">4.8★</div>
-                <div className="text-blue-100 text-sm">Avg Rating</div>
+              {/* Stats */}
+              <div className="flex gap-6 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-foreground">{filteredInstructions?.length || 0}</div>
+                  <div className="text-sm text-muted-foreground">MOC Instructions</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-foreground">12K+</div>
+                  <div className="text-sm text-muted-foreground">Downloads</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-foreground">850+</div>
+                  <div className="text-sm text-muted-foreground">Builders</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-foreground">4.8★</div>
+                  <div className="text-sm text-muted-foreground">Avg Rating</div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
       {/* Main Content Area */}
-      <div className="container mx-auto px-4 py-12">
 
 
 
 
 
-      {/* Gallery Component with Custom Search Layout */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-        <div className="p-6">
-          {/* Search Bar - Full width on top */}
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 pointer-events-none" />
-              <Input
-                type="text"
-                value={searchQuery}
-                placeholder="Search MOCs by title, author, or description..."
-                className="w-full pl-10 pr-4 py-3 text-lg border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent bg-white text-slate-700"
-                onChange={(e) => handleSearch(e.target.value)}
-              />
+
+        {/* Search and Filters Card */}
+        <Card>
+          <CardContent className="p-6">
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5 pointer-events-none" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  placeholder="Search MOCs by title, author, or description..."
+                  className="w-full pl-10 pr-4 py-3 text-base"
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Filter Controls and Layout Toggle Row - Full width */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6 w-full">
-            {/* Left side - Filter dropdowns */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-shrink-0">
-              <Select value={selectedCategory || "all"} onValueChange={handleCategoryChange}>
-                <SelectTrigger className="min-w-[160px] h-12">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {availableCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger className="min-w-[160px] h-12">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
+            {/* Filter Controls and Layout Toggle */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+              {/* Left side - Filter dropdowns */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-shrink-0">
+                <Select value={selectedCategory || "all"} onValueChange={handleCategoryChange}>
+                  <SelectTrigger className="min-w-[160px]">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {availableCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={handleSortChange}>
+                  <SelectTrigger className="min-w-[160px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recent">Most Recent</SelectItem>
                   <SelectItem value="popular">Most Popular</SelectItem>
@@ -422,181 +461,190 @@ const MocInstructionsGallery: React.FC = () => {
               </Select>
             </div>
 
-            {/* Right side - Layout Toggle Buttons with more space */}
-            <div className="flex items-center justify-center lg:justify-end">
-              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                <button
-                  onClick={() => handleLayoutChange('grid')}
-                  className={`flex items-center justify-center px-5 py-3 min-w-[52px] h-12 transition-all duration-200 ${
-                    currentLayout === 'grid'
-                      ? 'bg-cyan-50 text-cyan-600 border-r border-cyan-200'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-r border-slate-200'
-                  }`}
-                  title="Grid View"
-                  aria-label="Grid View"
-                >
-                  <Grid className="w-5 h-5" />
-                </button>
+              {/* Right side - Layout Toggle Buttons */}
+              <div className="flex items-center justify-center lg:justify-end">
+                <div className="flex items-center border rounded-lg overflow-hidden bg-background">
+                  <button
+                    onClick={() => handleLayoutChange('grid')}
+                    className={`flex items-center justify-center px-4 py-2 transition-all duration-200 ${
+                      currentLayout === 'grid'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground border-r'
+                    }`}
+                    title="Grid View"
+                    aria-label="Grid View"
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
 
-                <button
-                  onClick={() => handleLayoutChange('list')}
-                  className={`flex items-center justify-center px-5 py-3 min-w-[52px] h-12 transition-all duration-200 ${
-                    currentLayout === 'list'
-                      ? 'bg-cyan-50 text-cyan-600 border-r border-cyan-200'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-r border-slate-200'
-                  }`}
-                  title="List View"
-                  aria-label="List View"
-                >
-                  <List className="w-5 h-5" />
-                </button>
+                  <button
+                    onClick={() => handleLayoutChange('list')}
+                    className={`flex items-center justify-center px-4 py-2 transition-all duration-200 ${
+                      currentLayout === 'list'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground border-r'
+                    }`}
+                    title="List View"
+                    aria-label="List View"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
 
-                <button
-                  onClick={() => handleLayoutChange('masonry')}
-                  className={`flex items-center justify-center px-5 py-3 min-w-[52px] h-12 transition-all duration-200 ${
-                    currentLayout === 'masonry'
-                      ? 'bg-cyan-50 text-cyan-600 border-r border-cyan-200'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-r border-slate-200'
-                  }`}
-                  title="Masonry View"
-                  aria-label="Masonry View"
-                >
-                  <LayoutGrid className="w-5 h-5" />
-                </button>
+                  <button
+                    onClick={() => handleLayoutChange('masonry')}
+                    className={`flex items-center justify-center px-4 py-2 transition-all duration-200 ${
+                      currentLayout === 'masonry'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                    title="Masonry View"
+                    aria-label="Masonry View"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
 
-                <button
-                  onClick={() => handleLayoutChange('table')}
-                  className={`flex items-center justify-center px-5 py-3 min-w-[52px] h-12 transition-all duration-200 ${
-                    currentLayout === 'table'
-                      ? 'bg-cyan-50 text-cyan-600'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-                  }`}
-                  title="Table View"
-                  aria-label="Table View"
-                >
-                  <Table className="w-5 h-5" />
-                </button>
+                  <button
+                    onClick={() => handleLayoutChange('table')}
+                    className={`flex items-center justify-center px-4 py-2 transition-all duration-200 ${
+                      currentLayout === 'table'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                    title="Table View"
+                    aria-label="Table View"
+                  >
+                    <Table className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Gallery with filtered instructions */}
-          <Gallery
-            images={filteredInstructions.map(instruction => ({
-              id: instruction.id,
-              url: instruction.coverImageUrl || '/placeholder-instruction.jpg',
-              title: instruction.title,
-              description: instruction.description,
-              author: instruction.author,
-              tags: instruction.tags,
-              createdAt: new Date(instruction.createdAt),
-              updatedAt: new Date(instruction.updatedAt),
-            }))}
-            layout={currentLayout === 'masonry' ? 'masonry' : 'grid'}
-            onImageClick={(image) => {
-              const instruction = filteredInstructions.find(i => i.id === image.id);
-              if (instruction) {
-                navigate({ to: `/moc-instructions/${instruction.id}` });
-              }
-            }}
-            data-testid="moc-gallery"
-          />
-        </div>
-      </div>
+        {/* Gallery Card */}
+        {!isLoading && filteredInstructions && filteredInstructions.length > 0 && (
+          <Card>
+            <CardContent className="p-6">
+              {/* Gallery with filtered instructions */}
+              <Gallery
+                images={filteredInstructions.map(instruction => ({
+                  id: instruction.id,
+                  url: instruction.coverImageUrl || '/placeholder-instruction.jpg',
+                  title: instruction.title,
+                  description: instruction.description,
+                  author: instruction.author,
+                  tags: instruction.tags,
+                  createdAt: new Date(instruction.createdAt),
+                  updatedAt: new Date(instruction.updatedAt),
+                }))}
+                layout={currentLayout === 'masonry' ? 'masonry' : 'grid'}
+                onImageClick={(image) => {
+                  const instruction = filteredInstructions.find(i => i.id === image.id);
+                  if (instruction) {
+                    navigate({ to: `/moc-detail/${instruction.id}` });
+                  }
+                }}
+                data-testid="moc-gallery"
+              />
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Modern Empty State */}
-      {!isLoading && (!filteredInstructions || filteredInstructions.length === 0) && (
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-12 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <div className="text-4xl">🧱</div>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-700 mb-3">No MOC Instructions Yet</h3>
-            <p className="text-slate-600 mb-8 leading-relaxed">
-              Be the first to share your amazing LEGO creation! Upload your MOC instructions
-              and inspire builders around the world.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                onClick={handleCreateNew}
-                size="lg"
-                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Create First MOC
-              </Button>
-              <Button
-                onClick={() => refetchInstructions()}
-                variant="outline"
-                size="lg"
-                className="border-slate-200 hover:bg-slate-50 font-semibold px-8 py-3 rounded-xl text-slate-600"
-              >
-                Refresh Gallery
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Empty State */}
+        {!isLoading && (!filteredInstructions || filteredInstructions.length === 0) && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+                  <div className="text-4xl">🧱</div>
+                </div>
+                <h3 className="text-2xl font-bold text-foreground mb-3">No MOC Instructions Yet</h3>
+                <p className="text-muted-foreground mb-8 leading-relaxed">
+                  Be the first to share your amazing LEGO creation! Upload your MOC instructions
+                  and inspire builders around the world.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={handleCreateNew}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Create First MOC
+                  </Button>
+                  <Button
+                    onClick={() => refetchInstructions()}
+                    variant="outline"
+                    size="lg"
+                  >
+                    Refresh Gallery
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Modern Loading State */}
-      {isLoading && (
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-12 text-center">
-          <div className="flex flex-col items-center">
-            <div className="relative">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-100"></div>
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
-            </div>
-            <div className="mt-6">
-              <h3 className="text-xl font-semibold text-slate-700 mb-2">Loading Amazing MOCs</h3>
-              <p className="text-slate-600">Discovering the latest community creations...</p>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Loading State */}
+        {isLoading && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-muted"></div>
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent absolute top-0 left-0"></div>
+                </div>
+                <div className="mt-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-2">Loading Amazing MOCs</h3>
+                  <p className="text-muted-foreground">Discovering the latest community creations...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Modern Error State */}
-      {error && (
-        <div className="bg-white rounded-2xl shadow-lg border border-red-100 p-12 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="w-24 h-24 bg-gradient-to-br from-red-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <div className="text-4xl">⚠️</div>
-            </div>
-            <h3 className="text-2xl font-bold text-red-700 mb-3">Oops! Something went wrong</h3>
-            <p className="text-red-600 mb-2 font-medium">
-              {getErrorMessage(error)}
-            </p>
-            <p className="text-slate-600 mb-8">
-              Don't worry, this happens sometimes. Try refreshing the page or check back later.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                onClick={() => window.location.reload()}
-                size="lg"
-                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                Try Again
-              </Button>
-              <Button
-                onClick={handleCreateNew}
-                variant="outline"
-                size="lg"
-                className="border-slate-200 hover:bg-slate-50 font-semibold px-8 py-3 rounded-xl text-slate-600"
-              >
-                Create New MOC
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Error State */}
+        {error && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <div className="text-4xl">⚠️</div>
+                </div>
+                <h3 className="text-2xl font-bold text-destructive mb-3">Oops! Something went wrong</h3>
+                <p className="text-destructive mb-2 font-medium">
+                  {getErrorMessage(error)}
+                </p>
+                <p className="text-muted-foreground mb-8">
+                  Don't worry, this happens sometimes. Try refreshing the page or check back later.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={() => window.location.reload()}
+                    size="lg"
+                  >
+                    Try Again
+                  </Button>
+                  <Button
+                    onClick={handleCreateNew}
+                    variant="outline"
+                    size="lg"
+                  >
+                    Create New MOC
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Create MOC Modal */}
-      <CreateMocModal
-        isOpen={isCreateModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmitMoc}
-        isLoading={isCreating}
-      />
-
+        {/* Create MOC Modal */}
+        <CreateMocModal
+          isOpen={isCreateModalOpen}
+          onClose={handleCloseModal}
+          onSubmit={handleSubmitMoc}
+          isLoading={isCreating}
+        />
       </div>
     </div>
   );

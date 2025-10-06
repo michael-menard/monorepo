@@ -22,6 +22,12 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
   const finalOptions = { ...defaultCacheOptions, ...options };
 
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Skip caching entirely in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🚫 Cache disabled in development mode for:', req.originalUrl);
+      return next();
+    }
+
     // Skip caching for non-GET requests
     if (req.method !== 'GET') {
       return next();
@@ -69,6 +75,11 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
 // Cache invalidation middleware
 export const createCacheInvalidationMiddleware = (pattern: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Skip cache invalidation in development mode (no cache to invalidate)
+    if (process.env.NODE_ENV === 'development') {
+      return next();
+    }
+
     // Store original send method
     const originalSend = res.json;
 

@@ -1,8 +1,0 @@
-{
-  "schema": "./src/db/schema.ts",
-  "out": "./src/db/migrations",
-  "dialect": "postgresql",
-  "dbCredentials": {
-    "connectionString": "${DATABASE_URL:-postgres://user:password@localhost:5432/dbname}"
-  }
-} 

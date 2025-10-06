@@ -1,5 +1,7 @@
+// Load centralized environment configuration first
+require('../../../shared/config/env-loader');
+
 import express, { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -11,10 +13,8 @@ import { connectDB } from './db/connectDB';
 import { notFound, errorHandler } from './middleware/errorMiddleware';
 import { csrf } from './middleware/csrf';
 
-dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT || 9000;
+const PORT = process.env.PORT || process.env.AUTH_SERVICE_PORT || 9300;
 
 // Middleware
 app.use(express.json({ limit: '100kb' }));
@@ -37,9 +37,10 @@ const origins =
 
 app.use(
   cors({
-    origin: origins,
+    // For local development, allow all origins
+    origin: process.env.NODE_ENV === 'production' ? origins : true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token', 'Cache-Control'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
     credentials: true,
   }),

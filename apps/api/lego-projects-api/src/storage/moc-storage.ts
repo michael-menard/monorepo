@@ -1,5 +1,6 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import {
   S3Client,
@@ -30,14 +31,14 @@ export type MocFileType = (typeof MOC_FILE_TYPES)[keyof typeof MOC_FILE_TYPES];
 
 export const ALLOWED_FILE_EXTENSIONS: Record<MocFileType, string[]> = {
   [MOC_FILE_TYPES.INSTRUCTION]: ['.pdf', '.io'],
-  [MOC_FILE_TYPES.PARTS_LIST]: ['.csv', '.json', '.txt'],
+  [MOC_FILE_TYPES.PARTS_LIST]: ['.csv', '.json', '.txt', '.xml'],
   [MOC_FILE_TYPES.THUMBNAIL]: ['.jpg', '.jpeg', '.png', '.webp', '.heic'],
   [MOC_FILE_TYPES.GALLERY_IMAGE]: ['.jpg', '.jpeg', '.png', '.webp', '.heic'],
 };
 
 export const ALLOWED_MIME_TYPES: Record<MocFileType, string[]> = {
   [MOC_FILE_TYPES.INSTRUCTION]: ['application/pdf', 'application/octet-stream'],
-  [MOC_FILE_TYPES.PARTS_LIST]: ['text/csv', 'application/json', 'text/plain'],
+  [MOC_FILE_TYPES.PARTS_LIST]: ['text/csv', 'application/json', 'text/plain', 'application/xml', 'text/xml', 'application/octet-stream'],
   [MOC_FILE_TYPES.THUMBNAIL]: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'],
   [MOC_FILE_TYPES.GALLERY_IMAGE]: [
     'image/jpeg',
@@ -59,8 +60,30 @@ const mocLocalStorage = multer.diskStorage({
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const baseName = path.basename(file.originalname, ext);
+    // Sanitize filename: replace spaces and special characters with hyphens
+    const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
     const uniqueId = uuidv4();
-    cb(null, `${baseName}-${uniqueId}${ext}`);
+    cb(null, `${sanitizedBaseName}-${uniqueId}${ext}`);
+  },
+});
+
+// Local storage configuration specifically for parts list files
+const partsListLocalStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const userId = req.user?.sub;
+    const uploadPath = `uploads/moc-files/${userId}/${MOC_FILE_TYPES.PARTS_LIST}`;
+
+    // Ensure directory exists
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, ext);
+    // Sanitize filename: replace spaces and special characters with hyphens
+    const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
+    const uniqueId = uuidv4();
+    cb(null, `${sanitizedBaseName}-${uniqueId}${ext}`);
   },
 });
 
@@ -86,6 +109,32 @@ export const mocFileUpload = multer({
   },
 });
 
+// Multer configuration specifically for parts list uploads
+export const partsListUpload = multer({
+  storage: USE_S3 ? multer.memoryStorage() : partsListLocalStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB for parts list files
+  },
+  fileFilter: (req, file, cb) => {
+    // For parts list uploads, validate both MIME type and file extension
+    const allowedMimeTypes = ALLOWED_MIME_TYPES[MOC_FILE_TYPES.PARTS_LIST];
+    const allowedExtensions = ALLOWED_FILE_EXTENSIONS[MOC_FILE_TYPES.PARTS_LIST];
+
+    // Check file extension
+    const fileExtension = '.' + file.originalname.split('.').pop()?.toLowerCase();
+    const hasValidExtension = allowedExtensions.includes(fileExtension);
+
+    // Check MIME type or allow if extension is valid (handles MIME type detection issues)
+    const hasValidMimeType = allowedMimeTypes.includes(file.mimetype);
+
+    if (hasValidMimeType || hasValidExtension) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} with extension ${fileExtension} not allowed for parts list. Allowed extensions: ${allowedExtensions.join(', ')}`));
+    }
+  },
+});
+
 // Enhanced multer configuration for modal file uploads (multiple file types)
 export const mocModalUpload = multer({
   storage: USE_S3 ? multer.memoryStorage() : multer.diskStorage({
@@ -103,18 +152,27 @@ export const mocModalUpload = multer({
       }
 
       const uploadPath = `uploads/moc-files/${userId}/${subDir}`;
+
+      // Ensure directory exists
+      const fs = require('fs');
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+
       cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
       const baseName = path.basename(file.originalname, ext);
+      // Sanitize filename: replace spaces and special characters with hyphens
+      const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
       const uniqueId = uuidv4();
-      cb(null, `${baseName}-${uniqueId}${ext}`);
+      cb(null, `${sanitizedBaseName}-${uniqueId}${ext}`);
     },
   }),
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB max file size
-    files: 15, // Max 15 files total (1 instruction + 10 parts lists + 3 images + buffer)
+    files: 25, // Max 25 files total (10 instructions + 10 parts lists + 3 images + buffer)
   },
   fileFilter: (req, file, cb) => {
     console.log('🔍 File filter - fieldname:', file.fieldname, 'mimetype:', file.mimetype);

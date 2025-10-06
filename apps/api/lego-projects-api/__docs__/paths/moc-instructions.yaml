@@ -1,7 +1,9 @@
 /api/mocs:
   post:
-    summary: Create a new MOC instruction
-    description: Create a new MOC instruction with metadata (title, description, tags, thumbnailUrl)
+    summary: Create a new MOC instruction (metadata only)
+    description: Create a new MOC instruction with metadata only (title, description, tags, thumbnailUrl). For file uploads, use the /with-files endpoint.
+    tags:
+      - MOC Instructions
     security:
       - cookieAuth: []
     requestBody:
@@ -10,20 +12,28 @@
         application/json:
           schema:
             type: object
+            required:
+              - title
             properties:
               title:
                 type: string
+                minLength: 1
+                maxLength: 255
+                description: Title of the MOC instruction
               description:
                 type: string
                 nullable: true
+                description: Optional description of the MOC
               tags:
                 type: array
                 items:
                   type: string
                 nullable: true
+                description: Optional array of tags for categorization
               thumbnailUrl:
                 type: string
                 nullable: true
+                description: Optional URL to thumbnail image
     responses:
       '201':
         description: MOC created successfully
@@ -74,10 +84,247 @@
                   error: "UNAUTHORIZED"
                   details: null
 
+/api/mocs/with-files:
+  post:
+    summary: Create a new MOC instruction with files
+    description: |
+      Create a new MOC instruction with metadata and file uploads.
+
+      **Required Files:**
+      - instructionsFile: 1 or more PDF or .io files (up to 10)
+
+      **Optional Files:**
+      - partsLists: 0-10 files (CSV, XML, JSON, PDF, TXT)
+      - images: 0-3 images (JPEG, PNG, WebP)
+
+      **File Size Limits:**
+      - Instructions: 50MB per file
+      - Parts Lists: 10MB per file
+      - Images: 10MB per file
+
+      **Storage:**
+      - Development: Local storage in uploads/moc-files/
+      - Production: S3 bucket storage
+    tags:
+      - MOC Instructions
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - title
+              - instructionsFile
+            properties:
+              title:
+                type: string
+                minLength: 1
+                maxLength: 255
+                description: Title of the MOC instruction
+              description:
+                type: string
+                description: Optional description of the MOC
+              tags:
+                type: string
+                description: JSON array of tags as string (e.g., '["castle", "medieval"]')
+              category:
+                type: string
+                description: Optional category for the MOC
+              difficulty:
+                type: string
+                enum: [beginner, intermediate, advanced, expert]
+                description: Optional difficulty level
+              instructionsFile:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                minItems: 1
+                maxItems: 10
+                description: 1 or more instruction files (PDF or .io format, 50MB max each)
+              partsLists:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                maxItems: 10
+                description: Optional parts list files (CSV, XML, JSON, PDF, TXT, 10MB max each)
+              images:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                maxItems: 3
+                description: Optional images (JPEG, PNG, WebP, 10MB max each)
+          encoding:
+            instructionsFile:
+              contentType: application/pdf, application/octet-stream
+            partsLists:
+              contentType: text/csv, application/xml, application/json, application/pdf, text/plain
+            images:
+              contentType: image/jpeg, image/png, image/webp
+    responses:
+      '201':
+        description: MOC created successfully with files
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "MOC created successfully with files"
+                moc:
+                  allOf:
+                    - $ref: '../components/schemas.yaml#/MocInstruction'
+                    - type: object
+                      properties:
+                        files:
+                          type: array
+                          items:
+                            $ref: '../components/schemas.yaml#/MocFile'
+            examples:
+              success:
+                value:
+                  message: "MOC created successfully with files"
+                  moc:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    userId: "user-uuid"
+                    title: "Medieval Castle"
+                    description: "A detailed medieval castle with working drawbridge"
+                    tags: ["castle", "medieval", "architecture"]
+                    thumbnailUrl: "/uploads/moc-files/user/images/castle-front.jpg"
+                    createdAt: "2025-01-06T10:00:00Z"
+                    updatedAt: "2025-01-06T10:00:00Z"
+                    files:
+                      - id: "file-uuid-1"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "instruction"
+                        fileUrl: "/uploads/moc-files/user/instructions/castle-part1.pdf"
+                        originalFilename: "castle-part1.pdf"
+                        mimeType: "application/pdf"
+                        createdAt: "2025-01-06T10:00:00Z"
+                      - id: "file-uuid-2"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "instruction"
+                        fileUrl: "/uploads/moc-files/user/instructions/castle-part2.pdf"
+                        originalFilename: "castle-part2.pdf"
+                        mimeType: "application/pdf"
+                        createdAt: "2025-01-06T10:00:00Z"
+                      - id: "file-uuid-3"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "parts-list"
+                        fileUrl: "/uploads/moc-files/user/parts-lists/parts.csv"
+                        originalFilename: "parts.csv"
+                        mimeType: "text/csv"
+                        createdAt: "2025-01-06T10:00:00Z"
+                      - id: "file-uuid-4"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "thumbnail"
+                        fileUrl: "/uploads/moc-files/user/images/castle-front.jpg"
+                        originalFilename: "castle-front.jpg"
+                        mimeType: "image/jpeg"
+                        createdAt: "2025-01-06T10:00:00Z"
+      '400':
+        description: Bad request - validation error or missing required files
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              missing_instructions:
+                value:
+                  status: 400
+                  message: "At least one instructions file is required (PDF or .io format)"
+                  error: "VALIDATION_ERROR"
+              invalid_file_type:
+                value:
+                  status: 400
+                  message: "Instructions file must be PDF or .io format"
+                  error: "FILE_TYPE_ERROR"
+              file_too_large:
+                value:
+                  status: 400
+                  message: "File size must be less than 50MB"
+                  error: "FILE_SIZE_ERROR"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+
+/api/mocs/test-auth:
+  post:
+    summary: Generate test authentication token
+    description: |
+      Generate a test JWT token for API testing purposes.
+
+      **Development Only:** This endpoint is only available in development mode.
+
+      Returns a JWT token that can be used for testing other endpoints.
+      The token is also set as an HTTP-only cookie.
+    tags:
+      - MOC Instructions
+      - Testing
+    responses:
+      '200':
+        description: Test token generated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Test auth token generated"
+                userId:
+                  type: string
+                  format: uuid
+                  description: Generated test user ID
+                token:
+                  type: string
+                  description: JWT token for API authentication
+            examples:
+              success:
+                value:
+                  message: "Test auth token generated"
+                  userId: "123e4567-e89b-12d3-a456-426614174000"
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        headers:
+          Set-Cookie:
+            description: HTTP-only cookie with JWT token
+            schema:
+              type: string
+              example: "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; SameSite=Lax; Max-Age=3600"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              error:
+                value:
+                  status: 500
+                  message: "Failed to generate test token"
+                  error: "INTERNAL_ERROR"
+
 /api/mocs/{id}:
   patch:
     summary: Update MOC instruction metadata
     description: Update the metadata for an existing MOC instruction (title, description, tags, thumbnailUrl)
+    tags:
+      - MOC Instructions
     security:
       - cookieAuth: []
     parameters:
@@ -245,6 +492,9 @@
   get:
     summary: Search MOC instructions
     description: Full-text search for MOC instructions using Elasticsearch
+    tags:
+      - MOC Instructions
+      - Search
     security:
       - cookieAuth: []
     parameters:

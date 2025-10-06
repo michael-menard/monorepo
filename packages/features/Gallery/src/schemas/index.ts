@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Gallery Image Schema
 export const GalleryImageSchema = z.object({
   id: z.string(),
-  url: z.string().url(),
+  url: z.string().min(1, 'URL is required'), // Accept both absolute and relative URLs
   title: z.string().optional(),
   description: z.string().optional(),
   author: z.string().optional(),

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { boolean, z } from 'zod';
 
 // ============================================================================
 // CORE SCHEMAS
@@ -11,7 +11,7 @@ export const instructionsStepSchema = z.object({
   stepNumber: z.number().int().positive(),
   title: z.string().min(1, 'Step title is required'),
   description: z.string().min(1, 'Step description is required'),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().min(1).optional(), // Accept both absolute and relative URLs
   imageFile: z.instanceof(File).optional(),
   parts: z
     .array(
@@ -30,18 +30,17 @@ export const instructionsStepSchema = z.object({
   updatedAt: z.date(),
 });
 
-// Instructions schema
-export const instructionsSchema = z.object({
+// ============================================================================
+// BASE INSTRUCTIONS SCHEMA
+// ============================================================================
+
+// Base schema with common fields for both MOCs and Sets
+export const baseInstructionsSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  author: z.string().min(1, 'Author is required'),
-  category: z.string().min(1, 'Category is required'),
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).default('intermediate'),
   tags: z.array(z.string()).default([]),
-  coverImageUrl: z.string().url().optional(),
-  coverImageFile: z.instanceof(File).optional(),
-  steps: z.array(instructionsStepSchema).min(1, 'At least one step is required'),
+  coverImageUrl: z.string().min(1).optional(), 
   partsList: z
     .array(
       z.object({
@@ -62,18 +61,76 @@ export const instructionsSchema = z.object({
 });
 
 // ============================================================================
+// MOC INSTRUCTIONS SCHEMA
+// ============================================================================
+
+// MOC-specific schema (requires author, no brand)
+export const mocInstructionsSchema = baseInstructionsSchema.extend({
+  type: z.literal('moc'),
+  author: z.string().min(1, 'Author is required for MOCs'),
+});
+
+// ============================================================================
+// SET INSTRUCTIONS SCHEMA
+// ============================================================================
+
+// Set-specific schema (requires brand, no author)
+export const setInstructionsSchema = baseInstructionsSchema.extend({
+  type: z.literal('set'),
+  brand: z.string().min(1, 'Brand is required for Sets'),
+  theme: z.enum(['modular', 'Automobile', 'ideas', 'creator expert', 'Lord Of The Rings', 'city']),
+  setNumber: z.string().optional(), // Optional set number (e.g., "10294")
+  releaseYear: z.number().int().min(1950).max(new Date().getFullYear() + 2).optional(),
+  retired: z.boolean().default(false),
+});
+
+// ============================================================================
+// UNIFIED INSTRUCTIONS SCHEMA
+// ============================================================================
+
+// Discriminated union of MOC and Set schemas
+export const instructionsSchema = z.discriminatedUnion('type', [
+  mocInstructionsSchema,
+  setInstructionsSchema,
+]);
+
+// ============================================================================
 // CREATE/UPDATE SCHEMAS
 // ============================================================================
 
-// Create Instructions schema
-export const createInstructionsSchema = instructionsSchema.omit({
+// Create schemas for MOCs and Sets
+export const createMocInstructionsSchema = mocInstructionsSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-// Update Instructions schema
-export const updateInstructionsSchema = createInstructionsSchema.partial();
+export const createSetInstructionsSchema = setInstructionsSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Unified create schema (discriminated union)
+export const createInstructionsSchema = z.discriminatedUnion('type', [
+  createMocInstructionsSchema,
+  createSetInstructionsSchema,
+]);
+
+// Update schemas (make all fields optional except type discriminator)
+export const updateMocInstructionsSchema = createMocInstructionsSchema.partial().extend({
+  type: z.literal('moc'),
+});
+
+export const updateSetInstructionsSchema = createSetInstructionsSchema.partial().extend({
+  type: z.literal('set'),
+});
+
+// Unified update schema (discriminated union)
+export const updateInstructionsSchema = z.discriminatedUnion('type', [
+  updateMocInstructionsSchema,
+  updateSetInstructionsSchema,
+]);
 
 // Create Instructions step schema
 export const createInstructionsStepSchema = instructionsStepSchema.omit({
@@ -152,10 +209,10 @@ export const instructionsFileSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   fileName: z.string().min(1, 'File name is required'),
-  fileUrl: z.string().url(),
+  fileUrl: z.string().min(1), // Accept both absolute and relative URLs
   fileType: z.enum(['pdf', 'io']),
   fileSize: z.number().positive(),
-  thumbnailUrl: z.string().url().optional(),
+  thumbnailUrl: z.string().min(1).optional(), // Accept both absolute and relative URLs
   downloadCount: z.number().int().min(0).default(0),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -168,10 +225,10 @@ export const partsListFileSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   fileName: z.string().min(1, 'File name is required'),
-  fileUrl: z.string().url(),
+  fileUrl: z.string().min(1), // Accept both absolute and relative URLs
   fileType: z.enum(['csv', 'xml', 'json']),
   fileSize: z.number().positive(),
-  thumbnailUrl: z.string().url().optional(),
+  thumbnailUrl: z.string().min(1).optional(), // Accept both absolute and relative URLs
   downloadCount: z.number().int().min(0).default(0),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -500,9 +557,26 @@ export const mockInstructionStepsListPropsSchema = z.object({
 
 // Core types
 export type MockInstructionStep = z.infer<typeof instructionsStepSchema>;
+
+// Base instruction types
+export type BaseInstruction = z.infer<typeof baseInstructionsSchema>;
+
+// MOC-specific types
+export type MocInstruction = z.infer<typeof mocInstructionsSchema>;
+export type CreateMocInstruction = z.infer<typeof createMocInstructionsSchema>;
+export type UpdateMocInstruction = z.infer<typeof updateMocInstructionsSchema>;
+
+// Set-specific types
+export type SetInstruction = z.infer<typeof setInstructionsSchema>;
+export type CreateSetInstruction = z.infer<typeof createSetInstructionsSchema>;
+export type UpdateSetInstruction = z.infer<typeof updateSetInstructionsSchema>;
+
+// Unified types (discriminated unions)
 export type MockInstruction = z.infer<typeof instructionsSchema>;
 export type CreateMockInstruction = z.infer<typeof createInstructionsSchema>;
 export type UpdateMockInstruction = z.infer<typeof updateInstructionsSchema>;
+
+// Step types
 export type CreateMockInstructionStep = z.infer<typeof createInstructionsStepSchema>;
 export type UpdateMockInstructionStep = z.infer<typeof updateInstructionsStepSchema>;
 
