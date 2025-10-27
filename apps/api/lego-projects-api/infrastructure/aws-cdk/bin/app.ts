@@ -12,6 +12,7 @@ new LegoApiStack(
   `LegoApiStack${environment.charAt(0).toUpperCase() + environment.slice(1)}`,
   {
     environment: environment as 'staging' | 'production',
+    useSharedInfrastructure: true, // Use shared VPC, RDS, Redis, and monitoring
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',

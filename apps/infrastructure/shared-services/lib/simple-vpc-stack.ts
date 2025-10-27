@@ -54,18 +54,52 @@ export class SimpleVpcStack extends cdk.Stack {
       description: 'VPC ID for shared infrastructure',
     })
 
-    // Output private subnet IDs
+    // Output public subnet IDs (both comma-separated and individual)
+    new cdk.CfnOutput(this, 'PublicSubnetIds', {
+      value: this.vpc.publicSubnets.map(subnet => subnet.subnetId).join(','),
+      exportName: `${id}-PublicSubnetIds`,
+      description: 'Public subnet IDs for load balancers',
+    })
+
+    // Individual public subnet IDs
+    this.vpc.publicSubnets.forEach((subnet, index) => {
+      new cdk.CfnOutput(this, `PublicSubnet${index + 1}Id`, {
+        value: subnet.subnetId,
+        exportName: `${id}-PublicSubnet${index + 1}Id`,
+        description: `Public subnet ${index + 1} ID`,
+      })
+    })
+
+    // Output private subnet IDs (both comma-separated and individual)
     new cdk.CfnOutput(this, 'PrivateSubnetIds', {
       value: this.vpc.privateSubnets.map(subnet => subnet.subnetId).join(','),
       exportName: `${id}-PrivateSubnetIds`,
       description: 'Private subnet IDs for applications',
     })
 
-    // Output isolated subnet IDs for databases
+    // Individual private subnet IDs
+    this.vpc.privateSubnets.forEach((subnet, index) => {
+      new cdk.CfnOutput(this, `PrivateSubnet${index + 1}Id`, {
+        value: subnet.subnetId,
+        exportName: `${id}-PrivateSubnet${index + 1}Id`,
+        description: `Private subnet ${index + 1} ID`,
+      })
+    })
+
+    // Output isolated subnet IDs for databases (both comma-separated and individual)
     new cdk.CfnOutput(this, 'IsolatedSubnetIds', {
       value: this.vpc.isolatedSubnets.map(subnet => subnet.subnetId).join(','),
       exportName: `${id}-IsolatedSubnetIds`,
       description: 'Isolated subnet IDs for databases',
+    })
+
+    // Individual isolated subnet IDs
+    this.vpc.isolatedSubnets.forEach((subnet, index) => {
+      new cdk.CfnOutput(this, `IsolatedSubnet${index + 1}Id`, {
+        value: subnet.subnetId,
+        exportName: `${id}-IsolatedSubnet${index + 1}Id`,
+        description: `Isolated subnet ${index + 1} ID`,
+      })
     })
   }
 }
