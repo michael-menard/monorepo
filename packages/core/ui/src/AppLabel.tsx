@@ -1,6 +1,11 @@
 import * as React from 'react'
-import {Label, LabelProps} from './label'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import { Label, LabelProps } from './label'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 export interface AppLabelProps extends Omit<LabelProps, 'children'> {
   /** Label text content */

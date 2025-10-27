@@ -1,5 +1,5 @@
-import type {Meta, StoryObj} from '@storybook/react'
-import {AppAvatar} from './AppAvatar'
+import type { Meta, StoryObj } from '@storybook/react'
+import { AppAvatar } from './AppAvatar'
 
 const meta: Meta<typeof AppAvatar> = {
   title: 'UI/AppAvatar',

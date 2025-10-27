@@ -1,5 +1,5 @@
 import * as React from 'react'
-import {SanitizationConfig} from './lib/sanitization'
+import { SanitizationConfig } from './lib/sanitization'
 
 export interface AppFormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, 'onSubmit'> {
   /** Custom sanitization configurations for specific fields */

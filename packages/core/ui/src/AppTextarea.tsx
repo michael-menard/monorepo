@@ -1,6 +1,11 @@
 import * as React from 'react'
-import {Textarea, TextareaProps} from './textarea'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import { Textarea, TextareaProps } from './textarea'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 // Simple debounce hook (internal to avoid external dependencies)
 function useDebounce<T>(value: T, delay: number): T {

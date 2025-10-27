@@ -1,5 +1,5 @@
-import type {PayloadAction, Slice} from '@reduxjs/toolkit'
-import {createAsyncThunk, createSlice} from '@reduxjs/toolkit'
+import type { PayloadAction, Slice } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
 // Simplified auth state - only UI-specific state
 export interface AuthState {

@@ -1,5 +1,5 @@
-import {NextFunction, Request, Response} from 'express'
-import {CACHE_TTL, cacheUtils} from '../utils/redis'
+import { NextFunction, Request, Response } from 'express'
+import { CACHE_TTL, cacheUtils } from '../utils/redis'
 
 // Cache middleware options
 interface CacheOptions {

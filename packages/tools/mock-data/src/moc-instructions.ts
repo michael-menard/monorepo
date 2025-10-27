@@ -602,7 +602,13 @@ export const getPublishedMocInstructions = (): MockInstruction[] => {
  * Get MOC instruction categories
  */
 export const getMocInstructionCategories = (): string[] => {
-  return Array.from(new Set(mockMocInstructions.map(instruction => instruction.category).filter((category): category is string => category !== undefined)))
+  return Array.from(
+    new Set(
+      mockMocInstructions
+        .map(instruction => instruction.category)
+        .filter((category): category is string => category !== undefined),
+    ),
+  )
 }
 
 /**

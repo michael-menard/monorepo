@@ -1,7 +1,7 @@
-import React, {useState} from 'react'
-import {motion} from 'framer-motion'
+import React, { useState } from 'react'
+import { motion } from 'framer-motion'
 import ImageCard from '../ImageCard/index.js'
-import type {GalleryImage} from '../../types/index.js'
+import type { GalleryImage } from '../../types/index.js'
 
 export interface Album {
   id: string

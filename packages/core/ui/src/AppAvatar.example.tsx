@@ -1,5 +1,5 @@
-import React, {useState} from 'react'
-import {AppAvatar} from './AppAvatar'
+import React, { useState } from 'react'
+import { AppAvatar } from './AppAvatar'
 
 export const AppAvatarExample: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState<string>('https://example.com/avatar.jpg')

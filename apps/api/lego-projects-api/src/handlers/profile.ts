@@ -7,7 +7,7 @@ import {
   galleryImages,
   galleryAlbums,
   wishlistItems,
-  mocPartsLists
+  mocPartsLists,
 } from '../db/schema'
 import {
   uploadAvatar as uploadAvatarFile,

@@ -1,8 +1,15 @@
-import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react'
-import {getRTKQueryCacheConfig} from '@repo/cache'
-import type {BaseQueryFn, FetchArgs, FetchBaseQueryError} from '@reduxjs/toolkit/query'
-import type {AuthResponse, ConfirmResetRequest, ForgotPasswordRequest, LoginRequest, SignupRequest, VerifyEmailRequest,} from '../types/auth.js'
-import {getCSRFHeaders, isCSRFError, refreshCSRFToken} from '../utils/csrf.js'
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { getRTKQueryCacheConfig } from '@repo/cache'
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import type {
+  AuthResponse,
+  ConfirmResetRequest,
+  ForgotPasswordRequest,
+  LoginRequest,
+  SignupRequest,
+  VerifyEmailRequest,
+} from '../types/auth.js'
+import { getCSRFHeaders, isCSRFError, refreshCSRFToken } from '../utils/csrf.js'
 
 // Environment-aware base URL function
 const getAuthBaseUrl = () => {

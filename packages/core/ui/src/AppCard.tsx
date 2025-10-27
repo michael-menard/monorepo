@@ -1,5 +1,5 @@
 import React from 'react'
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from './index'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './index'
 
 export interface AppCardProps {
   title?: string
