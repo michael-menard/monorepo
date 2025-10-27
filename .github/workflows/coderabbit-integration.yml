@@ -339,10 +339,10 @@ jobs:
             3. ✅ Quality gates validated the changes
             
             ### Next Steps
-            ${needs.quality-gates.result === 'success' ? 
-              '🎉 All checks passed! This PR is ready for human review and merge.' :
+            ${{ needs.quality-gates.result == 'success' &&
+              '🎉 All checks passed! This PR is ready for human review and merge.' ||
               '⚠️ Some checks failed. Please review the feedback and make necessary adjustments.'
-            }
+            }}
             
             ### Tools Used
             - **Auggie**: AI-powered development assistance
