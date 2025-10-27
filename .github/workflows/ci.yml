@@ -77,7 +77,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
@@ -108,7 +108,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run tests for changed packages
         run: pnpm turbo test --filter="./packages/*...[HEAD^1]"
@@ -136,7 +136,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build changed packages
         run: pnpm turbo build --filter="./packages/*...[HEAD^1]"
