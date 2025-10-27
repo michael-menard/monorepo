@@ -65,16 +65,16 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for Turborepo change detection
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -96,16 +96,16 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for Turborepo change detection
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -124,16 +124,16 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for Turborepo change detection
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
