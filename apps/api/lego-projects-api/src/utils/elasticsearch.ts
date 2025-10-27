@@ -1,24 +1,75 @@
 import { Client } from '@elastic/elasticsearch'
 
-const ELASTIC_URL = process.env.ELASTICSEARCH_URL || 'http://elasticsearch:9200'
 export const ES_INDEX = 'gallery_images'
 export const MOC_INDEX = 'moc_instructions'
 export const WISHLIST_INDEX = 'wishlist_items'
 
-export const esClient = new Client({ node: ELASTIC_URL })
+/**
+ * Get Elasticsearch/OpenSearch configuration based on environment
+ */
+const getSearchConfig = () => {
+  const isProd = process.env.NODE_ENV === 'production'
+  const useAwsServices = process.env.USE_AWS_SERVICES === 'true' || isProd
+  const searchDisabled = process.env.OPENSEARCH_DISABLED === 'true'
+
+  if (searchDisabled) {
+    console.log('🔍 Search functionality is disabled')
+    return null
+  }
+
+  if (useAwsServices) {
+    // AWS OpenSearch configuration
+    const opensearchEndpoint = process.env.OPENSEARCH_ENDPOINT
+    if (!opensearchEndpoint) {
+      console.warn('🔍 OPENSEARCH_ENDPOINT not configured, search functionality disabled')
+      return null
+    }
+
+    return {
+      node: opensearchEndpoint,
+      // AWS OpenSearch may require additional auth configuration
+      // This would typically use AWS SDK credentials or IAM roles
+    }
+  } else {
+    // Local Elasticsearch configuration
+    return {
+      node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200'
+    }
+  }
+}
+
+// Create client if search is enabled
+const searchConfig = getSearchConfig()
+export const esClient = searchConfig ? new Client(searchConfig) : null
 
 // Log connection status on startup
-;(async () => {
-  try {
-    const health = await esClient.cluster.health()
-    console.log('Elasticsearch cluster health:', health.status)
-  } catch (err: any) {
-    console.warn('Elasticsearch not available:', err.message)
-  }
-})()
+if (esClient) {
+  ;(async () => {
+    try {
+      const health = await esClient.cluster.health()
+      console.log('🔍 Search cluster health:', health.status)
+    } catch (err: any) {
+      console.warn('🔍 Search service not available:', err.message)
+    }
+  })()
+} else {
+  console.log('🔍 Search functionality is disabled')
+}
+
+/**
+ * Check if search functionality is available
+ */
+export const isSearchAvailable = (): boolean => {
+  return esClient !== null
+}
 
 // --- IMAGE INDEXING ---
 export async function indexImage(image: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.index({
       index: ES_INDEX,
@@ -34,6 +85,11 @@ export async function indexImage(image: any) {
 }
 
 export async function updateImage(image: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.update({
       index: ES_INDEX,
@@ -50,6 +106,11 @@ export async function updateImage(image: any) {
 }
 
 export async function deleteImage(id: string) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.delete({ index: ES_INDEX, id })
   } catch (err: any) {
@@ -60,6 +121,11 @@ export async function deleteImage(id: string) {
 
 // --- ALBUM INDEXING ---
 export async function indexAlbum(album: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.index({
       index: ES_INDEX,
@@ -101,6 +167,11 @@ export async function deleteAlbum(id: string) {
 
 // --- MOC INSTRUCTIONS INDEXING ---
 export async function indexMoc(moc: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.index({
       index: MOC_INDEX,
@@ -214,6 +285,10 @@ export async function searchGalleryItems({
   from?: number
   size?: number
 }) {
+  if (!esClient) {
+    console.log('🔍 Search service disabled, falling back to database')
+    return null
+  }
   const must: any[] = [{ term: { userId } }]
   if (type && type !== 'all') {
     must.push({ term: { type } })
@@ -270,6 +345,10 @@ export async function searchMocs({
   from?: number
   size?: number
 }) {
+  if (!esClient) {
+    console.log('🔍 Search service disabled, falling back to database')
+    return null
+  }
   const must: any[] = []
 
   // Only filter by userId if provided (for authenticated users)
@@ -341,6 +420,10 @@ export async function searchWishlistItems({
   from?: number
   size?: number
 }) {
+  if (!esClient) {
+    console.log('🔍 Search service disabled, falling back to database')
+    return null
+  }
   const must: any[] = [{ term: { userId } }]
 
   if (category) {
