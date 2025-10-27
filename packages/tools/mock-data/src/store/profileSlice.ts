@@ -1,13 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { UserStats, RecentActivity, QuickAction } from '../profile'
-import {
-  mockUserStats,
-  mockRecentActivities,
-  mockQuickActions,
-  getProfileDashboardData,
-  getRecentActivities,
-  getRecentActivitiesByType,
-} from '../profile'
+import { mockUserStats, getProfileDashboardData, getRecentActivities } from '../profile'
 
 export interface ProfileState {
   userStats: UserStats | null

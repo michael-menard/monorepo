@@ -1,14 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { WishlistItem } from '../wishlist'
-import {
-  mockWishlistItems,
-  getWishlistStats,
-  getWishlistCategories,
-  getWishlistItemsByCategory,
-  getWishlistItemsByPriority,
-  getPurchasedWishlistItems,
-  getUnpurchasedWishlistItems,
-} from '../wishlist'
+import { mockWishlistItems, getWishlistStats } from '../wishlist'
 
 export interface WishlistState {
   items: WishlistItem[]
