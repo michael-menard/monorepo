@@ -1,31 +1,28 @@
-import * as React from "react"
-import { motion } from "framer-motion"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "../lib/utils"
+import * as React from 'react'
+import { motion } from 'framer-motion'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '../lib/utils'
 
-const spinnerVariants = cva(
-  "inline-block",
-  {
-    variants: {
-      variant: {
-        default: "text-primary",
-        secondary: "text-secondary-foreground",
-        muted: "text-muted-foreground",
-        destructive: "text-destructive",
-      },
-      size: {
-        sm: "w-4 h-4",
-        default: "w-6 h-6",
-        lg: "w-8 h-8",
-        xl: "w-12 h-12",
-      },
+const spinnerVariants = cva('inline-block', {
+  variants: {
+    variant: {
+      default: 'text-primary',
+      secondary: 'text-secondary-foreground',
+      muted: 'text-muted-foreground',
+      destructive: 'text-destructive',
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      sm: 'w-4 h-4',
+      default: 'w-6 h-6',
+      lg: 'w-8 h-8',
+      xl: 'w-12 h-12',
     },
-  }
-)
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default',
+  },
+})
 
 export interface LoadingSpinnerProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -35,11 +32,11 @@ export interface LoadingSpinnerProps
 }
 
 const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
-  ({ className, variant, size, text = "Loading...", showText = false, ...props }, ref) => {
+  ({ className, variant, size, text = 'Loading...', showText = false, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn("flex flex-col items-center justify-center gap-2", className)}
+        className={cn('flex flex-col items-center justify-center gap-2', className)}
         {...props}
       >
         <motion.div
@@ -48,7 +45,7 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
           transition={{
             duration: 1,
             repeat: Infinity,
-            ease: "linear",
+            ease: 'linear',
           }}
         >
           <svg
@@ -72,7 +69,7 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
             />
           </svg>
         </motion.div>
-        {showText && (
+        {showText ? (
           <motion.p
             className="text-sm text-muted-foreground"
             initial={{ opacity: 0 }}
@@ -81,37 +78,34 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
           >
             {text}
           </motion.p>
-        )}
+        ) : null}
       </div>
     )
-  }
+  },
 )
-LoadingSpinner.displayName = "LoadingSpinner"
+LoadingSpinner.displayName = 'LoadingSpinner'
 
 // Pulse variant
-const pulseVariants = cva(
-  "inline-block rounded-full",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary",
-        secondary: "bg-secondary-foreground",
-        muted: "bg-muted-foreground",
-        destructive: "bg-destructive",
-      },
-      size: {
-        sm: "w-2 h-2",
-        default: "w-3 h-3",
-        lg: "w-4 h-4",
-        xl: "w-6 h-6",
-      },
+const pulseVariants = cva('inline-block rounded-full', {
+  variants: {
+    variant: {
+      default: 'bg-primary',
+      secondary: 'bg-secondary-foreground',
+      muted: 'bg-muted-foreground',
+      destructive: 'bg-destructive',
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      sm: 'w-2 h-2',
+      default: 'w-3 h-3',
+      lg: 'w-4 h-4',
+      xl: 'w-6 h-6',
     },
-  }
-)
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default',
+  },
+})
 
 export interface PulseSpinnerProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -122,11 +116,7 @@ export interface PulseSpinnerProps
 const PulseSpinner = React.forwardRef<HTMLDivElement, PulseSpinnerProps>(
   ({ className, variant, size, count = 3, ...props }, ref) => {
     return (
-      <div
-        ref={ref}
-        className={cn("flex items-center justify-center gap-1", className)}
-        {...props}
-      >
+      <div ref={ref} className={cn('flex items-center justify-center gap-1', className)} {...props}>
         {Array.from({ length: count }).map((_, index) => (
           <motion.div
             key={index}
@@ -139,40 +129,37 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, PulseSpinnerProps>(
               duration: 1.5,
               repeat: Infinity,
               delay: index * 0.2,
-              ease: "easeInOut",
+              ease: 'easeInOut',
             }}
           />
         ))}
       </div>
     )
-  }
+  },
 )
-PulseSpinner.displayName = "PulseSpinner"
+PulseSpinner.displayName = 'PulseSpinner'
 
 // Dots variant
-const dotsVariants = cva(
-  "inline-block rounded-full",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary",
-        secondary: "bg-secondary-foreground",
-        muted: "bg-muted-foreground",
-        destructive: "bg-destructive",
-      },
-      size: {
-        sm: "w-1.5 h-1.5",
-        default: "w-2 h-2",
-        lg: "w-2.5 h-2.5",
-        xl: "w-3 h-3",
-      },
+const dotsVariants = cva('inline-block rounded-full', {
+  variants: {
+    variant: {
+      default: 'bg-primary',
+      secondary: 'bg-secondary-foreground',
+      muted: 'bg-muted-foreground',
+      destructive: 'bg-destructive',
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      sm: 'w-1.5 h-1.5',
+      default: 'w-2 h-2',
+      lg: 'w-2.5 h-2.5',
+      xl: 'w-3 h-3',
     },
-  }
-)
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default',
+  },
+})
 
 export interface DotsSpinnerProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -183,11 +170,7 @@ export interface DotsSpinnerProps
 const DotsSpinner = React.forwardRef<HTMLDivElement, DotsSpinnerProps>(
   ({ className, variant, size, count = 3, ...props }, ref) => {
     return (
-      <div
-        ref={ref}
-        className={cn("flex items-center justify-center gap-1", className)}
-        {...props}
-      >
+      <div ref={ref} className={cn('flex items-center justify-center gap-1', className)} {...props}>
         {Array.from({ length: count }).map((_, index) => (
           <motion.div
             key={index}
@@ -199,14 +182,14 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, DotsSpinnerProps>(
               duration: 0.6,
               repeat: Infinity,
               delay: index * 0.1,
-              ease: "easeInOut",
+              ease: 'easeInOut',
             }}
           />
         ))}
       </div>
     )
-  }
+  },
 )
-DotsSpinner.displayName = "DotsSpinner"
+DotsSpinner.displayName = 'DotsSpinner'
 
-export { LoadingSpinner, PulseSpinner, DotsSpinner, spinnerVariants, pulseVariants, dotsVariants } 
+export { LoadingSpinner, PulseSpinner, DotsSpinner, spinnerVariants, pulseVariants, dotsVariants }

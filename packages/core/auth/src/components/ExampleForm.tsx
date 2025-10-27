@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Badge } from '@repo/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Badge } from '@repo/ui'
 
 export const ExampleForm: React.FC = () => {
   return (
@@ -21,5 +21,5 @@ export const ExampleForm: React.FC = () => {
         <Button className="w-full">Submit</Button>
       </CardContent>
     </Card>
-  );
-}; 
+  )
+}

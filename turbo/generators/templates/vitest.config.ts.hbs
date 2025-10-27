@@ -1,0 +1,26 @@
+import { defineConfig } from 'vitest/config'
+{{#if (eq type "react-lib")}}
+import react from '@vitejs/plugin-react'
+{{/if}}
+
+export default defineConfig({
+  {{#if (eq type "react-lib")}}
+  plugins: [react()],
+  {{/if}}
+  test: {
+    globals: true,
+    environment: {{#if (eq type "react-lib")}}'jsdom'{{else}}'node'{{/if}},
+    setupFiles: ['../../__tests__/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '**/*.test.*',
+        '**/*.spec.*',
+        '**/*.stories.*'
+      ]
+    }
+  }
+})

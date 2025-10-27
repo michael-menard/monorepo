@@ -2,7 +2,7 @@
 
 /**
  * MailHog Setup Script for E2E Testing
- * 
+ *
  * This script helps you set up MailHog as a local email testing tool.
  * MailHog runs on your machine and captures emails sent by your application.
  */
@@ -11,12 +11,12 @@ import { mailHogHelper } from './mailhog-helper'
 
 async function main() {
   console.log('📧 MailHog E2E Testing Setup\n')
-  console.log('=' .repeat(50))
+  console.log('='.repeat(50))
 
   // Print setup instructions
   mailHogHelper.printSetupInstructions()
 
-  console.log('\n' + '=' .repeat(50))
+  console.log('\n' + '='.repeat(50))
 
   console.log('\n🎯 Benefits of MailHog:')
   console.log('✅ Completely free')
@@ -62,7 +62,7 @@ MAILHOG_WEB_PORT=8025
   console.log('• Gmail App Passwords (if you have Gmail)')
   console.log('• Simple mock email service')
 
-  console.log('\n' + '=' .repeat(50))
+  console.log('\n' + '='.repeat(50))
   console.log('🎉 Ready to set up MailHog!')
   console.log('📚 For more information, see: README.md')
 }
@@ -73,4 +73,4 @@ main().catch(error => {
   process.exit(1)
 })
 
-export { main as setupMailHog } 
+export { main as setupMailHog }

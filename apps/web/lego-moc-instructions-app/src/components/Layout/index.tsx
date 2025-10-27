@@ -5,9 +5,9 @@ import Navigation from '../Navigation'
 // Zod schema for layout props
 const LayoutPropsSchema = z.object({
   children: z.any(),
-});
+})
 
-type LayoutProps = z.infer<typeof LayoutPropsSchema>;
+type LayoutProps = z.infer<typeof LayoutPropsSchema>
 
 function Layout({ children }: LayoutProps) {
   return (
@@ -19,7 +19,10 @@ function Layout({ children }: LayoutProps) {
           <div className="flex h-16 items-center justify-between">
             {/* Left side - Brand */}
             <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <Link
+                to="/"
+                className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              >
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
                   <span className="text-primary-foreground font-bold text-sm">M</span>
                 </div>
@@ -37,12 +40,10 @@ function Layout({ children }: LayoutProps) {
 
       {/* Main Content Container - Centered with Max Width */}
       <div className="w-full max-w-[1200px] mx-auto">
-        <main className="flex-1 p-10">
-          {children}
-        </main>
+        <main className="flex-1 p-10">{children}</main>
       </div>
     </div>
   )
 }
 
-export default Layout 
+export default Layout

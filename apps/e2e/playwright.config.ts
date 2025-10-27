@@ -35,16 +35,16 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    
+
     /* Take screenshot on failure */
     screenshot: 'only-on-failure',
-    
+
     /* Record video on failure */
     video: 'retain-on-failure',
-    
+
     /* More generous timeouts for React app loading */
-    actionTimeout: 10000,        // 10 seconds for actions (click, fill, etc.)
-    navigationTimeout: 15000,    // 15 seconds for page navigation
+    actionTimeout: 10000, // 10 seconds for actions (click, fill, etc.)
+    navigationTimeout: 15000, // 15 seconds for page navigation
 
     /* Additional timeout configurations */
     testIdAttribute: 'data-testid', // Use data-testid for element selection

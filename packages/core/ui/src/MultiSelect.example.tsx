@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { MultiSelect, MultiSelectOption } from './multi-select';
+import React, { useState } from 'react'
+import { MultiSelect, MultiSelectOption } from './multi-select'
 
 const MultiSelectExample: React.FC = () => {
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const [selectedValues, setSelectedValues] = useState<string[]>([])
 
   const options: MultiSelectOption[] = [
     { value: 'react', label: 'React' },
@@ -20,12 +20,12 @@ const MultiSelectExample: React.FC = () => {
     { value: 'kotlin', label: 'Kotlin' },
     { value: 'scala', label: 'Scala' },
     { value: 'elixir', label: 'Elixir' },
-  ];
+  ]
 
   const handleSelectionChange = (values: string[]) => {
-    setSelectedValues(values);
-    console.log('Selected values:', values);
-  };
+    setSelectedValues(values)
+    console.log('Selected values:', values)
+  }
 
   return (
     <div className="space-y-6 p-6 max-w-md">
@@ -85,12 +85,10 @@ const MultiSelectExample: React.FC = () => {
 
       <div className="mt-4 p-4 bg-gray-50 rounded-md">
         <h4 className="font-medium mb-2">Selected Values:</h4>
-        <pre className="text-sm text-gray-600">
-          {JSON.stringify(selectedValues, null, 2)}
-        </pre>
+        <pre className="text-sm text-gray-600">{JSON.stringify(selectedValues, null, 2)}</pre>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default MultiSelectExample; 
+export default MultiSelectExample

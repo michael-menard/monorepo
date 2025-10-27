@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import InspirationGallery from './index.js';
-import type { GalleryImage } from '../../types/index.js';
+import React, { useState, useCallback } from 'react'
+import type { GalleryImage } from '../../types/index.js'
+import InspirationGallery from './index.js'
 
 // Example usage of InspirationGallery component
 const InspirationGalleryExample: React.FC = () => {
@@ -55,50 +55,50 @@ const InspirationGalleryExample: React.FC = () => {
       createdAt: new Date('2024-01-05'),
       updatedAt: new Date('2024-01-05'),
     },
-  ]);
+  ])
 
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
 
   // Example handlers
   const handleImageClick = useCallback((image: GalleryImage) => {
-    console.log('Image clicked:', image.title);
+    console.log('Image clicked:', image.title)
     // Open lightbox or navigate to detail view
-  }, []);
+  }, [])
 
   const handleImageLike = useCallback((imageId: string, liked: boolean) => {
-    console.log('Image liked:', imageId, liked);
+    console.log('Image liked:', imageId, liked)
     // Update like status in backend
-  }, []);
+  }, [])
 
   const handleImageShare = useCallback((imageId: string) => {
-    console.log('Image shared:', imageId);
+    console.log('Image shared:', imageId)
     // Open share dialog
-  }, []);
+  }, [])
 
   const handleImageDelete = useCallback((imageId: string) => {
-    console.log('Image deleted:', imageId);
-    setImages((prev) => prev.filter((img) => img.id !== imageId));
-  }, []);
+    console.log('Image deleted:', imageId)
+    setImages(prev => prev.filter(img => img.id !== imageId))
+  }, [])
 
   const handleImageDownload = useCallback((imageId: string) => {
-    console.log('Image downloaded:', imageId);
+    console.log('Image downloaded:', imageId)
     // Trigger download
-  }, []);
+  }, [])
 
   const handleImageAddToAlbum = useCallback((imageId: string) => {
-    console.log('Image added to album:', imageId);
+    console.log('Image added to album:', imageId)
     // Open album selection dialog
-  }, []);
+  }, [])
 
   // Simulate loading more images
   const handleLoadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore) return
 
-    setLoading(true);
+    setLoading(true)
 
     // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     // Add more images
     const newImages: GalleryImage[] = [
@@ -112,17 +112,17 @@ const InspirationGalleryExample: React.FC = () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ];
+    ]
 
-    setImages((prev) => [...prev, ...newImages]);
+    setImages(prev => [...prev, ...newImages])
 
     // Stop loading more after 10 images
     if (images.length + newImages.length >= 10) {
-      setHasMore(false);
+      setHasMore(false)
     }
 
-    setLoading(false);
-  }, [images.length, loading, hasMore]);
+    setLoading(false)
+  }, [images.length, loading, hasMore])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -185,7 +185,7 @@ const InspirationGalleryExample: React.FC = () => {
         />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InspirationGalleryExample;
+export default InspirationGalleryExample

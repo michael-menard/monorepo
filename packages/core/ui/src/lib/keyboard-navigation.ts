@@ -161,11 +161,11 @@ export const useFocusTrap = (isActive: boolean = false) => {
 
   const getFocusableElements = useCallback(() => {
     if (!containerRef.current) return []
-    
+
     return Array.from(
       containerRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"], [role="button"], [role="tab"], [role="menuitem"], [role="option"]'
-      )
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"], [role="button"], [role="tab"], [role="menuitem"], [role="option"]',
+      ),
     ).filter(el => !(el as any).disabled && el.offsetParent !== null && el.style.display !== 'none')
   }, [])
 
@@ -215,7 +215,7 @@ export const useFocusTrap = (isActive: boolean = false) => {
     if (container) {
       container.addEventListener('keydown', handleKeyDown)
       focusFirstElement()
-      
+
       return () => {
         container.removeEventListener('keydown', handleKeyDown)
       }
@@ -233,9 +233,7 @@ export const useFocusTrap = (isActive: boolean = false) => {
 }
 
 // Keyboard event handler utilities
-export const createKeyboardHandler = (
-  handlers: Record<string, (event: KeyboardEvent) => void>
-) => {
+export const createKeyboardHandler = (handlers: Record<string, (event: KeyboardEvent) => void>) => {
   return (event: KeyboardEvent) => {
     const handler = handlers[event.key]
     if (handler) {
@@ -268,7 +266,7 @@ export const useLiveRegion = () => {
     const liveRegion = document.getElementById('live-region') || createLiveRegion()
     liveRegion.setAttribute('aria-live', priority)
     liveRegion.textContent = message
-    
+
     // Clear the message after a short delay to allow for multiple announcements
     setTimeout(() => {
       liveRegion.textContent = ''
@@ -314,10 +312,12 @@ export const useKeyboardNavigationContext = () => {
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
       // Don't handle shortcuts when typing in input fields
-      if (event.target instanceof HTMLInputElement || 
-          event.target instanceof HTMLTextAreaElement ||
-          event.target instanceof HTMLSelectElement ||
-          (event.target as HTMLElement).contentEditable === 'true') {
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement ||
+        (event.target as HTMLElement).contentEditable === 'true'
+      ) {
         return
       }
 
@@ -339,11 +339,11 @@ export const useKeyboardNavigationContext = () => {
 // Utility to generate unique IDs for ARIA relationships
 export const useUniqueId = (prefix: string = 'id') => {
   const idRef = useRef<string>('')
-  
+
   if (!idRef.current) {
     idRef.current = `${prefix}-${Math.random().toString(36).substr(2, 9)}`
   }
-  
+
   return idRef.current
 }
 
@@ -351,42 +351,50 @@ export const useUniqueId = (prefix: string = 'id') => {
 export const isFocusable = (element: HTMLElement): boolean => {
   const tagName = element.tagName.toLowerCase()
   const tabIndex = element.getAttribute('tabindex')
-  
+
   // Elements that are naturally focusable
   if (['input', 'select', 'textarea', 'button', 'a'].includes(tagName)) {
     return !(element as any).disabled && element.offsetParent !== null
   }
-  
+
   // Elements with tabindex >= 0
   if (tabIndex !== null && parseInt(tabIndex) >= 0) {
     return element.offsetParent !== null
   }
-  
+
   // Elements with contenteditable
   if (element.contentEditable === 'true') {
     return element.offsetParent !== null
   }
-  
+
   return false
 }
 
 // Utility to get the next focusable element
-export const getNextFocusableElement = (currentElement: HTMLElement, direction: 'forward' | 'backward' = 'forward'): HTMLElement | null => {
+export const getNextFocusableElement = (
+  currentElement: HTMLElement,
+  direction: 'forward' | 'backward' = 'forward',
+): HTMLElement | null => {
   const allElements = Array.from(document.querySelectorAll<HTMLElement>('*'))
   const focusableElements = allElements.filter(isFocusable)
   const currentIndex = focusableElements.indexOf(currentElement)
-  
+
   if (currentIndex === -1) return null
-  
+
   if (direction === 'forward') {
     return focusableElements[currentIndex + 1] || focusableElements[0] || null
   } else {
-    return focusableElements[currentIndex - 1] || focusableElements[focusableElements.length - 1] || null
+    return (
+      focusableElements[currentIndex - 1] || focusableElements[focusableElements.length - 1] || null
+    )
   }
 }
 
 // Utility to announce changes to screen readers
-export const announceToScreenReader = (message: string, priority: 'polite' | 'assertive' = 'polite') => {
+export const announceToScreenReader = (
+  message: string,
+  priority: 'polite' | 'assertive' = 'polite',
+) => {
   const { announce } = useLiveRegion()
   announce(message, priority)
-} 
+}

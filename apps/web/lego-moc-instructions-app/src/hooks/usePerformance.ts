@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
-import {  getPerformanceSummary, performanceMonitor, trackEvent, trackInteraction, trackPerformanceMetric } from '../services/performance'
-import type {UserAnalytics} from '../services/performance';
+import {
+  getPerformanceSummary,
+  performanceMonitor,
+  trackEvent,
+  trackInteraction,
+  trackPerformanceMetric,
+} from '../services/performance'
+import type { UserAnalytics } from '../services/performance'
 
 export const usePerformance = () => {
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null)
-  const [performanceSummary, setPerformanceSummary] = useState<ReturnType<typeof getPerformanceSummary> | null>(null)
+  const [performanceSummary, setPerformanceSummary] = useState<ReturnType<
+    typeof getPerformanceSummary
+  > | null>(null)
 
   // Initialize performance monitoring
   useEffect(() => {
     performanceMonitor.init()
-    
+
     // Update analytics data periodically
     const updateAnalytics = () => {
       setAnalytics(performanceMonitor.getAnalytics())
@@ -31,9 +39,12 @@ export const usePerformance = () => {
   }, [])
 
   // Track user interaction
-  const trackUserInteraction = useCallback((type: string, target: string, data?: Record<string, any>) => {
-    trackInteraction(type, target, data)
-  }, [])
+  const trackUserInteraction = useCallback(
+    (type: string, target: string, data?: Record<string, any>) => {
+      trackInteraction(type, target, data)
+    },
+    [],
+  )
 
   // Track custom event
   const trackCustomEvent = useCallback((eventName: string, data?: Record<string, any>) => {
@@ -88,16 +99,19 @@ export const useComponentPerformance = (componentName: string) => {
 
   useEffect(() => {
     const startTime = performance.now()
-    
+
     return () => {
       const renderTime = performance.now() - startTime
       trackRenderTime(componentName, renderTime)
     }
   }, [componentName, trackRenderTime])
 
-  const trackInteraction = useCallback((type: string, target: string, data?: Record<string, any>) => {
-    trackUserInteraction(type, `${componentName}:${target}`, data)
-  }, [componentName, trackUserInteraction])
+  const trackInteraction = useCallback(
+    (type: string, target: string, data?: Record<string, any>) => {
+      trackUserInteraction(type, `${componentName}:${target}`, data)
+    },
+    [componentName, trackUserInteraction],
+  )
 
   return { trackInteraction }
 }
@@ -106,24 +120,24 @@ export const useComponentPerformance = (componentName: string) => {
 export const useApiPerformance = () => {
   const { trackApiCall } = usePerformance()
 
-  const trackApiRequest = useCallback(async <T>(
-    apiCall: () => Promise<T>,
-    endpoint: string
-  ): Promise<T> => {
-    const startTime = performance.now()
-    
-    try {
-      const result = await apiCall()
-      const duration = performance.now() - startTime
-      trackApiCall(endpoint, duration, 200)
-      return result
-    } catch (error) {
-      const duration = performance.now() - startTime
-      const status = error instanceof Response ? error.status : 500
-      trackApiCall(endpoint, duration, status)
-      throw error
-    }
-  }, [trackApiCall])
+  const trackApiRequest = useCallback(
+    async <T>(apiCall: () => Promise<T>, endpoint: string): Promise<T> => {
+      const startTime = performance.now()
+
+      try {
+        const result = await apiCall()
+        const duration = performance.now() - startTime
+        trackApiCall(endpoint, duration, 200)
+        return result
+      } catch (error) {
+        const duration = performance.now() - startTime
+        const status = error instanceof Response ? error.status : 500
+        trackApiCall(endpoint, duration, status)
+        throw error
+      }
+    },
+    [trackApiCall],
+  )
 
   return { trackApiRequest }
 }
@@ -132,22 +146,25 @@ export const useApiPerformance = () => {
 export const useImagePerformance = () => {
   const { trackImageLoad } = usePerformance()
 
-  const trackImage = useCallback((imageUrl: string) => {
-    const img = new Image()
-    const startTime = performance.now()
-    
-    img.onload = () => {
-      const loadTime = performance.now() - startTime
-      trackImageLoad(imageUrl, loadTime)
-    }
-    
-    img.onerror = () => {
-      const loadTime = performance.now() - startTime
-      trackImageLoad(imageUrl, loadTime)
-    }
-    
-    img.src = imageUrl
-  }, [trackImageLoad])
+  const trackImage = useCallback(
+    (imageUrl: string) => {
+      const img = new Image()
+      const startTime = performance.now()
+
+      img.onload = () => {
+        const loadTime = performance.now() - startTime
+        trackImageLoad(imageUrl, loadTime)
+      }
+
+      img.onerror = () => {
+        const loadTime = performance.now() - startTime
+        trackImageLoad(imageUrl, loadTime)
+      }
+
+      img.src = imageUrl
+    },
+    [trackImageLoad],
+  )
 
   return { trackImage }
-} 
+}

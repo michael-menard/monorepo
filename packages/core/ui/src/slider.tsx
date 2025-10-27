@@ -1,14 +1,14 @@
-import * as React from "react"
-import * as SliderPrimitive from "@radix-ui/react-slider"
-import { cn } from "./lib/utils"
-import { getAriaAttributes, useUniqueId } from "./lib/keyboard-navigation"
+import * as React from 'react'
+import * as SliderPrimitive from '@radix-ui/react-slider'
+import { cn } from './lib/utils'
+import { getAriaAttributes, useUniqueId } from './lib/keyboard-navigation'
 
 export interface SliderProps extends React.ComponentProps<typeof SliderPrimitive.Root> {
-  label?: string;
-  description?: string;
-  showValue?: boolean;
-  valueText?: string;
-  orientation?: 'horizontal' | 'vertical';
+  label?: string
+  description?: string
+  showValue?: boolean
+  valueText?: string
+  orientation?: 'horizontal' | 'vertical'
 }
 
 function Slider({
@@ -28,20 +28,15 @@ function Slider({
   const uniqueId = useUniqueId('slider')
   const sliderId = id || uniqueId
   const descriptionId = `${sliderId}-description`
-  
+
   const _values = React.useMemo(
-    () =>
-      Array.isArray(value)
-        ? value
-        : Array.isArray(defaultValue)
-          ? defaultValue
-          : [min, max],
-    [value, defaultValue, min, max]
+    () => (Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max]),
+    [value, defaultValue, min, max],
   )
 
   const currentValue = Array.isArray(_values) ? _values[0] : _values
   const percentage = Math.round(((currentValue - min) / (max - min)) * 100)
-  
+
   const ariaAttributes = getAriaAttributes({
     orientation,
     valueNow: currentValue,
@@ -53,24 +48,19 @@ function Slider({
 
   return (
     <div className="space-y-2">
-      {(label || showValue) && (
+      {label || showValue ? (
         <div className="flex items-center justify-between">
-          {label && (
-            <label 
-              htmlFor={sliderId}
-              className="text-sm font-medium text-foreground"
-            >
+          {label ? (
+            <label htmlFor={sliderId} className="text-sm font-medium text-foreground">
               {label}
             </label>
-          )}
-          {showValue && (
-            <span className="text-sm text-muted-foreground">
-              {valueText || `${currentValue}`}
-            </span>
-          )}
+          ) : null}
+          {showValue ? (
+            <span className="text-sm text-muted-foreground">{valueText || `${currentValue}`}</span>
+          ) : null}
         </div>
-      )}
-      
+      ) : null}
+
       <SliderPrimitive.Root
         data-slot="slider"
         id={sliderId}
@@ -79,8 +69,8 @@ function Slider({
         min={min}
         max={max}
         className={cn(
-          "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
-          className
+          'relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col',
+          className,
         )}
         role="slider"
         aria-valuenow={currentValue}
@@ -95,13 +85,13 @@ function Slider({
         <SliderPrimitive.Track
           data-slot="slider-track"
           className={cn(
-            "bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+            'bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5',
           )}
         >
           <SliderPrimitive.Range
             data-slot="slider-range"
             className={cn(
-              "bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+              'bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full',
             )}
           />
         </SliderPrimitive.Track>
@@ -114,15 +104,12 @@ function Slider({
           />
         ))}
       </SliderPrimitive.Root>
-      
-      {description && (
-        <p 
-          id={descriptionId}
-          className="text-sm text-muted-foreground"
-        >
+
+      {description ? (
+        <p id={descriptionId} className="text-sm text-muted-foreground">
           {description}
         </p>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 /**
  * Ethereal Email Setup Script for E2E Testing
- * 
+ *
  * This script helps you set up Ethereal Email as a free alternative to Mailtrap.
  * Ethereal Email provides temporary email accounts for testing.
  */
@@ -11,12 +11,12 @@ import { etherealHelper } from './ethereal-helper'
 
 async function main() {
   console.log('📧 Ethereal Email E2E Testing Setup\n')
-  console.log('=' .repeat(50))
+  console.log('='.repeat(50))
 
   // Print setup instructions
   etherealHelper.printSetupInstructions()
 
-  console.log('\n' + '=' .repeat(50))
+  console.log('\n' + '='.repeat(50))
 
   console.log('\n🎯 Benefits of Ethereal Email:')
   console.log('✅ Completely free')
@@ -51,7 +51,7 @@ ETHEREAL_SECURE=false
   console.log('• MailHog (local email testing)')
   console.log('• Simple mock email service')
 
-  console.log('\n' + '=' .repeat(50))
+  console.log('\n' + '='.repeat(50))
   console.log('🎉 Ready to set up Ethereal Email!')
   console.log('📚 For more information, see: README.md')
 }
@@ -62,4 +62,4 @@ main().catch(error => {
   process.exit(1)
 })
 
-export { main as setupEthereal } 
+export { main as setupEthereal }

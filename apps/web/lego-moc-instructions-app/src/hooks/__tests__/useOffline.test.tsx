@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { useOffline } from '../useOffline'
-import { offlineApi, useGetOfflineStatusQuery, useProcessOfflineActionsMutation } from '../../services/offlineApi'
+import {
+  offlineApi,
+  useGetOfflineStatusQuery,
+  useProcessOfflineActionsMutation,
+} from '../../services/offlineApi'
 
 // Mock the offline API hooks
 vi.mock('../../services/offlineApi', () => ({
@@ -37,19 +41,14 @@ const createMockStore = () => {
     reducer: {
       [offlineApi.reducerPath]: offlineApi.reducer,
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(offlineApi.middleware),
+    middleware: getDefaultMiddleware => getDefaultMiddleware().concat(offlineApi.middleware),
   })
 }
 
 const renderHookWithProvider = (hook: () => any) => {
   const store = createMockStore()
   return renderHook(hook, {
-    wrapper: ({ children }) => (
-      <Provider store={store}>
-        {children}
-      </Provider>
-    ),
+    wrapper: ({ children }) => <Provider store={store}>{children}</Provider>,
   })
 }
 
@@ -73,10 +72,7 @@ describe('useOffline', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     const { result } = renderHookWithProvider(useOffline)
 
@@ -97,10 +93,7 @@ describe('useOffline', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     const { result } = renderHookWithProvider(useOffline)
 
@@ -119,10 +112,7 @@ describe('useOffline', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     const { result } = renderHookWithProvider(useOffline)
 
@@ -132,7 +122,7 @@ describe('useOffline', () => {
 
   it('should handle sync when online and has pending actions', async () => {
     const mockProcessActions = vi.fn().mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({ data: undefined })
+      unwrap: vi.fn().mockResolvedValue({ data: undefined }),
     })
     const mockRefetch = vi.fn()
 
@@ -204,13 +194,10 @@ describe('useOffline', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: true },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: true }] as any)
 
     const { result } = renderHookWithProvider(useOffline)
 
     expect(result.current.isProcessing).toBe(true)
   })
-}) 
+})

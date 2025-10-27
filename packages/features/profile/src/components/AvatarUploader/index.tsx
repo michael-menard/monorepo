@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
-import Cropper from 'react-easy-crop';
-import { Camera, Upload, X, Check, Loader2 } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react'
+import Cropper from 'react-easy-crop'
+import { Camera, Upload, X, Check, Loader2 } from 'lucide-react'
 import {
   Button,
   Avatar,
@@ -12,25 +12,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@repo/ui';
+  cn,
+} from '@repo/ui'
+import type { AvatarUploadProps } from '../../types'
 
-import type { AvatarUploadProps } from '../../types';
-import { cn } from '@repo/ui';
-
-const isTestEnv = typeof process !== 'undefined' && !!(process.env?.VITEST_WORKER_ID || process.env?.NODE_ENV === 'test')
+const isTestEnv =
+  typeof process !== 'undefined' &&
+  !!(process.env?.VITEST_WORKER_ID || process.env?.NODE_ENV === 'test')
 
 interface CropArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 interface AvatarUploaderProps extends AvatarUploadProps {
-  maxFileSize?: number; // in bytes
-  acceptedFileTypes?: string[];
-  cropAspectRatio?: number;
-  cropShape?: 'rect' | 'round';
+  maxFileSize?: number // in bytes
+  acceptedFileTypes?: string[]
+  cropAspectRatio?: number
+  cropShape?: 'rect' | 'round'
 }
 
 export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
@@ -44,67 +45,70 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   cropAspectRatio = 1,
   cropShape = 'round',
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropArea | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropArea | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
 
-    setError(null);
+      setError(null)
 
-    try {
-      // Basic file validation
-      if (!(file instanceof File || (file as any).constructor?.name === 'MockFile')) {
-        setError('Invalid file selected');
-        return;
+      try {
+        // Basic file validation
+        if (!(file instanceof File || (file as any).constructor?.name === 'MockFile')) {
+          setError('Invalid file selected')
+          return
+        }
+
+        // Validate file size
+        if (file.size > maxFileSize) {
+          setError(`File size must be less than ${Math.round(maxFileSize / (1024 * 1024))}MB`)
+          return
+        }
+
+        // Validate file type
+        if (!acceptedFileTypes.includes(file.type)) {
+          setError(`File type must be one of: ${acceptedFileTypes.join(', ')}`)
+          return
+        }
+
+        setSelectedFile(file)
+        setIsModalOpen(true)
+      } catch (err) {
+        setError('Invalid file selected')
       }
-
-      // Validate file size
-      if (file.size > maxFileSize) {
-        setError(`File size must be less than ${Math.round(maxFileSize / (1024 * 1024))}MB`);
-        return;
-      }
-
-      // Validate file type
-      if (!acceptedFileTypes.includes(file.type)) {
-        setError(`File type must be one of: ${acceptedFileTypes.join(', ')}`);
-        return;
-      }
-
-      setSelectedFile(file);
-      setIsModalOpen(true);
-    } catch (err) {
-      setError('Invalid file selected');
-    }
-  }, [maxFileSize, acceptedFileTypes]);
+    },
+    [maxFileSize, acceptedFileTypes],
+  )
 
   const handleCropComplete = useCallback((_croppedArea: CropArea, croppedAreaPixels: CropArea) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
+    setCroppedAreaPixels(croppedAreaPixels)
+  }, [])
 
   const getInitials = (name?: string) => {
-    if (!name) return 'U';
+    if (!name) return 'U'
     return name
       .split(' ')
       .map(word => word.charAt(0))
       .join('')
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2)
+  }
 
   const createCroppedImage = useCallback(async (): Promise<File> => {
     if (!selectedFile || !croppedAreaPixels || !canvasRef.current) {
-      throw new Error('Missing required data for cropping');
+      throw new Error('Missing required data for cropping')
     }
 
     // In test environment, bypass canvas/image operations for stability
@@ -112,125 +116,118 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       return new File([new Blob(['test'], { type: selectedFile.type })], selectedFile.name, {
         type: selectedFile.type,
         lastModified: Date.now(),
-      });
+      })
     }
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
     if (!ctx) {
-      throw new Error('Could not get canvas context');
+      throw new Error('Could not get canvas context')
     }
 
-    const image = new Image();
-    const imageUrl = URL.createObjectURL(selectedFile);
+    const image = new Image()
+    const imageUrl = URL.createObjectURL(selectedFile)
 
     return new Promise((resolve, reject) => {
       image.onload = () => {
-        const { width, height, x, y } = croppedAreaPixels;
-        
+        const { width, height, x, y } = croppedAreaPixels
+
         // Set canvas size to cropped area
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width
+        canvas.height = height
 
         // Draw cropped image
-        ctx.drawImage(
-          image,
-          x,
-          y,
-          width,
-          height,
-          0,
-          0,
-          width,
-          height
-        );
+        ctx.drawImage(image, x, y, width, height, 0, 0, width, height)
 
         // Convert to blob and then to file
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Failed to create cropped image'));
-            return;
-          }
+        canvas.toBlob(
+          blob => {
+            if (!blob) {
+              reject(new Error('Failed to create cropped image'))
+              return
+            }
 
-          const croppedFile = new File([blob], selectedFile.name, {
-            type: selectedFile.type,
-            lastModified: Date.now(),
-          });
+            const croppedFile = new File([blob], selectedFile.name, {
+              type: selectedFile.type,
+              lastModified: Date.now(),
+            })
 
-          URL.revokeObjectURL(imageUrl);
-          resolve(croppedFile);
-        }, selectedFile.type, 0.9);
-      };
+            URL.revokeObjectURL(imageUrl)
+            resolve(croppedFile)
+          },
+          selectedFile.type,
+          0.9,
+        )
+      }
 
       image.onerror = () => {
-        URL.revokeObjectURL(imageUrl);
-        reject(new Error('Failed to load image'));
-      };
+        URL.revokeObjectURL(imageUrl)
+        reject(new Error('Failed to load image'))
+      }
 
-      image.src = imageUrl;
-    });
-  }, [selectedFile, croppedAreaPixels]);
+      image.src = imageUrl
+    })
+  }, [selectedFile, croppedAreaPixels])
 
   const handleSave = useCallback(async () => {
-    if (!selectedFile || !croppedAreaPixels) return;
+    if (!selectedFile || !croppedAreaPixels) return
 
-    setIsProcessing(true);
-    setError(null);
+    setIsProcessing(true)
+    setError(null)
 
     try {
-      const croppedFile = await createCroppedImage();
-      
+      const croppedFile = await createCroppedImage()
+
       // Simulate upload progress
-      setUploadProgress(10);
+      setUploadProgress(10)
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
+            clearInterval(progressInterval)
+            return 90
           }
-          return prev + 10;
-        });
-      }, 100);
+          return prev + 10
+        })
+      }, 100)
 
       // Call the upload handler
-      await onUpload(croppedFile);
-      
-      setUploadProgress(100);
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setSelectedFile(null);
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-        setCroppedAreaPixels(null);
-        setUploadProgress(0);
-        setIsProcessing(false);
-        setError(null);
-      }, 500);
+      await onUpload(croppedFile)
 
+      setUploadProgress(100)
+      setTimeout(() => {
+        setIsModalOpen(false)
+        setSelectedFile(null)
+        setCrop({ x: 0, y: 0 })
+        setZoom(1)
+        setCroppedAreaPixels(null)
+        setUploadProgress(0)
+        setIsProcessing(false)
+        setError(null)
+      }, 500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process image');
-      setIsProcessing(false);
-      setUploadProgress(0);
+      setError(err instanceof Error ? err.message : 'Failed to process image')
+      setIsProcessing(false)
+      setUploadProgress(0)
     }
-  }, [selectedFile, croppedAreaPixels, onUpload, createCroppedImage]);
+  }, [selectedFile, croppedAreaPixels, onUpload, createCroppedImage])
 
   const handleRemove = useCallback(() => {
     if (onRemove) {
-      onRemove();
+      onRemove()
     }
-  }, [onRemove]);
+  }, [onRemove])
 
   const handleModalClose = useCallback(() => {
     if (!isProcessing) {
-      setIsModalOpen(false);
-      setSelectedFile(null);
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
-      setCroppedAreaPixels(null);
-      setUploadProgress(0);
-      setError(null);
+      setIsModalOpen(false)
+      setSelectedFile(null)
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedAreaPixels(null)
+      setUploadProgress(0)
+      setError(null)
     }
-  }, [isProcessing]);
+  }, [isProcessing])
 
   return (
     <div className={cn('flex flex-col items-center space-y-4', className)}>
@@ -238,11 +235,9 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       <div className="relative group">
         <Avatar className="h-24 w-24">
           <AvatarImage src={currentAvatar} alt="Profile avatar" />
-          <AvatarFallback className="text-lg font-semibold">
-            {getInitials()}
-          </AvatarFallback>
+          <AvatarFallback className="text-lg font-semibold">{getInitials()}</AvatarFallback>
         </Avatar>
-        
+
         {/* Upload Overlay */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
           <Button
@@ -269,8 +264,8 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
           <Upload className="h-4 w-4" />
           <span>Upload Photo</span>
         </Button>
-        
-        {currentAvatar && onRemove && (
+
+        {currentAvatar && onRemove ? (
           <Button
             variant="outline"
             size="sm"
@@ -281,7 +276,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
             <X className="h-4 w-4" />
             <span>Remove</span>
           </Button>
-        )}
+        ) : null}
       </div>
 
       {/* Hidden File Input */}
@@ -294,11 +289,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       />
 
       {/* Error Display */}
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
-          {error}
-        </div>
-      )}
+      {error ? <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">{error}</div> : null}
 
       {/* Crop Modal */}
       <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
@@ -306,11 +297,11 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
           <DialogHeader>
             <DialogTitle>Crop Profile Photo</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {/* Crop Area */}
             <div className="relative h-80 w-full bg-gray-100 rounded-lg overflow-hidden">
-              {selectedFile && (
+              {selectedFile ? (
                 <Cropper
                   image={URL.createObjectURL(selectedFile)}
                   crop={crop}
@@ -328,7 +319,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
                     },
                   }}
                 />
-              )}
+              ) : null}
             </div>
 
             {/* Zoom Slider */}
@@ -340,7 +331,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
                 max={3}
                 step={0.1}
                 value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
+                onChange={e => setZoom(Number(e.target.value))}
                 className="w-full"
               />
             </div>
@@ -357,19 +348,13 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
             )}
 
             {/* Error in Modal */}
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
-                {error}
-              </div>
-            )}
+            {error ? (
+              <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">{error}</div>
+            ) : null}
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleModalClose}
-              disabled={isProcessing}
-            >
+            <Button variant="outline" onClick={handleModalClose} disabled={isProcessing}>
               Cancel
             </Button>
             <Button
@@ -396,5 +381,5 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       {/* Hidden Canvas for Image Processing */}
       <canvas ref={canvasRef} className="hidden" />
     </div>
-  );
-}; 
+  )
+}

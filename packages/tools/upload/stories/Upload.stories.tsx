@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { action } from '@storybook/addon-actions';
-import { Upload } from '../src/components/Upload/Upload.tsx';
-import { UPLOAD_PRESETS } from '../src/utils/presets.js';
+import type { Meta, StoryObj } from '@storybook/react'
+import { action } from '@storybook/addon-actions'
+import { Upload } from '../src/components/Upload/Upload.tsx'
+import { UPLOAD_PRESETS } from '../src/utils/presets.js'
 
 const meta: Meta<typeof Upload> = {
   title: 'Upload/Upload',
@@ -10,7 +10,8 @@ const meta: Meta<typeof Upload> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'The main Upload component that can render in different modes: inline, modal, or avatar.',
+        component:
+          'The main Upload component that can render in different modes: inline, modal, or avatar.',
       },
     },
   },
@@ -42,10 +43,10 @@ const meta: Meta<typeof Upload> = {
     onUploadError: action('onUploadError'),
     onFilesChange: action('onFilesChange'),
   },
-};
+}
 
-export default meta;
-type Story = StoryObj<typeof meta>;
+export default meta
+type Story = StoryObj<typeof meta>
 
 export const Inline: Story = {
   args: {
@@ -58,7 +59,7 @@ export const Inline: Story = {
       },
     },
   },
-};
+}
 
 export const Modal: Story = {
   args: {
@@ -71,7 +72,7 @@ export const Modal: Story = {
       },
     },
   },
-};
+}
 
 export const Avatar: Story = {
   args: {
@@ -85,7 +86,7 @@ export const Avatar: Story = {
       },
     },
   },
-};
+}
 
 export const WithImagePreset: Story = {
   args: {
@@ -99,7 +100,7 @@ export const WithImagePreset: Story = {
       },
     },
   },
-};
+}
 
 export const WithDocumentPreset: Story = {
   args: {
@@ -113,7 +114,7 @@ export const WithDocumentPreset: Story = {
       },
     },
   },
-};
+}
 
 export const CustomConfig: Story = {
   args: {
@@ -133,7 +134,7 @@ export const CustomConfig: Story = {
       },
     },
   },
-};
+}
 
 export const SingleFile: Story = {
   args: {
@@ -151,7 +152,7 @@ export const SingleFile: Story = {
       },
     },
   },
-};
+}
 
 export const Disabled: Story = {
   args: {
@@ -165,7 +166,7 @@ export const Disabled: Story = {
       },
     },
   },
-};
+}
 
 export const WithCustomButton: Story = {
   args: {
@@ -183,4 +184,4 @@ export const WithCustomButton: Story = {
       },
     },
   },
-};
+}

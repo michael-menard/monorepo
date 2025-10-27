@@ -63,4 +63,4 @@ global.fetch = vi.fn()
 // Reset all mocks before each test
 beforeEach(() => {
   vi.clearAllMocks()
-}) 
+})

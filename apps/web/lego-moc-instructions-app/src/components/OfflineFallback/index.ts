@@ -1,1 +1,1 @@
-export { OfflineFallback } from './OfflineFallback' 
+export { OfflineFallback } from './OfflineFallback'

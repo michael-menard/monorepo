@@ -1,24 +1,30 @@
 # Custom Colors Fix - Complete! 🎨
 
 ## Problem
+
 Tailwind CSS was working (the test was displaying), but custom colors from design tokens were not showing up.
 
 ## Root Cause
+
 The main app's CSS was not properly importing the shared design tokens, and the `@theme` block was not correctly configured to use the shadcn/ui color variables.
 
 ## Solution Implemented
 
 ### 1. **Import Shared Design Tokens**
+
 Updated `apps/web/lego-moc-instructions-app/src/styles.css`:
+
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Import shared design tokens */
-@import "@monorepo/shared/design-tokens.css";
+@import '@monorepo/shared/design-tokens.css';
 ```
 
 ### 2. **Configure Tailwind CSS v4 Theme**
+
 Updated the `@theme` block to use proper shadcn/ui color variables:
+
 ```css
 @theme {
   /* shadcn/ui colors - using shared design tokens */
@@ -41,7 +47,7 @@ Updated the `@theme` block to use proper shadcn/ui color variables:
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+
   /* Additional semantic colors from shared design tokens */
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
@@ -57,13 +63,18 @@ Updated the `@theme` block to use proper shadcn/ui color variables:
 ```
 
 ### 3. **Remove Redundant Styles**
+
 Removed duplicate base styles since they're now handled by shared design tokens.
 
 ### 4. **Add Test Components**
+
 Added color test grid to `App.tsx` to verify all custom colors are working:
+
 ```jsx
-{/* Custom Color Test */}
-<div className="space-y-4">
+{
+  /* Custom Color Test */
+}
+;<div className="space-y-4">
   <h2 className="text-2xl font-semibold">Custom Colors Test</h2>
   <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
     <div className="p-4 bg-primary text-primary-foreground rounded">Primary</div>
@@ -81,11 +92,13 @@ Added color test grid to `App.tsx` to verify all custom colors are working:
 ## Available Custom Colors
 
 ### **Primary Colors**
+
 - `bg-primary` / `text-primary-foreground` - Green (#47624E)
 - `bg-secondary` / `text-secondary-foreground` - Brown (#B07E5B)
 - `bg-accent` / `text-accent-foreground` - Light Brown (#C7A27C)
 
 ### **Semantic Colors**
+
 - `bg-success` / `text-success-foreground` - Green (#3D9B74)
 - `bg-warning` / `text-warning-foreground` - Yellow (#E0B64A)
 - `bg-error` / `text-error-foreground` - Red (#B14D4D)
@@ -93,6 +106,7 @@ Added color test grid to `App.tsx` to verify all custom colors are working:
 - `bg-tertiary` / `text-tertiary-foreground` - Teal (#487D85)
 
 ### **Surface Colors**
+
 - `bg-background` / `text-foreground` - Main background/text
 - `bg-card` / `text-card-foreground` - Card background/text
 - `bg-popover` / `text-popover-foreground` - Popover background/text
@@ -101,16 +115,19 @@ Added color test grid to `App.tsx` to verify all custom colors are working:
 ## Benefits
 
 ### ✅ **Consistent Design System**
+
 - All colors are centrally managed in `packages/shared/src/design-tokens.css`
 - Consistent across all packages and apps
 - Easy to maintain and update
 
 ### ✅ **Full shadcn/ui Support**
+
 - All shadcn/ui components use the correct colors
 - Proper light/dark mode support
 - Semantic color naming
 
 ### ✅ **Tailwind CSS v4 Integration**
+
 - Colors work with all Tailwind utilities
 - Proper HSL format for better color manipulation
 - CSS custom properties for dynamic theming
@@ -134,4 +151,4 @@ Added color test grid to `App.tsx` to verify all custom colors are working:
 ---
 
 **Status**: ✅ **COMPLETE** - Custom colors are now working correctly!
-**Test**: Check the color grid in the app to see all custom colors displayed. 
+**Test**: Check the color grid in the app to see all custom colors displayed.

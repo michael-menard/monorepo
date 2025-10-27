@@ -8,38 +8,36 @@ The App-prefixed components provide automatic XSS protection by sanitizing all u
 
 ## 📦 Available Secure Components
 
-| Regular Component | Secure Component | Purpose |
-|------------------|------------------|---------|
-| `Input` | `AppInput` | Text inputs with automatic sanitization |
-| `Textarea` | `AppTextarea` | Multi-line text inputs with sanitization |
-| `Select` | `AppSelect` | Select dropdowns with sanitized options |
-| `Label` | `AppLabel` | Form labels with sanitized text |
-| `form` | `AppForm` | Forms with automatic data sanitization |
-| N/A | `AppSafeContent` | Display user-generated content safely |
+| Regular Component | Secure Component | Purpose                                  |
+| ----------------- | ---------------- | ---------------------------------------- |
+| `Input`           | `AppInput`       | Text inputs with automatic sanitization  |
+| `Textarea`        | `AppTextarea`    | Multi-line text inputs with sanitization |
+| `Select`          | `AppSelect`      | Select dropdowns with sanitized options  |
+| `Label`           | `AppLabel`       | Form labels with sanitized text          |
+| `form`            | `AppForm`        | Forms with automatic data sanitization   |
+| N/A               | `AppSafeContent` | Display user-generated content safely    |
 
 ## 🚀 Quick Migration Examples
 
 ### Input Components
 
 **Before:**
-```tsx
-import { Input } from '@repo/ui';
 
-<Input 
-  type="text" 
-  placeholder="Enter your name"
-  onChange={(e) => setName(e.target.value)}
-/>
+```tsx
+import { Input } from '@repo/ui'
+
+;<Input type="text" placeholder="Enter your name" onChange={e => setName(e.target.value)} />
 ```
 
 **After:**
-```tsx
-import { AppInput } from '@repo/ui';
 
-<AppInput
+```tsx
+import { AppInput } from '@repo/ui'
+
+;<AppInput
   type="text"
   placeholder="Enter your name"
-  onChange={(e) => setName(e.target.value)} // Value is automatically sanitized
+  onChange={e => setName(e.target.value)} // Value is automatically sanitized
   showSanitizationWarnings={process.env.NODE_ENV === 'development'}
   debounceMs={300} // Optional: debounce onChange events
 />
@@ -48,22 +46,21 @@ import { AppInput } from '@repo/ui';
 ### Textarea Components
 
 **Before:**
-```tsx
-import { Textarea } from '@repo/ui';
 
-<Textarea 
-  placeholder="Enter your message"
-  onChange={(e) => setMessage(e.target.value)}
-/>
+```tsx
+import { Textarea } from '@repo/ui'
+
+;<Textarea placeholder="Enter your message" onChange={e => setMessage(e.target.value)} />
 ```
 
 **After:**
-```tsx
-import { AppTextarea, SANITIZATION_PROFILES } from '@repo/ui';
 
-<AppTextarea
+```tsx
+import { AppTextarea, SANITIZATION_PROFILES } from '@repo/ui'
+
+;<AppTextarea
   placeholder="Enter your message"
-  onChange={(e) => setMessage(e.target.value)}
+  onChange={e => setMessage(e.target.value)}
   sanitizationConfig={SANITIZATION_PROFILES.BASIC_TEXT} // Allows basic formatting
   debounceMs={500} // Optional: debounce for better performance on long text
 />
@@ -72,10 +69,11 @@ import { AppTextarea, SANITIZATION_PROFILES } from '@repo/ui';
 ### Select Components
 
 **Before:**
-```tsx
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui';
 
-<Select onValueChange={setValue}>
+```tsx
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui'
+
+;<Select onValueChange={setValue}>
   <SelectTrigger>
     <SelectValue placeholder="Select option" />
   </SelectTrigger>
@@ -87,13 +85,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 ```
 
 **After:**
-```tsx
-import { AppSelect } from '@repo/ui';
 
-<AppSelect 
+```tsx
+import { AppSelect } from '@repo/ui'
+
+;<AppSelect
   options={[
     { value: 'option1', label: 'Option 1' },
-    { value: 'option2', label: 'Option 2' }
+    { value: 'option2', label: 'Option 2' },
   ]}
   placeholder="Select option"
   onValueChange={setValue} // Values are automatically sanitized
@@ -103,6 +102,7 @@ import { AppSelect } from '@repo/ui';
 ### Form Components
 
 **Before:**
+
 ```tsx
 <form onSubmit={handleSubmit}>
   <Input name="email" type="email" />
@@ -112,14 +112,15 @@ import { AppSelect } from '@repo/ui';
 ```
 
 **After:**
-```tsx
-import { AppForm, AppInput, AppTextarea, SANITIZATION_PROFILES } from '@repo/ui';
 
-<AppForm 
+```tsx
+import { AppForm, AppInput, AppTextarea, SANITIZATION_PROFILES } from '@repo/ui'
+
+;<AppForm
   onSubmit={(e, sanitizedData) => handleSubmit(sanitizedData)}
   fieldSanitizationConfigs={{
     message: SANITIZATION_PROFILES.BASIC_TEXT,
-    email: SANITIZATION_PROFILES.STRICT
+    email: SANITIZATION_PROFILES.STRICT,
   }}
 >
   <AppInput name="email" type="email" />
@@ -133,50 +134,43 @@ import { AppForm, AppInput, AppTextarea, SANITIZATION_PROFILES } from '@repo/ui'
 Choose the appropriate sanitization level for your use case:
 
 ### `SANITIZATION_PROFILES.STRICT`
+
 - **Use for:** Email, passwords, search inputs, IDs
 - **Allows:** Plain text only
 - **Removes:** All HTML tags and attributes
 
 ```tsx
-<AppInput 
-  type="email"
-  sanitizationConfig={SANITIZATION_PROFILES.STRICT}
-/>
+<AppInput type="email" sanitizationConfig={SANITIZATION_PROFILES.STRICT} />
 ```
 
 ### `SANITIZATION_PROFILES.BASIC_TEXT`
+
 - **Use for:** Comments, descriptions, short messages
 - **Allows:** Basic formatting (`<b>`, `<i>`, `<em>`, `<strong>`, `<u>`, `<br>`)
 - **Removes:** Scripts, links, complex HTML
 
 ```tsx
-<AppTextarea 
-  sanitizationConfig={SANITIZATION_PROFILES.BASIC_TEXT}
-/>
+<AppTextarea sanitizationConfig={SANITIZATION_PROFILES.BASIC_TEXT} />
 ```
 
 ### `SANITIZATION_PROFILES.RICH_TEXT`
+
 - **Use for:** Blog posts, articles, rich content
 - **Allows:** Headings, paragraphs, lists, links, formatting
 - **Removes:** Scripts, dangerous attributes, unsafe elements
 
 ```tsx
-<AppSafeContent 
-  content={userBlogPost}
-  sanitizationConfig={SANITIZATION_PROFILES.RICH_TEXT}
-/>
+<AppSafeContent content={userBlogPost} sanitizationConfig={SANITIZATION_PROFILES.RICH_TEXT} />
 ```
 
 ### `SANITIZATION_PROFILES.SEARCH`
+
 - **Use for:** Search queries
 - **Allows:** Plain text with search-safe characters
 - **Removes:** All HTML and special characters
 
 ```tsx
-<AppInput 
-  type="search"
-  sanitizationConfig={SANITIZATION_PROFILES.SEARCH}
-/>
+<AppInput type="search" sanitizationConfig={SANITIZATION_PROFILES.SEARCH} />
 ```
 
 ## ⚙️ Advanced Configuration
@@ -184,7 +178,7 @@ Choose the appropriate sanitization level for your use case:
 ### Custom Sanitization Config
 
 ```tsx
-import { AppInput, SanitizationConfig } from '@repo/ui';
+import { AppInput, SanitizationConfig } from '@repo/ui'
 
 const customConfig: SanitizationConfig = {
   allowBasicHTML: true,
@@ -194,12 +188,12 @@ const customConfig: SanitizationConfig = {
     ALLOWED_ATTR: [],
     KEEP_CONTENT: true,
   },
-};
+}
 
-<AppInput 
+;<AppInput
   sanitizationConfig={customConfig}
   showSanitizationWarnings
-  onSanitizationWarning={(warnings) => console.warn(warnings)}
+  onSanitizationWarning={warnings => console.warn(warnings)}
 />
 ```
 
@@ -251,6 +245,7 @@ App components include optional debouncing to improve performance and user exper
 ```
 
 **When to use debouncing:**
+
 - ✅ Search inputs (300-500ms)
 - ✅ Auto-save functionality (500-1000ms)
 - ✅ API calls triggered by input (300-500ms)
@@ -269,17 +264,17 @@ const testInputs = [
   '<img src="x" onerror="alert(1)">',
   'javascript:alert("XSS")',
   '<iframe src="javascript:alert(1)"></iframe>',
-];
+]
 ```
 
 ### 2. Enable Development Warnings
 
 ```tsx
-<AppInput 
+<AppInput
   showSanitizationWarnings={process.env.NODE_ENV === 'development'}
-  onSanitizationWarning={(warnings) => {
+  onSanitizationWarning={warnings => {
     // Log or handle sanitization warnings
-    console.warn('Input was sanitized:', warnings);
+    console.warn('Input was sanitized:', warnings)
   }}
 />
 ```
@@ -287,7 +282,7 @@ const testInputs = [
 ## 📋 Migration Checklist
 
 - [ ] Replace `Input` with `AppInput` for all user inputs
-- [ ] Replace `Textarea` with `AppTextarea` for multi-line inputs  
+- [ ] Replace `Textarea` with `AppTextarea` for multi-line inputs
 - [ ] Replace `Select` with `AppSelect` for dropdowns with user data
 - [ ] Replace `Label` with `AppLabel` for labels with dynamic content
 - [ ] Wrap forms with `AppForm` for automatic data sanitization
@@ -316,7 +311,7 @@ If legitimate content is being removed, try a less strict profile:
 The components are SSR-safe and will fall back to basic string cleaning:
 
 ```tsx
-import { isDOMPurifyAvailable } from '@repo/ui';
+import { isDOMPurifyAvailable } from '@repo/ui'
 
 if (!isDOMPurifyAvailable()) {
   // DOMPurify not available (SSR environment)
@@ -329,7 +324,7 @@ if (!isDOMPurifyAvailable()) {
 For high-frequency inputs, consider sanitizing only on blur:
 
 ```tsx
-<AppInput 
+<AppInput
   sanitizeOnChange={false} // Only sanitize when user leaves field
 />
 ```

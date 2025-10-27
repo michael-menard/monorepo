@@ -62,6 +62,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for Turborepo change detection
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -77,11 +79,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm turbo lint
+      - name: Lint changed projects
+        run: pnpm turbo lint --filter="...[HEAD^1]"
 
-      - name: Type check
-        run: pnpm turbo check-types
+      - name: Type check changed projects
+        run: pnpm turbo check-types --filter="...[HEAD^1]"
 
   test-packages:
     name: Test Packages
@@ -91,6 +93,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for Turborepo change detection
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -106,8 +110,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run package tests
-        run: pnpm turbo test --filter="./packages/*"
+      - name: Run tests for changed packages
+        run: pnpm turbo test --filter="./packages/*...[HEAD^1]"
 
   build-packages:
     name: Build Packages
@@ -117,6 +121,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for Turborepo change detection
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -132,5 +138,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm turbo build --filter="./packages/*"
+      - name: Build changed packages
+        run: pnpm turbo build --filter="./packages/*...[HEAD^1]"

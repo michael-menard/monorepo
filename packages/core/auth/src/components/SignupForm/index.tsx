@@ -1,39 +1,40 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { motion } from 'framer-motion';
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { motion } from 'framer-motion'
 // import { Mail, Lock, User } from 'lucide-react'; // Removed - icons not used with shadcn Input
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth.js';
-import { SignupSchema, type SignupFormData } from '../../schemas/index.js';
-import { Input, Button } from '@repo/ui';
-import PasswordStrength from '../PasswordStrength/index.js';
-import { FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui';
-import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
-import type { SerializedError } from '@reduxjs/toolkit';
+import { useNavigate } from 'react-router-dom'
+import { Input, Button, FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
+import type { SerializedError } from '@reduxjs/toolkit'
+import PasswordStrength from '../PasswordStrength/index.js'
+import { SignupSchema, type SignupFormData } from '../../schemas/index.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 // Helper function to convert RTK Query errors to the format expected by FormLevelErrorMessage
-const convertError = (error: FetchBaseQueryError | SerializedError | undefined): string | { message?: string } | undefined => {
-  if (!error) return undefined;
-  
+const convertError = (
+  error: FetchBaseQueryError | SerializedError | undefined,
+): string | { message?: string } | undefined => {
+  if (!error) return undefined
+
   if ('status' in error) {
     // FetchBaseQueryError
     if (typeof error.data === 'string') {
-      return error.data;
+      return error.data
     }
     if (error.data && typeof error.data === 'object' && 'message' in error.data) {
-      return { message: String(error.data.message) };
+      return { message: String(error.data.message) }
     }
-    return `Error ${error.status}: ${error.data || 'Unknown error'}`;
+    return `Error ${error.status}: ${error.data || 'Unknown error'}`
   }
-  
+
   // SerializedError
-  return error.message || 'An error occurred';
-};
+  return error.message || 'An error occurred'
+}
 
 export const SignupForm = () => {
-  const { signup, isLoading, error } = useAuth();
+  const { signup, isLoading, error } = useAuth()
 
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const {
     register,
@@ -43,27 +44,26 @@ export const SignupForm = () => {
   } = useForm<SignupFormData>({
     resolver: zodResolver(SignupSchema),
     mode: 'onChange',
-  });
+  })
 
-  const watchedPassword = watch('password');
+  const watchedPassword = watch('password')
 
   const onSubmit = async (data: SignupFormData) => {
     try {
-      
       await signup({
         email: data.email,
         password: data.password,
         name: data.name,
-      });
+      })
     } catch (err) {
       // Handle any additional errors here if needed
-      console.error('Signup error:', err);
+      console.error('Signup error:', err)
     }
-  };
+  }
 
   const handleLogin = () => {
-    navigate('/login');
-  };
+    navigate('/login')
+  }
 
   return (
     <motion.div
@@ -87,10 +87,7 @@ export const SignupForm = () => {
               {...register('name')}
               className={errors.name ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            <FieldErrorMessage
-              error={errors.name}
-              fieldName="Name"
-            />
+            <FieldErrorMessage error={errors.name} fieldName="Name" />
           </div>
           <div>
             <Input
@@ -99,10 +96,7 @@ export const SignupForm = () => {
               {...register('email')}
               className={errors.email ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            <FieldErrorMessage
-              error={errors.email}
-              fieldName="Email"
-            />
+            <FieldErrorMessage error={errors.email} fieldName="Email" />
           </div>
           <div>
             <Input
@@ -111,11 +105,8 @@ export const SignupForm = () => {
               {...register('password')}
               className={errors.password ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            <FieldErrorMessage
-              error={errors.password}
-              fieldName="Password"
-            />
-            {watchedPassword && <PasswordStrength password={watchedPassword} />}
+            <FieldErrorMessage error={errors.password} fieldName="Password" />
+            {watchedPassword ? <PasswordStrength password={watchedPassword} /> : null}
           </div>
           <div>
             <Input
@@ -124,23 +115,20 @@ export const SignupForm = () => {
               {...register('confirmPassword')}
               className={errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            <FieldErrorMessage
-              error={errors.confirmPassword}
-              fieldName="Confirm Password"
-            />
+            <FieldErrorMessage error={errors.confirmPassword} fieldName="Confirm Password" />
           </div>
           <FormLevelErrorMessage error={error ? convertError(error) : undefined} />
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               type="submit"
               disabled={isSubmitting || isLoading}
               className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200"
             >
               {isSubmitting || isLoading ? (
-                <div data-testid="loader-icon" className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                <div
+                  data-testid="loader-icon"
+                  className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"
+                />
               ) : (
                 'Create Account'
               )}
@@ -151,15 +139,11 @@ export const SignupForm = () => {
       <div className="px-8 py-4 bg-gray-900 bg-opacity-50 flex justify-center">
         <p className="text-sm text-gray-400">
           Already have an account?{' '}
-          <button
-            type="button"
-            onClick={handleLogin}
-            className="text-green-400 hover:underline"
-          >
+          <button type="button" onClick={handleLogin} className="text-green-400 hover:underline">
             Sign in
           </button>
         </p>
       </div>
     </motion.div>
-  );
-}; 
+  )
+}

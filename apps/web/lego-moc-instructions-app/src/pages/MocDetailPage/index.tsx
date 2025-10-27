@@ -1,18 +1,73 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from '@tanstack/react-router';
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import {
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from '@repo/ui';
-import { ArrowLeft, Download, Calendar, User, Package, FileText, ExternalLink, Plus, Upload } from 'lucide-react';
+  CardTitle,
+  showSuccessToast,
+  showErrorToast,
+} from '@repo/ui'
+import { ArrowLeft, Download, Calendar, User, Package, Plus, Upload, ImageIcon } from 'lucide-react'
+import { FileList, FileActions, createCommonActions, normalizeFileItem } from '@repo/file-list'
+import { downloadFile, downloadMultipleFiles } from '@repo/moc-instructions'
+import { CachedImage } from '@repo/cache/components/CachedImage'
+import { Upload as UploadComponent } from '@repo/upload'
+import { DoughnutChart } from '@monorepo/charts'
 
 // Import RTK Query hooks for fetching MOC data and uploading parts list
-import { useGetMOCInstructionQuery, useUploadPartsListMutation } from '../../services/api';
-import type { MockInstruction } from '@repo/moc-instructions';
+import type { MockInstruction } from '@repo/moc-instructions'
+import {
+  useGetMOCInstructionQuery,
+  useUploadPartsListMutation,
+  useUploadMocThumbnailMutation,
+  useDeleteMocFileMutation,
+} from '../../services/api'
+
+// Inventory Progress Chart Component
+interface InventoryProgressChartProps {
+  totalPieces: number
+  ownedPieces: number
+}
+
+const InventoryProgressChart: React.FC<InventoryProgressChartProps> = ({
+  totalPieces,
+  ownedPieces,
+}) => {
+  if (totalPieces === 0) {
+    return (
+      <div className="flex items-center justify-center h-20">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-400">—</div>
+        </div>
+      </div>
+    )
+  }
+
+  const missingPieces = Math.max(0, totalPieces - ownedPieces)
+  const percentage = Math.round((ownedPieces / totalPieces) * 100)
+
+  const chartData = [
+    {
+      label: 'Owned',
+      value: ownedPieces,
+      color: '#059669', // Darker, flatter green
+    },
+    {
+      label: 'Missing',
+      value: missingPieces,
+      color: '#D1D5DB', // Flatter gray
+    },
+  ]
+
+  return (
+    <div className="flex justify-center">
+      <DoughnutChart data={chartData} width={80} height={80} animate={true} duration={1000} />
+    </div>
+  )
+}
 
 // Helper functions for MOC data
 const getFileTypeLabel = (mimeType: string): string => {
@@ -24,132 +79,269 @@ const getFileTypeLabel = (mimeType: string): string => {
     'application/json': 'JSON',
     'application/vnd.ms-excel': 'Excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
-  };
-  return typeMap[mimeType] || 'File';
-};
+  }
+  return typeMap[mimeType] || 'File'
+}
 
 const formatDate = (date: Date | string | null | undefined): string => {
-  if (!date) return 'Unknown date';
+  if (!date) return 'Unknown date'
 
   try {
-    const dateObj = date instanceof Date ? date : new Date(date);
+    const dateObj = date instanceof Date ? date : new Date(date)
 
     // Check if the date is valid
     if (isNaN(dateObj.getTime())) {
-      return 'Invalid date';
+      return 'Invalid date'
     }
 
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    }).format(dateObj);
+    }).format(dateObj)
   } catch (error) {
-    console.warn('Error formatting date:', date, error);
-    return 'Invalid date';
+    console.warn('Error formatting date:', date, error)
+    return 'Invalid date'
   }
-};
+}
 
 const formatTime = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
   if (hours > 0) {
-    return `${hours}h ${mins}m`;
+    return `${hours}h ${mins}m`
   }
-  return `${mins}m`;
-};
+  return `${mins}m`
+}
 
 const getDifficultyLabel = (difficulty: string): string => {
-  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
-};
+  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
+}
 
 // Mock data for development/testing when API is not available
 // Convert MOC images to gallery format
 const convertMocImagesToGalleryImages = (images: any[]): Array<GalleryImage> => {
-  return images?.map((image) => ({
-    id: image.id,
-    url: image.url,
-    title: image.alt || 'MOC Image',
-    description: image.caption || '',
-    author: 'MOC Image',
-    tags: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  })) || [];
-};
+  return (
+    images?.map(image => ({
+      id: image.id,
+      url: image.url || '/placeholder-instruction.svg',
+      title: image.alt || 'MOC Image',
+      description: image.caption || '',
+      author: 'MOC Image',
+      tags: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })) || []
+  )
+}
 
 export const MocDetailPage: React.FC = (): React.JSX.Element => {
-  const { id } = useParams({ from: '/moc-detail/$id' });
-  const navigate = useNavigate();
+  const { id } = useParams({ from: '/moc-detail/$id' })
+  const navigate = useNavigate()
 
-  console.log('🔍 MocDetailPage rendered with ID:', id);
+  console.log('🔍 MocDetailPage rendered with ID:', id)
 
   // Local state for parts list upload
-  const [showPartsListUpload, setShowPartsListUpload] = useState(false);
+  const [showPartsListUpload, setShowPartsListUpload] = useState(false)
+
+  // Local state for thumbnail upload
+  const [showThumbnailUpload, setShowThumbnailUpload] = useState(false)
+
+  // Local state for file deletion confirmation
+  const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
 
   // RTK Query mutation for uploading parts list
-  const [uploadPartsList, { isLoading: isUploadingPartsList, error: uploadError }] = useUploadPartsListMutation();
+  const [uploadPartsList, { isLoading: isUploadingPartsList, error: uploadError }] =
+    useUploadPartsListMutation()
+
+  // RTK Query mutation for uploading thumbnail
+  const [uploadMocThumbnail, { isLoading: isUploadingThumbnail }] = useUploadMocThumbnailMutation()
+
+  // RTK Query mutation for deleting files
+  const [deleteMocFile, { isLoading: isDeletingFile }] = useDeleteMocFileMutation()
 
   // Handle parts list file upload using RTK Query
   const handlePartsListUpload = async (files: FileList) => {
-    console.log('🚀 handlePartsListUpload called with:', files.length, 'files');
+    console.log('🚀 handlePartsListUpload called with:', files.length, 'files')
 
     if (!files.length || !id) {
-      console.log('❌ No files or no ID:', { filesLength: files.length, id });
-      return;
+      console.log('❌ No files or no ID:', { filesLength: files.length, id })
+      return
     }
 
-    const file = files[0];
+    const file = files[0]
     console.log('📁 File details:', {
       name: file.name,
       size: file.size,
       type: file.type,
-      lastModified: file.lastModified
-    });
+      lastModified: file.lastModified,
+    })
 
     try {
-      console.log('📤 Uploading parts list file using RTK Query...');
+      console.log('📤 Uploading parts list file using RTK Query...')
 
       // Use RTK Query mutation
       const result = await uploadPartsList({
         mocId: id,
-        file: file
-      }).unwrap();
+        file: file,
+      }).unwrap()
 
-      console.log('✅ Parts list uploaded successfully:', result);
-      alert('Parts list uploaded successfully! The file should now appear in the list.');
+      console.log('✅ Parts list uploaded successfully:', result)
+
+      // Show success toast with parsing details
+      const parsingInfo = result.data?.parsing
+      if (parsingInfo) {
+        showSuccessToast(
+          'Parts list processed successfully',
+          `Found ${parsingInfo.totalPieceCount} total pieces from ${parsingInfo.uniqueParts} unique parts (${parsingInfo.format.toUpperCase()} format)`,
+        )
+      } else {
+        showSuccessToast(
+          'Parts list uploaded successfully',
+          'The parts list has been added to this MOC.',
+        )
+      }
 
       // RTK Query will automatically invalidate and refetch the MOC data
-      setShowPartsListUpload(false);
+      setShowPartsListUpload(false)
+    } catch (error: any) {
+      console.error('❌ Parts list upload failed:', error)
 
-    } catch (error) {
-      console.error('❌ Parts list upload failed:', error);
-      alert(`Failed to upload parts list: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setShowPartsListUpload(false);
+      // Show detailed error message based on error type
+      let errorTitle = 'Failed to upload parts list'
+      let errorMessage = 'Please try again or contact support if the problem persists.'
+
+      if (error?.data?.code === 'PARSING_FAILED') {
+        errorTitle = 'Failed to parse parts list file'
+        const details = error.data.details
+        if (details && details.length > 0) {
+          const firstError = details[0]
+          errorMessage = `${firstError.message}. Please check your file format and try again.`
+        } else {
+          errorMessage = 'The file format is not supported or contains invalid data.'
+        }
+      } else if (error?.data?.code === 'MISSING_FIELDS') {
+        errorTitle = 'Upload error'
+        errorMessage = 'Required information is missing. Please try again.'
+      } else if (error?.data?.code === 'MOC_NOT_FOUND') {
+        errorTitle = 'Access denied'
+        errorMessage = 'You do not have permission to modify this MOC.'
+      }
+
+      showErrorToast(errorTitle, errorMessage)
+      setShowPartsListUpload(false)
     }
-  };
+  }
+
+  // Handle thumbnail upload
+  const handleThumbnailUpload = async (files: File[]) => {
+    console.log('🚀 handleThumbnailUpload called with:', files.length, 'files')
+
+    if (!files.length || !id) {
+      console.log('❌ No files or no ID:', { filesLength: files.length, id })
+      return
+    }
+
+    const file = files[0]
+    console.log('📁 File details:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified,
+    })
+
+    try {
+      console.log('📤 Uploading thumbnail using RTK Query...')
+
+      // Use RTK Query mutation
+      const result = await uploadMocThumbnail({
+        mocId: id,
+        file: file,
+      }).unwrap()
+
+      console.log('✅ Thumbnail uploaded successfully:', result)
+
+      // Show success toast
+      showSuccessToast(
+        'Cover image uploaded successfully',
+        'The cover image has been added to this MOC.',
+      )
+
+      // RTK Query will automatically invalidate and refetch the MOC data
+      setShowThumbnailUpload(false)
+    } catch (error) {
+      console.error('❌ Thumbnail upload failed:', error)
+
+      // Show error toast with user-friendly message
+      showErrorToast(error, 'Failed to upload cover image')
+
+      setShowThumbnailUpload(false)
+    }
+  }
+
+  // Handle file deletion confirmation
+  const handleDeleteFile = (file: { id: string; name: string }) => {
+    setFileToDelete(file)
+    setShowDeleteConfirmation(true)
+  }
+
+  // Handle confirmed file deletion
+  const handleConfirmDelete = async () => {
+    if (!fileToDelete || !id) return
+
+    try {
+      console.log('🗑️ Deleting file:', fileToDelete)
+
+      await deleteMocFile({
+        mocId: id,
+        fileId: fileToDelete.id,
+      }).unwrap()
+
+      console.log('✅ File deleted successfully')
+
+      // Show success toast
+      showSuccessToast(
+        'File deleted successfully',
+        `"${fileToDelete.name}" has been removed from this MOC.`,
+      )
+
+      // Reset state
+      setFileToDelete(null)
+      setShowDeleteConfirmation(false)
+    } catch (error) {
+      console.error('❌ File deletion failed:', error)
+
+      // Show error toast with user-friendly message
+      showErrorToast(error, 'Failed to delete file')
+
+      // Keep the modal open so user can try again or cancel
+    }
+  }
+
+  // Handle cancel deletion
+  const handleCancelDelete = () => {
+    setFileToDelete(null)
+    setShowDeleteConfirmation(false)
+  }
 
   // Early return for debugging - remove this once working
   if (!id) {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1>Error: No MOC ID provided</h1>
-        <Button onClick={() => navigate({ to: '/moc-gallery' })}>
-          Back to Gallery
-        </Button>
+        <Button onClick={() => navigate({ to: '/moc-gallery' })}>Back to Gallery</Button>
       </div>
-    );
+    )
   }
 
-
-
   // Fetch MOC data using RTK Query
-  let instruction, isLoading, error, result;
+  let instruction, isLoading, error, result
   try {
-    result = useGetMOCInstructionQuery(id);
-    instruction = result.data?.data; // Extract data from standard API response
-    isLoading = result.isLoading;
-    error = result.error;
+    result = useGetMOCInstructionQuery(id)
+    instruction = result.data?.data // Extract data from standard API response
+    isLoading = result.isLoading
+    error = result.error
     console.log('📊 RTK Query state:', {
       instruction,
       isLoading,
@@ -157,19 +349,17 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       rawData: result.data,
       dataExists: !!result.data,
       dataDataExists: !!result.data?.data,
-      extractedInstruction: result.data?.data
-    });
+      extractedInstruction: result.data?.data,
+    })
   } catch (hookError) {
-    console.error('❌ RTK Query hook error:', hookError);
+    console.error('❌ RTK Query hook error:', hookError)
     return (
       <div className="container mx-auto px-4 py-8">
         <h1>RTK Query Hook Error</h1>
         <p>Error: {String(hookError)}</p>
-        <Button onClick={() => navigate({ to: '/moc-gallery' })}>
-          Back to Gallery
-        </Button>
+        <Button onClick={() => navigate({ to: '/moc-gallery' })}>Back to Gallery</Button>
       </div>
-    );
+    )
   }
 
   // Loading state
@@ -184,7 +374,7 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
           <p>Loading MOC details...</p>
         </div>
       </div>
-    );
+    )
   }
 
   // Error state
@@ -199,7 +389,7 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
           <p className="text-red-600 mb-4">Error: {JSON.stringify(error)}</p>
         </div>
       </div>
-    );
+    )
   }
 
   // Not found state - with debugging info
@@ -214,15 +404,25 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
           <p className="text-gray-600 mb-4">The requested MOC instruction could not be found.</p>
           <div className="mt-4 p-4 bg-gray-100 rounded text-left text-sm">
             <h3 className="font-bold mb-2">Debug Info:</h3>
-            <p><strong>MOC ID:</strong> {id}</p>
-            <p><strong>Is Loading:</strong> {isLoading ? 'Yes' : 'No'}</p>
-            <p><strong>Has Error:</strong> {error ? 'Yes' : 'No'}</p>
-            <p><strong>Raw Data:</strong> {JSON.stringify(result?.data, null, 2)}</p>
-            <p><strong>Extracted Instruction:</strong> {JSON.stringify(instruction, null, 2)}</p>
+            <p>
+              <strong>MOC ID:</strong> {id}
+            </p>
+            <p>
+              <strong>Is Loading:</strong> {isLoading ? 'Yes' : 'No'}
+            </p>
+            <p>
+              <strong>Has Error:</strong> {error ? 'Yes' : 'No'}
+            </p>
+            <p>
+              <strong>Raw Data:</strong> {JSON.stringify(result?.data, null, 2)}
+            </p>
+            <p>
+              <strong>Extracted Instruction:</strong> {JSON.stringify(instruction, null, 2)}
+            </p>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   // Success state - show MOC details
@@ -248,90 +448,150 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
             {/* Hero Image Card */}
             <Card>
               <CardContent className="p-0">
-                <img
-                  src={instruction.thumbnailUrl || 'https://via.placeholder.com/800x400/F97316/FFFFFF?text=No+Image'}
-                  alt={instruction.title}
-                  className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
-                />
-
+                {instruction.thumbnailUrl ? (
+                  <CachedImage
+                    src={instruction.thumbnailUrl}
+                    alt={instruction.title}
+                    className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
+                    fallback="/placeholder-instruction.svg"
+                    onError={() =>
+                      console.warn('Failed to load MOC thumbnail:', instruction.thumbnailUrl)
+                    }
+                  />
+                ) : (
+                  <div className="w-full h-64 lg:h-96 bg-gradient-to-br from-orange-100 to-orange-200 rounded-t-lg flex flex-col items-center justify-center text-orange-600 p-8">
+                    {!showThumbnailUpload ? (
+                      <>
+                        <ImageIcon className="h-16 w-16 mb-4 opacity-60" />
+                        <h3 className="text-lg font-medium mb-2">No Cover Image</h3>
+                        <p className="text-sm opacity-75 text-center mb-4">
+                          This MOC doesn't have a cover image yet. Add one to make it more
+                          appealing!
+                        </p>
+                        <Button
+                          onClick={() => setShowThumbnailUpload(true)}
+                          className="bg-orange-500 hover:bg-orange-600 text-white"
+                          disabled={isUploadingThumbnail}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Add Cover Image
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="w-full max-w-md">
+                        <div className="mb-4 text-center">
+                          <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-60" />
+                          <h3 className="text-lg font-medium mb-1">Upload Cover Image</h3>
+                          <p className="text-sm opacity-75">
+                            Choose a high-quality image to represent your MOC
+                          </p>
+                        </div>
+                        <UploadComponent
+                          mode="inline"
+                          config={{
+                            maxFiles: 1,
+                            maxFileSize: 10 * 1024 * 1024, // 10MB
+                            acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
+                            multiple: false,
+                            autoUpload: false,
+                          }}
+                          onFilesChange={handleThumbnailUpload}
+                          disabled={isUploadingThumbnail}
+                          className="border-2 border-dashed border-orange-300 bg-white/50 rounded-lg"
+                        />
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowThumbnailUpload(false)}
+                            disabled={isUploadingThumbnail}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right Column - MOC Information */}
-          <div className="space-y-6">
-            {/* Basic Info Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl">{instruction.title}</CardTitle>
-                <CardDescription>
-                  {instruction.description || 'No description available'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Author */}
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Created by</span>
-                  <span className="font-medium">{instruction.author}</span>
+            {/* Mini Dashboard */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Piece Count Tile */}
+              <Card className="p-6 text-center hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <div className="text-5xl font-black text-orange-600">
+                    {instruction.totalPieceCount
+                      ? instruction.totalPieceCount.toLocaleString()
+                      : '—'}
+                  </div>
+                  <div className="text-sm text-muted-foreground font-medium">Total Pieces</div>
                 </div>
+              </Card>
 
-                {/* Creation Date */}
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Created</span>
-                  <span className="font-medium">{formatDate(instruction.createdAt)}</span>
-                </div>
-
-                {/* Stats */}
-                <div className="pt-4 border-t">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Downloads</span>
-                      <p className="font-semibold">{instruction.downloadCount || 0}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Rating</span>
-                      <p className="font-semibold">
-                        {instruction.rating ? `${instruction.rating}/5` : 'Not rated'}
-                      </p>
-                    </div>
+              {/* Inventory Progress Tile */}
+              <Card className="p-6 text-center hover:shadow-md transition-shadow">
+                <div className="space-y-3">
+                  <InventoryProgressChart
+                    totalPieces={instruction.totalPieceCount || 0}
+                    ownedPieces={Math.floor((instruction.totalPieceCount || 0) * 0.65)} // Hardcoded for now
+                  />
+                  <div className="text-sm text-muted-foreground font-medium">
+                    Inventory Progress
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Card>
 
-            {/* Download Button */}
-            <div className="flex justify-center">
-              <Button variant="default" size="lg" className="bg-orange-500 hover:bg-orange-600 px-8 py-3">
-                <Download className="h-5 w-5 mr-2" />
-                Download Instructions
-              </Button>
+              {/* Projects Tile */}
+              <Card className="p-6 text-center hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold text-blue-600">
+                    {/* Hardcoded for now - will be replaced with actual project count */}2
+                  </div>
+                  <div className="text-sm text-muted-foreground font-medium">Projects</div>
+                </div>
+              </Card>
+
+              {/* Build Status Tile */}
+              <Card className="p-6 text-center hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  {(() => {
+                    // Hardcoded for now - will be replaced with actual build status from database
+                    const isBuilt = Math.random() > 0.5 // Random for demo
+                    return (
+                      <>
+                        <div
+                          className={`text-3xl font-bold ${isBuilt ? 'text-green-600' : 'text-gray-400'}`}
+                        >
+                          {isBuilt ? '✓' : '○'}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium">
+                          {isBuilt ? 'Built' : 'Not Built'}
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              </Card>
             </div>
 
             {/* Parts List Files Card */}
             {(() => {
-              const partsListFiles = instruction.files?.filter(file => file.fileType === 'parts-list') || [];
-              console.log('🔍 All files:', instruction.files);
-              console.log('🔍 Parts list files:', partsListFiles);
+              const partsListFiles =
+                instruction.files?.filter(file => file.fileType === 'parts-list') || []
+              console.log('🔍 All files:', instruction.files)
+              console.log('🔍 Parts list files:', partsListFiles)
 
               // Always show the card for debugging
               return (
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Package className="h-4 w-4" />
-                          Parts Lists
-                        </CardTitle>
-                        <CardDescription>
-                          {partsListFiles.length > 0
-                            ? `${partsListFiles.length} parts list ${partsListFiles.length === 1 ? 'file' : 'files'} available`
-                            : 'No parts list files available'
-                          }
-                        </CardDescription>
-                      </div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Parts Lists
+                      </CardTitle>
                       <Button
                         variant="outline"
                         size="sm"
@@ -346,25 +606,27 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                   </CardHeader>
                   <CardContent>
                     {/* Upload Interface */}
-                    {showPartsListUpload && (
+                    {showPartsListUpload ? (
                       <div className="mb-6 p-4 border-2 border-dashed border-primary/20 rounded-lg bg-primary/5">
                         <div className="text-center">
                           <Upload className="h-8 w-8 mx-auto mb-3 text-primary" />
                           <h3 className="font-medium mb-2">Upload Parts List</h3>
                           <p className="text-sm text-muted-foreground mb-4">
-                            Upload CSV, XML, TXT, or JSON files containing LEGO parts information
+                            Upload CSV files containing LEGO parts information. The file will be
+                            automatically parsed to calculate the total piece count. CSV files can
+                            have headers or not - the parser will auto-detect.
                           </p>
                           <div className="flex items-center gap-2 justify-center">
                             <input
                               type="file"
-                              accept=".csv,.xml,.txt,.json,.xlsx,.xls"
-                              onChange={(e) => {
-                                console.log('📁 File input changed:', e.target.files);
+                              accept=".csv,.txt"
+                              onChange={e => {
+                                console.log('📁 File input changed:', e.target.files)
                                 if (e.target.files && e.target.files.length > 0) {
-                                  console.log('📁 Calling handlePartsListUpload...');
-                                  handlePartsListUpload(e.target.files);
+                                  console.log('📁 Calling handlePartsListUpload...')
+                                  handlePartsListUpload(e.target.files)
                                 } else {
-                                  console.log('❌ No files selected');
+                                  console.log('❌ No files selected')
                                 }
                               }}
                               disabled={isUploadingPartsList}
@@ -401,73 +663,81 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
-                    {partsListFiles.length > 0 ? (
-                      <div className="space-y-3">
-                        {partsListFiles.map((file) => (
-                          <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-primary/10 rounded-lg">
-                                <FileText className="h-4 w-4 text-primary" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {file.originalFilename || 'Parts List'}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span>{getFileTypeLabel(file.mimeType)}</span>
-                                  <span>•</span>
-                                  <span>{formatDate(file.createdAt)}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(file.fileUrl, '_blank')}
-                                className="flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                View
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  const link = document.createElement('a');
-                                  link.href = file.fileUrl;
-                                  link.download = file.originalFilename || 'parts-list';
-                                  link.click();
-                                }}
-                                className="flex items-center gap-1"
-                              >
-                                <Download className="h-3 w-3" />
-                                Download
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No parts list files have been uploaded for this MOC.</p>
-                        <p className="text-sm mt-2">Parts lists typically include CSV, XML, or TXT files with LEGO part information.</p>
-
-                        {/* Debug info */}
-                        <div className="mt-4 p-3 bg-muted/50 rounded text-xs text-left">
-                          <p><strong>Debug:</strong></p>
-                          <p>Total files: {instruction.files?.length || 0}</p>
-                          <p>File types: {instruction.files?.map(f => f.fileType).join(', ') || 'none'}</p>
-                        </div>
-                      </div>
-                    )}
+                    <FileList
+                      files={partsListFiles.map(file =>
+                        normalizeFileItem({
+                          id: file.id,
+                          name: file.originalFilename || 'Parts List',
+                          size: file.size,
+                          mimeType: file.mimeType,
+                          url: file.fileUrl,
+                          createdAt: file.createdAt,
+                        }),
+                      )}
+                      config={{
+                        emptyMessage: 'No parts list files have been uploaded for this MOC.',
+                      }}
+                    >
+                      {file => (
+                        <FileActions
+                          file={file}
+                          actions={createCommonActions({
+                            onDownload: file => {
+                              const link = document.createElement('a')
+                              link.href = file.url
+                              link.download = file.name
+                              link.click()
+                            },
+                            onDelete: file => {
+                              handleDeleteFile({ id: file.id, name: file.name })
+                            },
+                          })}
+                        />
+                      )}
+                    </FileList>
                   </CardContent>
                 </Card>
-              );
+              )
             })()}
+          </div>
+
+          {/* Right Column - MOC Information */}
+          <div className="space-y-6">
+            {/* Basic Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">{instruction.title}</CardTitle>
+                <CardDescription>
+                  {instruction.description || 'No description available'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Author */}
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Created by</span>
+                  <span className="font-medium">{instruction.author}</span>
+                </div>
+
+                {/* Creation Date */}
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="font-medium">{formatDate(instruction.createdAt)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Download Button */}
+            <Button
+              variant="default"
+              className="w-full bg-orange-500 hover:bg-orange-600 py-4 text-lg font-semibold"
+            >
+              <Download className="h-5 w-5 mr-2" />
+              Download Instructions
+            </Button>
 
             {/* Debug Card - Remove this in production */}
             <Card className="border-dashed">
@@ -483,6 +753,52 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
           </div>
         </div>
       </div>
+
+      {/* File Deletion Confirmation Modal */}
+      {showDeleteConfirmation ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-200"
+          style={{ zIndex: 9999 }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in-0 duration-200"
+            onClick={() => !isDeletingFile && handleCancelDelete()}
+          />
+
+          {/* Modal Content */}
+          <div className="relative bg-background border rounded-lg shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200 w-full max-w-[calc(100%-2rem)] sm:max-w-lg z-10">
+            {/* Header */}
+            <div className="flex flex-col gap-2 text-center sm:text-left p-6 pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Delete File</h2>
+              <p className="text-muted-foreground text-sm">
+                Are you sure you want to delete "{fileToDelete?.name}"? This action cannot be
+                undone.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end p-6 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                disabled={isDeletingFile}
+                className="sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isDeletingFile}
+                className="sm:w-auto"
+              >
+                {isDeletingFile ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
-  );
-};
+  )
+}

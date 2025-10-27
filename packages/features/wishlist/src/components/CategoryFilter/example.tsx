@@ -1,31 +1,29 @@
-import React, { useState } from 'react';
-import CategoryFilter from './index';
-import type { CategoryFilter as CategoryFilterType } from '../../schemas';
+import React, { useState } from 'react'
+import type { CategoryFilter as CategoryFilterType } from '../../schemas'
+import CategoryFilter from './index'
 
 const CategoryFilterExample: React.FC = () => {
-  const [filter, setFilter] = useState<CategoryFilterType>({ category: undefined });
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [filter, setFilter] = useState<CategoryFilterType>({ category: undefined })
+  const [customCategories, setCustomCategories] = useState<string[]>([])
 
   const handleFilterChange = (newFilter: CategoryFilterType) => {
-    setFilter(newFilter);
-    console.log('Filter changed:', newFilter);
-  };
+    setFilter(newFilter)
+    console.log('Filter changed:', newFilter)
+  }
 
   const handleAddCustomCategory = (category: string) => {
     if (!customCategories.includes(category)) {
-      setCustomCategories([...customCategories, category]);
+      setCustomCategories([...customCategories, category])
     }
-  };
+  }
 
   return (
     <div className="p-6 max-w-md mx-auto">
       <h2 className="text-2xl font-bold mb-4">CategoryFilter Example</h2>
-      
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Current Filter:</h3>
-        <pre className="bg-gray-100 p-2 rounded text-sm">
-          {JSON.stringify(filter, null, 2)}
-        </pre>
+        <pre className="bg-gray-100 p-2 rounded text-sm">{JSON.stringify(filter, null, 2)}</pre>
       </div>
 
       <CategoryFilter
@@ -38,7 +36,7 @@ const CategoryFilterExample: React.FC = () => {
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">Available Custom Categories:</h3>
         <ul className="list-disc list-inside">
-          {customCategories.map((category) => (
+          {customCategories.map(category => (
             <li key={category}>{category}</li>
           ))}
         </ul>
@@ -50,7 +48,7 @@ const CategoryFilterExample: React.FC = () => {
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">Add Test Categories:</h3>
         <div className="flex gap-2 flex-wrap">
-          {['Custom Set 1', 'MOC Project', 'Limited Edition'].map((category) => (
+          {['Custom Set 1', 'MOC Project', 'Limited Edition'].map(category => (
             <button
               key={category}
               onClick={() => handleAddCustomCategory(category)}
@@ -62,7 +60,7 @@ const CategoryFilterExample: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CategoryFilterExample; 
+export default CategoryFilterExample

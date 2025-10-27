@@ -136,9 +136,7 @@ export const ThreeTabs: Story = {
       <TabsContent value="reports">
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Reports</h3>
-          <p className="text-sm text-muted-foreground">
-            Generate and download detailed reports.
-          </p>
+          <p className="text-sm text-muted-foreground">Generate and download detailed reports.</p>
           <div className="space-y-2">
             <button className="w-full px-4 py-2 text-left border rounded-lg hover:bg-gray-50">
               Monthly Report - January 2024
@@ -160,10 +158,18 @@ export const VerticalTabs: Story = {
   render: () => (
     <Tabs defaultValue="general" className="w-[600px] flex gap-6">
       <TabsList className="flex flex-col h-auto w-[200px]">
-        <TabsTrigger value="general" className="justify-start">General</TabsTrigger>
-        <TabsTrigger value="security" className="justify-start">Security</TabsTrigger>
-        <TabsTrigger value="notifications" className="justify-start">Notifications</TabsTrigger>
-        <TabsTrigger value="billing" className="justify-start">Billing</TabsTrigger>
+        <TabsTrigger value="general" className="justify-start">
+          General
+        </TabsTrigger>
+        <TabsTrigger value="security" className="justify-start">
+          Security
+        </TabsTrigger>
+        <TabsTrigger value="notifications" className="justify-start">
+          Notifications
+        </TabsTrigger>
+        <TabsTrigger value="billing" className="justify-start">
+          Billing
+        </TabsTrigger>
       </TabsList>
       <div className="flex-1">
         <TabsContent value="general" className="mt-0">
@@ -261,15 +267,15 @@ export const DisabledTabs: Story = {
     <Tabs defaultValue="active" className="w-[400px]">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="active">Active</TabsTrigger>
-        <TabsTrigger value="disabled" disabled>Disabled</TabsTrigger>
+        <TabsTrigger value="disabled" disabled>
+          Disabled
+        </TabsTrigger>
         <TabsTrigger value="coming-soon">Coming Soon</TabsTrigger>
       </TabsList>
       <TabsContent value="active">
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Active Tab</h3>
-          <p className="text-sm text-muted-foreground">
-            This tab is active and functional.
-          </p>
+          <p className="text-sm text-muted-foreground">This tab is active and functional.</p>
         </div>
       </TabsContent>
       <TabsContent value="disabled">
@@ -283,11 +289,9 @@ export const DisabledTabs: Story = {
       <TabsContent value="coming-soon">
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Coming Soon</h3>
-          <p className="text-sm text-muted-foreground">
-            This feature is coming soon!
-          </p>
+          <p className="text-sm text-muted-foreground">This feature is coming soon!</p>
         </div>
       </TabsContent>
     </Tabs>
   ),
-} 
+}

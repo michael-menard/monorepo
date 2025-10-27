@@ -21,6 +21,7 @@ The `FilterBar` component provides the main search and filtering interface.
 **Location:** `src/components/FilterBar/index.tsx`
 
 **Features:**
+
 - Search input with debouncing
 - Tag filtering with toggle functionality
 - Category filtering with dropdown
@@ -29,17 +30,18 @@ The `FilterBar` component provides the main search and filtering interface.
 - Active filters summary
 
 **Props:**
+
 ```typescript
 interface FilterBarProps {
-  onSearchChange: (query: string) => void;
-  onTagsChange: (tags: string[]) => void;
-  onCategoryChange: (category: string) => void;
-  onClearFilters: () => void;
-  availableTags?: string[];
-  availableCategories?: string[];
-  searchPlaceholder?: string;
-  className?: string;
-  debounceMs?: number;
+  onSearchChange: (query: string) => void
+  onTagsChange: (tags: string[]) => void
+  onCategoryChange: (category: string) => void
+  onClearFilters: () => void
+  availableTags?: string[]
+  availableCategories?: string[]
+  searchPlaceholder?: string
+  className?: string
+  debounceMs?: number
 }
 ```
 
@@ -50,6 +52,7 @@ The `useFilterBar` hook manages the search and filtering state and integrates wi
 **Location:** `src/hooks/useFilterBar.ts`
 
 **Features:**
+
 - Local filter state management
 - API integration for search results
 - Available tags and categories fetching
@@ -57,35 +60,36 @@ The `useFilterBar` hook manages the search and filtering state and integrates wi
 - Loading and error state handling
 
 **Return Value:**
+
 ```typescript
 interface UseFilterBarReturn {
   // State
-  filters: FilterState;
-  searchResults: any[];
-  isLoading: boolean;
-  error: any;
-  totalResults: number;
-  hasActiveFilters: boolean;
+  filters: FilterState
+  searchResults: any[]
+  isLoading: boolean
+  error: any
+  totalResults: number
+  hasActiveFilters: boolean
 
   // Available options
-  availableTags: string[];
-  availableCategories: string[];
+  availableTags: string[]
+  availableCategories: string[]
 
   // Actions
-  setSearchQuery: (query: string) => void;
-  setSelectedTags: (tags: string[]) => void;
-  setSelectedCategory: (category: string) => void;
-  clearFilters: () => void;
-  toggleTag: (tag: string) => void;
+  setSearchQuery: (query: string) => void
+  setSelectedTags: (tags: string[]) => void
+  setSelectedCategory: (category: string) => void
+  clearFilters: () => void
+  toggleTag: (tag: string) => void
 
   // Computed
   searchParams: {
-    query?: string;
-    tags?: string[];
-    category?: string;
-    from?: number;
-    size?: number;
-  };
+    query?: string
+    tags?: string[]
+    category?: string
+    from?: number
+    size?: number
+  }
 }
 ```
 
@@ -96,6 +100,7 @@ The `GalleryWithSearch` component combines the FilterBar with the main Gallery c
 **Location:** `src/components/GalleryWithSearch/index.tsx`
 
 **Features:**
+
 - Integrated search and filtering
 - Automatic tag extraction from images
 - Search results display
@@ -104,25 +109,26 @@ The `GalleryWithSearch` component combines the FilterBar with the main Gallery c
 - Fallback to local filtering when API is unavailable
 
 **Props:**
+
 ```typescript
 interface GalleryWithSearchProps {
-  images: GalleryImage[];
-  className?: string;
-  onImageClick?: (image: GalleryImage) => void;
-  onImageLike?: (imageId: string, liked: boolean) => void;
-  onImageShare?: (imageId: string) => void;
-  onImageDelete?: (imageId: string) => void;
-  onImageDownload?: (imageId: string) => void;
-  onImageAddToAlbum?: (imageId: string) => void;
-  onImagesSelected?: (imageIds: string[]) => void;
-  selectedImages?: string[];
-  onImagesDeleted?: (imageIds: string[]) => void;
-  onImagesAddedToAlbum?: (imageIds: string[], albumId: string) => void;
-  onImagesDownloaded?: (imageIds: string[]) => void;
-  onImagesShared?: (imageIds: string[]) => void;
-  layout?: 'grid' | 'masonry';
-  searchPlaceholder?: string;
-  showFilterBar?: boolean;
+  images: GalleryImage[]
+  className?: string
+  onImageClick?: (image: GalleryImage) => void
+  onImageLike?: (imageId: string, liked: boolean) => void
+  onImageShare?: (imageId: string) => void
+  onImageDelete?: (imageId: string) => void
+  onImageDownload?: (imageId: string) => void
+  onImageAddToAlbum?: (imageId: string) => void
+  onImagesSelected?: (imageIds: string[]) => void
+  selectedImages?: string[]
+  onImagesDeleted?: (imageIds: string[]) => void
+  onImagesAddedToAlbum?: (imageIds: string[], albumId: string) => void
+  onImagesDownloaded?: (imageIds: string[]) => void
+  onImagesShared?: (imageIds: string[]) => void
+  layout?: 'grid' | 'masonry'
+  searchPlaceholder?: string
+  showFilterBar?: boolean
 }
 ```
 
@@ -135,28 +141,31 @@ The gallery package includes RTK Query endpoints for search and filtering:
 **Location:** `src/store/galleryApi.ts`
 
 **Endpoints:**
+
 - `searchImages` - Search images with filters
 - `getAvailableTags` - Get available tags for filtering
 - `getAvailableCategories` - Get available categories for filtering
 
 **Search Filters:**
+
 ```typescript
 interface SearchFilters {
-  query?: string;
-  tags?: string[];
-  category?: string;
-  from?: number;
-  size?: number;
+  query?: string
+  tags?: string[]
+  category?: string
+  from?: number
+  size?: number
 }
 ```
 
 **Search Response:**
+
 ```typescript
 interface SearchResponse {
-  data: GalleryImage[];
-  total: number;
-  source: 'elasticsearch' | 'database';
-  message?: string;
+  data: GalleryImage[]
+  total: number
+  source: 'elasticsearch' | 'database'
+  message?: string
 }
 ```
 
@@ -165,7 +174,7 @@ interface SearchResponse {
 ### Basic Usage
 
 ```tsx
-import { GalleryWithSearch } from '@repo/gallery';
+import { GalleryWithSearch } from '@repo/gallery'
 
 const MyGallery = () => {
   const images = [
@@ -180,39 +189,39 @@ const MyGallery = () => {
       updatedAt: new Date(),
     },
     // ... more images
-  ];
+  ]
 
   return (
     <GalleryWithSearch
       images={images}
-      onImageClick={(image) => console.log('Clicked:', image.title)}
+      onImageClick={image => console.log('Clicked:', image.title)}
       layout="grid"
       showFilterBar={true}
     />
-  );
-};
+  )
+}
 ```
 
 ### Advanced Usage with Custom Handlers
 
 ```tsx
-import { GalleryWithSearch } from '@repo/gallery';
+import { GalleryWithSearch } from '@repo/gallery'
 
 const AdvancedGallery = () => {
   const handleImageLike = (imageId: string, liked: boolean) => {
     // Handle like/unlike
-    console.log(`Image ${imageId} ${liked ? 'liked' : 'unliked'}`);
-  };
+    console.log(`Image ${imageId} ${liked ? 'liked' : 'unliked'}`)
+  }
 
   const handleImageDelete = (imageId: string) => {
     // Handle image deletion
-    console.log(`Deleting image ${imageId}`);
-  };
+    console.log(`Deleting image ${imageId}`)
+  }
 
   const handleImagesSelected = (imageIds: string[]) => {
     // Handle batch selection
-    console.log('Selected images:', imageIds);
-  };
+    console.log('Selected images:', imageIds)
+  }
 
   return (
     <GalleryWithSearch
@@ -225,14 +234,14 @@ const AdvancedGallery = () => {
       searchPlaceholder="Search your images..."
       className="my-custom-gallery"
     />
-  );
-};
+  )
+}
 ```
 
 ### Using FilterBar Directly
 
 ```tsx
-import { FilterBar, useFilterBar } from '@repo/gallery';
+import { FilterBar, useFilterBar } from '@repo/gallery'
 
 const CustomFilterBar = () => {
   const {
@@ -253,7 +262,7 @@ const CustomFilterBar = () => {
     },
     debounceMs: 300,
     pageSize: 20,
-  });
+  })
 
   return (
     <FilterBar
@@ -265,8 +274,8 @@ const CustomFilterBar = () => {
       availableCategories={availableCategories}
       searchPlaceholder="Search images..."
     />
-  );
-};
+  )
+}
 ```
 
 ## Search and Filter Features
@@ -328,6 +337,7 @@ The search and filtering functionality integrates with the backend API:
 ### Elasticsearch Integration
 
 When Elasticsearch is available, the search uses:
+
 - Full-text search across title, description, and tags
 - Fuzzy matching for typos
 - Relevance scoring
@@ -336,6 +346,7 @@ When Elasticsearch is available, the search uses:
 ### Database Fallback
 
 When Elasticsearch is unavailable, the search falls back to:
+
 - Database queries with LIKE operators
 - Basic text matching
 - Tag-based filtering
@@ -344,6 +355,7 @@ When Elasticsearch is unavailable, the search falls back to:
 ### API Endpoints
 
 The backend provides these endpoints:
+
 - `GET /api/gallery/search` - Search images with filters
 - `GET /api/gallery/tags` - Get available tags
 - `GET /api/gallery/categories` - Get available categories
@@ -371,12 +383,13 @@ const defaultConfig = {
   pageSize: 20,
   searchPlaceholder: 'Search images...',
   showFilterBar: true,
-};
+}
 ```
 
 ## Future Enhancements
 
 Potential future improvements:
+
 - Advanced search operators (AND, OR, NOT)
 - Date range filtering
 - File type filtering
@@ -398,8 +411,9 @@ Potential future improvements:
 ### Debug Mode
 
 Enable debug logging by setting the environment variable:
+
 ```bash
 DEBUG=gallery:search
 ```
 
-This will log search queries, filter changes, and API responses for debugging purposes. 
+This will log search queries, filter changes, and API responses for debugging purposes.

@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 // For file validation, we define a minimal AvatarFile type for Node.js context.
 // In a real app, you might use multer or another upload middleware.
 export type AvatarFile = {
-  type: string;
-  size: number;
-};
+  type: string
+  size: number
+}
 
 export const ProfileUpdateSchema = z.object({
   name: z
@@ -23,20 +23,20 @@ export const ProfileUpdateSchema = z.object({
     )
     .optional(),
   bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
-});
-export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;
+})
+export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>
 
 export const AvatarUploadSchema = z.object({
   file: z
     .custom<AvatarFile>()
-    .refine((file) => ['image/jpeg', 'image/heic'].includes(file.type), {
+    .refine(file => ['image/jpeg', 'image/heic'].includes(file.type), {
       message: 'Only .jpg or .heic files are supported',
     })
-    .refine((file) => file.size <= 10 * 1024 * 1024, {
+    .refine(file => file.size <= 10 * 1024 * 1024, {
       message: 'File size must be less than 10MB',
     }),
-});
-export type AvatarUpload = z.infer<typeof AvatarUploadSchema>;
+})
+export type AvatarUpload = z.infer<typeof AvatarUploadSchema>
 
 // --- MOC INSTRUCTIONS TYPES ---
 export const MocInstructionSchema = z.object({
@@ -48,12 +48,13 @@ export const MocInstructionSchema = z.object({
   theme: z.enum(['modular', 'Automobile', 'ideas', 'creator expert', 'Lord Of The Rings', 'city']),
   tags: z.array(z.string()).optional(),
   thumbnailUrl: z.string().url().optional(),
+  totalPieceCount: z.number().int().min(0).optional(),
   instructionFileUrl: z.string().url().optional(),
   partsListFiles: z.array(z.string().url()).optional(),
   galleryImageIds: z.array(z.string().uuid()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-});
+})
 
 export const CreateMocSchema = z.object({
   title: z.string().min(1).max(255),
@@ -61,7 +62,7 @@ export const CreateMocSchema = z.object({
   tags: z.array(z.string()).optional(),
   thumbnailUrl: z.string().url().optional(),
   galleryImageIds: z.array(z.string().uuid()).optional(),
-});
+})
 
 // Base schema for file uploads
 const BaseCreateWithFilesSchema = z.object({
@@ -72,29 +73,39 @@ const BaseCreateWithFilesSchema = z.object({
   // Required: instructionsFile (PDF or .io)
   // Optional: partsLists (0 or more files)
   // Optional: images (up to 3 images)
-});
+})
 
 // MOC-specific schema for file uploads
 const CreateMocWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
   type: z.literal('moc'),
   author: z.string().min(1, 'Author is required for MOCs').max(255),
-});
+  setNumber: z.string().min(1, 'MOC ID is required'), // e.g., "MOC-172552"
+  partsCount: z.number().int().min(1, 'Parts count must be at least 1'), // e.g., 874
+  theme: z.string().min(1, 'Theme is required'), // e.g., "City"
+  subtheme: z.string().optional(), // e.g., "Trains"
+  uploadedDate: z.string().datetime().optional(), // ISO string, will be converted to Date
+})
 
 // Set-specific schema for file uploads
 const CreateSetWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
   type: z.literal('set'),
   brand: z.string().min(1, 'Brand is required for Sets').max(255),
-  theme: z.enum(['modular', 'Automobile', 'ideas', 'creator expert', 'Lord Of The Rings', 'city']),
-  setNumber: z.string().optional(),
-  releaseYear: z.number().int().min(1950).max(new Date().getFullYear() + 2).optional(),
+  theme: z.string().min(1, 'Theme is required for Sets'), // Changed from enum to string to match MOCs
+  setNumber: z.string().min(1, 'Set number is required'), // Required set number (e.g., "10294")
+  releaseYear: z
+    .number()
+    .int()
+    .min(1950)
+    .max(new Date().getFullYear() + 2)
+    .optional(),
   retired: z.boolean().default(false),
-});
+})
 
 // Unified schema (discriminated union)
 export const CreateMocWithFilesSchema = z.discriminatedUnion('type', [
   CreateMocWithFilesSchemaBase,
   CreateSetWithFilesSchemaBase,
-]);
+])
 
 export const UpdateMocSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -102,49 +113,65 @@ export const UpdateMocSchema = z.object({
   tags: z.array(z.string()).optional(),
   thumbnailUrl: z.string().url().optional(),
   galleryImageIds: z.array(z.string().uuid()).optional(),
-});
+})
 
 export const FileUploadSchema = z.object({
   fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
   file: z.custom<AvatarFile>(),
-});
+})
 
 // Validation for MOC instruction files (PDF or .io) - 1 or more allowed
-export const MocInstructionFileSchema = z.object({
-  originalname: z.string(),
-  mimetype: z.enum(['application/pdf', 'application/octet-stream']),
-  size: z.number().max(50 * 1024 * 1024), // 50MB max
-}).refine((file) => {
-  // Allow .io files (they might come as application/octet-stream)
-  return file.mimetype === 'application/pdf' || file.originalname.endsWith('.io');
-}, {
-  message: 'File must be a PDF or .io file'
-});
+export const MocInstructionFileSchema = z
+  .object({
+    originalname: z.string(),
+    mimetype: z.enum(['application/pdf', 'application/octet-stream']),
+    size: z.number().max(50 * 1024 * 1024), // 50MB max
+  })
+  .refine(
+    file => {
+      // Allow .io files (they might come as application/octet-stream)
+      return file.mimetype === 'application/pdf' || file.originalname.endsWith('.io')
+    },
+    {
+      message: 'File must be a PDF or .io file',
+    },
+  )
 
 // Validation for parts list files (CSV, XML, JSON, PDF)
-export const MocPartsListFileSchema = z.object({
-  originalname: z.string(),
-  mimetype: z.enum(['text/csv', 'application/xml', 'application/json', 'application/pdf', 'text/plain']),
-  size: z.number().max(10 * 1024 * 1024), // 10MB max
-}).refine((file) => {
-  const allowedExtensions = ['.csv', '.xml', '.json', '.pdf', '.txt'];
-  return allowedExtensions.some(ext => file.originalname.toLowerCase().endsWith(ext));
-}, {
-  message: 'Parts list file must be CSV, XML, JSON, PDF, or TXT'
-});
+export const MocPartsListFileSchema = z
+  .object({
+    originalname: z.string(),
+    mimetype: z.enum([
+      'text/csv',
+      'application/xml',
+      'application/json',
+      'application/pdf',
+      'text/plain',
+    ]),
+    size: z.number().max(10 * 1024 * 1024), // 10MB max
+  })
+  .refine(
+    file => {
+      const allowedExtensions = ['.csv', '.xml', '.json', '.pdf', '.txt']
+      return allowedExtensions.some(ext => file.originalname.toLowerCase().endsWith(ext))
+    },
+    {
+      message: 'Parts list file must be CSV, XML, JSON, PDF, or TXT',
+    },
+  )
 
 // Validation for gallery images (JPEG, PNG, WebP)
 export const MocGalleryImageSchema = z.object({
   originalname: z.string(),
   mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']),
   size: z.number().max(10 * 1024 * 1024), // 10MB max
-});
+})
 
-export type MocInstruction = z.infer<typeof MocInstructionSchema>;
-export type CreateMoc = z.infer<typeof CreateMocSchema>;
-export type CreateMocWithFiles = z.infer<typeof CreateMocWithFilesSchema>;
-export type UpdateMoc = z.infer<typeof UpdateMocSchema>;
-export type FileUpload = z.infer<typeof FileUploadSchema>;
+export type MocInstruction = z.infer<typeof MocInstructionSchema>
+export type CreateMoc = z.infer<typeof CreateMocSchema>
+export type CreateMocWithFiles = z.infer<typeof CreateMocWithFilesSchema>
+export type UpdateMoc = z.infer<typeof UpdateMocSchema>
+export type FileUpload = z.infer<typeof FileUploadSchema>
 
 // --- WISHLIST TYPES ---
 
@@ -176,7 +203,7 @@ const LEGO_CATEGORIES = [
   'Botanical Collection',
   'Seasonal',
   'Other',
-] as const;
+] as const
 
 export const WishlistItemSchema = z.object({
   id: z.string().uuid(),
@@ -189,7 +216,7 @@ export const WishlistItemSchema = z.object({
   sortOrder: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
-});
+})
 
 export const CreateWishlistItemSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be less than 255 characters'),
@@ -202,7 +229,7 @@ export const CreateWishlistItemSchema = z.object({
     .max(100, 'Category must be less than 100 characters')
     .optional(),
   sortOrder: z.string().min(1, 'Sort order is required'),
-});
+})
 
 export const UpdateWishlistItemSchema = z.object({
   title: z
@@ -219,25 +246,25 @@ export const UpdateWishlistItemSchema = z.object({
     .max(100, 'Category must be less than 100 characters')
     .optional(),
   sortOrder: z.string().min(1, 'Sort order is required').optional(),
-});
+})
 
 // Export the categories for use in frontend and documentation
-export const WISHLIST_CATEGORIES = LEGO_CATEGORIES;
+export const WISHLIST_CATEGORIES = LEGO_CATEGORIES
 
 export const WishlistImageUploadSchema = z.object({
   file: z
     .custom<AvatarFile>()
-    .refine((file) => ['image/jpeg', 'image/jpg', 'image/heic'].includes(file.type), {
+    .refine(file => ['image/jpeg', 'image/jpg', 'image/heic'].includes(file.type), {
       message: 'Only .jpg, .jpeg, or .heic files are supported',
     })
-    .refine((file) => file.size <= 20 * 1024 * 1024, {
+    .refine(file => file.size <= 20 * 1024 * 1024, {
       message: 'File size must be less than 20MB',
     }),
-});
+})
 
-export type WishlistItem = z.infer<typeof WishlistItemSchema>;
-export type CreateWishlistItem = z.infer<typeof CreateWishlistItemSchema>;
-export type UpdateWishlistItem = z.infer<typeof UpdateWishlistItemSchema>;
+export type WishlistItem = z.infer<typeof WishlistItemSchema>
+export type CreateWishlistItem = z.infer<typeof CreateWishlistItemSchema>
+export type UpdateWishlistItem = z.infer<typeof UpdateWishlistItemSchema>
 
 // --- MOC PARTS LIST TYPES ---
 export const MocPartsListSchema = z.object({
@@ -258,7 +285,7 @@ export const MocPartsListSchema = z.object({
   notes: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-});
+})
 
 export const CreateMocPartsListSchema = z.object({
   mocId: z.string().uuid(),
@@ -268,7 +295,7 @@ export const CreateMocPartsListSchema = z.object({
   totalPartsCount: z.string().optional(),
   costEstimate: z.string().optional(),
   notes: z.string().optional(),
-});
+})
 
 export const UpdateMocPartsListSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -284,9 +311,9 @@ export const UpdateMocPartsListSchema = z.object({
   costEstimate: z.string().optional(),
   actualCost: z.string().optional(),
   notes: z.string().optional(),
-});
+})
 
-export type MocPartsList = z.infer<typeof MocPartsListSchema>;
-export type CreateMocPartsList = z.infer<typeof CreateMocPartsListSchema>;
-export type UpdateMocPartsList = z.infer<typeof UpdateMocPartsListSchema>;
-export type WishlistImageUpload = z.infer<typeof WishlistImageUploadSchema>;
+export type MocPartsList = z.infer<typeof MocPartsListSchema>
+export type CreateMocPartsList = z.infer<typeof CreateMocPartsListSchema>
+export type UpdateMocPartsList = z.infer<typeof UpdateMocPartsListSchema>
+export type WishlistImageUpload = z.infer<typeof WishlistImageUploadSchema>

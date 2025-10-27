@@ -21,7 +21,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Provide minimal XMLHttpRequest header helpers used by msw interceptors in tests
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const XHRProto: any = (global as any).XMLHttpRequest?.prototype
 if (XHRProto) {
   if (!XHRProto.getAllResponseHeaders) {
@@ -58,8 +58,12 @@ class FakeXMLHttpRequest {
     if (!this._listeners[type]) this._listeners[type] = []
     this._listeners[type].push(handler)
   }
-  getAllResponseHeaders() { return '' }
-  getResponseHeader(_name: string) { return null }
+  getAllResponseHeaders() {
+    return ''
+  }
+  getResponseHeader(_name: string) {
+    return null
+  }
   send() {
     // Simulate async progress and completion
     setTimeout(() => {
@@ -136,5 +140,3 @@ if (typeof (global as any).HTMLAnchorElement !== 'undefined') {
     this.dispatchEvent(evt)
   }
 }
-
-

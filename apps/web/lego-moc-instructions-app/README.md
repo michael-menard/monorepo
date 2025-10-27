@@ -26,28 +26,32 @@ A comprehensive web application for creating, managing, and sharing LEGO MOC (My
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - pnpm 8+
 - Git
 
 ### Installation
 
 1. Clone the repository and navigate to the app directory:
+
 ```bash
 cd apps/web/lego-moc-instructions-app
 ```
 
 2. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp env.example .env.local
 ```
 
 4. Update the `.env.local` file with your configuration:
+
 ```env
 VITE_API_BASE_URL=http://localhost:3001
 VITE_AUTH_DOMAIN=your-auth-domain
@@ -58,6 +62,7 @@ VITE_S3_BUCKET_NAME=your-s3-bucket
 ### Development
 
 Start the development server:
+
 ```bash
 pnpm dev
 ```
@@ -67,11 +72,13 @@ The app will be available at `http://localhost:5173`
 ### Building
 
 Build for production:
+
 ```bash
 pnpm build
 ```
 
 Preview the production build:
+
 ```bash
 pnpm preview
 ```
@@ -105,7 +112,7 @@ src/
 Create comprehensive step-by-step instructions:
 
 ```tsx
-import { InstructionBuilder } from '@/features/instructions';
+import { InstructionBuilder } from '@/features/instructions'
 
 function CreateInstructions() {
   return (
@@ -114,7 +121,7 @@ function CreateInstructions() {
       onPublish={handlePublish}
       initialData={instructionData}
     />
-  );
+  )
 }
 ```
 
@@ -123,17 +130,15 @@ function CreateInstructions() {
 Upload and manage images for instruction steps:
 
 ```tsx
-import { ImageUploadModal } from '@/features/gallery';
+import { ImageUploadModal } from '@/features/gallery'
 
 function StepEditor() {
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
 
   return (
     <div>
-      <button onClick={() => setIsUploadOpen(true)}>
-        Add Image
-      </button>
-      
+      <button onClick={() => setIsUploadOpen(true)}>Add Image</button>
+
       <ImageUploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
@@ -142,7 +147,7 @@ function StepEditor() {
         acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
       />
     </div>
-  );
+  )
 }
 ```
 
@@ -151,10 +156,10 @@ function StepEditor() {
 Integrated authentication with profile management:
 
 ```tsx
-import { useAuth } from '@/features/auth';
+import { useAuth } from '@/features/auth'
 
 function App() {
-  const { user, isAuthenticated, login, logout } = useAuth();
+  const { user, isAuthenticated, login, logout } = useAuth()
 
   return (
     <div>
@@ -167,7 +172,7 @@ function App() {
         <button onClick={() => login()}>Login</button>
       )}
     </div>
-  );
+  )
 }
 ```
 
@@ -178,28 +183,28 @@ function App() {
 The app uses RTK Query for API calls:
 
 ```tsx
-import { api } from '@/services/api';
+import { api } from '@/services/api'
 
 // Define API endpoints
 export const instructionsApi = api.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     getInstructions: builder.query({
-      query: (params) => ({
+      query: params => ({
         url: '/instructions',
-        params
-      })
+        params,
+      }),
     }),
     createInstruction: builder.mutation({
-      query: (data) => ({
+      query: data => ({
         url: '/instructions',
         method: 'POST',
-        body: data
-      })
-    })
-  })
-});
+        body: data,
+      }),
+    }),
+  }),
+})
 
-export const { useGetInstructionsQuery, useCreateInstructionMutation } = instructionsApi;
+export const { useGetInstructionsQuery, useCreateInstructionMutation } = instructionsApi
 ```
 
 ## CSRF Protection
@@ -223,18 +228,18 @@ The application implements comprehensive CSRF (Cross-Site Request Forgery) prote
 The CSRF service manages token fetching and caching:
 
 ```tsx
-import { getCSRFToken, initializeCSRF, clearCSRFToken } from '@/services/csrfService';
+import { getCSRFToken, initializeCSRF, clearCSRFToken } from '@/services/csrfService'
 
 // Initialize CSRF on app start
 useEffect(() => {
-  initializeCSRF();
-}, []);
+  initializeCSRF()
+}, [])
 
 // Clear CSRF token on logout
 const handleLogout = () => {
-  clearCSRFToken();
+  clearCSRFToken()
   // ... other logout logic
-};
+}
 ```
 
 #### RTK Query Integration
@@ -243,17 +248,17 @@ All mutation requests automatically include CSRF tokens:
 
 ```tsx
 // RTK Query mutations are automatically CSRF-protected
-const [createInstruction] = useCreateInstructionMutation();
+const [createInstruction] = useCreateInstructionMutation()
 
-const handleCreate = async (data) => {
+const handleCreate = async data => {
   try {
     // CSRF token is automatically added to the request
-    await createInstruction(data).unwrap();
+    await createInstruction(data).unwrap()
   } catch (error) {
     // Automatic retry happens behind the scenes for CSRF failures
-    console.error('Create failed:', error);
+    console.error('Create failed:', error)
   }
-};
+}
 ```
 
 #### Auth API Integration
@@ -261,12 +266,12 @@ const handleCreate = async (data) => {
 Authentication endpoints are also CSRF-protected:
 
 ```tsx
-import { authApi } from '@/services/authApi';
+import { authApi } from '@/services/authApi'
 
 // All auth mutations include CSRF protection and retry logic
-await authApi.login({ email, password });
-await authApi.signup({ name, email, password });
-await authApi.logout();
+await authApi.login({ email, password })
+await authApi.signup({ name, email, password })
+await authApi.logout()
 ```
 
 ### Manual CSRF Token Management
@@ -274,21 +279,21 @@ await authApi.logout();
 For custom fetch requests, you can manually handle CSRF tokens:
 
 ```tsx
-import { getCSRFHeaders, refreshCSRFToken } from '@/services/csrfService';
+import { getCSRFHeaders, refreshCSRFToken } from '@/services/csrfService'
 
 // Add CSRF headers to a custom request
-const headers = await getCSRFHeaders();
+const headers = await getCSRFHeaders()
 const response = await fetch('/api/custom-endpoint', {
   method: 'POST',
   headers,
   body: JSON.stringify(data),
-});
+})
 
 // Handle CSRF failure manually
 if (response.status === 403) {
-  const errorData = await response.json();
+  const errorData = await response.json()
   if (errorData.code === 'CSRF_FAILED') {
-    const newToken = await refreshCSRFToken();
+    const newToken = await refreshCSRFToken()
     // Retry with new token...
   }
 }
@@ -300,9 +305,9 @@ The application includes debugging utilities for CSRF verification:
 
 ```tsx
 // Available in browser console during development
-window.testCSRFIntegration(); // Run CSRF integration test
-window.enableCSRFRequestLogging(); // Log CSRF token presence in requests
-window.generateCSRFAuditReport(); // Generate security audit report
+window.testCSRFIntegration() // Run CSRF integration test
+window.enableCSRFRequestLogging() // Log CSRF token presence in requests
+window.generateCSRFAuditReport() // Generate security audit report
 ```
 
 ### Security Considerations
@@ -318,27 +323,27 @@ window.generateCSRFAuditReport(); // Generate security audit report
 Comprehensive error handling with user-friendly messages:
 
 ```tsx
-import { useCreateInstructionMutation } from '@/services/api';
+import { useCreateInstructionMutation } from '@/services/api'
 
 function CreateInstructionForm() {
-  const [createInstruction, { error, isLoading }] = useCreateInstructionMutation();
+  const [createInstruction, { error, isLoading }] = useCreateInstructionMutation()
 
-  const handleSubmit = async (data) => {
+  const handleSubmit = async data => {
     try {
-      await createInstruction(data).unwrap();
+      await createInstruction(data).unwrap()
       // Success handling
     } catch (error) {
       // Error handling
-      console.error('Failed to create instruction:', error);
+      console.error('Failed to create instruction:', error)
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit}>
       {error && <ErrorMessage error={error} />}
       {/* Form fields */}
     </form>
-  );
+  )
 }
 ```
 
@@ -347,6 +352,7 @@ function CreateInstructionForm() {
 ### Unit Tests
 
 Run unit tests with Vitest:
+
 ```bash
 pnpm test
 ```
@@ -354,6 +360,7 @@ pnpm test
 ### E2E Tests
 
 Run end-to-end tests with Playwright:
+
 ```bash
 pnpm test:e2e
 ```
@@ -361,6 +368,7 @@ pnpm test:e2e
 ### Test Coverage
 
 Generate test coverage report:
+
 ```bash
 pnpm test:coverage
 ```
@@ -372,16 +380,16 @@ pnpm test:coverage
 The app uses dynamic imports for code splitting:
 
 ```tsx
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react'
 
-const InstructionBuilder = lazy(() => import('@/features/instructions/InstructionBuilder'));
+const InstructionBuilder = lazy(() => import('@/features/instructions/InstructionBuilder'))
 
 function App() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <InstructionBuilder />
     </Suspense>
-  );
+  )
 }
 ```
 
@@ -390,7 +398,7 @@ function App() {
 Optimized image loading with lazy loading and progressive enhancement:
 
 ```tsx
-import { LazyImage } from '@/components/ui';
+import { LazyImage } from '@/components/ui'
 
 function StepImage({ src, alt }) {
   return (
@@ -401,11 +409,28 @@ function StepImage({ src, alt }) {
       placeholder="blur"
       sizes="(max-width: 768px) 100vw, 50vw"
     />
-  );
+  )
 }
 ```
 
 ## Deployment
+
+### AWS Infrastructure (CDK)
+
+The application uses AWS CDK for infrastructure deployment. See `infrastructure/aws-cdk/` for:
+
+- **S3 + CloudFront**: Static website hosting with global CDN
+- **Route53**: DNS management and custom domains
+- **SSL Certificates**: Automatic HTTPS with certificate management
+- **API Proxying**: Routes `/api/auth/*` and `/api/lego/*` to backend services
+
+Deploy infrastructure:
+
+```bash
+cd infrastructure/aws-cdk
+npm install
+npx cdk deploy --profile your-aws-profile
+```
 
 ### Docker
 
@@ -454,15 +479,18 @@ VITE_ENVIRONMENT=production
 ### Common Issues
 
 **Build fails with TypeScript errors**
+
 - Run `pnpm type-check` to identify issues
 - Ensure all dependencies are properly typed
 
 **API calls failing**
+
 - Check environment variables are set correctly
 - Verify API server is running
 - Check network connectivity
 
 **Images not loading**
+
 - Verify S3 bucket configuration
 - Check image URLs are correct
 - Ensure proper CORS settings

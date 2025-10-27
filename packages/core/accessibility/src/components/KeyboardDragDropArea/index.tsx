@@ -1,16 +1,16 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, ArrowUp, ArrowDown, X, Check } from 'lucide-react';
-import type { KeyboardDragState, KeyboardDragActions } from '../../hooks/useKeyboardDragAndDrop';
+import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronUp, ChevronDown, ArrowUp, ArrowDown, X, Check } from 'lucide-react'
+import type { KeyboardDragState, KeyboardDragActions } from '../../hooks/useKeyboardDragAndDrop'
 
 export interface KeyboardDragDropAreaProps {
-  children: React.ReactNode;
-  state: KeyboardDragState;
-  actions: KeyboardDragActions;
-  className?: string;
-  itemType?: string;
-  showInstructions?: boolean;
-  showControls?: boolean;
+  children: React.ReactNode
+  state: KeyboardDragState
+  actions: KeyboardDragActions
+  className?: string
+  itemType?: string
+  showInstructions?: boolean
+  showControls?: boolean
 }
 
 export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
@@ -22,9 +22,9 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
   showInstructions = true,
   showControls = true,
 }) => {
-  const isDragging = state.isKeyboardDragging;
-  const hasTarget = state.targetIndex !== null && state.sourceIndex !== null;
-  const isMoving = hasTarget && state.targetIndex !== state.sourceIndex;
+  const isDragging = state.isKeyboardDragging
+  const hasTarget = state.targetIndex !== null && state.sourceIndex !== null
+  const isMoving = hasTarget && state.targetIndex !== state.sourceIndex
 
   return (
     <div className={`relative ${className}`}>
@@ -41,7 +41,7 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
 
       {/* Keyboard instructions */}
       <AnimatePresence>
-        {showInstructions && isDragging && (
+        {showInstructions && isDragging ? (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -49,9 +49,7 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
             className="absolute -top-12 left-0 right-0 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50"
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {actions.getKeyboardInstructions()}
-              </span>
+              <span className="text-sm font-medium">{actions.getKeyboardInstructions()}</span>
               <button
                 type="button"
                 onClick={actions.handleCancel}
@@ -62,12 +60,12 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               </button>
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
       {/* Keyboard controls */}
       <AnimatePresence>
-        {showControls && isDragging && (
+        {showControls && isDragging ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -84,7 +82,7 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               >
                 <ArrowUp className="w-4 h-4" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={actions.handleMoveUp}
@@ -94,7 +92,7 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               >
                 <ChevronUp className="w-4 h-4" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={actions.handleMoveDown}
@@ -104,7 +102,7 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={actions.handleMoveToBottom}
@@ -114,9 +112,9 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               >
                 <ArrowDown className="w-4 h-4" />
               </button>
-              
+
               <div className="border-t border-gray-200 my-1" />
-              
+
               <button
                 type="button"
                 onClick={actions.handleConfirm}
@@ -126,7 +124,7 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               >
                 <Check className="w-4 h-4 text-green-600" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={actions.handleCancel}
@@ -138,12 +136,12 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               </button>
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
       {/* Position indicator */}
       <AnimatePresence>
-        {isDragging && hasTarget && (
+        {isDragging && hasTarget ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -153,10 +151,10 @@ export const KeyboardDragDropArea: React.FC<KeyboardDragDropAreaProps> = ({
               transform: `translateY(${(state.targetIndex! / (state.totalItems || 1)) * 100}%)`,
             }}
           />
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
-  );
-};
+  )
+}
 
-export default KeyboardDragDropArea; 
+export default KeyboardDragDropArea

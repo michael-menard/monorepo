@@ -1,10 +1,10 @@
-import { Router } from 'express';
-import { requireAuth } from '../middleware/auth';
-import { db } from '../db/client';
-import { mocInstructions, mocFiles, users } from '../db/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
+import { Router } from 'express'
+import { eq, and, sql } from 'drizzle-orm'
+import { v4 as uuidv4 } from 'uuid'
+import jwt from 'jsonwebtoken'
+import { requireAuth } from '../middleware/auth'
+import { db } from '../db/client'
+import { mocInstructions, mocFiles } from '../db/schema'
 
 // Temporary in-memory store for recently created MOCs (for testing)
 const recentMocs: any[] = [
@@ -21,14 +21,14 @@ const recentMocs: any[] = [
         id: 'img-1',
         url: 'https://via.placeholder.com/400x300/129990/ffffff?text=Castle+View+1',
         alt: 'Castle front view',
-        caption: 'Front view of the castle'
+        caption: 'Front view of the castle',
       },
       {
         id: 'img-2',
         url: 'https://via.placeholder.com/400x300/5A827E/ffffff?text=Castle+View+2',
         alt: 'Castle side view',
-        caption: 'Side view of the castle'
-      }
+        caption: 'Side view of the castle',
+      },
     ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -45,21 +45,21 @@ const recentMocs: any[] = [
         id: 'img-3',
         url: 'https://via.placeholder.com/400x300/178B7A/ffffff?text=Spaceship+View+1',
         alt: 'Spaceship front view',
-        caption: 'Front view of the spaceship'
+        caption: 'Front view of the spaceship',
       },
       {
         id: 'img-4',
         url: 'https://via.placeholder.com/400x300/FAEAB1/333333?text=Spaceship+View+2',
         alt: 'Spaceship side view',
-        caption: 'Side view of the spaceship'
-      }
+        caption: 'Side view of the spaceship',
+      },
     ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }
-];
+  },
+]
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 import {
   createMoc,
   createMocWithFiles,
@@ -73,7 +73,9 @@ import {
   unlinkGalleryImageFromMoc,
   getMocGalleryImages,
   uploadPartsList,
-} from '../handlers/moc';
+  getMocStatsByCategory,
+  getMocUploadsOverTime,
+} from '../handlers/moc'
 import {
   mocFileUpload,
   mocModalUpload,
@@ -85,46 +87,46 @@ import {
   streamLocalMocFile,
   checkMocFileExists,
   type MocFileType,
-} from '../storage/moc-storage';
-import { mocCache, mocCacheInvalidation } from '../middleware/cache';
+} from '../storage/moc-storage'
+import { mocCache, mocCacheInvalidation } from '../middleware/cache'
 
-const router = Router();
+const router = Router()
 
 // TEST ENDPOINT: Generate auth token for testing
 router.post('/test-auth', async (req, res) => {
   try {
-    const testUserId = uuidv4();
+    const testUserId = uuidv4()
     const token = jwt.sign(
       {
         sub: testUserId,
         id: testUserId,
         email: 'test@example.com',
-        name: 'Test User'
+        name: 'Test User',
       },
       JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+      { expiresIn: '1h' },
+    )
 
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 3600000 // 1 hour
-    });
+      maxAge: 3600000, // 1 hour
+    })
 
     return res.json({
       message: 'Test auth token generated',
       userId: testUserId,
-      token // Also return in response for manual testing
-    });
+      token, // Also return in response for manual testing
+    })
   } catch (error) {
-    console.error('Test auth error:', error);
-    return res.status(500).json({ error: 'Failed to generate test token' });
+    console.error('Test auth error:', error)
+    return res.status(500).json({ error: 'Failed to generate test token' })
   }
-});
+})
 
 // POST /api/mocs - Create new MOC with metadata only
-router.post('/', requireAuth, mocCacheInvalidation, createMoc);
+router.post('/', requireAuth, mocCacheInvalidation, createMoc)
 
 // POST /api/mocs/with-files - Create new MOC with metadata and file uploads
 router.post(
@@ -132,12 +134,12 @@ router.post(
   requireAuth,
   mocModalUpload.fields([
     { name: 'instructionsFile', maxCount: 10 }, // Required: 1 or more instruction files (PDF or .io)
-    { name: 'partsLists', maxCount: 10 },       // Optional: 0-10 parts list files
-    { name: 'images', maxCount: 3 }             // Optional: 0-3 images
+    { name: 'partsLists', maxCount: 10 }, // Optional: 0-10 parts list files
+    { name: 'images', maxCount: 3 }, // Optional: 0-3 images
   ]),
   mocCacheInvalidation,
-  createMocWithFiles
-);
+  createMocWithFiles,
+)
 
 // POST /api/mocs/upload-parts-list - Upload parts list file to existing MOC
 router.post(
@@ -145,18 +147,18 @@ router.post(
   requireAuth,
   partsListUpload.single('partsListFile'),
   mocCacheInvalidation,
-  uploadPartsList
-);
+  uploadPartsList,
+)
 
 // Test CORS endpoint
 router.post('/test-cors', (req, res) => {
-  console.log('🧪 CORS test endpoint hit');
-  console.log('📋 Headers:', req.headers);
-  res.json({ message: 'CORS test successful', timestamp: new Date().toISOString() });
-});
+  console.log('🧪 CORS test endpoint hit')
+  console.log('📋 Headers:', req.headers)
+  res.json({ message: 'CORS test successful', timestamp: new Date().toISOString() })
+})
 
 // PATCH /api/mocs/:id - Update MOC metadata
-router.patch('/:id', requireAuth, mocCacheInvalidation, updateMoc);
+router.patch('/:id', requireAuth, mocCacheInvalidation, updateMoc)
 
 // POST /api/mocs/:id/files - Upload instruction or parts list file
 router.post(
@@ -165,95 +167,100 @@ router.post(
   mocFileUpload.single('file'),
   mocCacheInvalidation,
   uploadMocFile,
-);
+)
 
 // DELETE /api/mocs/:id/files/:fileId - Delete file
-router.delete('/:id/files/:fileId', requireAuth, mocCacheInvalidation, deleteMocFile);
+router.delete('/:id/files/:fileId', requireAuth, mocCacheInvalidation, deleteMocFile)
+
+// GET /api/mocs/stats/by-category - Get MOC statistics grouped by category
+router.get('/stats/by-category', requireAuth, getMocStatsByCategory)
+
+// GET /api/mocs/stats/uploads-over-time - Get MOC upload statistics over time
+router.get('/stats/uploads-over-time', requireAuth, getMocUploadsOverTime)
 
 // GET /api/mocs/search - Full-text search with database query
 router.get('/search', async (req, res) => {
   try {
-    const { q: query, from = '0', size = '20' } = req.query;
+    const { q: query, from = '0', size = '20' } = req.query
 
-    console.log('🔍 Gallery search - querying database for MOCs');
+    console.log('🔍 Gallery search - querying database for MOCs')
 
     // Query database for MOCs with their image files
-    const dbMocs = await db
-      .select()
-      .from(mocInstructions)
-      .orderBy(mocInstructions.createdAt);
+    const dbMocs = await db.select().from(mocInstructions).orderBy(mocInstructions.createdAt)
 
-    console.log('🔍 Database MOCs found:', dbMocs.length);
+    console.log('🔍 Database MOCs found:', dbMocs.length)
 
     // Convert to proper format for frontend
-    const allMocs = await Promise.all(dbMocs.map(async (moc) => {
-      // Get image files for this MOC (thumbnail and gallery images only)
-      const imageFiles = await db
-        .select()
-        .from(mocFiles)
-        .where(
-          and(
-            eq(mocFiles.mocId, moc.id),
-            sql`${mocFiles.fileType} IN ('thumbnail', 'gallery-image')`
+    const allMocs = await Promise.all(
+      dbMocs.map(async moc => {
+        // Get image files for this MOC (thumbnail and gallery images only)
+        const imageFiles = await db
+          .select()
+          .from(mocFiles)
+          .where(
+            and(
+              eq(mocFiles.mocId, moc.id),
+              sql`${mocFiles.fileType} IN ('thumbnail', 'gallery-image')`,
+            ),
           )
-        );
 
-      // Convert files to image format expected by frontend
-      const images = imageFiles.map(file => ({
-        id: file.id,
-        url: file.fileUrl,
-        alt: file.originalFilename || 'MOC Image',
-        caption: file.originalFilename || 'MOC Image'
-      }));
+        // Convert files to image format expected by frontend
+        const images = imageFiles.map(file => ({
+          id: file.id,
+          url: file.fileUrl,
+          alt: file.originalFilename || 'MOC Image',
+          caption: file.originalFilename || 'MOC Image',
+        }))
 
-      return {
-        ...moc,
-        createdAt: moc.createdAt.toISOString(),
-        updatedAt: moc.updatedAt.toISOString(),
-        images: images // Use actual image files
-      };
-    }));
+        return {
+          ...moc,
+          createdAt: moc.createdAt.toISOString(),
+          updatedAt: moc.updatedAt.toISOString(),
+          images: images, // Use actual image files
+        }
+      }),
+    )
 
     // Apply basic filtering if query is provided
-    let filteredMocs = allMocs;
+    let filteredMocs = allMocs
     if (query && typeof query === 'string' && query.trim()) {
-      filteredMocs = allMocs.filter(moc =>
-        moc.title.toLowerCase().includes(query.toLowerCase()) ||
-        (moc.description && moc.description.toLowerCase().includes(query.toLowerCase()))
-      );
+      filteredMocs = allMocs.filter(
+        moc =>
+          moc.title.toLowerCase().includes(query.toLowerCase()) ||
+          (moc.description && moc.description.toLowerCase().includes(query.toLowerCase())),
+      )
     }
 
     // Apply pagination
-    const fromNum = parseInt(from as string) || 0;
-    const sizeNum = parseInt(size as string) || 20;
-    const paginatedMocs = filteredMocs.slice(fromNum, fromNum + sizeNum);
+    const fromNum = parseInt(from as string) || 0
+    const sizeNum = parseInt(size as string) || 20
+    const paginatedMocs = filteredMocs.slice(fromNum, fromNum + sizeNum)
 
     return res.json({
       mocs: paginatedMocs,
       total: filteredMocs.length,
       source: 'database',
-      message: `Found ${filteredMocs.length} MOCs in database`
-    });
-
+      message: `Found ${filteredMocs.length} MOCs in database`,
+    })
   } catch (error) {
-    console.error('Search error:', error);
+    console.error('Search error:', error)
     return res.json({
       mocs: [],
       total: 0,
       source: 'error',
-      message: 'Database search failed'
-    });
+      message: 'Database search failed',
+    })
   }
-});
+})
 
 // GET /api/mocs/:id - Get specific MOC (public access)
-router.get('/:id', mocCache, getMoc);
+router.get('/:id', mocCache, getMoc)
 
 // DELETE /api/mocs/:id - Delete MOC
-router.delete('/:id', requireAuth, mocCacheInvalidation, deleteMoc);
+router.delete('/:id', requireAuth, mocCacheInvalidation, deleteMoc)
 
 // POST /api/mocs/:id/gallery-images - Link gallery image to MOC
-router.post('/:id/gallery-images', requireAuth, mocCacheInvalidation, linkGalleryImageToMoc);
+router.post('/:id/gallery-images', requireAuth, mocCacheInvalidation, linkGalleryImageToMoc)
 
 // DELETE /api/mocs/:id/gallery-images/:galleryImageId - Unlink gallery image from MOC
 router.delete(
@@ -261,10 +268,10 @@ router.delete(
   requireAuth,
   mocCacheInvalidation,
   unlinkGalleryImageFromMoc,
-);
+)
 
 // GET /api/mocs/:id/gallery-images - Get linked gallery images for MOC
-router.get('/:id/gallery-images', requireAuth, mocCache, getMocGalleryImages);
+router.get('/:id/gallery-images', requireAuth, mocCache, getMocGalleryImages)
 
 // GET /api/mocs/:id/files/:fileId/download-info - Get download information for a file
 // TEMPORARILY DISABLED - Upload package needs to be fixed
@@ -382,4 +389,4 @@ router.get('/:id/gallery-images', requireAuth, mocCache, getMocGalleryImages);
 //   }
 // });
 
-export default router;
+export default router

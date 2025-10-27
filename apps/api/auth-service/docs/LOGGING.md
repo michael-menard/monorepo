@@ -30,33 +30,33 @@ const logger = pino({
       'user.password',
       'user.refreshToken',
       'user.verificationToken',
-      'user.resetPasswordToken'
+      'user.resetPasswordToken',
     ],
-    censor: '[REDACTED]'
+    censor: '[REDACTED]',
   },
   serializers: {
     req: pino.stdSerializers.req,
     res: pino.stdSerializers.res,
-    err: pino.stdSerializers.err
+    err: pino.stdSerializers.err,
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   formatters: {
-    level: (label) => ({ level: label })
-  }
-});
+    level: label => ({ level: label }),
+  },
+})
 
 const httpLogger = pinoHttp({
   logger,
-  genReqId: (req) => req.id || req.headers['x-request-id'] || uuidv4(),
+  genReqId: req => req.id || req.headers['x-request-id'] || uuidv4(),
   customProps: (req, res) => {
     return {
       userId: req.user?.id,
       correlationId: getOrCreateCorrelationId(req),
       userAgent: req.get('User-Agent'),
-      ip: req.ip || req.connection.remoteAddress
-    };
-  }
-});
+      ip: req.ip || req.connection.remoteAddress,
+    }
+  },
+})
 ```
 
 ## Logging Utilities
@@ -64,53 +64,60 @@ const httpLogger = pinoHttp({
 Located in `utils/logger.ts`, these functions provide standardized logging:
 
 ### Authentication Events
+
 ```typescript
-logAuthEvent(req, 'login', { email: user.email, method: 'email' });
-logAuthEvent(req, 'signup', { email, verified: false });
+logAuthEvent(req, 'login', { email: user.email, method: 'email' })
+logAuthEvent(req, 'signup', { email, verified: false })
 ```
 
 ### Security Events
+
 ```typescript
-logSecurityEvent(req, 'failed_login', { 
-  email, 
+logSecurityEvent(req, 'failed_login', {
+  email,
   reason: 'Invalid credentials',
-  attempts: 3
-});
+  attempts: 3,
+})
 ```
 
 ### User Actions
+
 ```typescript
-logUserAction(req, 'password_reset_requested', { email });
-logUserAction(req, 'email_verified', { userId: user.id });
+logUserAction(req, 'password_reset_requested', { email })
+logUserAction(req, 'email_verified', { userId: user.id })
 ```
 
 ### Error Logging
+
 ```typescript
-logAuthError(req, error, 'signup_failed', { email, step: 'validation' });
+logAuthError(req, error, 'signup_failed', { email, step: 'validation' })
 ```
 
 ### Database Operations
+
 ```typescript
-logDatabaseOperation(req, 'user_created', { 
-  userId: user.id, 
+logDatabaseOperation(req, 'user_created', {
+  userId: user.id,
   table: 'users',
-  operation: 'INSERT'
-});
+  operation: 'INSERT',
+})
 ```
 
 ### Email Events
+
 ```typescript
-logEmailEvent(req, 'verification_sent', true, { 
-  email, 
-  template: 'verification'
-});
+logEmailEvent(req, 'verification_sent', true, {
+  email,
+  template: 'verification',
+})
 ```
 
 ### Performance Monitoring
+
 ```typescript
-const startTime = Date.now();
+const startTime = Date.now()
 // ... operation ...
-logPerformance(req, 'password_hash', Date.now() - startTime);
+logPerformance(req, 'password_hash', Date.now() - startTime)
 ```
 
 ## Request Context
@@ -118,7 +125,7 @@ logPerformance(req, 'password_hash', Date.now() - startTime);
 All log entries automatically include:
 
 - **requestId**: Unique identifier for request tracing
-- **correlationId**: For distributed tracing across services  
+- **correlationId**: For distributed tracing across services
 - **userId**: When user is authenticated
 - **ip**: Client IP address
 - **userAgent**: Client browser/application
@@ -158,6 +165,7 @@ Comprehensive tests in `__tests__/logger.test.ts` verify:
 - All utility functions
 
 Run tests with:
+
 ```bash
 pnpm test __tests__/logger.test.ts
 ```
@@ -174,32 +182,35 @@ pnpm test __tests__/logger.test.ts
 ## Examples
 
 ### Successful Login
+
 ```typescript
 // In controller
-logAuthEvent(req, 'login_success', { 
-  email: user.email, 
+logAuthEvent(req, 'login_success', {
+  email: user.email,
   loginMethod: 'email',
-  userAgent: req.get('User-Agent')
-});
+  userAgent: req.get('User-Agent'),
+})
 ```
 
 ### Failed Authentication
+
 ```typescript
-// In controller  
+// In controller
 logSecurityEvent(req, 'login_failed', {
   email: loginData.email,
   reason: 'Invalid credentials',
-  ip: req.ip
-});
+  ip: req.ip,
+})
 ```
 
 ### Database Error
+
 ```typescript
 // In controller
 logAuthError(req, error, 'database_error', {
   operation: 'user_lookup',
-  email: loginData.email
-});
+  email: loginData.email,
+})
 ```
 
 All logs will automatically include request ID, user context, and timestamps while protecting sensitive information.

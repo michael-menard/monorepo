@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const signupSchema = z
   .object({
@@ -19,13 +19,13 @@ export const signupSchema = z
       .max(100, 'Password must be less than 100 characters')
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
       ),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine(data => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
-  });
+  })
 
-export type SignupFormData = z.infer<typeof signupSchema>; 
+export type SignupFormData = z.infer<typeof signupSchema>

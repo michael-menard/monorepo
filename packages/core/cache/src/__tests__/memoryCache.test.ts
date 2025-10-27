@@ -56,7 +56,7 @@ describe('MemoryCache', () => {
   it('should expire entries after maxAge', async () => {
     cache.set('key1', 'value1', 100) // 100ms
     expect(cache.get('key1')).toBe('value1')
-    
+
     await new Promise(resolve => setTimeout(resolve, 150))
     expect(cache.get('key1')).toBeNull()
   })
@@ -74,7 +74,7 @@ describe('MemoryCache', () => {
     cache.set('key1', 'value1')
     cache.get('key1') // Hit
     cache.get('nonexistent') // Miss
-    
+
     const stats = cache.getStats()
     expect(stats.hits).toBe(1)
     expect(stats.misses).toBe(1)
@@ -86,12 +86,12 @@ describe('MemoryCache', () => {
   it('should clean up expired entries', async () => {
     cache.set('key1', 'value1', 100)
     cache.set('key2', 'value2', 200)
-    
+
     await new Promise(resolve => setTimeout(resolve, 150))
-    
+
     const cleaned = cache.cleanup()
     expect(cleaned).toBe(1) // key1 should be cleaned
-    
+
     expect(cache.get('key1')).toBeNull()
     expect(cache.get('key2')).toBe('value2')
   })
@@ -99,7 +99,7 @@ describe('MemoryCache', () => {
   it('should get all keys', () => {
     cache.set('key1', 'value1')
     cache.set('key2', 'value2')
-    
+
     const keys = cache.keys()
     expect(keys).toContain('key1')
     expect(keys).toContain('key2')
@@ -113,4 +113,4 @@ describe('MemoryCache', () => {
     cache.set('key2', 'value2')
     expect(cache.size()).toBe(2)
   })
-}) 
+})

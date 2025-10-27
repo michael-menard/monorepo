@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw'
 
 // Default handlers for common API endpoints
 export const handlers = [
@@ -11,21 +11,21 @@ export const handlers = [
         firstName: 'Test',
         lastName: 'User',
       },
-    });
+    })
   }),
 
   http.post('/api/auth/login', () => {
     return HttpResponse.json({
       success: true,
       message: 'Login successful',
-    });
+    })
   }),
 
   http.post('/api/auth/signup', () => {
     return HttpResponse.json({
       success: true,
       message: 'Signup successful',
-    });
+    })
   }),
 
   // Gallery endpoints
@@ -33,14 +33,14 @@ export const handlers = [
     return HttpResponse.json({
       images: [],
       total: 0,
-    });
+    })
   }),
 
   http.get('/api/gallery/albums', () => {
     return HttpResponse.json({
       albums: [],
       total: 0,
-    });
+    })
   }),
 
   // Wishlist endpoints
@@ -48,7 +48,7 @@ export const handlers = [
     return HttpResponse.json({
       items: [],
       total: 0,
-    });
+    })
   }),
 
   // Profile endpoints
@@ -61,7 +61,7 @@ export const handlers = [
         email: 'test@example.com',
         avatar: null,
       },
-    });
+    })
   }),
 
   // MOC endpoints
@@ -69,15 +69,12 @@ export const handlers = [
     return HttpResponse.json({
       instructions: [],
       total: 0,
-    });
+    })
   }),
 
   // Catch-all handler for unhandled requests
   http.all('*', ({ request }) => {
-    console.warn(`Unhandled request: ${request.method} ${request.url}`);
-    return HttpResponse.json(
-      { error: 'Unhandled request' },
-      { status: 404 }
-    );
+    console.warn(`Unhandled request: ${request.method} ${request.url}`)
+    return HttpResponse.json({ error: 'Unhandled request' }, { status: 404 })
   }),
-]; 
+]

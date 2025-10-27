@@ -1,7 +1,7 @@
-import express, { Request, Response, Router } from 'express';
-import os from 'os';
+import os from 'os'
+import express, { Request, Response, Router } from 'express'
 
-const router: Router = express.Router();
+const router: Router = express.Router()
 
 // System info endpoint
 router.get('/system', (req: Request, res: Response) => {
@@ -16,8 +16,8 @@ router.get('/system', (req: Request, res: Response) => {
     uptime: os.uptime(),
     nodeVersion: process.version,
     processId: process.pid,
-  });
-});
+  })
+})
 
 // Environment variables (safe ones only)
 router.get('/env', (req: Request, res: Response) => {
@@ -28,8 +28,8 @@ router.get('/env', (req: Request, res: Response) => {
     hasMongoDB: !!process.env.MONGO_URI,
     hasJwtSecret: !!process.env.JWT_SECRET,
     hasFrontendUrl: !!process.env.FRONTEND_URL,
-  });
-});
+  })
+})
 
 // Test database connection
 router.get('/db-test', async (req: Request, res: Response) => {
@@ -39,15 +39,15 @@ router.get('/db-test', async (req: Request, res: Response) => {
     res.json({
       status: 'Database connection test not implemented yet',
       timestamp: new Date().toISOString(),
-    });
+    })
   } catch (error: any) {
     res.status(500).json({
       status: 'error',
       message: error.message || 'Unknown error',
       timestamp: new Date().toISOString(),
-    });
+    })
   }
-});
+})
 
 // Echo request details back to client
 router.all('/echo', (req: Request, res: Response) => {
@@ -60,7 +60,7 @@ router.all('/echo', (req: Request, res: Response) => {
     cookies: req.cookies,
     ip: req.ip,
     timestamp: new Date().toISOString(),
-  });
-});
+  })
+})
 
-export default router;
+export default router

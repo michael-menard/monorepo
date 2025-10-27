@@ -1,10 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from './accordion'
+import type {Meta, StoryObj} from '@storybook/react'
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from './accordion'
 
 const meta: Meta<typeof Accordion> = {
   title: 'UI/Accordion',
@@ -32,22 +27,22 @@ export const Default: Story = {
       <AccordionItem value="item-1">
         <AccordionTrigger>What is React?</AccordionTrigger>
         <AccordionContent>
-          React is a JavaScript library for building user interfaces. It lets you create
-          reusable UI components and manage their state efficiently.
+          React is a JavaScript library for building user interfaces. It lets you create reusable UI
+          components and manage their state efficiently.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-2">
         <AccordionTrigger>How do I get started?</AccordionTrigger>
         <AccordionContent>
-          You can get started with React by creating a new project using Create React App
-          or by adding React to an existing project.
+          You can get started with React by creating a new project using Create React App or by
+          adding React to an existing project.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-3">
         <AccordionTrigger>What are components?</AccordionTrigger>
         <AccordionContent>
-          Components are the building blocks of React applications. They let you split
-          the UI into independent, reusable pieces.
+          Components are the building blocks of React applications. They let you split the UI into
+          independent, reusable pieces.
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -106,9 +101,9 @@ export const Multiple: Story = {
 
 export const WithLabel: Story = {
   render: () => (
-    <Accordion 
-      type="single" 
-      collapsible 
+    <Accordion
+      type="single"
+      collapsible
       className="w-full max-w-md"
       label="Frequently Asked Questions"
       description="Common questions about our platform and services"
@@ -116,22 +111,22 @@ export const WithLabel: Story = {
       <AccordionItem value="item-1">
         <AccordionTrigger>How do I reset my password?</AccordionTrigger>
         <AccordionContent>
-          To reset your password, go to the login page and click on "Forgot Password".
-          You'll receive an email with instructions to create a new password.
+          To reset your password, go to the login page and click on "Forgot Password". You'll
+          receive an email with instructions to create a new password.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-2">
         <AccordionTrigger>Can I cancel my subscription?</AccordionTrigger>
         <AccordionContent>
-          Yes, you can cancel your subscription at any time from your account settings.
-          Your access will continue until the end of your current billing period.
+          Yes, you can cancel your subscription at any time from your account settings. Your access
+          will continue until the end of your current billing period.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-3">
         <AccordionTrigger>What payment methods do you accept?</AccordionTrigger>
         <AccordionContent>
-          We accept all major credit cards (Visa, MasterCard, American Express),
-          PayPal, and bank transfers for annual plans.
+          We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank
+          transfers for annual plans.
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -148,22 +143,20 @@ export const NestedContent: Story = {
             <div>
               <h4 className="font-medium mb-2">Performance Optimization</h4>
               <p className="text-sm text-muted-foreground">
-                Learn about React.memo, useMemo, and useCallback for optimizing
-                component performance.
+                Learn about React.memo, useMemo, and useCallback for optimizing component
+                performance.
               </p>
             </div>
             <div>
               <h4 className="font-medium mb-2">Testing</h4>
               <p className="text-sm text-muted-foreground">
-                Use Jest and React Testing Library to write comprehensive tests
-                for your components.
+                Use Jest and React Testing Library to write comprehensive tests for your components.
               </p>
             </div>
             <div>
               <h4 className="font-medium mb-2">Deployment</h4>
               <p className="text-sm text-muted-foreground">
-                Deploy your React app to platforms like Vercel, Netlify, or
-                your own server.
+                Deploy your React app to platforms like Vercel, Netlify, or your own server.
               </p>
             </div>
           </div>
@@ -219,4 +212,4 @@ export const CustomStyling: Story = {
       </AccordionItem>
     </Accordion>
   ),
-} 
+}

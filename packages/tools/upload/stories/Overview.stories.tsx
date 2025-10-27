@@ -1,20 +1,21 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { action } from '@storybook/addon-actions';
-import { Upload } from '../src/components/Upload/Upload.tsx';
-import { FilePreview } from '../src/components/FilePreview/FilePreview.tsx';
-import { ProgressIndicator } from '../src/components/ProgressIndicator/ProgressIndicator.tsx';
-import { UPLOAD_PRESETS } from '../src/utils/presets.js';
-import { useState } from 'react';
+import type { Meta, StoryObj } from '@storybook/react'
+import { action } from '@storybook/addon-actions'
+import { useState } from 'react'
+import { Upload } from '../src/components/Upload/Upload.tsx'
+import { FilePreview } from '../src/components/FilePreview/FilePreview.tsx'
+import { ProgressIndicator } from '../src/components/ProgressIndicator/ProgressIndicator.tsx'
+import { UPLOAD_PRESETS } from '../src/utils/presets.js'
 
 const OverviewDemo = () => {
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<any[]>([])
 
   return (
     <div className="space-y-8 p-6 max-w-4xl">
       <div>
         <h2 className="text-2xl font-bold mb-4">@repo/upload Package</h2>
         <p className="text-gray-600 mb-6">
-          A comprehensive upload system with drag-and-drop, progress tracking, validation, and image processing.
+          A comprehensive upload system with drag-and-drop, progress tracking, validation, and image
+          processing.
         </p>
       </div>
 
@@ -149,8 +150,8 @@ const OverviewDemo = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const meta: Meta<typeof OverviewDemo> = {
   title: 'Upload/Overview',
@@ -164,10 +165,10 @@ const meta: Meta<typeof OverviewDemo> = {
     },
   },
   tags: ['autodocs'],
-};
+}
 
-export default meta;
-type Story = StoryObj<typeof meta>;
+export default meta
+type Story = StoryObj<typeof meta>
 
 export const CompleteOverview: Story = {
   parameters: {
@@ -177,4 +178,4 @@ export const CompleteOverview: Story = {
       },
     },
   },
-};
+}

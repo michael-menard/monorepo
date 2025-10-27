@@ -1,13 +1,13 @@
-import React from 'react';
-import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '@repo/ui';
+import React from 'react'
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from '@repo/ui'
 
 const DarkModeToggle: React.FC = () => {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme()
 
   const toggleDarkMode = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-  };
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+  }
 
   return (
     <button
@@ -21,7 +21,7 @@ const DarkModeToggle: React.FC = () => {
         <Moon className="h-5 w-5 text-foreground" />
       )}
     </button>
-  );
-};
+  )
+}
 
-export default DarkModeToggle; 
+export default DarkModeToggle

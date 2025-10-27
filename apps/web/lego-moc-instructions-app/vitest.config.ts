@@ -5,13 +5,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['../../../__tests__/setup.ts'],
+    setupFiles: ['./src/__tests__/setup.ts'],
     // Memory management
     pool: 'forks',
     poolOptions: {
       forks: {
         singleFork: true, // Run tests in single process to reduce memory overhead
-      }
+      },
     },
     // Reduce parallel execution to manage memory
     maxConcurrency: 1,
@@ -33,4 +33,4 @@ export default defineConfig({
       '@monorepo/shared': resolve(__dirname, '../../../packages/shared/src'),
     },
   },
-}) 
+})

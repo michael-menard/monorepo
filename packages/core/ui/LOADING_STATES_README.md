@@ -92,7 +92,7 @@ import { CardSkeleton } from '@repo/ui'
 <CardSkeleton />
 
 // Custom configuration
-<CardSkeleton 
+<CardSkeleton
   showImage={false}
   showTitle={true}
   showDescription={true}
@@ -145,7 +145,7 @@ import { ListSkeleton } from '@repo/ui'
 <ListSkeleton />
 
 // Custom configuration
-<ListSkeleton 
+<ListSkeleton
   items={5}
   showAvatar={false}
   showTitle={true}
@@ -162,7 +162,7 @@ import { FormSkeleton } from '@repo/ui'
 <FormSkeleton />
 
 // Custom configuration
-<FormSkeleton 
+<FormSkeleton
   fields={5}
   showLabels={true}
   showButtons={true}
@@ -180,10 +180,10 @@ import { ProgressIndicator } from '@repo/ui'
 <ProgressIndicator value={50} max={100} />
 
 // With label
-<ProgressIndicator 
-  value={75} 
-  max={100} 
-  showLabel 
+<ProgressIndicator
+  value={75}
+  max={100}
+  showLabel
   labelPosition="top"
 />
 
@@ -191,7 +191,7 @@ import { ProgressIndicator } from '@repo/ui'
 <ProgressIndicator indeterminate />
 
 // Different sizes and variants
-<ProgressIndicator 
+<ProgressIndicator
   size="lg"
   variant="success"
   value={90}
@@ -210,10 +210,10 @@ import { CircularProgress } from '@repo/ui'
 <CircularProgress value={60} max={100} />
 
 // With label
-<CircularProgress 
-  value={80} 
-  max={100} 
-  showLabel 
+<CircularProgress
+  value={80}
+  max={100}
+  showLabel
   size="lg"
 />
 
@@ -221,9 +221,9 @@ import { CircularProgress } from '@repo/ui'
 <CircularProgress indeterminate size="xl" variant="warning" />
 
 // Custom stroke width
-<CircularProgress 
-  value={45} 
-  max={100} 
+<CircularProgress
+  value={45}
+  max={100}
   strokeWidth={6}
   size="lg"
 />
@@ -235,7 +235,7 @@ import { CircularProgress } from '@repo/ui'
 import { LoadingOverlay } from '@repo/ui'
 
 // Spinner overlay
-<LoadingOverlay 
+<LoadingOverlay
   isLoading={isLoading}
   text="Loading content..."
   variant="spinner"
@@ -244,7 +244,7 @@ import { LoadingOverlay } from '@repo/ui'
 </LoadingOverlay>
 
 // Progress overlay
-<LoadingOverlay 
+<LoadingOverlay
   isLoading={uploading}
   text={`Uploading... ${progress}%`}
   variant="progress"
@@ -255,7 +255,7 @@ import { LoadingOverlay } from '@repo/ui'
 </LoadingOverlay>
 
 // Circular overlay
-<LoadingOverlay 
+<LoadingOverlay
   isLoading={processing}
   text="Processing..."
   variant="circular"
@@ -277,14 +277,11 @@ const MyComponent = () => {
   const loadingStates = useLoadingStates()
 
   const handleAsyncOperation = async () => {
-    await loadingStates.withLoading(
-      async () => {
-        // Your async operation here
-        const result = await apiCall()
-        return result
-      },
-      'Processing your request...'
-    )
+    await loadingStates.withLoading(async () => {
+      // Your async operation here
+      const result = await apiCall()
+      return result
+    }, 'Processing your request...')
   }
 
   return (
@@ -292,18 +289,12 @@ const MyComponent = () => {
       {loadingStates.isLoading && (
         <LoadingSpinner showText text={loadingStates.loadingState.message} />
       )}
-      
-      {loadingStates.isSuccess && (
-        <div>Success: {loadingStates.loadingState.message}</div>
-      )}
-      
-      {loadingStates.isError && (
-        <div>Error: {loadingStates.loadingState.error}</div>
-      )}
-      
-      <button onClick={handleAsyncOperation}>
-        Start Operation
-      </button>
+
+      {loadingStates.isSuccess && <div>Success: {loadingStates.loadingState.message}</div>}
+
+      {loadingStates.isError && <div>Error: {loadingStates.loadingState.error}</div>}
+
+      <button onClick={handleAsyncOperation}>Start Operation</button>
     </div>
   )
 }
@@ -316,14 +307,14 @@ const MyComponent = () => {
   const loadingStates = useLoadingStates({
     autoReset: true,
     resetDelay: 3000,
-    onStateChange: (state) => {
+    onStateChange: state => {
       console.log('Loading state changed:', state)
-    }
+    },
   })
 
   const handleManualControl = () => {
     loadingStates.startLoading('Starting operation...')
-    
+
     // Simulate progress
     setTimeout(() => loadingStates.setProgress(25), 500)
     setTimeout(() => loadingStates.setProgress(50), 1000)
@@ -348,7 +339,7 @@ import { useMultipleLoadingStates } from '@repo/ui'
 
 const MyComponent = () => {
   const { createLoadingState } = useMultipleLoadingStates()
-  
+
   const uploadState = createLoadingState('upload')
   const saveState = createLoadingState('save')
 
@@ -378,12 +369,12 @@ const MyComponent = () => {
         Upload: {uploadState.state.type}
         {uploadState.state.message && <span>{uploadState.state.message}</span>}
       </div>
-      
+
       <div>
         Save: {saveState.state.type}
         {saveState.state.message && <span>{saveState.state.message}</span>}
       </div>
-      
+
       <button onClick={handleUpload}>Upload</button>
       <button onClick={handleSave}>Save</button>
     </div>
@@ -436,11 +427,7 @@ const ProfileComponent = ({ isLoading, profile }) => {
     )
   }
 
-  return (
-    <div>
-      {/* Profile content */}
-    </div>
-  )
+  return <div>{/* Profile content */}</div>
 }
 ```
 
@@ -451,27 +438,21 @@ const FormComponent = () => {
   const loadingStates = useLoadingStates()
   const [formData, setFormData] = useState({})
 
-  const handleSubmit = async (data) => {
-    await loadingStates.withLoading(
-      async () => {
-        await submitForm(data)
-      },
-      'Submitting form...'
-    )
+  const handleSubmit = async data => {
+    await loadingStates.withLoading(async () => {
+      await submitForm(data)
+    }, 'Submitting form...')
   }
 
   return (
-    <LoadingOverlay 
+    <LoadingOverlay
       isLoading={loadingStates.isLoading}
       text={loadingStates.loadingState.message}
       variant="spinner"
     >
       <form onSubmit={handleSubmit}>
         {/* Form fields */}
-        <button 
-          type="submit" 
-          disabled={loadingStates.isLoading}
-        >
+        <button type="submit" disabled={loadingStates.isLoading}>
           {loadingStates.isLoading ? 'Submitting...' : 'Submit'}
         </button>
       </form>
@@ -487,14 +468,14 @@ const FileUploadComponent = () => {
   const loadingStates = useLoadingStates()
   const [uploadProgress, setUploadProgress] = useState(0)
 
-  const handleFileUpload = async (file) => {
+  const handleFileUpload = async file => {
     loadingStates.startLoading('Preparing upload...')
-    
+
     const upload = uploadFile(file, {
-      onProgress: (progress) => {
+      onProgress: progress => {
         setUploadProgress(progress)
         loadingStates.setProgress(progress)
-      }
+      },
     })
 
     try {
@@ -506,7 +487,7 @@ const FileUploadComponent = () => {
   }
 
   return (
-    <LoadingOverlay 
+    <LoadingOverlay
       isLoading={loadingStates.isLoading}
       text={`Uploading... ${uploadProgress}%`}
       variant="progress"
@@ -514,7 +495,7 @@ const FileUploadComponent = () => {
       progressMax={100}
     >
       <div>
-        <input type="file" onChange={(e) => handleFileUpload(e.target.files[0])} />
+        <input type="file" onChange={e => handleFileUpload(e.target.files[0])} />
       </div>
     </LoadingOverlay>
   )
@@ -564,50 +545,50 @@ const FileUploadComponent = () => {
 
 ### LoadingSpinner
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `size` | `'sm' \| 'default' \| 'lg' \| 'xl'` | `'default'` | Size of the spinner |
-| `variant` | `'default' \| 'secondary' \| 'muted' \| 'destructive'` | `'default'` | Visual variant |
-| `text` | `string` | `'Loading...'` | Text to display |
-| `showText` | `boolean` | `false` | Whether to show text |
+| Prop       | Type                                                   | Default        | Description          |
+| ---------- | ------------------------------------------------------ | -------------- | -------------------- |
+| `size`     | `'sm' \| 'default' \| 'lg' \| 'xl'`                    | `'default'`    | Size of the spinner  |
+| `variant`  | `'default' \| 'secondary' \| 'muted' \| 'destructive'` | `'default'`    | Visual variant       |
+| `text`     | `string`                                               | `'Loading...'` | Text to display      |
+| `showText` | `boolean`                                              | `false`        | Whether to show text |
 
 ### Skeleton
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `variant` | `'default' \| 'primary' \| 'secondary' \| 'muted'` | `'default'` | Visual variant |
-| `className` | `string` | - | Additional CSS classes |
+| Prop        | Type                                               | Default     | Description            |
+| ----------- | -------------------------------------------------- | ----------- | ---------------------- |
+| `variant`   | `'default' \| 'primary' \| 'secondary' \| 'muted'` | `'default'` | Visual variant         |
+| `className` | `string`                                           | -           | Additional CSS classes |
 
 ### ProgressIndicator
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `value` | `number` | `0` | Current progress value |
-| `max` | `number` | `100` | Maximum progress value |
-| `size` | `'sm' \| 'default' \| 'lg' \| 'xl'` | `'default'` | Size of the progress bar |
-| `variant` | `'default' \| 'primary' \| 'success' \| 'warning' \| 'destructive'` | `'default'` | Visual variant |
-| `showLabel` | `boolean` | `false` | Whether to show progress label |
-| `labelPosition` | `'top' \| 'bottom' \| 'inside'` | `'top'` | Position of the label |
-| `indeterminate` | `boolean` | `false` | Whether to show indeterminate progress |
-| `animated` | `boolean` | `true` | Whether to animate progress changes |
+| Prop            | Type                                                                | Default     | Description                            |
+| --------------- | ------------------------------------------------------------------- | ----------- | -------------------------------------- |
+| `value`         | `number`                                                            | `0`         | Current progress value                 |
+| `max`           | `number`                                                            | `100`       | Maximum progress value                 |
+| `size`          | `'sm' \| 'default' \| 'lg' \| 'xl'`                                 | `'default'` | Size of the progress bar               |
+| `variant`       | `'default' \| 'primary' \| 'success' \| 'warning' \| 'destructive'` | `'default'` | Visual variant                         |
+| `showLabel`     | `boolean`                                                           | `false`     | Whether to show progress label         |
+| `labelPosition` | `'top' \| 'bottom' \| 'inside'`                                     | `'top'`     | Position of the label                  |
+| `indeterminate` | `boolean`                                                           | `false`     | Whether to show indeterminate progress |
+| `animated`      | `boolean`                                                           | `true`      | Whether to animate progress changes    |
 
 ### LoadingOverlay
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isLoading` | `boolean` | `false` | Whether to show the overlay |
-| `text` | `string` | `'Loading...'` | Text to display |
-| `variant` | `'spinner' \| 'progress' \| 'circular'` | `'spinner'` | Type of loading indicator |
-| `progressValue` | `number` | `0` | Current progress value |
-| `progressMax` | `number` | `100` | Maximum progress value |
-| `blur` | `boolean` | `true` | Whether to blur the background |
+| Prop            | Type                                    | Default        | Description                    |
+| --------------- | --------------------------------------- | -------------- | ------------------------------ |
+| `isLoading`     | `boolean`                               | `false`        | Whether to show the overlay    |
+| `text`          | `string`                                | `'Loading...'` | Text to display                |
+| `variant`       | `'spinner' \| 'progress' \| 'circular'` | `'spinner'`    | Type of loading indicator      |
+| `progressValue` | `number`                                | `0`            | Current progress value         |
+| `progressMax`   | `number`                                | `100`          | Maximum progress value         |
+| `blur`          | `boolean`                               | `true`         | Whether to blur the background |
 
 ### useLoadingStates Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `initialType` | `'idle' \| 'loading' \| 'success' \| 'error'` | `'idle'` | Initial loading state |
-| `initialMessage` | `string` | - | Initial message |
-| `autoReset` | `boolean` | `false` | Whether to automatically reset after success/error |
-| `resetDelay` | `number` | `3000` | Delay before auto-reset (ms) |
-| `onStateChange` | `(state: LoadingState) => void` | - | Callback when state changes | 
+| Option           | Type                                          | Default  | Description                                        |
+| ---------------- | --------------------------------------------- | -------- | -------------------------------------------------- |
+| `initialType`    | `'idle' \| 'loading' \| 'success' \| 'error'` | `'idle'` | Initial loading state                              |
+| `initialMessage` | `string`                                      | -        | Initial message                                    |
+| `autoReset`      | `boolean`                                     | `false`  | Whether to automatically reset after success/error |
+| `resetDelay`     | `number`                                      | `3000`   | Delay before auto-reset (ms)                       |
+| `onStateChange`  | `(state: LoadingState) => void`               | -        | Callback when state changes                        |

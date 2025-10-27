@@ -1,19 +1,19 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import {render, screen, waitFor} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
-import { Button } from '../button'
-import { Input } from '../input'
-import { Checkbox } from '../checkbox'
-import { Switch } from '../switch'
-import { Progress } from '../progress'
-import { Slider } from '../slider'
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, TableCaption } from '../table'
-import { MultiSelect } from '../multi-select'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../tabs'
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../accordion'
-import { Tooltip, TooltipTrigger, TooltipContent } from '../tooltip'
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '../dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
+import {vi} from 'vitest'
+import {Button} from '../button'
+import {Input} from '../input'
+import {Checkbox} from '../checkbox'
+import {Switch} from '../switch'
+import {Progress} from '../progress'
+import {Slider} from '../slider'
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from '../table'
+import {MultiSelect} from '../multi-select'
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '../tabs'
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from '../accordion'
+import {Tooltip, TooltipContent, TooltipTrigger} from '../tooltip'
+import {Dialog, DialogContent, DialogTitle, DialogTrigger} from '../dialog'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '../select'
 
 // Mock ResizeObserver for tests
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -28,14 +28,14 @@ describe('Accessibility Features', () => {
   describe('Button Component', () => {
     test('should have proper ARIA attributes for toggle button', () => {
       render(<Button pressed>Toggle Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Toggle Button' })
       expect(button).toHaveAttribute('aria-pressed', 'true')
     })
 
     test('should have proper ARIA attributes for disabled button', () => {
       render(<Button disabled>Disabled Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Disabled Button' })
       expect(button).toHaveAttribute('aria-disabled', 'true')
     })
@@ -43,13 +43,13 @@ describe('Accessibility Features', () => {
     test('should be keyboard accessible', async () => {
       const handleClick = vi.fn()
       render(<Button onClick={handleClick}>Test Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Test Button' })
       button.focus()
-      
+
       await user.keyboard('{Enter}')
       expect(handleClick).toHaveBeenCalledTimes(1)
-      
+
       await user.keyboard(' ')
       expect(handleClick).toHaveBeenCalledTimes(2)
     })
@@ -58,14 +58,14 @@ describe('Accessibility Features', () => {
   describe('Input Component', () => {
     test('should have proper label association', () => {
       render(<Input label="Email Address" placeholder="Enter email" />)
-      
+
       const input = screen.getByRole('textbox', { name: 'Email Address' })
       expect(input).toBeInTheDocument()
     })
 
     test('should show required indicator', () => {
       render(<Input label="Email Address" required />)
-      
+
       const label = screen.getByText('Email Address')
       const requiredIndicator = label.querySelector('[aria-hidden="true"]')
       expect(requiredIndicator).toHaveTextContent('*')
@@ -73,10 +73,10 @@ describe('Accessibility Features', () => {
 
     test('should have proper error handling', () => {
       render(<Input label="Email" error="Invalid email format" />)
-      
+
       const input = screen.getByRole('textbox', { name: 'Email' })
       expect(input).toHaveAttribute('aria-invalid', 'true')
-      
+
       const errorMessage = screen.getByText('Invalid email format')
       expect(errorMessage).toHaveAttribute('role', 'alert')
       expect(errorMessage).toHaveAttribute('aria-live', 'polite')
@@ -84,7 +84,7 @@ describe('Accessibility Features', () => {
 
     test('should have proper description', () => {
       render(<Input label="Password" description="Must be at least 8 characters" />)
-      
+
       const input = screen.getByRole('textbox', { name: 'Password' })
       const description = screen.getByText('Must be at least 8 characters')
       expect(input).toHaveAttribute('aria-describedby', expect.stringContaining(description.id))
@@ -94,14 +94,14 @@ describe('Accessibility Features', () => {
   describe('Checkbox Component', () => {
     test('should have proper label association', () => {
       render(<Checkbox label="Accept terms" />)
-      
+
       const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' })
       expect(checkbox).toBeInTheDocument()
     })
 
     test('should show required indicator', () => {
       render(<Checkbox label="Accept terms" required />)
-      
+
       const label = screen.getByText('Accept terms')
       const requiredIndicator = label.querySelector('[aria-hidden="true"]')
       expect(requiredIndicator).toHaveTextContent('*')
@@ -109,10 +109,10 @@ describe('Accessibility Features', () => {
 
     test('should have proper error handling', () => {
       render(<Checkbox label="Accept terms" error="You must accept the terms" />)
-      
+
       const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' })
       expect(checkbox).toHaveAttribute('aria-invalid', 'true')
-      
+
       const errorMessage = screen.getByText('You must accept the terms')
       expect(errorMessage).toHaveAttribute('role', 'alert')
     })
@@ -121,14 +121,14 @@ describe('Accessibility Features', () => {
   describe('Switch Component', () => {
     test('should have proper label association', () => {
       render(<Switch label="Enable notifications" />)
-      
+
       const switchElement = screen.getByRole('switch', { name: 'Enable notifications' })
       expect(switchElement).toBeInTheDocument()
     })
 
     test('should show required indicator', () => {
       render(<Switch label="Enable notifications" required />)
-      
+
       const label = screen.getByText('Enable notifications')
       const requiredIndicator = label.querySelector('[aria-hidden="true"]')
       expect(requiredIndicator).toHaveTextContent('*')
@@ -136,7 +136,7 @@ describe('Accessibility Features', () => {
 
     test('should have proper error handling', () => {
       render(<Switch label="Enable notifications" error="This field is required" />)
-      
+
       const switchElement = screen.getByRole('switch', { name: 'Enable notifications' })
       expect(switchElement).toHaveAttribute('aria-invalid', 'true')
     })
@@ -145,7 +145,7 @@ describe('Accessibility Features', () => {
   describe('Progress Component', () => {
     test('should have proper ARIA attributes', () => {
       render(<Progress value={50} label="Upload Progress" />)
-      
+
       const progressbar = screen.getByRole('progressbar')
       expect(progressbar).toHaveAttribute('aria-valuenow', '50')
       expect(progressbar).toHaveAttribute('aria-valuemin', '0')
@@ -154,13 +154,13 @@ describe('Accessibility Features', () => {
 
     test('should show value when requested', () => {
       render(<Progress value={75} showValue />)
-      
+
       expect(screen.getByText('75%')).toBeInTheDocument()
     })
 
     test('should have proper description', () => {
       render(<Progress value={50} description="File upload in progress" />)
-      
+
       const progressbar = screen.getByRole('progressbar')
       const description = screen.getByText('File upload in progress')
       expect(progressbar).toHaveAttribute('aria-describedby', description.id)
@@ -170,7 +170,7 @@ describe('Accessibility Features', () => {
   describe('Slider Component', () => {
     test('should have proper ARIA attributes', () => {
       render(<Slider value={[50]} label="Volume" />)
-      
+
       const sliders = screen.getAllByRole('slider')
       const mainSlider = sliders[0] // Get the main slider, not the thumb
       expect(mainSlider).toHaveAttribute('aria-valuenow', '50')
@@ -181,13 +181,13 @@ describe('Accessibility Features', () => {
 
     test('should show value when requested', () => {
       render(<Slider value={[75]} showValue />)
-      
+
       expect(screen.getByText('75')).toBeInTheDocument()
     })
 
     test('should have proper description', () => {
       render(<Slider value={[50]} description="Adjust volume level" />)
-      
+
       const sliders = screen.getAllByRole('slider')
       const mainSlider = sliders[0] // Get the main slider, not the thumb
       const description = screen.getByText('Adjust volume level')
@@ -211,9 +211,9 @@ describe('Accessibility Features', () => {
               <TableCell>john@example.com</TableCell>
             </TableRow>
           </TableBody>
-        </Table>
+        </Table>,
       )
-      
+
       const table = screen.getByRole('table', { name: 'User data table' })
       expect(table).toBeInTheDocument()
     })
@@ -227,12 +227,12 @@ describe('Accessibility Features', () => {
               <TableHead sort="ascending">Email</TableHead>
             </TableRow>
           </TableHeader>
-        </Table>
+        </Table>,
       )
-      
+
       const nameHeader = screen.getByRole('columnheader', { name: 'Name' })
       const emailHeader = screen.getByRole('columnheader', { name: 'Email' })
-      
+
       expect(nameHeader).toHaveAttribute('scope', 'col')
       expect(emailHeader).toHaveAttribute('aria-sort', 'ascending')
     })
@@ -245,9 +245,9 @@ describe('Accessibility Features', () => {
               <TableCell>John Doe</TableCell>
             </TableRow>
           </TableBody>
-        </Table>
+        </Table>,
       )
-      
+
       const row = screen.getByRole('row')
       expect(row).toHaveAttribute('aria-selected', 'true')
     })
@@ -267,9 +267,9 @@ describe('Accessibility Features', () => {
           selectedValues={[]}
           onSelectionChange={() => {}}
           label="Select options"
-        />
+        />,
       )
-      
+
       const combobox = screen.getByRole('combobox', { name: 'Select options' })
       expect(combobox).toHaveAttribute('aria-expanded', 'false')
       // For combobox with a listbox popup, aria-haspopup should be "listbox"
@@ -285,9 +285,9 @@ describe('Accessibility Features', () => {
           onSelectionChange={() => {}}
           label="Select options"
           required
-        />
+        />,
       )
-      
+
       const label = screen.getByText('Select options')
       const requiredIndicator = label.querySelector('[aria-hidden="true"]')
       expect(requiredIndicator).toHaveTextContent('*')
@@ -301,31 +301,25 @@ describe('Accessibility Features', () => {
           onSelectionChange={() => {}}
           label="Select options"
           error="Please select at least one option"
-        />
+        />,
       )
-      
+
       const combobox = screen.getByRole('combobox', { name: 'Select options' })
       expect(combobox).toHaveAttribute('aria-invalid', 'true')
-      
+
       const errorMessage = screen.getByText('Please select at least one option')
       expect(errorMessage).toHaveAttribute('role', 'alert')
     })
 
     test('should be keyboard accessible', async () => {
-      render(
-        <MultiSelect
-          options={options}
-          selectedValues={[]}
-          onSelectionChange={() => {}}
-        />
-      )
-      
+      render(<MultiSelect options={options} selectedValues={[]} onSelectionChange={() => {}} />)
+
       const trigger = screen.getByRole('combobox')
       trigger.focus()
-      
+
       await user.keyboard('{Enter}')
       expect(screen.getByRole('listbox')).toBeInTheDocument()
-      
+
       await user.keyboard('{Escape}')
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     })
@@ -341,15 +335,15 @@ describe('Accessibility Features', () => {
           </TabsList>
           <TabsContent value="tab1">General settings</TabsContent>
           <TabsContent value="tab2">Security settings</TabsContent>
-        </Tabs>
+        </Tabs>,
       )
-      
+
       const tablist = screen.getByRole('tablist')
       expect(tablist).toBeInTheDocument()
-      
+
       const tabs = screen.getAllByRole('tab')
       expect(tabs).toHaveLength(2)
-      
+
       // Only one tabpanel should be visible at a time
       const tabpanels = screen.getAllByRole('tabpanel')
       expect(tabpanels).toHaveLength(1)
@@ -362,15 +356,15 @@ describe('Accessibility Features', () => {
             <TabsTrigger value="tab1">Tab 1</TabsTrigger>
             <TabsTrigger value="tab2">Tab 2</TabsTrigger>
           </TabsList>
-        </Tabs>
+        </Tabs>,
       )
-      
+
       const tab1 = screen.getByRole('tab', { name: 'Tab 1' })
       const tab2 = screen.getByRole('tab', { name: 'Tab 2' })
-      
+
       tab1.focus()
       expect(tab1).toHaveAttribute('aria-selected', 'true')
-      
+
       await user.keyboard('{ArrowRight}')
       expect(document.activeElement).toBe(tab2)
     })
@@ -384,9 +378,9 @@ describe('Accessibility Features', () => {
             <AccordionTrigger>What is this?</AccordionTrigger>
             <AccordionContent>This is an accordion item.</AccordionContent>
           </AccordionItem>
-        </Accordion>
+        </Accordion>,
       )
-      
+
       const trigger = screen.getByRole('button', { name: 'What is this?' })
       expect(trigger).toHaveAttribute('aria-expanded', 'false')
     })
@@ -402,14 +396,14 @@ describe('Accessibility Features', () => {
             <AccordionTrigger>Section 2</AccordionTrigger>
             <AccordionContent>Content 2</AccordionContent>
           </AccordionItem>
-        </Accordion>
+        </Accordion>,
       )
-      
+
       const trigger1 = screen.getByRole('button', { name: 'Section 1' })
       const trigger2 = screen.getByRole('button', { name: 'Section 2' })
-      
+
       trigger1.focus()
-      
+
       await user.keyboard('{ArrowDown}')
       expect(document.activeElement).toBe(trigger2)
     })
@@ -421,21 +415,21 @@ describe('Accessibility Features', () => {
         <Tooltip>
           <TooltipTrigger>Hover me</TooltipTrigger>
           <TooltipContent>This is a tooltip</TooltipContent>
-        </Tooltip>
+        </Tooltip>,
       )
-      
+
       const trigger = screen.getByText('Hover me')
       await user.hover(trigger)
-      
+
       // Wait for tooltip to appear
       await waitFor(() => {
         const tooltips = screen.getAllByRole('tooltip')
         expect(tooltips.length).toBeGreaterThan(0)
       })
-      
+
       const tooltips = screen.getAllByRole('tooltip')
-      const visibleTooltip = tooltips.find(tooltip => 
-        !tooltip.style.clip || tooltip.style.clip !== 'rect(0px, 0px, 0px, 0px)'
+      const visibleTooltip = tooltips.find(
+        tooltip => !tooltip.style.clip || tooltip.style.clip !== 'rect(0px, 0px, 0px, 0px)',
       )
       expect(visibleTooltip).toHaveAttribute('aria-live', 'polite')
     })
@@ -453,7 +447,7 @@ describe('Accessibility Features', () => {
             <Input placeholder="Test input" />
             <Button>Close</Button>
           </DialogContent>
-        </Dialog>
+        </Dialog>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Open Dialog' })
@@ -477,7 +471,7 @@ describe('Accessibility Features', () => {
             <DialogTitle>Dialog Title</DialogTitle>
             <Button>Close</Button>
           </DialogContent>
-        </Dialog>
+        </Dialog>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Open Dialog' })
@@ -487,7 +481,7 @@ describe('Accessibility Features', () => {
       expect(dialog).toBeInTheDocument()
 
       await user.keyboard('{Escape}')
-      
+
       await waitFor(() => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       })
@@ -505,7 +499,7 @@ describe('Accessibility Features', () => {
             <SelectItem value="option1">Option 1</SelectItem>
             <SelectItem value="option2">Option 2</SelectItem>
           </SelectContent>
-        </Select>
+        </Select>,
       )
 
       const trigger = screen.getByRole('combobox')
@@ -520,7 +514,7 @@ describe('Accessibility Features', () => {
           <Button>First Button</Button>
           <Input placeholder="Test input" />
           <Button>Second Button</Button>
-        </div>
+        </div>,
       )
 
       const firstButton = screen.getByRole('button', { name: 'First Button' })
@@ -544,7 +538,7 @@ describe('Accessibility Features', () => {
           <Button>First Button</Button>
           <Button disabled>Disabled Button</Button>
           <Button>Second Button</Button>
-        </div>
+        </div>,
       )
 
       const disabledButton = screen.getByRole('button', { name: 'Disabled Button' })
@@ -556,19 +550,19 @@ describe('Accessibility Features', () => {
   describe('Screen Reader Support', () => {
     test('should announce dynamic content changes', () => {
       const { rerender } = render(<Progress value={0} label="Upload" />)
-      
+
       const progressbar = screen.getByRole('progressbar')
       expect(progressbar).toHaveAttribute('aria-valuetext', '0%')
-      
+
       rerender(<Progress value={50} label="Upload" />)
       expect(progressbar).toHaveAttribute('aria-valuetext', '50%')
     })
 
     test('should provide proper error announcements', () => {
       render(<Input label="Email" error="Invalid email format" />)
-      
+
       const errorMessage = screen.getByText('Invalid email format')
       expect(errorMessage).toHaveAttribute('aria-live', 'polite')
     })
   })
-}) 
+})

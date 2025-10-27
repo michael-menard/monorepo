@@ -1,0 +1,28 @@
+{{#if (eq type "react-lib")}}
+// Export all components
+export * from './components'
+
+// Export types
+export type * from './types'
+{{else if (eq type "node-lib")}}
+// Export main functionality
+export * from './lib'
+
+// Export types
+export type * from './types'
+{{else if (eq type "feature")}}
+// Export feature components
+export * from './components'
+
+// Export hooks
+export * from './hooks'
+
+// Export types
+export type * from './types'
+{{else}}
+// Export utilities
+export * from './utils'
+
+// Export types
+export type * from './types'
+{{/if}}

@@ -1,6 +1,6 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
   EnhancedFormMessage,
-} from '@repo/ui';
+} from '@repo/ui'
 // import { FileUpload } from '@monorepo/fileupload';
 import {
   createWishlistItemSchema,
@@ -31,25 +31,25 @@ import {
   type CreateWishlistItem,
   type UpdateWishlistItem,
   type WishlistItem,
-} from '../../schemas';
+} from '../../schemas'
 import {
   useCreateWishlistItemMutation,
   useUpdateWishlistItemMutation,
-} from '../../store/wishlistApi';
+} from '../../store/wishlistApi'
 
 export interface AddEditWishlistModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  wishlistId: string;
-  item?: WishlistItem; // If provided, we're editing; if not, we're creating
-  onSuccess?: (item: WishlistItem) => void;
+  isOpen: boolean
+  onClose: () => void
+  wishlistId: string
+  item?: WishlistItem // If provided, we're editing; if not, we're creating
+  onSuccess?: (item: WishlistItem) => void
 }
 
 const priorityOptions = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
-];
+]
 
 const categoryOptions = [
   { value: 'electronics', label: 'Electronics' },
@@ -61,7 +61,7 @@ const categoryOptions = [
   { value: 'beauty', label: 'Beauty & Health' },
   { value: 'automotive', label: 'Automotive' },
   { value: 'other', label: 'Other' },
-];
+]
 
 export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
   isOpen,
@@ -70,8 +70,8 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
   item,
   onSuccess,
 }) => {
-  const isEditing = !!item;
-  const schema = isEditing ? updateWishlistItemSchema : createWishlistItemSchema;
+  const isEditing = !!item
+  const schema = isEditing ? updateWishlistItemSchema : createWishlistItemSchema
 
   const form = useForm<CreateWishlistItem | UpdateWishlistItem>({
     resolver: zodResolver(schema),
@@ -85,12 +85,12 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
       category: item?.category || '',
       isPurchased: item?.isPurchased || false,
     },
-  });
+  })
 
-  const [createItem, { isLoading: isCreating }] = useCreateWishlistItemMutation();
-  const [updateItem, { isLoading: isUpdating }] = useUpdateWishlistItemMutation();
+  const [createItem, { isLoading: isCreating }] = useCreateWishlistItemMutation()
+  const [updateItem, { isLoading: isUpdating }] = useUpdateWishlistItemMutation()
 
-  const isLoading = isCreating || isUpdating;
+  const isLoading = isCreating || isUpdating
 
   const onSubmit = async (data: CreateWishlistItem | UpdateWishlistItem) => {
     try {
@@ -99,38 +99,38 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
           wishlistId,
           itemId: item.id,
           data: data as UpdateWishlistItem,
-        }).unwrap();
-        onSuccess?.(result);
+        }).unwrap()
+        onSuccess?.(result)
       } else {
         const result = await createItem({
           wishlistId,
           data: data as CreateWishlistItem,
-        }).unwrap();
-        onSuccess?.(result);
+        }).unwrap()
+        onSuccess?.(result)
       }
-      onClose();
-      form.reset();
+      onClose()
+      form.reset()
     } catch (error) {
-      console.error('Failed to save wishlist item:', error);
+      console.error('Failed to save wishlist item:', error)
     }
-  };
+  }
 
   const handleClose = () => {
     if (!isLoading) {
-      onClose();
-      form.reset();
+      onClose()
+      form.reset()
     }
-  };
+  }
 
   const handleImageUpload = (files: File[]) => {
     if (files.length > 0) {
       // In a real implementation, you would upload the file to your server
       // and get back a URL. For now, we'll create a temporary URL
-      const file = files[0];
-      const imageUrl = window.URL.createObjectURL(file);
-      form.setValue('imageUrl', imageUrl);
+      const file = files[0]
+      const imageUrl = window.URL.createObjectURL(file)
+      form.setValue('imageUrl', imageUrl)
     }
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -138,7 +138,9 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Wishlist Item' : 'Add Wishlist Item'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Update the details of your wishlist item.' : 'Add a new item to your wishlist.'}
+            {isEditing
+              ? 'Update the details of your wishlist item.'
+              : 'Add a new item to your wishlist.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -172,7 +174,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                         min="0"
                         placeholder="0.00"
                         {...field}
-                        onChange={(e) =>
+                        onChange={e =>
                           field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
                         }
                         disabled={isLoading}
@@ -211,7 +213,12 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                 <FormItem>
                   <FormLabel>Product Link</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://example.com/product" {...field} disabled={isLoading} />
+                    <Input
+                      type="url"
+                      placeholder="https://example.com/product"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <EnhancedFormMessage />
                 </FormItem>
@@ -225,14 +232,18 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isLoading}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {priorityOptions.map((option) => (
+                        {priorityOptions.map(option => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -250,14 +261,18 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isLoading}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categoryOptions.map((option) => (
+                        {categoryOptions.map(option => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -289,7 +304,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                         disabled={isLoading}
                       />
                       */}
-                      {field.value && (
+                      {field.value ? (
                         <div className="mt-2">
                           <img
                             src={field.value}
@@ -297,7 +312,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
                             className="w-20 h-20 object-cover rounded-md border"
                           />
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </FormControl>
                   <EnhancedFormMessage />
@@ -323,7 +338,7 @@ export const AddEditWishlistModal: React.FC<AddEditWishlistModalProps> = ({
         </Form>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}
 
-export default AddEditWishlistModal; 
+export default AddEditWishlistModal

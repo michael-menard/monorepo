@@ -1,8 +1,8 @@
-import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
-import { WishlistGalleryPage } from '../index';
+import React from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { BrowserRouter } from 'react-router-dom'
+import { WishlistGalleryPage } from '../index'
 
 // Mock localStorage
 const localStorageMock = {
@@ -10,43 +10,39 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
-};
+}
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
-});
+})
 
 // Spy on event listeners while preserving behavior
-const addEventSpy = vi.spyOn(window, 'addEventListener');
-const removeEventSpy = vi.spyOn(window, 'removeEventListener');
-const docAddEventSpy = vi.spyOn(document, 'addEventListener');
-const docRemoveEventSpy = vi.spyOn(document, 'removeEventListener');
+const addEventSpy = vi.spyOn(window, 'addEventListener')
+const removeEventSpy = vi.spyOn(window, 'removeEventListener')
+const docAddEventSpy = vi.spyOn(document, 'addEventListener')
+const docRemoveEventSpy = vi.spyOn(document, 'removeEventListener')
 
 // Spy on timers while preserving behavior
-const mockSetTimeout = vi.spyOn(global, 'setTimeout');
-const mockClearTimeout = vi.spyOn(global, 'clearTimeout');
+const mockSetTimeout = vi.spyOn(global, 'setTimeout')
+const mockClearTimeout = vi.spyOn(global, 'clearTimeout')
 
 const renderWithRouter = (component: React.ReactElement) => {
-  return render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
-  );
-};
+  return render(<BrowserRouter>{component}</BrowserRouter>)
+}
 
 describe('WishlistGalleryPage Auto-Save', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    localStorageMock.getItem.mockReturnValue(null);
+    vi.clearAllMocks()
+    localStorageMock.getItem.mockReturnValue(null)
     mockSetTimeout.mockImplementation((fn, delay) => {
       // Don't call the real setTimeout to avoid infinite recursion
       // Just return a mock timeout ID
-      return 123;
-    });
-  });
+      return 123
+    })
+  })
 
   afterEach(() => {
-    vi.restoreAllMocks();
-  });
+    vi.restoreAllMocks()
+  })
 
   it('loads saved data from localStorage on mount', () => {
     const savedItems = [
@@ -61,159 +57,156 @@ describe('WishlistGalleryPage Auto-Save', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
       },
-    ];
-    
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(savedItems));
-    
-    renderWithRouter(<WishlistGalleryPage />);
-    
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('wishlist_items');
-    expect(screen.getByText('Test Item')).toBeInTheDocument();
-  });
+    ]
+
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(savedItems))
+
+    renderWithRouter(<WishlistGalleryPage />)
+
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('wishlist_items')
+    expect(screen.getByText('Test Item')).toBeInTheDocument()
+  })
 
   it('shows saving indicator when auto-save is triggered', async () => {
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Add a new item to trigger auto-save
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+
     // Fill in the form
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'New Test Item' } });
-    
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'New Test Item' } })
+
     // Submit the form
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
-    
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
+
     // Check that saving indicator appears
     await waitFor(() => {
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('Saving...')).toBeInTheDocument()
+    })
+  })
 
   it('debounces save operations with 2 second delay', async () => {
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Add a new item
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'Test Item 1' } });
-    
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'Test Item 1' } })
+
     // Change the name multiple times quickly
-    fireEvent.change(nameInput, { target: { value: 'Test Item 2' } });
-    fireEvent.change(nameInput, { target: { value: 'Test Item 3' } });
-    
+    fireEvent.change(nameInput, { target: { value: 'Test Item 2' } })
+    fireEvent.change(nameInput, { target: { value: 'Test Item 3' } })
+
     // Submit the form
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
-    
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
+
     // In test-mode, save is immediate; verify a save occurred instead of relying on timers
     await waitFor(() => {
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'wishlist_items',
-        expect.any(String)
-      );
-    });
-  });
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('wishlist_items', expect.any(String))
+    })
+  })
 
   it('saves data to localStorage when items are modified', async () => {
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Add a new item
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'New Test Item' } });
-    
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
-    
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'New Test Item' } })
+
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
+
     // Wait for auto-save to complete
     await waitFor(() => {
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'wishlist_items',
-        expect.stringContaining('New Test Item')
-      );
-    });
-  });
+        expect.stringContaining('New Test Item'),
+      )
+    })
+  })
 
   it('handles save errors gracefully', async () => {
     // Mock localStorage.setItem to throw an error
     localStorageMock.setItem.mockImplementation(() => {
-      throw new Error('Storage quota exceeded');
-    });
-    
-    renderWithRouter(<WishlistGalleryPage />);
-    
+      throw new Error('Storage quota exceeded')
+    })
+
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Add a new item
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'Test Item' } });
-    
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
-    
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'Test Item' } })
+
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
+
     // Wait for error to appear
     await waitFor(() => {
-      expect(screen.getByText(/Save failed/)).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText(/Save failed/)).toBeInTheDocument()
+    })
+  })
 
   it('creates backup on page unload', () => {
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Mutate data so backup condition is met
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'Backup Test Item' } });
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'Backup Test Item' } })
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
 
     // Simulate page unload
-    const beforeUnloadEvent = new Event('beforeunload');
-    window.dispatchEvent(beforeUnloadEvent);
-    
+    const beforeUnloadEvent = new Event('beforeunload')
+    window.dispatchEvent(beforeUnloadEvent)
+
     // Verify backup was created
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       'wishlist_autosave_backup',
-      expect.any(String)
-    );
-  });
+      expect.any(String),
+    )
+  })
 
   it('saves on visibility change when page becomes hidden', async () => {
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Add a new item
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'Test Item' } });
-    
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
-    
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'Test Item' } })
+
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
+
     // Simulate page becoming hidden
     Object.defineProperty(document, 'visibilityState', {
       value: 'hidden',
       writable: true,
-    });
-    
-    const visibilityChangeEvent = new Event('visibilitychange');
-    document.dispatchEvent(visibilityChangeEvent);
-    
+    })
+
+    const visibilityChangeEvent = new Event('visibilitychange')
+    document.dispatchEvent(visibilityChangeEvent)
+
     // Verify save was triggered
     await waitFor(() => {
-      expect(localStorageMock.setItem).toHaveBeenCalled();
-    });
-  });
+      expect(localStorageMock.setItem).toHaveBeenCalled()
+    })
+  })
 
   it('restores from backup on mount if available', () => {
     const backupData = [
@@ -228,42 +221,42 @@ describe('WishlistGalleryPage Auto-Save', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
       },
-    ];
-    
+    ]
+
     // First call for wishlist_items => null; second for backup => data
     localStorageMock.getItem.mockImplementation((key: string) => {
       if (key === 'wishlist_items') return null as unknown as string
       if (key === 'wishlist_autosave_backup') return JSON.stringify(backupData) as unknown as string
       return null as unknown as string
-    });
-    
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    })
+
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Verify backup was restored and cleaned up
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('wishlist_autosave_backup');
-  });
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('wishlist_autosave_backup')
+  })
 
   it('shows last save time after successful save', async () => {
-    renderWithRouter(<WishlistGalleryPage />);
-    
+    renderWithRouter(<WishlistGalleryPage />)
+
     // Add a new item
-    const addButton = screen.getByText('Add Item');
-    fireEvent.click(addButton);
-    
-    const nameInput = screen.getByLabelText(/name/i);
-    fireEvent.change(nameInput, { target: { value: 'Test Item' } });
-    
-    const submitButton = screen.getByText('Save Item');
-    fireEvent.click(submitButton);
-    
+    const addButton = screen.getByText('Add Item')
+    fireEvent.click(addButton)
+
+    const nameInput = screen.getByLabelText(/name/i)
+    fireEvent.change(nameInput, { target: { value: 'Test Item' } })
+
+    const submitButton = screen.getByText('Save Item')
+    fireEvent.click(submitButton)
+
     // Wait for save to complete and show success indicator
     await waitFor(() => {
-      expect(screen.getByText(/Saved/)).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText(/Saved/)).toBeInTheDocument()
+    })
+  })
 
   it('cleans up event listeners on unmount', () => {
-    const { unmount } = renderWithRouter(<WishlistGalleryPage />);
-    expect(() => unmount()).not.toThrow();
-  });
-}); 
+    const { unmount } = renderWithRouter(<WishlistGalleryPage />)
+    expect(() => unmount()).not.toThrow()
+  })
+})

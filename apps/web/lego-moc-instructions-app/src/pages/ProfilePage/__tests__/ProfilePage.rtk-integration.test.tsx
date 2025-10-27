@@ -1,19 +1,19 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import ProfilePage from '../index';
-
-// Import RTK reducers and actions for testing
-import { 
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import {
   wishlistReducer,
   mocInstructionsReducer,
   profileReducer,
   fetchWishlistItems,
   fetchMocInstructions,
   fetchProfileData,
-} from '@repo/mock-data';
+} from '@repo/mock-data'
+import ProfilePage from '../index'
+
+// Import RTK reducers and actions for testing
 
 // Create a test store with RTK reducers
 const createTestStore = (preloadedState?: any) => {
@@ -24,8 +24,8 @@ const createTestStore = (preloadedState?: any) => {
       profile: profileReducer,
     },
     preloadedState,
-  });
-};
+  })
+}
 
 // Mock the LegoProfileContent component to test its integration
 vi.mock('../LegoProfileContent', () => ({
@@ -68,14 +68,14 @@ vi.mock('../LegoProfileContent', () => ({
           </div>
         </div>
       </div>
-      {isEditing && (
+      {isEditing ? (
         <div data-testid="edit-mode-indicator">
           Editing Profile for {profile.firstName} {profile.lastName}
         </div>
-      )}
+      ) : null}
     </div>
   ),
-}));
+}))
 
 // Mock all the layout and UI components
 vi.mock('@repo/profile', () => ({
@@ -95,7 +95,10 @@ vi.mock('@repo/profile', () => ({
   ProfileAvatar: ({ userName, onAvatarUpload }: any) => (
     <div data-testid="profile-avatar">
       <span>{userName}</span>
-      <button data-testid="avatar-upload" onClick={() => onAvatarUpload?.(new File([''], 'test.jpg'))}>
+      <button
+        data-testid="avatar-upload"
+        onClick={() => onAvatarUpload?.(new File([''], 'test.jpg'))}
+      >
         Upload
       </button>
     </div>
@@ -106,7 +109,7 @@ vi.mock('@repo/profile', () => ({
       <div>{userEmail}</div>
     </div>
   ),
-}));
+}))
 
 vi.mock('@repo/profile', () => ({
   ProfileMain: ({ children, title }: any) => (
@@ -120,7 +123,7 @@ vi.mock('@repo/profile', () => ({
       Upload Avatar
     </button>
   ),
-}));
+}))
 
 vi.mock('@repo/ui', () => ({
   Button: ({ children, onClick, ...props }: any) => (
@@ -135,218 +138,216 @@ vi.mock('@repo/ui', () => ({
       ))}
     </div>
   ),
-}));
+}))
 
-const mockNavigate = vi.fn();
+const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-  };
-});
+  }
+})
 
 // Mock URL.createObjectURL for avatar upload tests
 Object.defineProperty(global.URL, 'createObjectURL', {
   writable: true,
   value: vi.fn(() => 'mocked-object-url'),
-});
+})
 
 Object.defineProperty(global.URL, 'revokeObjectURL', {
   writable: true,
   value: vi.fn(),
-});
+})
 
 const renderWithStore = (component: React.ReactElement, store?: any) => {
-  const testStore = store || createTestStore();
+  const testStore = store || createTestStore()
   return render(
     <Provider store={testStore}>
-      <BrowserRouter>
-        {component}
-      </BrowserRouter>
-    </Provider>
-  );
-};
+      <BrowserRouter>{component}</BrowserRouter>
+    </Provider>,
+  )
+}
 
 describe('ProfilePage - RTK Integration', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   describe('RTK State Integration', () => {
     it('integrates with RTK store and renders profile content', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
       // Verify the main components are rendered
-      expect(screen.getByTestId('profile-layout')).toBeInTheDocument();
-      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument();
-      expect(screen.getByTestId('profile-tabs')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('profile-layout')).toBeInTheDocument()
+      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument()
+      expect(screen.getByTestId('profile-tabs')).toBeInTheDocument()
+    })
 
     it('displays RTK-powered statistics in overview tab', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
       // Check that stats are displayed (mocked in LegoProfileContent)
-      expect(screen.getByTestId('stats-section')).toBeInTheDocument();
-      expect(screen.getByTestId('stat-mocs')).toHaveTextContent('MOCs: 8');
-      expect(screen.getByTestId('stat-downloads')).toHaveTextContent('Downloads: 4,567');
-      expect(screen.getByTestId('stat-rating')).toHaveTextContent('Rating: 4.7');
-    });
+      expect(screen.getByTestId('stats-section')).toBeInTheDocument()
+      expect(screen.getByTestId('stat-mocs')).toHaveTextContent('MOCs: 8')
+      expect(screen.getByTestId('stat-downloads')).toHaveTextContent('Downloads: 4,567')
+      expect(screen.getByTestId('stat-rating')).toHaveTextContent('Rating: 4.7')
+    })
 
     it('shows recent activity from RTK state', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('recent-activity')).toBeInTheDocument();
-      expect(screen.getByText('Downloaded Custom Batmobile')).toBeInTheDocument();
-      expect(screen.getByText('Published Medieval Castle')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('recent-activity')).toBeInTheDocument()
+      expect(screen.getByText('Downloaded Custom Batmobile')).toBeInTheDocument()
+      expect(screen.getByText('Published Medieval Castle')).toBeInTheDocument()
+    })
 
     it('displays wishlist preview from RTK state', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('wishlist-preview')).toBeInTheDocument();
+      expect(screen.getByTestId('wishlist-preview')).toBeInTheDocument()
       // Use getAllByText since the same items appear in both preview and grid sections
-      const legoItems = screen.getAllByText('LEGO Creator Expert 10242');
-      const technicItems = screen.getAllByText('LEGO Technic 42115');
-      expect(legoItems.length).toBeGreaterThan(0);
-      expect(technicItems.length).toBeGreaterThan(0);
-    });
-  });
+      const legoItems = screen.getAllByText('LEGO Creator Expert 10242')
+      const technicItems = screen.getAllByText('LEGO Technic 42115')
+      expect(legoItems.length).toBeGreaterThan(0)
+      expect(technicItems.length).toBeGreaterThan(0)
+    })
+  })
 
   describe('Profile Tabs Integration', () => {
     it('renders all profile tabs with RTK data', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('tab-overview')).toBeInTheDocument();
-      expect(screen.getByTestId('tab-mocs')).toBeInTheDocument();
-      expect(screen.getByTestId('tab-wishlist')).toBeInTheDocument();
-      expect(screen.getByTestId('tab-preferences')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('tab-overview')).toBeInTheDocument()
+      expect(screen.getByTestId('tab-mocs')).toBeInTheDocument()
+      expect(screen.getByTestId('tab-wishlist')).toBeInTheDocument()
+      expect(screen.getByTestId('tab-preferences')).toBeInTheDocument()
+    })
 
     it('displays MOC grid with RTK data', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('moc-grid')).toBeInTheDocument();
-      expect(screen.getByText('Custom Batmobile')).toBeInTheDocument();
-      expect(screen.getByText('Medieval Castle')).toBeInTheDocument();
-      expect(screen.getByText('Space Station Alpha')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('moc-grid')).toBeInTheDocument()
+      expect(screen.getByText('Custom Batmobile')).toBeInTheDocument()
+      expect(screen.getByText('Medieval Castle')).toBeInTheDocument()
+      expect(screen.getByText('Space Station Alpha')).toBeInTheDocument()
+    })
 
     it('displays wishlist grid with RTK data', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('wishlist-grid')).toBeInTheDocument();
-      const wishlistCards = screen.getAllByTestId('wishlist-card');
-      expect(wishlistCards).toHaveLength(2);
-    });
+      expect(screen.getByTestId('wishlist-grid')).toBeInTheDocument()
+      const wishlistCards = screen.getAllByTestId('wishlist-card')
+      expect(wishlistCards).toHaveLength(2)
+    })
 
     it('displays preferences with current settings', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('preferences-form')).toBeInTheDocument();
-      expect(screen.getByTestId('notification-settings')).toBeInTheDocument();
-      expect(screen.getByTestId('privacy-settings')).toBeInTheDocument();
-      expect(screen.getByTestId('theme-settings')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByTestId('preferences-form')).toBeInTheDocument()
+      expect(screen.getByTestId('notification-settings')).toBeInTheDocument()
+      expect(screen.getByTestId('privacy-settings')).toBeInTheDocument()
+      expect(screen.getByTestId('theme-settings')).toBeInTheDocument()
+    })
+  })
 
   describe('Edit Mode Integration', () => {
     it('passes edit state to LegoProfileContent', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
       // Click edit button to enter edit mode
-      const editButton = screen.getByText('Edit Profile');
-      fireEvent.click(editButton);
+      const editButton = screen.getByText('Edit Profile')
+      fireEvent.click(editButton)
 
       await waitFor(() => {
-        expect(screen.getByTestId('edit-mode-indicator')).toBeInTheDocument();
-        expect(screen.getByText('Editing Profile for John Doe')).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByTestId('edit-mode-indicator')).toBeInTheDocument()
+        expect(screen.getByText('Editing Profile for John Doe')).toBeInTheDocument()
+      })
+    })
 
     it('handles profile updates through RTK', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
       // Enter edit mode
-      const editButton = screen.getByText('Edit Profile');
-      fireEvent.click(editButton);
+      const editButton = screen.getByText('Edit Profile')
+      fireEvent.click(editButton)
 
       await waitFor(() => {
-        expect(screen.getByTestId('form-section')).toBeInTheDocument();
-      });
+        expect(screen.getByTestId('form-section')).toBeInTheDocument()
+      })
 
       // Verify form fields are populated with current profile data
-      expect(screen.getByTestId('input-firstName')).toHaveValue('John');
-      expect(screen.getByTestId('input-lastName')).toHaveValue('Doe');
-      expect(screen.getByTestId('input-email')).toHaveValue('john.doe@example.com');
-    });
-  });
+      expect(screen.getByTestId('input-firstName')).toHaveValue('John')
+      expect(screen.getByTestId('input-lastName')).toHaveValue('Doe')
+      expect(screen.getByTestId('input-email')).toHaveValue('john.doe@example.com')
+    })
+  })
 
   describe('Avatar Upload Integration', () => {
     it('handles avatar upload from sidebar', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      const avatarUpload = screen.getByTestId('avatar-upload');
-      fireEvent.click(avatarUpload);
+      const avatarUpload = screen.getByTestId('avatar-upload')
+      fireEvent.click(avatarUpload)
 
       // Since we're mocking the file upload, we just verify the interaction
-      expect(avatarUpload).toBeInTheDocument();
-    });
+      expect(avatarUpload).toBeInTheDocument()
+    })
 
     it('handles avatar upload from edit modal', async () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
       // Enter edit mode
-      const editButton = screen.getByText('Edit Profile');
-      fireEvent.click(editButton);
+      const editButton = screen.getByText('Edit Profile')
+      fireEvent.click(editButton)
 
       await waitFor(() => {
-        const avatarUploader = screen.getByTestId('avatar-uploader');
-        fireEvent.click(avatarUploader);
-        expect(avatarUploader).toBeInTheDocument();
-      });
-    });
-  });
+        const avatarUploader = screen.getByTestId('avatar-uploader')
+        fireEvent.click(avatarUploader)
+        expect(avatarUploader).toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Navigation Integration', () => {
     it('handles back navigation correctly', () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      const backButton = screen.getByTestId('back-button');
-      fireEvent.click(backButton);
+      const backButton = screen.getByTestId('back-button')
+      fireEvent.click(backButton)
 
-      expect(mockNavigate).toHaveBeenCalledWith('/');
-    });
-  });
+      expect(mockNavigate).toHaveBeenCalledWith('/')
+    })
+  })
 
   describe('Responsive Layout', () => {
     it('renders responsive layout structure', () => {
-      const store = createTestStore();
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore()
+      renderWithStore(<ProfilePage />, store)
 
-      const layout = screen.getByTestId('profile-layout');
-      expect(layout).toBeInTheDocument();
-      
-      const sidebar = screen.getByTestId('sidebar');
-      const main = screen.getByTestId('main');
-      
-      expect(sidebar).toBeInTheDocument();
-      expect(main).toBeInTheDocument();
-    });
-  });
+      const layout = screen.getByTestId('profile-layout')
+      expect(layout).toBeInTheDocument()
+
+      const sidebar = screen.getByTestId('sidebar')
+      const main = screen.getByTestId('main')
+
+      expect(sidebar).toBeInTheDocument()
+      expect(main).toBeInTheDocument()
+    })
+  })
 
   describe('Error Handling', () => {
     it('handles RTK loading states gracefully', async () => {
@@ -358,14 +359,14 @@ describe('ProfilePage - RTK Integration', () => {
           loading: true,
           error: null,
         },
-      });
+      })
 
-      renderWithStore(<ProfilePage />, store);
+      renderWithStore(<ProfilePage />, store)
 
       // Profile should still render even with loading state
-      expect(screen.getByTestId('profile-layout')).toBeInTheDocument();
-      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('profile-layout')).toBeInTheDocument()
+      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument()
+    })
 
     it('handles RTK error states gracefully', async () => {
       const store = createTestStore({
@@ -376,15 +377,15 @@ describe('ProfilePage - RTK Integration', () => {
           loading: false,
           error: 'Failed to load profile data',
         },
-      });
+      })
 
-      renderWithStore(<ProfilePage />, store);
+      renderWithStore(<ProfilePage />, store)
 
       // Profile should still render even with error state
-      expect(screen.getByTestId('profile-layout')).toBeInTheDocument();
-      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByTestId('profile-layout')).toBeInTheDocument()
+      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument()
+    })
+  })
 
   describe('Performance', () => {
     it('renders efficiently with large RTK state', () => {
@@ -399,13 +400,13 @@ describe('ProfilePage - RTK Integration', () => {
           loading: false,
           error: null,
         },
-      };
+      }
 
-      const store = createTestStore(largeState);
-      renderWithStore(<ProfilePage />, store);
+      const store = createTestStore(largeState)
+      renderWithStore(<ProfilePage />, store)
 
-      expect(screen.getByTestId('profile-layout')).toBeInTheDocument();
-      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument();
-    });
-  });
-});
+      expect(screen.getByTestId('profile-layout')).toBeInTheDocument()
+      expect(screen.getByTestId('lego-profile-content')).toBeInTheDocument()
+    })
+  })
+})

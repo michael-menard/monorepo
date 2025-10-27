@@ -1,0 +1,43 @@
+import { defineConfig } from 'vite'
+{{#if (eq type "react-lib")}}
+import react from '@vitejs/plugin-react'
+{{/if}}
+import { resolve } from 'path'
+
+export default defineConfig({
+  {{#if (eq type "react-lib")}}
+  plugins: [react()],
+  {{/if}}
+  build: {
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: '{{pascalCase name}}',
+      formats: ['es', 'cjs'],
+      fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`
+    },
+    rollupOptions: {
+      external: [
+        {{#if (eq type "react-lib")}}
+        'react',
+        'react-dom',
+        {{/if}}
+        // Add other external dependencies here
+      ],
+      output: {
+        globals: {
+          {{#if (eq type "react-lib")}}
+          react: 'React',
+          'react-dom': 'ReactDOM',
+          {{/if}}
+        }
+      }
+    },
+    sourcemap: true,
+    emptyOutDir: true
+  },
+  {{#if (eq type "react-lib")}}
+  esbuild: {
+    jsx: 'automatic'
+  }
+  {{/if}}
+})

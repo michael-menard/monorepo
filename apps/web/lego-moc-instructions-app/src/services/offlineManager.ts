@@ -105,7 +105,9 @@ class OfflineManager {
     } else {
       try {
         const stored = localStorage.getItem(this.OFFLINE_DATA_KEY)
-        return stored ? JSON.parse(stored) : { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
+        return stored
+          ? JSON.parse(stored)
+          : { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
       } catch {
         return { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
       }
@@ -220,7 +222,9 @@ class OfflineManager {
     await this.setOfflineData(offlineData)
 
     // eslint-disable-next-line no-console
-    console.log(`Processed ${processedActions.length} offline actions, ${failedActions.length} failed`)
+    console.log(
+      `Processed ${processedActions.length} offline actions, ${failedActions.length} failed`,
+    )
   }
 
   // Process a single action using fetch with proper headers and base URL
@@ -297,15 +301,16 @@ class OfflineManager {
     lastSync: number
     dataVersion: string
   } {
-    const offlineData =
-      (() => {
-        try {
-          const stored = localStorage.getItem(this.OFFLINE_DATA_KEY)
-          return stored ? JSON.parse(stored) : { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
-        } catch {
-          return { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
-        }
-      })()
+    const offlineData = (() => {
+      try {
+        const stored = localStorage.getItem(this.OFFLINE_DATA_KEY)
+        return stored
+          ? JSON.parse(stored)
+          : { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
+      } catch {
+        return { version: this.DATA_VERSION, lastSync: Date.now(), data: {} }
+      }
+    })()
 
     return {
       isOnline: navigator.onLine,

@@ -24,9 +24,9 @@ import { InspirationGallery } from '@repo/features-gallery';
 ## Basic Usage
 
 ```tsx
-import React, { useState, useCallback } from 'react';
-import { InspirationGallery } from '@repo/features-gallery';
-import type { GalleryImage } from '@repo/features-gallery';
+import React, { useState, useCallback } from 'react'
+import { InspirationGallery } from '@repo/features-gallery'
+import type { GalleryImage } from '@repo/features-gallery'
 
 const MyGallery = () => {
   const [images, setImages] = useState<GalleryImage[]>([
@@ -41,30 +41,30 @@ const MyGallery = () => {
       updatedAt: new Date(),
     },
     // ... more images
-  ]);
+  ])
 
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
 
   const handleLoadMore = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     // Fetch more images from your API
-    const newImages = await fetchMoreImages();
-    setImages(prev => [...prev, ...newImages]);
-    setLoading(false);
-  }, []);
+    const newImages = await fetchMoreImages()
+    setImages(prev => [...prev, ...newImages])
+    setLoading(false)
+  }, [])
 
   return (
     <InspirationGallery
       images={images}
-      onImageClick={(image) => console.log('Image clicked:', image.title)}
+      onImageClick={image => console.log('Image clicked:', image.title)}
       onImageLike={(imageId, liked) => console.log('Image liked:', imageId, liked)}
       onLoadMore={handleLoadMore}
       hasMore={hasMore}
       loading={loading}
     />
-  );
-};
+  )
+}
 ```
 
 ## Props
@@ -92,14 +92,14 @@ const MyGallery = () => {
 
 ```tsx
 interface GalleryImage {
-  id: string;
-  url: string;
-  title?: string;
-  description?: string;
-  author?: string;
-  tags?: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  url: string
+  title?: string
+  description?: string
+  author?: string
+  tags?: string[]
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -131,30 +131,30 @@ interface GalleryImage {
 ### Infinite Scroll Implementation
 
 ```tsx
-const [images, setImages] = useState<GalleryImage[]>([]);
-const [loading, setLoading] = useState(false);
-const [hasMore, setHasMore] = useState(true);
-const [page, setPage] = useState(1);
+const [images, setImages] = useState<GalleryImage[]>([])
+const [loading, setLoading] = useState(false)
+const [hasMore, setHasMore] = useState(true)
+const [page, setPage] = useState(1)
 
 const handleLoadMore = useCallback(async () => {
-  if (loading || !hasMore) return;
-  
-  setLoading(true);
+  if (loading || !hasMore) return
+
+  setLoading(true)
   try {
-    const newImages = await fetchImages(page);
-    setImages(prev => [...prev, ...newImages]);
-    setPage(prev => prev + 1);
-    
+    const newImages = await fetchImages(page)
+    setImages(prev => [...prev, ...newImages])
+    setPage(prev => prev + 1)
+
     // Stop loading more if no more images
     if (newImages.length === 0) {
-      setHasMore(false);
+      setHasMore(false)
     }
   } catch (error) {
-    console.error('Failed to load more images:', error);
+    console.error('Failed to load more images:', error)
   } finally {
-    setLoading(false);
+    setLoading(false)
   }
-}, [loading, hasMore, page]);
+}, [loading, hasMore, page])
 ```
 
 ## Responsive Breakpoints
@@ -162,7 +162,7 @@ const handleLoadMore = useCallback(async () => {
 The component uses Tailwind CSS breakpoints:
 
 - `sm`: 640px and up
-- `md`: 768px and up  
+- `md`: 768px and up
 - `lg`: 1024px and up
 - `xl`: 1280px and up
 
@@ -211,4 +211,4 @@ Run tests with:
 
 ```bash
 pnpm test:run
-``` 
+```

@@ -1,6 +1,6 @@
 /**
  * Ethereal Email Helper for E2E Testing
- * 
+ *
  * This is a free email testing service for development and testing.
  * Ethereal Email provides temporary email accounts for testing.
  */
@@ -42,7 +42,7 @@ export class EtherealHelper {
       console.log('Ethereal Email: Access your emails at https://ethereal.email')
       console.log(`Username: ${this.config.user}`)
       console.log(`Password: ${this.config.pass}`)
-      
+
       return []
     } catch (error) {
       console.error('Error fetching emails from Ethereal:', error)
@@ -83,7 +83,7 @@ export class EtherealHelper {
     console.log(`Ethereal Email: Check for verification email for ${userEmail}`)
     console.log('Access your emails at: https://ethereal.email')
     console.log(`Login with: ${this.config.user} / ${this.config.pass}`)
-    
+
     // For testing purposes, return a mock code
     // In real usage, you'd check the Ethereal web interface
     return '123456'
@@ -92,11 +92,14 @@ export class EtherealHelper {
   /**
    * Wait for verification email to arrive
    */
-  async waitForVerificationEmail(userEmail: string, timeoutMs: number = 30000): Promise<string | null> {
+  async waitForVerificationEmail(
+    userEmail: string,
+    timeoutMs: number = 30000,
+  ): Promise<string | null> {
     console.log(`Ethereal Email: Waiting for verification email for ${userEmail}`)
     console.log('Please check: https://ethereal.email')
     console.log(`Login: ${this.config.user} / ${this.config.pass}`)
-    
+
     // For testing, return mock code after a short delay
     await new Promise(resolve => setTimeout(resolve, 2000))
     return '123456'
@@ -134,7 +137,7 @@ export const defaultEtherealConfig: EtherealConfig = {
   port: 587,
   user: 'your_ethereal_username',
   pass: 'your_ethereal_password',
-  secure: false
+  secure: false,
 }
 
 // Default helper instance
@@ -145,10 +148,13 @@ export async function getVerificationCodeFromEthereal(email: string): Promise<st
   return etherealHelper.getVerificationCode(email)
 }
 
-export async function waitForVerificationEmail(email: string, timeoutMs: number = 30000): Promise<string | null> {
+export async function waitForVerificationEmail(
+  email: string,
+  timeoutMs: number = 30000,
+): Promise<string | null> {
   return etherealHelper.waitForVerificationEmail(email, timeoutMs)
 }
 
 export function getEtherealSmtpConfig(): EtherealConfig {
   return etherealHelper.getSmtpConfig()
-} 
+}

@@ -6,9 +6,9 @@ import HomePage from '../index'
 vi.mock('../../../config/environment.js', () => ({
   config: {
     app: {
-      name: 'LEGO MOC Instructions'
-    }
-  }
+      name: 'LEGO MOC Instructions',
+    },
+  },
 }))
 
 // Mock UI components
@@ -28,7 +28,7 @@ vi.mock('@tanstack/react-router', () => ({
     <a href={to} {...props}>
       {children}
     </a>
-  )
+  ),
 }))
 
 // Mock lucide-react icons
@@ -55,7 +55,9 @@ describe('HomePage', () => {
 
   it('renders the hero description', () => {
     render(<HomePage />)
-    expect(screen.getByText(/Discover, build, and share custom LEGO MOC instructions/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Discover, build, and share custom LEGO MOC instructions/),
+    ).toBeInTheDocument()
   })
 
   it('renders navigation buttons for unauthenticated users', () => {
@@ -105,4 +107,4 @@ describe('HomePage', () => {
     const browseLink = screen.getByRole('link', { name: /browse mocs/i })
     expect(browseLink).toHaveAttribute('href', '/moc-gallery')
   })
-}) 
+})

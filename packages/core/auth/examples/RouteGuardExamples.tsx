@@ -1,5 +1,5 @@
-import React from 'react';
-import { RouteGuard } from '../src/index.js';
+import React from 'react'
+import { RouteGuard } from '../src/index.js'
 
 /**
  * Examples of how to use the RouteGuard component in different scenarios
@@ -13,7 +13,7 @@ export const BasicProtectedPage = () => (
       <p>This content is only visible to authenticated users.</p>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 2: Admin-only access
 export const AdminPage = () => (
@@ -25,7 +25,7 @@ export const AdminPage = () => (
       <button>Manage Settings</button>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 3: Moderator access
 export const ModeratorPage = () => (
@@ -37,7 +37,7 @@ export const ModeratorPage = () => (
       <button>Manage Comments</button>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 4: Email verification required
 export const VerifiedUserPage = () => (
@@ -48,24 +48,21 @@ export const VerifiedUserPage = () => (
       <button>Access Premium Features</button>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 5: Custom redirect paths
 export const CustomProtectedPage = () => (
-  <RouteGuard 
-    redirectTo="/auth/login"
-    unauthorizedTo="/auth/access-denied"
-  >
+  <RouteGuard redirectTo="/auth/login" unauthorizedTo="/auth/access-denied">
     <div>
       <h1>Custom Protected Content</h1>
       <p>This uses custom redirect paths.</p>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 6: Admin with email verification
 export const AdminVerifiedPage = () => (
-  <RouteGuard 
+  <RouteGuard
     requiredRole="admin"
     requireVerified={true}
     redirectTo="/admin/login"
@@ -78,7 +75,7 @@ export const AdminVerifiedPage = () => (
       <button>User Management</button>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 7: Nested route protection
 export const NestedProtectedLayout = () => (
@@ -92,7 +89,7 @@ export const NestedProtectedLayout = () => (
           <a href="/settings">Settings</a>
         </nav>
       </header>
-      
+
       <main>
         {/* Individual pages can have their own protection */}
         <RouteGuard requiredRole="admin">
@@ -101,7 +98,7 @@ export const NestedProtectedLayout = () => (
             <p>Only admins can see this section.</p>
           </div>
         </RouteGuard>
-        
+
         <RouteGuard requireVerified={true}>
           <div>
             <h2>Verified User Section</h2>
@@ -111,7 +108,7 @@ export const NestedProtectedLayout = () => (
       </main>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 8: Profile page with protection
 export const ProtectedProfilePage = () => (
@@ -127,7 +124,7 @@ export const ProtectedProfilePage = () => (
           <button type="submit">Update Profile</button>
         </form>
       </div>
-      
+
       <div>
         <h2>Security Settings</h2>
         <button>Change Password</button>
@@ -135,20 +132,20 @@ export const ProtectedProfilePage = () => (
       </div>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 9: Dashboard with role-based sections
 export const RoleBasedDashboard = () => (
   <RouteGuard>
     <div>
       <h1>Dashboard</h1>
-      
+
       {/* User section - visible to all authenticated users */}
       <section>
         <h2>My Account</h2>
         <p>Welcome back!</p>
       </section>
-      
+
       {/* Moderator section */}
       <RouteGuard requiredRole="moderator">
         <section>
@@ -157,7 +154,7 @@ export const RoleBasedDashboard = () => (
           <button>Manage Users</button>
         </section>
       </RouteGuard>
-      
+
       {/* Admin section */}
       <RouteGuard requiredRole="admin">
         <section>
@@ -169,14 +166,14 @@ export const RoleBasedDashboard = () => (
       </RouteGuard>
     </div>
   </RouteGuard>
-);
+)
 
 // Example 10: Settings page with different access levels
 export const SettingsPage = () => (
   <RouteGuard requireVerified={true}>
     <div>
       <h1>Settings</h1>
-      
+
       {/* Basic settings - all verified users */}
       <section>
         <h2>Account Settings</h2>
@@ -184,7 +181,7 @@ export const SettingsPage = () => (
         <button>Change Password</button>
         <button>Notification Preferences</button>
       </section>
-      
+
       {/* Advanced settings - moderators and admins */}
       <RouteGuard requiredRole="moderator">
         <section>
@@ -193,7 +190,7 @@ export const SettingsPage = () => (
           <button>Report Thresholds</button>
         </section>
       </RouteGuard>
-      
+
       {/* System settings - admins only */}
       <RouteGuard requiredRole="admin">
         <section>
@@ -205,4 +202,4 @@ export const SettingsPage = () => (
       </RouteGuard>
     </div>
   </RouteGuard>
-); 
+)

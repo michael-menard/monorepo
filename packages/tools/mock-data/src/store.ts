@@ -1,5 +1,5 @@
 // Re-export all store-related exports for easier access
-export * from './store/index';
+export * from './store/index'
 
 // Explicitly export actions that might be needed
 export {
@@ -8,11 +8,11 @@ export {
   clearError,
   setSelectedInstruction,
   updateStats,
-} from './store/mocInstructionsSlice';
+} from './store/mocInstructionsSlice'
 
 export {
   setFilter as setWishlistFilter,
   clearFilters as clearWishlistFilters,
   clearError as clearWishlistError,
   updateStats as updateWishlistStats,
-} from './store/wishlistSlice';
+} from './store/wishlistSlice'

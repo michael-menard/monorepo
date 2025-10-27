@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { requireAuth, wishlistOwnershipAuth } from '../middleware/auth';
+import { Router } from 'express'
+import { requireAuth, wishlistOwnershipAuth } from '../middleware/auth'
 import {
   getWishlist,
   createWishlistItem,
@@ -12,25 +12,25 @@ import {
   uploadWishlistImage,
   deleteWishlistImageHandler,
   searchWishlist,
-} from '../handlers/wishlist';
-import { wishlistImageUpload } from '../storage/wishlist-storage';
+} from '../handlers/wishlist'
+import { wishlistImageUpload } from '../storage/wishlist-storage'
 import {
   handleWishlistUploadError,
   validateWishlistFile,
   cleanupWishlistFileOnError,
-} from '../middleware/wishlist-upload';
-import { wishlistCache, wishlistCacheInvalidation } from '../middleware/cache';
+} from '../middleware/wishlist-upload'
+import { wishlistCache, wishlistCacheInvalidation } from '../middleware/cache'
 
-const router = Router();
+const router = Router()
 
 // GET /api/wishlist - Get all wishlist items for authenticated user
-router.get('/', requireAuth, wishlistOwnershipAuth, wishlistCache, getWishlist);
+router.get('/', requireAuth, wishlistOwnershipAuth, wishlistCache, getWishlist)
 
 // GET /api/wishlist/search - Search wishlist items with full-text and category filtering
-router.get('/search', requireAuth, wishlistOwnershipAuth, wishlistCache, searchWishlist);
+router.get('/search', requireAuth, wishlistOwnershipAuth, wishlistCache, searchWishlist)
 
 // POST /api/wishlist - Create new wishlist item
-router.post('/', requireAuth, wishlistOwnershipAuth, wishlistCacheInvalidation, createWishlistItem);
+router.post('/', requireAuth, wishlistOwnershipAuth, wishlistCacheInvalidation, createWishlistItem)
 
 // PUT /api/wishlist/:id - Update wishlist item
 router.put(
@@ -39,7 +39,7 @@ router.put(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   updateWishlistItem,
-);
+)
 
 // PATCH /api/wishlist/:id - Update wishlist item (partial update)
 router.patch(
@@ -48,7 +48,7 @@ router.patch(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   updateWishlistItem,
-);
+)
 
 // DELETE /api/wishlist/:id - Delete wishlist item
 router.delete(
@@ -57,7 +57,7 @@ router.delete(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   deleteWishlistItem,
-);
+)
 
 // PUT /api/wishlist/reorder - Reorder wishlist items
 router.put(
@@ -66,7 +66,7 @@ router.put(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   reorderWishlist,
-);
+)
 
 // POST /api/wishlist/reorder - Reorder wishlist items (alternative method)
 router.post(
@@ -75,7 +75,7 @@ router.post(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   reorderWishlist,
-);
+)
 
 // POST /api/wishlist/reorder/debounced - Debounced reorder for rapid UI updates
 router.post(
@@ -84,13 +84,13 @@ router.post(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   reorderWishlistDebounced,
-);
+)
 
 // GET /api/wishlist/reorder/status - Get reorder status
-router.get('/reorder/status', requireAuth, getReorderStatus);
+router.get('/reorder/status', requireAuth, getReorderStatus)
 
 // POST /api/wishlist/reorder/cancel - Cancel pending reorder
-router.post('/reorder/cancel', requireAuth, cancelPendingReorder);
+router.post('/reorder/cancel', requireAuth, cancelPendingReorder)
 
 // POST /api/wishlist/upload-image - Upload image for wishlist
 router.post(
@@ -103,7 +103,7 @@ router.post(
   wishlistCacheInvalidation,
   uploadWishlistImage,
   cleanupWishlistFileOnError,
-);
+)
 
 // DELETE /api/wishlist/image - Delete wishlist image
 router.delete(
@@ -112,6 +112,6 @@ router.delete(
   wishlistOwnershipAuth,
   wishlistCacheInvalidation,
   deleteWishlistImageHandler,
-);
+)
 
-export default router;
+export default router

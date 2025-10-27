@@ -5,6 +5,7 @@ This document lists all the seeded users available for testing the auth flow.
 ## 🚀 Quick Start
 
 ### Seed Users
+
 ```bash
 # Seed users in development database
 pnpm seed:users
@@ -17,6 +18,7 @@ pnpm seed:users:test
 ```
 
 ### From Project Root
+
 ```bash
 # Seed users from project root
 pnpm seed:users
@@ -30,6 +32,7 @@ pnpm seed:users:clear
 ### Standard Test Users
 
 #### Regular Test User
+
 - **Email**: `test@example.com`
 - **Password**: `TestPassword123!`
 - **Name**: Test User
@@ -38,6 +41,7 @@ pnpm seed:users:clear
 - **Use**: Standard automated testing
 
 #### Admin Test User
+
 - **Email**: `admin@example.com`
 - **Password**: `AdminPassword123!`
 - **Name**: Admin Test
@@ -50,6 +54,7 @@ pnpm seed:users:clear
 #### Main Characters
 
 **Stan Marsh**
+
 - **Email**: `stan.marsh@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -57,6 +62,7 @@ pnpm seed:users:clear
 - **Bio**: "I'm just a regular kid from South Park. Oh my God, they killed Kenny!"
 
 **Kyle Broflovski**
+
 - **Email**: `kyle.broflovski@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -64,6 +70,7 @@ pnpm seed:users:clear
 - **Bio**: "Smart kid from South Park. I wear a green hat and care about doing the right thing."
 
 **Eric Cartman**
+
 - **Email**: `eric.cartman@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -71,6 +78,7 @@ pnpm seed:users:clear
 - **Bio**: "Respect my authoritah! I'm the coolest kid in South Park."
 
 **Kenny McCormick**
+
 - **Email**: `kenny.mccormick@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -80,6 +88,7 @@ pnpm seed:users:clear
 #### Supporting Characters
 
 **Butters Stotch**
+
 - **Email**: `butters.stotch@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -87,6 +96,7 @@ pnpm seed:users:clear
 - **Bio**: "Oh hamburgers! I'm just trying to be a good kid and not get grounded."
 
 **Wendy Testaburger**
+
 - **Email**: `wendy.testaburger@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -94,6 +104,7 @@ pnpm seed:users:clear
 - **Bio**: "Student body president and activist. I care about important issues."
 
 **Jimmy Valmer**
+
 - **Email**: `jimmy.valmer@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -101,6 +112,7 @@ pnpm seed:users:clear
 - **Bio**: "Wow, what a great audience! I love telling jokes and performing."
 
 **Timmy Burch**
+
 - **Email**: `timmy.burch@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -110,6 +122,7 @@ pnpm seed:users:clear
 #### Adult Characters (Admins)
 
 **Randy Marsh**
+
 - **Email**: `randy.marsh@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -117,6 +130,7 @@ pnpm seed:users:clear
 - **Bio**: "I'm a geologist and Stan's dad. I thought this was America!"
 
 **Chef Jerome**
+
 - **Email**: `chef@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ✅ Verified
@@ -126,6 +140,7 @@ pnpm seed:users:clear
 #### Unverified Users (For Testing Verification Flow)
 
 **Mr. Garrison**
+
 - **Email**: `mr.garrison@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ⏳ Unverified
@@ -133,6 +148,7 @@ pnpm seed:users:clear
 - **Bio**: "I'm a teacher at South Park Elementary. Mkay?"
 
 **Towelie**
+
 - **Email**: `towelie@southpark.co`
 - **Password**: `SouthPark123!`
 - **Status**: ⏳ Unverified
@@ -142,6 +158,7 @@ pnpm seed:users:clear
 ## 🧪 Testing Scenarios
 
 ### Login Testing
+
 ```bash
 # Test with Stan (verified user)
 Email: stan.marsh@southpark.co
@@ -157,18 +174,21 @@ Password: SouthPark123!
 ```
 
 ### Playwright E2E Tests
+
 The test users are available in `tests/auth/test-users.ts`:
 
 ```typescript
-import { DEFAULT_TEST_USER, SOUTH_PARK_USERS } from './test-users';
+import { DEFAULT_TEST_USER, SOUTH_PARK_USERS } from './test-users'
 
 // Use in tests
-await page.fill('input[type="email"]', DEFAULT_TEST_USER.email);
-await page.fill('input[type="password"]', DEFAULT_TEST_USER.password);
+await page.fill('input[type="email"]', DEFAULT_TEST_USER.email)
+await page.fill('input[type="password"]', DEFAULT_TEST_USER.password)
 ```
 
 ### Manual Testing
+
 1. **Start the development environment**:
+
    ```bash
    pnpm dev:full
    ```
@@ -180,6 +200,7 @@ await page.fill('input[type="password"]', DEFAULT_TEST_USER.password);
 ## 🔧 Database Management
 
 ### View Users in MongoDB
+
 ```bash
 # Connect to MongoDB
 mongosh mongodb://admin:password123@localhost:27017/backend?authSource=admin
@@ -196,6 +217,7 @@ db.users.countDocuments({ isVerified: false })
 ```
 
 ### Clear All Users
+
 ```bash
 # Clear all seeded users
 pnpm seed:users:clear
@@ -226,6 +248,7 @@ When manually testing, you can role-play as the characters:
 ## 📊 Database Statistics
 
 After seeding, you should have:
+
 - **Total Users**: ~85 (including any existing users)
 - **Verified Users**: ~54
 - **Unverified Users**: ~31
@@ -235,6 +258,7 @@ After seeding, you should have:
 ## 🚀 Integration with Tests
 
 The seeded users integrate with:
+
 - ✅ Playwright E2E tests
 - ✅ Auth package unit tests
 - ✅ Integration tests

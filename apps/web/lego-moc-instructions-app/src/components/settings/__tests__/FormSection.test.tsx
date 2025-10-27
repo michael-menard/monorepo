@@ -8,9 +8,9 @@ describe('FormSection', () => {
     render(
       <FormSection title="Test Section">
         <div>Test content</div>
-      </FormSection>
+      </FormSection>,
     )
-    
+
     expect(screen.getByText('Test Section')).toBeInTheDocument()
     expect(screen.getByText('Test content')).toBeInTheDocument()
   })
@@ -19,9 +19,9 @@ describe('FormSection', () => {
     render(
       <FormSection title="Test Section" description="Test description">
         <div>Test content</div>
-      </FormSection>
+      </FormSection>,
     )
-    
+
     expect(screen.getByText('Test Section')).toBeInTheDocument()
     expect(screen.getByText('Test description')).toBeInTheDocument()
     expect(screen.getByText('Test content')).toBeInTheDocument()
@@ -31,9 +31,9 @@ describe('FormSection', () => {
     render(
       <FormSection title="Test Section">
         <div>Test content</div>
-      </FormSection>
+      </FormSection>,
     )
-    
+
     expect(screen.getByText('Test Section')).toBeInTheDocument()
     expect(screen.queryByText('Test description')).not.toBeInTheDocument()
   })
@@ -42,9 +42,9 @@ describe('FormSection', () => {
     render(
       <FormSection title="Test Section" className="custom-class">
         <div>Test content</div>
-      </FormSection>
+      </FormSection>,
     )
-    
+
     const section = screen.getByText('Test Section').closest('.custom-class')
     expect(section).toBeInTheDocument()
   })
@@ -55,9 +55,9 @@ describe('FormSection', () => {
         <div>First child</div>
         <div>Second child</div>
         <button>Third child</button>
-      </FormSection>
+      </FormSection>,
     )
-    
+
     expect(screen.getByText('First child')).toBeInTheDocument()
     expect(screen.getByText('Second child')).toBeInTheDocument()
     expect(screen.getByText('Third child')).toBeInTheDocument()

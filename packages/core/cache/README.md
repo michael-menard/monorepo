@@ -50,17 +50,17 @@ import { useImageCache, CachedImage } from '@repo/shared-cache'
 // Using the hook
 function MyComponent() {
   const { cacheImage, getCachedImage } = useImageCache()
-  
+
   const handleImageLoad = async (url: string) => {
     await cacheImage(url)
   }
-  
+
   return <CachedImage src="https://example.com/image.jpg" alt="Example" />
 }
 
 // Using the component
-<CachedImage 
-  src="https://example.com/image.jpg" 
+<CachedImage
+  src="https://example.com/image.jpg"
   alt="Example"
   fallback="/placeholder.jpg"
   preload={true}
@@ -70,18 +70,17 @@ function MyComponent() {
 ### RTK Query Integration
 
 ```typescript
-import { 
-  getRTKQueryCacheConfig, 
-  createCachedBaseQuery 
-} from '@repo/shared-cache'
+import { getRTKQueryCacheConfig, createCachedBaseQuery } from '@repo/shared-cache'
 
 // Enhanced base query with caching headers
 const api = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery(createCachedBaseQuery('/api', {
-    maxAge: 300, // 5 minutes
-  })),
-  endpoints: (builder) => ({
+  baseQuery: fetchBaseQuery(
+    createCachedBaseQuery('/api', {
+      maxAge: 300, // 5 minutes
+    }),
+  ),
+  endpoints: builder => ({
     getData: builder.query({
       query: () => 'data',
       ...getRTKQueryCacheConfig('medium'), // 5 minutes cache
@@ -101,17 +100,17 @@ import { useCacheManager, CacheManager } from '@repo/shared-cache'
 
 // Using the hook
 function MyComponent() {
-  const { 
-    cacheData, 
-    getCachedData, 
-    clearAllCaches, 
-    stats 
+  const {
+    cacheData,
+    getCachedData,
+    clearAllCaches,
+    stats
   } = useCacheManager()
-  
+
   // Cache data with different strategies
   cacheData('temp-data', data, 'memory', 60000) // 1 minute
   cacheData('persistent-data', data, 'localStorage') // 30 minutes default
-  
+
   return <div>Cache hit rate: {(stats?.memory.hitRate * 100).toFixed(1)}%</div>
 }
 
@@ -146,11 +145,11 @@ Persistent cache using localStorage or sessionStorage.
 
 ```typescript
 const cache = new StorageCache({
-  storage: 'localStorage',         // 'localStorage' or 'sessionStorage'
-  maxSize: 50,                     // Maximum number of entries
-  maxAge: 1800000,                 // Default TTL in milliseconds
-  keyPrefix: 'cache_',             // Key prefix for namespacing
-  compress: false,                 // Enable compression
+  storage: 'localStorage', // 'localStorage' or 'sessionStorage'
+  maxSize: 50, // Maximum number of entries
+  maxAge: 1800000, // Default TTL in milliseconds
+  keyPrefix: 'cache_', // Key prefix for namespacing
+  compress: false, // Enable compression
 })
 
 // Same methods as MemoryCache
@@ -162,18 +161,18 @@ Image caching using Cache API and data URLs.
 
 ```typescript
 const imageCache = new ImageCache({
-  cacheName: 'image-cache',        // Cache name for Cache API
-  maxAge: 86400000,                // 24 hours default
-  maxSize: 52428800,               // 50MB default
+  cacheName: 'image-cache', // Cache name for Cache API
+  maxAge: 86400000, // 24 hours default
+  maxSize: 52428800, // 50MB default
 })
 
-await imageCache.cacheImage(url)                    // Cache image
-await imageCache.getImageAsDataURL(url)             // Get as data URL
-await imageCache.cacheImageAsDataURL(url)           // Cache as data URL
-imageCache.getCachedImage(url)                      // Get cached image
-await imageCache.preloadImages(urls)                // Preload multiple images
-await imageCache.clearCache()                       // Clear all cached images
-await imageCache.getCacheStats()                    // Get statistics
+await imageCache.cacheImage(url) // Cache image
+await imageCache.getImageAsDataURL(url) // Get as data URL
+await imageCache.cacheImageAsDataURL(url) // Cache as data URL
+imageCache.getCachedImage(url) // Get cached image
+await imageCache.preloadImages(urls) // Preload multiple images
+await imageCache.clearCache() // Clear all cached images
+await imageCache.getCacheStats() // Get statistics
 ```
 
 ### React Hooks
@@ -181,13 +180,7 @@ await imageCache.getCacheStats()                    // Get statistics
 #### useImageCache
 
 ```typescript
-const { 
-  cacheImage, 
-  getCachedImage, 
-  preloadImages, 
-  clearCache, 
-  getStats 
-} = useImageCache()
+const { cacheImage, getCachedImage, preloadImages, clearCache, getStats } = useImageCache()
 ```
 
 #### useCacheManager
@@ -247,17 +240,17 @@ const {
 
 ```typescript
 // Predefined configurations
-getRTKQueryCacheConfig('short')      // 30 seconds
-getRTKQueryCacheConfig('medium')     // 5 minutes
-getRTKQueryCacheConfig('long')       // 30 minutes
+getRTKQueryCacheConfig('short') // 30 seconds
+getRTKQueryCacheConfig('medium') // 5 minutes
+getRTKQueryCacheConfig('long') // 30 minutes
 getRTKQueryCacheConfig('persistent') // 1 hour
-getRTKQueryCacheConfig('realtime')   // No cache, polling
+getRTKQueryCacheConfig('realtime') // No cache, polling
 
 // Custom configuration
 createRTKQueryCacheConfig({
-  keepUnusedDataFor: 120,            // 2 minutes
+  keepUnusedDataFor: 120, // 2 minutes
   refetchOnFocus: false,
-  pollingInterval: 10000,            // 10 seconds
+  pollingInterval: 10000, // 10 seconds
 })
 ```
 
@@ -265,9 +258,9 @@ createRTKQueryCacheConfig({
 
 ```typescript
 createCachedBaseQuery('/api', {
-  cacheControl: 'max-age=300',       // Custom cache control
-  etag: true,                        // Enable ETag support
-  maxAge: 300,                       // 5 minutes
+  cacheControl: 'max-age=300', // Custom cache control
+  etag: true, // Enable ETag support
+  maxAge: 300, // 5 minutes
 })
 ```
 
@@ -276,12 +269,12 @@ createCachedBaseQuery('/api', {
 ```typescript
 const monitor = createCacheMonitor()
 
-monitor.onCacheHit()                 // Track cache hit
-monitor.onCacheMiss()                // Track cache miss
-monitor.onCacheInvalidation()        // Track invalidation
-monitor.onCacheUpdate()              // Track updates
-monitor.getStats()                   // Get statistics
-monitor.resetStats()                 // Reset statistics
+monitor.onCacheHit() // Track cache hit
+monitor.onCacheMiss() // Track cache miss
+monitor.onCacheInvalidation() // Track invalidation
+monitor.onCacheUpdate() // Track updates
+monitor.getStats() // Get statistics
+monitor.resetStats() // Reset statistics
 ```
 
 ## Configuration
@@ -290,12 +283,12 @@ monitor.resetStats()                 // Reset statistics
 
 ```typescript
 interface CacheConfig {
-  maxAge: number                     // Default TTL in milliseconds
-  maxSize: number                    // Maximum number of entries
+  maxAge: number // Default TTL in milliseconds
+  maxSize: number // Maximum number of entries
   storage: 'memory' | 'localStorage' | 'sessionStorage' | 'cache'
-  keyPrefix: string                  // Key prefix for namespacing
-  compress: boolean                  // Enable compression
-  encrypt: boolean                   // Enable encryption (future)
+  keyPrefix: string // Key prefix for namespacing
+  compress: boolean // Enable compression
+  encrypt: boolean // Enable encryption (future)
 }
 ```
 
@@ -303,12 +296,12 @@ interface CacheConfig {
 
 ```typescript
 interface RTKQueryCacheConfig {
-  keepUnusedDataFor: number          // Cache duration in seconds
+  keepUnusedDataFor: number // Cache duration in seconds
   refetchOnMountOrArgChange: boolean // Refetch on mount/arg change
-  refetchOnFocus: boolean            // Refetch on window focus
-  refetchOnReconnect: boolean        // Refetch on network reconnect
-  pollingInterval?: number           // Polling interval in milliseconds
-  skip: boolean                      // Skip query execution
+  refetchOnFocus: boolean // Refetch on window focus
+  refetchOnReconnect: boolean // Refetch on network reconnect
+  pollingInterval?: number // Polling interval in milliseconds
+  skip: boolean // Skip query execution
 }
 ```
 
@@ -341,4 +334,4 @@ See the test files for comprehensive examples of all features:
 
 - `src/__tests__/memoryCache.test.ts` - Memory cache examples
 - `src/__tests__/imageCache.test.ts` - Image caching examples
-- `apps/web/lego-moc-instructions-app/src/hooks/__tests__/useCacheManager.test.tsx` - React hook examples 
+- `apps/web/lego-moc-instructions-app/src/hooks/__tests__/useCacheManager.test.tsx` - React hook examples

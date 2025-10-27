@@ -44,7 +44,7 @@ class AuthApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public code?: string
+    public code?: string,
   ) {
     super(message)
     this.name = 'AuthApiError'
@@ -54,18 +54,18 @@ class AuthApiError extends Error {
 async function makeApiCall<T>(
   endpoint: string,
   options: RequestInit = {},
-  skipCSRFRetry = false
+  skipCSRFRetry = false,
 ): Promise<ApiResponse<T>> {
   const url = `${AUTH_BASE_URL}${endpoint}`
   const method = options.method?.toUpperCase() || 'GET'
   const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
-  
+
   // Add CSRF headers for mutation requests
   let headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   }
-  
+
   if (isMutation) {
     try {
       const csrfHeaders = await getCSRFHeaders()
@@ -74,7 +74,7 @@ async function makeApiCall<T>(
       console.warn('Failed to add CSRF token to auth request:', error)
     }
   }
-  
+
   const defaultOptions: RequestInit = {
     headers,
     credentials: 'include', // Include cookies for JWT tokens
@@ -94,17 +94,17 @@ async function makeApiCall<T>(
       !skipCSRFRetry
     ) {
       console.log('CSRF token failed on auth request, attempting to refresh and retry')
-      
+
       try {
         // Get a fresh CSRF token
         const newToken = await refreshCSRFToken()
-        
+
         // Update headers with new token
         const retryHeaders = {
           ...headers,
           'X-CSRF-Token': newToken,
         }
-        
+
         // Retry the request
         console.log('Retrying auth request with fresh CSRF token')
         return await makeApiCall<T>(endpoint, { ...options, headers: retryHeaders }, true)
@@ -115,11 +115,7 @@ async function makeApiCall<T>(
     }
 
     if (!response.ok) {
-      throw new AuthApiError(
-        data.message || 'An error occurred',
-        response.status,
-        data.code
-      )
+      throw new AuthApiError(data.message || 'An error occurred', response.status, data.code)
     }
 
     return data
@@ -127,12 +123,9 @@ async function makeApiCall<T>(
     if (error instanceof AuthApiError) {
       throw error
     }
-    
+
     // Network or other errors
-    throw new AuthApiError(
-      'Network error. Please check your connection.',
-      0
-    )
+    throw new AuthApiError('Network error. Please check your connection.', 0)
   }
 }
 

@@ -1,7 +1,7 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import React from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import {
   Form,
   FormControl,
@@ -29,28 +29,32 @@ import {
   createEnhancedSchemas,
   validationMessages,
   validatePasswordStrength,
-} from './index';
+} from './index'
 
 // Example schema using enhanced validation
-const exampleFormSchema = z.object({
-  name: createEnhancedSchemas.name('Full Name'),
-  email: createEnhancedSchemas.email('Email Address'),
-  password: createEnhancedSchemas.password('Password'),
-  confirmPassword: createEnhancedSchemas.confirmPassword('Confirm Password'),
-  age: createEnhancedSchemas.number('Age', 18, 120),
-  bio: createEnhancedSchemas.optionalString('Bio', 500),
-  category: z.enum(['personal', 'business', 'education']).optional(),
-  terms: z.boolean().refine((val) => val === true, validationMessages.terms),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: validationMessages.password.match,
-  path: ['confirmPassword'],
-});
+const exampleFormSchema = z
+  .object({
+    name: createEnhancedSchemas.name('Full Name'),
+    email: createEnhancedSchemas.email('Email Address'),
+    password: createEnhancedSchemas.password('Password'),
+    confirmPassword: createEnhancedSchemas.confirmPassword('Confirm Password'),
+    age: createEnhancedSchemas.number('Age', 18, 120),
+    bio: createEnhancedSchemas.optionalString('Bio', 500),
+    category: z.enum(['personal', 'business', 'education']).optional(),
+    terms: z.boolean().refine(val => val === true, validationMessages.terms),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: validationMessages.password.match,
+    path: ['confirmPassword'],
+  })
 
-type ExampleFormData = z.infer<typeof exampleFormSchema>;
+type ExampleFormData = z.infer<typeof exampleFormSchema>
 
 export const FormErrorExample: React.FC = () => {
-  const [password, setPassword] = React.useState('');
-  const [passwordStrength, setPasswordStrength] = React.useState<ReturnType<typeof validatePasswordStrength> | null>(null);
+  const [password, setPassword] = React.useState('')
+  const [passwordStrength, setPasswordStrength] = React.useState<ReturnType<
+    typeof validatePasswordStrength
+  > | null>(null)
 
   const form = useForm<ExampleFormData>({
     resolver: zodResolver(exampleFormSchema),
@@ -65,24 +69,24 @@ export const FormErrorExample: React.FC = () => {
       terms: false,
     },
     mode: 'onChange',
-  });
+  })
 
   const onSubmit = async (data: ExampleFormData) => {
     // Simulate API call
-    console.log('Form data:', data);
-    
+    console.log('Form data:', data)
+
     // Simulate error
-    throw new Error('Network error. Please try again.');
-  };
+    throw new Error('Network error. Please try again.')
+  }
 
   const handlePasswordChange = (value: string) => {
-    setPassword(value);
+    setPassword(value)
     if (value) {
-      setPasswordStrength(validatePasswordStrength(value));
+      setPasswordStrength(validatePasswordStrength(value))
     } else {
-      setPasswordStrength(null);
+      setPasswordStrength(null)
     }
-  };
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -90,14 +94,15 @@ export const FormErrorExample: React.FC = () => {
         <CardHeader>
           <CardTitle>Enhanced Form Error Messaging Example</CardTitle>
           <CardDescription>
-            This example demonstrates the comprehensive error messaging system with various validation scenarios.
+            This example demonstrates the comprehensive error messaging system with various
+            validation scenarios.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Form-level error message */}
-              <FormLevelErrorMessage 
+              <FormLevelErrorMessage
                 error="This is a form-level error message that appears at the top of the form."
                 onClose={() => console.log('Form error closed')}
               />
@@ -113,13 +118,8 @@ export const FormErrorExample: React.FC = () => {
                       <FormControl>
                         <Input placeholder="Enter your full name" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        Enter your first and last name
-                      </FormDescription>
-                      <FieldErrorMessage 
-                        error={form.formState.errors.name}
-                        fieldName="Full Name"
-                      />
+                      <FormDescription>Enter your first and last name</FormDescription>
+                      <FieldErrorMessage error={form.formState.errors.name} fieldName="Full Name" />
                     </FormItem>
                   )}
                 />
@@ -149,27 +149,33 @@ export const FormErrorExample: React.FC = () => {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="Enter your password" 
+                        <Input
+                          type="password"
+                          placeholder="Enter your password"
                           {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handlePasswordChange(e.target.value);
+                          onChange={e => {
+                            field.onChange(e)
+                            handlePasswordChange(e.target.value)
                           }}
                         />
                       </FormControl>
-                      <FieldErrorMessage 
+                      <FieldErrorMessage
                         error={form.formState.errors.password}
                         fieldName="Password"
                       />
-                      {passwordStrength && (
+                      {passwordStrength ? (
                         <FormErrorMessage
                           message={passwordStrength.message}
-                          type={passwordStrength.strength === 'weak' ? 'error' : passwordStrength.strength === 'medium' ? 'warning' : 'success'}
+                          type={
+                            passwordStrength.strength === 'weak'
+                              ? 'error'
+                              : passwordStrength.strength === 'medium'
+                                ? 'warning'
+                                : 'success'
+                          }
                           showIcon={true}
                         />
-                      )}
+                      ) : null}
                     </FormItem>
                   )}
                 />
@@ -182,13 +188,9 @@ export const FormErrorExample: React.FC = () => {
                     <FormItem>
                       <FormLabel>Confirm Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="Confirm your password" 
-                          {...field} 
-                        />
+                        <Input type="password" placeholder="Confirm your password" {...field} />
                       </FormControl>
-                      <FieldErrorMessage 
+                      <FieldErrorMessage
                         error={form.formState.errors.confirmPassword}
                         fieldName="Confirm Password"
                       />
@@ -206,20 +208,17 @@ export const FormErrorExample: React.FC = () => {
                     <FormItem>
                       <FormLabel>Age</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Enter your age" 
+                        <Input
+                          type="number"
+                          placeholder="Enter your age"
                           {...field}
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          onChange={e =>
+                            field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
+                          }
                         />
                       </FormControl>
-                      <FormDescription>
-                        Must be between 18 and 120
-                      </FormDescription>
-                      <FieldErrorMessage 
-                        error={form.formState.errors.age}
-                        fieldName="Age"
-                      />
+                      <FormDescription>Must be between 18 and 120</FormDescription>
+                      <FieldErrorMessage error={form.formState.errors.age} fieldName="Age" />
                     </FormItem>
                   )}
                 />
@@ -257,20 +256,15 @@ export const FormErrorExample: React.FC = () => {
                   <FormItem>
                     <FormLabel>Bio</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Tell us about yourself (optional)" 
+                      <Textarea
+                        placeholder="Tell us about yourself (optional)"
                         className="resize-none"
                         rows={3}
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Maximum 500 characters
-                    </FormDescription>
-                    <FieldErrorMessage 
-                      error={form.formState.errors.bio}
-                      fieldName="Bio"
-                    />
+                    <FormDescription>Maximum 500 characters</FormDescription>
+                    <FieldErrorMessage error={form.formState.errors.bio} fieldName="Bio" />
                   </FormItem>
                 )}
               />
@@ -290,27 +284,16 @@ export const FormErrorExample: React.FC = () => {
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        I agree to the terms and conditions
-                      </FormLabel>
-                      <FormDescription>
-                        You must accept the terms to continue
-                      </FormDescription>
+                      <FormLabel>I agree to the terms and conditions</FormLabel>
+                      <FormDescription>You must accept the terms to continue</FormDescription>
                     </div>
-                    <FieldErrorMessage 
-                      error={form.formState.errors.terms}
-                      fieldName="Terms"
-                    />
+                    <FieldErrorMessage error={form.formState.errors.terms} fieldName="Terms" />
                   </FormItem>
                 )}
               />
 
               {/* Submit button */}
-              <Button 
-                type="submit" 
-                disabled={form.formState.isSubmitting}
-                className="w-full"
-              >
+              <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
                 {form.formState.isSubmitting ? 'Submitting...' : 'Submit Form'}
               </Button>
             </form>
@@ -322,9 +305,7 @@ export const FormErrorExample: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle>Error Message Types</CardTitle>
-          <CardDescription>
-            Different types of error messages for various scenarios
-          </CardDescription>
+          <CardDescription>Different types of error messages for various scenarios</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <FormErrorMessage
@@ -332,25 +313,25 @@ export const FormErrorExample: React.FC = () => {
             type="error"
             showIcon={true}
           />
-          
+
           <FormErrorMessage
             message="This is a warning message with amber styling"
             type="warning"
             showIcon={true}
           />
-          
+
           <FormErrorMessage
             message="This is an info message with blue styling"
             type="info"
             showIcon={true}
           />
-          
+
           <FormErrorMessage
             message="This is a success message with green styling"
             type="success"
             showIcon={true}
           />
-          
+
           <FormErrorMessage
             message="This message has a close button"
             type="error"
@@ -361,7 +342,7 @@ export const FormErrorExample: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default FormErrorExample; 
+export default FormErrorExample

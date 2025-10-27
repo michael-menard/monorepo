@@ -1,8 +1,8 @@
-import React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import WishlistItem from '../components/WishlistItem';
-import type { WishlistItem as WishlistItemType } from '../schemas';
+import React from 'react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import WishlistItem from '../components/WishlistItem'
+import type { WishlistItem as WishlistItemType } from '../schemas'
 
 const mockItem: WishlistItemType = {
   id: '1',
@@ -14,18 +14,18 @@ const mockItem: WishlistItemType = {
   isPurchased: false,
   createdAt: new Date(),
   updatedAt: new Date(),
-};
+}
 
 const mockHandlers = {
   onEdit: () => {},
   onDelete: () => {},
   onTogglePurchased: () => {},
-};
+}
 
 describe('Wishlist Package', () => {
   it('exports WishlistItem component', () => {
-    expect(WishlistItem).toBeDefined();
-  });
+    expect(WishlistItem).toBeDefined()
+  })
 
   it('renders WishlistItem with correct data', () => {
     render(
@@ -34,30 +34,30 @@ describe('Wishlist Package', () => {
         onEdit={mockHandlers.onEdit}
         onDelete={mockHandlers.onDelete}
         onTogglePurchased={mockHandlers.onTogglePurchased}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('Test Item')).toBeInTheDocument();
-    expect(screen.getByText('Test description')).toBeInTheDocument();
-    expect(screen.getByText('$99.99')).toBeInTheDocument();
-    expect(screen.getByText('high')).toBeInTheDocument();
-    expect(screen.getByText('Electronics')).toBeInTheDocument();
-  });
+    expect(screen.getByText('Test Item')).toBeInTheDocument()
+    expect(screen.getByText('Test description')).toBeInTheDocument()
+    expect(screen.getByText('$99.99')).toBeInTheDocument()
+    expect(screen.getByText('high')).toBeInTheDocument()
+    expect(screen.getByText('Electronics')).toBeInTheDocument()
+  })
 
   it('shows purchased state correctly', () => {
-    const purchasedItem = { ...mockItem, isPurchased: true };
-    
+    const purchasedItem = { ...mockItem, isPurchased: true }
+
     render(
       <WishlistItem
         item={purchasedItem}
         onEdit={mockHandlers.onEdit}
         onDelete={mockHandlers.onDelete}
         onTogglePurchased={mockHandlers.onTogglePurchased}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('Purchased')).toBeInTheDocument();
-  });
+    expect(screen.getByText('Purchased')).toBeInTheDocument()
+  })
 
   it('renders without optional fields', () => {
     const minimalItem = {
@@ -65,7 +65,7 @@ describe('Wishlist Package', () => {
       description: undefined,
       price: undefined,
       category: undefined,
-    };
+    }
 
     render(
       <WishlistItem
@@ -73,12 +73,12 @@ describe('Wishlist Package', () => {
         onEdit={mockHandlers.onEdit}
         onDelete={mockHandlers.onDelete}
         onTogglePurchased={mockHandlers.onTogglePurchased}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('Test Item')).toBeInTheDocument();
-    expect(screen.queryByText('Test description')).not.toBeInTheDocument();
-    expect(screen.queryByText('$99.99')).not.toBeInTheDocument();
-    expect(screen.queryByText('Electronics')).not.toBeInTheDocument();
-  });
-}); 
+    expect(screen.getByText('Test Item')).toBeInTheDocument()
+    expect(screen.queryByText('Test description')).not.toBeInTheDocument()
+    expect(screen.queryByText('$99.99')).not.toBeInTheDocument()
+    expect(screen.queryByText('Electronics')).not.toBeInTheDocument()
+  })
+})

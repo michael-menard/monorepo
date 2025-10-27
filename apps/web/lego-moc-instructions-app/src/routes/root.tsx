@@ -1,9 +1,9 @@
 import { Outlet, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { Toaster } from '@repo/ui'
 import Layout from '../components/Layout'
 import TanStackQueryLayout from '../integrations/tanstack-query/layout'
 import PerformanceMonitor from '../components/PerformanceMonitor'
-
 import { OfflineStatusIndicator } from '../components/OfflineStatusIndicator'
 
 export const rootRoute = createRootRoute({
@@ -15,6 +15,7 @@ export const rootRoute = createRootRoute({
       <PerformanceMonitor />
 
       <OfflineStatusIndicator />
+      <Toaster position="bottom-right" />
     </Layout>
   ),
 })

@@ -8,8 +8,9 @@ export const PWASettings: React.FC = () => {
   const { needRefresh, offlineReady, updateServiceWorker, canInstall, installPrompt } = usePWA()
 
   // Check if app is already installed (running in standalone mode)
-  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || 
-                     (window.navigator as any).standalone === true
+  const isInstalled =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true
 
   return (
     <div className="space-y-6">
@@ -49,7 +50,9 @@ export const PWASettings: React.FC = () => {
             <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
               <AlertCircle className="h-5 w-5 text-gray-500 flex-shrink-0" />
               <div>
-                <p className="font-medium text-gray-700 dark:text-gray-300">Installation Not Available</p>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
+                  Installation Not Available
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   App installation is not available on this device or browser.
                 </p>
@@ -60,7 +63,7 @@ export const PWASettings: React.FC = () => {
       </FormSection>
 
       {/* App Updates Section */}
-      {needRefresh && (
+      {needRefresh ? (
         <FormSection
           title="App Update Available"
           description="A new version of the app is ready to install"
@@ -81,7 +84,7 @@ export const PWASettings: React.FC = () => {
             </Button>
           </div>
         </FormSection>
-      )}
+      ) : null}
 
       {/* Offline Status Section */}
       <FormSection
@@ -93,7 +96,9 @@ export const PWASettings: React.FC = () => {
             <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
               <div>
-                <p className="font-medium text-green-800 dark:text-green-200">Ready for Offline Use</p>
+                <p className="font-medium text-green-800 dark:text-green-200">
+                  Ready for Offline Use
+                </p>
                 <p className="text-sm text-green-600 dark:text-green-300">
                   The app has been cached and will work even when you're offline.
                 </p>
@@ -103,7 +108,9 @@ export const PWASettings: React.FC = () => {
             <div className="flex items-center space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
               <WifiOff className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
               <div>
-                <p className="font-medium text-yellow-800 dark:text-yellow-200">Setting Up Offline Support</p>
+                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                  Setting Up Offline Support
+                </p>
                 <p className="text-sm text-yellow-600 dark:text-yellow-300">
                   The app is being prepared for offline use. This will complete automatically.
                 </p>
@@ -114,10 +121,7 @@ export const PWASettings: React.FC = () => {
       </FormSection>
 
       {/* PWA Features Info */}
-      <FormSection
-        title="Progressive Web App Features"
-        description="Benefits of using this app"
-      >
+      <FormSection title="Progressive Web App Features" description="Benefits of using this app">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />

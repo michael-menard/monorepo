@@ -15,43 +15,43 @@ A React component for uploading and cropping profile avatars with comprehensive 
 
 ```typescript
 interface AvatarUploaderProps {
-  currentAvatar?: string;           // Current avatar URL
-  onUpload: (file: File) => void;   // Upload handler function
-  onRemove?: () => void;            // Optional remove handler
-  isLoading?: boolean;              // Loading state
-  className?: string;               // Additional CSS classes
-  maxFileSize?: number;             // Max file size in bytes (default: 5MB)
-  acceptedFileTypes?: string[];     // Allowed file types
-  cropAspectRatio?: number;         // Crop aspect ratio (default: 1)
-  cropShape?: 'rect' | 'round';     // Crop shape (default: 'round')
+  currentAvatar?: string // Current avatar URL
+  onUpload: (file: File) => void // Upload handler function
+  onRemove?: () => void // Optional remove handler
+  isLoading?: boolean // Loading state
+  className?: string // Additional CSS classes
+  maxFileSize?: number // Max file size in bytes (default: 5MB)
+  acceptedFileTypes?: string[] // Allowed file types
+  cropAspectRatio?: number // Crop aspect ratio (default: 1)
+  cropShape?: 'rect' | 'round' // Crop shape (default: 'round')
 }
 ```
 
 ## Usage
 
 ```tsx
-import { AvatarUploader } from '@repo/profile';
+import { AvatarUploader } from '@repo/profile'
 
 function ProfilePage() {
-  const [avatar, setAvatar] = useState<string>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [avatar, setAvatar] = useState<string>()
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleUpload = async (file: File) => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       // Upload file to your server
-      const response = await uploadAvatar(file);
-      setAvatar(response.avatarUrl);
+      const response = await uploadAvatar(file)
+      setAvatar(response.avatarUrl)
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('Upload failed:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleRemove = () => {
-    setAvatar(undefined);
-  };
+    setAvatar(undefined)
+  }
 
   return (
     <AvatarUploader
@@ -64,7 +64,7 @@ function ProfilePage() {
       cropAspectRatio={1}
       cropShape="round"
     />
-  );
+  )
 }
 ```
 
@@ -108,6 +108,7 @@ The component includes comprehensive tests covering:
 - Accessibility features
 
 Run tests with:
+
 ```bash
 pnpm test:run
-``` 
+```

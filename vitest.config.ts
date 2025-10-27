@@ -1,9 +1,9 @@
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react-swc';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react-swc'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
@@ -13,12 +13,7 @@ export default defineConfig({
       ['**/*.{test,spec}.tsx', 'jsdom'],
       ['**/*.{test,spec}.jsx', 'jsdom'],
     ],
-    include: [
-      '**/*.test.ts',
-      '**/*.test.tsx',
-      '**/*.spec.ts',
-      '**/*.spec.tsx'
-    ],
+    include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -26,7 +21,7 @@ export default defineConfig({
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
       '**/__tests__/**/*.e2e.test.*',
       '**/__tests__/**/*.spec.*',
-      '**/src/pages/auth/EmailVerificationPage/__tests__/**'
+      '**/src/pages/auth/EmailVerificationPage/__tests__/**',
     ],
     globals: true,
     setupFiles: ['./__tests__/setup.ts'],
@@ -40,7 +35,7 @@ export default defineConfig({
         '**/test/**',
         '**/__tests__/**',
         '**/*.d.ts',
-        '**/coverage/**'
+        '**/coverage/**',
       ],
     },
   },
@@ -51,4 +46,4 @@ export default defineConfig({
       '@packages/auth': path.resolve(__dirname, './packages/auth/src'),
     },
   },
-}); 
+})

@@ -26,34 +26,34 @@ pnpm add @repo/auth
 Wrap your app with the Redux Provider:
 
 ```tsx
-import { Provider } from 'react-redux';
-import { store } from '@repo/auth';
+import { Provider } from 'react-redux'
+import { store } from '@repo/auth'
 
 function App() {
   return (
     <Provider store={store}>
       <YourApp />
     </Provider>
-  );
+  )
 }
 ```
 
 ### 2. Use the Auth Hook
 
 ```tsx
-import { useAuth } from '@repo/auth';
+import { useAuth } from '@repo/auth'
 
 function LoginForm() {
-  const { login, isLoading, error, user } = useAuth();
+  const { login, isLoading, error, user } = useAuth()
 
   const handleSubmit = async (email: string, password: string) => {
     try {
-      await login(email, password);
+      await login(email, password)
       // User is now logged in
     } catch (error) {
       // Handle error
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -61,7 +61,7 @@ function LoginForm() {
       {isLoading && <div>Loading...</div>}
       {/* Your form fields */}
     </form>
-  );
+  )
 }
 ```
 
@@ -80,7 +80,7 @@ const {
   isCheckingAuth,
   error,
   message,
-  
+
   // Actions
   signup,
   login,
@@ -91,45 +91,45 @@ const {
   resetPassword,
   clearError,
   clearMessage,
-} = useAuth();
+} = useAuth()
 ```
 
 #### State Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `user` | `User \| null` | Current user object |
-| `isAuthenticated` | `boolean` | Whether user is logged in |
-| `isLoading` | `boolean` | Loading state for auth operations |
-| `isCheckingAuth` | `boolean` | Loading state for initial auth check |
-| `error` | `string \| null` | Current error message |
-| `message` | `string \| null` | Success/info message |
+| Property          | Type             | Description                          |
+| ----------------- | ---------------- | ------------------------------------ |
+| `user`            | `User \| null`   | Current user object                  |
+| `isAuthenticated` | `boolean`        | Whether user is logged in            |
+| `isLoading`       | `boolean`        | Loading state for auth operations    |
+| `isCheckingAuth`  | `boolean`        | Loading state for initial auth check |
+| `error`           | `string \| null` | Current error message                |
+| `message`         | `string \| null` | Success/info message                 |
 
 #### Action Methods
 
-| Method | Parameters | Description |
-|--------|------------|-------------|
-| `signup` | `(email, password, name)` | Register new user |
-| `login` | `(email, password)` | Log in user |
-| `logout` | `()` | Log out user |
-| `verifyEmail` | `(code)` | Verify email with code |
-| `checkAuth` | `()` | Check current auth status |
-| `forgotPassword` | `(email)` | Send password reset email |
-| `resetPassword` | `(token, password)` | Reset password with token |
-| `clearError` | `()` | Clear current error |
-| `clearMessage` | `()` | Clear current message |
+| Method           | Parameters                | Description               |
+| ---------------- | ------------------------- | ------------------------- |
+| `signup`         | `(email, password, name)` | Register new user         |
+| `login`          | `(email, password)`       | Log in user               |
+| `logout`         | `()`                      | Log out user              |
+| `verifyEmail`    | `(code)`                  | Verify email with code    |
+| `checkAuth`      | `()`                      | Check current auth status |
+| `forgotPassword` | `(email)`                 | Send password reset email |
+| `resetPassword`  | `(token, password)`       | Reset password with token |
+| `clearError`     | `()`                      | Clear current error       |
+| `clearMessage`   | `()`                      | Clear current message     |
 
 ### User Type
 
 ```tsx
 interface User {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified?: boolean;
-  isVerified?: boolean;
-  createdAt: string;
-  updatedAt: string;
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  isVerified?: boolean
+  createdAt: string
+  updatedAt: string
 }
 ```
 
@@ -138,45 +138,45 @@ interface User {
 ### Authentication Flow
 
 ```tsx
-import { useAuth } from '@repo/auth';
+import { useAuth } from '@repo/auth'
 
 function AuthApp() {
-  const { user, isAuthenticated, isLoading, checkAuth } = useAuth();
+  const { user, isAuthenticated, isLoading, checkAuth } = useAuth()
 
   useEffect(() => {
     // Check auth status on app load
-    checkAuth();
-  }, [checkAuth]);
+    checkAuth()
+  }, [checkAuth])
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner />
   }
 
-  return isAuthenticated ? <Dashboard /> : <LoginForm />;
+  return isAuthenticated ? <Dashboard /> : <LoginForm />
 }
 ```
 
 ### Login Form
 
 ```tsx
-import { useAuth } from '@repo/auth';
+import { useAuth } from '@repo/auth'
 
 function LoginForm() {
-  const { login, isLoading, error, clearError } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login, isLoading, error, clearError } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearError();
-    
+    e.preventDefault()
+    clearError()
+
     try {
-      await login(email, password);
+      await login(email, password)
       // Redirect or show success
     } catch (error) {
       // Error is handled by the store
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -184,14 +184,14 @@ function LoginForm() {
       <input
         type="email"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={e => setEmail(e.target.value)}
         placeholder="Email"
         required
       />
       <input
         type="password"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={e => setPassword(e.target.value)}
         placeholder="Password"
         required
       />
@@ -199,33 +199,33 @@ function LoginForm() {
         {isLoading ? 'Logging in...' : 'Login'}
       </button>
     </form>
-  );
+  )
 }
 ```
 
 ### Signup Form
 
 ```tsx
-import { useAuth } from '@repo/auth';
+import { useAuth } from '@repo/auth'
 
 function SignupForm() {
-  const { signup, isLoading, error } = useAuth();
+  const { signup, isLoading, error } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: ''
-  });
+    name: '',
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     try {
-      await signup(formData.email, formData.password, formData.name);
+      await signup(formData.email, formData.password, formData.name)
       // Show verification message
     } catch (error) {
       // Error is handled by the store
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -233,21 +233,21 @@ function SignupForm() {
       <input
         type="text"
         value={formData.name}
-        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+        onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
         placeholder="Name"
         required
       />
       <input
         type="email"
         value={formData.email}
-        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+        onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
         placeholder="Email"
         required
       />
       <input
         type="password"
         value={formData.password}
-        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+        onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
         placeholder="Password"
         required
       />
@@ -255,29 +255,29 @@ function SignupForm() {
         {isLoading ? 'Creating account...' : 'Sign Up'}
       </button>
     </form>
-  );
+  )
 }
 ```
 
 ### Password Reset
 
 ```tsx
-import { useAuth } from '@repo/auth';
+import { useAuth } from '@repo/auth'
 
 function ForgotPasswordForm() {
-  const { forgotPassword, isLoading, message, error } = useAuth();
-  const [email, setEmail] = useState('');
+  const { forgotPassword, isLoading, message, error } = useAuth()
+  const [email, setEmail] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     try {
-      await forgotPassword(email);
+      await forgotPassword(email)
       // Show success message
     } catch (error) {
       // Error is handled by the store
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -286,7 +286,7 @@ function ForgotPasswordForm() {
       <input
         type="email"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={e => setEmail(e.target.value)}
         placeholder="Email"
         required
       />
@@ -294,27 +294,27 @@ function ForgotPasswordForm() {
         {isLoading ? 'Sending...' : 'Send Reset Email'}
       </button>
     </form>
-  );
+  )
 }
 ```
 
 ### Protected Route Component
 
 ```tsx
-import { useAuth } from '@repo/auth';
+import { useAuth } from '@repo/auth'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isCheckingAuth } = useAuth();
+  const { isAuthenticated, isCheckingAuth } = useAuth()
 
   if (isCheckingAuth) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner />
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" />
   }
 
-  return <>{children}</>;
+  return <>{children}</>
 }
 ```
 
@@ -323,16 +323,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 The package includes reusable UI components:
 
 ```tsx
-import { 
-  LoadingSpinner, 
-  Input, 
-  PasswordStrength, 
+import {
+  LoadingSpinner,
+  Input,
+  PasswordStrength,
   FloatingShape,
   ProtectedRoute,
   RedirectAuthenticatedUser,
   AuthLayout,
-  AuthApp
-} from '@repo/auth';
+  AuthApp,
+} from '@repo/auth'
 
 function MyComponent() {
   return (
@@ -342,7 +342,7 @@ function MyComponent() {
       <PasswordStrength password="myPassword" />
       <FloatingShape color="bg-blue-500" size="w-20 h-20" />
     </div>
-  );
+  )
 }
 ```
 
@@ -351,9 +351,9 @@ function MyComponent() {
 For a complete authentication app, use the `AuthApp` component:
 
 ```tsx
-import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
-import { store, AuthApp } from '@repo/auth';
+import { Provider } from 'react-redux'
+import { BrowserRouter } from 'react-router-dom'
+import { store, AuthApp } from '@repo/auth'
 
 function App() {
   return (
@@ -362,7 +362,7 @@ function App() {
         <AuthApp />
       </BrowserRouter>
     </Provider>
-  );
+  )
 }
 ```
 
@@ -371,35 +371,31 @@ function App() {
 Use individual components for custom implementations:
 
 ```tsx
-import { 
-  ProtectedRoute, 
-  RedirectAuthenticatedUser,
-  AuthLayout 
-} from '@repo/auth';
+import { ProtectedRoute, RedirectAuthenticatedUser, AuthLayout } from '@repo/auth'
 
 function CustomAuthApp() {
   return (
     <AuthLayout>
       <Routes>
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <RedirectAuthenticatedUser>
               <Login />
             </RedirectAuthenticatedUser>
-          } 
+          }
         />
       </Routes>
     </AuthLayout>
-  );
+  )
 }
 ```
 
@@ -417,15 +413,17 @@ The store is configured with Redux DevTools for debugging:
 The store automatically handles API errors and provides them through the `error` state:
 
 ```tsx
-const { error, clearError } = useAuth();
+const { error, clearError } = useAuth()
 
 // Clear errors when needed
 useEffect(() => {
-  clearError();
-}, [clearError]);
+  clearError()
+}, [clearError])
 
 // Display errors
-{error && <div className="error">{error}</div>}
+{
+  error && <div className="error">{error}</div>
+}
 ```
 
 ## Configuration
@@ -466,4 +464,4 @@ When adding new features:
 
 ## License
 
-This package is part of the monorepo and follows the same license as the main project. 
+This package is part of the monorepo and follows the same license as the main project.

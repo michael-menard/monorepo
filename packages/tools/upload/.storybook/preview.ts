@@ -1,4 +1,4 @@
-import type { Preview } from '@storybook/react';
+import type { Preview } from '@storybook/react'
 
 const preview: Preview = {
   parameters: {
@@ -11,7 +11,8 @@ const preview: Preview = {
     },
     docs: {
       description: {
-        component: 'Upload components for file and image uploads with drag-and-drop, progress tracking, and validation.',
+        component:
+          'Upload components for file and image uploads with drag-and-drop, progress tracking, and validation.',
       },
     },
   },
@@ -30,6 +31,6 @@ const preview: Preview = {
       description: 'Additional CSS classes',
     },
   },
-};
+}
 
-export default preview;
+export default preview

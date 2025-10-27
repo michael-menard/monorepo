@@ -16,7 +16,7 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({
   icon: Icon,
   iconColor = 'text-primary',
   children,
-  className = ''
+  className = '',
 }) => {
   return (
     <Card className={`hover:shadow-md transition-shadow ${className}`}>
@@ -27,9 +27,7 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {children}
-      </CardContent>
+      <CardContent className="space-y-4">{children}</CardContent>
     </Card>
   )
 }

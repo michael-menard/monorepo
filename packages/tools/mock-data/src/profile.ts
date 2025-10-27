@@ -1,45 +1,45 @@
-import { getWishlistStats } from './wishlist';
-import { getMocInstructionStats } from './moc-instructions';
+import { getWishlistStats } from './wishlist'
+import { getMocInstructionStats } from './moc-instructions'
 
 /**
  * User profile statistics
  */
 export interface UserStats {
-  totalWishlistItems: number;
-  totalMocInstructions: number;
-  totalDownloads: number;
-  memberSince: string;
-  favoriteCategory: string;
-  totalSpent: number;
-  averageRating: number;
-  profileViews: number;
-  followersCount: number;
-  followingCount: number;
+  totalWishlistItems: number
+  totalMocInstructions: number
+  totalDownloads: number
+  memberSince: string
+  favoriteCategory: string
+  totalSpent: number
+  averageRating: number
+  profileViews: number
+  followersCount: number
+  followingCount: number
 }
 
 /**
  * Recent activity item
  */
 export interface RecentActivity {
-  id: string;
-  type: 'download' | 'wishlist_add' | 'instruction_upload' | 'review' | 'follow';
-  title: string;
-  description: string;
-  timestamp: Date;
-  imageUrl?: string;
-  relatedId?: string;
+  id: string
+  type: 'download' | 'wishlist_add' | 'instruction_upload' | 'review' | 'follow'
+  title: string
+  description: string
+  timestamp: Date
+  imageUrl?: string
+  relatedId?: string
 }
 
 /**
  * Quick action item
  */
 export interface QuickAction {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  href: string;
-  color: 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
+  id: string
+  title: string
+  description: string
+  icon: string
+  href: string
+  color: 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
 }
 
 /**
@@ -51,12 +51,12 @@ export const mockUserStats: UserStats = {
   totalDownloads: getMocInstructionStats().totalDownloads,
   memberSince: '2023-01-15',
   favoriteCategory: 'Star Wars',
-  totalSpent: 2847.50,
+  totalSpent: 2847.5,
   averageRating: getMocInstructionStats().averageRating,
   profileViews: 1234,
   followersCount: 89,
   followingCount: 156,
-};
+}
 
 /**
  * Mock recent activities
@@ -84,7 +84,7 @@ export const mockRecentActivities: RecentActivity[] = [
     id: '3',
     type: 'review',
     title: 'Reviewed Medieval Castle',
-    description: 'Left a 5-star review for CastleBuilder42\'s instructions',
+    description: "Left a 5-star review for CastleBuilder42's instructions",
     timestamp: new Date('2024-01-14T16:45:00Z'),
     imageUrl: '/images/mocs/medieval-castle.jpg',
     relatedId: '2',
@@ -106,7 +106,7 @@ export const mockRecentActivities: RecentActivity[] = [
     imageUrl: '/images/mocs/custom-xwing.jpg',
     relatedId: '5',
   },
-];
+]
 
 /**
  * Mock quick actions
@@ -160,28 +160,28 @@ export const mockQuickActions: QuickAction[] = [
     href: '/settings',
     color: 'secondary',
   },
-];
+]
 
 /**
  * Get recent activities by type
  */
 export const getRecentActivitiesByType = (type: RecentActivity['type']): RecentActivity[] => {
-  return mockRecentActivities.filter(activity => activity.type === type);
-};
+  return mockRecentActivities.filter(activity => activity.type === type)
+}
 
 /**
  * Get recent activities (limited)
  */
 export const getRecentActivities = (limit: number = 5): RecentActivity[] => {
-  return mockRecentActivities.slice(0, limit);
-};
+  return mockRecentActivities.slice(0, limit)
+}
 
 /**
  * Get quick actions by category
  */
 export const getQuickActionsByColor = (color: QuickAction['color']): QuickAction[] => {
-  return mockQuickActions.filter(action => action.color === color);
-};
+  return mockQuickActions.filter(action => action.color === color)
+}
 
 /**
  * Get profile dashboard data
@@ -191,5 +191,5 @@ export const getProfileDashboardData = () => {
     stats: mockUserStats,
     recentActivities: getRecentActivities(5),
     quickActions: mockQuickActions.slice(0, 6),
-  };
-};
+  }
+}

@@ -1,14 +1,12 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { Heart, ShoppingCart, Star, Plus } from 'lucide-react';
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
+import { Heart, ShoppingCart, Star, Plus } from 'lucide-react'
 
 export const WishlistTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Wishlist
-        </h2>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Wishlist</h2>
         <p className="text-gray-600 dark:text-gray-400">
           Track your desired LEGO sets and building materials.
         </p>
@@ -99,7 +97,9 @@ export const WishlistTab: React.FC = () => {
             <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Added "LEGO Architecture Empire State Building"</p>
+                <p className="text-sm font-medium">
+                  Added "LEGO Architecture Empire State Building"
+                </p>
                 <p className="text-xs text-gray-500">Priority: Medium • 1 week ago</p>
               </div>
             </div>
@@ -107,5 +107,5 @@ export const WishlistTab: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-  );
-}; 
+  )
+}

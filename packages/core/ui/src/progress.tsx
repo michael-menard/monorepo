@@ -1,15 +1,15 @@
-import * as React from "react"
-import * as ProgressPrimitive from "@radix-ui/react-progress"
-import { cn } from "./lib/utils"
-import { getAriaAttributes, useUniqueId } from "./lib/keyboard-navigation"
+import * as React from 'react'
+import * as ProgressPrimitive from '@radix-ui/react-progress'
+import { cn } from './lib/utils'
+import { getAriaAttributes, useUniqueId } from './lib/keyboard-navigation'
 
 export interface ProgressProps extends React.ComponentProps<typeof ProgressPrimitive.Root> {
-  label?: string;
-  description?: string;
-  showValue?: boolean;
-  valueText?: string;
-  min?: number;
-  max?: number;
+  label?: string
+  description?: string
+  showValue?: boolean
+  valueText?: string
+  min?: number
+  max?: number
 }
 
 function Progress({
@@ -27,10 +27,10 @@ function Progress({
   const uniqueId = useUniqueId('progress')
   const progressId = id || uniqueId
   const descriptionId = `${progressId}-description`
-  
+
   const currentValue = value || 0
   const percentage = Math.round(((currentValue - min) / (max - min)) * 100)
-  
+
   const ariaAttributes = getAriaAttributes({
     valueNow: currentValue,
     valueMin: min,
@@ -41,31 +41,23 @@ function Progress({
 
   return (
     <div className="space-y-2">
-      {(label || showValue) && (
+      {label || showValue ? (
         <div className="flex items-center justify-between">
-          {label && (
-            <label 
-              htmlFor={progressId}
-              className="text-sm font-medium text-foreground"
-            >
+          {label ? (
+            <label htmlFor={progressId} className="text-sm font-medium text-foreground">
               {label}
             </label>
-          )}
-          {showValue && (
-            <span className="text-sm text-muted-foreground">
-              {valueText || `${percentage}%`}
-            </span>
-          )}
+          ) : null}
+          {showValue ? (
+            <span className="text-sm text-muted-foreground">{valueText || `${percentage}%`}</span>
+          ) : null}
         </div>
-      )}
-      
+      ) : null}
+
       <ProgressPrimitive.Root
         data-slot="progress"
         id={progressId}
-        className={cn(
-          "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
-          className
-        )}
+        className={cn('bg-primary/20 relative h-2 w-full overflow-hidden rounded-full', className)}
         role="progressbar"
         aria-valuenow={currentValue}
         aria-valuemin={min}
@@ -81,15 +73,12 @@ function Progress({
           style={{ transform: `translateX(-${100 - percentage}%)` }}
         />
       </ProgressPrimitive.Root>
-      
-      {description && (
-        <p 
-          id={descriptionId}
-          className="text-sm text-muted-foreground"
-        >
+
+      {description ? (
+        <p id={descriptionId} className="text-sm text-muted-foreground">
           {description}
         </p>
-      )}
+      ) : null}
     </div>
   )
 }

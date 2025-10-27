@@ -1,6 +1,8 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import React from 'react'
+import {render, screen} from '@testing-library/react'
+import {vi} from 'vitest'
+// Import after mocks
+import AlbumView from '../index.js'
 
 // Mock all dependencies
 vi.mock('../../../store/albumsApi.js', () => ({
@@ -37,73 +39,70 @@ vi.mock('../../../store/albumsApi.js', () => ({
     reducer: (state = {}, action: any) => state,
     middleware: () => () => () => {},
   },
-}));
+}))
 
 vi.mock('../../ImageCard/index.js', () => ({
   default: ({ title }: any) => <div data-testid={`image-card-${title}`}>{title}</div>,
-}));
+}))
 
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
-}));
-
-// Import after mocks
-import AlbumView from '../index.js';
+}))
 
 describe('AlbumView', () => {
   it('should render album title and description', () => {
-    render(<AlbumView albumId="album-1" />);
-    
-    expect(screen.getByText('Test Album')).toBeInTheDocument();
-    expect(screen.getByText('Test Description')).toBeInTheDocument();
-  });
+    render(<AlbumView albumId="album-1" />)
+
+    expect(screen.getByText('Test Album')).toBeInTheDocument()
+    expect(screen.getByText('Test Description')).toBeInTheDocument()
+  })
 
   it('should render album metadata', () => {
-    render(<AlbumView albumId="album-1" />);
-    
-    expect(screen.getByText('1 image')).toBeInTheDocument();
-    expect(screen.getByText(/Created/)).toBeInTheDocument();
-    expect(screen.getByText(/Last updated/)).toBeInTheDocument();
-  });
+    render(<AlbumView albumId="album-1" />)
+
+    expect(screen.getByText('1 image')).toBeInTheDocument()
+    expect(screen.getByText(/Created/)).toBeInTheDocument()
+    expect(screen.getByText(/Last updated/)).toBeInTheDocument()
+  })
 
   it('should render images in the album', () => {
-    render(<AlbumView albumId="album-1" />);
-    
-    expect(screen.getByTestId('image-card-Image 1')).toBeInTheDocument();
-  });
+    render(<AlbumView albumId="album-1" />)
+
+    expect(screen.getByTestId('image-card-Image 1')).toBeInTheDocument()
+  })
 
   it('should render management buttons', () => {
-    render(<AlbumView albumId="album-1" />);
-    
-    expect(screen.getByText('Edit')).toBeInTheDocument();
-    expect(screen.getByText('Delete')).toBeInTheDocument();
-  });
+    render(<AlbumView albumId="album-1" />)
+
+    expect(screen.getByText('Edit')).toBeInTheDocument()
+    expect(screen.getByText('Delete')).toBeInTheDocument()
+  })
 
   it('should render back button when onBack is provided', () => {
-    const mockOnBack = vi.fn();
-    render(<AlbumView albumId="album-1" onBack={mockOnBack} />);
-    
-    expect(screen.getByLabelText('Go back')).toBeInTheDocument();
-  });
+    const mockOnBack = vi.fn()
+    render(<AlbumView albumId="album-1" onBack={mockOnBack} />)
+
+    expect(screen.getByLabelText('Go back')).toBeInTheDocument()
+  })
 
   it('should not render back button when onBack is not provided', () => {
-    render(<AlbumView albumId="album-1" />);
-    
-    expect(screen.queryByLabelText('Go back')).not.toBeInTheDocument();
-  });
+    render(<AlbumView albumId="album-1" />)
+
+    expect(screen.queryByLabelText('Go back')).not.toBeInTheDocument()
+  })
 
   it('should render share button when onShare is provided', () => {
-    const mockOnShare = vi.fn();
-    render(<AlbumView albumId="album-1" onShare={mockOnShare} />);
-    
-    expect(screen.getByText('Share')).toBeInTheDocument();
-  });
+    const mockOnShare = vi.fn()
+    render(<AlbumView albumId="album-1" onShare={mockOnShare} />)
+
+    expect(screen.getByText('Share')).toBeInTheDocument()
+  })
 
   it('should not render share button when onShare is not provided', () => {
-    render(<AlbumView albumId="album-1" />);
-    
-    expect(screen.queryByText('Share')).not.toBeInTheDocument();
-  });
-}); 
+    render(<AlbumView albumId="album-1" />)
+
+    expect(screen.queryByText('Share')).not.toBeInTheDocument()
+  })
+})

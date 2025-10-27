@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect } from 'react'
+import type { ReactNode } from 'react'
 import { performanceMonitor } from '../services/performance'
 import { usePerformance } from '../hooks/usePerformance'
 import { getPerformanceConfig, shouldTrack } from '../config/performance'
-import type { ReactNode } from 'react';
 
 interface PerformanceContextType {
   isInitialized: boolean
@@ -27,10 +27,10 @@ export const PerformanceProvider = ({ children, enabled = true }: PerformancePro
     if (enabled) {
       const config = getPerformanceConfig()
       if (!config.enabled) return
-      
+
       // Initialize performance monitoring
       performanceMonitor.init()
-      
+
       // Track app initialization
       performance.trackCustomEvent('app_initialized', {
         timestamp: Date.now(),
@@ -82,11 +82,7 @@ export const PerformanceProvider = ({ children, enabled = true }: PerformancePro
     trackCustomEvent: performance.trackCustomEvent,
   }
 
-  return (
-    <PerformanceContext.Provider value={contextValue}>
-      {children}
-    </PerformanceContext.Provider>
-  )
+  return <PerformanceContext.Provider value={contextValue}>{children}</PerformanceContext.Provider>
 }
 
 export const usePerformanceContext = () => {
@@ -95,4 +91,4 @@ export const usePerformanceContext = () => {
     throw new Error('usePerformanceContext must be used within a PerformanceProvider')
   }
   return context
-} 
+}

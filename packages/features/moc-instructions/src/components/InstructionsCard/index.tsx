@@ -1,5 +1,5 @@
-import React from 'react';
-import type { MockInstructionCardProps } from '../../schemas';
+import React from 'react'
+import type { MockInstructionCardProps } from '../../schemas'
 import {
   formatTime,
   calculateTotalParts,
@@ -7,7 +7,7 @@ import {
   getDifficultyColor,
   getDifficultyLabel,
   formatDate,
-} from '../../utils';
+} from '../../utils'
 
 export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
   instruction,
@@ -17,14 +17,16 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
   isEditable = false,
   className = '',
 }) => {
-  const totalParts = calculateTotalParts(instruction);
-  const totalTime = calculateTotalTime(instruction);
-  const difficultyColor = getDifficultyColor(instruction.difficulty);
+  const totalParts = calculateTotalParts(instruction)
+  const totalTime = calculateTotalTime(instruction)
+  const difficultyColor = getDifficultyColor(instruction.difficulty)
 
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 ${className}`}>
+    <div
+      className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 ${className}`}
+    >
       <div className="relative">
-        {instruction.coverImageUrl && (
+        {instruction.coverImageUrl ? (
           <div className="relative w-full h-48 overflow-hidden">
             <img
               src={instruction.coverImageUrl}
@@ -32,19 +34,18 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
               className="w-full h-full object-cover"
             />
           </div>
-        )}
-        
+        ) : null}
+
         <div className="p-4 space-y-3">
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{instruction.title}</h3>
           <p className="text-sm text-gray-600 line-clamp-3">{instruction.description}</p>
-          
+
           <div className="flex flex-wrap gap-2 text-xs text-gray-500">
             <span className="font-medium">By {instruction.author}</span>
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{instruction.category}</span>
-            <span
-              className="font-semibold"
-              style={{ color: difficultyColor }}
-            >
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              {instruction.category}
+            </span>
+            <span className="font-semibold" style={{ color: difficultyColor }}>
               {getDifficultyLabel(instruction.difficulty)}
             </span>
           </div>
@@ -62,12 +63,12 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
               <span className="text-gray-500">Time:</span>
               <span className="font-semibold text-gray-900">{formatTime(totalTime)}</span>
             </div>
-            {instruction.rating && (
+            {instruction.rating ? (
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Rating:</span>
                 <span className="font-semibold text-gray-900">{instruction.rating}/5</span>
               </div>
-            )}
+            ) : null}
           </div>
 
           {instruction.tags.length > 0 && (
@@ -84,9 +85,9 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
             <span className="text-xs text-gray-500">
               Created {formatDate(instruction.createdAt)}
             </span>
-            
+
             <div className="flex gap-2">
-              {onView && (
+              {onView ? (
                 <button
                   type="button"
                   onClick={onView}
@@ -95,9 +96,9 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
                 >
                   View
                 </button>
-              )}
-              
-              {isEditable && onEdit && (
+              ) : null}
+
+              {isEditable && onEdit ? (
                 <button
                   type="button"
                   onClick={onEdit}
@@ -106,9 +107,9 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
                 >
                   Edit
                 </button>
-              )}
-              
-              {isEditable && onDelete && (
+              ) : null}
+
+              {isEditable && onDelete ? (
                 <button
                   type="button"
                   onClick={onDelete}
@@ -117,13 +118,13 @@ export const InstructionsCard: React.FC<MockInstructionCardProps> = ({
                 >
                   Delete
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InstructionsCard; 
+export default InstructionsCard

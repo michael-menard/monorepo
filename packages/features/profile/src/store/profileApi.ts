@@ -1,9 +1,8 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { Profile, UpdateProfile, AvatarUpload } from '../schemas';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import type { Profile, UpdateProfile, AvatarUpload } from '../schemas'
 
-const baseUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5000/api/profile'
-  : '/api/profile';
+const baseUrl =
+  process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api/profile' : '/api/profile'
 
 export const profileApi = createApi({
   reducerPath: 'profileApi',
@@ -12,13 +11,13 @@ export const profileApi = createApi({
     credentials: 'include',
   }),
   tagTypes: ['Profile'],
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     getProfile: builder.query<Profile, void>({
       query: () => '/',
       providesTags: ['Profile'],
     }),
     updateProfile: builder.mutation<Profile, UpdateProfile>({
-      query: (body) => ({
+      query: body => ({
         url: '/',
         method: 'PUT',
         body,
@@ -26,7 +25,7 @@ export const profileApi = createApi({
       invalidatesTags: ['Profile'],
     }),
     uploadAvatar: builder.mutation<{ avatarUrl: string }, AvatarUpload>({
-      query: (body) => ({
+      query: body => ({
         url: '/avatar',
         method: 'POST',
         body,
@@ -40,29 +39,38 @@ export const profileApi = createApi({
       }),
       invalidatesTags: ['Profile'],
     }),
-    changePassword: builder.mutation<{ message: string }, { currentPassword: string; newPassword: string; confirmPassword: string }>({
-      query: (body) => ({
+    changePassword: builder.mutation<
+      { message: string },
+      { currentPassword: string; newPassword: string; confirmPassword: string }
+    >({
+      query: body => ({
         url: '/change-password',
         method: 'POST',
         body,
       }),
     }),
-    changeEmail: builder.mutation<{ message: string }, { currentEmail: string; newEmail: string; password: string }>({
-      query: (body) => ({
+    changeEmail: builder.mutation<
+      { message: string },
+      { currentEmail: string; newEmail: string; password: string }
+    >({
+      query: body => ({
         url: '/change-email',
         method: 'POST',
         body,
       }),
     }),
-    deleteAccount: builder.mutation<{ message: string }, { password: string; confirmation: string }>({
-      query: (body) => ({
+    deleteAccount: builder.mutation<
+      { message: string },
+      { password: string; confirmation: string }
+    >({
+      query: body => ({
         url: '/delete-account',
         method: 'DELETE',
         body,
       }),
     }),
   }),
-});
+})
 
 export const {
   useGetProfileQuery,
@@ -72,4 +80,4 @@ export const {
   useChangePasswordMutation,
   useChangeEmailMutation,
   useDeleteAccountMutation,
-} = profileApi; 
+} = profileApi

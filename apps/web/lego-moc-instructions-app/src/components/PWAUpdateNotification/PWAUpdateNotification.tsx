@@ -3,7 +3,8 @@ import { Download, RefreshCw, WifiOff, X } from 'lucide-react'
 import { usePWA } from '../PWAProvider'
 
 export const PWAUpdateNotification = () => {
-  const { needRefresh, offlineReady, updateServiceWorker, closePrompt, canInstall, installPrompt } = usePWA()
+  const { needRefresh, offlineReady, updateServiceWorker, closePrompt, canInstall, installPrompt } =
+    usePWA()
 
   if (!needRefresh && !offlineReady && !canInstall) {
     return null
@@ -11,7 +12,7 @@ export const PWAUpdateNotification = () => {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-      {needRefresh && (
+      {needRefresh ? (
         <div className="bg-blue-600 text-white p-4 rounded-lg shadow-lg mb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -48,9 +49,9 @@ export const PWAUpdateNotification = () => {
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {offlineReady && (
+      {offlineReady ? (
         <div className="bg-green-600 text-white p-4 rounded-lg shadow-lg mb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -67,13 +68,11 @@ export const PWAUpdateNotification = () => {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-sm mt-2">
-            The app is now ready to work offline.
-          </p>
+          <p className="text-sm mt-2">The app is now ready to work offline.</p>
         </div>
-      )}
+      ) : null}
 
-      {canInstall && (
+      {canInstall ? (
         <div className="bg-purple-600 text-white p-4 rounded-lg shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -94,10 +93,7 @@ export const PWAUpdateNotification = () => {
             Install this app on your device for a better experience.
           </p>
           <div className="flex space-x-2">
-            <Button
-              onClick={installPrompt}
-              className="bg-white text-purple-600 hover:bg-gray-100"
-            >
+            <Button onClick={installPrompt} className="bg-white text-purple-600 hover:bg-gray-100">
               <Download className="h-4 w-4 mr-2" />
               Install
             </Button>
@@ -110,7 +106,7 @@ export const PWAUpdateNotification = () => {
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
-} 
+}

@@ -1,11 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express'
 import {
   WishlistUploadError,
   validateFileSize,
   validateFileType,
   getFileInfo,
-} from '../storage/wishlist-storage';
-import { apiErrorResponse } from '../utils/response';
+} from '../storage/wishlist-storage'
+import { apiErrorResponse } from '../utils/response'
 
 // Middleware to handle wishlist upload errors
 export const handleWishlistUploadError = (
@@ -14,7 +14,7 @@ export const handleWishlistUploadError = (
   res: Response,
   next: NextFunction,
 ) => {
-  console.error('Wishlist upload error:', error);
+  console.error('Wishlist upload error:', error)
 
   if (error instanceof WishlistUploadError) {
     return res
@@ -25,7 +25,7 @@ export const handleWishlistUploadError = (
           error.statusCode === 413 ? 'FILE_ERROR' : 'VALIDATION_ERROR',
           error.message,
         ),
-      );
+      )
   }
 
   // Handle multer errors
@@ -34,13 +34,13 @@ export const handleWishlistUploadError = (
       .status(413)
       .json(
         apiErrorResponse(413, 'FILE_ERROR', `File size too large. Maximum allowed size is 20MB.`),
-      );
+      )
   }
 
   if (error.code === 'LIMIT_FILE_COUNT') {
     return res
       .status(400)
-      .json(apiErrorResponse(400, 'VALIDATION_ERROR', 'Only one file can be uploaded at a time.'));
+      .json(apiErrorResponse(400, 'VALIDATION_ERROR', 'Only one file can be uploaded at a time.'))
   }
 
   if (error.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -52,7 +52,7 @@ export const handleWishlistUploadError = (
           'VALIDATION_ERROR',
           'Unexpected file field. Please use the correct field name for image upload.',
         ),
-      );
+      )
   }
 
   // Generic multer error
@@ -65,17 +65,17 @@ export const handleWishlistUploadError = (
           'VALIDATION_ERROR',
           error.message || 'File upload validation failed.',
         ),
-      );
+      )
   }
 
   // General upload error
   if (error.message && error.message.includes('upload')) {
-    return res.status(400).json(apiErrorResponse(400, 'FILE_ERROR', error.message));
+    return res.status(400).json(apiErrorResponse(400, 'FILE_ERROR', error.message))
   }
 
   // Pass other errors to the general error handler
-  next(error);
-};
+  next(error)
+}
 
 // Middleware to validate uploaded file
 export const validateWishlistFile = (req: Request, res: Response, next: NextFunction) => {
@@ -89,20 +89,20 @@ export const validateWishlistFile = (req: Request, res: Response, next: NextFunc
             'VALIDATION_ERROR',
             'No file provided. Please upload an image file.',
           ),
-        );
+        )
     }
 
     // Log file info for debugging
-    const fileInfo = getFileInfo(req.file);
-    console.log('Wishlist file upload info:', fileInfo);
+    const fileInfo = getFileInfo(req.file)
+    console.log('Wishlist file upload info:', fileInfo)
 
     // Validate file size (additional check beyond multer)
-    validateFileSize(req.file.size);
+    validateFileSize(req.file.size)
 
     // Validate file type (additional check beyond multer)
-    validateFileType(req.file.mimetype, req.file.originalname);
+    validateFileType(req.file.mimetype, req.file.originalname)
 
-    next();
+    next()
   } catch (error) {
     if (error instanceof WishlistUploadError) {
       return res
@@ -113,12 +113,12 @@ export const validateWishlistFile = (req: Request, res: Response, next: NextFunc
             error.statusCode === 413 ? 'FILE_ERROR' : 'VALIDATION_ERROR',
             error.message,
           ),
-        );
+        )
     }
 
-    next(error);
+    next(error)
   }
-};
+}
 
 // Middleware to clean up uploaded file on error
 export const cleanupWishlistFileOnError = (
@@ -130,15 +130,15 @@ export const cleanupWishlistFileOnError = (
   // If there was an uploaded file and an error occurred, clean it up
   if (req.file && error) {
     try {
-      const fs = require('fs');
+      const fs = require('fs')
       if (req.file.path && fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-        console.log('Cleaned up uploaded file after error:', req.file.path);
+        fs.unlinkSync(req.file.path)
+        console.log('Cleaned up uploaded file after error:', req.file.path)
       }
     } catch (cleanupError) {
-      console.error('Error cleaning up uploaded file:', cleanupError);
+      console.error('Error cleaning up uploaded file:', cleanupError)
     }
   }
 
-  next(error);
-};
+  next(error)
+}

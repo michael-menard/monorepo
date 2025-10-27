@@ -5,6 +5,7 @@ A comprehensive detail page component for displaying and editing MOC (My Own Cre
 ## Features
 
 ### Core Functionality
+
 - **Detailed MOC Display**: Shows complete MOC information including title, description, author, difficulty, and statistics
 - **Editable Forms**: Inline editing capabilities for title, description, difficulty, category, and tags
 - **File Management**: Image upload and management for cover images and step images
@@ -12,6 +13,7 @@ A comprehensive detail page component for displaying and editing MOC (My Own Cre
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 
 ### Interactive Features
+
 - **Edit Dialog**: Modal form for editing MOC details with validation
 - **Image Upload Dialog**: Drag-and-drop file upload with progress tracking
 - **Tags Management**: Add, remove, and manage tags with real-time updates
@@ -19,6 +21,7 @@ A comprehensive detail page component for displaying and editing MOC (My Own Cre
 - **Share Functionality**: Native sharing API with clipboard fallback
 
 ### Data Management
+
 - **RTK Query Integration**: Efficient data fetching and caching
 - **Real-time Updates**: Automatic UI updates when data changes
 - **Form Validation**: Zod schema validation for all form inputs
@@ -39,15 +42,16 @@ MocDetailPage/
 ## Usage
 
 ```tsx
-import { MocDetailPage } from './pages/MocDetailPage';
+import { MocDetailPage } from './pages/MocDetailPage'
 
 // The component automatically fetches data based on the URL parameter
-<Route path="/moc-instructions/:id" element={<MocDetailPage />} />
+;<Route path="/moc-instructions/:id" element={<MocDetailPage />} />
 ```
 
 ## Props
 
 The component doesn't accept props directly. It uses:
+
 - `useParams()` to get the MOC ID from the URL
 - `useNavigate()` for navigation
 - RTK Query hooks for data management
@@ -62,24 +66,28 @@ The component doesn't accept props directly. It uses:
 ## Key Features Implementation
 
 ### Editable Forms
+
 - Uses React Hook Form with Zod validation
 - Real-time form validation
 - Optimistic updates for better UX
 - Form state persistence during navigation
 
 ### File Management
+
 - Image compression before upload
 - File type and size validation
 - Progress tracking for uploads
 - Lazy loading for gallery images
 
 ### Tags Management
+
 - Real-time tag addition/removal
 - Duplicate prevention
 - Keyboard shortcuts (Enter to add)
 - Visual feedback for actions
 
 ### Responsive Design
+
 - Mobile-first approach
 - Adaptive layouts for different screen sizes
 - Touch-friendly interactions
@@ -88,6 +96,7 @@ The component doesn't accept props directly. It uses:
 ## Testing Strategy
 
 ### Unit Tests (`MocDetailPage.test.tsx`)
+
 - Component rendering
 - User interactions
 - API calls and responses
@@ -95,6 +104,7 @@ The component doesn't accept props directly. It uses:
 - Navigation
 
 ### UX Tests (`MocDetailPage.ux.test.tsx`)
+
 - Accessibility compliance
 - User interaction flows
 - Responsive design
@@ -102,6 +112,7 @@ The component doesn't accept props directly. It uses:
 - Error recovery
 
 ### Performance Tests (`MocDetailPage.performance.test.tsx`)
+
 - Rendering performance
 - Memory usage
 - Large dataset handling
@@ -111,6 +122,7 @@ The component doesn't accept props directly. It uses:
 ## Dependencies
 
 ### Core Dependencies
+
 - `react`: React framework
 - `react-router-dom`: Routing
 - `react-hook-form`: Form management
@@ -120,6 +132,7 @@ The component doesn't accept props directly. It uses:
 - `@repo/moc-instructions`: MOC data and utilities
 
 ### External Dependencies
+
 - `lucide-react`: Icons
 - `vitest`: Testing framework
 - `@testing-library/react`: Testing utilities
@@ -127,12 +140,14 @@ The component doesn't accept props directly. It uses:
 ## API Integration
 
 ### RTK Query Endpoints Used
+
 - `useGetInstructionQuery`: Fetch MOC details
 - `useUpdateInstructionMutation`: Update MOC data
 - `useDeleteInstructionMutation`: Delete MOC
 - `useUploadInstructionsImageMutation`: Upload images
 
 ### Data Types
+
 - `MockInstruction`: Main MOC data structure
 - `UpdateMockInstruction`: Form data for updates
 - `MockInstructionImageUpload`: Image upload data
@@ -140,18 +155,21 @@ The component doesn't accept props directly. It uses:
 ## Performance Optimizations
 
 ### Rendering Optimizations
+
 - Memoized calculations for totals
 - Efficient re-renders with React.memo
 - Lazy loading for images
 - Debounced input handling
 
 ### Data Optimizations
+
 - RTK Query caching
 - Optimistic updates
 - Efficient state management
 - Minimal re-renders
 
 ### Memory Management
+
 - Proper cleanup of event listeners
 - Efficient file handling
 - Memory leak prevention
@@ -160,12 +178,14 @@ The component doesn't accept props directly. It uses:
 ## Accessibility Features
 
 ### ARIA Compliance
+
 - Proper heading hierarchy
 - ARIA labels and roles
 - Keyboard navigation support
 - Screen reader compatibility
 
 ### User Experience
+
 - Clear error messages
 - Loading states
 - Confirmation dialogs
@@ -180,6 +200,7 @@ The component doesn't accept props directly. It uses:
 ## Future Enhancements
 
 ### Planned Features
+
 - Offline support with service workers
 - Advanced image editing capabilities
 - Collaborative editing features
@@ -187,6 +208,7 @@ The component doesn't accept props directly. It uses:
 - Social sharing integration
 
 ### Performance Improvements
+
 - Virtual scrolling for large lists
 - Advanced caching strategies
 - Bundle splitting optimization
@@ -220,4 +242,4 @@ When contributing to this component:
 
 ## License
 
-This component is part of the monorepo and follows the project's licensing terms. 
+This component is part of the monorepo and follows the project's licensing terms.

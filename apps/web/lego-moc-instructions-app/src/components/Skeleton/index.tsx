@@ -13,28 +13,28 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   width,
   height,
   variant = 'rectangular',
-  animation = 'pulse'
+  animation = 'pulse',
 }) => {
   const baseClasses = 'bg-gray-200 rounded'
-  
+
   const variantClasses = {
     text: 'h-4 rounded-md',
     rectangular: 'rounded-md',
-    circular: 'rounded-full'
+    circular: 'rounded-full',
   }
-  
+
   const animationClasses = {
     pulse: 'animate-pulse',
     wave: 'animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200',
-    none: ''
+    none: '',
   }
-  
+
   const style: React.CSSProperties = {}
   if (width) style.width = typeof width === 'number' ? `${width}px` : width
   if (height) style.height = typeof height === 'number' ? `${height}px` : height
-  
+
   return (
-    <div 
+    <div
       className={`${baseClasses} ${variantClasses[variant]} ${animationClasses[animation]} ${className}`}
       style={style}
       role="presentation"
@@ -51,25 +51,25 @@ export const GalleryGridSkeleton: React.FC<{ count?: number }> = ({ count = 12 }
         <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Image skeleton */}
           <Skeleton height={200} className="w-full" animation="wave" />
-          
+
           {/* Content skeleton */}
           <div className="p-4 space-y-3">
             {/* Title */}
             <Skeleton height={20} width="80%" />
-            
+
             {/* Description lines */}
             <div className="space-y-2">
               <Skeleton height={16} width="100%" />
               <Skeleton height={16} width="60%" />
             </div>
-            
+
             {/* Tags */}
             <div className="flex gap-2 pt-2">
               <Skeleton height={24} width={60} className="rounded-full" />
               <Skeleton height={24} width={80} className="rounded-full" />
               <Skeleton height={24} width={50} className="rounded-full" />
             </div>
-            
+
             {/* Author and date */}
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export const DetailPageSkeleton: React.FC = () => {
             <Skeleton height={14} width={100} />
           </div>
         </div>
-        
+
         {/* Tags skeleton */}
         <div className="flex gap-2 mb-6">
           <Skeleton height={28} width={60} className="rounded-full" />
@@ -107,14 +107,14 @@ export const DetailPageSkeleton: React.FC = () => {
           <Skeleton height={28} width={70} className="rounded-full" />
         </div>
       </div>
-      
+
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Cover image */}
           <Skeleton height={400} className="w-full rounded-lg" animation="wave" />
-          
+
           {/* Description */}
           <div className="space-y-4">
             <Skeleton height={24} width="40%" />
@@ -125,7 +125,7 @@ export const DetailPageSkeleton: React.FC = () => {
               <Skeleton height={16} width="90%" />
             </div>
           </div>
-          
+
           {/* Instructions steps */}
           <div className="space-y-4">
             <Skeleton height={24} width="30%" />
@@ -141,7 +141,7 @@ export const DetailPageSkeleton: React.FC = () => {
             ))}
           </div>
         </div>
-        
+
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Stats card */}
@@ -158,14 +158,14 @@ export const DetailPageSkeleton: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Actions card */}
           <div className="bg-white rounded-lg shadow p-6 space-y-4">
             <Skeleton height={40} className="w-full" />
             <Skeleton height={40} className="w-full" />
             <Skeleton height={40} className="w-full" />
           </div>
-          
+
           {/* Related items */}
           <div className="space-y-4">
             <Skeleton height={20} width="60%" />

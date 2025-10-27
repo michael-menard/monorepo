@@ -1,23 +1,24 @@
-import * as React from 'react';
-import { InputProps } from './input';
-import { SanitizationConfig } from './lib/sanitization';
+import * as React from 'react'
+import {InputProps} from './input'
+import {SanitizationConfig} from './lib/sanitization'
+
 export interface AppInputProps extends Omit<InputProps, 'onChange' | 'onBlur'> {
-    /** Custom sanitization configuration */
-    sanitizationConfig?: SanitizationConfig;
-    /** Whether to sanitize on every change or only on blur */
-    sanitizeOnChange?: boolean;
-    /** Whether to show warnings when content is sanitized */
-    showSanitizationWarnings?: boolean;
-    /** Callback when sanitization warnings occur */
-    onSanitizationWarning?: (warnings: string[]) => void;
-    /** Original onChange handler that receives sanitized value */
-    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    /** Original onBlur handler that receives sanitized value */
-    onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-    /** Debounce delay in milliseconds for onChange events (0 = no debounce) */
-    debounceMs?: number;
-    /** Whether to debounce sanitization as well (default: true) */
-    debounceSanitization?: boolean;
+  /** Custom sanitization configuration */
+  sanitizationConfig?: SanitizationConfig
+  /** Whether to sanitize on every change or only on blur */
+  sanitizeOnChange?: boolean
+  /** Whether to show warnings when content is sanitized */
+  showSanitizationWarnings?: boolean
+  /** Callback when sanitization warnings occur */
+  onSanitizationWarning?: (warnings: string[]) => void
+  /** Original onChange handler that receives sanitized value */
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
+  /** Original onBlur handler that receives sanitized value */
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void
+  /** Debounce delay in milliseconds for onChange events (0 = no debounce) */
+  debounceMs?: number
+  /** Whether to debounce sanitization as well (default: true) */
+  debounceSanitization?: boolean
 }
 /**
  * Secure Input component that automatically sanitizes user input using DOMPurify
@@ -58,5 +59,7 @@ export interface AppInputProps extends Omit<InputProps, 'onChange' | 'onBlur'> {
  * />
  * ```
  */
-export declare const AppInput: React.ForwardRefExoticComponent<AppInputProps & React.RefAttributes<HTMLInputElement>>;
+export declare const AppInput: React.ForwardRefExoticComponent<
+  AppInputProps & React.RefAttributes<HTMLInputElement>
+>
 //# sourceMappingURL=AppInput.d.ts.map

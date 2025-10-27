@@ -1,1 +1,1 @@
-export { PWAProvider, usePWA } from './PWAProvider' 
+export { PWAProvider, usePWA } from './PWAProvider'

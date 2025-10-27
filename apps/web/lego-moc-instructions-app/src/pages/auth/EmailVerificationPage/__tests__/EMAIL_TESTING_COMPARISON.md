@@ -2,22 +2,24 @@
 
 ## Quick Decision Guide
 
-| Feature | Ethereal Email | MailHog | Mock Service | Gmail |
-|---------|----------------|---------|--------------|-------|
-| **Cost** | Free | Free | Free | Free |
-| **Setup** | 1-click online | Local install | Instant | 2FA setup |
-| **Dependencies** | None | Local tool | None | Gmail account |
-| **Web Interface** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
-| **API Access** | ❌ No | ✅ Yes | ✅ Yes | ❌ No |
-| **Real Email** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
-| **Offline** | ❌ No | ✅ Yes | ✅ Yes | ❌ No |
+| Feature           | Ethereal Email | MailHog       | Mock Service | Gmail         |
+| ----------------- | -------------- | ------------- | ------------ | ------------- |
+| **Cost**          | Free           | Free          | Free         | Free          |
+| **Setup**         | 1-click online | Local install | Instant      | 2FA setup     |
+| **Dependencies**  | None           | Local tool    | None         | Gmail account |
+| **Web Interface** | ✅ Yes         | ✅ Yes        | ❌ No        | ❌ No         |
+| **API Access**    | ❌ No          | ✅ Yes        | ✅ Yes       | ❌ No         |
+| **Real Email**    | ✅ Yes         | ✅ Yes        | ❌ No        | ✅ Yes        |
+| **Offline**       | ❌ No          | ✅ Yes        | ✅ Yes       | ❌ No         |
 
 ## Detailed Comparison
 
 ### 🥇 **Ethereal Email** (Recommended for Personal Projects)
+
 **Best for**: Quick setup, no installation, web interface
 
 **Pros**:
+
 - ✅ One-click setup
 - ✅ No installation required
 - ✅ Web interface to view emails
@@ -25,6 +27,7 @@
 - ✅ Perfect for personal projects
 
 **Cons**:
+
 - ❌ Requires internet connection
 - ❌ No API for automation
 - ❌ Manual email checking
@@ -34,9 +37,11 @@
 ---
 
 ### 🥈 **MailHog** (Recommended for Development)
+
 **Best for**: Local development, automation, full control
 
 **Pros**:
+
 - ✅ Runs locally
 - ✅ API for automated testing
 - ✅ Web interface
@@ -44,6 +49,7 @@
 - ✅ Perfect for development
 
 **Cons**:
+
 - ❌ Requires installation
 - ❌ Only works locally
 - ❌ Need to start service manually
@@ -53,9 +59,11 @@
 ---
 
 ### 🥉 **Mock Email Service** (Recommended for Unit Tests)
+
 **Best for**: Unit testing, CI/CD, no external dependencies
 
 **Pros**:
+
 - ✅ Instant setup
 - ✅ No external dependencies
 - ✅ Full control over content
@@ -63,6 +71,7 @@
 - ✅ Works offline
 
 **Cons**:
+
 - ❌ Not real email delivery
 - ❌ No web interface
 - ❌ Limited to in-memory storage
@@ -72,14 +81,17 @@
 ---
 
 ### **Gmail App Passwords** (Alternative)
+
 **Best for**: If you already have Gmail
 
 **Pros**:
+
 - ✅ Real email delivery
 - ✅ No additional services
 - ✅ Works with existing account
 
 **Cons**:
+
 - ❌ Requires Gmail account
 - ❌ Requires 2FA setup
 - ❌ No web interface for testing
@@ -114,6 +126,7 @@ mailhog
 ## 🔧 Integration with Your Auth Service
 
 ### For Ethereal Email:
+
 ```javascript
 // In your auth service
 const transporter = nodemailer.createTransporter({
@@ -121,12 +134,13 @@ const transporter = nodemailer.createTransporter({
   port: 587,
   auth: {
     user: 'your_ethereal_username',
-    pass: 'your_ethereal_password'
-  }
+    pass: 'your_ethereal_password',
+  },
 })
 ```
 
 ### For MailHog:
+
 ```javascript
 // In your auth service
 const transporter = nodemailer.createTransporter({
@@ -137,6 +151,7 @@ const transporter = nodemailer.createTransporter({
 ```
 
 ### For Mock Service:
+
 ```typescript
 // In your tests
 import { sendMockEmail } from './mock-email-service'
@@ -155,4 +170,4 @@ await sendMockEmail('test@example.com', 'Verification', 'Code: 123456')
 
 - [Ethereal Email](https://ethereal.email) - Online email testing
 - [MailHog Documentation](https://github.com/mailhog/MailHog) - Local email testing
-- [Nodemailer Documentation](https://nodemailer.com) - Email sending library 
+- [Nodemailer Documentation](https://nodemailer.com) - Email sending library

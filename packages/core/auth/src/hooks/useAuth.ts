@@ -1,13 +1,14 @@
-import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch } from '../store/store.js';
-import { clearMessage, setCheckingAuth } from '../store/authSlice.js';
+import React from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import type { AppDispatch } from '../store/store.js'
 import {
+  clearMessage,
+  setCheckingAuth,
   selectIsCheckingAuth,
   selectMessage,
   selectLastActivity,
   selectSessionTimeout,
-} from '../store/authSlice.js';
+} from '../store/authSlice.js'
 import {
   useLoginMutation,
   useSignupMutation,
@@ -19,16 +20,20 @@ import {
   useResetPasswordMutation,
   useConfirmResetMutation,
   useSocialLoginMutation,
-} from '../store/authApi.js';
+} from '../store/authApi.js'
 
 export const useAuth = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useDispatch<AppDispatch>()
 
   // Get auth data from RTK Query cache
-  const { data: authData, isLoading: isCheckAuthLoading, error: checkAuthError } = useCheckAuthQuery();
-  const user = authData?.data?.user || null;
-  const tokens = authData?.data?.tokens || null;
-  const isAuthenticated = !!user;
+  const {
+    data: authData,
+    isLoading: isCheckAuthLoading,
+    error: checkAuthError,
+  } = useCheckAuthQuery()
+  const user = authData?.data?.user || null
+  const tokens = authData?.data?.tokens || null
+  const isAuthenticated = !!user
 
   // Debug logging for auth state
   React.useEffect(() => {
@@ -41,50 +46,72 @@ export const useAuth = () => {
       checkAuthError,
       errorStatus: (checkAuthError as any)?.status,
       errorMessage: (checkAuthError as any)?.data?.message,
-    });
-  }, [authData, user, tokens, isAuthenticated, isCheckAuthLoading, checkAuthError]);
+    })
+  }, [authData, user, tokens, isAuthenticated, isCheckAuthLoading, checkAuthError])
 
   // Filter out expected authentication errors (401 responses are normal when not logged in)
-  const isAuthError = checkAuthError &&
+  const isAuthError =
+    checkAuthError &&
     (checkAuthError as any)?.status === 401 &&
     ((checkAuthError as any)?.data?.message?.includes('Not authorized') ||
-     (checkAuthError as any)?.data?.message?.includes('User not found'));
+      (checkAuthError as any)?.data?.message?.includes('User not found'))
 
   // Only show unexpected errors, not normal "not authenticated" responses
-  const filteredError = isAuthError ? null : checkAuthError;
+  const filteredError = isAuthError ? null : checkAuthError
 
   // Auth slice state (UI-specific)
-  const isCheckingAuth = useSelector(selectIsCheckingAuth);
-  const message = useSelector(selectMessage);
-  const lastActivity = useSelector(selectLastActivity);
-  const sessionTimeout = useSelector(selectSessionTimeout);
+  const isCheckingAuth = useSelector(selectIsCheckingAuth)
+  const message = useSelector(selectMessage)
+  const lastActivity = useSelector(selectLastActivity)
+  const sessionTimeout = useSelector(selectSessionTimeout)
 
   // RTK Query hooks
-  const [loginMutation, { isLoading: isLoginLoading, error: loginError }] = useLoginMutation();
-  const [signupMutation, { isLoading: isSignupLoading, error: signupError }] = useSignupMutation();
-  const [logoutMutation, { isLoading: isLogoutLoading }] = useLogoutMutation();
-  const [verifyEmailMutation, { isLoading: isVerifyLoading, error: verifyError }] = useVerifyEmailMutation();
-  const [resendVerificationCodeMutation, { isLoading: isResendLoading }] = useResendVerificationCodeMutation();
-  const [forgotPasswordMutation, { isLoading: isForgotLoading, error: forgotError }] = useForgotPasswordMutation();
-  const [resetPasswordMutation, { isLoading: isResetLoading, error: resetError }] = useResetPasswordMutation();
-  const [confirmResetMutation, { isLoading: isConfirmLoading, error: confirmError }] = useConfirmResetMutation();
-  const [socialLoginMutation, { isLoading: isSocialLoading, error: socialError }] = useSocialLoginMutation();
+  const [loginMutation, { isLoading: isLoginLoading, error: loginError }] = useLoginMutation()
+  const [signupMutation, { isLoading: isSignupLoading, error: signupError }] = useSignupMutation()
+  const [logoutMutation, { isLoading: isLogoutLoading }] = useLogoutMutation()
+  const [verifyEmailMutation, { isLoading: isVerifyLoading, error: verifyError }] =
+    useVerifyEmailMutation()
+  const [resendVerificationCodeMutation, { isLoading: isResendLoading }] =
+    useResendVerificationCodeMutation()
+  const [forgotPasswordMutation, { isLoading: isForgotLoading, error: forgotError }] =
+    useForgotPasswordMutation()
+  const [resetPasswordMutation, { isLoading: isResetLoading, error: resetError }] =
+    useResetPasswordMutation()
+  const [confirmResetMutation, { isLoading: isConfirmLoading, error: confirmError }] =
+    useConfirmResetMutation()
+  const [socialLoginMutation, { isLoading: isSocialLoading, error: socialError }] =
+    useSocialLoginMutation()
 
   // Combine all loading states
-  const isLoading = isCheckAuthLoading || isLoginLoading || isSignupLoading || isLogoutLoading ||
-    isVerifyLoading || isResendLoading || isForgotLoading || isResetLoading || isConfirmLoading ||
-    isSocialLoading;
+  const isLoading =
+    isCheckAuthLoading ||
+    isLoginLoading ||
+    isSignupLoading ||
+    isLogoutLoading ||
+    isVerifyLoading ||
+    isResendLoading ||
+    isForgotLoading ||
+    isResetLoading ||
+    isConfirmLoading ||
+    isSocialLoading
 
   // Combine all errors (RTK Query errors take precedence, exclude expected auth errors)
-  const error = loginError || signupError || verifyError || forgotError || resetError ||
-    confirmError || socialError || filteredError;
+  const error =
+    loginError ||
+    signupError ||
+    verifyError ||
+    forgotError ||
+    resetError ||
+    confirmError ||
+    socialError ||
+    filteredError
 
   // Update checking auth state when checkAuth query completes
   React.useEffect(() => {
     if (!isCheckAuthLoading) {
-      dispatch(setCheckingAuth(false));
+      dispatch(setCheckingAuth(false))
     }
-  }, [isCheckAuthLoading, dispatch]);
+  }, [isCheckAuthLoading, dispatch])
 
   return {
     // State from RTK Query
@@ -93,13 +120,13 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     error,
-    
+
     // State from auth slice (UI-specific)
     isCheckingAuth,
     message,
     lastActivity,
     sessionTimeout,
-    
+
     // Actions
     signup: signupMutation,
     login: loginMutation,
@@ -112,5 +139,5 @@ export const useAuth = () => {
     confirmReset: confirmResetMutation,
     socialLogin: socialLoginMutation,
     clearMessage: () => dispatch(clearMessage(undefined)),
-  };
-}; 
+  }
+}

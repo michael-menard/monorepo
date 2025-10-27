@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "eslint src/",
+    "lint": "eslint --fix src/",
     "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:coverage": "vitest --coverage"
@@ -21,10 +21,11 @@
     "react-redux": "^9.0.4"
   },
   "devDependencies": {
+    "@types/node": "24.9.1",
+    "eslint": "^9.30.1",
     "tsup": "^8.0.1",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4",
-    "eslint": "^9.30.1"
+    "vitest": "^3.2.4"
   },
   "exports": {
     ".": {

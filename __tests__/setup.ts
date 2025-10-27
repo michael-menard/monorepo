@@ -1,29 +1,29 @@
-import '@testing-library/jest-dom';
-import { beforeAll, afterEach, afterAll, vi } from 'vitest';
-import { server } from './mocks/server';
+import '@testing-library/jest-dom'
+import { beforeAll, afterEach, afterAll, vi } from 'vitest'
+import { server } from './mocks/server'
 
 // Extend expect with custom matchers
-import 'vitest-axe/extend-expect';
+import 'vitest-axe/extend-expect'
 
 // Setup MSW server
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
-  root: Element | null = null;
-  rootMargin: string = '';
-  thresholds: ReadonlyArray<number> = [];
-  
+  root: Element | null = null
+  rootMargin: string = ''
+  thresholds: ReadonlyArray<number> = []
+
   constructor() {}
   disconnect() {}
   observe() {}
   unobserve() {}
   takeRecords() {
-    return [];
+    return []
   }
-};
+}
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -31,7 +31,7 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-};
+}
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -46,17 +46,17 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-});
+})
 
 // Mock window.scrollTo
 Object.defineProperty(window, 'scrollTo', {
   writable: true,
   value: vi.fn(),
-});
+})
 
 // Mock console methods to reduce noise in tests
-const originalError = console.error;
-const originalWarn = console.warn;
+const originalError = console.error
+const originalWarn = console.warn
 
 beforeAll(() => {
   console.error = (...args: any[]) => {
@@ -64,10 +64,10 @@ beforeAll(() => {
       typeof args[0] === 'string' &&
       args[0].includes('Warning: ReactDOM.render is no longer supported')
     ) {
-      return;
+      return
     }
-    originalError.call(console, ...args);
-  };
+    originalError.call(console, ...args)
+  }
 
   console.warn = (...args: any[]) => {
     if (
@@ -75,13 +75,13 @@ beforeAll(() => {
       (args[0].includes('Warning: componentWillReceiveProps') ||
         args[0].includes('Warning: componentWillUpdate'))
     ) {
-      return;
+      return
     }
-    originalWarn.call(console, ...args);
-  };
-});
+    originalWarn.call(console, ...args)
+  }
+})
 
 afterAll(() => {
-  console.error = originalError;
-  console.warn = originalWarn;
-}); 
+  console.error = originalError
+  console.warn = originalWarn
+})

@@ -1,32 +1,32 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import ImageCard from '../ImageCard/index.js';
-import type { GalleryImage } from '../../types/index.js';
+import React, {useState} from 'react'
+import {motion} from 'framer-motion'
+import ImageCard from '../ImageCard/index.js'
+import type {GalleryImage} from '../../types/index.js'
 
 export interface Album {
-  id: string;
-  title: string;
-  description?: string;
-  createdAt: Date;
-  lastUpdatedAt: Date;
-  coverImageId?: string;
+  id: string
+  title: string
+  description?: string
+  createdAt: Date
+  lastUpdatedAt: Date
+  coverImageId?: string
 }
 
 export interface AlbumViewWithPropsProps {
-  album: Album;
-  images: GalleryImage[];
-  onBack?: () => void;
-  onEdit?: (albumId: string, data: Partial<Album>) => void;
-  onDelete?: (albumId: string) => void;
-  onShare?: (albumId: string) => void;
-  onImageClick?: (image: GalleryImage) => void;
-  onImageLike?: (imageId: string, liked: boolean) => void;
-  onImageShare?: (imageId: string) => void;
-  onImageDelete?: (imageId: string) => void;
-  onImageDownload?: (imageId: string) => void;
-  onImageAddToAlbum?: (imageId: string) => void;
-  onRemoveImageFromAlbum?: (albumId: string, imageId: string) => void;
-  className?: string;
+  album: Album
+  images: GalleryImage[]
+  onBack?: () => void
+  onEdit?: (albumId: string, data: Partial<Album>) => void
+  onDelete?: (albumId: string) => void
+  onShare?: (albumId: string) => void
+  onImageClick?: (image: GalleryImage) => void
+  onImageLike?: (imageId: string, liked: boolean) => void
+  onImageShare?: (imageId: string) => void
+  onImageDelete?: (imageId: string) => void
+  onImageDownload?: (imageId: string) => void
+  onImageAddToAlbum?: (imageId: string) => void
+  onRemoveImageFromAlbum?: (albumId: string, imageId: string) => void
+  className?: string
 }
 
 const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
@@ -45,45 +45,45 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
   onRemoveImageFromAlbum,
   className = '',
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(album.title);
-  const [editDescription, setEditDescription] = useState(album.description || '');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(album.title)
+  const [editDescription, setEditDescription] = useState(album.description || '')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleSaveEdit = () => {
     if (onEdit) {
       onEdit(album.id, {
         title: editTitle,
         description: editDescription,
-      });
+      })
     }
-    setIsEditing(false);
-  };
+    setIsEditing(false)
+  }
 
   const handleCancelEdit = () => {
-    setEditTitle(album.title);
-    setEditDescription(album.description || '');
-    setIsEditing(false);
-  };
+    setEditTitle(album.title)
+    setEditDescription(album.description || '')
+    setIsEditing(false)
+  }
 
   const handleDeleteAlbum = () => {
     if (onDelete) {
-      onDelete(album.id);
+      onDelete(album.id)
     }
-    setShowDeleteConfirm(false);
-  };
+    setShowDeleteConfirm(false)
+  }
 
   const handleRemoveImage = (imageId: string) => {
     if (onRemoveImageFromAlbum) {
-      onRemoveImageFromAlbum(album.id, imageId);
+      onRemoveImageFromAlbum(album.id, imageId)
     }
-  };
+  }
 
   const handleShareAlbum = () => {
     if (onShare) {
-      onShare(album.id);
+      onShare(album.id)
     }
-  };
+  }
 
   if (!images || images.length === 0) {
     return (
@@ -97,7 +97,7 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
           {/* Album Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
-              {onBack && (
+              {onBack ? (
                 <button
                   onClick={onBack}
                   className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -112,11 +112,13 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
                     />
                   </svg>
                 </button>
-              )}
+              ) : null}
 
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900">{album.title}</h1>
-                {album.description && <p className="text-gray-600 mt-2">{album.description}</p>}
+                {album.description ? (
+                  <p className="text-gray-600 mt-2">{album.description}</p>
+                ) : null}
               </div>
             </div>
 
@@ -127,22 +129,22 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
               >
                 Edit
               </button>
-              {onShare && (
+              {onShare ? (
                 <button
                   onClick={handleShareAlbum}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
                   Share
                 </button>
-              )}
-              {onDelete && (
+              ) : null}
+              {onDelete ? (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
                   Delete
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -161,7 +163,7 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
           </div>
         </motion.div>
       </div>
-    );
+    )
   }
 
   return (
@@ -175,7 +177,7 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            {onBack && (
+            {onBack ? (
               <button
                 onClick={onBack}
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -190,20 +192,20 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
                   />
                 </svg>
               </button>
-            )}
+            ) : null}
 
             {isEditing ? (
               <div className="flex-1 max-w-2xl">
                 <input
                   type="text"
                   value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
+                  onChange={e => setEditTitle(e.target.value)}
                   className="w-full text-3xl font-bold text-gray-900 border-b-2 border-blue-500 focus:outline-none focus:border-blue-600"
                   placeholder="Album title"
                 />
                 <textarea
                   value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
+                  onChange={e => setEditDescription(e.target.value)}
                   className="w-full mt-2 text-gray-600 border-b border-gray-300 focus:outline-none focus:border-blue-500 resize-none"
                   placeholder="Album description (optional)"
                   rows={2}
@@ -212,7 +214,9 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
             ) : (
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900">{album.title}</h1>
-                {album.description && <p className="text-gray-600 mt-2">{album.description}</p>}
+                {album.description ? (
+                  <p className="text-gray-600 mt-2">{album.description}</p>
+                ) : null}
               </div>
             )}
           </div>
@@ -241,22 +245,22 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
                 >
                   Edit
                 </button>
-                {onShare && (
+                {onShare ? (
                   <button
                     onClick={handleShareAlbum}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                   >
                     Share
                   </button>
-                )}
-                {onDelete && (
+                ) : null}
+                {onDelete ? (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                   >
                     Delete
                   </button>
-                )}
+                ) : null}
               </>
             )}
           </div>
@@ -293,7 +297,7 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
               uploadDate={image.createdAt}
               tags={image.tags}
               onView={() => onImageClick?.(image)}
-              onLike={(liked) => onImageLike?.(image.id, liked)}
+              onLike={liked => onImageLike?.(image.id, liked)}
               onShare={() => onImageShare?.(image.id)}
               onDelete={() =>
                 onRemoveImageFromAlbum
@@ -308,7 +312,7 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
+      {showDeleteConfirm ? (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Album</h3>
@@ -331,9 +335,9 @@ const AlbumViewWithProps: React.FC<AlbumViewWithPropsProps> = ({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default AlbumViewWithProps;
+export default AlbumViewWithProps

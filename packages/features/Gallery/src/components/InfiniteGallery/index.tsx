@@ -1,30 +1,30 @@
-import React, { useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import ImageCard from '../ImageCard/index.js';
-import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
-import { useInfiniteGallery } from '../../hooks/useInfiniteGallery.js';
-import { useIntersectionObserver } from '../../hooks/useIntersectionObserver.js';
-import type { GalleryFilters } from '../../store/galleryApi.js';
+import React, { useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import ImageCard from '../ImageCard/index.js'
+import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js'
+import { useInfiniteGallery } from '../../hooks/useInfiniteGallery.js'
+import { useIntersectionObserver } from '../../hooks/useIntersectionObserver.js'
+import type { GalleryFilters } from '../../store/galleryApi.js'
 
 export interface InfiniteGalleryProps {
-  className?: string;
-  initialFilters?: Omit<GalleryFilters, 'cursor' | 'limit'>;
-  pageSize?: number;
-  onImageClick?: (image: any) => void;
-  onImageLike?: (imageId: string, liked: boolean) => void;
-  onImageShare?: (imageId: string) => void;
-  onImageDelete?: (imageId: string) => void;
-  onImageDownload?: (imageId: string) => void;
-  onImageAddToAlbum?: (imageId: string) => void;
-  onImagesSelected?: (imageIds: string[]) => void;
-  selectedImages?: string[];
+  className?: string
+  initialFilters?: Omit<GalleryFilters, 'cursor' | 'limit'>
+  pageSize?: number
+  onImageClick?: (image: any) => void
+  onImageLike?: (imageId: string, liked: boolean) => void
+  onImageShare?: (imageId: string) => void
+  onImageDelete?: (imageId: string) => void
+  onImageDownload?: (imageId: string) => void
+  onImageAddToAlbum?: (imageId: string) => void
+  onImagesSelected?: (imageIds: string[]) => void
+  selectedImages?: string[]
   columns?: {
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-  };
-  gap?: number;
+    sm?: number
+    md?: number
+    lg?: number
+    xl?: number
+  }
+  gap?: number
 }
 
 const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
@@ -42,47 +42,47 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
   columns = { sm: 2, md: 3, lg: 4, xl: 5 },
   gap = 4,
 }) => {
-  const { actions: dragActions } = useAlbumDragAndDrop();
+  const { actions: dragActions } = useAlbumDragAndDrop()
 
   // Use infinite gallery hook
   const { items, isLoading, isFetching, error, hasMore, loadMore, refresh } = useInfiniteGallery({
     initialFilters,
     pageSize,
-  });
+  })
 
   // Intersection Observer for infinite scroll
   const handleIntersection = useCallback(
     (isIntersecting: boolean) => {
       if (isIntersecting && hasMore && !isFetching) {
-        loadMore();
+        loadMore()
       }
     },
     [hasMore, isFetching, loadMore],
-  );
+  )
 
   const { ref: loadMoreRef } = useIntersectionObserver(handleIntersection, {
     threshold: 0.1,
     rootMargin: '100px',
-  });
+  })
 
   // Generate CSS columns based on breakpoints
   const getColumnClasses = () => {
-    const { sm, md, lg, xl } = columns;
-    return `columns-1 ${sm ? `sm:columns-${sm}` : ''} ${md ? `md:columns-${md}` : ''} ${lg ? `lg:columns-${lg}` : ''} ${xl ? `xl:columns-${xl}` : ''}`;
-  };
+    const { sm, md, lg, xl } = columns
+    return `columns-1 ${sm ? `sm:columns-${sm}` : ''} ${md ? `md:columns-${md}` : ''} ${lg ? `lg:columns-${lg}` : ''} ${xl ? `xl:columns-${xl}` : ''}`
+  }
 
   const handleDragStart = (e: React.DragEvent, imageId: string) => {
-    dragActions.handleDragStart(e, [imageId]);
-  };
+    dragActions.handleDragStart(e, [imageId])
+  }
 
   const handleImageSelect = (imageId: string, checked: boolean) => {
     if (onImagesSelected) {
       const newSelected = checked
         ? [...selectedImages, imageId]
-        : selectedImages.filter((id) => id !== imageId);
-      onImagesSelected(newSelected);
+        : selectedImages.filter(id => id !== imageId)
+      onImagesSelected(newSelected)
     }
-  };
+  }
 
   // Handle errors
   if (error) {
@@ -100,7 +100,7 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   // Handle empty state
@@ -118,7 +118,7 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
           <p className="text-gray-600 text-lg">Start adding images to your gallery!</p>
         </motion.div>
       </div>
-    );
+    )
   }
 
   return (
@@ -149,15 +149,15 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
                 uploadDate={item.createdAt}
                 tags={item.tags}
                 onView={() => onImageClick?.(item)}
-                onLike={(liked) => onImageLike?.(item.id, liked)}
+                onLike={liked => onImageLike?.(item.id, liked)}
                 onShare={() => onImageShare?.(item.id)}
                 onDelete={() => onImageDelete?.(item.id)}
                 onDownload={() => onImageDownload?.(item.id)}
                 onAddToAlbum={() => onImageAddToAlbum?.(item.id)}
                 draggableId={item.id}
-                onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
+                onDragStart={id => handleDragStart({} as React.DragEvent, id)}
                 selected={selectedImages.includes(item.id)}
-                onSelect={(checked) => handleImageSelect(item.id, checked)}
+                onSelect={checked => handleImageSelect(item.id, checked)}
               />
             </motion.div>
           ))}
@@ -165,17 +165,17 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
       </div>
 
       {/* Loading state */}
-      {isLoading && (
+      {isLoading ? (
         <div className="flex justify-center py-8">
           <div className="flex items-center space-x-2">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span className="text-gray-600">Loading gallery...</span>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Load More Trigger */}
-      {hasMore && (
+      {hasMore ? (
         <div ref={loadMoreRef} className="flex justify-center py-8">
           {isFetching ? (
             <div className="flex items-center space-x-2">
@@ -186,7 +186,7 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
             <div className="h-8" /> // Invisible trigger element
           )}
         </div>
-      )}
+      ) : null}
 
       {/* End of gallery message */}
       {!hasMore && items.length > 0 && (
@@ -197,7 +197,7 @@ const InfiniteGallery: React.FC<InfiniteGalleryProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default InfiniteGallery; 
+export default InfiniteGallery

@@ -1,18 +1,17 @@
-import { motion } from 'framer-motion';
-import { Lock } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '../../hooks/useAuth.js';
-import { confirmResetPasswordSchema, type ConfirmResetPasswordFormData } from './schema.js';
-import { Input } from '@repo/ui';
-import { Button } from '@repo/ui';
-import PasswordStrength from '../PasswordStrength';
+import { motion } from 'framer-motion'
+import { Lock } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Input, Button } from '@repo/ui'
+import { useAuth } from '../../hooks/useAuth.js'
+import PasswordStrength from '../PasswordStrength'
+import { confirmResetPasswordSchema, type ConfirmResetPasswordFormData } from './schema.js'
 
 const ConfirmResetPasswordForm = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { confirmReset, isLoading, message, error } = useAuth();
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { confirmReset, isLoading, message, error } = useAuth()
 
   const {
     register,
@@ -24,18 +23,18 @@ const ConfirmResetPasswordForm = () => {
     defaultValues: {
       token: searchParams.get('token') || '',
     },
-  });
+  })
 
-  const password = watch('newPassword', '');
+  const password = watch('newPassword', '')
 
   const onSubmit = async (data: ConfirmResetPasswordFormData) => {
-    const { token, newPassword } = data;
-    await confirmReset({ token, newPassword });
-  };
+    const { token, newPassword } = data
+    await confirmReset({ token, newPassword })
+  }
 
   const handleBackToLogin = () => {
-    navigate('/login');
-  };
+    navigate('/login')
+  }
 
   return (
     <motion.div
@@ -48,17 +47,13 @@ const ConfirmResetPasswordForm = () => {
         <h2 className="text-2xl font-bold">Set New Password</h2>
       </div>
 
-      {error && (
-        <div className="p-3 text-sm text-red-500 bg-red-50 rounded">
-          {String(error)}
-        </div>
-      )}
+      {error ? (
+        <div className="p-3 text-sm text-red-500 bg-red-50 rounded">{String(error)}</div>
+      ) : null}
 
-      {message && (
-        <div className="p-3 text-sm text-green-500 bg-green-50 rounded">
-          {message}
-        </div>
-      )}
+      {message ? (
+        <div className="p-3 text-sm text-green-500 bg-green-50 rounded">{message}</div>
+      ) : null}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" role="form">
         <input type="hidden" {...register('token')} />
@@ -70,11 +65,11 @@ const ConfirmResetPasswordForm = () => {
             {...register('newPassword')}
             error={errors.newPassword?.message}
           />
-          {errors.newPassword && (
+          {errors.newPassword ? (
             <p className="text-sm text-red-500" role="alert">
               {errors.newPassword.message}
             </p>
-          )}
+          ) : null}
           <PasswordStrength password={password} />
         </div>
 
@@ -85,11 +80,11 @@ const ConfirmResetPasswordForm = () => {
             {...register('confirmPassword')}
             error={errors.confirmPassword?.message}
           />
-          {errors.confirmPassword && (
+          {errors.confirmPassword ? (
             <p className="text-sm text-red-500" role="alert">
               {errors.confirmPassword.message}
             </p>
-          )}
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -109,7 +104,7 @@ const ConfirmResetPasswordForm = () => {
         </div>
       </form>
     </motion.div>
-  );
-};
+  )
+}
 
-export default ConfirmResetPasswordForm; 
+export default ConfirmResetPasswordForm

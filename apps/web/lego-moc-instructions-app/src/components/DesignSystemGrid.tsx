@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 
 const DesignSystemGrid: React.FC = () => {
   const colorTokens = [
@@ -19,7 +19,11 @@ const DesignSystemGrid: React.FC = () => {
     { name: 'accent', class: 'bg-accent', textClass: 'text-accent-foreground' },
     { name: 'accent-foreground', class: 'bg-accent-foreground', textClass: 'text-accent' },
     { name: 'destructive', class: 'bg-destructive', textClass: 'text-destructive-foreground' },
-    { name: 'destructive-foreground', class: 'bg-destructive-foreground', textClass: 'text-destructive' },
+    {
+      name: 'destructive-foreground',
+      class: 'bg-destructive-foreground',
+      textClass: 'text-destructive',
+    },
     { name: 'success', class: 'bg-success', textClass: 'text-success-foreground' },
     { name: 'success-foreground', class: 'bg-success-foreground', textClass: 'text-success' },
     { name: 'warning', class: 'bg-warning', textClass: 'text-warning-foreground' },
@@ -31,27 +35,95 @@ const DesignSystemGrid: React.FC = () => {
     { name: 'border', class: 'bg-border', textClass: 'text-foreground' },
     { name: 'input', class: 'bg-input', textClass: 'text-foreground' },
     { name: 'ring', class: 'bg-ring', textClass: 'text-foreground' },
-  ];
+  ]
 
   const gradients = [
-    { name: 'Primary Gradient', class: 'bg-gradient-to-r from-primary to-primary/80', textClass: 'text-primary-foreground' },
-    { name: 'Secondary Gradient', class: 'bg-gradient-to-r from-secondary to-secondary/80', textClass: 'text-secondary-foreground' },
-    { name: 'Tertiary Gradient', class: 'bg-gradient-to-r from-tertiary to-tertiary/80', textClass: 'text-tertiary-foreground' },
-    { name: 'Accent Gradient', class: 'bg-gradient-to-r from-accent to-accent/80', textClass: 'text-accent-foreground' },
-    { name: 'Success Gradient', class: 'bg-gradient-to-r from-success to-success/80', textClass: 'text-success-foreground' },
-    { name: 'Warning Gradient', class: 'bg-gradient-to-r from-warning to-warning/80', textClass: 'text-warning-foreground' },
-    { name: 'Error Gradient', class: 'bg-gradient-to-r from-error to-error/80', textClass: 'text-error-foreground' },
-    { name: 'Info Gradient', class: 'bg-gradient-to-r from-info to-info/80', textClass: 'text-info-foreground' },
-    { name: 'Muted Gradient', class: 'bg-gradient-to-r from-muted to-muted/80', textClass: 'text-muted-foreground' },
-    { name: 'Rainbow Gradient', class: 'bg-gradient-to-r from-primary via-secondary to-tertiary', textClass: 'text-primary-foreground' },
-    { name: 'Sunset Gradient', class: 'bg-gradient-to-r from-primary via-destructive to-accent', textClass: 'text-primary-foreground' },
-    { name: 'Ocean Gradient', class: 'bg-gradient-to-r from-secondary via-tertiary to-info', textClass: 'text-secondary-foreground' },
-    { name: 'Neutral Gradient', class: 'bg-gradient-to-r from-background via-muted to-border', textClass: 'text-foreground' },
-    { name: 'Diagonal Primary', class: 'bg-gradient-to-br from-primary to-primary/60', textClass: 'text-primary-foreground' },
-    { name: 'Diagonal Secondary', class: 'bg-gradient-to-br from-secondary to-secondary/60', textClass: 'text-secondary-foreground' },
-    { name: 'Destructive Gradient', class: 'bg-gradient-to-r from-destructive to-destructive/80', textClass: 'text-destructive-foreground' },
-    { name: 'Glass Effect', class: 'bg-gradient-to-r from-background/80 to-background/40 backdrop-blur-sm', textClass: 'text-foreground' },
-  ];
+    {
+      name: 'Primary Gradient',
+      class: 'bg-gradient-to-r from-primary to-primary/80',
+      textClass: 'text-primary-foreground',
+    },
+    {
+      name: 'Secondary Gradient',
+      class: 'bg-gradient-to-r from-secondary to-secondary/80',
+      textClass: 'text-secondary-foreground',
+    },
+    {
+      name: 'Tertiary Gradient',
+      class: 'bg-gradient-to-r from-tertiary to-tertiary/80',
+      textClass: 'text-tertiary-foreground',
+    },
+    {
+      name: 'Accent Gradient',
+      class: 'bg-gradient-to-r from-accent to-accent/80',
+      textClass: 'text-accent-foreground',
+    },
+    {
+      name: 'Success Gradient',
+      class: 'bg-gradient-to-r from-success to-success/80',
+      textClass: 'text-success-foreground',
+    },
+    {
+      name: 'Warning Gradient',
+      class: 'bg-gradient-to-r from-warning to-warning/80',
+      textClass: 'text-warning-foreground',
+    },
+    {
+      name: 'Error Gradient',
+      class: 'bg-gradient-to-r from-error to-error/80',
+      textClass: 'text-error-foreground',
+    },
+    {
+      name: 'Info Gradient',
+      class: 'bg-gradient-to-r from-info to-info/80',
+      textClass: 'text-info-foreground',
+    },
+    {
+      name: 'Muted Gradient',
+      class: 'bg-gradient-to-r from-muted to-muted/80',
+      textClass: 'text-muted-foreground',
+    },
+    {
+      name: 'Rainbow Gradient',
+      class: 'bg-gradient-to-r from-primary via-secondary to-tertiary',
+      textClass: 'text-primary-foreground',
+    },
+    {
+      name: 'Sunset Gradient',
+      class: 'bg-gradient-to-r from-primary via-destructive to-accent',
+      textClass: 'text-primary-foreground',
+    },
+    {
+      name: 'Ocean Gradient',
+      class: 'bg-gradient-to-r from-secondary via-tertiary to-info',
+      textClass: 'text-secondary-foreground',
+    },
+    {
+      name: 'Neutral Gradient',
+      class: 'bg-gradient-to-r from-background via-muted to-border',
+      textClass: 'text-foreground',
+    },
+    {
+      name: 'Diagonal Primary',
+      class: 'bg-gradient-to-br from-primary to-primary/60',
+      textClass: 'text-primary-foreground',
+    },
+    {
+      name: 'Diagonal Secondary',
+      class: 'bg-gradient-to-br from-secondary to-secondary/60',
+      textClass: 'text-secondary-foreground',
+    },
+    {
+      name: 'Destructive Gradient',
+      class: 'bg-gradient-to-r from-destructive to-destructive/80',
+      textClass: 'text-destructive-foreground',
+    },
+    {
+      name: 'Glass Effect',
+      class: 'bg-gradient-to-r from-background/80 to-background/40 backdrop-blur-sm',
+      textClass: 'text-foreground',
+    },
+  ]
 
   const borderRadiusTokens = [
     { name: 'sm', class: 'rounded-sm' },
@@ -60,7 +132,7 @@ const DesignSystemGrid: React.FC = () => {
     { name: 'xl', class: 'rounded-xl' },
     { name: '2xl', class: 'rounded-2xl' },
     { name: 'full', class: 'rounded-full' },
-  ];
+  ]
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-12">
@@ -76,15 +148,13 @@ const DesignSystemGrid: React.FC = () => {
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold text-foreground">Color Tokens</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {colorTokens.map((token) => (
+          {colorTokens.map(token => (
             <div
               key={token.name}
               className={`${token.class} ${token.textClass} p-4 rounded-lg border border-border shadow-sm`}
             >
               <div className="text-sm font-medium mb-2">{token.name}</div>
-              <div className="text-xs opacity-80">
-                {token.class}
-              </div>
+              <div className="text-xs opacity-80">{token.class}</div>
             </div>
           ))}
         </div>
@@ -94,18 +164,14 @@ const DesignSystemGrid: React.FC = () => {
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold text-foreground">Gradients</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {gradients.map((gradient) => (
+          {gradients.map(gradient => (
             <div
               key={gradient.name}
               className={`${gradient.class} p-6 rounded-lg border border-border shadow-sm min-h-[120px] flex items-center justify-center`}
             >
               <div className={`text-center ${gradient.textClass}`}>
-                <div className="text-sm font-medium drop-shadow-lg">
-                  {gradient.name}
-                </div>
-                <div className="text-xs opacity-80 drop-shadow-lg mt-1">
-                  {gradient.class}
-                </div>
+                <div className="text-sm font-medium drop-shadow-lg">{gradient.name}</div>
+                <div className="text-xs opacity-80 drop-shadow-lg mt-1">{gradient.class}</div>
               </div>
             </div>
           ))}
@@ -116,11 +182,8 @@ const DesignSystemGrid: React.FC = () => {
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold text-foreground">Border Radius</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {borderRadiusTokens.map((token) => (
-            <div
-              key={token.name}
-              className="bg-card border border-border p-4 rounded-lg shadow-sm"
-            >
+          {borderRadiusTokens.map(token => (
+            <div key={token.name} className="bg-card border border-border p-4 rounded-lg shadow-sm">
               <div className={`${token.class} bg-primary h-16 w-full mb-2`}></div>
               <div className="text-sm font-medium text-foreground">{token.name}</div>
               <div className="text-xs text-muted-foreground">{token.class}</div>
@@ -197,12 +260,10 @@ const DesignSystemGrid: React.FC = () => {
         <h2 className="text-2xl font-semibold text-foreground">CSS Variables</h2>
         <div className="bg-card border border-border rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            {colorTokens.slice(0, 12).map((token) => (
+            {colorTokens.slice(0, 12).map(token => (
               <div key={token.name} className="font-mono">
                 <span className="text-primary">--{token.name}:</span>
-                <span className="text-muted-foreground ml-2">
-                  hsl(var(--{token.name}))
-                </span>
+                <span className="text-muted-foreground ml-2">hsl(var(--{token.name}))</span>
               </div>
             ))}
           </div>
@@ -291,12 +352,14 @@ const DesignSystemGrid: React.FC = () => {
         <div className="bg-muted/50 border border-border rounded-lg p-6">
           <h3 className="text-lg font-medium text-foreground mb-2">Dark Mode Support</h3>
           <p className="text-muted-foreground">
-            All colors automatically adapt to dark mode when the <code className="bg-background px-2 py-1 rounded text-sm">.dark</code> class is applied to the HTML element.
+            All colors automatically adapt to dark mode when the{' '}
+            <code className="bg-background px-2 py-1 rounded text-sm">.dark</code> class is applied
+            to the HTML element.
           </p>
         </div>
       </section>
     </div>
-  );
-};
+  )
+}
 
-export default DesignSystemGrid; 
+export default DesignSystemGrid

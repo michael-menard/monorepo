@@ -121,4 +121,4 @@ export const CustomStyling: Story = {
       onCancel={() => console.log('Cancelled')}
     />
   ),
-} 
+}

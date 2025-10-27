@@ -1,31 +1,31 @@
 // React Router specific components - only export components that use react-router-dom
 // Note: Login component removed - use LoginForm instead
-export { default as LoginForm } from './components/LoginForm/index';
-export { SignupForm as Signup } from './components/SignupForm/index';
-export { SignupForm } from './components/SignupForm/index';
-export { default as ForgotPasswordForm } from './components/ForgotPasswordForm/index';
-export { default as ResetPasswordForm } from './components/ResetPasswordForm/index';
-export { default as ConfirmResetPasswordForm } from './components/ConfirmResetPasswordForm/index';
-export { default as EmailVerificationForm } from './components/EmailVerificationForm/index';
+export { default as LoginForm } from './components/LoginForm/index'
+export { SignupForm as Signup } from './components/SignupForm/index'
+export { SignupForm } from './components/SignupForm/index'
+export { default as ForgotPasswordForm } from './components/ForgotPasswordForm/index'
+export { default as ResetPasswordForm } from './components/ResetPasswordForm/index'
+export { default as ConfirmResetPasswordForm } from './components/ConfirmResetPasswordForm/index'
+export { default as EmailVerificationForm } from './components/EmailVerificationForm/index'
 // Note: RouteGuard component removed - use TanStackRouteGuard instead
 
 // Re-export everything from main index that doesn't depend on react-router
 // Note: Input, Button, Card, Label, LoadingSpinner now imported from @repo/ui
-export { default as PasswordStrength } from './components/PasswordStrength/index';
-export { default as FloatingShape } from './components/FloatingShape/index';
-export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index';
+export { default as PasswordStrength } from './components/PasswordStrength/index'
+export { default as FloatingShape } from './components/FloatingShape/index'
+export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index'
 
 // Hooks
-export { useAuth } from './hooks/useAuth';
+export { useAuth } from './hooks/useAuth'
 
 // Store
-export { default as authReducer } from './store/authSlice';
-export { authApi } from './store/authApi';
-export { initialState as authInitialState } from './store/authSlice';
-export type { RootState } from './store/store';
+export { default as authReducer } from './store/authSlice'
+export { authApi } from './store/authApi'
+export { initialState as authInitialState } from './store/authSlice'
+export type { RootState } from './store/store'
 
 // Types
-export * from './types';
+export * from './types'
 
 // Zod Schemas
 export {
@@ -35,7 +35,7 @@ export {
   ResetPasswordRequestSchema,
   ConfirmResetRequestSchema,
   VerifyEmailRequestSchema,
-} from './types/auth';
+} from './types/auth'
 
 // Enhanced Schemas (from schemas directory)
 export {
@@ -48,11 +48,11 @@ export {
   VerifyEmailSchema,
   type LoginFormData,
   type SignupFormData,
-} from './schemas';
+} from './schemas'
 
 // Utils
-export * from './utils/date';
-export { cn } from './lib/utils';
+export * from './utils/date'
+export { cn } from './lib/utils'
 
 export {
   useLoginMutation,
@@ -67,7 +67,7 @@ export {
   useResendVerificationCodeMutation,
   useFetchCSRFTokenQuery,
   useSocialLoginMutation,
-} from './store/authApi';
+} from './store/authApi'
 
 // CSRF utilities
 export {
@@ -79,7 +79,7 @@ export {
   initializeCSRF,
   getCSRFHeaders,
   isCSRFError,
-} from './utils/csrf';
+} from './utils/csrf'
 
 // Token utilities
 export {
@@ -94,4 +94,4 @@ export {
   getTokenIssuer,
   getTokenConfig,
   updateTokenConfig,
-} from './utils/token';
+} from './utils/token'

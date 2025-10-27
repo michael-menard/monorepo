@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'
 
 const userSchema = new mongoose.Schema(
   {
@@ -25,10 +25,10 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordToken: String, // SHA-256 hash of the reset token (raw token sent via email)
     resetPasswordExpiresAt: Date,
-    verificationToken: String, // SHA-256 hash of the verification code (raw code sent via email)  
+    verificationToken: String, // SHA-256 hash of the verification code (raw code sent via email)
     verificationTokenExpiresAt: Date,
   },
   { timestamps: true },
-);
+)
 
-export const User = mongoose.model('User', userSchema);
+export const User = mongoose.model('User', userSchema)

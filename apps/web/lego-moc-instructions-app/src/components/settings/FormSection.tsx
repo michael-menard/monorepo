@@ -11,19 +11,15 @@ export const FormSection: React.FC<FormSectionProps> = ({
   title,
   description,
   children,
-  className = ''
+  className = '',
 }) => {
   return (
     <div className={`space-y-3 ${className}`}>
       <div>
         <h3 className="text-sm font-medium text-foreground">{title}</h3>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
+        {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
       </div>
-      <div className="space-y-2">
-        {children}
-      </div>
+      <div className="space-y-2">{children}</div>
     </div>
   )
 }

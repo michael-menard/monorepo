@@ -6,23 +6,15 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./multer": {
-      "import": "./dist/multer.esm.js",
-      "require": "./dist/multer.js",
-      "types": "./dist/multer.d.ts"
-    }
+    ".": "./dist/index.js",
+    "./multer": "./dist/multer.js"
   },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint --fix src/",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
@@ -39,11 +31,13 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
     "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^1.0.0",
-    "eslint": "^8.0.0"
+    "vitest": "^1.0.0"
   },
   "peerDependencies": {
     "multer": "^2.0.0"

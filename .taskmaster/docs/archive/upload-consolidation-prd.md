@@ -12,12 +12,14 @@ package: @monorepo/upload
 # File Upload Package Consolidation & Enhancement
 
 ## Executive Summary
+
 - **Problem**: Three separate packages (@monorepo/fileupload, @repo/features/ImageUploadModal, @repo/shared-image-utils) contain overlapping functionality for file and image uploads, creating code duplication, inconsistent APIs, and maintenance overhead
 - **Audience**: Frontend developers using upload functionality, backend developers handling image processing, and end users experiencing inconsistent upload interfaces across the application
 - **Opportunity**: Consolidating these packages will reduce bundle size, improve developer experience, create consistent UX patterns, and establish a single source of truth for upload functionality
 - **Desired Outcome**: A unified, comprehensive upload system that handles all file/image upload scenarios with consistent API, reduced duplication, and enhanced capabilities
 
 ## Goals
+
 - Consolidate FileUpload, ImageUploadModal, and shared-image-utils into a unified upload system
 - Eliminate code duplication while preserving all existing functionality
 - Create consistent API patterns across all upload scenarios
@@ -26,6 +28,7 @@ package: @monorepo/upload
 - Maintain backward compatibility during migration period
 
 ## Constraints & Standards (Must-Follow)
+
 - Design system: shadcn/ui, Tailwind tokens
 - Types: TypeScript + Zod for all validation schemas
 - State: RTK Query for upload API calls
@@ -35,6 +38,7 @@ package: @monorepo/upload
 - Security: no unsafe HTML, file type validation, size limits, sanitized uploads
 
 ## Acceptance Criteria
+
 - Single package replaces three existing packages with feature parity
 - All upload modes supported: inline, modal, avatar, drag-and-drop
 - Unified API for file validation, processing, and upload progress
@@ -47,42 +51,49 @@ package: @monorepo/upload
 ## Vertical Slices
 
 ### Phase A — Compile + Storybook
+
 - New consolidated package structure compiles successfully
 - Core upload component renders in Storybook with all variants
 - Basic file selection and validation working
 - No build errors or TypeScript issues
 
 ### Phase B1 — Unit Tests
+
 - File upload logic and validation covered
 - Image processing integration tested
 - Hook functionality validated
 - Edge cases and error scenarios tested
 
-### Phase B2 — E2E Smoke  
+### Phase B2 — E2E Smoke
+
 - Happy-path file upload flows working end-to-end
 - Drag-and-drop functionality verified
 - Modal and inline modes tested
 - Progress tracking validated
 
 ### Phase C — Accessibility
+
 - Axe violations: 0 across all upload variants
 - Keyboard navigation through all focusable elements
 - Screen reader announcements for upload states
 - High contrast mode compatibility
 
 ### Phase D — Performance
+
 - Bundle size reduction achieved and measured
 - Lazy loading for heavy components implemented
 - Tree-shaking optimization verified
 - Core Web Vitals budget compliance
 
 ### Phase E — Security/Hardening
+
 - File type validation enforced on both client and server
 - File size limits properly implemented
 - No unsafe HTML in file preview rendering
 - Upload endpoint security headers verified
 
 ## Rollout / Risks
+
 - **Migration Risk**: Breaking changes for existing consumers
   - **Mitigation**: Provide backward compatibility layer and automated migration scripts
 - **Bundle Size Risk**: Consolidated package might be larger for simple use cases
@@ -97,7 +108,9 @@ package: @monorepo/upload
 ### Current Package Analysis
 
 #### @monorepo/fileupload (1.0.1)
+
 **Features:**
+
 - Drag & Drop interface
 - File validation (type, size)
 - Progress tracking
@@ -108,13 +121,16 @@ package: @monorepo/upload
 - TypeScript + Zod validation
 
 **Hooks:**
+
 - useFileUpload
-- useMetadataFields  
+- useMetadataFields
 - useDragAndDrop
 - useUploadProgress
 
 #### @repo/features/ImageUploadModal
+
 **Features:**
+
 - Modal-specific image upload
 - Drag & Drop support
 - Image preview
@@ -124,10 +140,13 @@ package: @monorepo/upload
 - TypeScript support
 
 **Hooks:**
+
 - useImageUpload
 
 #### @repo/shared-image-utils
+
 **Features:**
+
 - Backend image processing (Sharp)
 - Frontend image processing (Canvas)
 - Multiple format support (JPEG, PNG, WebP, AVIF)
@@ -194,6 +213,7 @@ package: @monorepo/upload
 ```
 
 ### Performance Targets
+
 - Bundle size: ≤80% of combined current packages
 - First paint: <100ms for basic upload component
 - Time to interactive: <200ms for modal with processing

@@ -51,22 +51,22 @@ describe('ThemeProvider', () => {
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
     expect(screen.getByTestId('resolved-theme')).toHaveTextContent('light')
   })
 
   it('loads theme from localStorage on mount', () => {
     localStorageMock.getItem.mockReturnValue('dark')
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(localStorageMock.getItem).toHaveBeenCalledWith('ui-theme')
     expect(screen.getByTestId('theme')).toHaveTextContent('dark')
   })
@@ -75,14 +75,14 @@ describe('ThemeProvider', () => {
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     const setDarkButton = screen.getByText('Set Dark')
     act(() => {
       setDarkButton.click()
     })
-    
+
     expect(localStorageMock.setItem).toHaveBeenCalledWith('ui-theme', 'dark')
   })
 
@@ -90,32 +90,32 @@ describe('ThemeProvider', () => {
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     const setDarkButton = screen.getByText('Set Dark')
     act(() => {
       setDarkButton.click()
     })
-    
+
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
   it('removes dark class from document when theme is light', () => {
     // Start with dark theme
     localStorageMock.getItem.mockReturnValue('dark')
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     const setLightButton = screen.getByText('Set Light')
     act(() => {
       setLightButton.click()
     })
-    
+
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 
@@ -125,23 +125,23 @@ describe('ThemeProvider', () => {
       matches: query === '(prefers-color-scheme: dark)',
       media: query,
       onchange: null,
-          addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
     }))
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: mockMatchMedia,
     })
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(screen.getByTestId('resolved-theme')).toHaveTextContent('dark')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
@@ -150,20 +150,20 @@ describe('ThemeProvider', () => {
     render(
       <ThemeProvider storageKey="custom-theme">
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(localStorageMock.getItem).toHaveBeenCalledWith('custom-theme')
   })
 
   it('throws error when useTheme is used outside provider', () => {
     // Suppress console.error for this test
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    
+
     expect(() => {
       render(<TestComponent />)
     }).toThrow('useTheme must be used within a ThemeProvider')
-    
+
     consoleSpy.mockRestore()
   })
-}) 
+})

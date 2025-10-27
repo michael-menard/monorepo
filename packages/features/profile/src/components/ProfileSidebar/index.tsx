@@ -1,10 +1,14 @@
-import React from 'react';
-import { Button, Badge } from '@repo/ui';
-import { ProfileAvatar } from '../ProfileAvatar';
-import { ProfileLayoutSidebar } from '../ProfileLayout';
-import { ProfileAvatarInfo } from '../ProfileAvatarInfo';
-import type { ProfileSidebarProps } from '../../types';
-import { formatFullName, generateAvatarPlaceholder, getProfileCompletionPercentage } from '../../utils';
+import React from 'react'
+import { Button, Badge } from '@repo/ui'
+import { ProfileAvatar } from '../ProfileAvatar'
+import { ProfileLayoutSidebar } from '../ProfileLayout'
+import { ProfileAvatarInfo } from '../ProfileAvatarInfo'
+import type { ProfileSidebarProps } from '../../types'
+import {
+  formatFullName,
+  generateAvatarPlaceholder,
+  getProfileCompletionPercentage,
+} from '../../utils'
 
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   profile,
@@ -14,27 +18,27 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
   isEditable = false,
   className = '',
 }) => {
-  const fullName = formatFullName(profile);
+  const fullName = formatFullName(profile)
 
-  const avatarUrl = profile.avatar || generateAvatarPlaceholder(fullName);
-  const completionPercentage = getProfileCompletionPercentage(profile);
+  const avatarUrl = profile.avatar || generateAvatarPlaceholder(fullName)
+  const completionPercentage = getProfileCompletionPercentage(profile)
 
   const handleProfileClick = () => {
     if (onViewProfile) {
-      onViewProfile();
+      onViewProfile()
     }
-  };
+  }
 
   const handleUserSettingsClick = () => {
     // Navigate to user settings page
-    window.location.href = '/settings';
-  };
+    window.location.href = '/settings'
+  }
 
   const handleLogout = () => {
     // Handle logout logic
-    console.log('Logout clicked');
+    console.log('Logout clicked')
     // In a real app, this would clear auth tokens and redirect to login
-  };
+  }
 
   return (
     <ProfileLayoutSidebar
@@ -77,20 +81,19 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
       }
       additionalContent={
         <div className="space-y-6">
-
           {/* Bio Section */}
-          {profile.bio && (
+          {profile.bio ? (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Bio</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{profile.bio}</p>
             </div>
-          )}
+          ) : null}
 
           {/* Stats Section */}
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">Profile Stats</h3>
             <div className="space-y-2">
-              {profile.website && (
+              {profile.website ? (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Website</span>
                   <a
@@ -102,16 +105,16 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
                     Visit
                   </a>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
           {/* Social Links */}
-          {profile.socialLinks && (
+          {profile.socialLinks ? (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Social Links</h3>
               <div className="flex flex-wrap gap-2">
-                {profile.socialLinks.twitter && (
+                {profile.socialLinks.twitter ? (
                   <a
                     href={profile.socialLinks.twitter}
                     target="_blank"
@@ -120,8 +123,8 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
                   >
                     Twitter
                   </a>
-                )}
-                {profile.socialLinks.linkedin && (
+                ) : null}
+                {profile.socialLinks.linkedin ? (
                   <a
                     href={profile.socialLinks.linkedin}
                     target="_blank"
@@ -130,8 +133,8 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
                   >
                     LinkedIn
                   </a>
-                )}
-                {profile.socialLinks.github && (
+                ) : null}
+                {profile.socialLinks.github ? (
                   <a
                     href={profile.socialLinks.github}
                     target="_blank"
@@ -140,8 +143,8 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
                   >
                     GitHub
                   </a>
-                )}
-                {profile.socialLinks.instagram && (
+                ) : null}
+                {profile.socialLinks.instagram ? (
                   <a
                     href={profile.socialLinks.instagram}
                     target="_blank"
@@ -150,28 +153,28 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
                   >
                     Instagram
                   </a>
-                )}
+                ) : null}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            {isEditable && onEdit && (
+            {isEditable && onEdit ? (
               <Button onClick={onEdit} className="w-full" variant="default">
                 Edit Profile
               </Button>
-            )}
-            {onViewProfile && (
+            ) : null}
+            {onViewProfile ? (
               <Button onClick={onViewProfile} className="w-full" variant="outline">
                 View Profile
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       }
     />
-  );
-};
+  )
+}
 
-export default ProfileSidebar; 
+export default ProfileSidebar

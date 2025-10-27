@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Button, buttonVariants } from './button'
+import type {Meta, StoryObj} from '@storybook/react'
+import {Button} from './button'
 
 const meta: Meta<typeof Button> = {
   title: 'UI/Button',
@@ -143,4 +143,4 @@ export const AllSizes: Story = {
       },
     },
   },
-} 
+}

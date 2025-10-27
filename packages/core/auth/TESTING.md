@@ -49,17 +49,17 @@ pnpm test:verbose       # Detailed output
 
 ### Test Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm test` | Run all tests once |
-| `pnpm test:all` | Run comprehensive test suite |
-| `pnpm test:unit` | Run unit tests for utilities and core logic |
-| `pnpm test:integration` | Run integration tests for complete flows |
-| `pnpm test:components` | Run component tests with React Testing Library |
-| `pnpm test:watch` | Run tests in watch mode for development |
-| `pnpm test:coverage` | Generate coverage report |
-| `pnpm test:verbose` | Run with detailed output |
-| `pnpm test:ci` | Run tests optimized for CI environment |
+| Command                 | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `pnpm test`             | Run all tests once                             |
+| `pnpm test:all`         | Run comprehensive test suite                   |
+| `pnpm test:unit`        | Run unit tests for utilities and core logic    |
+| `pnpm test:integration` | Run integration tests for complete flows       |
+| `pnpm test:components`  | Run component tests with React Testing Library |
+| `pnpm test:watch`       | Run tests in watch mode for development        |
+| `pnpm test:coverage`    | Generate coverage report                       |
+| `pnpm test:verbose`     | Run with detailed output                       |
+| `pnpm test:ci`          | Run tests optimized for CI environment         |
 
 ## Test Categories
 
@@ -76,13 +76,14 @@ Test individual functions, utilities, and core logic:
 - Token management
 
 **Example**:
+
 ```typescript
 // src/utils/__tests__/csrf.test.ts
 describe('CSRF Utilities', () => {
   it('should fetch CSRF token successfully', async () => {
     // Test implementation
-  });
-});
+  })
+})
 ```
 
 ### 2. Integration Tests
@@ -98,13 +99,14 @@ Test complete authentication flows:
 - API retry logic
 
 **Example**:
+
 ```typescript
 // src/__tests__/integration/authFlow.integration.test.tsx
 describe('Auth Flow Integration Tests', () => {
   it('should complete successful login flow with CSRF protection', async () => {
     // Test complete login flow
-  });
-});
+  })
+})
 ```
 
 ### 3. Component Tests
@@ -120,13 +122,14 @@ Test React components with user interactions:
 - Accessibility features
 
 **Example**:
+
 ```typescript
 // src/components/__tests__/LoginForm.test.tsx
 describe('LoginForm Component', () => {
   it('should render login form with email and password fields', () => {
     // Test component rendering
-  });
-});
+  })
+})
 ```
 
 ### 4. End-to-End Tests
@@ -159,7 +162,7 @@ export default defineConfig({
       exclude: ['**/*.test.ts', '**/*.test.tsx'],
     },
   },
-});
+})
 ```
 
 ### Test Setup
@@ -225,6 +228,7 @@ open coverage/index.html
 ### GitHub Actions
 
 Tests run automatically on:
+
 - Pull requests
 - Pushes to main branch
 - Release branches
@@ -266,25 +270,25 @@ pnpm test -t "should fetch CSRF token"
 ### 1. Unit Test Template
 
 ```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { functionToTest } from '../functionToTest';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { functionToTest } from '../functionToTest'
 
 describe('FunctionToTest', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   it('should handle success case', () => {
     // Arrange
-    const input = 'test-input';
-    
+    const input = 'test-input'
+
     // Act
-    const result = functionToTest(input);
-    
+    const result = functionToTest(input)
+
     // Assert
-    expect(result).toBe('expected-output');
-  });
-});
+    expect(result).toBe('expected-output')
+  })
+})
 ```
 
 ### 2. Component Test Template
@@ -326,7 +330,7 @@ it('should render quickly', async () => {
   const renderTime = await performanceUtils.measureRenderTime(() => {
     render(<LoginForm />);
   });
-  
+
   performanceUtils.expectFastRender(renderTime, 100);
 });
 ```
@@ -352,6 +356,7 @@ Verify security features are working correctly:
 ### Dependencies
 
 Keep testing dependencies up to date:
+
 - Vitest
 - Testing Library
 - Playwright (for E2E tests)

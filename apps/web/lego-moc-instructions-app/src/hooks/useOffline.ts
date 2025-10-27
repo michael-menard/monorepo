@@ -54,14 +54,13 @@ export const useOffline = () => {
   }, [])
 
   // Queue an action for offline sync
-  const queueOfflineAction = useCallback(async (action: {
-    type: 'create' | 'update' | 'delete'
-    endpoint: string
-    data: any
-  }) => {
-    await offlineManager.queueAction(action)
-    refetch()
-  }, [refetch])
+  const queueOfflineAction = useCallback(
+    async (action: { type: 'create' | 'update' | 'delete'; endpoint: string; data: any }) => {
+      await offlineManager.queueAction(action)
+      refetch()
+    },
+    [refetch],
+  )
 
   // Clear all offline data
   const clearOfflineData = useCallback(async () => {
@@ -76,19 +75,19 @@ export const useOffline = () => {
     pendingActions: offlineStatus?.pendingActions || 0,
     lastSync: offlineStatus?.lastSync,
     dataVersion: offlineStatus?.dataVersion,
-    
+
     // Actions
     syncOfflineActions,
     storeOfflineData,
     getOfflineData,
     queueOfflineAction,
     clearOfflineData,
-    
+
     // Loading states
     isProcessing,
-    
+
     // Utilities
     hasPendingActions: (offlineStatus?.pendingActions || 0) > 0,
     canSync: isOnline && (offlineStatus?.pendingActions || 0) > 0,
   }
-} 
+}

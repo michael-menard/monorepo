@@ -73,4 +73,4 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       </DropdownMenuContent>
     </DropdownMenu>
   )
-} 
+}

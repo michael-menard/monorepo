@@ -34,10 +34,10 @@ function LoginPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       // Call the auth API
       const response = await authApi.login(data)
-      
+
       console.log('Login successful:', response)
 
       // Navigate to profile page on success
@@ -91,11 +91,11 @@ function LoginPage() {
                   {...register('email')}
                 />
               </div>
-              {errors.email && (
+              {errors.email ? (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-              )}
+              ) : null}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -104,7 +104,7 @@ function LoginPage() {
                 </span>
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   className="pl-10 pr-10"
                   {...register('password')}
@@ -113,18 +113,14 @@ function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              {errors.password && (
+              {errors.password ? (
                 <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center mb-6">
@@ -137,21 +133,14 @@ function LoginPage() {
               </button>
             </div>
 
-            {error && (
+            {error ? (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
-            )}
+            ) : null}
 
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isSubmitting || isLoading}
-              >
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
                 {isSubmitting || isLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
@@ -179,4 +168,4 @@ function LoginPage() {
   )
 }
 
-export default LoginPage 
+export default LoginPage

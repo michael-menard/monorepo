@@ -50,10 +50,7 @@ export const AccountSettingsPage: React.FC = () => {
           icon={Palette}
           iconColor="text-purple-600"
         >
-          <FormSection
-            title="Theme"
-            description="Choose your preferred color scheme"
-          >
+          <FormSection title="Theme" description="Choose your preferred color scheme">
             <ThemeSelector />
           </FormSection>
         </SettingsCard>

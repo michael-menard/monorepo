@@ -1,28 +1,28 @@
 // Components (router-agnostic)
 // Note: Input, Button, Card, Label, LoadingSpinner now imported from @repo/ui
-export { default as PasswordStrength } from './components/PasswordStrength/index';
-export { default as FloatingShape } from './components/FloatingShape/index';
-export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index';
+export { default as PasswordStrength } from './components/PasswordStrength/index'
+export { default as FloatingShape } from './components/FloatingShape/index'
+export { default as SocialLoginButtonGroup } from './components/SocialLoginButtonGroup/index'
 
 // TanStack Router Components (default)
 export {
   createTanStackRouteGuard,
   type TanStackRouteGuardOptions,
-} from './components/TanStackRouteGuard/index';
+} from './components/TanStackRouteGuard/index'
 
 // Note: For React Router components, import from '@repo/auth/react-router'
 
 // Hooks
-export { useAuth } from './hooks/useAuth';
+export { useAuth } from './hooks/useAuth'
 
 // Store
-export { default as authReducer, authSlice } from './store/authSlice';
-export { authApi } from './store/authApi';
-export { initialState as authInitialState } from './store/authSlice';
-export type { RootState } from './store/store';
+export { default as authReducer, authSlice } from './store/authSlice'
+export { authApi } from './store/authApi'
+export { initialState as authInitialState } from './store/authSlice'
+export type { RootState } from './store/store'
 
 // Types
-export * from './types';
+export * from './types'
 
 // Zod Schemas
 export {
@@ -32,7 +32,7 @@ export {
   ResetPasswordRequestSchema,
   ConfirmResetRequestSchema,
   VerifyEmailRequestSchema,
-} from './types/auth';
+} from './types/auth'
 
 // Enhanced Schemas (from schemas directory)
 export {
@@ -45,11 +45,11 @@ export {
   VerifyEmailSchema,
   type LoginFormData,
   type SignupFormData,
-} from './schemas';
+} from './schemas'
 
 // Utils
-export * from './utils/date';
-export { cn } from './lib/utils';
+export * from './utils/date'
+export { cn } from './lib/utils'
 
 export {
   useLoginMutation,
@@ -64,7 +64,7 @@ export {
   useResendVerificationCodeMutation,
   useFetchCSRFTokenQuery,
   useSocialLoginMutation,
-} from './store/authApi';
+} from './store/authApi'
 
 // CSRF utilities
 export {
@@ -76,7 +76,7 @@ export {
   initializeCSRF,
   getCSRFHeaders,
   isCSRFError,
-} from './utils/csrf';
+} from './utils/csrf'
 
 // Token utilities
 export {
@@ -91,4 +91,4 @@ export {
   getTokenIssuer,
   getTokenConfig,
   updateTokenConfig,
-} from './utils/token';
+} from './utils/token'

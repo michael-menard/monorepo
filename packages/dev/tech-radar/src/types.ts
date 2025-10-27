@@ -29,4 +29,4 @@ export interface RadarEntryProps {
   ring: Ring
   onClick: (entry: Entry) => void
   isSelected: boolean
-} 
+}

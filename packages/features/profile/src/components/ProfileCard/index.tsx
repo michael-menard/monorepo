@@ -1,6 +1,6 @@
-import React from 'react';
-import type { ProfileCardProps } from '../../types';
-import { formatFullName, getInitials, generateAvatarPlaceholder } from '../../utils';
+import React from 'react'
+import type { ProfileCardProps } from '../../types'
+import { formatFullName, getInitials, generateAvatarPlaceholder } from '../../utils'
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
   profile,
@@ -8,9 +8,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   isEditable = false,
   className = '',
 }) => {
-  const fullName = formatFullName(profile);
-  const initials = getInitials(profile);
-  const avatarUrl = profile.avatar || generateAvatarPlaceholder(fullName);
+  const fullName = formatFullName(profile)
+  const initials = getInitials(profile)
+  const avatarUrl = profile.avatar || generateAvatarPlaceholder(fullName)
 
   return (
     <div className={`profile-card ${className}`}>
@@ -20,9 +20,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             src={avatarUrl}
             alt={`${fullName}'s avatar`}
             className="avatar-image"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = generateAvatarPlaceholder(fullName);
+            onError={e => {
+              const target = e.target as HTMLImageElement
+              target.src = generateAvatarPlaceholder(fullName)
             }}
           />
           {!profile.avatar && (
@@ -31,51 +31,42 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             </div>
           )}
         </div>
-        
+
         <div className="profile-info">
           <h2 className="profile-name">{fullName}</h2>
-          {profile.username && (
-            <p className="profile-username">@{profile.username}</p>
-          )}
-          {profile.email && (
-            <p className="profile-email">{profile.email}</p>
-          )}
+          {profile.username ? <p className="profile-username">@{profile.username}</p> : null}
+          {profile.email ? <p className="profile-email">{profile.email}</p> : null}
         </div>
 
-        {isEditable && onEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="edit-button"
-            aria-label="Edit profile"
-          >
+        {isEditable && onEdit ? (
+          <button type="button" onClick={onEdit} className="edit-button" aria-label="Edit profile">
             Edit
           </button>
-        )}
+        ) : null}
       </div>
 
-      {profile.bio && (
+      {profile.bio ? (
         <div className="profile-bio">
           <p>{profile.bio}</p>
         </div>
-      )}
+      ) : null}
 
       <div className="profile-details">
-        {profile.phone && (
+        {profile.phone ? (
           <div className="profile-detail">
             <span className="detail-label">Phone:</span>
             <span className="detail-value">{profile.phone}</span>
           </div>
-        )}
-        
-        {profile.location && (
+        ) : null}
+
+        {profile.location ? (
           <div className="profile-detail">
             <span className="detail-label">Location:</span>
             <span className="detail-value">{profile.location}</span>
           </div>
-        )}
-        
-        {profile.website && (
+        ) : null}
+
+        {profile.website ? (
           <div className="profile-detail">
             <span className="detail-label">Website:</span>
             <a
@@ -87,23 +78,21 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               {profile.website}
             </a>
           </div>
-        )}
-        
-        {profile.dateOfBirth && (
+        ) : null}
+
+        {profile.dateOfBirth ? (
           <div className="profile-detail">
             <span className="detail-label">Birth Date:</span>
-            <span className="detail-value">
-              {profile.dateOfBirth.toLocaleDateString()}
-            </span>
+            <span className="detail-value">{profile.dateOfBirth.toLocaleDateString()}</span>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {profile.socialLinks && (
+      {profile.socialLinks ? (
         <div className="profile-social-links">
           <h3 className="social-links-title">Social Links</h3>
           <div className="social-links-grid">
-            {profile.socialLinks.twitter && (
+            {profile.socialLinks.twitter ? (
               <a
                 href={profile.socialLinks.twitter}
                 target="_blank"
@@ -112,8 +101,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               >
                 Twitter
               </a>
-            )}
-            {profile.socialLinks.linkedin && (
+            ) : null}
+            {profile.socialLinks.linkedin ? (
               <a
                 href={profile.socialLinks.linkedin}
                 target="_blank"
@@ -122,8 +111,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               >
                 LinkedIn
               </a>
-            )}
-            {profile.socialLinks.github && (
+            ) : null}
+            {profile.socialLinks.github ? (
               <a
                 href={profile.socialLinks.github}
                 target="_blank"
@@ -132,8 +121,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               >
                 GitHub
               </a>
-            )}
-            {profile.socialLinks.instagram && (
+            ) : null}
+            {profile.socialLinks.instagram ? (
               <a
                 href={profile.socialLinks.instagram}
                 target="_blank"
@@ -142,12 +131,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               >
                 Instagram
               </a>
-            )}
+            ) : null}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default ProfileCard; 
+export default ProfileCard

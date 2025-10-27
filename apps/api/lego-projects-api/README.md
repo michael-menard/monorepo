@@ -43,8 +43,9 @@ docker-compose -f docker-compose-dev.yml up -d
 ```
 
 This starts:
+
 - PostgreSQL database (port 5432)
-- Redis cache (port 6379) 
+- Redis cache (port 6379)
 - Elasticsearch (port 9200)
 - pgAdmin (port 5050)
 - Mongo Express (port 8081)
@@ -52,21 +53,24 @@ This starts:
 ### 2. Environment Setup
 
 1. **Navigate to the API directory**:
+
    ```bash
    cd apps/api/lego-projects-api
    ```
 
 2. **Create environment file**:
+
    ```bash
    cp .env.example .env
    ```
 
 3. **Configure environment variables for native development**:
+
    ```bash
    # Database Configuration (Docker service)
    DATABASE_URL=postgresql://postgres:password@localhost:5432/lego_projects
 
-   # JWT Configuration  
+   # JWT Configuration
    JWT_SECRET=your-jwt-secret-here-min-32-chars-long
    AUTH_API=http://localhost:5000
 
@@ -86,7 +90,7 @@ This starts:
    # File Storage (local development)
    UPLOAD_PATH=./uploads
    MAX_FILE_SIZE=20971520
-   
+
    # Optional: AWS S3 Configuration (for production)
    # S3_BUCKET=your-s3-bucket-name
    # S3_REGION=us-east-1
@@ -223,22 +227,26 @@ Different TTL values are used based on data volatility:
 #### Cached Endpoints
 
 ##### Gallery Endpoints
+
 - `GET /api/gallery` - Cached with MEDIUM TTL
 - `GET /api/images` - Cached with MEDIUM TTL
 - `GET /api/albums` - Cached with MEDIUM TTL
 - `GET /api/albums/:id` - Cached with MEDIUM TTL
 
 ##### MOC Instructions Endpoints
+
 - `GET /api/mocs` - Cached with LONG TTL
 - `GET /api/mocs/:id` - Cached with LONG TTL
 - `GET /api/mocs/search` - Cached with LONG TTL
 - `GET /api/mocs/:id/gallery-images` - Cached with LONG TTL
 
 ##### Wishlist Endpoints
+
 - `GET /api/wishlist` - Cached with MEDIUM TTL
 - `GET /api/wishlist/search` - Cached with MEDIUM TTL
 
 ##### Profile Endpoints
+
 - `GET /api/users/:id` - Cached with LONG TTL
 
 ### Cache Invalidation
@@ -252,47 +260,48 @@ Cache invalidation is automatically triggered for write operations:
 ### Manual Cache Operations
 
 ```typescript
-import { cacheUtils, CACHE_KEYS, CACHE_TTL } from './src/utils/redis';
+import { cacheUtils, CACHE_KEYS, CACHE_TTL } from './src/utils/redis'
 
 // Set cache
-await cacheUtils.set('my-key', data, CACHE_TTL.MEDIUM);
+await cacheUtils.set('my-key', data, CACHE_TTL.MEDIUM)
 
 // Get cache
-const data = await cacheUtils.get('my-key');
+const data = await cacheUtils.get('my-key')
 
 // Delete cache
-await cacheUtils.del('my-key');
+await cacheUtils.del('my-key')
 
 // Invalidate pattern
-await cacheUtils.invalidatePattern('gallery:*');
+await cacheUtils.invalidatePattern('gallery:*')
 
 // Get or set (cache-aside pattern)
 const data = await cacheUtils.getOrSet(
   'my-key',
   async () => fetchDataFromDatabase(),
-  CACHE_TTL.MEDIUM
-);
+  CACHE_TTL.MEDIUM,
+)
 ```
 
 ### Cache Middleware
 
 ```typescript
-import { createCacheMiddleware } from './src/middleware/cache';
+import { createCacheMiddleware } from './src/middleware/cache'
 
 // Create custom cache middleware
 const customCache = createCacheMiddleware({
   ttl: CACHE_TTL.SHORT,
-  key: (req) => `custom:${req.user?.id}:${req.params.id}`,
-  condition: (req) => req.method === 'GET' && req.user?.id,
-});
+  key: req => `custom:${req.user?.id}:${req.params.id}`,
+  condition: req => req.method === 'GET' && req.user?.id,
+})
 
 // Use in routes
-router.get('/custom-endpoint', customCache, handler);
+router.get('/custom-endpoint', customCache, handler)
 ```
 
 ## API Endpoints
 
 ### Authentication
+
 All endpoints require authentication unless specified otherwise.
 
 ### Gallery

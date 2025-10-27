@@ -16,13 +16,13 @@ A comprehensive gallery component for displaying MOC instructions with advanced 
 ## Usage
 
 ```tsx
-import { MocInstructionsGallery } from '@repo/moc-instructions';
+import { MocInstructionsGallery } from '@repo/moc-instructions'
 
 const MyComponent = () => {
-  const [instructions, setInstructions] = useState<MockInstruction[]>([]);
-  const [filters, setFilters] = useState<MockInstructionFilter>({});
-  const [sortBy, setSortBy] = useState<MockInstructionSortBy>('createdAt');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [instructions, setInstructions] = useState<MockInstruction[]>([])
+  const [filters, setFilters] = useState<MockInstructionFilter>({})
+  const [sortBy, setSortBy] = useState<MockInstructionSortBy>('createdAt')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
   return (
     <MocInstructionsGallery
@@ -32,13 +32,13 @@ const MyComponent = () => {
       sortBy={sortBy}
       sortOrder={sortOrder}
       onSortChange={(newSortBy, newSortOrder) => {
-        setSortBy(newSortBy);
-        setSortOrder(newSortOrder);
+        setSortBy(newSortBy)
+        setSortOrder(newSortOrder)
       }}
-      onInstructionClick={(instruction) => {
+      onInstructionClick={instruction => {
         // Handle instruction click
       }}
-      onInstructionDelete={(instructionId) => {
+      onInstructionDelete={instructionId => {
         // Handle instruction deletion
       }}
       isEditable={true}
@@ -47,8 +47,8 @@ const MyComponent = () => {
         // Load more instructions
       }}
     />
-  );
-};
+  )
+}
 ```
 
 ## Props
@@ -86,11 +86,11 @@ The component supports responsive grid layouts with configurable columns:
 
 ```tsx
 const columns = {
-  sm: 1,  // 1 column on small screens
-  md: 2,  // 2 columns on medium screens
-  lg: 3,  // 3 columns on large screens
-  xl: 4   // 4 columns on extra large screens
-};
+  sm: 1, // 1 column on small screens
+  md: 2, // 2 columns on medium screens
+  lg: 3, // 3 columns on large screens
+  xl: 4, // 4 columns on extra large screens
+}
 ```
 
 ## Filtering
@@ -147,4 +147,4 @@ Run tests with:
 
 ```bash
 pnpm test:run
-``` 
+```

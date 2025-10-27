@@ -1,1 +1,5 @@
-export { useUserPreferences, type UserPreferences, UserPreferencesSchema } from './useUserPreferences'
+export {
+  useUserPreferences,
+  type UserPreferences,
+  UserPreferencesSchema,
+} from './useUserPreferences'

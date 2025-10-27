@@ -1,16 +1,12 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { LegoProfileContent } from '../LegoProfileContent';
-import type { Profile } from '@repo/profile';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import type { Profile } from '@repo/profile'
 
 // Import RTK reducers for testing
-import { 
-  wishlistReducer,
-  mocInstructionsReducer,
-  profileReducer,
-} from '@repo/mock-data';
+import { wishlistReducer, mocInstructionsReducer, profileReducer } from '@repo/mock-data'
+import { LegoProfileContent } from '../LegoProfileContent'
 
 // Create a test store with mock data
 const createTestStore = (preloadedState?: any) => {
@@ -33,9 +29,27 @@ const createTestStore = (preloadedState?: any) => {
       },
       mocInstructions: {
         instructions: [
-          { id: '1', title: 'Custom Batmobile', author: 'BrickMaster3000', downloadCount: 156, rating: 4.8 },
-          { id: '2', title: 'Medieval Castle', author: 'CastleBuilder42', downloadCount: 234, rating: 4.6 },
-          { id: '3', title: 'Space Station Alpha', author: 'SpaceBuilder99', downloadCount: 89, rating: 4.7 },
+          {
+            id: '1',
+            title: 'Custom Batmobile',
+            author: 'BrickMaster3000',
+            downloadCount: 156,
+            rating: 4.8,
+          },
+          {
+            id: '2',
+            title: 'Medieval Castle',
+            author: 'CastleBuilder42',
+            downloadCount: 234,
+            rating: 4.6,
+          },
+          {
+            id: '3',
+            title: 'Space Station Alpha',
+            author: 'SpaceBuilder99',
+            downloadCount: 89,
+            rating: 4.7,
+          },
         ],
         loading: false,
         error: null,
@@ -53,7 +67,12 @@ const createTestStore = (preloadedState?: any) => {
           lastActive: new Date(),
         },
         recentActivities: [
-          { id: '1', type: 'download', title: 'Downloaded Custom Batmobile', timestamp: new Date() },
+          {
+            id: '1',
+            type: 'download',
+            title: 'Downloaded Custom Batmobile',
+            timestamp: new Date(),
+          },
           { id: '2', type: 'publish', title: 'Published Medieval Castle', timestamp: new Date() },
         ],
         quickActions: [],
@@ -62,20 +81,36 @@ const createTestStore = (preloadedState?: any) => {
       },
       ...preloadedState,
     },
-  });
-};
+  })
+}
 
 // Mock UI components
 vi.mock('@repo/ui', () => ({
-  Card: ({ children, className }: any) => <div data-testid="card" className={className}>{children}</div>,
+  Card: ({ children, className }: any) => (
+    <div data-testid="card" className={className}>
+      {children}
+    </div>
+  ),
   CardContent: ({ children }: any) => <div data-testid="card-content">{children}</div>,
   CardHeader: ({ children }: any) => <div data-testid="card-header">{children}</div>,
   CardTitle: ({ children }: any) => <h3 data-testid="card-title">{children}</h3>,
-  Tabs: ({ children, defaultValue }: any) => <div data-testid="tabs" data-default-value={defaultValue}>{children}</div>,
-  TabsContent: ({ children, value }: any) => <div data-testid={`tabs-content-${value}`}>{children}</div>,
+  Tabs: ({ children, defaultValue }: any) => (
+    <div data-testid="tabs" data-default-value={defaultValue}>
+      {children}
+    </div>
+  ),
+  TabsContent: ({ children, value }: any) => (
+    <div data-testid={`tabs-content-${value}`}>{children}</div>
+  ),
   TabsList: ({ children }: any) => <div data-testid="tabs-list">{children}</div>,
-  TabsTrigger: ({ children, value }: any) => <button data-testid={`tab-trigger-${value}`}>{children}</button>,
-  Badge: ({ children, variant }: any) => <span data-testid="badge" data-variant={variant}>{children}</span>,
+  TabsTrigger: ({ children, value }: any) => (
+    <button data-testid={`tab-trigger-${value}`}>{children}</button>
+  ),
+  Badge: ({ children, variant }: any) => (
+    <span data-testid="badge" data-variant={variant}>
+      {children}
+    </span>
+  ),
   Button: ({ children, onClick, variant, size }: any) => (
     <button data-testid="button" onClick={onClick} data-variant={variant} data-size={size}>
       {children}
@@ -83,18 +118,20 @@ vi.mock('@repo/ui', () => ({
   ),
   AppCard: ({ children, title }: any) => (
     <div data-testid="app-card">
-      {title && <h3>{title}</h3>}
+      {title ? <h3>{title}</h3> : null}
       {children}
     </div>
   ),
   TabPanel: ({ tabs }: any) => (
     <div data-testid="tab-panel">
       {tabs?.map((tab: any) => (
-        <div key={tab.id} data-testid={`tab-${tab.id}`}>{tab.label}</div>
+        <div key={tab.id} data-testid={`tab-${tab.id}`}>
+          {tab.label}
+        </div>
       ))}
     </div>
   ),
-}));
+}))
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
@@ -123,7 +160,7 @@ vi.mock('lucide-react', () => ({
   Linkedin: () => <div data-testid="linkedin-icon" />,
   Github: () => <div data-testid="github-icon" />,
   Instagram: () => <div data-testid="instagram-icon" />,
-}));
+}))
 
 const mockProfile: Profile = {
   id: '1',
@@ -149,161 +186,157 @@ const mockProfile: Profile = {
   },
   createdAt: new Date('2023-01-01'),
   updatedAt: new Date('2024-01-15'),
-};
+}
 
 const renderWithStore = (component: React.ReactElement, store?: any) => {
-  const testStore = store || createTestStore();
-  return render(
-    <Provider store={testStore}>
-      {component}
-    </Provider>
-  );
-};
+  const testStore = store || createTestStore()
+  return render(<Provider store={testStore}>{component}</Provider>)
+}
 
 describe('LegoProfileContent - RTK Integration', () => {
-  const mockOnEdit = vi.fn();
+  const mockOnEdit = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   describe('Overview Tab with RTK Data', () => {
     it('displays user statistics from RTK state', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
       // Check that statistics are displayed
-      expect(screen.getByText('3')).toBeInTheDocument(); // Total MOCs
-      expect(screen.getByText('479')).toBeInTheDocument(); // Total Downloads
-      expect(screen.getByText('4.7')).toBeInTheDocument(); // Average Rating
-      expect(screen.getByText('2')).toBeInTheDocument(); // Wishlist Items
-    });
+      expect(screen.getByText('3')).toBeInTheDocument() // Total MOCs
+      expect(screen.getByText('479')).toBeInTheDocument() // Total Downloads
+      expect(screen.getByText('4.7')).toBeInTheDocument() // Average Rating
+      expect(screen.getByText('2')).toBeInTheDocument() // Wishlist Items
+    })
 
     it('displays recent activities from RTK state', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      expect(screen.getByText('Downloaded Custom Batmobile')).toBeInTheDocument();
-      expect(screen.getByText('Published Medieval Castle')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Downloaded Custom Batmobile')).toBeInTheDocument()
+      expect(screen.getByText('Published Medieval Castle')).toBeInTheDocument()
+    })
 
     it('shows quick actions section', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
       // Quick actions should be present
-      expect(screen.getByText('Create New MOC')).toBeInTheDocument();
-      expect(screen.getByText('Browse Gallery')).toBeInTheDocument();
-      expect(screen.getByText('Manage Wishlist')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('Create New MOC')).toBeInTheDocument()
+      expect(screen.getByText('Browse Gallery')).toBeInTheDocument()
+      expect(screen.getByText('Manage Wishlist')).toBeInTheDocument()
+    })
+  })
 
   describe('MOCs Tab with RTK Data', () => {
     it('displays MOC instructions from RTK state', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
       // Switch to MOCs tab
-      const mocsTab = screen.getByTestId('tab-trigger-mocs');
-      fireEvent.click(mocsTab);
+      const mocsTab = screen.getByTestId('tab-trigger-mocs')
+      fireEvent.click(mocsTab)
 
-      expect(screen.getByText('Custom Batmobile')).toBeInTheDocument();
-      expect(screen.getByText('Medieval Castle')).toBeInTheDocument();
-      expect(screen.getByText('Space Station Alpha')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Custom Batmobile')).toBeInTheDocument()
+      expect(screen.getByText('Medieval Castle')).toBeInTheDocument()
+      expect(screen.getByText('Space Station Alpha')).toBeInTheDocument()
+    })
 
     it('shows MOC statistics and actions', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      const mocsTab = screen.getByTestId('tab-trigger-mocs');
-      fireEvent.click(mocsTab);
+      const mocsTab = screen.getByTestId('tab-trigger-mocs')
+      fireEvent.click(mocsTab)
 
       // Should show download counts and ratings
-      expect(screen.getByText('156')).toBeInTheDocument(); // Batmobile downloads
-      expect(screen.getByText('234')).toBeInTheDocument(); // Castle downloads
-      expect(screen.getByText('89')).toBeInTheDocument(); // Space Station downloads
-    });
-  });
+      expect(screen.getByText('156')).toBeInTheDocument() // Batmobile downloads
+      expect(screen.getByText('234')).toBeInTheDocument() // Castle downloads
+      expect(screen.getByText('89')).toBeInTheDocument() // Space Station downloads
+    })
+  })
 
   describe('Wishlist Tab with RTK Data', () => {
     it('displays wishlist items from RTK state', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      const wishlistTab = screen.getByTestId('tab-trigger-wishlist');
-      fireEvent.click(wishlistTab);
+      const wishlistTab = screen.getByTestId('tab-trigger-wishlist')
+      fireEvent.click(wishlistTab)
 
-      expect(screen.getByText('LEGO Creator Expert 10242')).toBeInTheDocument();
-      expect(screen.getByText('LEGO Technic 42115')).toBeInTheDocument();
-    });
+      expect(screen.getByText('LEGO Creator Expert 10242')).toBeInTheDocument()
+      expect(screen.getByText('LEGO Technic 42115')).toBeInTheDocument()
+    })
 
     it('shows wishlist statistics', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      const wishlistTab = screen.getByTestId('tab-trigger-wishlist');
-      fireEvent.click(wishlistTab);
+      const wishlistTab = screen.getByTestId('tab-trigger-wishlist')
+      fireEvent.click(wishlistTab)
 
       // Should show total items and purchased status
-      expect(screen.getByText('Total Items: 2')).toBeInTheDocument();
-      expect(screen.getByText('Purchased: 1')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('Total Items: 2')).toBeInTheDocument()
+      expect(screen.getByText('Purchased: 1')).toBeInTheDocument()
+    })
+  })
 
   describe('Preferences Tab', () => {
     it('displays current preferences from profile', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      const preferencesTab = screen.getByTestId('tab-trigger-preferences');
-      fireEvent.click(preferencesTab);
+      const preferencesTab = screen.getByTestId('tab-trigger-preferences')
+      fireEvent.click(preferencesTab)
 
-      expect(screen.getByText('Email Notifications')).toBeInTheDocument();
-      expect(screen.getByText('Public Profile')).toBeInTheDocument();
-      expect(screen.getByText('Theme')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Email Notifications')).toBeInTheDocument()
+      expect(screen.getByText('Public Profile')).toBeInTheDocument()
+      expect(screen.getByText('Theme')).toBeInTheDocument()
+    })
 
     it('shows current preference values', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      const preferencesTab = screen.getByTestId('tab-trigger-preferences');
-      fireEvent.click(preferencesTab);
+      const preferencesTab = screen.getByTestId('tab-trigger-preferences')
+      fireEvent.click(preferencesTab)
 
       // Check that current values are displayed
-      expect(screen.getByText('Enabled')).toBeInTheDocument(); // Email notifications
-      expect(screen.getByText('Public')).toBeInTheDocument(); // Public profile
-      expect(screen.getByText('System')).toBeInTheDocument(); // Theme
-    });
-  });
+      expect(screen.getByText('Enabled')).toBeInTheDocument() // Email notifications
+      expect(screen.getByText('Public')).toBeInTheDocument() // Public profile
+      expect(screen.getByText('System')).toBeInTheDocument() // Theme
+    })
+  })
 
   describe('Loading States', () => {
     it('handles RTK loading states gracefully', () => {
@@ -315,16 +348,16 @@ describe('LegoProfileContent - RTK Integration', () => {
           loading: true,
           error: null,
         },
-      });
+      })
 
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
       // Component should still render with loading state
-      expect(screen.getByTestId('tabs')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+    })
 
     it('handles empty RTK data gracefully', () => {
       const store = createTestStore({
@@ -343,70 +376,70 @@ describe('LegoProfileContent - RTK Integration', () => {
           filters: { category: null, showPurchased: false },
           stats: { total: 0, purchased: 0, totalValue: 0 },
         },
-      });
+      })
 
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      expect(screen.getByTestId('tabs')).toBeInTheDocument();
-      expect(screen.getByText('0')).toBeInTheDocument(); // Should show 0 for empty stats
-    });
-  });
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+      expect(screen.getByText('0')).toBeInTheDocument() // Should show 0 for empty stats
+    })
+  })
 
   describe('Interactive Features', () => {
     it('handles tab switching correctly', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
       // Test tab switching
-      const mocsTab = screen.getByTestId('tab-trigger-mocs');
-      const wishlistTab = screen.getByTestId('tab-trigger-wishlist');
-      const preferencesTab = screen.getByTestId('tab-trigger-preferences');
+      const mocsTab = screen.getByTestId('tab-trigger-mocs')
+      const wishlistTab = screen.getByTestId('tab-trigger-wishlist')
+      const preferencesTab = screen.getByTestId('tab-trigger-preferences')
 
-      fireEvent.click(mocsTab);
-      expect(screen.getByTestId('tabs-content-mocs')).toBeInTheDocument();
+      fireEvent.click(mocsTab)
+      expect(screen.getByTestId('tabs-content-mocs')).toBeInTheDocument()
 
-      fireEvent.click(wishlistTab);
-      expect(screen.getByTestId('tabs-content-wishlist')).toBeInTheDocument();
+      fireEvent.click(wishlistTab)
+      expect(screen.getByTestId('tabs-content-wishlist')).toBeInTheDocument()
 
-      fireEvent.click(preferencesTab);
-      expect(screen.getByTestId('tabs-content-preferences')).toBeInTheDocument();
-    });
+      fireEvent.click(preferencesTab)
+      expect(screen.getByTestId('tabs-content-preferences')).toBeInTheDocument()
+    })
 
     it('calls onEdit when edit buttons are clicked', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
-      const editButtons = screen.getAllByTestId('button');
-      const editButton = editButtons.find(button => button.textContent?.includes('Edit'));
-      
+      const editButtons = screen.getAllByTestId('button')
+      const editButton = editButtons.find(button => button.textContent?.includes('Edit'))
+
       if (editButton) {
-        fireEvent.click(editButton);
-        expect(mockOnEdit).toHaveBeenCalled();
+        fireEvent.click(editButton)
+        expect(mockOnEdit).toHaveBeenCalled()
       }
-    });
-  });
+    })
+  })
 
   describe('Edit Mode', () => {
     it('shows edit mode indicator when isEditing is true', () => {
-      const store = createTestStore();
+      const store = createTestStore()
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={true} />,
-        store
-      );
+        store,
+      )
 
       // In edit mode, certain elements might be different
-      expect(screen.getByTestId('tabs')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+    })
+  })
 
   describe('Error Handling', () => {
     it('handles RTK error states gracefully', () => {
@@ -418,15 +451,15 @@ describe('LegoProfileContent - RTK Integration', () => {
           loading: false,
           error: 'Failed to load profile data',
         },
-      });
+      })
 
       renderWithStore(
         <LegoProfileContent profile={mockProfile} onEdit={mockOnEdit} isEditing={false} />,
-        store
-      );
+        store,
+      )
 
       // Component should still render despite error
-      expect(screen.getByTestId('tabs')).toBeInTheDocument();
-    });
-  });
-});
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+    })
+  })
+})

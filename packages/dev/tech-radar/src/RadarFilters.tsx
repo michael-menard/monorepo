@@ -1,6 +1,6 @@
 import React from 'react'
-import { Quadrant, Ring } from './types'
 import { Search, Filter, X } from 'lucide-react'
+import { Quadrant, Ring } from './types'
 
 interface RadarFiltersProps {
   quadrants: Quadrant[]
@@ -10,27 +10,23 @@ interface RadarFiltersProps {
     rings: string[]
     search: string
   }
-  onFiltersChange: (filters: {
-    quadrants: string[]
-    rings: string[]
-    search: string
-  }) => void
+  onFiltersChange: (filters: { quadrants: string[]; rings: string[]; search: string }) => void
 }
 
 export const RadarFilters: React.FC<RadarFiltersProps> = ({
   quadrants,
   rings,
   filters,
-  onFiltersChange
+  onFiltersChange,
 }) => {
   const handleQuadrantToggle = (quadrantName: string) => {
     const newQuadrants = filters.quadrants.includes(quadrantName)
       ? filters.quadrants.filter(q => q !== quadrantName)
       : [...filters.quadrants, quadrantName]
-    
+
     onFiltersChange({
       ...filters,
-      quadrants: newQuadrants
+      quadrants: newQuadrants,
     })
   }
 
@@ -38,17 +34,17 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
     const newRings = filters.rings.includes(ringName)
       ? filters.rings.filter(r => r !== ringName)
       : [...filters.rings, ringName]
-    
+
     onFiltersChange({
       ...filters,
-      rings: newRings
+      rings: newRings,
     })
   }
 
   const handleSearchChange = (search: string) => {
     onFiltersChange({
       ...filters,
-      search
+      search,
     })
   }
 
@@ -56,11 +52,12 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
     onFiltersChange({
       quadrants: [],
       rings: [],
-      search: ''
+      search: '',
     })
   }
 
-  const hasActiveFilters = filters.quadrants.length > 0 || filters.rings.length > 0 || filters.search
+  const hasActiveFilters =
+    filters.quadrants.length > 0 || filters.rings.length > 0 || filters.search
 
   return (
     <div className="radar-filters">
@@ -69,15 +66,11 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
           <Filter size={16} />
           Filters
         </h3>
-        {hasActiveFilters && (
-          <button
-            onClick={clearAllFilters}
-            className="clear-filters-btn"
-            title="Clear all filters"
-          >
+        {hasActiveFilters ? (
+          <button onClick={clearAllFilters} className="clear-filters-btn" title="Clear all filters">
             <X size={14} />
           </button>
-        )}
+        ) : null}
       </div>
 
       <div className="filter-group">
@@ -88,7 +81,7 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
             type="text"
             placeholder="Search technologies..."
             value={filters.search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={e => handleSearchChange(e.target.value)}
             className="search-input"
           />
         </div>
@@ -97,7 +90,7 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
       <div className="filter-group">
         <label className="filter-label">Quadrants</label>
         <div className="filter-options">
-          {quadrants.map((quadrant) => (
+          {quadrants.map(quadrant => (
             <label key={quadrant.name} className="filter-option">
               <input
                 type="checkbox"
@@ -114,7 +107,7 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
       <div className="filter-group">
         <label className="filter-label">Rings</label>
         <div className="filter-options">
-          {rings.map((ring) => (
+          {rings.map(ring => (
             <label key={ring.name} className="filter-option">
               <input
                 type="checkbox"
@@ -122,10 +115,7 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
                 onChange={() => handleRingToggle(ring.name)}
                 className="filter-checkbox"
               />
-              <div 
-                className="filter-color-indicator"
-                style={{ backgroundColor: ring.color }}
-              />
+              <div className="filter-color-indicator" style={{ backgroundColor: ring.color }} />
               <span className="filter-option-text">{ring.name}</span>
             </label>
           ))}
@@ -133,4 +123,4 @@ export const RadarFilters: React.FC<RadarFiltersProps> = ({
       </div>
     </div>
   )
-} 
+}

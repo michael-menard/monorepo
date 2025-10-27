@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import {z} from 'zod'
 
 // Zod schemas
 export const UserSchema = z.object({
@@ -11,13 +11,13 @@ export const UserSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   role: z.string().min(1), // e.g., 'user', 'admin'
-});
+})
 
 export const AuthTokensSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
   expiresIn: z.number(),
-});
+})
 
 export const AuthResponseSchema = z.object({
   success: z.boolean(),
@@ -26,36 +26,36 @@ export const AuthResponseSchema = z.object({
     user: UserSchema,
     tokens: AuthTokensSchema.optional(),
   }),
-});
+})
 
 export const LoginRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-});
+})
 
 export const SignupRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().min(1),
-});
+})
 
 export const ForgotPasswordRequestSchema = z.object({
   email: z.string().email(),
-});
+})
 
 export const ResetPasswordRequestSchema = z.object({
   token: z.string(),
   password: z.string().min(6),
-});
+})
 
 export const ConfirmResetRequestSchema = z.object({
   token: z.string(),
   newPassword: z.string().min(6),
-});
+})
 
 export const VerifyEmailRequestSchema = z.object({
   code: z.string().min(6).max(6),
-});
+})
 
 export const AuthErrorSchema = z.object({
   success: z.literal(false),
@@ -68,14 +68,14 @@ export const AuthErrorSchema = z.object({
       }),
     )
     .optional(),
-});
+})
 
 export const AuthStateSchema = z.object({
   isCheckingAuth: z.boolean(),
   lastActivity: z.number().nullable(),
   sessionTimeout: z.number(),
   message: z.string().nullable(),
-});
+})
 
 // TypeScript interfaces (single source of truth)
 export interface User extends z.infer<typeof UserSchema> {}

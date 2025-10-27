@@ -5,6 +5,7 @@ This document describes the comprehensive keyboard navigation implementation for
 ## Overview
 
 The keyboard navigation system provides:
+
 - **Focus Management**: Proper focus trapping, restoration, and cycling
 - **Keyboard Shortcuts**: Standard keyboard interactions for all components
 - **Accessibility**: ARIA attributes and screen reader support
@@ -15,6 +16,7 @@ The keyboard navigation system provides:
 ### Keyboard Navigation Library (`lib/keyboard-navigation.ts`)
 
 #### Constants
+
 ```typescript
 KEYBOARD_KEYS = {
   ENTER: 'Enter',
@@ -45,18 +47,22 @@ KEYBOARD_SHORTCUTS = {
 #### Focus Management Hooks
 
 ##### `useFocusTrap(isActive: boolean)`
+
 Traps focus within a container (e.g., modal dialogs).
 
 ```typescript
-const { containerRef, focusFirstElement, focusNextElement, focusPreviousElement } = useFocusTrap(true)
+const { containerRef, focusFirstElement, focusNextElement, focusPreviousElement } =
+  useFocusTrap(true)
 ```
 
 **Features:**
+
 - Prevents focus from escaping the container
 - Cycles focus through focusable elements
 - Automatically focuses first element when activated
 
 ##### `useFocusRestoration()`
+
 Saves and restores focus when components mount/unmount.
 
 ```typescript
@@ -64,6 +70,7 @@ const { saveFocus, restoreFocus } = useFocusRestoration()
 ```
 
 **Features:**
+
 - Saves current focus before opening modals
 - Restores focus when modals close
 - Prevents focus loss during component transitions
@@ -71,6 +78,7 @@ const { saveFocus, restoreFocus } = useFocusRestoration()
 #### ARIA Utilities
 
 ##### `getAriaAttributes(options)`
+
 Generates appropriate ARIA attributes for components.
 
 ```typescript
@@ -89,6 +97,7 @@ const ariaAttributes = getAriaAttributes({
 #### Live Region Utilities
 
 ##### `useLiveRegion()`
+
 Provides screen reader announcements.
 
 ```typescript
@@ -101,16 +110,19 @@ announce('Dialog opened', 'polite')
 ### Button Component
 
 **Keyboard Support:**
+
 - `Enter` - Activates button
 - `Space` - Activates button
 
 **ARIA Attributes:**
+
 - `aria-pressed` - For toggle buttons
 - `aria-disabled` - For disabled buttons
 
 **Usage:**
+
 ```typescript
-<Button 
+<Button
   pressed={isPressed}
   disabled={isDisabled}
   onClick={handleClick}
@@ -122,16 +134,19 @@ announce('Dialog opened', 'polite')
 ### Dialog Component
 
 **Keyboard Support:**
+
 - `Escape` - Closes dialog
 - `Tab` - Cycles through focusable elements (trapped)
 - `Shift+Tab` - Cycles backward through focusable elements
 
 **Focus Management:**
+
 - Automatically traps focus within dialog
 - Restores focus to trigger when dialog closes
 - Focuses first focusable element when opened
 
 **Usage:**
+
 ```typescript
 <Dialog>
   <DialogTrigger asChild>
@@ -148,16 +163,19 @@ announce('Dialog opened', 'polite')
 ### Select Component
 
 **Keyboard Support:**
+
 - `Enter` / `Space` - Opens/closes select
 - `Arrow Down/Up` - Navigates options (handled by Radix)
 - `Enter` / `Space` - Selects option
 - `Escape` - Closes select
 
 **ARIA Attributes:**
+
 - `aria-expanded` - Indicates if select is open
 - `aria-selected` - Indicates selected option
 
 **Usage:**
+
 ```typescript
 <Select>
   <SelectTrigger>
@@ -177,6 +195,7 @@ announce('Dialog opened', 'polite')
 Provides global keyboard navigation context to the entire application.
 
 **Setup:**
+
 ```typescript
 import { KeyboardNavigationProvider } from '@your-org/ui/providers/KeyboardNavigationProvider'
 
@@ -271,17 +290,20 @@ The keyboard navigation tests cover:
 ### Testing Best Practices
 
 1. **Use `userEvent` for keyboard interactions**
+
    ```typescript
    const user = userEvent.setup()
    await user.keyboard('{Enter}')
    ```
 
 2. **Test focus management**
+
    ```typescript
    expect(document.activeElement).toBe(expectedElement)
    ```
 
 3. **Test ARIA attributes**
+
    ```typescript
    expect(element).toHaveAttribute('aria-expanded', 'true')
    ```
@@ -370,4 +392,4 @@ Standard keyboard shortcuts are implemented:
 1. **Custom Keyboard Shortcuts**: Allow apps to define custom shortcuts
 2. **Keyboard Shortcut Display**: Show available shortcuts in UI
 3. **Advanced Focus Management**: Support for complex focus scenarios
-4. **Internationalization**: Support for different keyboard layouts 
+4. **Internationalization**: Support for different keyboard layouts

@@ -1,13 +1,24 @@
 ---
-tags: ['@frontend', '#inspiration-gallery', '#component-library', '#image-upload', '#responsive', '#accessibility', '#dragdrop', '#elasticsearch', '#animation']
+tags:
+  [
+    '@frontend',
+    '#inspiration-gallery',
+    '#component-library',
+    '#image-upload',
+    '#responsive',
+    '#accessibility',
+    '#dragdrop',
+    '#elasticsearch',
+    '#animation',
+  ]
 priority: 1
 ---
 
 # 🖼️ Inspiration Gallery – Frontend PRD
 
 ## 1. Overview
----
 
+---
 
 ## 1.1 Implementation Details
 
@@ -33,6 +44,7 @@ priority: 1
   - Components must be styled with Tailwind + ShadCN only
   - ShadCN components should be imported from `packages/ui`
   - ESLint and Prettier are enforced
+
 ## 2. Components
 
 - `<InspirationGallery />`: Masonry layout, infinite scroll
@@ -56,31 +68,31 @@ priority: 1
 
 ## 4. Test Cases
 
-| ID | Description | Expected |
-|----|-------------|----------|
-| TC01 | Upload `.jpg` | Appears in gallery |
-| TC02 | Upload 5 `.png`s | Album auto-created |
-| TC03 | Hover image | Drawer shows title, tags |
-| TC04 | Click image | Opens in lightbox with keyboard nav |
-| TC05 | Filter by tag | Gallery updates |
-| TC06 | Drag onto another image | New album created |
-| TC07 | Upload `.gif` | Error shown |
-| TC08 | Batch select + delete | Images removed |
-| TC09 | Flag image | Modal opens |
-| TC10 | Delete prompt | Modal confirmation shown |
+| ID   | Description             | Expected                            |
+| ---- | ----------------------- | ----------------------------------- |
+| TC01 | Upload `.jpg`           | Appears in gallery                  |
+| TC02 | Upload 5 `.png`s        | Album auto-created                  |
+| TC03 | Hover image             | Drawer shows title, tags            |
+| TC04 | Click image             | Opens in lightbox with keyboard nav |
+| TC05 | Filter by tag           | Gallery updates                     |
+| TC06 | Drag onto another image | New album created                   |
+| TC07 | Upload `.gif`           | Error shown                         |
+| TC08 | Batch select + delete   | Images removed                      |
+| TC09 | Flag image              | Modal opens                         |
+| TC10 | Delete prompt           | Modal confirmation shown            |
 
 ---
 
 ## 5. Edge Cases
 
-| Scenario | Handling |
-|----------|----------|
-| 100+ uploads | Paginate or batch |
-| Metadata includes emojis/symbols | Render safely |
-| Drag image onto itself | Prevent interaction |
-| Network fails mid-upload | Retry or show error |
-| Album with 0 images | Hide or prompt deletion |
-| Repeated flagging | One flag per user |
+| Scenario                         | Handling                |
+| -------------------------------- | ----------------------- |
+| 100+ uploads                     | Paginate or batch       |
+| Metadata includes emojis/symbols | Render safely           |
+| Drag image onto itself           | Prevent interaction     |
+| Network fails mid-upload         | Retry or show error     |
+| Album with 0 images              | Hide or prompt deletion |
+| Repeated flagging                | One flag per user       |
 
 ---
 

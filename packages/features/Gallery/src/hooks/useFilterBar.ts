@@ -1,49 +1,49 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react'
 import {
   useSearchImagesQuery,
   useGetAvailableTagsQuery,
   useGetAvailableCategoriesQuery,
-} from '../store/galleryApi';
-import type { FilterState } from '../schemas';
+} from '../store/galleryApi'
+import type { FilterState } from '../schemas'
 
 export interface UseFilterBarOptions {
-  initialFilters?: Partial<FilterState>;
-  debounceMs?: number;
-  pageSize?: number;
+  initialFilters?: Partial<FilterState>
+  debounceMs?: number
+  pageSize?: number
 }
 
 export interface UseFilterBarReturn {
   // State
-  filters: FilterState;
-  searchResults: any[];
-  isLoading: boolean;
-  error: any;
-  totalResults: number;
-  hasActiveFilters: boolean;
+  filters: FilterState
+  searchResults: any[]
+  isLoading: boolean
+  error: any
+  totalResults: number
+  hasActiveFilters: boolean
 
   // Available options
-  availableTags: string[];
-  availableCategories: string[];
+  availableTags: string[]
+  availableCategories: string[]
 
   // Actions
-  setSearchQuery: (query: string) => void;
-  setSelectedTags: (tags: string[]) => void;
-  setSelectedCategory: (category: string) => void;
-  clearFilters: () => void;
-  toggleTag: (tag: string) => void;
+  setSearchQuery: (query: string) => void
+  setSelectedTags: (tags: string[]) => void
+  setSelectedCategory: (category: string) => void
+  clearFilters: () => void
+  toggleTag: (tag: string) => void
 
   // Computed
   searchParams: {
-    query?: string;
-    tags?: string[];
-    category?: string;
-    from?: number;
-    size?: number;
-  };
+    query?: string
+    tags?: string[]
+    category?: string
+    from?: number
+    size?: number
+  }
 }
 
 export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarReturn => {
-  const { initialFilters = {}, pageSize = 20 } = options;
+  const { initialFilters = {}, pageSize = 20 } = options
 
   // Local filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -51,11 +51,11 @@ export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarRet
     selectedTags: [],
     selectedCategory: '',
     ...initialFilters,
-  });
+  })
 
   // Get available tags and categories
-  const { data: availableTags = [] } = useGetAvailableTagsQuery();
-  const { data: availableCategories = [] } = useGetAvailableCategoriesQuery();
+  const { data: availableTags = [] } = useGetAvailableTagsQuery()
+  const { data: availableCategories = [] } = useGetAvailableCategoriesQuery()
 
   // Computed values
   const hasActiveFilters = useMemo(() => {
@@ -63,35 +63,35 @@ export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarRet
       filters.searchQuery.trim() ||
       filters.selectedTags.length > 0 ||
       filters.selectedCategory
-    );
-  }, [filters]);
+    )
+  }, [filters])
 
   // Compute search parameters for API call
   const searchParams = useMemo(() => {
     const params: {
-      query?: string;
-      tags?: string[];
-      category?: string;
-      from?: number;
-      size?: number;
-    } = {};
+      query?: string
+      tags?: string[]
+      category?: string
+      from?: number
+      size?: number
+    } = {}
 
     if (filters.searchQuery.trim()) {
-      params.query = filters.searchQuery.trim();
+      params.query = filters.searchQuery.trim()
     }
 
     if (filters.selectedTags.length > 0) {
-      params.tags = filters.selectedTags;
+      params.tags = filters.selectedTags
     }
 
     if (filters.selectedCategory) {
-      params.category = filters.selectedCategory;
+      params.category = filters.selectedCategory
     }
 
-    params.size = pageSize;
+    params.size = pageSize
 
-    return params;
-  }, [filters, pageSize]);
+    return params
+  }, [filters, pageSize])
 
   // Perform search query
   const {
@@ -100,46 +100,46 @@ export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarRet
     error,
   } = useSearchImagesQuery(searchParams, {
     skip: !hasActiveFilters && !filters.searchQuery.trim(),
-  });
+  })
 
   const searchResults = useMemo(() => {
-    return searchData?.data || [];
-  }, [searchData]);
+    return searchData?.data || []
+  }, [searchData])
 
   const totalResults = useMemo(() => {
-    return searchData?.total || 0;
-  }, [searchData]);
+    return searchData?.total || 0
+  }, [searchData])
 
   // Action handlers
   const setSearchQuery = useCallback((query: string) => {
-    setFilters((prev) => ({ ...prev, searchQuery: query }));
-  }, []);
+    setFilters(prev => ({ ...prev, searchQuery: query }))
+  }, [])
 
   const setSelectedTags = useCallback((tags: string[]) => {
-    setFilters((prev) => ({ ...prev, selectedTags: tags }));
-  }, []);
+    setFilters(prev => ({ ...prev, selectedTags: tags }))
+  }, [])
 
   const setSelectedCategory = useCallback((category: string) => {
-    setFilters((prev) => ({ ...prev, selectedCategory: category }));
-  }, []);
+    setFilters(prev => ({ ...prev, selectedCategory: category }))
+  }, [])
 
   const clearFilters = useCallback(() => {
     setFilters({
       searchQuery: '',
       selectedTags: [],
       selectedCategory: '',
-    });
-  }, []);
+    })
+  }, [])
 
   const toggleTag = useCallback((tag: string) => {
-    setFilters((prev) => {
+    setFilters(prev => {
       const newTags = prev.selectedTags.includes(tag)
-        ? prev.selectedTags.filter((t) => t !== tag)
-        : [...prev.selectedTags, tag];
+        ? prev.selectedTags.filter(t => t !== tag)
+        : [...prev.selectedTags, tag]
 
-      return { ...prev, selectedTags: newTags };
-    });
-  }, []);
+      return { ...prev, selectedTags: newTags }
+    })
+  }, [])
 
   return {
     // State
@@ -163,5 +163,5 @@ export const useFilterBar = (options: UseFilterBarOptions = {}): UseFilterBarRet
 
     // Computed
     searchParams,
-  };
-};
+  }
+}

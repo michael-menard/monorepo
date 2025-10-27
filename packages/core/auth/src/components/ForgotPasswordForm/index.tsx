@@ -1,15 +1,15 @@
-import { motion } from 'framer-motion';
-import { Mail } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '../../hooks/useAuth.js';
-import { forgotPasswordSchema, type ForgotPasswordFormData } from './schema.js';
-import { Input, Button } from '@repo/ui';
+import { motion } from 'framer-motion'
+import { Mail } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Input, Button } from '@repo/ui'
+import { useAuth } from '../../hooks/useAuth.js'
+import { forgotPasswordSchema, type ForgotPasswordFormData } from './schema.js'
 
 const ForgotPasswordForm = () => {
-  const navigate = useNavigate();
-  const { forgotPassword, isLoading, message, error } = useAuth();
+  const navigate = useNavigate()
+  const { forgotPassword, isLoading, message, error } = useAuth()
 
   const {
     register,
@@ -17,15 +17,15 @@ const ForgotPasswordForm = () => {
     formState: { errors },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
-  });
+  })
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    await forgotPassword(data);
-  };
+    await forgotPassword(data)
+  }
 
   const handleBackToLogin = () => {
-    navigate('/login');
-  };
+    navigate('/login')
+  }
 
   return (
     <motion.div
@@ -52,16 +52,14 @@ const ForgotPasswordForm = () => {
                   placeholder="Email Address"
                   className="pl-10"
                 />
-                {errors.email && (
+                {errors.email ? (
                   <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-                )}
+                ) : null}
               </div>
             </div>
 
-            {error && <p className="text-red-500 font-semibold mt-2">{String(error)}</p>}
-            {message && (
-              <p className="text-green-500 font-semibold mt-2">{message}</p>
-            )}
+            {error ? <p className="text-red-500 font-semibold mt-2">{String(error)}</p> : null}
+            {message ? <p className="text-green-500 font-semibold mt-2">{message}</p> : null}
 
             <Button
               type="submit"
@@ -84,16 +82,13 @@ const ForgotPasswordForm = () => {
       <div className="px-8 py-4 bg-gray-900 bg-opacity-50 flex justify-center">
         <p className="text-sm text-gray-400">
           Remember your password?{' '}
-          <button
-            onClick={handleBackToLogin}
-            className="text-green-400 hover:underline"
-          >
+          <button onClick={handleBackToLogin} className="text-green-400 hover:underline">
             Back to Login
           </button>
         </p>
       </div>
     </motion.div>
-  );
-};
+  )
+}
 
-export default ForgotPasswordForm; 
+export default ForgotPasswordForm

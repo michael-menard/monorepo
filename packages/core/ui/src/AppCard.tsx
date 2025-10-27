@@ -1,15 +1,15 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './index';
+import React from 'react'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from './index'
 
 export interface AppCardProps {
-  title?: string;
-  description?: string;
-  children: React.ReactNode;
-  className?: string;
-  headerClassName?: string;
-  contentClassName?: string;
-  showHeader?: boolean;
-  actions?: React.ReactNode;
+  title?: string
+  description?: string
+  children: React.ReactNode
+  className?: string
+  headerClassName?: string
+  contentClassName?: string
+  showHeader?: boolean
+  actions?: React.ReactNode
 }
 
 export const AppCard: React.FC<AppCardProps> = ({
@@ -24,18 +24,18 @@ export const AppCard: React.FC<AppCardProps> = ({
 }) => {
   return (
     <Card className={className}>
-      {showHeader && (title || description || actions) && (
+      {showHeader && (title || description || actions) ? (
         <CardHeader className={headerClassName}>
           <div className="flex items-center justify-between">
             <div>
-              {title && <CardTitle data-testid="app-card-title">{title}</CardTitle>}
-              {description && <CardDescription>{description}</CardDescription>}
+              {title ? <CardTitle data-testid="app-card-title">{title}</CardTitle> : null}
+              {description ? <CardDescription>{description}</CardDescription> : null}
             </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
+            {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
           </div>
         </CardHeader>
-      )}
+      ) : null}
       <CardContent className={contentClassName}>{children}</CardContent>
     </Card>
-  );
-}; 
+  )
+}

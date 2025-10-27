@@ -32,18 +32,23 @@ import { Upload } from '@monorepo/upload';
 ## Components
 
 ### Upload
+
 The main component that can render in different modes:
+
 - `inline`: Direct upload area in component tree
 - `modal`: Button that opens upload modal
 - `avatar`: Circular upload for profile pictures
 
 ### UploadArea
+
 Drag-and-drop interface component with visual feedback.
 
 ### FilePreview
+
 Displays file information, preview thumbnails, and upload status.
 
 ### ProgressIndicator
+
 Shows upload progress in linear or circular format.
 
 ## Presets
@@ -68,10 +73,10 @@ const config = {
   multiple: true,
   autoUpload: false,
   endpoint: '/api/upload',
-  headers: { 'Authorization': 'Bearer token' }
-};
+  headers: { Authorization: 'Bearer token' },
+}
 
-<Upload config={config} />
+;<Upload config={config} />
 ```
 
 ## Hooks
@@ -87,11 +92,11 @@ const config = {
 
 ```tsx
 <Upload
-  onUploadStart={(files) => console.log('Started:', files)}
+  onUploadStart={files => console.log('Started:', files)}
   onUploadProgress={(progress, file) => console.log('Progress:', progress)}
-  onUploadComplete={(files) => console.log('Completed:', files)}
+  onUploadComplete={files => console.log('Completed:', files)}
   onUploadError={(error, file) => console.log('Error:', error)}
-  onFilesChange={(files) => console.log('Files changed:', files)}
+  onFilesChange={files => console.log('Files changed:', files)}
 />
 ```
 
@@ -100,10 +105,7 @@ const config = {
 The components use Tailwind CSS classes and can be customized with:
 
 ```tsx
-<Upload 
-  className="custom-upload-styles"
-  mode="inline"
-/>
+<Upload className="custom-upload-styles" mode="inline" />
 ```
 
 ## Browser Support

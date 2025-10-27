@@ -2,7 +2,10 @@ import { z } from 'zod'
 
 // Cache configuration schema
 export const CacheConfigSchema = z.object({
-  maxAge: z.number().positive().default(5 * 60 * 1000), // 5 minutes default
+  maxAge: z
+    .number()
+    .positive()
+    .default(5 * 60 * 1000), // 5 minutes default
   maxSize: z.number().positive().default(100), // 100 items default
   storage: z.enum(['memory', 'localStorage', 'sessionStorage', 'cache']).default('memory'),
   keyPrefix: z.string().default('cache_'),
@@ -60,4 +63,4 @@ export type CacheConfig = z.infer<typeof CacheConfigSchema>
 export type CacheEntry = z.infer<typeof CacheEntrySchema>
 export type CacheStats = z.infer<typeof CacheStatsSchema>
 export type ImageCacheEntry = z.infer<typeof ImageCacheEntrySchema>
-export type RTKQueryCacheConfig = z.infer<typeof RTKQueryCacheConfigSchema> 
+export type RTKQueryCacheConfig = z.infer<typeof RTKQueryCacheConfigSchema>

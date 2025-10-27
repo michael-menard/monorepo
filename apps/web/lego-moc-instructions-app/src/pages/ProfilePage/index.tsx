@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from '@tanstack/react-router';
-import {
-  Button,
-  FormSection,
-} from '@repo/ui';
-import {
-  AvatarUploader,
-} from '@repo/profile';
-import { useAuth } from '@repo/auth';
-import { LegoProfileContent } from './LegoProfileContent';
-import type { Profile, ProfileForm } from '@repo/profile';
+import React, { useEffect, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
+import { Button, FormSection } from '@repo/ui'
+import { AvatarUploader } from '@repo/profile'
+import { useAuth } from '@repo/auth'
+import type { Profile, ProfileForm } from '@repo/profile'
+import { LegoProfileContent } from './LegoProfileContent'
 
 // Mock profile data - in a real app, this would come from an API
 const mockProfile: Profile = {
@@ -19,7 +14,8 @@ const mockProfile: Profile = {
   email: 'john.doe@example.com',
   username: 'johndoe',
   bio: 'LEGO enthusiast and MOC creator. I love building custom models and sharing instructions with the community.',
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+  avatar:
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
   phone: '+1 (555) 123-4567',
   dateOfBirth: new Date('1990-05-15'),
   location: 'San Francisco, CA',
@@ -38,50 +34,52 @@ const mockProfile: Profile = {
   },
   createdAt: new Date('2023-01-01'),
   updatedAt: new Date('2024-01-15'),
-};
+}
 
 export const ProfilePage: React.FC = () => {
-  const router = useRouter();
-  const { user, isLoading: isAuthLoading, isAuthenticated, error } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
+  const router = useRouter()
+  const { user, isLoading: isAuthLoading, isAuthenticated, error } = useAuth()
+  const [isEditing, setIsEditing] = useState(false)
 
   // Redirect to login if not authenticated (after logout)
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      console.log('🔄 ProfilePage: User not authenticated, redirecting to login');
-      router.navigate({ to: '/auth/login', replace: true });
+      console.log('🔄 ProfilePage: User not authenticated, redirecting to login')
+      router.navigate({ to: '/auth/login', replace: true })
     }
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, router])
 
   // Convert authenticated user data to profile format
-  const profile: Profile = user ? {
-    id: user._id || user.id || '1',
-    firstName: user.name?.split(' ')[0] || 'User',
-    lastName: user.name?.split(' ').slice(1).join(' ') || 'Builder',
-    email: user.email || '',
-    username: user.username || user.email?.split('@')[0] || '',
-    bio: user.bio || 'LEGO enthusiast and MOC creator. Welcome to my profile!',
-    avatar: user.avatar || '',
-    phone: user.phone || '',
-    dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date('1990-01-01'),
-    location: user.location || '',
-    website: user.website || '',
-    socialLinks: user.socialLinks || {},
-    preferences: {
-      emailNotifications: true,
-      pushNotifications: false,
-      publicProfile: true,
-      theme: 'system',
-    },
-    createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-    updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-  } : mockProfile;
+  const profile: Profile = user
+    ? {
+        id: user._id || user.id || '1',
+        firstName: user.name?.split(' ')[0] || 'User',
+        lastName: user.name?.split(' ').slice(1).join(' ') || 'Builder',
+        email: user.email || '',
+        username: user.username || user.email?.split('@')[0] || '',
+        bio: user.bio || 'LEGO enthusiast and MOC creator. Welcome to my profile!',
+        avatar: user.avatar || '',
+        phone: user.phone || '',
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date('1990-01-01'),
+        location: user.location || '',
+        website: user.website || '',
+        socialLinks: user.socialLinks || {},
+        preferences: {
+          emailNotifications: true,
+          pushNotifications: false,
+          publicProfile: true,
+          theme: 'system',
+        },
+        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+      }
+    : mockProfile
 
-  const [profileState, setProfileState] = useState<Profile>(profile);
+  const [profileState, setProfileState] = useState<Profile>(profile)
 
   const handleEdit = () => {
-    setIsEditing(true);
-  };
+    setIsEditing(true)
+  }
 
   // Update profile state when user data changes
   useEffect(() => {
@@ -107,10 +105,10 @@ export const ProfilePage: React.FC = () => {
         },
         createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
         updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-      };
-      setProfileState(updatedProfile);
+      }
+      setProfileState(updatedProfile)
     }
-  }, [user]);
+  }, [user])
 
   const handleSave = (data: ProfileForm) => {
     // In a real app, this would call an API to update the profile
@@ -118,41 +116,41 @@ export const ProfilePage: React.FC = () => {
       ...prev,
       ...data,
       updatedAt: new Date(),
-    }));
-    setIsEditing(false);
-  };
+    }))
+    setIsEditing(false)
+  }
 
   const handleCancel = () => {
-    setIsEditing(false);
-  };
+    setIsEditing(false)
+  }
 
   // Close modal on Escape for accessibility
   useEffect(() => {
-    if (!isEditing) return;
+    if (!isEditing) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsEditing(false);
+        setIsEditing(false)
       }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEditing]);
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isEditing])
 
   const handleAvatarUpload = (file: File) => {
     try {
       // In a real app, this would upload to a server and return a URL
-      const url = URL.createObjectURL(file);
+      const url = URL.createObjectURL(file)
       setProfileState((prev: Profile) => ({
         ...prev,
         avatar: url,
         updatedAt: new Date(),
-      }));
+      }))
     } catch (error) {
       // Handle upload errors gracefully
-      console.error('Avatar upload failed:', error);
+      console.error('Avatar upload failed:', error)
       // Optionally show a toast notification or error message
     }
-  };
+  }
 
   // Simplified layout - no sidebar, just main content
 
@@ -165,12 +163,12 @@ export const ProfilePage: React.FC = () => {
           <p className="text-muted-foreground">Loading your profile...</p>
         </div>
       </div>
-    );
+    )
   }
 
   // If not authenticated, don't render anything (redirect will happen)
   if (!isAuthenticated || !user) {
-    return null;
+    return null
   }
 
   // Show error state if not authenticated
@@ -182,32 +180,28 @@ export const ProfilePage: React.FC = () => {
           <p className="text-muted-foreground mb-4">
             {error ? `Error: ${error}` : 'You are not authenticated. Please log in again.'}
           </p>
-          <Button onClick={() => router.navigate({ to: '/auth/login' })}>
-            Go to Login
-          </Button>
+          <Button onClick={() => router.navigate({ to: '/auth/login' })}>Go to Login</Button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <>
       {/* Profile Content */}
-      <LegoProfileContent
-        profile={profileState}
-        onEdit={handleEdit}
-        isEditing={isEditing}
-      />
+      <LegoProfileContent profile={profileState} onEdit={handleEdit} isEditing={isEditing} />
 
       {/* Edit Profile Modal */}
-      {isEditing && (
+      {isEditing ? (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Edit Profile</h2>
-              <Button variant="ghost" onClick={handleCancel}>×</Button>
+              <Button variant="ghost" onClick={handleCancel}>
+                ×
+              </Button>
             </div>
-            
+
             <div className="space-y-6">
               <div className="text-center">
                 <AvatarUploader
@@ -285,12 +279,27 @@ export const ProfilePage: React.FC = () => {
               </Button>
               <Button
                 onClick={() => {
-                  const first = (document.querySelector('[data-testid="input-firstName"]') as HTMLInputElement | null)?.value || '';
-                  const last = (document.querySelector('[data-testid="input-lastName"]') as HTMLInputElement | null)?.value || '';
-                  const email = (document.querySelector('[data-testid="input-email"]') as HTMLInputElement | null)?.value || '';
+                  const first =
+                    (
+                      document.querySelector(
+                        '[data-testid="input-firstName"]',
+                      ) as HTMLInputElement | null
+                    )?.value || ''
+                  const last =
+                    (
+                      document.querySelector(
+                        '[data-testid="input-lastName"]',
+                      ) as HTMLInputElement | null
+                    )?.value || ''
+                  const email =
+                    (
+                      document.querySelector(
+                        '[data-testid="input-email"]',
+                      ) as HTMLInputElement | null
+                    )?.value || ''
                   if (!first || !last || !email) {
                     // Simulate save flow (and test expectation to close on invalid)
-                    handleSave(profile as unknown as ProfileForm);
+                    handleSave(profile as unknown as ProfileForm)
                   }
                   // If valid, keep modal open to mimic client-side validation preventing submit
                 }}
@@ -301,9 +310,9 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
-  );
-};
+  )
+}
 
-export default ProfilePage; 
+export default ProfilePage

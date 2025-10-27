@@ -9,6 +9,7 @@
 A comprehensive monorepo for the LEGO MOC (My Own Creation) platform, featuring web applications, API services, and shared packages for building, managing, and sharing LEGO instructions with automated testing and quality assurance.
 
 🚀 **CI/CD Status**: GitHub Actions workflows active for automated testing, security scanning, and quality assurance.
+🔒 **Branch Protection**: Main branch is protected - all changes must go through Pull Requests with required status checks.
 
 ## 🏗️ Architecture Overview
 
@@ -53,17 +54,20 @@ Monorepo/
 ### Installation
 
 1. **Clone the repository:**
+
 ```bash
 git clone <repository-url>
 cd Monorepo
 ```
 
 2. **Install dependencies:**
+
 ```bash
 pnpm install
 ```
 
 3. **Set up environment variables:**
+
 ```bash
 # Copy main environment file (includes port configuration)
 cp .env.example .env
@@ -79,6 +83,7 @@ cp .env.ports .env.ports.local
 ```
 
 4. **Start development services:**
+
 ```bash
 # Start external services (databases, search, admin tools)
 pnpm dev:infra
@@ -88,6 +93,7 @@ pnpm dev
 ```
 
 5. **Access the applications:**
+
 - **Main Web App**: http://localhost:3002
 - **Documentation**: http://localhost:3000
 - **Auth API**: http://localhost:9300
@@ -96,6 +102,7 @@ pnpm dev
 ### 🔧 Troubleshooting
 
 #### Port Conflicts
+
 If you encounter port conflicts, the development script automatically cleans up ports before starting. You can also manually clean ports:
 
 ```bash
@@ -111,6 +118,7 @@ lsof -ti:3002
 ```
 
 #### Port Configuration
+
 The monorepo uses centralized port configuration through environment variables:
 
 - **Default ports** are defined in `.env.ports`
@@ -122,6 +130,7 @@ The monorepo uses centralized port configuration through environment variables:
   - `DOCS_PORT=3000` - Documentation site
 
 To change ports system-wide:
+
 ```bash
 # Create local port configuration
 cp .env.ports .env.ports.local
@@ -133,19 +142,24 @@ LEGO_API_PORT=9100
 ```
 
 #### Common Issues
+
 - **"Port already in use"**: Run `pnpm kill-ports` before starting development
 - **Docker not running**: Ensure Docker Desktop is running before starting
 - **Services not responding**: Check logs with `pnpm logs:auth` or `pnpm logs:lego`
 - **Port conflicts**: Customize ports in `.env.ports.local`
+- **"Can't push to main"**: Main branch is protected - create a Pull Request instead
+- **Check branch protection**: Run `.github/scripts/check-branch-protection.sh`
 
 ## 📦 Packages Overview
 
 ### Core Packages
 
 #### `@repo/shared`
+
 Core utilities and design system tokens used across the entire monorepo.
 
 **Features:**
+
 - Design system tokens and theme configuration
 - Core utility functions (date, string, validation, etc.)
 - Custom React hooks
@@ -153,14 +167,17 @@ Core utilities and design system tokens used across the entire monorepo.
 - Responsive utilities
 
 **Usage:**
+
 ```tsx
-import { formatDate, validateEmail, useLocalStorage } from '@repo/shared';
+import { formatDate, validateEmail, useLocalStorage } from '@repo/shared'
 ```
 
 #### `@repo/ui`
+
 Base UI components built with shadcn/ui and Tailwind CSS.
 
 **Features:**
+
 - Reusable UI components
 - Consistent design system
 - Accessibility support
@@ -168,14 +185,17 @@ Base UI components built with shadcn/ui and Tailwind CSS.
 - Customizable theming
 
 **Usage:**
+
 ```tsx
-import { Button, Input, Card } from '@repo/ui';
+import { Button, Input, Card } from '@repo/ui'
 ```
 
 #### `@repo/auth`
+
 Authentication package with Redux Toolkit integration.
 
 **Features:**
+
 - Complete authentication flow
 - Redux state management
 - React hooks for auth
@@ -183,52 +203,63 @@ Authentication package with Redux Toolkit integration.
 - Email verification
 
 **Usage:**
+
 ```tsx
-import { useAuth, RouteGuard } from '@repo/auth';
+import { useAuth, RouteGuard } from '@repo/auth'
 ```
 
 ### Feature Packages
 
 #### `@repo/features/gallery`
+
 Gallery component package for displaying and managing image collections.
 
 **Features:**
+
 - Image gallery with grid layout
 - Advanced search and filtering
 - Upload integration
 - Responsive design
 
 #### `@repo/features/wishlist`
+
 Wishlist management package for LEGO sets and parts.
 
 **Features:**
+
 - Multi-select functionality
 - Categorization and filtering
 - Sharing capabilities
 - Bulk operations
 
 #### `@repo/features/profile`
+
 User profile management package.
 
 **Features:**
+
 - Profile editing and display
 - Avatar upload with cropping
 - Guided tours
 - Tabbed navigation
 
 #### `@repo/features/moc-instructions`
+
 MOC instruction creation and management.
 
 **Features:**
+
 - Step-by-step instruction builder
 - Image integration
 - Version control
 - Collaboration tools
 
 #### `@monorepo/upload`
+
 Unified file and image upload system with comprehensive functionality.
 
 **Features:**
+
 - Drag and drop support
 - Image preview and processing
 - Progress tracking
@@ -240,18 +271,22 @@ Unified file and image upload system with comprehensive functionality.
 ### Utility Packages
 
 #### `@repo/cache`
+
 Caching utilities for improved performance.
 
 **Features:**
+
 - Redis integration
 - Memory caching
 - Cache invalidation
 - Performance optimization
 
 #### `@monorepo/upload` (Consolidated)
+
 Unified file and image upload system with comprehensive functionality.
 
 **Features:**
+
 - File upload with drag-and-drop support
 - Image processing and optimization
 - Progress tracking and validation
@@ -260,9 +295,11 @@ Unified file and image upload system with comprehensive functionality.
 - Metadata extraction
 
 #### `@repo/tech-radar`
+
 Technology radar visualization for tracking tech decisions.
 
 **Features:**
+
 - Interactive radar chart
 - Quadrant organization
 - Adoption stage tracking
@@ -313,8 +350,13 @@ pnpm changeset        # Create a changeset
 
 ### Development Workflow
 
+> **🔒 Important**: The `main` branch is protected. All changes must go through Pull Requests with required status checks.
+
 1. **Create a feature branch:**
+
 ```bash
+git checkout main
+git pull origin main
 git checkout -b feature/your-feature-name
 ```
 
@@ -324,6 +366,7 @@ git checkout -b feature/your-feature-name
    - Update documentation
 
 3. **Run tests and checks:**
+
 ```bash
 pnpm test
 pnpm lint
@@ -331,11 +374,36 @@ pnpm type-check
 ```
 
 4. **Create a changeset:**
+
 ```bash
 pnpm changeset
 ```
 
-5. **Submit a pull request**
+5. **Push your changes:**
+
+```bash
+git add .
+git commit -m "feat: add your feature description"
+git push origin feature/your-feature-name
+```
+
+6. **Create a Pull Request:**
+   - Go to GitHub and create a Pull Request to `main`
+   - Fill out the PR template with description and testing notes
+   - All required status checks must pass:
+     - ✅ Unit Tests
+     - ✅ Lint & Type Check
+     - ✅ Build All Packages
+     - ✅ Security Audit
+     - ✅ AI Code Review (CodeRabbit + Auggie)
+   - At least 1 approval is required before merging
+   - Branch must be up-to-date with main before merging
+
+7. **Merge Process:**
+   - Use "Squash and merge" or "Rebase and merge" (no merge commits)
+   - Feature branch will be automatically deleted after merge
+
+> **📋 Branch Protection Details**: See [`.github/BRANCH_PROTECTION_SETUP.md`](.github/BRANCH_PROTECTION_SETUP.md) for complete setup instructions and troubleshooting.
 
 ### Code Standards
 
@@ -476,15 +544,15 @@ All packages use ESNext module resolution:
 Standard Vite configuration with React plugin:
 
 ```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
   build: {
-    target: 'ESNext'
-  }
-});
+    target: 'ESNext',
+  },
+})
 ```
 
 ### Tailwind Configuration
@@ -492,7 +560,7 @@ export default defineConfig({
 Tailwind CSS v4 with custom design tokens:
 
 ```typescript
-import { Config } from 'tailwindcss';
+import { Config } from 'tailwindcss'
 
 export default {
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
@@ -500,11 +568,11 @@ export default {
     extend: {
       colors: {
         primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)'
-      }
-    }
-  }
-} satisfies Config;
+        secondary: 'var(--color-secondary)',
+      },
+    },
+  },
+} satisfies Config
 ```
 
 ## 🤝 Contributing
@@ -553,16 +621,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Common issues and solutions:
 
 **Build Failures**
+
 - Clear node_modules and reinstall: `pnpm clean && pnpm install`
 - Check TypeScript errors: `pnpm type-check`
 - Verify environment variables
 
 **Test Failures**
+
 - Run tests individually: `pnpm --filter package-name test`
 - Check test environment setup
 - Verify database connection
 
 **Runtime Errors**
+
 - Check browser console for errors
 - Verify API endpoints are running
 - Check environment configuration

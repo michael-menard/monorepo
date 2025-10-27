@@ -26,18 +26,12 @@ export const PWAStatusIndicator = () => {
       ) : (
         <WifiOff className="h-4 w-4 text-red-500" />
       )}
-      
-      {offlineReady && (
-        <CheckCircle className="h-4 w-4 text-green-500" />
-      )}
-      
-      {needRefresh && (
-        <AlertCircle className="h-4 w-4 text-yellow-500" />
-      )}
-      
-      <span className="text-muted-foreground">
-        {isOnline ? 'Online' : 'Offline'}
-      </span>
+
+      {offlineReady ? <CheckCircle className="h-4 w-4 text-green-500" /> : null}
+
+      {needRefresh ? <AlertCircle className="h-4 w-4 text-yellow-500" /> : null}
+
+      <span className="text-muted-foreground">{isOnline ? 'Online' : 'Offline'}</span>
     </div>
   )
-} 
+}

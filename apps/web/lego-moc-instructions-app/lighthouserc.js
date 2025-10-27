@@ -20,4 +20,4 @@ exports = {
       target: 'temporary-public-storage',
     },
   },
-};
+}

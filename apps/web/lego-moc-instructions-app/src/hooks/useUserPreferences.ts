@@ -5,20 +5,26 @@ import { z } from 'zod'
 const UserPreferencesSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']).default('system'),
   language: z.string().default('en'),
-  notifications: z.object({
-    email: z.boolean().default(true),
-    push: z.boolean().default(true),
-    marketing: z.boolean().default(false),
-  }).default({}),
-  privacy: z.object({
-    analytics: z.boolean().default(true),
-    cookies: z.boolean().default(true),
-  }).default({}),
-  accessibility: z.object({
-    reducedMotion: z.boolean().default(false),
-    highContrast: z.boolean().default(false),
-    fontSize: z.enum(['small', 'medium', 'large']).default('medium'),
-  }).default({}),
+  notifications: z
+    .object({
+      email: z.boolean().default(true),
+      push: z.boolean().default(true),
+      marketing: z.boolean().default(false),
+    })
+    .default({}),
+  privacy: z
+    .object({
+      analytics: z.boolean().default(true),
+      cookies: z.boolean().default(true),
+    })
+    .default({}),
+  accessibility: z
+    .object({
+      reducedMotion: z.boolean().default(false),
+      highContrast: z.boolean().default(false),
+      fontSize: z.enum(['small', 'medium', 'large']).default('medium'),
+    })
+    .default({}),
 })
 
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>
@@ -127,32 +133,32 @@ export const useUserPreferences = () => {
   }, [])
 
   // Update specific preference
-  const updatePreference = useCallback(<K extends keyof UserPreferences>(
-    key: K,
-    value: UserPreferences[K]
-  ) => {
-    const newPreferences = { ...preferences, [key]: value }
-    return savePreferences(newPreferences)
-  }, [preferences, savePreferences])
+  const updatePreference = useCallback(
+    <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+      const newPreferences = { ...preferences, [key]: value }
+      return savePreferences(newPreferences)
+    },
+    [preferences, savePreferences],
+  )
 
   // Update nested preference
-  const updateNestedPreference = useCallback(<
-    K extends keyof UserPreferences,
-    NK extends keyof UserPreferences[K]
-  >(
-    key: K,
-    nestedKey: NK,
-    value: UserPreferences[K][NK]
-  ) => {
-    const newPreferences = {
-      ...preferences,
-      [key]: {
-        ...preferences[key],
-        [nestedKey]: value,
-      },
-    }
-    return savePreferences(newPreferences)
-  }, [preferences, savePreferences])
+  const updateNestedPreference = useCallback(
+    <K extends keyof UserPreferences, NK extends keyof UserPreferences[K]>(
+      key: K,
+      nestedKey: NK,
+      value: UserPreferences[K][NK],
+    ) => {
+      const newPreferences = {
+        ...preferences,
+        [key]: {
+          ...preferences[key],
+          [nestedKey]: value,
+        },
+      }
+      return savePreferences(newPreferences)
+    },
+    [preferences, savePreferences],
+  )
 
   // Reset to defaults
   const resetPreferences = useCallback(() => {
@@ -165,17 +171,20 @@ export const useUserPreferences = () => {
   }, [preferences])
 
   // Import preferences (from backup/sync)
-  const importPreferences = useCallback((preferencesJson: string) => {
-    try {
-      const parsed = JSON.parse(preferencesJson)
-      const validated = UserPreferencesSchema.parse(parsed)
-      return savePreferences(validated)
-    } catch (err) {
-      console.error('Failed to import preferences:', err)
-      setError('Invalid preferences format')
-      return false
-    }
-  }, [savePreferences])
+  const importPreferences = useCallback(
+    (preferencesJson: string) => {
+      try {
+        const parsed = JSON.parse(preferencesJson)
+        const validated = UserPreferencesSchema.parse(parsed)
+        return savePreferences(validated)
+      } catch (err) {
+        console.error('Failed to import preferences:', err)
+        setError('Invalid preferences format')
+        return false
+      }
+    },
+    [savePreferences],
+  )
 
   return {
     preferences,

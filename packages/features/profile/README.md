@@ -26,7 +26,7 @@ pnpm add @repo/features/profile
 ### 1. Basic Profile Component
 
 ```tsx
-import { Profile } from '@repo/features/profile';
+import { Profile } from '@repo/features/profile'
 
 function UserProfile() {
   const user = {
@@ -36,57 +36,49 @@ function UserProfile() {
     avatar: '/path/to/avatar.jpg',
     bio: 'LEGO enthusiast and builder',
     location: 'New York, NY',
-    website: 'https://example.com'
-  };
+    website: 'https://example.com',
+  }
 
   const handleProfileUpdate = async (updatedProfile: UserProfile) => {
     try {
-      await updateProfile(updatedProfile);
-      console.log('Profile updated successfully');
+      await updateProfile(updatedProfile)
+      console.log('Profile updated successfully')
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      console.error('Failed to update profile:', error)
     }
-  };
+  }
 
-  return (
-    <Profile
-      user={user}
-      onUpdate={handleProfileUpdate}
-      onAvatarUpload={handleAvatarUpload}
-    />
-  );
+  return <Profile user={user} onUpdate={handleProfileUpdate} onAvatarUpload={handleAvatarUpload} />
 }
 ```
 
 ### 2. With Guided Tour
 
 ```tsx
-import { Profile, useGuidedTour } from '@repo/features/profile';
+import { Profile, useGuidedTour } from '@repo/features/profile'
 
 function ProfileWithTour() {
-  const { startTour, isTourActive, currentStep } = useGuidedTour();
+  const { startTour, isTourActive, currentStep } = useGuidedTour()
 
   const tourSteps = [
     {
       id: 'profile-basics',
       title: 'Profile Basics',
       content: 'Update your basic information here',
-      target: '#profile-form'
+      target: '#profile-form',
     },
     {
       id: 'avatar-upload',
       title: 'Avatar Upload',
       content: 'Upload and crop your profile picture',
-      target: '#avatar-upload'
-    }
-  ];
+      target: '#avatar-upload',
+    },
+  ]
 
   return (
     <div>
-      <button onClick={() => startTour(tourSteps)}>
-        Start Tour
-      </button>
-      
+      <button onClick={() => startTour(tourSteps)}>Start Tour</button>
+
       <Profile
         user={user}
         onUpdate={handleProfileUpdate}
@@ -95,41 +87,41 @@ function ProfileWithTour() {
         currentTourStep={currentStep}
       />
     </div>
-  );
+  )
 }
 ```
 
 ### 3. Tabbed Profile Layout
 
 ```tsx
-import { ProfileTabs, ProfileTab } from '@repo/features/profile';
+import { ProfileTabs, ProfileTab } from '@repo/features/profile'
 
 function TabbedProfile() {
   const tabs = [
     {
       id: 'overview',
       label: 'Overview',
-      content: <ProfileOverview user={user} />
+      content: <ProfileOverview user={user} />,
     },
     {
       id: 'builds',
       label: 'My Builds',
-      content: <UserBuilds userId={user.id} />
+      content: <UserBuilds userId={user.id} />,
     },
     {
       id: 'settings',
       label: 'Settings',
-      content: <ProfileSettings user={user} />
-    }
-  ];
+      content: <ProfileSettings user={user} />,
+    },
+  ]
 
   return (
     <ProfileTabs
       tabs={tabs}
       defaultTab="overview"
-      onTabChange={(tabId) => console.log('Tab changed:', tabId)}
+      onTabChange={tabId => console.log('Tab changed:', tabId)}
     />
-  );
+  )
 }
 ```
 
@@ -141,27 +133,27 @@ The main profile component for displaying and editing user profiles.
 
 ```tsx
 interface ProfileProps {
-  user: UserProfile;
-  onUpdate: (profile: UserProfile) => Promise<void> | void;
-  onAvatarUpload?: (file: File) => Promise<string | null>;
-  tourSteps?: TourStep[];
-  isTourActive?: boolean;
-  currentTourStep?: string;
-  className?: string;
+  user: UserProfile
+  onUpdate: (profile: UserProfile) => Promise<void> | void
+  onAvatarUpload?: (file: File) => Promise<string | null>
+  tourSteps?: TourStep[]
+  isTourActive?: boolean
+  currentTourStep?: string
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `user` | `UserProfile` | User profile data |
-| `onUpdate` | `(profile: UserProfile) => Promise<void> \| void` | Profile update handler |
-| `onAvatarUpload` | `(file: File) => Promise<string \| null>` | Avatar upload handler |
-| `tourSteps` | `TourStep[]` | Guided tour steps |
-| `isTourActive` | `boolean` | Tour active state |
-| `currentTourStep` | `string` | Current tour step ID |
-| `className` | `string` | Additional CSS classes |
+| Property          | Type                                              | Description            |
+| ----------------- | ------------------------------------------------- | ---------------------- |
+| `user`            | `UserProfile`                                     | User profile data      |
+| `onUpdate`        | `(profile: UserProfile) => Promise<void> \| void` | Profile update handler |
+| `onAvatarUpload`  | `(file: File) => Promise<string \| null>`         | Avatar upload handler  |
+| `tourSteps`       | `TourStep[]`                                      | Guided tour steps      |
+| `isTourActive`    | `boolean`                                         | Tour active state      |
+| `currentTourStep` | `string`                                          | Current tour step ID   |
+| `className`       | `string`                                          | Additional CSS classes |
 
 ### ProfileTabs Component
 
@@ -169,49 +161,42 @@ Component for tabbed profile navigation.
 
 ```tsx
 interface ProfileTabsProps {
-  tabs: ProfileTab[];
-  defaultTab?: string;
-  onTabChange?: (tabId: string) => void;
-  className?: string;
+  tabs: ProfileTab[]
+  defaultTab?: string
+  onTabChange?: (tabId: string) => void
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `tabs` | `ProfileTab[]` | Array of tab configurations |
-| `defaultTab` | `string` | Default active tab |
-| `onTabChange` | `(tabId: string) => void` | Tab change callback |
-| `className` | `string` | Additional CSS classes |
+| Property      | Type                      | Description                 |
+| ------------- | ------------------------- | --------------------------- |
+| `tabs`        | `ProfileTab[]`            | Array of tab configurations |
+| `defaultTab`  | `string`                  | Default active tab          |
+| `onTabChange` | `(tabId: string) => void` | Tab change callback         |
+| `className`   | `string`                  | Additional CSS classes      |
 
 ### useGuidedTour Hook
 
 Hook for managing guided tour functionality.
 
 ```tsx
-const {
-  startTour,
-  stopTour,
-  nextStep,
-  previousStep,
-  isTourActive,
-  currentStep,
-  tourSteps
-} = useGuidedTour();
+const { startTour, stopTour, nextStep, previousStep, isTourActive, currentStep, tourSteps } =
+  useGuidedTour()
 ```
 
 #### Return Values
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `startTour` | `(steps: TourStep[]) => void` | Start guided tour |
-| `stopTour` | `() => void` | Stop guided tour |
-| `nextStep` | `() => void` | Go to next step |
-| `previousStep` | `() => void` | Go to previous step |
-| `isTourActive` | `boolean` | Tour active state |
-| `currentStep` | `string` | Current step ID |
-| `tourSteps` | `TourStep[]` | Tour steps array |
+| Property       | Type                          | Description         |
+| -------------- | ----------------------------- | ------------------- |
+| `startTour`    | `(steps: TourStep[]) => void` | Start guided tour   |
+| `stopTour`     | `() => void`                  | Stop guided tour    |
+| `nextStep`     | `() => void`                  | Go to next step     |
+| `previousStep` | `() => void`                  | Go to previous step |
+| `isTourActive` | `boolean`                     | Tour active state   |
+| `currentStep`  | `string`                      | Current step ID     |
+| `tourSteps`    | `TourStep[]`                  | Tour steps array    |
 
 ## Types
 
@@ -219,25 +204,25 @@ const {
 
 ```tsx
 interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  bio?: string;
-  location?: string;
-  website?: string;
+  id: string
+  name: string
+  email: string
+  avatar?: string
+  bio?: string
+  location?: string
+  website?: string
   socialLinks?: {
-    twitter?: string;
-    instagram?: string;
-    youtube?: string;
-  };
+    twitter?: string
+    instagram?: string
+    youtube?: string
+  }
   preferences?: {
-    emailNotifications: boolean;
-    publicProfile: boolean;
-    theme: 'light' | 'dark' | 'auto';
-  };
-  createdAt: Date;
-  updatedAt: Date;
+    emailNotifications: boolean
+    publicProfile: boolean
+    theme: 'light' | 'dark' | 'auto'
+  }
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -245,12 +230,12 @@ interface UserProfile {
 
 ```tsx
 interface TourStep {
-  id: string;
-  title: string;
-  content: string;
-  target: string; // CSS selector
-  position?: 'top' | 'bottom' | 'left' | 'right';
-  showArrow?: boolean;
+  id: string
+  title: string
+  content: string
+  target: string // CSS selector
+  position?: 'top' | 'bottom' | 'left' | 'right'
+  showArrow?: boolean
 }
 ```
 
@@ -258,11 +243,11 @@ interface TourStep {
 
 ```tsx
 interface ProfileTab {
-  id: string;
-  label: string;
-  content: React.ReactNode;
-  icon?: React.ReactNode;
-  disabled?: boolean;
+  id: string
+  label: string
+  content: React.ReactNode
+  icon?: React.ReactNode
+  disabled?: boolean
 }
 ```
 
@@ -277,22 +262,22 @@ const handleProfileUpdate = async (updatedProfile: UserProfile) => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(updatedProfile)
-    });
+      body: JSON.stringify(updatedProfile),
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to update profile');
+      throw new Error('Failed to update profile')
     }
 
-    const result = await response.json();
-    return result;
+    const result = await response.json()
+    return result
   } catch (error) {
-    console.error('Profile update failed:', error);
-    throw error;
+    console.error('Profile update failed:', error)
+    throw error
   }
-};
+}
 ```
 
 ### Avatar Upload
@@ -300,28 +285,28 @@ const handleProfileUpdate = async (updatedProfile: UserProfile) => {
 ```tsx
 const handleAvatarUpload = async (file: File) => {
   try {
-    const formData = new FormData();
-    formData.append('avatar', file);
+    const formData = new FormData()
+    formData.append('avatar', file)
 
     const response = await fetch('/api/profile/avatar', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: formData
-    });
+      body: formData,
+    })
 
     if (!response.ok) {
-      throw new Error('Avatar upload failed');
+      throw new Error('Avatar upload failed')
     }
 
-    const { avatarUrl } = await response.json();
-    return avatarUrl;
+    const { avatarUrl } = await response.json()
+    return avatarUrl
   } catch (error) {
-    console.error('Avatar upload failed:', error);
-    return null;
+    console.error('Avatar upload failed:', error)
+    return null
   }
-};
+}
 ```
 
 ## Guided Tour
@@ -333,53 +318,49 @@ const createProfileTour = (): TourStep[] => [
   {
     id: 'welcome',
     title: 'Welcome to Your Profile',
-    content: 'Let\'s take a quick tour of your profile features',
+    content: "Let's take a quick tour of your profile features",
     target: '#profile-header',
-    position: 'bottom'
+    position: 'bottom',
   },
   {
     id: 'basic-info',
     title: 'Basic Information',
     content: 'Update your name, email, and other basic details',
     target: '#basic-info-section',
-    position: 'right'
+    position: 'right',
   },
   {
     id: 'avatar',
     title: 'Profile Picture',
     content: 'Upload and crop your profile picture',
     target: '#avatar-upload',
-    position: 'left'
+    position: 'left',
   },
   {
     id: 'social-links',
     title: 'Social Links',
     content: 'Add your social media profiles',
     target: '#social-links',
-    position: 'top'
-  }
-];
+    position: 'top',
+  },
+]
 ```
 
 ### Tour Navigation
 
 ```tsx
 const ProfileTour = () => {
-  const { startTour, nextStep, previousStep, isTourActive } = useGuidedTour();
+  const { startTour, nextStep, previousStep, isTourActive } = useGuidedTour()
 
   const handleStartTour = () => {
-    const tourSteps = createProfileTour();
-    startTour(tourSteps);
-  };
+    const tourSteps = createProfileTour()
+    startTour(tourSteps)
+  }
 
   return (
     <div>
-      {!isTourActive && (
-        <button onClick={handleStartTour}>
-          Start Profile Tour
-        </button>
-      )}
-      
+      {!isTourActive && <button onClick={handleStartTour}>Start Profile Tour</button>}
+
       {isTourActive && (
         <div className="tour-controls">
           <button onClick={previousStep}>Previous</button>
@@ -387,8 +368,8 @@ const ProfileTour = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 ```
 
 ## Styling
@@ -447,4 +428,4 @@ The components include full accessibility support:
 
 - `@repo/ui` - Base UI components
 - `@repo/features/ImageUploadModal` - Image upload modal
-- `@repo/auth` - Authentication utilities 
+- `@repo/auth` - Authentication utilities

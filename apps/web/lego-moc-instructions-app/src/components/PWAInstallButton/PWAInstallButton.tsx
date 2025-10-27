@@ -9,11 +9,11 @@ interface PWAInstallButtonProps {
   children?: React.ReactNode
 }
 
-// export const PWAInstallButton = ({ 
-//   variant = 'default', 
-//   size = 'default', 
+// export const PWAInstallButton = ({
+//   variant = 'default',
+//   size = 'default',
 //   className = '',
-//   children 
+//   children
 // }: PWAInstallButtonProps) => {
 //   const { canInstall, installPrompt } = usePWA()
 
@@ -32,4 +32,4 @@ interface PWAInstallButtonProps {
 //       {children || 'Install App'}
 //     </Button>
 //   )
-// } 
+// }

@@ -245,4 +245,4 @@ export const Empty: Story = {
       </TableBody>
     </Table>
   ),
-} 
+}

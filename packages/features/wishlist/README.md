@@ -26,7 +26,7 @@ pnpm add @repo/features/wishlist
 ### 1. Basic Wishlist Component
 
 ```tsx
-import { Wishlist } from '@repo/features/wishlist';
+import { Wishlist } from '@repo/features/wishlist'
 
 function MyWishlist() {
   const wishlistItems = [
@@ -37,28 +37,28 @@ function MyWishlist() {
       price: 159.99,
       category: 'Star Wars',
       priority: 'high',
-      notes: 'Ultimate Collector Series'
+      notes: 'Ultimate Collector Series',
     },
     // ... more items
-  ];
+  ]
 
   const handleAddItem = async (item: WishlistItem) => {
     try {
-      await addToWishlist(item);
-      console.log('Item added to wishlist');
+      await addToWishlist(item)
+      console.log('Item added to wishlist')
     } catch (error) {
-      console.error('Failed to add item:', error);
+      console.error('Failed to add item:', error)
     }
-  };
+  }
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      await removeFromWishlist(itemId);
-      console.log('Item removed from wishlist');
+      await removeFromWishlist(itemId)
+      console.log('Item removed from wishlist')
     } catch (error) {
-      console.error('Failed to remove item:', error);
+      console.error('Failed to remove item:', error)
     }
-  };
+  }
 
   return (
     <Wishlist
@@ -67,33 +67,28 @@ function MyWishlist() {
       onRemoveItem={handleRemoveItem}
       onUpdateItem={handleUpdateItem}
     />
-  );
+  )
 }
 ```
 
 ### 2. With Multi-Select Functionality
 
 ```tsx
-import { Wishlist, useWishlistSelection } from '@repo/features/wishlist';
+import { Wishlist, useWishlistSelection } from '@repo/features/wishlist'
 
 function WishlistWithMultiSelect() {
-  const { 
-    selectedItems, 
-    toggleItem, 
-    selectAll, 
-    clearSelection,
-    isAllSelected 
-  } = useWishlistSelection(wishlistItems);
+  const { selectedItems, toggleItem, selectAll, clearSelection, isAllSelected } =
+    useWishlistSelection(wishlistItems)
 
   const handleBulkRemove = async () => {
     try {
-      await removeMultipleItems(selectedItems);
-      clearSelection();
-      console.log('Items removed successfully');
+      await removeMultipleItems(selectedItems)
+      clearSelection()
+      console.log('Items removed successfully')
     } catch (error) {
-      console.error('Failed to remove items:', error);
+      console.error('Failed to remove items:', error)
     }
-  };
+  }
 
   return (
     <div>
@@ -101,12 +96,10 @@ function WishlistWithMultiSelect() {
         <button onClick={selectAll}>Select All</button>
         <button onClick={clearSelection}>Clear Selection</button>
         {selectedItems.length > 0 && (
-          <button onClick={handleBulkRemove}>
-            Remove Selected ({selectedItems.length})
-          </button>
+          <button onClick={handleBulkRemove}>Remove Selected ({selectedItems.length})</button>
         )}
       </div>
-      
+
       <Wishlist
         items={wishlistItems}
         selectedItems={selectedItems}
@@ -116,30 +109,30 @@ function WishlistWithMultiSelect() {
         showMultiSelect={true}
       />
     </div>
-  );
+  )
 }
 ```
 
 ### 3. With Categories and Filtering
 
 ```tsx
-import { Wishlist, WishlistFilters } from '@repo/features/wishlist';
+import { Wishlist, WishlistFilters } from '@repo/features/wishlist'
 
 function CategorizedWishlist() {
   const [filters, setFilters] = useState({
     category: '',
     priority: '',
-    priceRange: { min: 0, max: 1000 }
-  });
+    priceRange: { min: 0, max: 1000 },
+  })
 
   const filteredItems = useMemo(() => {
     return wishlistItems.filter(item => {
-      if (filters.category && item.category !== filters.category) return false;
-      if (filters.priority && item.priority !== filters.priority) return false;
-      if (item.price < filters.priceRange.min || item.price > filters.priceRange.max) return false;
-      return true;
-    });
-  }, [wishlistItems, filters]);
+      if (filters.category && item.category !== filters.category) return false
+      if (filters.priority && item.priority !== filters.priority) return false
+      if (item.price < filters.priceRange.min || item.price > filters.priceRange.max) return false
+      return true
+    })
+  }, [wishlistItems, filters])
 
   return (
     <div>
@@ -149,7 +142,7 @@ function CategorizedWishlist() {
         categories={['Star Wars', 'City', 'Technic', 'Architecture']}
         priorities={['low', 'medium', 'high']}
       />
-      
+
       <Wishlist
         items={filteredItems}
         onAddItem={handleAddItem}
@@ -157,7 +150,7 @@ function CategorizedWishlist() {
         showCategories={true}
       />
     </div>
-  );
+  )
 }
 ```
 
@@ -169,31 +162,31 @@ The main wishlist component for displaying and managing wishlist items.
 
 ```tsx
 interface WishlistProps {
-  items: WishlistItem[];
-  selectedItems?: string[];
-  onAddItem?: (item: WishlistItem) => Promise<void> | void;
-  onRemoveItem?: (itemId: string) => Promise<void> | void;
-  onUpdateItem?: (item: WishlistItem) => Promise<void> | void;
-  onItemToggle?: (itemId: string) => void;
-  showMultiSelect?: boolean;
-  showCategories?: boolean;
-  className?: string;
+  items: WishlistItem[]
+  selectedItems?: string[]
+  onAddItem?: (item: WishlistItem) => Promise<void> | void
+  onRemoveItem?: (itemId: string) => Promise<void> | void
+  onUpdateItem?: (item: WishlistItem) => Promise<void> | void
+  onItemToggle?: (itemId: string) => void
+  showMultiSelect?: boolean
+  showCategories?: boolean
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `items` | `WishlistItem[]` | Array of wishlist items |
-| `selectedItems` | `string[]` | Array of selected item IDs |
-| `onAddItem` | `(item: WishlistItem) => Promise<void> \| void` | Add item handler |
-| `onRemoveItem` | `(itemId: string) => Promise<void> \| void` | Remove item handler |
-| `onUpdateItem` | `(item: WishlistItem) => Promise<void> \| void` | Update item handler |
-| `onItemToggle` | `(itemId: string) => void` | Item selection toggle |
-| `showMultiSelect` | `boolean` | Show multi-select functionality |
-| `showCategories` | `boolean` | Show category grouping |
-| `className` | `string` | Additional CSS classes |
+| Property          | Type                                            | Description                     |
+| ----------------- | ----------------------------------------------- | ------------------------------- |
+| `items`           | `WishlistItem[]`                                | Array of wishlist items         |
+| `selectedItems`   | `string[]`                                      | Array of selected item IDs      |
+| `onAddItem`       | `(item: WishlistItem) => Promise<void> \| void` | Add item handler                |
+| `onRemoveItem`    | `(itemId: string) => Promise<void> \| void`     | Remove item handler             |
+| `onUpdateItem`    | `(item: WishlistItem) => Promise<void> \| void` | Update item handler             |
+| `onItemToggle`    | `(itemId: string) => void`                      | Item selection toggle           |
+| `showMultiSelect` | `boolean`                                       | Show multi-select functionality |
+| `showCategories`  | `boolean`                                       | Show category grouping          |
+| `className`       | `string`                                        | Additional CSS classes          |
 
 ### WishlistFilters Component
 
@@ -201,23 +194,23 @@ Component for filtering wishlist items.
 
 ```tsx
 interface WishlistFiltersProps {
-  filters: WishlistFilters;
-  onFiltersChange: (filters: WishlistFilters) => void;
-  categories: string[];
-  priorities: string[];
-  className?: string;
+  filters: WishlistFilters
+  onFiltersChange: (filters: WishlistFilters) => void
+  categories: string[]
+  priorities: string[]
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `filters` | `WishlistFilters` | Current filter state |
-| `onFiltersChange` | `(filters: WishlistFilters) => void` | Filter change handler |
-| `categories` | `string[]` | Available categories |
-| `priorities` | `string[]` | Available priorities |
-| `className` | `string` | Additional CSS classes |
+| Property          | Type                                 | Description            |
+| ----------------- | ------------------------------------ | ---------------------- |
+| `filters`         | `WishlistFilters`                    | Current filter state   |
+| `onFiltersChange` | `(filters: WishlistFilters) => void` | Filter change handler  |
+| `categories`      | `string[]`                           | Available categories   |
+| `priorities`      | `string[]`                           | Available priorities   |
+| `className`       | `string`                             | Additional CSS classes |
 
 ### useWishlistSelection Hook
 
@@ -233,23 +226,23 @@ const {
   clearSelection,
   isSelected,
   isAllSelected,
-  selectedCount
-} = useWishlistSelection(items);
+  selectedCount,
+} = useWishlistSelection(items)
 ```
 
 #### Return Values
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `selectedItems` | `string[]` | Array of selected item IDs |
-| `toggleItem` | `(itemId: string) => void` | Toggle item selection |
-| `selectItem` | `(itemId: string) => void` | Select specific item |
-| `deselectItem` | `(itemId: string) => void` | Deselect specific item |
-| `selectAll` | `() => void` | Select all items |
-| `clearSelection` | `() => void` | Clear all selections |
-| `isSelected` | `(itemId: string) => boolean` | Check if item is selected |
-| `isAllSelected` | `boolean` | Check if all items are selected |
-| `selectedCount` | `number` | Number of selected items |
+| Property         | Type                          | Description                     |
+| ---------------- | ----------------------------- | ------------------------------- |
+| `selectedItems`  | `string[]`                    | Array of selected item IDs      |
+| `toggleItem`     | `(itemId: string) => void`    | Toggle item selection           |
+| `selectItem`     | `(itemId: string) => void`    | Select specific item            |
+| `deselectItem`   | `(itemId: string) => void`    | Deselect specific item          |
+| `selectAll`      | `() => void`                  | Select all items                |
+| `clearSelection` | `() => void`                  | Clear all selections            |
+| `isSelected`     | `(itemId: string) => boolean` | Check if item is selected       |
+| `isAllSelected`  | `boolean`                     | Check if all items are selected |
+| `selectedCount`  | `number`                      | Number of selected items        |
 
 ## Types
 
@@ -257,19 +250,19 @@ const {
 
 ```tsx
 interface WishlistItem {
-  id: string;
-  name: string;
-  setNumber?: string;
-  price: number;
-  currency?: string;
-  category: string;
-  priority: 'low' | 'medium' | 'high';
-  notes?: string;
-  imageUrl?: string;
-  availability?: 'in-stock' | 'out-of-stock' | 'discontinued';
-  releaseDate?: Date;
-  addedAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  setNumber?: string
+  price: number
+  currency?: string
+  category: string
+  priority: 'low' | 'medium' | 'high'
+  notes?: string
+  imageUrl?: string
+  availability?: 'in-stock' | 'out-of-stock' | 'discontinued'
+  releaseDate?: Date
+  addedAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -277,16 +270,16 @@ interface WishlistItem {
 
 ```tsx
 interface WishlistFilters {
-  category: string;
-  priority: string;
+  category: string
+  priority: string
   priceRange: {
-    min: number;
-    max: number;
-  };
-  availability?: string;
-  searchTerm?: string;
-  sortBy?: 'name' | 'price' | 'priority' | 'addedAt';
-  sortOrder?: 'asc' | 'desc';
+    min: number
+    max: number
+  }
+  availability?: string
+  searchTerm?: string
+  sortBy?: 'name' | 'price' | 'priority' | 'addedAt'
+  sortOrder?: 'asc' | 'desc'
 }
 ```
 
@@ -294,11 +287,11 @@ interface WishlistFilters {
 
 ```tsx
 interface WishlistStats {
-  totalItems: number;
-  totalValue: number;
-  averagePrice: number;
-  categoryBreakdown: Record<string, number>;
-  priorityBreakdown: Record<string, number>;
+  totalItems: number
+  totalValue: number
+  averagePrice: number
+  categoryBreakdown: Record<string, number>
+  priorityBreakdown: Record<string, number>
 }
 ```
 
@@ -313,22 +306,22 @@ const handleAddItem = async (item: WishlistItem) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(item)
-    });
+      body: JSON.stringify(item),
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to add item');
+      throw new Error('Failed to add item')
     }
 
-    const newItem = await response.json();
-    setWishlistItems(prev => [...prev, newItem]);
+    const newItem = await response.json()
+    setWishlistItems(prev => [...prev, newItem])
   } catch (error) {
-    console.error('Failed to add item:', error);
-    throw error;
+    console.error('Failed to add item:', error)
+    throw error
   }
-};
+}
 ```
 
 ### Bulk Operations
@@ -340,21 +333,21 @@ const handleBulkRemove = async (itemIds: string[]) => {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ itemIds })
-    });
+      body: JSON.stringify({ itemIds }),
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to remove items');
+      throw new Error('Failed to remove items')
     }
 
-    setWishlistItems(prev => prev.filter(item => !itemIds.includes(item.id)));
+    setWishlistItems(prev => prev.filter(item => !itemIds.includes(item.id)))
   } catch (error) {
-    console.error('Failed to remove items:', error);
-    throw error;
+    console.error('Failed to remove items:', error)
+    throw error
   }
-};
+}
 ```
 
 ### Sharing Wishlists
@@ -366,21 +359,21 @@ const handleShareWishlist = async (wishlistId: string, shareWith: string[]) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ shareWith })
-    });
+      body: JSON.stringify({ shareWith }),
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to share wishlist');
+      throw new Error('Failed to share wishlist')
     }
 
-    console.log('Wishlist shared successfully');
+    console.log('Wishlist shared successfully')
   } catch (error) {
-    console.error('Failed to share wishlist:', error);
-    throw error;
+    console.error('Failed to share wishlist:', error)
+    throw error
   }
-};
+}
 ```
 
 ## Multi-Select Functionality
@@ -389,23 +382,23 @@ const handleShareWishlist = async (wishlistId: string, shareWith: string[]) => {
 
 ```tsx
 const WishlistWithSelection = () => {
-  const { selectedItems, toggleItem, selectAll, clearSelection } = useWishlistSelection(items);
+  const { selectedItems, toggleItem, selectAll, clearSelection } = useWishlistSelection(items)
 
   const handleBulkAction = async (action: 'remove' | 'move' | 'export') => {
-    if (selectedItems.length === 0) return;
+    if (selectedItems.length === 0) return
 
     switch (action) {
       case 'remove':
-        await handleBulkRemove(selectedItems);
-        break;
+        await handleBulkRemove(selectedItems)
+        break
       case 'move':
-        await handleBulkMove(selectedItems, targetCategory);
-        break;
+        await handleBulkMove(selectedItems, targetCategory)
+        break
       case 'export':
-        await handleExportItems(selectedItems);
-        break;
+        await handleExportItems(selectedItems)
+        break
     }
-  };
+  }
 
   return (
     <div>
@@ -419,7 +412,7 @@ const WishlistWithSelection = () => {
           </>
         )}
       </div>
-      
+
       <Wishlist
         items={items}
         selectedItems={selectedItems}
@@ -427,8 +420,8 @@ const WishlistWithSelection = () => {
         showMultiSelect={true}
       />
     </div>
-  );
-};
+  )
+}
 ```
 
 ## Styling
@@ -487,4 +480,4 @@ The components include full accessibility support:
 
 - `@repo/ui` - Base UI components
 - `@repo/features/shared` - Shared utilities
-- `@repo/shared-cache` - Caching utilities 
+- `@repo/shared-cache` - Caching utilities

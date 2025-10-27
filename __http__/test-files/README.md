@@ -15,6 +15,7 @@ This directory contains sample files for testing file upload functionality with 
 If these files don't exist, create them with the following commands:
 
 ### Create Sample Images
+
 ```bash
 # Create a simple colored square for avatar (requires ImageMagick)
 convert -size 200x200 xc:blue __http__/test-files/avatar.jpg
@@ -27,6 +28,7 @@ convert -size 400x400 xc:red __http__/test-files/wishlist-item.jpg
 ```
 
 ### Create Sample PDF (requires pandoc or similar)
+
 ```bash
 echo "# MOC Building Instructions
 
@@ -46,6 +48,7 @@ pandoc instructions.md -o __http__/test-files/instructions.pdf
 ```
 
 ### Create Sample CSV
+
 ```bash
 cat > __http__/test-files/parts-list.csv << 'EOF'
 Part Number,Description,Color,Quantity,Category

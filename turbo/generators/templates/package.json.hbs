@@ -1,17 +1,32 @@
 {
   "name": "@repo/{{kebabCase name}}",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "private": true,
+  "description": "{{description}}",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "sideEffects": false,
+  {{#if (eq type "react-lib")}}
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
+  {{else if (eq type "node-lib")}}
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  {{else}}
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  {{/if}}
   "scripts": {
     {{#if (eq type "react-lib")}}
     "dev": "vite",
@@ -33,49 +48,37 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"{{/if}}
   },
+  {{#if (eq type "react-lib")}}
   "dependencies": {
-    {{#if (eq type "react-lib")}}
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@repo/ui": "workspace:*",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0"
-    {{else if (eq type "feature")}}
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@repo/ui": "workspace:*",
-    "@repo/shared": "workspace:*",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0"
-    {{else if (eq type "shared")}}
-    "clsx": "^2.1.1"
-    {{else}}
-    "@types/node": "^24.1.0"
-    {{/if}}
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    {{#if (or (eq type "react-lib") (eq type "feature"))}}
-    "@tailwindcss/vite": "^4.1.11",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    {{/if}}
-    {{#if includeStorybook}}
+    "typescript": "5.8.3",
+    "vite": "^5.2.10",
+    "vitest": "^3.2.4"{{#if includeStorybook}},
     "@storybook/addon-essentials": "^8.6.14",
-    "@storybook/react": "^9.0.18",
-    "storybook": "^9.0.17",
-    {{/if}}
-    "eslint": "^9.30.0",
-    "jsdom": "^26.1.0",
+    "@storybook/addon-interactions": "^8.6.14",
+    "@storybook/react-vite": "^8.6.14",
+    "storybook": "^8.6.14"{{/if}}
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+  {{else if (eq type "node-lib")}}
+  "devDependencies": {
+    "@types/node": "^24.6.2",
     "typescript": "5.8.3",
     "vitest": "^3.2.4"
-  },
-  {{#if (or (eq type "react-lib") (eq type "feature"))}}
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+  }
+  {{else}}
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "vite": "^5.2.10",
+    "vitest": "^3.2.4"
   }
   {{/if}}
 }

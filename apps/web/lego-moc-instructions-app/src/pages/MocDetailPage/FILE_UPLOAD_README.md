@@ -29,6 +29,7 @@ The MOC File Upload functionality allows users to upload PDF instructions and St
 ### Upload Button
 
 The upload button is located in the Instructions tab and features:
+
 - **Label**: "Upload Instructions"
 - **Styling**: Primary button, large size, full width, rounded, shadowed
 - **Position**: Near the header for the list of MOC Instructions
@@ -36,6 +37,7 @@ The upload button is located in the Instructions tab and features:
 ### Upload Dialog
 
 The upload dialog includes:
+
 - **Title Field**: Required field for file title
 - **Description Field**: Optional field for file description
 - **File Selection**: Drag-and-drop or click-to-select interface
@@ -45,6 +47,7 @@ The upload dialog includes:
 ### File Display
 
 Uploaded files are displayed with:
+
 - **Thumbnail**: Custom thumbnail or default file icon
 - **File Information**: Title, description, file type, size, download count
 - **Actions**: Download and delete buttons
@@ -305,4 +308,4 @@ pnpm test:e2e
 
 ## License
 
-This file upload functionality is part of the LEGO MOC Instructions application and follows the same licensing terms as the main project. 
+This file upload functionality is part of the LEGO MOC Instructions application and follows the same licensing terms as the main project.

@@ -1,13 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  AppCard,
-  AppDataTable,
-  Badge,
-  Button,
-  PageHeader,
-  TabPanel,
-} from '@repo/ui';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { AppCard, AppDataTable, Badge, Button, PageHeader, TabPanel } from '@repo/ui'
 import {
   CheckCircle,
   Circle,
@@ -22,30 +15,30 @@ import {
   Table,
   Trash2,
   X,
-} from 'lucide-react';
-import { Gallery, GalleryAdapters } from '@repo/gallery';
+} from 'lucide-react'
+import { Gallery } from '@repo/gallery'
 // Define types locally to avoid import issues
 interface WishlistItem {
-  id: string;
-  name: string;
-  description?: string;
-  price?: number;
-  url?: string;
-  imageUrl?: string;
-  priority: 'low' | 'medium' | 'high';
-  category?: string;
-  isPurchased: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  description?: string
+  price?: number
+  url?: string
+  imageUrl?: string
+  priority: 'low' | 'medium' | 'high'
+  category?: string
+  isPurchased: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface WishlistFilter {
-  search: string;
-  category: string;
-  priority?: 'low' | 'medium' | 'high';
-  isPurchased?: boolean;
-  sortBy: 'name' | 'price' | 'priority' | 'createdAt';
-  sortOrder: 'asc' | 'desc';
+  search: string
+  category: string
+  priority?: 'low' | 'medium' | 'high'
+  isPurchased?: boolean
+  sortBy: 'name' | 'price' | 'priority' | 'createdAt'
+  sortOrder: 'asc' | 'desc'
 }
 
 // Mock wishlist data
@@ -128,15 +121,15 @@ const mockWishlistItems: Array<WishlistItem> = [
     createdAt: new Date('2024-01-03'),
     updatedAt: new Date('2024-01-03'),
   },
-];
+]
 
 // Add/Edit Modal Component
 const AddEditWishlistModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: Partial<WishlistItem>) => void;
-  initialData?: WishlistItem;
-  isEditing: boolean;
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (data: Partial<WishlistItem>) => void
+  initialData?: WishlistItem
+  isEditing: boolean
 }> = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
   const [formData, setFormData] = useState<Partial<WishlistItem>>(
     initialData || {
@@ -148,20 +141,20 @@ const AddEditWishlistModal: React.FC<{
       priority: 'medium',
       category: '',
       isPurchased: false,
-    }
-  );
+    },
+  )
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    onClose();
-  };
+    e.preventDefault()
+    onSubmit(formData)
+    onClose()
+  }
 
   const handleInputChange = (field: keyof WishlistItem, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -178,26 +171,27 @@ const AddEditWishlistModal: React.FC<{
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="wishlist-name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="wishlist-name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Name *
               </label>
               <input
                 type="text"
                 id="wishlist-name"
                 value={formData.name || ''}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                onChange={e => handleInputChange('name', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
               <select
                 value={formData.category || ''}
-                onChange={(e) => handleInputChange('category', e.target.value)}
+                onChange={e => handleInputChange('category', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select Category</option>
@@ -215,27 +209,30 @@ const AddEditWishlistModal: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={formData.price || ''}
-                onChange={(e) => handleInputChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                onChange={e =>
+                  handleInputChange(
+                    'price',
+                    e.target.value ? parseFloat(e.target.value) : undefined,
+                  )
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0.00"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Priority
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
               <select
                 value={formData.priority || 'medium'}
-                onChange={(e) => handleInputChange('priority', e.target.value as 'low' | 'medium' | 'high')}
+                onChange={e =>
+                  handleInputChange('priority', e.target.value as 'low' | 'medium' | 'high')
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="low">Low</option>
@@ -245,26 +242,22 @@ const AddEditWishlistModal: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
               <input
                 type="url"
                 value={formData.url || ''}
-                onChange={(e) => handleInputChange('url', e.target.value)}
+                onChange={e => handleInputChange('url', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="https://..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image URL
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
               <input
                 type="url"
                 value={formData.imageUrl || ''}
-                onChange={(e) => handleInputChange('imageUrl', e.target.value)}
+                onChange={e => handleInputChange('imageUrl', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="https://..."
               />
@@ -272,12 +265,10 @@ const AddEditWishlistModal: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               value={formData.description || ''}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={e => handleInputChange('description', e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Describe this LEGO set..."
@@ -289,7 +280,7 @@ const AddEditWishlistModal: React.FC<{
               type="checkbox"
               id="isPurchased"
               checked={formData.isPurchased || false}
-              onChange={(e) => handleInputChange('isPurchased', e.target.checked)}
+              onChange={e => handleInputChange('isPurchased', e.target.checked)}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="isPurchased" className="ml-2 block text-sm text-gray-900">
@@ -306,30 +297,38 @@ const AddEditWishlistModal: React.FC<{
         </form>
       </div>
     </div>
-  );
-};
+  )
+}
 
 // Custom WishlistItemCard component
 const WishlistItemCard: React.FC<{
-  item: WishlistItem;
-  onEdit: (item: WishlistItem) => void;
-  onDelete: (id: string) => void;
-  onTogglePurchased: (id: string) => void;
-  selected?: boolean;
-  onSelect?: (checked: boolean) => void;
-  showCheckbox?: boolean;
-}> = ({ item, onEdit, onDelete, onTogglePurchased, selected = false, onSelect, showCheckbox = false }) => {
+  item: WishlistItem
+  onEdit: (item: WishlistItem) => void
+  onDelete: (id: string) => void
+  onTogglePurchased: (id: string) => void
+  selected?: boolean
+  onSelect?: (checked: boolean) => void
+  showCheckbox?: boolean
+}> = ({
+  item,
+  onEdit,
+  onDelete,
+  onTogglePurchased,
+  selected = false,
+  onSelect,
+  showCheckbox = false,
+}) => {
   const priorityColors = {
     low: 'bg-green-100 text-green-800 border-green-200',
     medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     high: 'bg-red-100 text-red-800 border-red-200',
-  };
+  }
 
   const priorityLabels = {
     low: 'Low',
     medium: 'Medium',
     high: 'High',
-  };
+  }
 
   return (
     <div
@@ -339,35 +338,35 @@ const WishlistItemCard: React.FC<{
       `}
     >
       {/* Selection Checkbox */}
-      {showCheckbox && onSelect && (
+      {showCheckbox && onSelect ? (
         <div className="absolute top-2 right-2 z-10">
           <input
             type="checkbox"
             checked={selected}
-            onChange={(e) => onSelect(e.target.checked)}
+            onChange={e => onSelect(e.target.checked)}
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Card Content */}
       <div className="p-4 pt-8">
         {/* Image and Basic Info */}
         <div className="flex gap-4 mb-3">
-          {item.imageUrl && (
+          {item.imageUrl ? (
             <div className="flex-shrink-0">
               <img
                 src={item.imageUrl}
                 alt={item.name}
                 className="w-16 h-16 object-cover rounded-md border border-gray-200"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+                onError={e => {
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
                 }}
               />
             </div>
-          )}
+          ) : null}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
@@ -386,17 +385,17 @@ const WishlistItemCard: React.FC<{
               </button>
             </div>
 
-            {item.description && (
+            {item.description ? (
               <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
-            )}
+            ) : null}
           </div>
         </div>
 
         {/* Price and Meta Info */}
         <div className="flex items-center justify-between mb-3">
-          {item.price && (
+          {item.price ? (
             <span className="text-lg font-semibold text-gray-900">${item.price.toFixed(2)}</span>
-          )}
+          ) : null}
 
           <div className="flex items-center gap-2">
             <span
@@ -408,17 +407,17 @@ const WishlistItemCard: React.FC<{
               {priorityLabels[item.priority]}
             </span>
 
-            {item.category && (
+            {item.category ? (
               <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
                 {item.category}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {item.url && (
+          {item.url ? (
             <a
               href={item.url}
               target="_blank"
@@ -428,7 +427,7 @@ const WishlistItemCard: React.FC<{
               <Eye className="w-4 h-4" />
               View Item
             </a>
-          )}
+          ) : null}
 
           <button
             type="button"
@@ -451,74 +450,74 @@ const WishlistItemCard: React.FC<{
       </div>
 
       {/* Purchased Overlay */}
-      {item.isPurchased && (
+      {item.isPurchased ? (
         <div className="absolute inset-0 bg-green-50 bg-opacity-50 rounded-lg border-2 border-green-200 flex items-center justify-center">
           <div className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
             Purchased
           </div>
         </div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
 // Auto-save hook
-const useAutoSave = function<T>(
+const useAutoSave = function <T>(
   data: T,
   saveFunction: (data: T) => Promise<void> | void,
-  delay: number = 2000
+  delay: number = 2000,
 ) {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedDataRef = useRef<T>(data);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastSavedDataRef = useRef<T>(data)
+  const [isSaving, setIsSaving] = useState(false)
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const save = useCallback(async () => {
     if (JSON.stringify(data) === JSON.stringify(lastSavedDataRef.current)) {
-      return; // No changes to save
+      return // No changes to save
     }
 
-    setIsSaving(true);
-    setSaveError(null);
+    setIsSaving(true)
+    setSaveError(null)
 
     try {
-      await saveFunction(data);
+      await saveFunction(data)
       // In tests, yield once to ensure the 'Saving...' indicator is observable
       if (import.meta.env.MODE === 'test') {
         await new Promise(resolve => setTimeout(resolve, 1))
       }
-      lastSavedDataRef.current = data;
-      setLastSaveTime(new Date());
+      lastSavedDataRef.current = data
+      setLastSaveTime(new Date())
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Save failed');
-      console.error('Auto-save failed:', error);
+      setSaveError(error instanceof Error ? error.message : 'Save failed')
+      console.error('Auto-save failed:', error)
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  }, [data, saveFunction]);
+  }, [data, saveFunction])
 
   const debouncedSave = useCallback(() => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      clearTimeout(timeoutRef.current)
     }
 
     if (import.meta.env.MODE === 'test') {
       // In tests, call save immediately and also schedule a no-op timeout to satisfy spies
-      save();
-      setTimeout(() => {}, delay);
-      return;
+      save()
+      setTimeout(() => {}, delay)
+      return
     }
 
     timeoutRef.current = setTimeout(() => {
-      save();
-    }, delay);
-  }, [save, delay]);
+      save()
+    }, delay)
+  }, [save, delay])
 
   // Trigger save on data changes
   useEffect(() => {
-    debouncedSave();
-  }, [data, debouncedSave]);
+    debouncedSave()
+  }, [data, debouncedSave])
 
   // Save on page unload
   useEffect(() => {
@@ -526,107 +525,107 @@ const useAutoSave = function<T>(
       if (JSON.stringify(data) !== JSON.stringify(lastSavedDataRef.current)) {
         // Use synchronous storage for page unload
         try {
-          localStorage.setItem('wishlist_autosave_backup', JSON.stringify(data));
+          localStorage.setItem('wishlist_autosave_backup', JSON.stringify(data))
         } catch (error) {
-          console.error('Failed to backup data on page unload:', error);
+          console.error('Failed to backup data on page unload:', error)
         }
       }
-    };
+    }
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        save();
+        save()
       }
-    };
+    }
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+        clearTimeout(timeoutRef.current)
       }
-    };
-  }, [data, save]);
+    }
+  }, [data, save])
 
   // Restore from backup on mount
   useEffect(() => {
     try {
-      const backup = localStorage.getItem('wishlist_autosave_backup');
+      const backup = localStorage.getItem('wishlist_autosave_backup')
       if (backup) {
-        const parsedBackup = JSON.parse(backup);
+        const parsedBackup = JSON.parse(backup)
         if (JSON.stringify(parsedBackup) !== JSON.stringify(data)) {
           // Only restore if data is different
-          lastSavedDataRef.current = parsedBackup;
+          lastSavedDataRef.current = parsedBackup
         }
-        localStorage.removeItem('wishlist_autosave_backup');
+        localStorage.removeItem('wishlist_autosave_backup')
       }
     } catch (error) {
-      console.error('Failed to restore from backup:', error);
+      console.error('Failed to restore from backup:', error)
     }
-  }, []);
+  }, [])
 
   return {
     isSaving,
     lastSaveTime,
     saveError,
     save, // Manual save function
-  };
-};
+  }
+}
 
 export const WishlistGalleryPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [wishlistItems, setWishlistItems] = useState<Array<WishlistItem>>(mockWishlistItems);
-  const [selectedItems, setSelectedItems] = useState<Array<string>>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'gallery' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState('wishlist');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
+  const navigate = useNavigate()
+  const [wishlistItems, setWishlistItems] = useState<Array<WishlistItem>>(mockWishlistItems)
+  const [selectedItems, setSelectedItems] = useState<Array<string>>([])
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'gallery' | 'table'>('grid')
+  const [activeTab, setActiveTab] = useState('wishlist')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
 
   // Auto-save functionality
   const saveWishlistItems = useCallback(async (items: Array<WishlistItem>) => {
     try {
       if (import.meta.env.MODE !== 'test') {
         // Simulate API call - replace with actual API endpoint
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
       // Store in localStorage as backup
-      localStorage.setItem('wishlist_items', JSON.stringify(items));
-      console.log('Wishlist items saved successfully:', items.length, 'items');
+      localStorage.setItem('wishlist_items', JSON.stringify(items))
+      console.log('Wishlist items saved successfully:', items.length, 'items')
     } catch (error) {
-      console.error('Failed to save wishlist items:', error);
-      throw error;
+      console.error('Failed to save wishlist items:', error)
+      throw error
     }
-  }, []);
+  }, [])
 
   const { isSaving, lastSaveTime, saveError } = useAutoSave(
     wishlistItems,
     saveWishlistItems,
-    2000 // 2 second delay
-  );
+    2000, // 2 second delay
+  )
 
   // Load saved data on component mount
   useEffect(() => {
     try {
-      const savedItems = localStorage.getItem('wishlist_items');
+      const savedItems = localStorage.getItem('wishlist_items')
       if (savedItems) {
-        const parsedItems = JSON.parse(savedItems);
+        const parsedItems = JSON.parse(savedItems)
         // Convert date strings back to Date objects
         const itemsWithDates = parsedItems.map((item: any) => ({
           ...item,
           createdAt: new Date(item.createdAt),
           updatedAt: new Date(item.updatedAt),
-        }));
-        setWishlistItems(itemsWithDates);
-        console.log('Loaded saved wishlist items:', itemsWithDates.length, 'items');
+        }))
+        setWishlistItems(itemsWithDates)
+        console.log('Loaded saved wishlist items:', itemsWithDates.length, 'items')
       }
     } catch (error) {
-      console.error('Failed to load saved wishlist items:', error);
+      console.error('Failed to load saved wishlist items:', error)
     }
-  }, []);
-  
+  }, [])
+
   // Filter state
   const [filter, setFilter] = useState<WishlistFilter>({
     search: '',
@@ -635,99 +634,100 @@ export const WishlistGalleryPage: React.FC = () => {
     isPurchased: undefined,
     sortBy: 'createdAt',
     sortOrder: 'desc',
-  });
+  })
 
   // Get unique categories from items
   const categories = useMemo(() => {
-    const cats = wishlistItems.map(item => item.category).filter(Boolean) as Array<string>;
-    return Array.from(new Set(cats));
-  }, [wishlistItems]);
+    const cats = wishlistItems.map(item => item.category).filter(Boolean) as Array<string>
+    return Array.from(new Set(cats))
+  }, [wishlistItems])
 
   // Filter and sort items
   const filteredItems = useMemo(() => {
-    let filtered = [...wishlistItems];
+    let filtered = [...wishlistItems]
 
     // Apply search filter
     if (filter.search) {
-      filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(filter.search.toLowerCase()) ||
-        item.description?.toLowerCase().includes(filter.search.toLowerCase())
-      );
+      filtered = filtered.filter(
+        item =>
+          item.name.toLowerCase().includes(filter.search.toLowerCase()) ||
+          item.description?.toLowerCase().includes(filter.search.toLowerCase()),
+      )
     }
 
     // Apply category filter
     if (filter.category) {
-      filtered = filtered.filter(item => item.category === filter.category);
+      filtered = filtered.filter(item => item.category === filter.category)
     }
 
     // Apply priority filter
     if (filter.priority) {
-      filtered = filtered.filter(item => item.priority === filter.priority);
+      filtered = filtered.filter(item => item.priority === filter.priority)
     }
 
     // Apply purchased filter
     if (filter.isPurchased !== undefined) {
-      filtered = filtered.filter(item => item.isPurchased === filter.isPurchased);
+      filtered = filtered.filter(item => item.isPurchased === filter.isPurchased)
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
+      let aValue: any, bValue: any
+
       switch (filter.sortBy) {
         case 'name':
-          aValue = a.name;
-          bValue = b.name;
-          break;
+          aValue = a.name
+          bValue = b.name
+          break
         case 'price':
-          aValue = a.price || 0;
-          bValue = b.price || 0;
-          break;
+          aValue = a.price || 0
+          bValue = b.price || 0
+          break
         case 'priority': {
-          const priorityOrder = { low: 1, medium: 2, high: 3 };
-          aValue = priorityOrder[a.priority];
-          bValue = priorityOrder[b.priority];
-          break;
+          const priorityOrder = { low: 1, medium: 2, high: 3 }
+          aValue = priorityOrder[a.priority]
+          bValue = priorityOrder[b.priority]
+          break
         }
         case 'createdAt':
         default:
-          aValue = a.createdAt;
-          bValue = b.createdAt;
-          break;
+          aValue = a.createdAt
+          bValue = b.createdAt
+          break
       }
 
       if (filter.sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
+        return aValue > bValue ? 1 : -1
       } else {
-        return aValue < bValue ? 1 : -1;
+        return aValue < bValue ? 1 : -1
       }
-    });
+    })
 
-    return filtered;
-  }, [wishlistItems, filter]);
+    return filtered
+  }, [wishlistItems, filter])
 
   const handleBack = () => {
-    navigate('/');
-  };
+    navigate('/')
+  }
 
   const handleAddItem = () => {
-    setEditingItem(null);
-    setIsModalOpen(true);
-  };
+    setEditingItem(null)
+    setIsModalOpen(true)
+  }
 
   const handleEdit = (item: WishlistItem) => {
-    setEditingItem(item);
-    setIsModalOpen(true);
-  };
+    setEditingItem(item)
+    setIsModalOpen(true)
+  }
 
   const handleSubmitItem = (data: Partial<WishlistItem>) => {
     if (editingItem) {
       // Update existing item
-      setWishlistItems(prev => prev.map(item =>
-        item.id === editingItem.id
-          ? { ...item, ...data, updatedAt: new Date() }
-          : item
-      ));
+      setWishlistItems(prev =>
+        prev.map(item =>
+          item.id === editingItem.id ? { ...item, ...data, updatedAt: new Date() } : item,
+        ),
+      )
     } else {
       // Add new item
       const newItem: WishlistItem = {
@@ -735,67 +735,67 @@ export const WishlistGalleryPage: React.FC = () => {
         id: Date.now().toString(),
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as WishlistItem;
-      setWishlistItems(prev => [...prev, newItem]);
+      } as WishlistItem
+      setWishlistItems(prev => [...prev, newItem])
     }
-  };
+  }
 
   const handleDeleteItem = (id: string) => {
-    setWishlistItems(prev => prev.filter(item => item.id !== id));
-    setSelectedItems(prev => prev.filter(itemId => itemId !== id));
-  };
+    setWishlistItems(prev => prev.filter(item => item.id !== id))
+    setSelectedItems(prev => prev.filter(itemId => itemId !== id))
+  }
 
   const handleTogglePurchased = (id: string) => {
-    setWishlistItems(prev => prev.map(item =>
-      item.id === id
-        ? { ...item, isPurchased: !item.isPurchased, updatedAt: new Date() }
-        : item
-    ));
-  };
+    setWishlistItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, isPurchased: !item.isPurchased, updatedAt: new Date() } : item,
+      ),
+    )
+  }
 
   const handleSelectItem = (itemId: string, checked: boolean) => {
-    setSelectedItems(prev =>
-      checked
-        ? [...prev, itemId]
-        : prev.filter(id => id !== itemId)
-    );
-  };
+    setSelectedItems(prev => (checked ? [...prev, itemId] : prev.filter(id => id !== itemId)))
+  }
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedItems(checked ? filteredItems.map(item => item.id) : []);
-  };
+    setSelectedItems(checked ? filteredItems.map(item => item.id) : [])
+  }
 
   const handleBatchDelete = () => {
-    setWishlistItems(prev => prev.filter(item => !selectedItems.includes(item.id)));
-    setSelectedItems([]);
-  };
+    setWishlistItems(prev => prev.filter(item => !selectedItems.includes(item.id)))
+    setSelectedItems([])
+  }
 
   const handleBatchMarkPurchased = () => {
-    setWishlistItems(prev => prev.map(item =>
-      selectedItems.includes(item.id)
-        ? { ...item, isPurchased: true, updatedAt: new Date() }
-        : item
-    ));
-    setSelectedItems([]);
-  };
+    setWishlistItems(prev =>
+      prev.map(item =>
+        selectedItems.includes(item.id)
+          ? { ...item, isPurchased: true, updatedAt: new Date() }
+          : item,
+      ),
+    )
+    setSelectedItems([])
+  }
 
   const handleBatchMarkUnpurchased = () => {
-    setWishlistItems(prev => prev.map(item =>
-      selectedItems.includes(item.id)
-        ? { ...item, isPurchased: false, updatedAt: new Date() }
-        : item
-    ));
-    setSelectedItems([]);
-  };
+    setWishlistItems(prev =>
+      prev.map(item =>
+        selectedItems.includes(item.id)
+          ? { ...item, isPurchased: false, updatedAt: new Date() }
+          : item,
+      ),
+    )
+    setSelectedItems([])
+  }
 
   const handleBatchUpdatePriority = (priority: 'low' | 'medium' | 'high') => {
-    setWishlistItems(prev => prev.map(item =>
-      selectedItems.includes(item.id)
-        ? { ...item, priority, updatedAt: new Date() }
-        : item
-    ));
-    setSelectedItems([]);
-  };
+    setWishlistItems(prev =>
+      prev.map(item =>
+        selectedItems.includes(item.id) ? { ...item, priority, updatedAt: new Date() } : item,
+      ),
+    )
+    setSelectedItems([])
+  }
 
   // Convert wishlist items to gallery format
   const galleryItems = useMemo(() => {
@@ -808,134 +808,121 @@ export const WishlistGalleryPage: React.FC = () => {
       createdAt: item.createdAt,
       tags: [item.priority, item.category].filter((tag): tag is string => Boolean(tag)),
       liked: item.isPurchased,
-    }));
-  }, [filteredItems]);
+    }))
+  }, [filteredItems])
 
   // AppDataTable columns configuration
-  const tableColumns = useMemo(() => [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (item: WishlistItem) => (
-        <div className="flex items-center gap-3">
-          {item.imageUrl && (
-            <img
-              src={item.imageUrl}
-              alt={item.name}
-              className="w-10 h-10 object-cover rounded border"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
-          )}
-          <div>
-            <div className="font-medium">{item.name}</div>
-            {item.description && (
-              <div className="text-sm text-gray-500 truncate max-w-xs">
-                {item.description}
-              </div>
-            )}
+  const tableColumns = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Name',
+        render: (item: WishlistItem) => (
+          <div className="flex items-center gap-3">
+            {item.imageUrl ? (
+              <img
+                src={item.imageUrl}
+                alt={item.name}
+                className="w-10 h-10 object-cover rounded border"
+                onError={e => {
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                }}
+              />
+            ) : null}
+            <div>
+              <div className="font-medium">{item.name}</div>
+              {item.description ? (
+                <div className="text-sm text-gray-500 truncate max-w-xs">{item.description}</div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      ),
-    },
-    {
-      key: 'price',
-      header: 'Price',
-      render: (item: WishlistItem) => (
-        item.price ? `$${item.price.toFixed(2)}` : '-'
-      ),
-      sortable: true,
-    },
-    {
-      key: 'priority',
-      header: 'Priority',
-      render: (item: WishlistItem) => {
-        const colors = {
-          low: 'bg-green-100 text-green-800',
-          medium: 'bg-yellow-100 text-yellow-800',
-          high: 'bg-red-100 text-red-800',
-        };
-        return (
-          <Badge className={colors[item.priority]}>
-            {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
-          </Badge>
-        );
+        ),
       },
-      sortable: true,
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      render: (item: WishlistItem) => (
-        item.category ? (
-          <Badge variant="outline">{item.category}</Badge>
-        ) : '-'
-      ),
-    },
-    {
-      key: 'isPurchased',
-      header: 'Status',
-      render: (item: WishlistItem) => (
-        <div className="flex items-center gap-2">
-          {item.isPurchased ? (
-            <CheckCircle className="w-4 h-4 text-green-600" />
-          ) : (
-            <Circle className="w-4 h-4 text-gray-400" />
-          )}
-          <span className="text-sm">
-            {item.isPurchased ? 'Purchased' : 'Not Purchased'}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'createdAt',
-      header: 'Added',
-      render: (item: WishlistItem) => (
-        <span className="text-sm text-gray-500">
-          {item.createdAt.toLocaleDateString()}
-        </span>
-      ),
-      sortable: true,
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      render: (item: WishlistItem) => (
-        <div className="flex items-center gap-2">
-          {item.url && (
+      {
+        key: 'price',
+        header: 'Price',
+        render: (item: WishlistItem) => (item.price ? `$${item.price.toFixed(2)}` : '-'),
+        sortable: true,
+      },
+      {
+        key: 'priority',
+        header: 'Priority',
+        render: (item: WishlistItem) => {
+          const colors = {
+            low: 'bg-green-100 text-green-800',
+            medium: 'bg-yellow-100 text-yellow-800',
+            high: 'bg-red-100 text-red-800',
+          }
+          return (
+            <Badge className={colors[item.priority]}>
+              {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+            </Badge>
+          )
+        },
+        sortable: true,
+      },
+      {
+        key: 'category',
+        header: 'Category',
+        render: (item: WishlistItem) =>
+          item.category ? <Badge variant="outline">{item.category}</Badge> : '-',
+      },
+      {
+        key: 'isPurchased',
+        header: 'Status',
+        render: (item: WishlistItem) => (
+          <div className="flex items-center gap-2">
+            {item.isPurchased ? (
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            ) : (
+              <Circle className="w-4 h-4 text-gray-400" />
+            )}
+            <span className="text-sm">{item.isPurchased ? 'Purchased' : 'Not Purchased'}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'createdAt',
+        header: 'Added',
+        render: (item: WishlistItem) => (
+          <span className="text-sm text-gray-500">{item.createdAt.toLocaleDateString()}</span>
+        ),
+        sortable: true,
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        render: (item: WishlistItem) => (
+          <div className="flex items-center gap-2">
+            {item.url ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(item.url, '_blank')}
+                title="View Item"
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} title="Edit">
+              <Edit className="w-4 h-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.open(item.url, '_blank')}
-              title="View Item"
+              onClick={() => handleDeleteItem(item.id)}
+              title="Delete"
+              className="text-red-600 hover:text-red-700"
             >
-              <Eye className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEdit(item)}
-            title="Edit"
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteItem(item.id)}
-            title="Delete"
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
-    },
-  ], [handleEdit, handleDeleteItem]);
+          </div>
+        ),
+      },
+    ],
+    [handleEdit, handleDeleteItem],
+  )
 
   const tabs = [
     {
@@ -954,26 +941,35 @@ export const WishlistGalleryPage: React.FC = () => {
                       type="text"
                       placeholder="Search wishlist items..."
                       value={filter.search}
-                      onChange={(e) => setFilter(prev => ({ ...prev, search: e.target.value }))}
+                      onChange={e => setFilter(prev => ({ ...prev, search: e.target.value }))}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
-                
+
                 <select
                   value={filter.category}
-                  onChange={(e) => setFilter(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={e => setFilter(prev => ({ ...prev, category: e.target.value }))}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Categories</option>
                   {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
                   ))}
                 </select>
 
                 <select
                   value={filter.priority || ''}
-                  onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value ? (e.target.value as 'low' | 'medium' | 'high') : undefined }))}
+                  onChange={e =>
+                    setFilter(prev => ({
+                      ...prev,
+                      priority: e.target.value
+                        ? (e.target.value as 'low' | 'medium' | 'high')
+                        : undefined,
+                    }))
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Priorities</option>
@@ -984,10 +980,12 @@ export const WishlistGalleryPage: React.FC = () => {
 
                 <select
                   value={filter.isPurchased === undefined ? '' : filter.isPurchased.toString()}
-                  onChange={(e) => setFilter(prev => ({ 
-                    ...prev, 
-                    isPurchased: e.target.value === '' ? undefined : e.target.value === 'true'
-                  }))}
+                  onChange={e =>
+                    setFilter(prev => ({
+                      ...prev,
+                      isPurchased: e.target.value === '' ? undefined : e.target.value === 'true',
+                    }))
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Items</option>
@@ -1041,33 +1039,21 @@ export const WishlistGalleryPage: React.FC = () => {
                   <span className="text-sm text-gray-600">
                     {selectedItems.length} items selected
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedItems([])}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setSelectedItems([])}>
                     Clear Selection
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBatchMarkPurchased}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleBatchMarkPurchased}>
                     Mark as Purchased
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBatchMarkUnpurchased}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleBatchMarkUnpurchased}>
                     Mark as Not Purchased
                   </Button>
                   <select
-                    onChange={(e) => {
+                    onChange={e => {
                       if (e.target.value) {
-                        handleBatchUpdatePriority(e.target.value as 'low' | 'medium' | 'high');
+                        handleBatchUpdatePriority(e.target.value as 'low' | 'medium' | 'high')
                       }
                     }}
                     className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1077,11 +1063,7 @@ export const WishlistGalleryPage: React.FC = () => {
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
                   </select>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleBatchDelete}
-                  >
+                  <Button variant="destructive" size="sm" onClick={handleBatchDelete}>
                     Delete Selected
                   </Button>
                 </div>
@@ -1095,7 +1077,7 @@ export const WishlistGalleryPage: React.FC = () => {
               <input
                 type="checkbox"
                 checked={selectedItems.length === filteredItems.length && filteredItems.length > 0}
-                onChange={(e) => handleSelectAll(e.target.checked)}
+                onChange={e => handleSelectAll(e.target.checked)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <span className="text-sm text-gray-600">
@@ -1124,8 +1106,11 @@ export const WishlistGalleryPage: React.FC = () => {
             // Temporarily replaced Gallery with simple grid due to import issue
             <div className="bg-white rounded-lg border p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredItems.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                {filteredItems.map(item => (
+                  <div
+                    key={item.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
                     <div className="flex items-start gap-3">
                       <img
                         src={item.imageUrl}
@@ -1137,11 +1122,15 @@ export const WishlistGalleryPage: React.FC = () => {
                         <p className="text-xs text-gray-600 mt-1">{item.description}</p>
                         <div className="flex items-center justify-between mt-2">
                           <span className="font-medium text-sm">${item.price}</span>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            item.priority === 'high' ? 'bg-red-100 text-red-800' :
-                            item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              item.priority === 'high'
+                                ? 'bg-red-100 text-red-800'
+                                : item.priority === 'medium'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-green-100 text-green-800'
+                            }`}
+                          >
                             {item.priority}
                           </span>
                         </div>
@@ -1152,11 +1141,14 @@ export const WishlistGalleryPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-              : 'space-y-4'
-            }>
-              {filteredItems.map((item) => (
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                  : 'space-y-4'
+              }
+            >
+              {filteredItems.map(item => (
                 <WishlistItemCard
                   key={item.id}
                   item={item}
@@ -1164,7 +1156,7 @@ export const WishlistGalleryPage: React.FC = () => {
                   onDelete={handleDeleteItem}
                   onTogglePurchased={handleTogglePurchased}
                   selected={selectedItems.includes(item.id)}
-                  onSelect={(checked) => handleSelectItem(item.id, checked)}
+                  onSelect={checked => handleSelectItem(item.id, checked)}
                   showCheckbox={true}
                 />
               ))}
@@ -1175,12 +1167,16 @@ export const WishlistGalleryPage: React.FC = () => {
             <AppCard>
               <div className="text-center py-12">
                 <Gift className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No wishlist items found</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No wishlist items found
+                </h3>
                 <p className="text-gray-600 mb-4">
-                  {filter.search || filter.category || filter.priority || filter.isPurchased !== undefined
+                  {filter.search ||
+                  filter.category ||
+                  filter.priority ||
+                  filter.isPurchased !== undefined
                     ? 'Try adjusting your filters to see more items.'
-                    : 'Start building your LEGO wishlist by adding some items!'
-                  }
+                    : 'Start building your LEGO wishlist by adding some items!'}
                 </p>
                 <Button onClick={handleAddItem}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -1225,12 +1221,15 @@ export const WishlistGalleryPage: React.FC = () => {
           <AppCard title="Category Breakdown">
             <div className="space-y-3">
               {categories.map(category => {
-                const categoryItems = wishlistItems.filter(item => item.category === category);
-                const purchasedCount = categoryItems.filter(item => item.isPurchased).length;
-                const totalValue = categoryItems.reduce((sum, item) => sum + (item.price || 0), 0);
-                
+                const categoryItems = wishlistItems.filter(item => item.category === category)
+                const purchasedCount = categoryItems.filter(item => item.isPurchased).length
+                const totalValue = categoryItems.reduce((sum, item) => sum + (item.price || 0), 0)
+
                 return (
-                  <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={category}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div>
                       <h4 className="font-medium">{category}</h4>
                       <p className="text-sm text-gray-600">
@@ -1246,7 +1245,7 @@ export const WishlistGalleryPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
           </AppCard>
@@ -1254,15 +1253,18 @@ export const WishlistGalleryPage: React.FC = () => {
           <AppCard title="Priority Distribution">
             <div className="space-y-3">
               {(['high', 'medium', 'low'] as const).map(priority => {
-                const priorityItems = wishlistItems.filter(item => item.priority === priority);
+                const priorityItems = wishlistItems.filter(item => item.priority === priority)
                 const priorityColors = {
                   high: 'bg-red-100 text-red-800',
                   medium: 'bg-yellow-100 text-yellow-800',
                   low: 'bg-green-100 text-green-800',
-                };
-                
+                }
+
                 return (
-                  <div key={priority} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={priority}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Badge className={priorityColors[priority]}>
                         {priority.charAt(0).toUpperCase() + priority.slice(1)}
@@ -1273,14 +1275,14 @@ export const WishlistGalleryPage: React.FC = () => {
                       ${priorityItems.reduce((sum, item) => sum + (item.price || 0), 0).toFixed(2)}
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
           </AppCard>
         </div>
       ),
     },
-  ];
+  ]
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -1306,13 +1308,13 @@ export const WishlistGalleryPage: React.FC = () => {
                 <span>Saved {lastSaveTime.toLocaleTimeString()}</span>
               </div>
             ) : null}
-            {saveError && (
+            {saveError ? (
               <div className="flex items-center gap-2 text-red-600">
                 <span>Save failed: {saveError}</span>
               </div>
-            )}
+            ) : null}
           </div>
-          
+
           <Button onClick={handleAddItem}>
             <Plus className="h-4 w-4 mr-2" />
             Add Item
@@ -1320,26 +1322,21 @@ export const WishlistGalleryPage: React.FC = () => {
         </div>
       </div>
 
-      <TabPanel
-        tabs={tabs}
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
-      />
+      <TabPanel tabs={tabs} value={activeTab} onValueChange={setActiveTab} className="space-y-6" />
 
       {/* Add/Edit Modal */}
       <AddEditWishlistModal
         isOpen={isModalOpen}
         onClose={() => {
-          setIsModalOpen(false);
-          setEditingItem(null);
+          setIsModalOpen(false)
+          setEditingItem(null)
         }}
         onSubmit={handleSubmitItem}
         initialData={editingItem || undefined}
         isEditing={!!editingItem}
       />
     </div>
-  );
-};
+  )
+}
 
-export default WishlistGalleryPage; 
+export default WishlistGalleryPage

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import InfiniteGallery from './index.js';
-import { galleryApi } from '../../store/galleryApi.js';
-import type { GalleryFilters } from '../../store/galleryApi.js';
+import React, { useState } from 'react'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { galleryApi } from '../../store/galleryApi.js'
+import type { GalleryFilters } from '../../store/galleryApi.js'
+import InfiniteGallery from './index.js'
 
 // Create a test store for the example
 const createExampleStore = () => {
@@ -11,57 +11,54 @@ const createExampleStore = () => {
     reducer: {
       [galleryApi.reducerPath]: galleryApi.reducer,
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(galleryApi.middleware),
-  });
-};
+    middleware: getDefaultMiddleware => getDefaultMiddleware().concat(galleryApi.middleware),
+  })
+}
 
 const InfiniteGalleryExample: React.FC = () => {
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [filters, setFilters] = useState<Partial<GalleryFilters>>({
     type: 'image',
-  });
+  })
 
   const handleImageClick = (image: any) => {
-    console.log('Image clicked:', image);
-  };
+    console.log('Image clicked:', image)
+  }
 
   const handleImageLike = (imageId: string, liked: boolean) => {
-    console.log('Image liked:', imageId, liked);
-  };
+    console.log('Image liked:', imageId, liked)
+  }
 
   const handleImageShare = (imageId: string) => {
-    console.log('Image shared:', imageId);
-  };
+    console.log('Image shared:', imageId)
+  }
 
   const handleImageDelete = (imageId: string) => {
-    console.log('Image deleted:', imageId);
-  };
+    console.log('Image deleted:', imageId)
+  }
 
   const handleImageDownload = (imageId: string) => {
-    console.log('Image downloaded:', imageId);
-  };
+    console.log('Image downloaded:', imageId)
+  }
 
   const handleImageAddToAlbum = (imageId: string) => {
-    console.log('Image added to album:', imageId);
-  };
+    console.log('Image added to album:', imageId)
+  }
 
   const handleImagesSelected = (imageIds: string[]) => {
-    setSelectedImages(imageIds);
-    console.log('Selected images:', imageIds);
-  };
+    setSelectedImages(imageIds)
+    console.log('Selected images:', imageIds)
+  }
 
   const handleFilterChange = (newFilters: Partial<GalleryFilters>) => {
-    setFilters(newFilters);
-  };
+    setFilters(newFilters)
+  }
 
   return (
     <Provider store={createExampleStore()}>
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Infinite Gallery Example
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Infinite Gallery Example</h1>
           <p className="text-gray-600 mb-6">
             This example demonstrates the infinite scroll functionality with IntersectionObserver.
             Scroll down to automatically load more images.
@@ -110,9 +107,7 @@ const InfiniteGalleryExample: React.FC = () => {
               <h3 className="text-lg font-semibold text-blue-900 mb-2">
                 Selected Images ({selectedImages.length})
               </h3>
-              <p className="text-blue-700">
-                Selected IDs: {selectedImages.join(', ')}
-              </p>
+              <p className="text-blue-700">Selected IDs: {selectedImages.join(', ')}</p>
             </div>
           )}
         </div>
@@ -136,9 +131,7 @@ const InfiniteGalleryExample: React.FC = () => {
 
         {/* Usage Instructions */}
         <div className="mt-12 p-6 bg-gray-50 rounded-lg">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            How to Use
-          </h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">How to Use</h3>
           <div className="space-y-4 text-gray-700">
             <div>
               <h4 className="font-semibold">Basic Usage:</h4>
@@ -152,7 +145,7 @@ const InfiniteGalleryExample: React.FC = () => {
 />`}
               </pre>
             </div>
-            
+
             <div>
               <h4 className="font-semibold">With Custom Filters:</h4>
               <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
@@ -182,7 +175,7 @@ const InfiniteGalleryExample: React.FC = () => {
         </div>
       </div>
     </Provider>
-  );
-};
+  )
+}
 
-export default InfiniteGalleryExample; 
+export default InfiniteGalleryExample

@@ -1,7 +1,7 @@
-import { createRoute, redirect } from '@tanstack/react-router';
-import { createTanStackRouteGuard } from '../lib/auth-guard';
-import { rootRoute } from './root';
-import { MocDetailPage } from '../pages/MocDetailPage';
+import { createRoute, redirect } from '@tanstack/react-router'
+import { createTanStackRouteGuard } from '../lib/auth-guard'
+import { MocDetailPage } from '../pages/MocDetailPage'
+import { rootRoute } from './root'
 
 export const mocDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -15,4 +15,4 @@ export const mocDetailRoute = createRoute({
   //   redirect
   // ),
   component: MocDetailPage, // Direct import instead of lazy loading
-});
+})

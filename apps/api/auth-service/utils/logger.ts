@@ -1,12 +1,12 @@
-import { Request } from 'express';
+import { Request } from 'express'
 
 /**
  * Extended Request interface that includes pino logger
  */
 interface LoggerRequest extends Request {
-  log: any;
-  user?: { id: string; email?: string };
-  userId?: string;
+  log: any
+  user?: { id: string; email?: string }
+  userId?: string
 }
 
 /**
@@ -28,9 +28,9 @@ export function logAuthEvent(
     ip: req.ip || req.connection?.remoteAddress,
     userAgent: req.headers['user-agent'],
     timestamp: new Date().toISOString(),
-  };
+  }
 
-  req.log[level](logData, `Auth event: ${event}`);
+  req.log[level](logData, `Auth event: ${event}`)
 }
 
 /**
@@ -41,7 +41,7 @@ export function logSecurityEvent(
   event: string,
   details: Record<string, any> = {},
 ) {
-  logAuthEvent(req, event, { ...details, security: true }, 'warn');
+  logAuthEvent(req, event, { ...details, security: true }, 'warn')
 }
 
 /**
@@ -52,7 +52,7 @@ export function logUserAction(
   action: string,
   details: Record<string, any> = {},
 ) {
-  logAuthEvent(req, action, details, 'info');
+  logAuthEvent(req, action, details, 'info')
 }
 
 /**
@@ -63,8 +63,8 @@ export function logAuthError(
   error: string | Error,
   details: Record<string, any> = {},
 ) {
-  const errorMessage = error instanceof Error ? error.message : error;
-  const errorStack = error instanceof Error ? error.stack : undefined;
+  const errorMessage = error instanceof Error ? error.message : error
+  const errorStack = error instanceof Error ? error.stack : undefined
 
   logAuthEvent(
     req,
@@ -75,7 +75,7 @@ export function logAuthError(
       stack: errorStack,
     },
     'error',
-  );
+  )
 }
 
 /**
@@ -91,7 +91,7 @@ export function logDatabaseOperation(
     ...details,
     operation,
     collection,
-  });
+  })
 }
 
 /**
@@ -114,7 +114,7 @@ export function logEmailEvent(
       success,
     },
     success ? 'info' : 'warn',
-  );
+  )
 }
 
 /**
@@ -135,7 +135,7 @@ export function logValidationError(
       validationError: error,
     },
     'warn',
-  );
+  )
 }
 
 /**
@@ -151,14 +151,14 @@ export function logRateLimitHit(
     ...details,
     limit,
     windowMs,
-  });
+  })
 }
 
 /**
  * Sanitize user object for logging (remove sensitive fields)
  */
 export function sanitizeUserForLogging(user: any) {
-  if (!user) return null;
+  if (!user) return null
 
   const sanitized = {
     id: user._id || user.id,
@@ -168,9 +168,9 @@ export function sanitizeUserForLogging(user: any) {
     lastLogin: user.lastLogin,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
-  };
+  }
 
-  return sanitized;
+  return sanitized
 }
 
 /**
@@ -181,7 +181,7 @@ export function getOrCreateCorrelationId(req: Request): string {
     (req.headers['x-correlation-id'] as string) ||
     (req.headers['x-request-id'] as string) ||
     (req as any).id
-  );
+  )
 }
 
 /**
@@ -198,5 +198,5 @@ export function logPerformance(
     operation,
     duration,
     durationMs: `${duration}ms`,
-  });
+  })
 }

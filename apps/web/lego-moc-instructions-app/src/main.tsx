@@ -9,7 +9,7 @@ import { initializeCSRF } from '@repo/auth'
 
 // Import test auth utilities for development
 if (import.meta.env.DEV) {
-  import('./utils/testAuth.ts');
+  import('./utils/testAuth.ts')
 }
 import { rootRoute } from './routes/root'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
@@ -17,7 +17,6 @@ import { homeRoute } from './routes/home.tsx'
 import { mocDetailRoute } from './routes/moc-detail.tsx'
 import { mocGalleryRoute } from './routes/moc-gallery.tsx'
 import { inspirationGalleryRoute } from './routes/inspiration-gallery.tsx'
-
 import { profileRoute } from './routes/profile.tsx'
 import { profileDemoRoute } from './routes/profile-demo.tsx'
 import { profileRTKDemoRoute } from './routes/profile-rtk-demo.tsx'
@@ -31,15 +30,11 @@ import { resetPasswordRoute } from './routes/auth/reset-password.tsx'
 import { verifyEmailRoute } from './routes/auth/verify-email.tsx'
 import { unauthorizedRoute } from './routes/unauthorized.tsx'
 import { notFoundRoute } from './routes/not-found.tsx'
-
 import { PerformanceProvider } from './providers/PerformanceProvider'
 import { UserPreferencesProvider } from './providers/UserPreferencesProvider'
 import { PWAProvider } from './components/PWAProvider'
-
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
-
 import reportWebVitals from './reportWebVitals.ts'
-
 import { store } from './store/store'
 // Offline API disabled for now; will re-enable after full typing/integration
 // import { offlineApi } from './services/offlineApi'

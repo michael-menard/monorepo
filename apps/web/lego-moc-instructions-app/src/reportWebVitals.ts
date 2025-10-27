@@ -12,7 +12,7 @@ type WebVitalsCallback = (metric: {
 const sendToAnalytics = (metric: { id: string; name: string; value: number; rating: string }) => {
   // Send to our performance monitoring service
   performanceMonitor.trackPerformanceMetric(metric.name, metric.value)
-  
+
   // In development, log to console
   if (process.env.NODE_ENV === 'development') {
     console.log(`[Web Vitals] ${metric.name}:`, {
@@ -21,7 +21,7 @@ const sendToAnalytics = (metric: { id: string; name: string; value: number; rati
       id: metric.id,
     })
   }
-  
+
   // In production, you can send to external analytics services
   if (process.env.NODE_ENV === 'production') {
     // Example: Send to Google Analytics

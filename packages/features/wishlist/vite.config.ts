@@ -1,12 +1,11 @@
-import { defineConfig } from 'vite';
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import react from '@vitejs/plugin-react-swc';
-import tailwindcss from '@tailwindcss/vite';
-import dts from 'vite-plugin-dts';
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import tailwindcss from '@tailwindcss/vite'
+import dts from 'vite-plugin-dts'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
@@ -14,8 +13,8 @@ export default defineConfig({
     tailwindcss(),
     dts({
       insertTypesEntry: true,
-      exclude: ['**/*.stories.ts', '**/*.stories.tsx', '**/*.test.ts', '**/*.test.tsx']
-    })
+      exclude: ['**/*.stories.ts', '**/*.stories.tsx', '**/*.test.ts', '**/*.test.tsx'],
+    }),
   ],
   build: {
     lib: {
@@ -32,7 +31,7 @@ export default defineConfig({
         '@repo/accessibility',
         '@reduxjs/toolkit',
         '@reduxjs/toolkit/query/react',
-        'framer-motion'
+        'framer-motion',
       ],
       output: {
         globals: {
@@ -48,4 +47,4 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
-});
+})

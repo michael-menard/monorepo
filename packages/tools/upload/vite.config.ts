@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { resolve } from 'path'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
@@ -10,9 +10,9 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'MonorepoUpload',
       formats: ['es', 'cjs'],
-      fileName: (format) => {
-        const extension = format === 'es' ? 'js' : 'cjs';
-        return `index.${extension}`;
+      fileName: format => {
+        const extension = format === 'es' ? 'js' : 'cjs'
+        return `index.${extension}`
       },
     },
     rollupOptions: {
@@ -24,7 +24,7 @@ export default defineConfig({
         'sharp',
         'zod',
         'clsx',
-        'tailwind-merge'
+        'tailwind-merge',
       ],
       output: {
         globals: {
@@ -45,4 +45,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
-});
+})

@@ -29,13 +29,13 @@ describe('Offline Functionality Integration', () => {
     vi.clearAllMocks()
     navigator.onLine = true
     localStorageMock.storage.clear()
-    localStorageMock.getItem.mockImplementation((key) => {
+    localStorageMock.getItem.mockImplementation(key => {
       return localStorageMock.storage.get(key) || null
     })
     localStorageMock.setItem.mockImplementation((key, value) => {
       localStorageMock.storage.set(key, value)
     })
-    localStorageMock.removeItem.mockImplementation((key) => {
+    localStorageMock.removeItem.mockImplementation(key => {
       localStorageMock.storage.delete(key)
     })
   })
@@ -47,7 +47,7 @@ describe('Offline Functionality Integration', () => {
   describe('OfflineManager', () => {
     it('should initialize with default data', () => {
       const status = offlineManager.getOfflineStatus()
-      
+
       expect(status.isOnline).toBe(true)
       expect(status.pendingActions).toBe(0)
       expect(status.dataVersion).toBe('1.0.0')
@@ -71,7 +71,7 @@ describe('Offline Functionality Integration', () => {
       }
 
       await offlineManager.queueAction(action)
-      
+
       expect(offlineManager.hasPendingActions()).toBe(true)
       expect(offlineManager.getPendingActionCount()).toBe(1)
     })
@@ -131,8 +131,8 @@ describe('Offline Functionality Integration', () => {
     it('should handle offline GET requests with cached data', async () => {
       navigator.onLine = false
       const cachedData = { success: true, data: [{ id: '1', title: 'Test' }] }
-      
-      localStorageMock.getItem.mockImplementation((key) => {
+
+      localStorageMock.getItem.mockImplementation(key => {
         if (key === 'offline_data') {
           return JSON.stringify({
             version: '1.0.0',
@@ -195,7 +195,7 @@ describe('Offline Functionality Integration', () => {
       await offlineManager.storeData('persistent', testData)
 
       // Simulate page reload by clearing the mock and setting up new storage
-      localStorageMock.getItem.mockImplementation((key) => {
+      localStorageMock.getItem.mockImplementation(key => {
         if (key === 'offline_data') {
           return JSON.stringify({
             version: '1.0.0',
@@ -215,4 +215,4 @@ describe('Offline Functionality Integration', () => {
       expect(retrieved).toEqual(testData)
     })
   })
-}) 
+})

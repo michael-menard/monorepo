@@ -111,10 +111,10 @@ export const defaultPerformanceConfig: PerformanceConfig = {
 // Environment-specific configuration
 export const getPerformanceConfig = (): PerformanceConfig => {
   const env = process.env.NODE_ENV
-  
+
   // Base configuration
   const config = { ...defaultPerformanceConfig }
-  
+
   // Environment-specific overrides
   if (env === 'development') {
     config.development.logToConsole = true
@@ -130,12 +130,12 @@ export const getPerformanceConfig = (): PerformanceConfig => {
     config.development.showMonitor = false
     config.production.sendToAnalytics = false
   }
-  
+
   // Check for Do Not Track
   if (config.privacy.respectDNT && navigator.doNotTrack === '1') {
     config.enabled = false
   }
-  
+
   return config
 }
 
@@ -174,4 +174,4 @@ export const getThresholds = () => {
 export const shouldRespectPrivacy = (): boolean => {
   const config = getPerformanceConfig()
   return config.privacy.excludePII
-} 
+}

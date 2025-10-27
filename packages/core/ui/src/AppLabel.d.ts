@@ -1,15 +1,16 @@
-import * as React from 'react';
-import { LabelProps } from './label';
-import { SanitizationConfig } from './lib/sanitization';
+import * as React from 'react'
+import {LabelProps} from './label'
+import {SanitizationConfig} from './lib/sanitization'
+
 export interface AppLabelProps extends Omit<LabelProps, 'children'> {
-    /** Label text content */
-    children: React.ReactNode;
-    /** Custom sanitization configuration */
-    sanitizationConfig?: SanitizationConfig;
-    /** Whether to show warnings when content is sanitized */
-    showSanitizationWarnings?: boolean;
-    /** Callback when sanitization warnings occur */
-    onSanitizationWarning?: (warnings: string[]) => void;
+  /** Label text content */
+  children: React.ReactNode
+  /** Custom sanitization configuration */
+  sanitizationConfig?: SanitizationConfig
+  /** Whether to show warnings when content is sanitized */
+  showSanitizationWarnings?: boolean
+  /** Callback when sanitization warnings occur */
+  onSanitizationWarning?: (warnings: string[]) => void
 }
 /**
  * Secure Label component that automatically sanitizes text content
@@ -36,5 +37,7 @@ export interface AppLabelProps extends Omit<LabelProps, 'children'> {
  * </AppLabel>
  * ```
  */
-export declare const AppLabel: React.ForwardRefExoticComponent<Omit<AppLabelProps, "ref"> & React.RefAttributes<HTMLLabelElement>>;
+export declare const AppLabel: React.ForwardRefExoticComponent<
+  Omit<AppLabelProps, 'ref'> & React.RefAttributes<HTMLLabelElement>
+>
 //# sourceMappingURL=AppLabel.d.ts.map

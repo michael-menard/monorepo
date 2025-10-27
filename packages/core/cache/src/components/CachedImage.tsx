@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useImageCache } from '../utils/imageCache.js'
 
 interface CachedImageProps {
@@ -134,7 +134,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
-      {images.map((image) => (
+      {images.map(image => (
         <div key={image.id} className="relative aspect-square overflow-hidden rounded-lg">
           <CachedImage
             src={image.src}
@@ -195,4 +195,4 @@ export const CacheStatus: React.FC = () => {
       </button>
     </div>
   )
-} 
+}

@@ -1,150 +1,150 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { z } from 'zod';
-import { LightboxPropsSchema, type LightboxProps } from '../../schemas';
+import React, { useEffect, useRef, useCallback } from 'react'
+import { z } from 'zod'
+import { LightboxPropsSchema, type LightboxProps } from '../../schemas'
 
 export const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, onClose }) => {
   // Validate props using Zod schema (guard for non-exported schema shapes)
-  let validatedProps: LightboxProps;
+  let validatedProps: LightboxProps
   try {
-    validatedProps = LightboxPropsSchema.parse({ images, currentIndex, onClose }) as LightboxProps;
+    validatedProps = LightboxPropsSchema.parse({ images, currentIndex, onClose }) as LightboxProps
   } catch (err) {
     // Fallback minimal validation to avoid crashing tests if schema import shape changes
     if (!Array.isArray(images) || images.length === 0) {
-      throw new Error('At least one image is required');
+      throw new Error('At least one image is required')
     }
     if (typeof currentIndex !== 'number' || currentIndex < 0) {
-      throw new Error('Invalid currentIndex');
+      throw new Error('Invalid currentIndex')
     }
-    const safeIndex = Math.min(currentIndex, images.length - 1);
-    validatedProps = { images, currentIndex: safeIndex, onClose } as LightboxProps;
+    const safeIndex = Math.min(currentIndex, images.length - 1)
+    validatedProps = { images, currentIndex: safeIndex, onClose } as LightboxProps
   }
 
-  const [index, setIndex] = React.useState(validatedProps.currentIndex);
-  const [zoom, setZoom] = React.useState(1);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
-  const [position, setPosition] = React.useState({ x: 0, y: 0 });
+  const [index, setIndex] = React.useState(validatedProps.currentIndex)
+  const [zoom, setZoom] = React.useState(1)
+  const [isDragging, setIsDragging] = React.useState(false)
+  const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 })
+  const [position, setPosition] = React.useState({ x: 0, y: 0 })
 
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const closeButtonRef = useRef<React.ElementRef<'button'>>(null);
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const closeButtonRef = useRef<React.ElementRef<'button'>>(null)
 
   // Reset zoom and position when image changes
   useEffect(() => {
-    setZoom(1);
-    setPosition({ x: 0, y: 0 });
-  }, [index]);
+    setZoom(1)
+    setPosition({ x: 0, y: 0 })
+  }, [index])
 
   // Focus management
   useEffect(() => {
-    overlayRef.current?.focus();
-  }, []);
+    overlayRef.current?.focus()
+  }, [])
 
   // Keyboard navigation with improved accessibility
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       switch (e.key) {
         case 'Escape':
-          onClose();
-          break;
+          onClose()
+          break
         case 'ArrowRight':
-          e.preventDefault();
-          setIndex((i) => (i + 1) % images.length);
-          break;
+          e.preventDefault()
+          setIndex(i => (i + 1) % images.length)
+          break
         case 'ArrowLeft':
-          e.preventDefault();
-          setIndex((i) => (i - 1 + images.length) % images.length);
-          break;
+          e.preventDefault()
+          setIndex(i => (i - 1 + images.length) % images.length)
+          break
         case '+':
         case '=':
-          e.preventDefault();
-          setZoom((z) => Math.min(z + 0.2, 3));
-          break;
+          e.preventDefault()
+          setZoom(z => Math.min(z + 0.2, 3))
+          break
         case '-':
-          e.preventDefault();
-          setZoom((z) => Math.max(z - 0.2, 1));
-          break;
+          e.preventDefault()
+          setZoom(z => Math.max(z - 0.2, 1))
+          break
         case 'Home':
-          e.preventDefault();
-          setIndex(0);
-          break;
+          e.preventDefault()
+          setIndex(0)
+          break
         case 'End':
-          e.preventDefault();
-          setIndex(images.length - 1);
-          break;
+          e.preventDefault()
+          setIndex(images.length - 1)
+          break
         case 'Tab':
           // Allow natural tab order
-          break;
+          break
         default:
-          break;
+          break
       }
     },
     [images.length, onClose],
-  );
+  )
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
 
   // Prevent background scroll
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, []);
+      document.body.style.overflow = originalOverflow
+    }
+  }, [])
 
   // Mouse drag functionality
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoom > 1) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+      setIsDragging(true)
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
     }
-  };
+  }
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && zoom > 1) {
       setPosition({
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y,
-      });
+      })
     }
-  };
+  }
 
   const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+    setIsDragging(false)
+  }
 
   // Click outside to close
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === overlayRef.current) {
-      onClose();
+      onClose()
     }
-  };
+  }
 
   // Navigation functions
   const goToPrevious = useCallback(() => {
-    setIndex((i) => (i - 1 + images.length) % images.length);
-  }, [images.length]);
+    setIndex(i => (i - 1 + images.length) % images.length)
+  }, [images.length])
 
   const goToNext = useCallback(() => {
-    setIndex((i) => (i + 1) % images.length);
-  }, [images.length]);
+    setIndex(i => (i + 1) % images.length)
+  }, [images.length])
 
   const zoomIn = useCallback(() => {
-    setZoom((z) => Math.min(z + 0.2, 3));
-  }, []);
+    setZoom(z => Math.min(z + 0.2, 3))
+  }, [])
 
   const zoomOut = useCallback(() => {
-    setZoom((z) => Math.max(z - 0.2, 1));
-  }, []);
+    setZoom(z => Math.max(z - 0.2, 1))
+  }, [])
 
   const resetZoom = useCallback(() => {
-    setZoom(1);
-    setPosition({ x: 0, y: 0 });
-  }, []);
+    setZoom(1)
+    setPosition({ x: 0, y: 0 })
+  }, [])
 
   return (
     <div
@@ -255,7 +255,7 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, onClos
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Lightbox;
+export default Lightbox

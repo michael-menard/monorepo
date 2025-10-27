@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express'
 
 /**
  * CSRF middleware that validates the presence and correctness of CSRF tokens
@@ -11,11 +11,11 @@ import { Request, Response, NextFunction } from 'express';
  * 4. Rejects requests with 403 and appropriate error message if validation fails
  */
 export function csrf(req: Request, res: Response, next: NextFunction): void {
-  const method = req.method.toUpperCase();
+  const method = req.method.toUpperCase()
 
   // Skip CSRF validation for safe methods
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-    return next();
+    return next()
   }
 
   // Origin validation in production
@@ -24,9 +24,9 @@ export function csrf(req: Request, res: Response, next: NextFunction): void {
       ['http://localhost:5173', process.env.APP_ORIGIN, process.env.FRONTEND_URL].filter(
         Boolean,
       ) as string[],
-    );
+    )
 
-    const origin = req.get('origin') || req.get('referer') || '';
+    const origin = req.get('origin') || req.get('referer') || ''
 
     if (
       origin &&
@@ -36,24 +36,24 @@ export function csrf(req: Request, res: Response, next: NextFunction): void {
         success: false,
         code: 'CSRF_FAILED',
         message: 'Invalid origin',
-      });
-      return;
+      })
+      return
     }
   }
 
   // CSRF token validation
-  const cookieToken = req.cookies['XSRF-TOKEN'];
-  const headerToken = req.get('x-csrf-token');
+  const cookieToken = req.cookies['XSRF-TOKEN']
+  const headerToken = req.get('x-csrf-token')
 
   if (!cookieToken || !headerToken || cookieToken !== headerToken) {
     res.status(403).json({
       success: false,
       code: 'CSRF_FAILED',
       message: 'CSRF validation failed',
-    });
-    return;
+    })
+    return
   }
 
   // If all validations pass, continue to next middleware
-  next();
+  next()
 }

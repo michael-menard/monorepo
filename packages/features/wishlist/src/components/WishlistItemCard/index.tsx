@@ -1,26 +1,26 @@
-import React from 'react';
-import { GripVertical, ExternalLink, Edit, Trash2, CheckCircle, Circle, Move } from 'lucide-react';
-import type { WishlistItem } from '../../schemas';
+import React from 'react'
+import { GripVertical, ExternalLink, Edit, Trash2, CheckCircle, Circle, Move } from 'lucide-react'
+import type { WishlistItem } from '../../schemas'
 
 export interface WishlistItemCardProps {
-  item: WishlistItem;
-  onEdit: (item: WishlistItem) => void;
-  onDelete: (id: string) => void;
-  onTogglePurchased: (id: string) => void;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
-  isDragging?: boolean;
-  className?: string;
-  selected?: boolean;
-  onSelect?: (checked: boolean) => void;
-  showCheckbox?: boolean;
+  item: WishlistItem
+  onEdit: (item: WishlistItem) => void
+  onDelete: (id: string) => void
+  onTogglePurchased: (id: string) => void
+  onDragStart?: (e: React.DragEvent) => void
+  onDragEnd?: (e: React.DragEvent) => void
+  isDragging?: boolean
+  className?: string
+  selected?: boolean
+  onSelect?: (checked: boolean) => void
+  showCheckbox?: boolean
   // Keyboard accessibility props
-  onKeyDown?: (e: React.KeyboardEvent) => void;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  isKeyboardFocused?: boolean;
-  isKeyboardDragging?: boolean;
-  showKeyboardInstructions?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent) => void
+  onFocus?: () => void
+  onBlur?: () => void
+  isKeyboardFocused?: boolean
+  isKeyboardDragging?: boolean
+  showKeyboardInstructions?: boolean
 }
 
 export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
@@ -47,13 +47,13 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
     low: 'bg-green-100 text-green-800 border-green-200',
     medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     high: 'bg-red-100 text-red-800 border-red-200',
-  };
+  }
 
   const priorityLabels = {
     low: 'Low',
     medium: 'Medium',
     high: 'High',
-  };
+  }
 
   return (
     <div
@@ -76,45 +76,45 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
       onBlur={onBlur}
     >
       {/* Selection Checkbox */}
-      {showCheckbox && onSelect && (
+      {showCheckbox && onSelect ? (
         <div className="absolute top-2 right-2 z-10">
           <input
             type="checkbox"
             checked={selected}
-            onChange={(e) => onSelect(e.target.checked)}
+            onChange={e => onSelect(e.target.checked)}
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Drag Handle */}
       <div className="absolute top-2 left-2 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-        {isKeyboardDragging && (
+        {isKeyboardDragging ? (
           <div className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full p-1">
             <Move className="w-3 h-3" />
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Card Content */}
       <div className="p-4 pt-8">
         {/* Image and Basic Info */}
         <div className="flex gap-4 mb-3">
-          {item.imageUrl && (
+          {item.imageUrl ? (
             <div className="flex-shrink-0">
               <img
                 src={item.imageUrl}
                 alt={item.name}
                 className="w-16 h-16 object-cover rounded-md border border-gray-200"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+                onError={e => {
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
                 }}
               />
             </div>
-          )}
+          ) : null}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
@@ -133,17 +133,17 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
               </button>
             </div>
 
-            {item.description && (
+            {item.description ? (
               <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
-            )}
+            ) : null}
           </div>
         </div>
 
         {/* Price and Meta Info */}
         <div className="flex items-center justify-between mb-3">
-          {item.price && (
+          {item.price ? (
             <span className="text-lg font-semibold text-gray-900">${item.price.toFixed(2)}</span>
-          )}
+          ) : null}
 
           <div className="flex items-center gap-2">
             <span
@@ -155,17 +155,17 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
               {priorityLabels[item.priority]}
             </span>
 
-            {item.category && (
+            {item.category ? (
               <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
                 {item.category}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {item.url && (
+          {item.url ? (
             <a
               href={item.url}
               target="_blank"
@@ -175,7 +175,7 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
               <ExternalLink className="w-4 h-4" />
               View Item
             </a>
-          )}
+          ) : null}
 
           <button
             type="button"
@@ -198,15 +198,15 @@ export const WishlistItemCard: React.FC<WishlistItemCardProps> = ({
       </div>
 
       {/* Purchased Overlay */}
-      {item.isPurchased && (
+      {item.isPurchased ? (
         <div className="absolute inset-0 bg-green-50 bg-opacity-50 rounded-lg border-2 border-green-200 flex items-center justify-center">
           <div className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
             Purchased
           </div>
         </div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default WishlistItemCard; 
+export default WishlistItemCard

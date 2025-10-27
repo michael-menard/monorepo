@@ -18,11 +18,7 @@ Object.defineProperty(window, 'location', {
 })
 
 const renderWithRouter = (component: React.ReactElement) => {
-  return render(
-    <MemoryRouter>
-      {component}
-    </MemoryRouter>
-  )
+  return render(<MemoryRouter>{component}</MemoryRouter>)
 }
 
 describe('OfflineFallback', () => {
@@ -44,12 +40,7 @@ describe('OfflineFallback', () => {
     const customTitle = 'Custom Offline Title'
     const customMessage = 'Custom offline message'
 
-    renderWithRouter(
-      <OfflineFallback 
-        title={customTitle}
-        message={customMessage}
-      />
-    )
+    renderWithRouter(<OfflineFallback title={customTitle} message={customMessage} />)
 
     expect(screen.getByText(customTitle)).toBeInTheDocument()
     expect(screen.getByText(customMessage)).toBeInTheDocument()
@@ -67,9 +58,7 @@ describe('OfflineFallback', () => {
   it('should handle retry button click with custom onRetry', () => {
     const mockOnRetry = vi.fn()
 
-    renderWithRouter(
-      <OfflineFallback onRetry={mockOnRetry} />
-    )
+    renderWithRouter(<OfflineFallback onRetry={mockOnRetry} />)
 
     const retryButton = screen.getByText('Try Again')
     fireEvent.click(retryButton)
@@ -126,4 +115,4 @@ describe('OfflineFallback', () => {
     expect(goBackButton).toBeInTheDocument()
     expect(homeButton).toBeInTheDocument()
   })
-}) 
+})

@@ -52,9 +52,7 @@ export const CacheManager: React.FC = () => {
       {/* Overall Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">
-            {(totalHitRate * 100).toFixed(1)}%
-          </div>
+          <div className="text-2xl font-bold text-blue-600">{(totalHitRate * 100).toFixed(1)}%</div>
           <div className="text-sm text-blue-800">Overall Hit Rate</div>
         </div>
         <div className="bg-green-50 p-4 rounded-lg">
@@ -64,9 +62,7 @@ export const CacheManager: React.FC = () => {
           <div className="text-sm text-green-800">Total Cached Items</div>
         </div>
         <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-purple-600">
-            {stats.image?.totalEntries || 0}
-          </div>
+          <div className="text-2xl font-bold text-purple-600">{stats.image?.totalEntries || 0}</div>
           <div className="text-sm text-purple-800">Cached Images</div>
         </div>
       </div>
@@ -79,7 +75,9 @@ export const CacheManager: React.FC = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Size:</span>
-              <span>{stats.memory.size} / {stats.memory.maxSize}</span>
+              <span>
+                {stats.memory.size} / {stats.memory.maxSize}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Hit Rate:</span>
@@ -106,7 +104,9 @@ export const CacheManager: React.FC = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Size:</span>
-              <span>{stats.localStorage.size} / {stats.localStorage.maxSize}</span>
+              <span>
+                {stats.localStorage.size} / {stats.localStorage.maxSize}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Hit Rate:</span>
@@ -133,7 +133,9 @@ export const CacheManager: React.FC = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Size:</span>
-              <span>{stats.sessionStorage.size} / {stats.sessionStorage.maxSize}</span>
+              <span>
+                {stats.sessionStorage.size} / {stats.sessionStorage.maxSize}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Hit Rate:</span>
@@ -187,4 +189,4 @@ export const CacheManager: React.FC = () => {
       </div>
     </div>
   )
-} 
+}

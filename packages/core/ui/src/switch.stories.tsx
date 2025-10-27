@@ -107,9 +107,7 @@ export const WithDescription: Story = {
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <Label htmlFor="dark-mode">Dark mode</Label>
-          <p className="text-sm text-muted-foreground">
-            Switch between light and dark themes.
-          </p>
+          <p className="text-sm text-muted-foreground">Switch between light and dark themes.</p>
         </div>
         <Switch id="dark-mode" />
       </div>
@@ -135,7 +133,7 @@ export const SettingsPanel: Story = {
           Manage your account preferences and security settings.
         </p>
       </div>
-      
+
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -146,17 +144,15 @@ export const SettingsPanel: Story = {
           </div>
           <Switch id="public-profile" defaultChecked />
         </div>
-        
+
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="email-verified">Email verified</Label>
-            <p className="text-sm text-muted-foreground">
-              Your email address has been verified.
-            </p>
+            <p className="text-sm text-muted-foreground">Your email address has been verified.</p>
           </div>
           <Switch id="email-verified" defaultChecked disabled />
         </div>
-        
+
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="login-alerts">Login alerts</Label>
@@ -166,7 +162,7 @@ export const SettingsPanel: Story = {
           </div>
           <Switch id="login-alerts" />
         </div>
-        
+
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="data-sharing">Data sharing</Label>
@@ -179,4 +175,4 @@ export const SettingsPanel: Story = {
       </div>
     </div>
   ),
-} 
+}

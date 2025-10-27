@@ -15,6 +15,7 @@ All components use our custom design system tokens defined in `src/styles/global
 ## 📦 Available Components
 
 ### Core Components
+
 - `Button` - Various button styles and variants
 - `Card` - Container components for content organization
 - `Input` - Text input fields
@@ -23,6 +24,7 @@ All components use our custom design system tokens defined in `src/styles/global
 - `Avatar` - User profile images
 
 ### Form Components
+
 - `Form` - Form wrapper with validation integration
 - `Checkbox` - Checkbox input
 - `RadioGroup` - Radio button groups
@@ -34,6 +36,7 @@ All components use our custom design system tokens defined in `src/styles/global
 - `ToggleGroup` - Grouped toggle buttons
 
 ### Interactive Components
+
 - `Dialog` - Modal dialogs
 - `AlertDialog` - Confirmation dialogs
 - `DropdownMenu` - Dropdown menus
@@ -44,6 +47,7 @@ All components use our custom design system tokens defined in `src/styles/global
 - `ContextMenu` - Right-click context menus
 
 ### Navigation Components
+
 - `NavigationMenu` - Main navigation menus
 - `Menubar` - Application menu bars
 - `Tabs` - Tabbed interfaces
@@ -51,20 +55,23 @@ All components use our custom design system tokens defined in `src/styles/global
 - `Collapsible` - Collapsible content
 
 ### Data Display Components
+
 - `Table` - Data tables
 - `Progress` - Progress indicators
 - `Separator` - Visual separators
 - `ScrollArea` - Custom scrollable areas
 
 ### Command Components
+
 - `Command` - Command palette interface
 - `Sonner` - Toast notifications (replaces deprecated toast)
 
 ## 🚀 Usage
 
 ### Basic Import
+
 ```tsx
-import { Button, Card, Input } from '@your-org/ui';
+import { Button, Card, Input } from '@your-org/ui'
 
 function MyComponent() {
   return (
@@ -72,25 +79,28 @@ function MyComponent() {
       <Input placeholder="Enter text..." />
       <Button>Click me</Button>
     </Card>
-  );
+  )
 }
 ```
 
 ### Component Showcase
+
 To see all components in action, import and use the `ComponentShowcase`:
 
 ```tsx
-import { ComponentShowcase } from '@your-org/ui';
+import { ComponentShowcase } from '@your-org/ui'
 
 function App() {
-  return <ComponentShowcase />;
+  return <ComponentShowcase />
 }
 ```
 
 ## 🎯 Design System Features
 
 ### Color Variants
+
 All components support our design system color variants:
+
 - `default` - Primary brand colors
 - `secondary` - Secondary brand colors
 - `destructive` - Error and warning states
@@ -99,14 +109,18 @@ All components support our design system color variants:
 - `link` - Link-style variants
 
 ### Size Variants
+
 Most components support multiple sizes:
+
 - `sm` - Small
 - `default` - Default size
 - `lg` - Large
 - `icon` - Icon-only (where applicable)
 
 ### Accessibility
+
 All components are built with accessibility in mind:
+
 - Proper ARIA attributes
 - Keyboard navigation support
 - Screen reader compatibility
@@ -116,6 +130,7 @@ All components are built with accessibility in mind:
 ## 🔧 Customization
 
 ### Using Design Tokens
+
 All components use CSS custom properties that can be customized:
 
 ```css
@@ -129,15 +144,15 @@ All components use CSS custom properties that can be customized:
 ```
 
 ### Extending Components
+
 You can extend any component with additional styles:
 
 ```tsx
-<Button className="bg-blue-500 hover:bg-blue-600">
-  Custom Button
-</Button>
+<Button className="bg-blue-500 hover:bg-blue-600">Custom Button</Button>
 ```
 
 ### Dark Mode
+
 All components support dark mode out of the box using the `dark` class:
 
 ```tsx
@@ -149,6 +164,7 @@ All components support dark mode out of the box using the `dark` class:
 ## 📚 Dependencies
 
 This package depends on:
+
 - `@radix-ui/react-*` - UI primitives
 - `class-variance-authority` - Component variants
 - `clsx` - Class name utilities
@@ -166,13 +182,15 @@ pnpm test
 ## 📖 Documentation
 
 For detailed component documentation, visit:
+
 - [shadcn/ui Documentation](https://ui.shadcn.com/)
 - [Radix UI Documentation](https://www.radix-ui.com/)
 
 ## 🤝 Contributing
 
 When adding new components:
+
 1. Use `npx shadcn@latest add <component-name>` to install
 2. Update the exports in `src/index.ts`
 3. Add tests in `__tests__/`
-4. Update this README with component documentation 
+4. Update this README with component documentation

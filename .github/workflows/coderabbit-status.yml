@@ -1,0 +1,207 @@
+name: CodeRabbit Status Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  coderabbit-status:
+    name: CodeRabbit Review Status
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Check CodeRabbit Review Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request?.number || context.payload.pull_request_review?.pull_request?.number;
+            
+            if (!pull_number) {
+              core.setFailed('Could not determine pull request number');
+              return;
+            }
+            
+            console.log(`Checking CodeRabbit status for PR #${pull_number}`);
+            
+            // Get PR comments to check for CodeRabbit review
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: pull_number,
+            });
+            
+            // Look for CodeRabbit bot comments
+            const coderabbitComments = comments.data.filter(comment => 
+              comment.user.login === 'coderabbitai[bot]' || 
+              comment.user.login === 'coderabbitai' ||
+              comment.body.includes('CodeRabbit') ||
+              comment.body.includes('AI Summary')
+            );
+            
+            console.log(`Found ${coderabbitComments.length} CodeRabbit comments`);
+            
+            // Check for review completion indicators
+            const hasReviewSummary = coderabbitComments.some(comment => 
+              comment.body.includes('Summary') || 
+              comment.body.includes('Review') ||
+              comment.body.includes('## Summary') ||
+              comment.body.includes('## Review')
+            );
+            
+            // Get PR reviews
+            const reviews = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number,
+            });
+            
+            const coderabbitReviews = reviews.data.filter(review => 
+              review.user.login === 'coderabbitai[bot]' || 
+              review.user.login === 'coderabbitai'
+            );
+            
+            console.log(`Found ${coderabbitReviews.length} CodeRabbit reviews`);
+            
+            // Determine status
+            let status = 'pending';
+            let description = 'Waiting for CodeRabbit AI review...';
+            
+            if (coderabbitComments.length > 0 || coderabbitReviews.length > 0) {
+              status = 'success';
+              description = 'CodeRabbit AI review completed';
+              
+              // Check for any requested changes
+              const hasRequestedChanges = coderabbitReviews.some(review => 
+                review.state === 'CHANGES_REQUESTED'
+              );
+              
+              if (hasRequestedChanges) {
+                status = 'failure';
+                description = 'CodeRabbit AI requested changes';
+              }
+            }
+            
+            // Create status check
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: context.payload.pull_request?.head?.sha || context.payload.pull_request_review?.pull_request?.head?.sha,
+              state: status,
+              target_url: `https://github.com/${owner}/${repo}/pull/${pull_number}`,
+              description: description,
+              context: 'CodeRabbit AI Review'
+            });
+            
+            console.log(`Set status to: ${status} - ${description}`);
+
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs: coderabbit-status
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Quality Gates
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            
+            console.log('🔍 Running Quality Gates checks...');
+            
+            // Check if this is a significant change (not just docs/config)
+            const changedFiles = execSync('git diff --name-only HEAD^1', { encoding: 'utf8' }).trim().split('\n');
+            console.log('Changed files:', changedFiles);
+            
+            const significantFiles = changedFiles.filter(file => 
+              file.match(/\.(ts|tsx|js|jsx)$/) && 
+              !file.includes('test') && 
+              !file.includes('spec') &&
+              !file.includes('.d.ts')
+            );
+            
+            console.log('Significant files:', significantFiles);
+            
+            let status = 'success';
+            let description = 'Quality gates passed';
+            const issues = [];
+            
+            if (significantFiles.length > 0) {
+              // Check if affected projects have tests
+              try {
+                const testOutput = execSync('pnpm turbo test --filter="...[HEAD^1]" --dry-run', { encoding: 'utf8' });
+                console.log('Test check output:', testOutput);
+                
+                if (!testOutput.includes('test')) {
+                  issues.push('No tests found for changed code');
+                }
+              } catch (error) {
+                console.log('Test check failed:', error.message);
+                issues.push('Could not verify test coverage');
+              }
+              
+              // Check build status
+              try {
+                execSync('pnpm turbo build --filter="...[HEAD^1]"', { encoding: 'utf8' });
+                console.log('✅ Build check passed');
+              } catch (error) {
+                console.log('❌ Build check failed:', error.message);
+                issues.push('Build failed for changed projects');
+              }
+              
+              // Check for large changes without tests
+              if (significantFiles.length > 10) {
+                const testFiles = changedFiles.filter(file => 
+                  file.match(/\.(test|spec)\.(ts|tsx|js|jsx)$/)
+                );
+                
+                if (testFiles.length === 0) {
+                  issues.push('Large change detected without corresponding tests');
+                }
+              }
+            }
+            
+            if (issues.length > 0) {
+              status = 'failure';
+              description = `Quality issues: ${issues.join(', ')}`;
+            }
+            
+            // Create status check
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: status,
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${context.payload.pull_request.number}`,
+              description: description,
+              context: 'Quality Gates'
+            });
+            
+            console.log(`Quality Gates: ${status} - ${description}`);
+            
+            if (status === 'failure') {
+              core.setFailed(description);
+            }

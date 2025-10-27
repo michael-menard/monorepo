@@ -24,13 +24,16 @@
 ## 🔧 Available Tools
 
 ### **Cleanup Script**
+
 ```bash
 # Run cleanup instructions
 node email-cleanup.js
 ```
 
 ### **Email Tracking**
+
 The auth service now tracks sent emails for better management:
+
 - Email tracking is built into the email service
 - Tracks message ID, recipient, subject, and preview URL
 - Helps with debugging and verification
@@ -38,16 +41,19 @@ The auth service now tracks sent emails for better management:
 ## 📋 Email Management Tips
 
 ### **Keep Important Emails**
+
 - ✅ Verification emails for testing
 - ✅ Password reset emails for debugging
 - ✅ Welcome emails for user flow testing
 
 ### **Delete Old Emails**
+
 - 🗑️ Old test emails
 - 🗑️ Duplicate verification emails
 - 🗑️ Failed email attempts
 
 ### **Best Practices**
+
 - Use different email addresses for different test scenarios
 - Check emails immediately after sending for best results
 - Keep inbox clean for easier testing
@@ -56,6 +62,7 @@ The auth service now tracks sent emails for better management:
 ## 📊 Recent Test Email
 
 **From the latest test:**
+
 - **Recipient**: `newuser123@example.com`
 - **Subject**: `Verify your email`
 - **Verification Code**: `318772`
@@ -64,6 +71,7 @@ The auth service now tracks sent emails for better management:
 ## 🎯 Testing Workflow
 
 1. **Send Test Email**:
+
    ```bash
    curl -X POST http://localhost:9000/api/auth/sign-up \
      -H "Content-Type: application/json" \
@@ -79,6 +87,7 @@ The auth service now tracks sent emails for better management:
    - Copy the 6-digit verification code from the email
 
 4. **Test Verification**:
+
    ```bash
    curl -X POST http://localhost:9000/api/auth/verify-email \
      -H "Content-Type: application/json" \
@@ -92,12 +101,14 @@ The auth service now tracks sent emails for better management:
 ## 🔄 Migration from Mailtrap
 
 ### **What Was Removed**
+
 - ✅ `mailtrap` package dependency
 - ✅ `mailtrap/` directory and files
 - ✅ Mailtrap environment variables
 - ✅ Mailtrap configuration
 
 ### **What Was Added**
+
 - ✅ `nodemailer` package for SMTP
 - ✅ `email/ethereal.config.ts` for Ethereal configuration
 - ✅ `email/ethereal.service.ts` for email functions
@@ -119,4 +130,4 @@ The auth service now tracks sent emails for better management:
 - [Ethereal Email](https://ethereal.email) - Main website
 - [Nodemailer Documentation](https://nodemailer.com) - Email library docs
 - [Email Templates](email/emailTemplates.ts) - HTML email templates
-- [Email Service](email/ethereal.service.ts) - Email sending functions 
+- [Email Service](email/ethereal.service.ts) - Email sending functions

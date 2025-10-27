@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { BookOpen, FileText, PlayCircle, CheckCircle } from 'lucide-react';
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
+import { BookOpen, FileText, PlayCircle, CheckCircle } from 'lucide-react'
 
 export const InstructionsTab: React.FC = () => {
   return (
@@ -104,5 +104,5 @@ export const InstructionsTab: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-  );
-}; 
+  )
+}

@@ -18,10 +18,12 @@ yourusername/yourrepo → your-github-username/your-repo-name
 Add these secrets in GitHub Settings > Secrets and variables > Actions:
 
 #### For Enhanced Features:
+
 - `CODECOV_TOKEN` - For coverage reporting
 - `LHCI_GITHUB_APP_TOKEN` - For Lighthouse CI
 
 #### For Future Deployment (when ready):
+
 - `VERCEL_TOKEN` - For Vercel deployments
 - `NETLIFY_AUTH_TOKEN` - For Netlify deployments
 - `RAILWAY_TOKEN` - For Railway deployments
@@ -29,6 +31,7 @@ Add these secrets in GitHub Settings > Secrets and variables > Actions:
 ### 3. Enable Workflows
 
 The workflows will automatically run when you:
+
 - Push to `main` or `develop` branches
 - Create pull requests
 - Push tags (for releases)
@@ -82,6 +85,7 @@ The workflows will automatically run when you:
 ### Adding Deployment Platforms
 
 #### Vercel (Recommended for Web Apps)
+
 ```yaml
 - name: Deploy to Vercel
   run: |
@@ -90,6 +94,7 @@ The workflows will automatically run when you:
 ```
 
 #### Netlify
+
 ```yaml
 - name: Deploy to Netlify
   run: |
@@ -98,6 +103,7 @@ The workflows will automatically run when you:
 ```
 
 #### Railway (Recommended for APIs)
+
 ```yaml
 - name: Deploy to Railway
   run: |
@@ -110,6 +116,7 @@ The workflows will automatically run when you:
 Add these to your deployment platform:
 
 #### Auth Service:
+
 - `JWT_SECRET`
 - `REFRESH_TOKEN_SECRET`
 - `CSRF_SECRET`
@@ -117,6 +124,7 @@ Add these to your deployment platform:
 - `NODE_ENV=production`
 
 #### Web App:
+
 - `VITE_API_URL`
 - `VITE_AUTH_SERVICE_URL`
 - `NODE_ENV=production`
@@ -124,10 +132,12 @@ Add these to your deployment platform:
 ## 🚀 Deployment Strategy
 
 ### Automatic Deployments:
+
 - **Staging**: Deploys on push to `develop` branch
 - **Production**: Deploys on push to `main` branch (with approval)
 
 ### Manual Deployments:
+
 - Go to Actions tab
 - Select "Deploy to Production" workflow
 - Click "Run workflow"
@@ -136,16 +146,19 @@ Add these to your deployment platform:
 ## 📊 Monitoring
 
 ### Build Status:
+
 - Check Actions tab for real-time status
 - Status badges in README show current state
 - Email notifications on failures
 
 ### Performance:
+
 - Lighthouse reports in PR comments
 - Performance budgets enforced
 - Core Web Vitals tracking
 
 ### Security:
+
 - Weekly dependency audits
 - Automated security updates
 - Vulnerability scanning
@@ -171,7 +184,9 @@ Add these to your deployment platform:
    - Verify deployment platform credentials
 
 ### Debug Mode:
+
 Add to workflow for detailed logging:
+
 ```yaml
 env:
   ACTIONS_STEP_DEBUG: true
@@ -189,6 +204,7 @@ env:
 ## 🎉 You're All Set!
 
 Your monorepo now has enterprise-grade CI/CD with:
+
 - ✅ Automated testing for all apps
 - ✅ Security scanning and audits
 - ✅ Performance monitoring

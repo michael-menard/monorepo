@@ -1,6 +1,6 @@
-import React from 'react';
-import { ProfilePageWithTour } from '../ProfilePageWithTour';
-import type { Profile } from '../../types';
+import React from 'react'
+import { ProfilePageWithTour } from '../ProfilePageWithTour'
+import type { Profile } from '../../types'
 
 // Sample profile data for demonstration
 const sampleProfile: Profile = {
@@ -19,11 +19,11 @@ const sampleProfile: Profile = {
     twitter: 'https://twitter.com/johndoe',
     linkedin: 'https://linkedin.com/in/johndoe',
     github: 'https://github.com/johndoe',
-    instagram: 'https://instagram.com/johndoe'
+    instagram: 'https://instagram.com/johndoe',
   },
   createdAt: new Date(),
-  updatedAt: new Date()
-};
+  updatedAt: new Date(),
+}
 
 // Sample sidebar content
 const sampleSidebarContent = (
@@ -53,7 +53,7 @@ const sampleSidebarContent = (
         </li>
       </ul>
     </div>
-    
+
     <div>
       <h3 className="text-lg font-semibold mb-2">Quick Stats</h3>
       <div className="space-y-3">
@@ -72,28 +72,28 @@ const sampleSidebarContent = (
       </div>
     </div>
   </div>
-);
+)
 
 export interface ProfileTourExampleProps {
-  showTour?: boolean;
-  onTourComplete?: () => void;
-  onTourSkip?: () => void;
+  showTour?: boolean
+  onTourComplete?: () => void
+  onTourSkip?: () => void
 }
 
 export const ProfileTourExample: React.FC<ProfileTourExampleProps> = ({
   showTour = true,
   onTourComplete,
-  onTourSkip
+  onTourSkip,
 }) => {
   const handleTourComplete = () => {
-    console.log('Profile tour completed!');
-    onTourComplete?.();
-  };
+    console.log('Profile tour completed!')
+    onTourComplete?.()
+  }
 
   const handleTourSkip = () => {
-    console.log('Profile tour skipped.');
-    onTourSkip?.();
-  };
+    console.log('Profile tour skipped.')
+    onTourSkip?.()
+  }
 
   return (
     <ProfilePageWithTour
@@ -105,7 +105,7 @@ export const ProfileTourExample: React.FC<ProfileTourExampleProps> = ({
     >
       <div>Profile content goes here</div>
     </ProfilePageWithTour>
-  );
-};
+  )
+}
 
-export default ProfileTourExample; 
+export default ProfileTourExample

@@ -1,7 +1,7 @@
-import { createRoute, redirect } from '@tanstack/react-router';
-import { createTanStackRouteGuard } from '../lib/auth-guard';
-import { rootRoute } from './root';
-import MocInstructionsGallery from '../pages/MocInstructionsGallery';
+import { createRoute, redirect } from '@tanstack/react-router'
+import { createTanStackRouteGuard } from '../lib/auth-guard'
+import MocInstructionsGallery from '../pages/MocInstructionsGallery'
+import { rootRoute } from './root'
 
 export const mocGalleryRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -9,9 +9,9 @@ export const mocGalleryRoute = createRoute({
   beforeLoad: createTanStackRouteGuard(
     {
       requireAuth: true, // Requires authentication
-      requireVerified: true // Requires email verification
+      requireVerified: true, // Requires email verification
     },
-    redirect
+    redirect,
   ),
   component: MocInstructionsGallery,
-});
+})

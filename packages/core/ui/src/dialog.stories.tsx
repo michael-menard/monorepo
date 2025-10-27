@@ -47,21 +47,13 @@ export const Default: Story = {
             <Label htmlFor="name" className="text-right">
               Name
             </Label>
-            <Input
-              id="name"
-              defaultValue="Pedro Duarte"
-              className="col-span-3"
-            />
+            <Input id="name" defaultValue="Pedro Duarte" className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="username" className="text-right">
               Username
             </Label>
-            <Input
-              id="username"
-              defaultValue="@peduarte"
-              className="col-span-3"
-            />
+            <Input id="username" defaultValue="@peduarte" className="col-span-3" />
           </div>
         </div>
         <DialogFooter>
@@ -108,12 +100,7 @@ export const WithForm: Story = {
             <Label htmlFor="email" className="text-right">
               Email
             </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              className="col-span-3"
-            />
+            <Input id="email" type="email" placeholder="Enter your email" className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="password" className="text-right">
@@ -159,8 +146,8 @@ export const Confirmation: Story = {
         <DialogHeader>
           <DialogTitle>Are you sure?</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. This will permanently delete your account
-            and remove your data from our servers.
+            This action cannot be undone. This will permanently delete your account and remove your
+            data from our servers.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -193,9 +180,9 @@ export const LargeContent: Story = {
           <div>
             <h4 className="font-medium">Project Overview</h4>
             <p className="text-sm text-muted-foreground">
-              This is a comprehensive project that involves multiple teams and
-              stakeholders. The project aims to deliver a modern web application
-              with cutting-edge features and excellent user experience.
+              This is a comprehensive project that involves multiple teams and stakeholders. The
+              project aims to deliver a modern web application with cutting-edge features and
+              excellent user experience.
             </p>
           </div>
           <div>
@@ -218,8 +205,7 @@ export const LargeContent: Story = {
               • Jane Smith - Lead Developer
               <br />
               • Mike Johnson - UI/UX Designer
-              <br />
-              • Sarah Wilson - QA Engineer
+              <br />• Sarah Wilson - QA Engineer
             </p>
           </div>
         </div>
@@ -232,4 +218,4 @@ export const LargeContent: Story = {
       </DialogContent>
     </Dialog>
   ),
-} 
+}

@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
-import ProfilePage from '../index';
+import { render, screen } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import ProfilePage from '../index'
 
 // Mock the profile package components
 vi.mock('@repo/profile', () => ({
@@ -29,13 +29,13 @@ vi.mock('@repo/profile', () => ({
     </div>
   ),
   AvatarUploader: () => <div data-testid="avatar-uploader" />,
-}));
+}))
 
 // Mock the UI components
 vi.mock('@repo/ui', () => ({
   AppCard: ({ children, title }: any) => (
     <div data-testid="app-card">
-      {title && <h3>{title}</h3>}
+      {title ? <h3>{title}</h3> : null}
       {children}
     </div>
   ),
@@ -72,7 +72,7 @@ vi.mock('@repo/ui', () => ({
   Avatar: ({ children }: any) => <div data-testid="avatar">{children}</div>,
   AvatarFallback: ({ children }: any) => <div data-testid="avatar-fallback">{children}</div>,
   AvatarImage: () => <div data-testid="avatar-image" />,
-}));
+}))
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
@@ -96,7 +96,7 @@ vi.mock('lucide-react', () => ({
   Download: () => <div data-testid="download-icon" />,
   Star: () => <div data-testid="star-icon" />,
   Heart: () => <div data-testid="heart-icon" />,
-}));
+}))
 
 // Mock the useAuth hook
 vi.mock('@repo/auth', () => ({
@@ -111,43 +111,43 @@ vi.mock('@repo/auth', () => ({
     },
     isLoading: false,
   }),
-}));
+}))
 
 const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
-};
+  return render(<BrowserRouter>{component}</BrowserRouter>)
+}
 
 describe('ProfilePage', () => {
   it('renders the profile page with correct structure', () => {
-    renderWithRouter(<ProfilePage />);
+    renderWithRouter(<ProfilePage />)
 
     // Check that the main components are rendered
-    expect(screen.getByTestId('profile-page')).toBeInTheDocument();
-    expect(screen.getByTestId('sidebar')).toBeInTheDocument();
-    expect(screen.getByTestId('content')).toBeInTheDocument();
-    expect(screen.getByTestId('page-header')).toBeInTheDocument();
-    expect(screen.getByTestId('tab-panel')).toBeInTheDocument();
-  });
+    expect(screen.getByTestId('profile-page')).toBeInTheDocument()
+    expect(screen.getByTestId('sidebar')).toBeInTheDocument()
+    expect(screen.getByTestId('content')).toBeInTheDocument()
+    expect(screen.getByTestId('page-header')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-panel')).toBeInTheDocument()
+  })
 
   it('displays the page header with correct title and subtitle', () => {
-    renderWithRouter(<ProfilePage />);
+    renderWithRouter(<ProfilePage />)
 
     // PageHeader mocked; verify presence via test id to avoid duplicate text match
-    expect(screen.getByTestId('page-header')).toBeInTheDocument();
-  });
+    expect(screen.getByTestId('page-header')).toBeInTheDocument()
+  })
 
   it('renders all tabs correctly', () => {
-    renderWithRouter(<ProfilePage />);
+    renderWithRouter(<ProfilePage />)
 
-    expect(screen.getByTestId('tab-overview')).toBeInTheDocument();
-    expect(screen.getByTestId('tab-preferences')).toBeInTheDocument();
-    expect(screen.getByTestId('tab-security')).toBeInTheDocument();
-  });
+    expect(screen.getByTestId('tab-overview')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-preferences')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-security')).toBeInTheDocument()
+  })
 
   it('displays user information in sidebar', () => {
-    renderWithRouter(<ProfilePage />);
+    renderWithRouter(<ProfilePage />)
 
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('@johndoe')).toBeInTheDocument();
-  });
-}); 
+    expect(screen.getByText('John Doe')).toBeInTheDocument()
+    expect(screen.getByText('@johndoe')).toBeInTheDocument()
+  })
+})

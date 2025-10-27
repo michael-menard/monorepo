@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { X, Plus, Tag } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button } from '@repo/ui';
-import { categoryFilterSchema } from '../../schemas';
-import type { CategoryFilterProps } from '../../types';
+import React, { useState, useCallback } from 'react'
+import { motion } from 'framer-motion'
+import { X, Plus, Tag } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button } from '@repo/ui'
+import { categoryFilterSchema } from '../../schemas'
+import type { CategoryFilterProps } from '../../types'
 
 // Predefined LEGO categories
 const LEGO_CATEGORIES = [
@@ -33,7 +33,7 @@ const LEGO_CATEGORIES = [
   'Botanical Collection',
   'Seasonal',
   'Other',
-] as const;
+] as const
 
 const CategoryFilter: React.FC<CategoryFilterProps> = ({
   filter,
@@ -41,55 +41,55 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
   categories = [],
   className = '',
 }) => {
-  const [customCategory, setCustomCategory] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customCategory, setCustomCategory] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
 
   // Combine predefined categories with custom categories from items
-  const allCategories = [...new Set([...LEGO_CATEGORIES, ...categories])].sort();
+  const allCategories = [...new Set([...LEGO_CATEGORIES, ...categories])].sort()
 
   const handleCategoryChange = useCallback(
     (category: string) => {
       const newFilter = categoryFilterSchema.parse({
         ...filter,
         category: category === 'all' ? undefined : category,
-      });
-      onFilterChange(newFilter);
+      })
+      onFilterChange(newFilter)
     },
     [filter, onFilterChange],
-  );
+  )
 
   const handleCustomCategoryAdd = useCallback(() => {
     if (customCategory.trim()) {
       const newFilter = categoryFilterSchema.parse({
         ...filter,
         category: customCategory.trim(),
-      });
-      onFilterChange(newFilter);
-      setCustomCategory('');
-      setShowCustomInput(false);
+      })
+      onFilterChange(newFilter)
+      setCustomCategory('')
+      setShowCustomInput(false)
     }
-  }, [customCategory, filter, onFilterChange]);
+  }, [customCategory, filter, onFilterChange])
 
   const handleClearCategory = useCallback(() => {
     const newFilter = categoryFilterSchema.parse({
       ...filter,
       category: undefined,
-    });
-    onFilterChange(newFilter);
-  }, [filter, onFilterChange]);
+    })
+    onFilterChange(newFilter)
+  }, [filter, onFilterChange])
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
-        e.preventDefault();
-        handleCustomCategoryAdd();
+        e.preventDefault()
+        handleCustomCategoryAdd()
       } else if (e.key === 'Escape') {
-        setShowCustomInput(false);
-        setCustomCategory('');
+        setShowCustomInput(false)
+        setCustomCategory('')
       }
     },
     [handleCustomCategoryAdd],
-  );
+  )
 
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
@@ -105,7 +105,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {allCategories.map((category) => (
+            {allCategories.map(category => (
               <SelectItem key={category} value={category}>
                 {category}
               </SelectItem>
@@ -113,11 +113,11 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
           </SelectContent>
         </Select>
 
-        {filter.category && filter.category !== 'all' && (
+        {filter.category && filter.category !== 'all' ? (
           <Button variant="ghost" size="sm" onClick={handleClearCategory} className="h-9 w-9 p-0">
             <X className="h-4 w-4" />
           </Button>
-        )}
+        ) : null}
 
         {!showCustomInput && (
           <Button
@@ -132,7 +132,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
         )}
       </div>
 
-      {showCustomInput && (
+      {showCustomInput ? (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
@@ -142,7 +142,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
           <input
             type="text"
             value={customCategory}
-            onChange={(e) => setCustomCategory(e.target.value)}
+            onChange={e => setCustomCategory(e.target.value)}
             onKeyDown={handleKeyPress}
             placeholder="Enter custom category..."
             className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -161,17 +161,17 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => {
-              setShowCustomInput(false);
-              setCustomCategory('');
+              setShowCustomInput(false)
+              setCustomCategory('')
             }}
             className="h-9 w-9 p-0"
           >
             <X className="h-4 w-4" />
           </Button>
         </motion.div>
-      )}
+      ) : null}
 
-      {filter.category && (
+      {filter.category ? (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,9 +180,9 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
           <span>Filtering by:</span>
           <span className="font-medium text-foreground">{filter.category}</span>
         </motion.div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default CategoryFilter; 
+export default CategoryFilter

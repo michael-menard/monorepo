@@ -1,5 +1,5 @@
-import { createClient } from 'redis';
-import { z } from 'zod';
+import { createClient } from 'redis'
+import { z } from 'zod'
 
 // Redis configuration schema
 const RedisConfigSchema = z.object({
@@ -10,9 +10,9 @@ const RedisConfigSchema = z.object({
   maxRetriesPerRequest: z.number().default(3),
   enableReadyCheck: z.boolean().default(true),
   lazyConnect: z.boolean().default(true),
-});
+})
 
-type RedisConfig = z.infer<typeof RedisConfigSchema>;
+type RedisConfig = z.infer<typeof RedisConfigSchema>
 
 // Default configuration
 const defaultConfig: RedisConfig = {
@@ -23,183 +23,183 @@ const defaultConfig: RedisConfig = {
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   lazyConnect: true,
-};
+}
 
 // Create Redis client
 const createRedisClient = (config: Partial<RedisConfig> = {}) => {
-  const finalConfig = RedisConfigSchema.parse({ ...defaultConfig, ...config });
+  const finalConfig = RedisConfigSchema.parse({ ...defaultConfig, ...config })
 
   const client = createClient({
     url: finalConfig.url,
     password: finalConfig.password,
     database: finalConfig.db,
     socket: {
-      reconnectStrategy: (retries) => {
+      reconnectStrategy: retries => {
         if (retries > 10) {
-          console.error('Redis connection failed after 10 retries');
-          return false;
+          console.error('Redis connection failed after 10 retries')
+          return false
         }
-        return Math.min(retries * 100, 3000);
+        return Math.min(retries * 100, 3000)
       },
     },
-  });
+  })
 
   // Error handling
-  client.on('error', (err) => {
-    console.error('Redis Client Error:', err);
-  });
+  client.on('error', err => {
+    console.error('Redis Client Error:', err)
+  })
 
   client.on('connect', () => {
-    console.log('Redis Client Connected');
-  });
+    console.log('Redis Client Connected')
+  })
 
   client.on('ready', () => {
-    console.log('Redis Client Ready');
-  });
+    console.log('Redis Client Ready')
+  })
 
   client.on('end', () => {
-    console.log('Redis Client Disconnected');
-  });
+    console.log('Redis Client Disconnected')
+  })
 
-  return client;
-};
+  return client
+}
 
 // Global Redis client instance
-let redisClient: ReturnType<typeof createClient> | null = null;
+let redisClient: ReturnType<typeof createClient> | null = null
 
 // Get or create Redis client
 export const getRedisClient = () => {
   if (!redisClient) {
-    redisClient = createRedisClient();
+    redisClient = createRedisClient()
   }
-  return redisClient;
-};
+  return redisClient
+}
 
 // Connect to Redis
 export const connectRedis = async () => {
-  const client = getRedisClient();
+  const client = getRedisClient()
   if (!client.isOpen) {
     try {
-      await client.connect();
+      await client.connect()
     } catch (error) {
-      console.error('Failed to connect to Redis:', error);
-      throw error;
+      console.error('Failed to connect to Redis:', error)
+      throw error
     }
   }
-  return client;
-};
+  return client
+}
 
 // Disconnect from Redis
 export const disconnectRedis = async () => {
   if (redisClient && redisClient.isOpen) {
-    await redisClient.disconnect();
-    redisClient = null;
+    await redisClient.disconnect()
+    redisClient = null
   }
-};
+}
 
 // Cache utility functions
 export const cacheUtils = {
   // Set cache with TTL
   async set(key: string, value: any, ttlSeconds: number = 3600): Promise<void> {
-    const client = getRedisClient();
+    const client = getRedisClient()
     if (!client.isOpen) {
-      await client.connect();
+      await client.connect()
     }
 
-    const serializedValue = typeof value === 'string' ? value : JSON.stringify(value);
-    await client.setEx(key, ttlSeconds, serializedValue);
+    const serializedValue = typeof value === 'string' ? value : JSON.stringify(value)
+    await client.setEx(key, ttlSeconds, serializedValue)
   },
 
   // Get cache value
   async get<T = any>(key: string): Promise<T | null> {
-    const client = getRedisClient();
+    const client = getRedisClient()
     if (!client.isOpen) {
-      await client.connect();
+      await client.connect()
     }
 
-    const value = await client.get(key);
-    if (!value) return null;
+    const value = await client.get(key)
+    if (!value) return null
 
     try {
-      return JSON.parse(value) as T;
+      return JSON.parse(value) as T
     } catch {
-      return value as T;
+      return value as T
     }
   },
 
   // Delete cache key
   async del(key: string): Promise<void> {
-    const client = getRedisClient();
+    const client = getRedisClient()
     if (!client.isOpen) {
-      await client.connect();
+      await client.connect()
     }
 
-    await client.del(key);
+    await client.del(key)
   },
 
   // Delete multiple cache keys by pattern
   async delPattern(pattern: string): Promise<void> {
-    const client = getRedisClient();
+    const client = getRedisClient()
     if (!client.isOpen) {
-      await client.connect();
+      await client.connect()
     }
 
-    const keys = await client.keys(pattern);
+    const keys = await client.keys(pattern)
     if (keys.length > 0) {
-      await client.del(keys);
+      await client.del(keys)
     }
   },
 
   // Check if key exists
   async exists(key: string): Promise<boolean> {
-    const client = getRedisClient();
+    const client = getRedisClient()
     if (!client.isOpen) {
-      await client.connect();
+      await client.connect()
     }
 
-    const result = await client.exists(key);
-    return result === 1;
+    const result = await client.exists(key)
+    return result === 1
   },
 
   // Set cache if not exists
   async setNX(key: string, value: any, ttlSeconds: number = 3600): Promise<boolean> {
-    const client = getRedisClient();
+    const client = getRedisClient()
     if (!client.isOpen) {
-      await client.connect();
+      await client.connect()
     }
 
-    const serializedValue = typeof value === 'string' ? value : JSON.stringify(value);
-    const result = await client.setNX(key, serializedValue);
+    const serializedValue = typeof value === 'string' ? value : JSON.stringify(value)
+    const result = await client.setNX(key, serializedValue)
 
     if (result === 1 && ttlSeconds > 0) {
-      await client.expire(key, ttlSeconds);
+      await client.expire(key, ttlSeconds)
     }
 
-    return result === 1;
+    return result === 1
   },
 
   // Get or set cache (cache-aside pattern)
   async getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttlSeconds: number = 3600): Promise<T> {
-    const cached = await this.get<T>(key);
+    const cached = await this.get<T>(key)
     if (cached !== null) {
-      return cached;
+      return cached
     }
 
-    const fresh = await fetchFn();
-    await this.set(key, fresh, ttlSeconds);
-    return fresh;
+    const fresh = await fetchFn()
+    await this.set(key, fresh, ttlSeconds)
+    return fresh
   },
 
   // Invalidate cache by pattern
   async invalidatePattern(pattern: string): Promise<void> {
-    await this.delPattern(pattern);
+    await this.delPattern(pattern)
   },
 
   // Generate cache key
   generateKey(prefix: string, ...parts: (string | number)[]): string {
-    return `${prefix}:${parts.join(':')}`;
+    return `${prefix}:${parts.join(':')}`
   },
-};
+}
 
 // Cache key constants
 export const CACHE_KEYS = {
@@ -226,7 +226,7 @@ export const CACHE_KEYS = {
     USER: 'profile:user',
     AVATAR: 'profile:avatar',
   },
-} as const;
+} as const
 
 // Cache TTL constants (in seconds)
 export const CACHE_TTL = {
@@ -234,7 +234,7 @@ export const CACHE_TTL = {
   MEDIUM: 1800, // 30 minutes
   LONG: 3600, // 1 hour
   VERY_LONG: 86400, // 24 hours
-} as const;
+} as const
 
 export default {
   getRedisClient,
@@ -243,4 +243,4 @@ export default {
   cacheUtils,
   CACHE_KEYS,
   CACHE_TTL,
-};
+}

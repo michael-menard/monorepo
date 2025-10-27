@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import dts from 'vite-plugin-dts';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import dts from 'vite-plugin-dts'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(({ mode }) => {
   return {
@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
       react(),
       dts({
         insertTypesEntry: true,
-        exclude: ['**/*.stories.ts', '**/*.stories.tsx', '**/*.test.ts', '**/*.test.tsx']
-      })
+        exclude: ['**/*.stories.ts', '**/*.stories.tsx', '**/*.test.ts', '**/*.test.tsx'],
+      }),
     ],
     resolve: {
       alias: {
@@ -68,5 +68,5 @@ export default defineConfig(({ mode }) => {
     define: {
       __DEV__: mode === 'development',
     },
-  };
-});
+  }
+})

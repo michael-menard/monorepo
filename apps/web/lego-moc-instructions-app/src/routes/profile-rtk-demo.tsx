@@ -1,7 +1,7 @@
 import { createRoute, redirect } from '@tanstack/react-router'
 import { createTanStackRouteGuard } from '../lib/auth-guard'
-import { rootRoute } from './root'
 import ProfileContentRTKDemo from '../pages/ProfileContentRTKDemo'
+import { rootRoute } from './root'
 
 export const profileRTKDemoRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -9,9 +9,9 @@ export const profileRTKDemoRoute = createRoute({
   beforeLoad: createTanStackRouteGuard(
     {
       requireAuth: true, // Requires authentication
-      requireVerified: true // Requires email verification
+      requireVerified: true, // Requires email verification
     },
-    redirect
+    redirect,
   ),
   component: ProfileContentRTKDemo,
   meta: () => [

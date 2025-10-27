@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
-import { Lightbox } from './index';
+import React, { useState } from 'react'
+import { Lightbox } from './index'
 
 const LightboxExample: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isOpen, setIsOpen] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
 
   const sampleImages = [
     'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
-  ];
+  ]
 
   const handleImageClick = (index: number) => {
-    setCurrentIndex(index);
-    setIsOpen(true);
-  };
+    setCurrentIndex(index)
+    setIsOpen(true)
+  }
 
   const handleClose = () => {
-    setIsOpen(false);
-  };
+    setIsOpen(false)
+  }
 
   return (
     <div className="p-8">
@@ -65,11 +65,11 @@ const LightboxExample: React.FC = () => {
         </ul>
       </div>
 
-      {isOpen && (
+      {isOpen ? (
         <Lightbox images={sampleImages} currentIndex={currentIndex} onClose={handleClose} />
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default LightboxExample;
+export default LightboxExample

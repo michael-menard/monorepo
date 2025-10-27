@@ -1,0 +1,80 @@
+name: Project Automation
+
+on:
+  issues:
+    types: [opened, assigned, labeled, closed]
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  automate-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move new issues to Backlog
+        if: github.event.action == 'opened' && github.event_name == 'issues'
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: '*'
+          label-operator: NOT
+
+      - name: Move groomed issues to Ready to Work
+        if: github.event.action == 'labeled' && github.event.label.name == 'groomed'
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+
+      - name: Move assigned issues to In Progress
+        if: github.event.action == 'assigned' && github.event_name == 'issues'
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+
+      - name: Move to QA when PR is merged
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Extract issue numbers from PR body and title
+            const issueRegex = /#(\d+)/g;
+            const prText = `${pr.title} ${pr.body || ''}`;
+            const matches = [...prText.matchAll(issueRegex)];
+
+            for (const match of matches) {
+              const issueNumber = match[1];
+
+              // Add 'in-qa' label to the issue
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: ['in-qa']
+                });
+                console.log(`Added 'in-qa' label to issue #${issueNumber}`);
+              } catch (error) {
+                console.error(`Failed to add label to issue #${issueNumber}:`, error);
+              }
+            }
+
+      - name: Move QA passed issues to Done
+        if: github.event.action == 'labeled' && github.event.label.name == 'qa-passed'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            // Close the issue when QA passes
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });
+
+            console.log(`Closed issue #${context.issue.number} after QA passed`);

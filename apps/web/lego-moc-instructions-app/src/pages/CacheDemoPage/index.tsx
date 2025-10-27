@@ -60,7 +60,7 @@ export const CacheDemoPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Cache Management Demo</h1>
-      
+
       {/* Cache Manager */}
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Cache Statistics & Management</h2>
@@ -70,14 +70,14 @@ export const CacheDemoPage: React.FC = () => {
       {/* Manual Cache Operations */}
       <div className="mb-8 p-6 bg-gray-50 rounded-lg">
         <h2 className="text-2xl font-semibold mb-4">Manual Cache Operations</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium mb-2">Cache Key:</label>
             <input
               type="text"
               value={cacheKey}
-              onChange={(e) => setCacheKey(e.target.value)}
+              onChange={e => setCacheKey(e.target.value)}
               className="w-full p-2 border rounded"
             />
           </div>
@@ -86,7 +86,7 @@ export const CacheDemoPage: React.FC = () => {
             <input
               type="text"
               value={cacheValue}
-              onChange={(e) => setCacheValue(e.target.value)}
+              onChange={e => setCacheValue(e.target.value)}
               className="w-full p-2 border rounded"
             />
           </div>
@@ -113,17 +113,17 @@ export const CacheDemoPage: React.FC = () => {
           </button>
         </div>
 
-        {cachedResult && (
+        {cachedResult ? (
           <div className="p-3 bg-blue-100 border border-blue-300 rounded">
             <strong>Result:</strong> {cachedResult}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Image Caching Demo */}
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Image Caching Demo</h2>
-        
+
         <div className="mb-6">
           <h3 className="text-lg font-medium mb-2">Single Cached Image</h3>
           <div className="w-64 h-48 border rounded overflow-hidden">
@@ -140,8 +140,8 @@ export const CacheDemoPage: React.FC = () => {
           <h3 className="text-lg font-medium mb-2">Image Gallery (Preloaded)</h3>
           <ImageGallery
             images={demoImages}
-            onImageLoad={(id) => console.log(`Image ${id} loaded`)}
-            onImageError={(id) => console.log(`Image ${id} failed to load`)}
+            onImageLoad={id => console.log(`Image ${id} loaded`)}
+            onImageError={id => console.log(`Image ${id} failed to load`)}
           />
         </div>
 
@@ -155,14 +155,31 @@ export const CacheDemoPage: React.FC = () => {
       <div className="p-6 bg-yellow-50 rounded-lg">
         <h2 className="text-2xl font-semibold mb-4">Performance Tips</h2>
         <ul className="space-y-2 text-sm">
-          <li>• <strong>Memory Cache:</strong> Fastest but limited in size, perfect for frequently accessed data</li>
-          <li>• <strong>LocalStorage Cache:</strong> Persistent across sessions, good for user preferences</li>
-          <li>• <strong>SessionStorage Cache:</strong> Cleared when tab closes, good for session-specific data</li>
-          <li>• <strong>Image Cache:</strong> Uses Cache API and localStorage for optimal performance</li>
-          <li>• <strong>RTK Query:</strong> Automatically handles API response caching with configurable strategies</li>
-          <li>• <strong>Cache Monitoring:</strong> Use the CacheManager component to monitor performance</li>
+          <li>
+            • <strong>Memory Cache:</strong> Fastest but limited in size, perfect for frequently
+            accessed data
+          </li>
+          <li>
+            • <strong>LocalStorage Cache:</strong> Persistent across sessions, good for user
+            preferences
+          </li>
+          <li>
+            • <strong>SessionStorage Cache:</strong> Cleared when tab closes, good for
+            session-specific data
+          </li>
+          <li>
+            • <strong>Image Cache:</strong> Uses Cache API and localStorage for optimal performance
+          </li>
+          <li>
+            • <strong>RTK Query:</strong> Automatically handles API response caching with
+            configurable strategies
+          </li>
+          <li>
+            • <strong>Cache Monitoring:</strong> Use the CacheManager component to monitor
+            performance
+          </li>
         </ul>
       </div>
     </div>
   )
-} 
+}

@@ -1,11 +1,11 @@
-import React from 'react';
-import { Button } from '@repo/ui';
+import React from 'react'
+import { Button } from '@repo/ui'
 
 const ButtonCustomizationDemo: React.FC = () => {
   return (
     <div className="p-6 space-y-8">
       <h2 className="text-2xl font-semibold text-foreground">Button Customization Examples</h2>
-      
+
       {/* Standard Button Variants */}
       <section className="space-y-4">
         <h3 className="text-lg font-medium text-foreground">Standard Button Variants</h3>
@@ -86,19 +86,19 @@ const ButtonCustomizationDemo: React.FC = () => {
           <Button variant="default" size="lg">
             Sign Up (Default)
           </Button>
-          <Button 
+          <Button
             className="bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all duration-300"
             size="lg"
           >
             Sign Up (Gradient)
           </Button>
-          <Button 
+          <Button
             className="bg-primary text-primary-foreground font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
             size="lg"
           >
             Sign Up (Bold)
           </Button>
-          <Button 
+          <Button
             className="bg-gradient-to-r from-primary via-secondary to-tertiary text-white font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
             size="lg"
           >
@@ -126,7 +126,7 @@ const ButtonCustomizationDemo: React.FC = () => {
         </div>
       </section>
     </div>
-  );
-};
+  )
+}
 
-export default ButtonCustomizationDemo; 
+export default ButtonCustomizationDemo

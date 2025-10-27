@@ -3,7 +3,8 @@ import { AppAvatar } from '@repo/ui'
 
 // Mock user data - in a real app, this would come from auth context
 const mockUser = {
-  avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+  avatarUrl:
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
   userName: 'John Doe',
   userEmail: 'john.doe@example.com',
 }

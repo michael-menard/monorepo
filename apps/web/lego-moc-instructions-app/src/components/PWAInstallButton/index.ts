@@ -1,1 +1,1 @@
-export { PWAInstallButton } from './PWAInstallButton' 
+export { PWAInstallButton } from './PWAInstallButton'

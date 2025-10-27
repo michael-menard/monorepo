@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Button } from '@repo/ui';
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle, Button } from '@repo/ui'
 import {
   Heart,
   BookOpen,
@@ -14,8 +14,8 @@ import {
   Settings,
   Upload,
   ExternalLink,
-  ArrowRight
-} from 'lucide-react';
+  ArrowRight,
+} from 'lucide-react'
 
 // Import mock data (in a real app, this would come from Redux/RTK Query)
 import {
@@ -29,7 +29,7 @@ import {
   type UserStats,
   type RecentActivity,
   type QuickAction,
-} from '@repo/mock-data';
+} from '@repo/mock-data'
 
 /**
  * Demo page showing the new ProfileContent component
@@ -38,29 +38,29 @@ import {
  */
 export default function ProfileContentDemo() {
   // In a real app, these would come from Redux store
-  const [loading, setLoading] = React.useState(true);
-  const [wishlistItems, setWishlistItems] = React.useState<WishlistItem[]>([]);
-  const [mocInstructions, setMocInstructions] = React.useState<MockInstruction[]>([]);
-  const [userStats, setUserStats] = React.useState<UserStats | undefined>();
-  const [recentActivities, setRecentActivities] = React.useState<RecentActivity[]>([]);
-  const [quickActions, setQuickActions] = React.useState<QuickAction[]>([]);
+  const [loading, setLoading] = React.useState(true)
+  const [wishlistItems, setWishlistItems] = React.useState<WishlistItem[]>([])
+  const [mocInstructions, setMocInstructions] = React.useState<MockInstruction[]>([])
+  const [userStats, setUserStats] = React.useState<UserStats | undefined>()
+  const [recentActivities, setRecentActivities] = React.useState<RecentActivity[]>([])
+  const [quickActions, setQuickActions] = React.useState<QuickAction[]>([])
 
   // Simulate loading data
   React.useEffect(() => {
     const loadData = async () => {
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setWishlistItems(mockWishlistItems);
-      setMocInstructions(mockMocInstructions);
-      setUserStats(mockUserStats);
-      setRecentActivities(mockRecentActivities);
-      setQuickActions(mockQuickActions);
-      setLoading(false);
-    };
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
-    loadData();
-  }, []);
+      setWishlistItems(mockWishlistItems)
+      setMocInstructions(mockMocInstructions)
+      setUserStats(mockUserStats)
+      setRecentActivities(mockRecentActivities)
+      setQuickActions(mockQuickActions)
+      setLoading(false)
+    }
+
+    loadData()
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -103,9 +103,7 @@ export default function ProfileContentDemo() {
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                🎯 What's New
-              </h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">🎯 What's New</h3>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                 <li>✅ Centralized mock data in @repo/mock-data</li>
                 <li>✅ Gallery integration with feature adapters</li>
@@ -114,7 +112,7 @@ export default function ProfileContentDemo() {
                 <li>✅ Quick actions and recent activity</li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
                 📦 Packages Used
@@ -126,11 +124,9 @@ export default function ProfileContentDemo() {
                 <li>@repo/ui - Shared UI components</li>
               </ul>
             </div>
-            
+
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                🚀 Next Steps
-              </h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">🚀 Next Steps</h3>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                 <li>Connect to Redux/RTK Query</li>
                 <li>Add real API endpoints</li>
@@ -142,17 +138,17 @@ export default function ProfileContentDemo() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // Simplified ProfileContent component for demo purposes
 interface ProfileContentSimplifiedProps {
-  wishlistItems: WishlistItem[];
-  mocInstructions: MockInstruction[];
-  userStats?: UserStats;
-  recentActivities: RecentActivity[];
-  quickActions: QuickAction[];
-  loading: boolean;
+  wishlistItems: WishlistItem[]
+  mocInstructions: MockInstruction[]
+  userStats?: UserStats
+  recentActivities: RecentActivity[]
+  quickActions: QuickAction[]
+  loading: boolean
 }
 
 const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
@@ -171,7 +167,7 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
     Users,
     Settings,
     Plus,
-  };
+  }
 
   const colorMap = {
     primary: 'bg-blue-600 hover:bg-blue-700 text-white',
@@ -179,54 +175,66 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
     success: 'bg-green-600 hover:bg-green-700 text-white',
     warning: 'bg-yellow-600 hover:bg-yellow-700 text-white',
     danger: 'bg-red-600 hover:bg-red-700 text-white',
-  };
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
-  };
+    }).format(amount)
+  }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).getFullYear();
-  };
+    return new Date(dateString).getFullYear()
+  }
 
   const getActivityIcon = (type: RecentActivity['type']) => {
     switch (type) {
-      case 'download': return <Download className="h-4 w-4" />;
-      case 'wishlist_add': return <Heart className="h-4 w-4" />;
-      case 'instruction_upload': return <Upload className="h-4 w-4" />;
-      case 'review': return <Star className="h-4 w-4" />;
-      case 'follow': return <Users className="h-4 w-4" />;
-      default: return <BookOpen className="h-4 w-4" />;
+      case 'download':
+        return <Download className="h-4 w-4" />
+      case 'wishlist_add':
+        return <Heart className="h-4 w-4" />
+      case 'instruction_upload':
+        return <Upload className="h-4 w-4" />
+      case 'review':
+        return <Star className="h-4 w-4" />
+      case 'follow':
+        return <Users className="h-4 w-4" />
+      default:
+        return <BookOpen className="h-4 w-4" />
     }
-  };
+  }
 
   const getActivityColor = (type: RecentActivity['type']) => {
     switch (type) {
-      case 'download': return 'text-blue-600';
-      case 'wishlist_add': return 'text-red-600';
-      case 'instruction_upload': return 'text-green-600';
-      case 'review': return 'text-yellow-600';
-      case 'follow': return 'text-purple-600';
-      default: return 'text-gray-600';
+      case 'download':
+        return 'text-blue-600'
+      case 'wishlist_add':
+        return 'text-red-600'
+      case 'instruction_upload':
+        return 'text-green-600'
+      case 'review':
+        return 'text-yellow-600'
+      case 'follow':
+        return 'text-purple-600'
+      default:
+        return 'text-gray-600'
     }
-  };
+  }
 
   const formatTimeAgo = (timestamp: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60 * 60));
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60 * 60))
 
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 1) return 'Just now'
+    if (diffInHours < 24) return `${diffInHours}h ago`
 
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays < 7) return `${diffInDays}d ago`
 
-    const diffInWeeks = Math.floor(diffInDays / 7);
-    return `${diffInWeeks}w ago`;
-  };
+    const diffInWeeks = Math.floor(diffInDays / 7)
+    return `${diffInWeeks}w ago`
+  }
 
   if (loading) {
     return (
@@ -259,23 +267,28 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
           ))}
         </div>
       </div>
-    );
+    )
   }
 
   const stats = userStats || {
     totalWishlistItems: wishlistItems.length,
     totalMocInstructions: mocInstructions.length,
-    totalDownloads: mocInstructions.reduce((sum, instruction) => sum + instruction.downloadCount, 0),
+    totalDownloads: mocInstructions.reduce(
+      (sum, instruction) => sum + instruction.downloadCount,
+      0,
+    ),
     memberSince: '2023-01-15',
     favoriteCategory: 'Star Wars',
     totalSpent: wishlistItems.reduce((sum, item) => sum + (item.isPurchased ? item.price : 0), 0),
-    averageRating: mocInstructions.length > 0
-      ? mocInstructions.reduce((sum, instruction) => sum + (instruction.rating || 0), 0) / mocInstructions.length
-      : 0,
+    averageRating:
+      mocInstructions.length > 0
+        ? mocInstructions.reduce((sum, instruction) => sum + (instruction.rating || 0), 0) /
+          mocInstructions.length
+        : 0,
     profileViews: 1234,
     followersCount: 89,
     followingCount: 156,
-  };
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -311,7 +324,9 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
           <CardContent>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-blue-600">{stats.totalMocInstructions}</span>
+                <span className="text-2xl font-bold text-blue-600">
+                  {stats.totalMocInstructions}
+                </span>
                 <span className="text-sm text-gray-500">MOCs</span>
               </div>
               <div className="flex items-center space-x-1 text-sm text-gray-600">
@@ -356,8 +371,8 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              {quickActions.slice(0, 6).map((action) => {
-                const IconComponent = iconMap[action.icon as keyof typeof iconMap];
+              {quickActions.slice(0, 6).map(action => {
+                const IconComponent = iconMap[action.icon as keyof typeof iconMap]
                 return (
                   <Button
                     key={action.id}
@@ -366,11 +381,11 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                     asChild
                   >
                     <a href={action.href}>
-                      {IconComponent && <IconComponent className="h-4 w-4" />}
+                      {IconComponent ? <IconComponent className="h-4 w-4" /> : null}
                       <span className="text-sm font-medium">{action.title}</span>
                     </a>
                   </Button>
-                );
+                )
               })}
             </div>
           </CardContent>
@@ -386,8 +401,11 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentActivities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              {recentActivities.slice(0, 5).map(activity => (
+                <div
+                  key={activity.id}
+                  className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
                   <div className={`mt-1 ${getActivityColor(activity.type)}`}>
                     {getActivityIcon(activity.type)}
                   </div>
@@ -395,20 +413,14 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {activity.title}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {activity.description}
-                    </p>
+                    <p className="text-xs text-gray-500 truncate">{activity.description}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       {formatTimeAgo(activity.timestamp)}
                     </p>
                   </div>
-                  {activity.imageUrl && (
-                    <img
-                      src={activity.imageUrl}
-                      alt=""
-                      className="w-8 h-8 rounded object-cover"
-                    />
-                  )}
+                  {activity.imageUrl ? (
+                    <img src={activity.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -430,7 +442,10 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                 </span>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <a href="/wishlist" className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700">
+                <a
+                  href="/wishlist"
+                  className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700"
+                >
                   <span>View All</span>
                   <ArrowRight className="h-4 w-4" />
                 </a>
@@ -453,8 +468,11 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-                {wishlistItems.slice(0, 5).map((item) => (
-                  <div key={item.id} className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border hover:shadow-md transition-shadow">
+                {wishlistItems.slice(0, 5).map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border hover:shadow-md transition-shadow"
+                  >
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -471,18 +489,22 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                         <span className="text-lg font-bold text-green-600">
                           ${item.price.toFixed(2)}
                         </span>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          item.priority === 'high' ? 'bg-red-100 text-red-800' :
-                          item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            item.priority === 'high'
+                              ? 'bg-red-100 text-red-800'
+                              : item.priority === 'medium'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
                           {item.priority} priority
                         </span>
-                        {item.isPurchased && (
+                        {item.isPurchased ? (
                           <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
                             Purchased
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -516,7 +538,10 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                 </span>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <a href="/moc-instructions" className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700">
+                <a
+                  href="/moc-instructions"
+                  className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700"
+                >
                   <span>View All</span>
                   <ArrowRight className="h-4 w-4" />
                 </a>
@@ -542,19 +567,27 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-                {mocInstructions.slice(0, 5).map((instruction) => {
+                {mocInstructions.slice(0, 5).map(instruction => {
                   const getDifficultyColor = (difficulty: string) => {
                     switch (difficulty) {
-                      case 'beginner': return 'bg-green-100 text-green-800';
-                      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
-                      case 'advanced': return 'bg-orange-100 text-orange-800';
-                      case 'expert': return 'bg-red-100 text-red-800';
-                      default: return 'bg-gray-100 text-gray-800';
+                      case 'beginner':
+                        return 'bg-green-100 text-green-800'
+                      case 'intermediate':
+                        return 'bg-yellow-100 text-yellow-800'
+                      case 'advanced':
+                        return 'bg-orange-100 text-orange-800'
+                      case 'expert':
+                        return 'bg-red-100 text-red-800'
+                      default:
+                        return 'bg-gray-100 text-gray-800'
                     }
-                  };
+                  }
 
                   return (
-                    <div key={instruction.id} className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border hover:shadow-md transition-shadow">
+                    <div
+                      key={instruction.id}
+                      className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border hover:shadow-md transition-shadow"
+                    >
                       <img
                         src={instruction.coverImageUrl || '/placeholder-instruction.jpg'}
                         alt={instruction.title}
@@ -568,20 +601,20 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                           {instruction.description}
                         </p>
                         <div className="flex items-center space-x-4 mt-2">
-                          <span className={`px-2 py-1 text-xs rounded-full ${getDifficultyColor(instruction.difficulty)}`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${getDifficultyColor(instruction.difficulty)}`}
+                          >
                             {instruction.difficulty}
                           </span>
-                          <span className="text-sm text-gray-500">
-                            {instruction.category}
-                          </span>
-                          {instruction.rating && (
+                          <span className="text-sm text-gray-500">{instruction.category}</span>
+                          {instruction.rating ? (
                             <div className="flex items-center space-x-1">
                               <Star className="h-3 w-3 text-yellow-500 fill-current" />
                               <span className="text-sm text-gray-600">
                                 {instruction.rating.toFixed(1)}
                               </span>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -594,7 +627,7 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
                         </div>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -602,5 +635,5 @@ const ProfileContentSimplified: React.FC<ProfileContentSimplifiedProps> = ({
         </Card>
       </div>
     </div>
-  );
-};
+  )
+}

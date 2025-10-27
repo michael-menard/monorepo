@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, CheckCircle, Circle, X, Check, Tag, DollarSign } from 'lucide-react';
-import { Button } from '@repo/ui';
-import { 
+import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Trash2, CheckCircle, Circle, X, Check, Tag, DollarSign } from 'lucide-react'
+import { Button } from '@repo/ui'
+import { z } from 'zod'
+import {
   useBatchDeleteWishlistItemsMutation,
   useBatchTogglePurchasedMutation,
-  useBatchUpdateWishlistItemsMutation
-} from '../../store/wishlistApi.js';
-import { z } from 'zod';
+  useBatchUpdateWishlistItemsMutation,
+} from '../../store/wishlistApi.js'
 
 // Zod schema for batch operations
 const BatchOperationsSchema = z.object({
@@ -15,19 +15,19 @@ const BatchOperationsSchema = z.object({
   operation: z.enum(['delete', 'togglePurchased', 'updatePriority', 'updateCategory']),
   wishlistId: z.string().uuid(),
   data: z.any().optional(),
-});
+})
 
-type BatchOperationsData = z.infer<typeof BatchOperationsSchema>;
+type BatchOperationsData = z.infer<typeof BatchOperationsSchema>
 
 export interface BatchOperationsToolbarProps {
-  selectedItems: string[];
-  totalItems: number;
-  wishlistId: string;
-  onClearSelection: () => void;
-  onItemsDeleted?: (deletedIds: string[]) => void;
-  onItemsUpdated?: (updatedIds: string[]) => void;
-  onItemsToggled?: (toggledIds: string[], isPurchased: boolean) => void;
-  className?: string;
+  selectedItems: string[]
+  totalItems: number
+  wishlistId: string
+  onClearSelection: () => void
+  onItemsDeleted?: (deletedIds: string[]) => void
+  onItemsUpdated?: (updatedIds: string[]) => void
+  onItemsToggled?: (toggledIds: string[], isPurchased: boolean) => void
+  className?: string
 }
 
 const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
@@ -40,96 +40,96 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
   onItemsToggled,
   className = '',
 }) => {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showPriorityDialog, setShowPriorityDialog] = useState(false);
-  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [newCategory, setNewCategory] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showPriorityDialog, setShowPriorityDialog] = useState(false)
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [newCategory, setNewCategory] = useState('')
 
   // RTK Query mutations
-  const [batchDelete] = useBatchDeleteWishlistItemsMutation();
-  const [batchTogglePurchased] = useBatchTogglePurchasedMutation();
-  const [batchUpdate] = useBatchUpdateWishlistItemsMutation();
+  const [batchDelete] = useBatchDeleteWishlistItemsMutation()
+  const [batchTogglePurchased] = useBatchTogglePurchasedMutation()
+  const [batchUpdate] = useBatchUpdateWishlistItemsMutation()
 
-  const selectedCount = selectedItems.length;
-  const isVisible = selectedCount > 0;
+  const selectedCount = selectedItems.length
+  const isVisible = selectedCount > 0
 
   const handleBatchDelete = async () => {
     if (!showDeleteConfirm) {
-      setShowDeleteConfirm(true);
-      return;
+      setShowDeleteConfirm(true)
+      return
     }
 
-    setIsProcessing(true);
+    setIsProcessing(true)
     try {
-      const result: any = await batchDelete({ wishlistId, itemIds: selectedItems });
-      onItemsDeleted?.(result?.deletedIds ?? selectedItems);
-      onClearSelection();
-      setShowDeleteConfirm(false);
+      const result: any = await batchDelete({ wishlistId, itemIds: selectedItems })
+      onItemsDeleted?.(result?.deletedIds ?? selectedItems)
+      onClearSelection()
+      setShowDeleteConfirm(false)
     } catch (error) {
-      console.error('Failed to delete items:', error);
+      console.error('Failed to delete items:', error)
       // You might want to show a toast notification here
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
 
   const handleBatchTogglePurchased = async (isPurchased: boolean) => {
-    setIsProcessing(true);
+    setIsProcessing(true)
     try {
-      const result: any = await batchTogglePurchased({ 
-        wishlistId, 
-        itemIds: selectedItems, 
-        isPurchased 
-      });
-      onItemsToggled?.(result?.updatedIds ?? selectedItems, isPurchased);
-      onClearSelection();
+      const result: any = await batchTogglePurchased({
+        wishlistId,
+        itemIds: selectedItems,
+        isPurchased,
+      })
+      onItemsToggled?.(result?.updatedIds ?? selectedItems, isPurchased)
+      onClearSelection()
     } catch (error) {
-      console.error('Failed to toggle purchased status:', error);
+      console.error('Failed to toggle purchased status:', error)
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
 
   const handleBatchUpdatePriority = async () => {
-    setIsProcessing(true);
+    setIsProcessing(true)
     try {
-      const result: any = await batchUpdate({ 
-        wishlistId, 
-        itemIds: selectedItems, 
-        data: { priority: newPriority } 
-      });
-      onItemsUpdated?.(result?.updatedIds ?? selectedItems);
-      onClearSelection();
-      setShowPriorityDialog(false);
+      const result: any = await batchUpdate({
+        wishlistId,
+        itemIds: selectedItems,
+        data: { priority: newPriority },
+      })
+      onItemsUpdated?.(result?.updatedIds ?? selectedItems)
+      onClearSelection()
+      setShowPriorityDialog(false)
     } catch (error) {
-      console.error('Failed to update priority:', error);
+      console.error('Failed to update priority:', error)
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
 
   const handleBatchUpdateCategory = async () => {
-    setIsProcessing(true);
+    setIsProcessing(true)
     try {
-      const result: any = await batchUpdate({ 
-        wishlistId, 
-        itemIds: selectedItems, 
-        data: { category: newCategory } 
-      });
-      onItemsUpdated?.(result?.updatedIds ?? selectedItems);
-      onClearSelection();
-      setShowCategoryDialog(false);
+      const result: any = await batchUpdate({
+        wishlistId,
+        itemIds: selectedItems,
+        data: { category: newCategory },
+      })
+      onItemsUpdated?.(result?.updatedIds ?? selectedItems)
+      onClearSelection()
+      setShowCategoryDialog(false)
     } catch (error) {
-      console.error('Failed to update category:', error);
+      console.error('Failed to update category:', error)
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
 
   if (!isVisible) {
-    return null;
+    return null
   }
 
   return (
@@ -151,7 +151,10 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2" aria-hidden={showPriorityDialog || showCategoryDialog || showDeleteConfirm}>
+          <div
+            className="flex items-center gap-2"
+            aria-hidden={showPriorityDialog || showCategoryDialog || showDeleteConfirm}
+          >
             <Button
               variant="outline"
               size="sm"
@@ -222,7 +225,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
 
         {/* Processing Indicator */}
         <AnimatePresence>
-          {isProcessing && (
+          {isProcessing ? (
             <motion.div
               className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg"
               initial={{ opacity: 0 }}
@@ -234,13 +237,13 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                 Processing...
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </motion.div>
 
       {/* Priority Update Dialog */}
       <AnimatePresence>
-        {showPriorityDialog && (
+        {showPriorityDialog ? (
           <motion.div
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             initial={{ opacity: 0 }}
@@ -261,7 +264,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                   </label>
                   <select
                     value={newPriority}
-                    onChange={(e) => setNewPriority(e.target.value as 'low' | 'medium' | 'high')}
+                    onChange={e => setNewPriority(e.target.value as 'low' | 'medium' | 'high')}
                     className="w-full p-2 border border-gray-300 rounded-md"
                   >
                     <option value="low">Low</option>
@@ -277,22 +280,19 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleBatchUpdatePriority}
-                    disabled={isProcessing}
-                  >
+                  <Button onClick={handleBatchUpdatePriority} disabled={isProcessing}>
                     Update
                   </Button>
                 </div>
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
       {/* Category Update Dialog */}
       <AnimatePresence>
-        {showCategoryDialog && (
+        {showCategoryDialog ? (
           <motion.div
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             initial={{ opacity: 0 }}
@@ -314,7 +314,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                   <input
                     type="text"
                     value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    onChange={e => setNewCategory(e.target.value)}
                     placeholder="Enter category name"
                     className="w-full p-2 border border-gray-300 rounded-md"
                   />
@@ -327,20 +327,17 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleBatchUpdateCategory}
-                    disabled={isProcessing}
-                  >
+                  <Button onClick={handleBatchUpdateCategory} disabled={isProcessing}>
                     Update
                   </Button>
                 </div>
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </>
-  );
-};
+  )
+}
 
-export default BatchOperationsToolbar; 
+export default BatchOperationsToolbar

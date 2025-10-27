@@ -10,11 +10,11 @@ if (typeof document !== 'undefined') {
     ReactDOM.createRoot(root).render(
       <React.StrictMode>
         <TechRadar />
-      </React.StrictMode>
+      </React.StrictMode>,
     )
   }
 }
 
 // Export for use in other apps
 export { TechRadar }
-export type { RadarData, Entry, Quadrant, Ring } from './src/types' 
+export type { RadarData, Entry, Quadrant, Ring } from './src/types'

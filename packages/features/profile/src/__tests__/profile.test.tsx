@@ -1,8 +1,8 @@
-import React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import ProfileCard from '../components/ProfileCard';
-import type { Profile } from '../schemas';
+import React from 'react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import ProfileCard from '../components/ProfileCard'
+import type { Profile } from '../schemas'
 
 const mockProfile: Profile = {
   id: '1',
@@ -29,72 +29,48 @@ const mockProfile: Profile = {
   },
   createdAt: new Date(),
   updatedAt: new Date(),
-};
+}
 
 const mockHandlers = {
   onEdit: () => {},
-};
+}
 
 describe('Profile Package', () => {
   it('exports ProfileCard component', () => {
-    expect(ProfileCard).toBeDefined();
-  });
+    expect(ProfileCard).toBeDefined()
+  })
 
   it('renders ProfileCard with correct data', () => {
-    render(
-      <ProfileCard
-        profile={mockProfile}
-        onEdit={mockHandlers.onEdit}
-        isEditable={true}
-      />
-    );
+    render(<ProfileCard profile={mockProfile} onEdit={mockHandlers.onEdit} isEditable={true} />)
 
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('@johndoe')).toBeInTheDocument();
-    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Software developer and tech enthusiast')).toBeInTheDocument();
-    expect(screen.getByText('+1-555-123-4567')).toBeInTheDocument();
-    expect(screen.getByText('San Francisco, CA')).toBeInTheDocument();
-    expect(screen.getByText('https://johndoe.dev')).toBeInTheDocument();
-  });
+    expect(screen.getByText('John Doe')).toBeInTheDocument()
+    expect(screen.getByText('@johndoe')).toBeInTheDocument()
+    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument()
+    expect(screen.getByText('Software developer and tech enthusiast')).toBeInTheDocument()
+    expect(screen.getByText('+1-555-123-4567')).toBeInTheDocument()
+    expect(screen.getByText('San Francisco, CA')).toBeInTheDocument()
+    expect(screen.getByText('https://johndoe.dev')).toBeInTheDocument()
+  })
 
   it('shows edit button when editable', () => {
-    render(
-      <ProfileCard
-        profile={mockProfile}
-        onEdit={mockHandlers.onEdit}
-        isEditable={true}
-      />
-    );
+    render(<ProfileCard profile={mockProfile} onEdit={mockHandlers.onEdit} isEditable={true} />)
 
-    expect(screen.getByText('Edit')).toBeInTheDocument();
-  });
+    expect(screen.getByText('Edit')).toBeInTheDocument()
+  })
 
   it('does not show edit button when not editable', () => {
-    render(
-      <ProfileCard
-        profile={mockProfile}
-        onEdit={mockHandlers.onEdit}
-        isEditable={false}
-      />
-    );
+    render(<ProfileCard profile={mockProfile} onEdit={mockHandlers.onEdit} isEditable={false} />)
 
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
-  });
+    expect(screen.queryByText('Edit')).not.toBeInTheDocument()
+  })
 
   it('renders social links when available', () => {
-    render(
-      <ProfileCard
-        profile={mockProfile}
-        onEdit={mockHandlers.onEdit}
-        isEditable={false}
-      />
-    );
+    render(<ProfileCard profile={mockProfile} onEdit={mockHandlers.onEdit} isEditable={false} />)
 
-    expect(screen.getByText('Twitter')).toBeInTheDocument();
-    expect(screen.getByText('LinkedIn')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
-  });
+    expect(screen.getByText('Twitter')).toBeInTheDocument()
+    expect(screen.getByText('LinkedIn')).toBeInTheDocument()
+    expect(screen.getByText('GitHub')).toBeInTheDocument()
+  })
 
   it('renders without optional fields', () => {
     const minimalProfile = {
@@ -107,19 +83,13 @@ describe('Profile Package', () => {
       location: undefined,
       website: undefined,
       socialLinks: undefined,
-    };
+    }
 
-    render(
-      <ProfileCard
-        profile={minimalProfile}
-        onEdit={mockHandlers.onEdit}
-        isEditable={false}
-      />
-    );
+    render(<ProfileCard profile={minimalProfile} onEdit={mockHandlers.onEdit} isEditable={false} />)
 
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
-    expect(screen.queryByText('@johndoe')).not.toBeInTheDocument();
-    expect(screen.queryByText('Software developer and tech enthusiast')).not.toBeInTheDocument();
-  });
-}); 
+    expect(screen.getByText('John Doe')).toBeInTheDocument()
+    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument()
+    expect(screen.queryByText('@johndoe')).not.toBeInTheDocument()
+    expect(screen.queryByText('Software developer and tech enthusiast')).not.toBeInTheDocument()
+  })
+})

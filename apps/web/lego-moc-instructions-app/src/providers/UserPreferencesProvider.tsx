@@ -6,17 +6,11 @@ interface UserPreferencesContextType {
   preferences: UserPreferences
   isLoading: boolean
   error: string | null
-  updatePreference: <K extends keyof UserPreferences>(
-    key: K,
-    value: UserPreferences[K]
-  ) => boolean
-  updateNestedPreference: <
-    K extends keyof UserPreferences,
-    NK extends keyof UserPreferences[K]
-  >(
+  updatePreference: <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => boolean
+  updateNestedPreference: <K extends keyof UserPreferences, NK extends keyof UserPreferences[K]>(
     key: K,
     nestedKey: NK,
-    value: UserPreferences[K][NK]
+    value: UserPreferences[K][NK],
   ) => boolean
   savePreferences: (newPreferences: UserPreferences) => boolean
   resetPreferences: () => boolean
@@ -30,9 +24,7 @@ interface UserPreferencesProviderProps {
   children: React.ReactNode
 }
 
-export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = ({
-  children
-}) => {
+export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = ({ children }) => {
   const preferencesHook = useUserPreferences()
   const { setTheme } = useTheme()
 
@@ -47,7 +39,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
   useEffect(() => {
     if (!preferencesHook.isLoading) {
       const { accessibility } = preferencesHook.preferences
-      
+
       // Apply reduced motion preference
       if (accessibility.reducedMotion) {
         document.documentElement.style.setProperty('--motion-reduce', '1')
@@ -79,11 +71,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
     importPreferences: preferencesHook.importPreferences,
   }
 
-  return (
-    <UserPreferencesContext.Provider value={value}>
-      {children}
-    </UserPreferencesContext.Provider>
-  )
+  return <UserPreferencesContext.Provider value={value}>{children}</UserPreferencesContext.Provider>
 }
 
 export const useUserPreferencesContext = (): UserPreferencesContextType => {

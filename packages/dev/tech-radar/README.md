@@ -26,7 +26,7 @@ pnpm add @repo/tech-radar
 ### 1. Basic Tech Radar
 
 ```tsx
-import { TechRadar } from '@repo/tech-radar';
+import { TechRadar } from '@repo/tech-radar'
 
 function MyTechRadar() {
   const radarData = [
@@ -37,7 +37,7 @@ function MyTechRadar() {
       ring: 'adopt',
       description: 'JavaScript library for building user interfaces',
       url: 'https://reactjs.org',
-      moved: 'up'
+      moved: 'up',
     },
     {
       id: '2',
@@ -46,41 +46,45 @@ function MyTechRadar() {
       ring: 'adopt',
       description: 'Typed superset of JavaScript',
       url: 'https://typescriptlang.org',
-      moved: 'none'
+      moved: 'none',
     },
     // ... more entries
-  ];
+  ]
 
   return (
     <TechRadar
       data={radarData}
-      onEntryClick={(entry) => console.log('Clicked:', entry)}
-      onEntryHover={(entry) => console.log('Hovered:', entry)}
+      onEntryClick={entry => console.log('Clicked:', entry)}
+      onEntryHover={entry => console.log('Hovered:', entry)}
     />
-  );
+  )
 }
 ```
 
 ### 2. With Filters and Search
 
 ```tsx
-import { TechRadar, TechRadarFilters } from '@repo/tech-radar';
+import { TechRadar, TechRadarFilters } from '@repo/tech-radar'
 
 function FilteredTechRadar() {
   const [filters, setFilters] = useState({
     quadrant: '',
     ring: '',
-    searchTerm: ''
-  });
+    searchTerm: '',
+  })
 
   const filteredData = useMemo(() => {
     return radarData.filter(entry => {
-      if (filters.quadrant && entry.quadrant !== filters.quadrant) return false;
-      if (filters.ring && entry.ring !== filters.ring) return false;
-      if (filters.searchTerm && !entry.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) return false;
-      return true;
-    });
-  }, [radarData, filters]);
+      if (filters.quadrant && entry.quadrant !== filters.quadrant) return false
+      if (filters.ring && entry.ring !== filters.ring) return false
+      if (
+        filters.searchTerm &&
+        !entry.name.toLowerCase().includes(filters.searchTerm.toLowerCase())
+      )
+        return false
+      return true
+    })
+  }, [radarData, filters])
 
   return (
     <div>
@@ -90,7 +94,7 @@ function FilteredTechRadar() {
         quadrants={['tools', 'languages-frameworks', 'platforms', 'techniques']}
         rings={['hold', 'assess', 'trial', 'adopt']}
       />
-      
+
       <TechRadar
         data={filteredData}
         onEntryClick={handleEntryClick}
@@ -98,14 +102,14 @@ function FilteredTechRadar() {
         showFilters={true}
       />
     </div>
-  );
+  )
 }
 ```
 
 ### 3. With Custom Configuration
 
 ```tsx
-import { TechRadar, TechRadarConfig } from '@repo/tech-radar';
+import { TechRadar, TechRadarConfig } from '@repo/tech-radar'
 
 function CustomTechRadar() {
   const config: TechRadarConfig = {
@@ -115,18 +119,18 @@ function CustomTechRadar() {
       adopt: '#4ade80',
       trial: '#fbbf24',
       assess: '#f97316',
-      hold: '#ef4444'
+      hold: '#ef4444',
     },
     quadrants: {
-      'tools': { label: 'Tools', color: '#3b82f6' },
+      tools: { label: 'Tools', color: '#3b82f6' },
       'languages-frameworks': { label: 'Languages & Frameworks', color: '#8b5cf6' },
-      'platforms': { label: 'Platforms', color: '#06b6d4' },
-      'techniques': { label: 'Techniques', color: '#10b981' }
+      platforms: { label: 'Platforms', color: '#06b6d4' },
+      techniques: { label: 'Techniques', color: '#10b981' },
     },
     showTooltips: true,
     showLegend: true,
-    showFilters: true
-  };
+    showFilters: true,
+  }
 
   return (
     <TechRadar
@@ -135,7 +139,7 @@ function CustomTechRadar() {
       onEntryClick={handleEntryClick}
       onEntryHover={handleEntryHover}
     />
-  );
+  )
 }
 ```
 
@@ -147,27 +151,27 @@ The main radar visualization component.
 
 ```tsx
 interface TechRadarProps {
-  data: RadarEntry[];
-  config?: TechRadarConfig;
-  onEntryClick?: (entry: RadarEntry) => void;
-  onEntryHover?: (entry: RadarEntry) => void;
-  showLegend?: boolean;
-  showFilters?: boolean;
-  className?: string;
+  data: RadarEntry[]
+  config?: TechRadarConfig
+  onEntryClick?: (entry: RadarEntry) => void
+  onEntryHover?: (entry: RadarEntry) => void
+  showLegend?: boolean
+  showFilters?: boolean
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `data` | `RadarEntry[]` | Array of radar entries |
-| `config` | `TechRadarConfig` | Radar configuration |
-| `onEntryClick` | `(entry: RadarEntry) => void` | Entry click handler |
-| `onEntryHover` | `(entry: RadarEntry) => void` | Entry hover handler |
-| `showLegend` | `boolean` | Show legend |
-| `showFilters` | `boolean` | Show filters |
-| `className` | `string` | Additional CSS classes |
+| Property       | Type                          | Description            |
+| -------------- | ----------------------------- | ---------------------- |
+| `data`         | `RadarEntry[]`                | Array of radar entries |
+| `config`       | `TechRadarConfig`             | Radar configuration    |
+| `onEntryClick` | `(entry: RadarEntry) => void` | Entry click handler    |
+| `onEntryHover` | `(entry: RadarEntry) => void` | Entry hover handler    |
+| `showLegend`   | `boolean`                     | Show legend            |
+| `showFilters`  | `boolean`                     | Show filters           |
+| `className`    | `string`                      | Additional CSS classes |
 
 ### TechRadarFilters Component
 
@@ -175,23 +179,23 @@ Component for filtering radar entries.
 
 ```tsx
 interface TechRadarFiltersProps {
-  filters: RadarFilters;
-  onFiltersChange: (filters: RadarFilters) => void;
-  quadrants: string[];
-  rings: string[];
-  className?: string;
+  filters: RadarFilters
+  onFiltersChange: (filters: RadarFilters) => void
+  quadrants: string[]
+  rings: string[]
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `filters` | `RadarFilters` | Current filter state |
-| `onFiltersChange` | `(filters: RadarFilters) => void` | Filter change handler |
-| `quadrants` | `string[]` | Available quadrants |
-| `rings` | `string[]` | Available rings |
-| `className` | `string` | Additional CSS classes |
+| Property          | Type                              | Description            |
+| ----------------- | --------------------------------- | ---------------------- |
+| `filters`         | `RadarFilters`                    | Current filter state   |
+| `onFiltersChange` | `(filters: RadarFilters) => void` | Filter change handler  |
+| `quadrants`       | `string[]`                        | Available quadrants    |
+| `rings`           | `string[]`                        | Available rings        |
+| `className`       | `string`                          | Additional CSS classes |
 
 ### useTechRadar Hook
 
@@ -205,21 +209,21 @@ const {
   filters,
   setFilters,
   searchTerm,
-  setSearchTerm
-} = useTechRadar(data, initialFilters);
+  setSearchTerm,
+} = useTechRadar(data, initialFilters)
 ```
 
 #### Return Values
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `filteredData` | `RadarEntry[]` | Filtered radar entries |
-| `selectedEntry` | `RadarEntry \| null` | Currently selected entry |
-| `setSelectedEntry` | `(entry: RadarEntry \| null) => void` | Set selected entry |
-| `filters` | `RadarFilters` | Current filters |
-| `setFilters` | `(filters: RadarFilters) => void` | Update filters |
-| `searchTerm` | `string` | Current search term |
-| `setSearchTerm` | `(term: string) => void` | Update search term |
+| Property           | Type                                  | Description              |
+| ------------------ | ------------------------------------- | ------------------------ |
+| `filteredData`     | `RadarEntry[]`                        | Filtered radar entries   |
+| `selectedEntry`    | `RadarEntry \| null`                  | Currently selected entry |
+| `setSelectedEntry` | `(entry: RadarEntry \| null) => void` | Set selected entry       |
+| `filters`          | `RadarFilters`                        | Current filters          |
+| `setFilters`       | `(filters: RadarFilters) => void`     | Update filters           |
+| `searchTerm`       | `string`                              | Current search term      |
+| `setSearchTerm`    | `(term: string) => void`              | Update search term       |
 
 ## Types
 
@@ -227,16 +231,16 @@ const {
 
 ```tsx
 interface RadarEntry {
-  id: string;
-  name: string;
-  quadrant: string;
-  ring: 'hold' | 'assess' | 'trial' | 'adopt';
-  description: string;
-  url?: string;
-  moved?: 'up' | 'down' | 'none';
-  tags?: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  quadrant: string
+  ring: 'hold' | 'assess' | 'trial' | 'adopt'
+  description: string
+  url?: string
+  moved?: 'up' | 'down' | 'none'
+  tags?: string[]
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -244,22 +248,25 @@ interface RadarEntry {
 
 ```tsx
 interface TechRadarConfig {
-  width?: number;
-  height?: number;
+  width?: number
+  height?: number
   colors?: {
-    adopt: string;
-    trial: string;
-    assess: string;
-    hold: string;
-  };
-  quadrants?: Record<string, {
-    label: string;
-    color: string;
-  }>;
-  showTooltips?: boolean;
-  showLegend?: boolean;
-  showFilters?: boolean;
-  animation?: boolean;
+    adopt: string
+    trial: string
+    assess: string
+    hold: string
+  }
+  quadrants?: Record<
+    string,
+    {
+      label: string
+      color: string
+    }
+  >
+  showTooltips?: boolean
+  showLegend?: boolean
+  showFilters?: boolean
+  animation?: boolean
 }
 ```
 
@@ -267,11 +274,11 @@ interface TechRadarConfig {
 
 ```tsx
 interface RadarFilters {
-  quadrant: string;
-  ring: string;
-  searchTerm: string;
-  tags: string[];
-  moved?: 'up' | 'down' | 'none';
+  quadrant: string
+  ring: string
+  searchTerm: string
+  tags: string[]
+  moved?: 'up' | 'down' | 'none'
 }
 ```
 
@@ -302,22 +309,22 @@ const handleAddEntry = async (entry: Omit<RadarEntry, 'id' | 'createdAt' | 'upda
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(entry)
-    });
+      body: JSON.stringify(entry),
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to add entry');
+      throw new Error('Failed to add entry')
     }
 
-    const newEntry = await response.json();
-    setRadarData(prev => [...prev, newEntry]);
+    const newEntry = await response.json()
+    setRadarData(prev => [...prev, newEntry])
   } catch (error) {
-    console.error('Failed to add entry:', error);
-    throw error;
+    console.error('Failed to add entry:', error)
+    throw error
   }
-};
+}
 ```
 
 ### Updating Entries
@@ -329,24 +336,22 @@ const handleUpdateEntry = async (entryId: string, updates: Partial<RadarEntry>) 
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(updates)
-    });
+      body: JSON.stringify(updates),
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to update entry');
+      throw new Error('Failed to update entry')
     }
 
-    const updatedEntry = await response.json();
-    setRadarData(prev => prev.map(entry => 
-      entry.id === entryId ? updatedEntry : entry
-    ));
+    const updatedEntry = await response.json()
+    setRadarData(prev => prev.map(entry => (entry.id === entryId ? updatedEntry : entry)))
   } catch (error) {
-    console.error('Failed to update entry:', error);
-    throw error;
+    console.error('Failed to update entry:', error)
+    throw error
   }
-};
+}
 ```
 
 ## Styling
@@ -368,8 +373,8 @@ The components use Tailwind CSS for styling. You can customize the appearance by
       adopt: '#10b981',
       trial: '#f59e0b',
       assess: '#f97316',
-      hold: '#ef4444'
-    }
+      hold: '#ef4444',
+    },
   }}
 />
 ```
@@ -411,4 +416,4 @@ The components include full accessibility support:
 
 - `@repo/ui` - Base UI components
 - `@repo/shared` - Shared utilities
-- `@repo/features/shared` - Feature-specific utilities 
+- `@repo/features/shared` - Feature-specific utilities

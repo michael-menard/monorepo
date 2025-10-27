@@ -8,13 +8,15 @@ import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState } from 'react'
 import { AuthApiError, authApi } from '../../../services/authApi'
 
-const ResetPasswordSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
+const ResetPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
 
 type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>
 
@@ -37,15 +39,15 @@ function ResetPasswordPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       // Remove confirmPassword before sending to backend
       const { confirmPassword, ...resetData } = data
-      
+
       // Call the auth API with token from route params
       const response = await authApi.resetPassword(token, resetData)
-      
+
       console.log('Reset password successful:', response)
-      
+
       setIsSubmitted(true)
     } catch (err) {
       if (err instanceof AuthApiError) {
@@ -75,9 +77,7 @@ function ResetPasswordPage() {
             className="shadow-lg"
           >
             <div className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                You can now sign in with your new password.
-              </p>
+              <p className="text-muted-foreground">You can now sign in with your new password.</p>
               <button
                 onClick={() => router.navigate({ to: '/auth/login' })}
                 className="text-primary hover:underline"
@@ -92,7 +92,10 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4" data-testid="reset-password-main">
+    <div
+      className="min-h-screen bg-background flex items-center justify-center p-4"
+      data-testid="reset-password-main"
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -119,9 +122,9 @@ function ResetPasswordPage() {
                   {...register('password')}
                 />
               </div>
-              {errors.password && (
+              {errors.password ? (
                 <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -138,26 +141,19 @@ function ResetPasswordPage() {
                   {...register('confirmPassword')}
                 />
               </div>
-              {errors.confirmPassword && (
+              {errors.confirmPassword ? (
                 <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
-              )}
+              ) : null}
             </div>
 
-            {error && (
+            {error ? (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
-            )}
+            ) : null}
 
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting || isLoading}
-              >
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
                 {isSubmitting || isLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
@@ -172,4 +168,4 @@ function ResetPasswordPage() {
   )
 }
 
-export default ResetPasswordPage 
+export default ResetPasswordPage

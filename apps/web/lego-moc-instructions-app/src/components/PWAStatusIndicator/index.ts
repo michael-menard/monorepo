@@ -1,1 +1,1 @@
-export { PWAStatusIndicator } from './PWAStatusIndicator' 
+export { PWAStatusIndicator } from './PWAStatusIndicator'

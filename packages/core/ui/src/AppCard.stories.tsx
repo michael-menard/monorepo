@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { AppCard } from './AppCard'
-import { Button } from './button'
-import { Badge } from './badge'
+import type {Meta, StoryObj} from '@storybook/react'
+import {AppCard} from './AppCard'
+import {Button} from './button'
+import {Badge} from './badge'
 
 const meta: Meta<typeof AppCard> = {
   title: 'UI/AppCard',
@@ -83,9 +83,7 @@ export const ContentOnly: Story = {
     children: (
       <div className="text-center py-8">
         <h3 className="text-lg font-semibold mb-2">Welcome!</h3>
-        <p className="text-muted-foreground">
-          This card has no header, just content.
-        </p>
+        <p className="text-muted-foreground">This card has no header, just content.</p>
       </div>
     ),
   },
@@ -146,7 +144,7 @@ export const MultipleCards: Story = {
           <p className="text-sm text-muted-foreground">Growth this month</p>
         </div>
       </AppCard>
-      
+
       <AppCard
         title="Users"
         description="Manage user accounts"
@@ -157,7 +155,7 @@ export const MultipleCards: Story = {
           <p className="text-sm text-muted-foreground">Total users</p>
         </div>
       </AppCard>
-      
+
       <AppCard
         title="Settings"
         description="Configure your preferences"
@@ -177,4 +175,4 @@ export const MultipleCards: Story = {
       },
     },
   },
-} 
+}

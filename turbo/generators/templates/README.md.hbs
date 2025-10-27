@@ -1,0 +1,82 @@
+# @repo/{{kebabCase name}}
+
+{{description}}
+
+## Installation
+
+This package is part of the monorepo and should be installed via workspace dependencies:
+
+```json
+{
+  "dependencies": {
+    "@repo/{{kebabCase name}}": "workspace:*"
+  }
+}
+```
+
+## Usage
+
+{{#if (eq type "react-lib")}}
+```tsx
+import { ComponentName } from '@repo/{{kebabCase name}}'
+
+function App() {
+  return <ComponentName />
+}
+```
+{{else if (eq type "node-lib")}}
+```typescript
+import { functionName } from '@repo/{{kebabCase name}}'
+
+const result = functionName()
+```
+{{else}}
+```typescript
+import { utilityFunction } from '@repo/{{kebabCase name}}'
+
+const result = utilityFunction()
+```
+{{/if}}
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start development
+pnpm dev
+
+# Build package
+pnpm build
+
+# Run tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Type check
+pnpm check-types
+
+# Lint
+pnpm lint
+```
+
+{{#if includeStorybook}}
+## Storybook
+
+This package includes Storybook for component documentation:
+
+```bash
+# Start Storybook
+pnpm storybook
+
+# Build Storybook
+pnpm build-storybook
+```
+{{/if}}
+
+## Contributing
+
+Please follow the monorepo conventions and ensure all tests pass before submitting changes.

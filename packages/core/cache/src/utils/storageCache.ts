@@ -14,7 +14,7 @@ export class StorageCache {
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = CacheConfigSchema.parse(config)
-    
+
     if (typeof window === 'undefined') {
       throw new Error('StorageCache requires a browser environment')
     }
@@ -27,7 +27,11 @@ export class StorageCache {
    */
   set(key: string, data: unknown, maxAge?: number): void {
     const now = Date.now()
-    const expiresAt = maxAge ? now + maxAge : this.config.maxAge ? now + this.config.maxAge : undefined
+    const expiresAt = maxAge
+      ? now + maxAge
+      : this.config.maxAge
+        ? now + this.config.maxAge
+        : undefined
 
     const entry: CacheEntry = {
       key,
@@ -40,7 +44,7 @@ export class StorageCache {
     }
 
     const fullKey = this.config.keyPrefix + key
-    const serialized = this.config.compress 
+    const serialized = this.config.compress
       ? this.compress(JSON.stringify(entry))
       : JSON.stringify(entry)
 
@@ -62,17 +66,17 @@ export class StorageCache {
    */
   get<T = unknown>(key: string): T | null {
     const fullKey = this.config.keyPrefix + key
-    
+
     try {
       const serialized = this.storage.getItem(fullKey)
-      
+
       if (!serialized) {
         this.stats.misses++
         return null
       }
 
       const entry: CacheEntry = JSON.parse(
-        this.config.compress ? this.decompress(serialized) : serialized
+        this.config.compress ? this.decompress(serialized) : serialized,
       )
 
       // Check if entry has expired
@@ -88,7 +92,7 @@ export class StorageCache {
       this.stats.hits++
 
       // Update the entry in storage
-      const updatedSerialized = this.config.compress 
+      const updatedSerialized = this.config.compress
         ? this.compress(JSON.stringify(entry))
         : JSON.stringify(entry)
       this.storage.setItem(fullKey, updatedSerialized)
@@ -108,12 +112,12 @@ export class StorageCache {
   has(key: string): boolean {
     const fullKey = this.config.keyPrefix + key
     const serialized = this.storage.getItem(fullKey)
-    
+
     if (!serialized) return false
 
     try {
       const entry: CacheEntry = JSON.parse(
-        this.config.compress ? this.decompress(serialized) : serialized
+        this.config.compress ? this.decompress(serialized) : serialized,
       )
 
       // Check if expired
@@ -144,7 +148,7 @@ export class StorageCache {
   clear(): void {
     const keys = Object.keys(this.storage)
     const prefixKeys = keys.filter(key => key.startsWith(this.config.keyPrefix))
-    
+
     prefixKeys.forEach(key => {
       this.storage.removeItem(key)
     })
@@ -162,9 +166,10 @@ export class StorageCache {
     const hitRate = totalHits > 0 ? this.stats.hits / totalHits : 0
 
     const timestamps = entries.map(entry => entry.timestamp)
-    const averageAge = timestamps.length > 0 
-      ? timestamps.reduce((sum, ts) => sum + (Date.now() - ts), 0) / timestamps.length 
-      : 0
+    const averageAge =
+      timestamps.length > 0
+        ? timestamps.reduce((sum, ts) => sum + (Date.now() - ts), 0) / timestamps.length
+        : 0
 
     return {
       hits: this.stats.hits,
@@ -227,7 +232,7 @@ export class StorageCache {
         if (serialized) {
           try {
             const parsed = JSON.parse(
-              this.config.compress ? this.decompress(serialized) : serialized
+              this.config.compress ? this.decompress(serialized) : serialized,
             )
             entries.push(parsed)
           } catch {
@@ -266,4 +271,4 @@ export class StorageCache {
     if (typeof atob === 'undefined') return data
     return atob(data)
   }
-} 
+}

@@ -1,18 +1,19 @@
-import * as React from 'react';
-import { SanitizationConfig } from './lib/sanitization';
+import * as React from 'react'
+import {SanitizationConfig} from './lib/sanitization'
+
 export interface AppFormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, 'onSubmit'> {
-    /** Custom sanitization configurations for specific fields */
-    fieldSanitizationConfigs?: Record<string, SanitizationConfig>;
-    /** Default sanitization configuration for all fields */
-    defaultSanitizationConfig?: SanitizationConfig;
-    /** Whether to sanitize form data on submit */
-    sanitizeOnSubmit?: boolean;
-    /** Whether to show warnings when content is sanitized */
-    showSanitizationWarnings?: boolean;
-    /** Callback when sanitization warnings occur */
-    onSanitizationWarning?: (warnings: string[]) => void;
-    /** Form submit handler that receives sanitized form data */
-    onSubmit?: (event: React.FormEvent<HTMLFormElement>, sanitizedData: FormData) => void;
+  /** Custom sanitization configurations for specific fields */
+  fieldSanitizationConfigs?: Record<string, SanitizationConfig>
+  /** Default sanitization configuration for all fields */
+  defaultSanitizationConfig?: SanitizationConfig
+  /** Whether to sanitize form data on submit */
+  sanitizeOnSubmit?: boolean
+  /** Whether to show warnings when content is sanitized */
+  showSanitizationWarnings?: boolean
+  /** Callback when sanitization warnings occur */
+  onSanitizationWarning?: (warnings: string[]) => void
+  /** Form submit handler that receives sanitized form data */
+  onSubmit?: (event: React.FormEvent<HTMLFormElement>, sanitizedData: FormData) => void
 }
 /**
  * Secure Form component that automatically sanitizes form data on submit
@@ -47,5 +48,7 @@ export interface AppFormProps extends Omit<React.FormHTMLAttributes<HTMLFormElem
  * </AppForm>
  * ```
  */
-export declare const AppForm: React.ForwardRefExoticComponent<AppFormProps & React.RefAttributes<HTMLFormElement>>;
+export declare const AppForm: React.ForwardRefExoticComponent<
+  AppFormProps & React.RefAttributes<HTMLFormElement>
+>
 //# sourceMappingURL=AppForm.d.ts.map

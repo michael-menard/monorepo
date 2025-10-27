@@ -13,7 +13,7 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
   radarData,
   entries,
   onEntryClick,
-  selectedEntry
+  selectedEntry,
 }) => {
   const { quadrants, rings } = radarData
 
@@ -30,13 +30,13 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
           quadrant: quadrant || { name: entry.quadrant, index: 0 },
           ring: ring || { name: entry.ring, index: 0, color: '#gray' },
           x: 50, // Center position as fallback
-          y: 50
+          y: 50,
         }
       }
 
       // Calculate position within the quadrant
       const quadrantAngle = (quadrant.index * Math.PI) / 2
-      const ringRadius = 0.2 + (ring.index * 0.2) // 0.2 to 0.8
+      const ringRadius = 0.2 + ring.index * 0.2 // 0.2 to 0.8
 
       // Add some randomness to prevent overlap
       const randomAngle = (Math.random() - 0.5) * 0.3
@@ -50,7 +50,7 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
         quadrant,
         ring,
         x,
-        y
+        y,
       }
     })
   }, [entries, quadrants, rings])
@@ -67,23 +67,23 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
         {/* Background grid */}
         <defs>
           <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e5e7eb" strokeWidth="0.1"/>
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e5e7eb" strokeWidth="0.1" />
           </pattern>
         </defs>
-        
+
         <rect width="100" height="100" fill="url(#grid)" />
-        
+
         {/* Quadrant lines */}
         <line x1="50" y1="0" x2="50" y2="100" stroke="#d1d5db" strokeWidth="0.2" />
         <line x1="0" y1="50" x2="100" y2="50" stroke="#d1d5db" strokeWidth="0.2" />
-        
+
         {/* Rings */}
         {rings.map((ring, index) => {
-          const radius = 0.2 + (index * 0.2)
+          const radius = 0.2 + index * 0.2
           const cx = 50
           const cy = 50
           const r = radius * 40
-          
+
           return (
             <circle
               key={ring.name}
@@ -97,13 +97,13 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
             />
           )
         })}
-        
+
         {/* Quadrant labels */}
         {quadrants.map((quadrant, index) => {
           const angle = (index * Math.PI) / 2
           const x = 50 + Math.cos(angle) * 45
           const y = 50 + Math.sin(angle) * 45
-          
+
           return (
             <text
               key={quadrant.name}
@@ -120,7 +120,7 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
             </text>
           )
         })}
-        
+
         {/* Entries */}
         {positionedEntries.map(({ entry, quadrant, ring, x, y }) => (
           <RadarEntry
@@ -137,4 +137,4 @@ export const RadarVisualization: React.FC<RadarVisualizationProps> = ({
       </svg>
     </div>
   )
-} 
+}

@@ -1,0 +1,50 @@
+# Build outputs
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+.next/
+.cache/
+
+# Static assets
+public/
+static/
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Environment files
+.env*
+
+# Documentation
+__docs__/
+
+# Infrastructure
+infrastructure/
+
+# Test files
+**/*.test.js
+**/*.test.jsx
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.js
+**/*.spec.jsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.integration.js
+**/*.integration.jsx
+**/*.integration.ts
+**/*.integration.tsx
+**/__tests__/
+**/test/
+**/tests/
+
+# Minified files
+**/*.min.js
+**/*.min.css
+
+# Vendor files
+**/vendor/

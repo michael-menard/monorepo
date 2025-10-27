@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { OfflineStatusIndicator } from '../OfflineStatusIndicator'
-import { offlineApi, useGetOfflineStatusQuery, useProcessOfflineActionsMutation } from '../../../services/offlineApi'
+import {
+  offlineApi,
+  useGetOfflineStatusQuery,
+  useProcessOfflineActionsMutation,
+} from '../../../services/offlineApi'
 
 // Mock the offline API hooks
 vi.mock('../../../services/offlineApi', () => ({
@@ -27,18 +31,13 @@ const createMockStore = () => {
     reducer: {
       [offlineApi.reducerPath]: offlineApi.reducer,
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(offlineApi.middleware),
+    middleware: getDefaultMiddleware => getDefaultMiddleware().concat(offlineApi.middleware),
   })
 }
 
 const renderWithProvider = (component: React.ReactElement) => {
   const store = createMockStore()
-  return render(
-    <Provider store={store}>
-      {component}
-    </Provider>
-  )
+  return render(<Provider store={store}>{component}</Provider>)
 }
 
 describe('OfflineStatusIndicator', () => {
@@ -61,13 +60,10 @@ describe('OfflineStatusIndicator', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     renderWithProvider(<OfflineStatusIndicator />)
-    
+
     expect(screen.queryByText('You are online')).not.toBeInTheDocument()
   })
 
@@ -83,13 +79,10 @@ describe('OfflineStatusIndicator', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     renderWithProvider(<OfflineStatusIndicator />)
-    
+
     expect(screen.getByText('You are offline')).toBeInTheDocument()
     expect(screen.getByText('Some features may be limited')).toBeInTheDocument()
   })
@@ -105,13 +98,10 @@ describe('OfflineStatusIndicator', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     renderWithProvider(<OfflineStatusIndicator />)
-    
+
     expect(screen.getByText('You are online')).toBeInTheDocument()
     expect(screen.getByText('3 actions pending sync')).toBeInTheDocument()
     expect(screen.getByText('Sync Now')).toBeInTheDocument()
@@ -119,7 +109,7 @@ describe('OfflineStatusIndicator', () => {
 
   it('should handle sync button click', async () => {
     const mockProcessActions = vi.fn().mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({ data: undefined })
+      unwrap: vi.fn().mockResolvedValue({ data: undefined }),
     })
     const mockRefetch = vi.fn()
 
@@ -139,7 +129,7 @@ describe('OfflineStatusIndicator', () => {
     ] as any)
 
     renderWithProvider(<OfflineStatusIndicator />)
-    
+
     const syncButton = screen.getByText('Sync Now')
     fireEvent.click(syncButton)
 
@@ -160,13 +150,10 @@ describe('OfflineStatusIndicator', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: true },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: true }] as any)
 
     renderWithProvider(<OfflineStatusIndicator />)
-    
+
     expect(screen.getByText('Syncing...')).toBeInTheDocument()
     expect(screen.getByRole('button')).toHaveAttribute('aria-disabled', 'true')
   })
@@ -183,13 +170,10 @@ describe('OfflineStatusIndicator', () => {
       refetch: vi.fn(),
     } as any)
 
-    mockUseProcessOfflineActionsMutation.mockReturnValue([
-      vi.fn(),
-      { isLoading: false },
-    ] as any)
+    mockUseProcessOfflineActionsMutation.mockReturnValue([vi.fn(), { isLoading: false }] as any)
 
     renderWithProvider(<OfflineStatusIndicator />)
-    
-    expect(screen.getByText('Changes will sync when you\'re back online')).toBeInTheDocument()
+
+    expect(screen.getByText("Changes will sync when you're back online")).toBeInTheDocument()
   })
-}) 
+})

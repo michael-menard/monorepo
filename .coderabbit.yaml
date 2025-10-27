@@ -18,6 +18,9 @@ reviews:
     - best_practices
     - accessibility
     - testing
+    - turborepo_patterns
+    - monorepo_dependencies
+    - build_optimization
     
   # Monorepo-specific settings
   path_filters:
@@ -94,6 +97,12 @@ integrations:
   auggie:
     enabled: true
     collaboration_mode: true
+
+  # Turborepo integration
+  turborepo:
+    enabled: true
+    change_detection: true
+    focus_on_affected: true
     
   # ESLint integration
   eslint:
@@ -150,6 +159,17 @@ custom_rules:
     description: "Prefer workspace imports over relative paths for cross-package dependencies"
     pattern: "import.*from ['\"]\\.\\./"
     suggestion: "Use workspace imports (@repo/package-name) for cross-package dependencies"
+
+  # Turborepo-specific rules
+  - name: "turborepo_config"
+    description: "Check turbo.json configuration for new tasks"
+    pattern: "\"scripts\":\\s*{[^}]*\"[^\"]*\":\\s*\"[^\"]*\""
+    suggestion: "Consider adding new scripts to turbo.json for caching and parallelization"
+
+  - name: "package_dependencies"
+    description: "Verify package.json dependencies are properly declared"
+    pattern: "import.*from ['\"]@repo/"
+    suggestion: "Ensure @repo/* dependencies are declared in package.json"
   
   # React/TypeScript best practices
   - name: "react_functional_components"

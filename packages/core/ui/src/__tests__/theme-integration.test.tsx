@@ -31,7 +31,7 @@ Object.defineProperty(window, 'matchMedia', {
 
 const TestApp: React.FC = () => {
   const { theme, resolvedTheme } = useTheme()
-  
+
   return (
     <div>
       <div data-testid="current-theme">{theme}</div>
@@ -51,9 +51,9 @@ describe('Theme Integration', () => {
     render(
       <ThemeProvider>
         <TestApp />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(screen.getByTestId('current-theme')).toHaveTextContent('system')
     expect(screen.getByTestId('resolved-theme')).toHaveTextContent('light')
     expect(screen.getByRole('button')).toBeInTheDocument()
@@ -62,40 +62,40 @@ describe('Theme Integration', () => {
   it('applies dark class when theme is set to dark', () => {
     const TestComponent: React.FC = () => {
       const { setTheme } = useTheme()
-      
+
       React.useEffect(() => {
         setTheme('dark')
       }, [setTheme])
-      
+
       return <div>Test</div>
     }
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
   it('saves theme preference to localStorage', () => {
     const TestComponent: React.FC = () => {
       const { setTheme } = useTheme()
-      
+
       React.useEffect(() => {
         setTheme('light')
       }, [setTheme])
-      
+
       return <div>Test</div>
     }
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
-    
+
     expect(localStorageMock.setItem).toHaveBeenCalledWith('ui-theme', 'light')
   })
-}) 
+})

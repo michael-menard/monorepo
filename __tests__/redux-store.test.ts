@@ -1,38 +1,55 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { describe, it, expect, beforeEach } from 'vitest'
+import { configureStore } from '@reduxjs/toolkit'
 
 // Import all store configurations
-import { store as authStore } from '../../packages/auth/src/store/store';
-import { store as galleryStore } from '../../packages/features/gallery/src/store/store';
-import { store as wishlistStore } from '../../packages/wishlist/src/store/store';
-import { store as profileStore } from '../../packages/features/profile/src/store/store';
-import { store as instructionsStore } from '../../packages/features/moc-instructions/src/store/store';
+import { store as authStore } from '../../packages/auth/src/store/store'
+import { store as galleryStore } from '../../packages/features/gallery/src/store/store'
+import { store as wishlistStore } from '../../packages/wishlist/src/store/store'
+import { store as profileStore } from '../../packages/features/profile/src/store/store'
+import { store as instructionsStore } from '../../packages/features/moc-instructions/src/store/store'
 
 // Import slices and APIs
-import authReducer, { setUser, logoutSuccess, setLoading } from '../../packages/auth/src/store/authSlice';
-import { authApi } from '../../packages/auth/src/store/authApi';
-import wishlistReducer, { setItems, addItem, updateItem, removeItem } from '../../packages/wishlist/src/store/wishlistSlice';
-import { wishlistApi } from '../../packages/wishlist/src/store/wishlistApi';
-import profileReducer, { setProfile, updateProfile, setError } from '../../packages/features/profile/src/store/profileSlice';
-import { profileApi } from '../../packages/features/profile/src/store/profileApi';
-import instructionsReducer, { setInstructions, addInstruction, setCurrentInstruction } from '../../packages/features/moc-instructions/src/store/instructionsSlice';
-import { instructionsApi } from '../../packages/features/moc-instructions/src/store/instructionsApi';
+import authReducer, {
+  setUser,
+  logoutSuccess,
+  setLoading,
+} from '../../packages/auth/src/store/authSlice'
+import { authApi } from '../../packages/auth/src/store/authApi'
+import wishlistReducer, {
+  setItems,
+  addItem,
+  updateItem,
+  removeItem,
+} from '../../packages/wishlist/src/store/wishlistSlice'
+import { wishlistApi } from '../../packages/wishlist/src/store/wishlistApi'
+import profileReducer, {
+  setProfile,
+  updateProfile,
+  setError,
+} from '../../packages/features/profile/src/store/profileSlice'
+import { profileApi } from '../../packages/features/profile/src/store/profileApi'
+import instructionsReducer, {
+  setInstructions,
+  addInstruction,
+  setCurrentInstruction,
+} from '../../packages/features/moc-instructions/src/store/instructionsSlice'
+import { instructionsApi } from '../../packages/features/moc-instructions/src/store/instructionsApi'
 
 describe('Redux Store Configurations', () => {
   describe('Auth Store', () => {
     it('should configure auth store correctly', () => {
-      expect(authStore.getState()).toBeDefined();
-      expect(typeof authStore.dispatch).toBe('function');
-      expect(typeof authStore.getState).toBe('function');
-    });
+      expect(authStore.getState()).toBeDefined()
+      expect(typeof authStore.dispatch).toBe('function')
+      expect(typeof authStore.getState).toBe('function')
+    })
 
     it('should have auth reducer in state', () => {
-      const state = authStore.getState();
-      expect(state.auth).toBeDefined();
-      expect(state.auth.user).toBeNull();
-      expect(state.auth.isAuthenticated).toBe(false);
-      expect(state.auth.isLoading).toBe(false);
-    });
+      const state = authStore.getState()
+      expect(state.auth).toBeDefined()
+      expect(state.auth.user).toBeNull()
+      expect(state.auth.isAuthenticated).toBe(false)
+      expect(state.auth.isLoading).toBe(false)
+    })
 
     it('should handle auth actions correctly', () => {
       const testUser = {
@@ -44,52 +61,52 @@ describe('Redux Store Configurations', () => {
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
         isVerified: true,
-      };
+      }
 
-      authStore.dispatch(setUser(testUser));
-      let state = authStore.getState();
-      expect(state.auth.user).toEqual(testUser);
-      expect(state.auth.isAuthenticated).toBe(true);
+      authStore.dispatch(setUser(testUser))
+      let state = authStore.getState()
+      expect(state.auth.user).toEqual(testUser)
+      expect(state.auth.isAuthenticated).toBe(true)
 
-      authStore.dispatch(logoutSuccess());
-      state = authStore.getState();
-      expect(state.auth.user).toBeNull();
-      expect(state.auth.isAuthenticated).toBe(false);
-    });
+      authStore.dispatch(logoutSuccess())
+      state = authStore.getState()
+      expect(state.auth.user).toBeNull()
+      expect(state.auth.isAuthenticated).toBe(false)
+    })
 
     it('should have authApi reducer in state', () => {
-      const state = authStore.getState();
-      expect(state[authApi.reducerPath]).toBeDefined();
-    });
-  });
+      const state = authStore.getState()
+      expect(state[authApi.reducerPath]).toBeDefined()
+    })
+  })
 
   describe('Gallery Store', () => {
     it('should configure gallery store correctly', () => {
-      expect(galleryStore.getState()).toBeDefined();
-      expect(typeof galleryStore.dispatch).toBe('function');
-      expect(typeof galleryStore.getState).toBe('function');
-    });
+      expect(galleryStore.getState()).toBeDefined()
+      expect(typeof galleryStore.dispatch).toBe('function')
+      expect(typeof galleryStore.getState).toBe('function')
+    })
 
     it('should have gallery API reducers in state', () => {
-      const state = galleryStore.getState();
-      expect(state.gallery).toBeDefined();
-    });
-  });
+      const state = galleryStore.getState()
+      expect(state.gallery).toBeDefined()
+    })
+  })
 
   describe('Wishlist Store', () => {
     it('should configure wishlist store correctly', () => {
-      expect(wishlistStore.getState()).toBeDefined();
-      expect(typeof wishlistStore.dispatch).toBe('function');
-      expect(typeof wishlistStore.getState).toBe('function');
-    });
+      expect(wishlistStore.getState()).toBeDefined()
+      expect(typeof wishlistStore.dispatch).toBe('function')
+      expect(typeof wishlistStore.getState).toBe('function')
+    })
 
     it('should have wishlist reducer in state', () => {
-      const state = wishlistStore.getState();
-      expect(state.wishlist).toBeDefined();
-      expect(state.wishlist.items).toEqual([]);
-      expect(state.wishlist.isLoading).toBe(false);
-      expect(state.wishlist.error).toBeNull();
-    });
+      const state = wishlistStore.getState()
+      expect(state.wishlist).toBeDefined()
+      expect(state.wishlist.items).toEqual([])
+      expect(state.wishlist.isLoading).toBe(false)
+      expect(state.wishlist.error).toBeNull()
+    })
 
     it('should handle wishlist actions correctly', () => {
       const testItem = {
@@ -101,43 +118,43 @@ describe('Redux Store Configurations', () => {
         isPurchased: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      }
 
-      wishlistStore.dispatch(addItem(testItem));
-      let state = wishlistStore.getState();
-      expect(state.wishlist.items).toHaveLength(1);
-      expect(state.wishlist.items[0]).toEqual(testItem);
+      wishlistStore.dispatch(addItem(testItem))
+      let state = wishlistStore.getState()
+      expect(state.wishlist.items).toHaveLength(1)
+      expect(state.wishlist.items[0]).toEqual(testItem)
 
-      const updatedItem = { ...testItem, name: 'Updated Item' };
-      wishlistStore.dispatch(updateItem(updatedItem));
-      state = wishlistStore.getState();
-      expect(state.wishlist.items[0].name).toBe('Updated Item');
+      const updatedItem = { ...testItem, name: 'Updated Item' }
+      wishlistStore.dispatch(updateItem(updatedItem))
+      state = wishlistStore.getState()
+      expect(state.wishlist.items[0].name).toBe('Updated Item')
 
-      wishlistStore.dispatch(removeItem(testItem.id));
-      state = wishlistStore.getState();
-      expect(state.wishlist.items).toHaveLength(0);
-    });
+      wishlistStore.dispatch(removeItem(testItem.id))
+      state = wishlistStore.getState()
+      expect(state.wishlist.items).toHaveLength(0)
+    })
 
     it('should have wishlistApi reducer in state', () => {
-      const state = wishlistStore.getState();
-      expect(state[wishlistApi.reducerPath]).toBeDefined();
-    });
-  });
+      const state = wishlistStore.getState()
+      expect(state[wishlistApi.reducerPath]).toBeDefined()
+    })
+  })
 
   describe('Profile Store', () => {
     it('should configure profile store correctly', () => {
-      expect(profileStore.getState()).toBeDefined();
-      expect(typeof profileStore.dispatch).toBe('function');
-      expect(typeof profileStore.getState).toBe('function');
-    });
+      expect(profileStore.getState()).toBeDefined()
+      expect(typeof profileStore.dispatch).toBe('function')
+      expect(typeof profileStore.getState).toBe('function')
+    })
 
     it('should have profile reducer in state', () => {
-      const state = profileStore.getState();
-      expect(state.profile).toBeDefined();
-      expect(state.profile.profile).toBeNull();
-      expect(state.profile.isLoading).toBe(false);
-      expect(state.profile.error).toBeNull();
-    });
+      const state = profileStore.getState()
+      expect(state.profile).toBeDefined()
+      expect(state.profile.profile).toBeNull()
+      expect(state.profile.isLoading).toBe(false)
+      expect(state.profile.error).toBeNull()
+    })
 
     it('should handle profile actions correctly', () => {
       const testProfile = {
@@ -147,38 +164,38 @@ describe('Redux Store Configurations', () => {
         email: 'john.doe@example.com',
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      }
 
-      profileStore.dispatch(setProfile(testProfile));
-      let state = profileStore.getState();
-      expect(state.profile.profile).toEqual(testProfile);
+      profileStore.dispatch(setProfile(testProfile))
+      let state = profileStore.getState()
+      expect(state.profile.profile).toEqual(testProfile)
 
-      profileStore.dispatch(updateProfile({ firstName: 'Jane' }));
-      state = profileStore.getState();
-      expect(state.profile.profile?.firstName).toBe('Jane');
-    });
+      profileStore.dispatch(updateProfile({ firstName: 'Jane' }))
+      state = profileStore.getState()
+      expect(state.profile.profile?.firstName).toBe('Jane')
+    })
 
     it('should have profileApi reducer in state', () => {
-      const state = profileStore.getState();
-      expect(state[profileApi.reducerPath]).toBeDefined();
-    });
-  });
+      const state = profileStore.getState()
+      expect(state[profileApi.reducerPath]).toBeDefined()
+    })
+  })
 
   describe('Instructions Store', () => {
     it('should configure Instructions store correctly', () => {
-      expect(instructionsStore.getState()).toBeDefined();
-      expect(typeof instructionsStore.dispatch).toBe('function');
-      expect(typeof instructionsStore.getState).toBe('function');
-    });
+      expect(instructionsStore.getState()).toBeDefined()
+      expect(typeof instructionsStore.dispatch).toBe('function')
+      expect(typeof instructionsStore.getState).toBe('function')
+    })
 
     it('should have Instructions reducer in state', () => {
-      const state = instructionsStore.getState();
-      expect(state.instructions).toBeDefined();
-      expect(state.instructions.instructions).toEqual([]);
-      expect(state.instructions.currentInstruction).toBeNull();
-      expect(state.instructions.isLoading).toBe(false);
-      expect(state.instructions.error).toBeNull();
-    });
+      const state = instructionsStore.getState()
+      expect(state.instructions).toBeDefined()
+      expect(state.instructions.instructions).toEqual([])
+      expect(state.instructions.currentInstruction).toBeNull()
+      expect(state.instructions.isLoading).toBe(false)
+      expect(state.instructions.error).toBeNull()
+    })
 
     it('should handle Instructions actions correctly', () => {
       const testInstruction = {
@@ -196,86 +213,86 @@ describe('Redux Store Configurations', () => {
         downloadCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      }
 
-      instructionsStore.dispatch(addInstruction(testInstruction));
-      let state = instructionsStore.getState();
-      expect(state.instructions.instructions).toHaveLength(1);
-      expect(state.instructions.instructions[0]).toEqual(testInstruction);
+      instructionsStore.dispatch(addInstruction(testInstruction))
+      let state = instructionsStore.getState()
+      expect(state.instructions.instructions).toHaveLength(1)
+      expect(state.instructions.instructions[0]).toEqual(testInstruction)
 
-      instructionsStore.dispatch(setCurrentInstruction(testInstruction));
-      state = instructionsStore.getState();
-      expect(state.instructions.currentInstruction).toEqual(testInstruction);
-    });
+      instructionsStore.dispatch(setCurrentInstruction(testInstruction))
+      state = instructionsStore.getState()
+      expect(state.instructions.currentInstruction).toEqual(testInstruction)
+    })
 
     it('should have instructionsApi reducer in state', () => {
-      const state = instructionsStore.getState();
-      expect(state[instructionsApi.reducerPath]).toBeDefined();
-    });
-  });
+      const state = instructionsStore.getState()
+      expect(state[instructionsApi.reducerPath]).toBeDefined()
+    })
+  })
 
   describe('Store Integration', () => {
     it('should handle multiple actions across stores', () => {
       // Test auth store
-      authStore.dispatch(setLoading(true));
-      let authState = authStore.getState();
-      expect(authState.auth.isLoading).toBe(true);
+      authStore.dispatch(setLoading(true))
+      const authState = authStore.getState()
+      expect(authState.auth.isLoading).toBe(true)
 
       // Test wishlist store
-      wishlistStore.dispatch(setItems([]));
-      let wishlistState = wishlistStore.getState();
-      expect(wishlistState.wishlist.items).toEqual([]);
+      wishlistStore.dispatch(setItems([]))
+      const wishlistState = wishlistStore.getState()
+      expect(wishlistState.wishlist.items).toEqual([])
 
       // Test profile store
-      profileStore.dispatch(setError('Test error'));
-      let profileState = profileStore.getState();
-      expect(profileState.profile.error).toBe('Test error');
-    });
+      profileStore.dispatch(setError('Test error'))
+      const profileState = profileStore.getState()
+      expect(profileState.profile.error).toBe('Test error')
+    })
 
     it('should maintain state isolation between stores', () => {
       // Set different states in different stores
-      authStore.dispatch(setLoading(true));
-      wishlistStore.dispatch(setItems([]));
-      profileStore.dispatch(setError('Error'));
+      authStore.dispatch(setLoading(true))
+      wishlistStore.dispatch(setItems([]))
+      profileStore.dispatch(setError('Error'))
 
       // Verify each store maintains its own state
-      expect(authStore.getState().auth.isLoading).toBe(true);
-      expect(wishlistStore.getState().wishlist.items).toEqual([]);
-      expect(profileStore.getState().profile.error).toBe('Error');
+      expect(authStore.getState().auth.isLoading).toBe(true)
+      expect(wishlistStore.getState().wishlist.items).toEqual([])
+      expect(profileStore.getState().profile.error).toBe('Error')
 
       // Verify no cross-contamination
-      expect(authStore.getState().wishlist).toBeUndefined();
-      expect(wishlistStore.getState().auth).toBeUndefined();
-      expect(profileStore.getState().auth).toBeUndefined();
-    });
-  });
+      expect(authStore.getState().wishlist).toBeUndefined()
+      expect(wishlistStore.getState().auth).toBeUndefined()
+      expect(profileStore.getState().auth).toBeUndefined()
+    })
+  })
 
   describe('API Integration', () => {
     it('should have all API reducers properly configured', () => {
       // Check auth API
-      const authState = authStore.getState();
-      expect(authState[authApi.reducerPath]).toBeDefined();
+      const authState = authStore.getState()
+      expect(authState[authApi.reducerPath]).toBeDefined()
 
       // Check wishlist API
-      const wishlistState = wishlistStore.getState();
-      expect(wishlistState[wishlistApi.reducerPath]).toBeDefined();
+      const wishlistState = wishlistStore.getState()
+      expect(wishlistState[wishlistApi.reducerPath]).toBeDefined()
 
       // Check profile API
-      const profileState = profileStore.getState();
-      expect(profileState[profileApi.reducerPath]).toBeDefined();
+      const profileState = profileStore.getState()
+      expect(profileState[profileApi.reducerPath]).toBeDefined()
 
       // Check Instructions API
-      const instructionsState = instructionsStore.getState();
-      expect(instructionsState[instructionsApi.reducerPath]).toBeDefined();
-    });
+      const instructionsState = instructionsStore.getState()
+      expect(instructionsState[instructionsApi.reducerPath]).toBeDefined()
+    })
 
     it('should have proper middleware configuration', () => {
       // All stores should have middleware configured
-      expect(authStore.getState()).toBeDefined();
-      expect(galleryStore.getState()).toBeDefined();
-      expect(wishlistStore.getState()).toBeDefined();
-      expect(profileStore.getState()).toBeDefined();
-      expect(instructionsStore.getState()).toBeDefined();
-    });
-  });
-}); 
+      expect(authStore.getState()).toBeDefined()
+      expect(galleryStore.getState()).toBeDefined()
+      expect(wishlistStore.getState()).toBeDefined()
+      expect(profileStore.getState()).toBeDefined()
+      expect(instructionsStore.getState()).toBeDefined()
+    })
+  })
+})

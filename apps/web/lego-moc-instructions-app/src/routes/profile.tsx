@@ -1,7 +1,7 @@
-import { createRoute, redirect } from '@tanstack/react-router';
-import { createTanStackRouteGuard } from '../lib/auth-guard';
-import { rootRoute } from './root';
-import ProfilePage from '../pages/ProfilePage';
+import { createRoute, redirect } from '@tanstack/react-router'
+import { createTanStackRouteGuard } from '../lib/auth-guard'
+import ProfilePage from '../pages/ProfilePage'
+import { rootRoute } from './root'
 
 export const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -9,9 +9,9 @@ export const profileRoute = createRoute({
   beforeLoad: createTanStackRouteGuard(
     {
       requireAuth: true, // Requires authentication
-      requireVerified: false // Temporarily disable email verification requirement
+      requireVerified: false, // Temporarily disable email verification requirement
     },
-    redirect
+    redirect,
   ),
   component: ProfilePage,
-});
+})

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { Image, Heart, Download, Share2 } from 'lucide-react';
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
+import { Image, Heart, Download, Share2 } from 'lucide-react'
 
 export const InspirationGalleryTab: React.FC = () => {
   return (
@@ -139,5 +139,5 @@ export const InspirationGalleryTab: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-  );
-}; 
+  )
+}

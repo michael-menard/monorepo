@@ -16,6 +16,7 @@ This directory contains comprehensive E2E tests for the EmailVerificationPage co
 ### Prerequisites
 
 1. **Install Playwright** (if not already installed):
+
    ```bash
    pnpm add -D @playwright/test
    npx playwright install
@@ -45,6 +46,7 @@ VITE_AUTH_SERVICE_BASE_URL=http://localhost:9000
 ### Running Tests
 
 #### Complete E2E Tests (with Ethereal Email)
+
 ```bash
 # Run all E2E tests
 npx playwright test EmailVerificationPage.e2e.test.ts
@@ -57,6 +59,7 @@ npx playwright test --ui
 ```
 
 #### Email Service Setup
+
 ```bash
 # Setup Ethereal Email (Recommended)
 pnpm test:ethereal-setup
@@ -66,6 +69,7 @@ pnpm test:mailhog-setup
 ```
 
 #### All Tests
+
 ```bash
 # Run all tests in this directory
 npx playwright test
@@ -76,12 +80,12 @@ npx playwright test --reporter=html
 
 ## 📧 Email Testing Options
 
-
-
 ### Option 1: Ethereal Email (Free Alternative) ⭐
+
 **Best for**: Personal projects, free email testing
 
 **Setup**:
+
 ```bash
 # Run setup script
 pnpm test:ethereal-setup
@@ -91,6 +95,7 @@ pnpm test:ethereal-setup
 ```
 
 **Benefits**:
+
 - ✅ Completely free
 - ✅ No account required
 - ✅ Instant setup
@@ -98,9 +103,11 @@ pnpm test:ethereal-setup
 - ✅ SMTP support for sending emails
 
 ### Option 2: MailHog (Local Email Testing) ⭐
+
 **Best for**: Local development, no external dependencies
 
 **Setup**:
+
 ```bash
 # Run setup script
 pnpm test:mailhog-setup
@@ -115,6 +122,7 @@ mailhog
 ```
 
 **Benefits**:
+
 - ✅ Completely free
 - ✅ Runs locally on your machine
 - ✅ No external dependencies
@@ -123,9 +131,11 @@ mailhog
 - ✅ Perfect for development and testing
 
 ### Option 3: Mock Email Service (Free)
+
 **Best for**: Simple testing without external dependencies
 
 **Setup**:
+
 ```typescript
 import { mockEmailService, sendMockEmail } from './mock-email-service'
 
@@ -137,15 +147,18 @@ const code = await mockEmailService.getVerificationCode('test@example.com')
 ```
 
 **Benefits**:
+
 - ✅ No external dependencies
 - ✅ Instant setup
 - ✅ Full control over email content
 - ✅ Perfect for unit testing
 
 ### Option 4: Gmail App Passwords (Free)
+
 **Best for**: If you have a Gmail account
 
 **Setup**:
+
 1. Enable 2-factor authentication on Gmail
 2. Generate an App Password
 3. Use Gmail SMTP with the app password
@@ -160,7 +173,9 @@ const code = await mockEmailService.getVerificationCode('test@example.com')
 ### Setup Steps (Choose Your Option)
 
 #### For Ethereal Email (Recommended Online Option):
+
 1. **Get SMTP Credentials**:
+
    ```bash
    # Visit https://ethereal.email/create
    # Click "Create Ethereal Account"
@@ -177,16 +192,19 @@ const code = await mockEmailService.getVerificationCode('test@example.com')
    ```
 
 #### For MailHog (Recommended Local Option):
+
 1. **Install and Start MailHog**:
+
    ```bash
    # Install MailHog
    brew install mailhog
-   
+
    # Start MailHog
    mailhog
    ```
 
 2. **Set Environment Variables**:
+
    ```bash
    export MAILHOG_HOST="localhost"
    export MAILHOG_PORT="1025"
@@ -195,19 +213,20 @@ const code = await mockEmailService.getVerificationCode('test@example.com')
    ```
 
 3. **Test Email Flow**:
+
    ```typescript
    // Example test flow
    test('real email verification', async ({ page }) => {
      // 1. Trigger email verification
      await triggerEmailVerification('test@example.com')
-     
+
      // 2. Wait for email in Ethereal
      const code = await waitForVerificationEmail('test@example.com')
-     
+
      // 3. Use real code in test
      await page.fill('input[name="code"]', code)
      await page.click('button:has-text("Verify Email")')
-     
+
      // 4. Verify success
      await expect(page.locator('h3')).toContainText('Email Verified')
    })
@@ -225,8 +244,6 @@ import { mailHogHelper, waitForVerificationEmail } from './mailhog-helper'
 // For Mock Email Service (In-Memory)
 import { mockEmailService, sendMockEmail } from './mock-email-service'
 
-
-
 // Wait for verification email (works with any service)
 const code = await waitForVerificationEmail('user@example.com', 30000)
 
@@ -237,41 +254,49 @@ await sendMockEmail('test@example.com', 'Verification', '<p>Code: 123456</p>', '
 ## 🧪 Test Categories
 
 ### 1. Complete Email Verification Flow
+
 - Full user journey from page load to successful verification
 - Network error handling
 - Real email integration (with Ethereal Email)
 
 ### 2. Form Validation E2E
+
 - Empty code submission
 - Code length validation
 - Special character handling
 
 ### 3. Accessibility E2E
+
 - Keyboard navigation
 - ARIA labels
 - Screen reader compatibility
 
 ### 4. Mobile Responsiveness E2E
+
 - Touch interactions
 - Virtual keyboard handling
 - Responsive layout testing
 
 ### 5. Cross-Browser Compatibility
+
 - Chrome, Firefox, Safari testing
 - Mobile browser testing
 - Consistent behavior validation
 
 ### 6. Error Recovery Scenarios
+
 - Invalid code attempts
 - Multiple resend attempts
 - Network failure recovery
 
 ### 7. Performance E2E
+
 - Page load times
 - Interaction responsiveness
 - Memory usage patterns
 
 ### 8. Security E2E
+
 - XSS prevention
 - HTML injection protection
 - Input sanitization
@@ -279,6 +304,7 @@ await sendMockEmail('test@example.com', 'Verification', '<p>Code: 123456</p>', '
 ## 🔧 Configuration
 
 ### Playwright Config
+
 ```typescript
 // playwright.config.ts
 export default defineConfig({
@@ -298,6 +324,7 @@ export default defineConfig({
 ```
 
 ### Test Configuration
+
 ```typescript
 const testConfig = {
   baseUrl: 'http://localhost:5173',
@@ -307,8 +334,8 @@ const testConfig = {
     port: parseInt(process.env.ETHEREAL_PORT || '587'),
     user: process.env.ETHEREAL_USER || 'your_ethereal_username',
     pass: process.env.ETHEREAL_PASS || 'your_ethereal_password',
-    secure: process.env.ETHEREAL_SECURE === 'true'
-  }
+    secure: process.env.ETHEREAL_SECURE === 'true',
+  },
 }
 ```
 
@@ -357,18 +384,21 @@ npx playwright show-trace trace.zip
 ## 📊 Test Reports
 
 ### HTML Report
+
 ```bash
 npx playwright test --reporter=html
 # Report will be available at playwright-report/index.html
 ```
 
 ### JUnit Report
+
 ```bash
 npx playwright test --reporter=junit
 # Report will be saved as test-results/results.xml
 ```
 
 ### Custom Reports
+
 ```bash
 # Multiple reporters
 npx playwright test --reporter=html,junit,line
@@ -377,6 +407,7 @@ npx playwright test --reporter=html,junit,line
 ## 🔄 CI/CD Integration
 
 ### GitHub Actions Example
+
 ```yaml
 name: E2E Tests
 on: [push, pull_request]
@@ -435,4 +466,4 @@ When adding new tests:
 - [Playwright Documentation](https://playwright.dev/)
 - [Ethereal Email](https://ethereal.email) - Free email testing service
 - [Testing Best Practices](https://playwright.dev/docs/best-practices)
-- [E2E Testing Patterns](https://playwright.dev/docs/test-patterns) 
+- [E2E Testing Patterns](https://playwright.dev/docs/test-patterns)

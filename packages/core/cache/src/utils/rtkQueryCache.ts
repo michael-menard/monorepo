@@ -54,14 +54,18 @@ export const RTK_QUERY_CACHE_CONFIGS = {
 /**
  * Get RTK Query cache configuration by type
  */
-export function getRTKQueryCacheConfig(type: keyof typeof RTK_QUERY_CACHE_CONFIGS): RTKQueryCacheConfig {
+export function getRTKQueryCacheConfig(
+  type: keyof typeof RTK_QUERY_CACHE_CONFIGS,
+): RTKQueryCacheConfig {
   return RTK_QUERY_CACHE_CONFIGS[type]
 }
 
 /**
  * Create custom RTK Query cache configuration
  */
-export function createRTKQueryCacheConfig(config: Partial<RTKQueryCacheConfig>): RTKQueryCacheConfig {
+export function createRTKQueryCacheConfig(
+  config: Partial<RTKQueryCacheConfig>,
+): RTKQueryCacheConfig {
   return {
     keepUnusedDataFor: 60, // Default 60 seconds
     refetchOnMountOrArgChange: false,
@@ -79,7 +83,7 @@ export function createOptimisticUpdate<T, R>(
   updateQueryData: (queryName: string, arg: T, updateFn: (draft: R) => void) => any,
   queryName: string,
   arg: T,
-  updateFn: (draft: R) => void
+  updateFn: (draft: R) => void,
 ) {
   return updateQueryData(queryName, arg, updateFn)
 }
@@ -101,11 +105,14 @@ export function createCacheUpdate<T>(data: T, id?: string | number) {
 /**
  * Enhanced RTK Query base query with caching headers
  */
-export function createCachedBaseQuery(baseUrl: string, options: {
-  cacheControl?: string
-  etag?: boolean
-  maxAge?: number
-} = {}) {
+export function createCachedBaseQuery(
+  baseUrl: string,
+  options: {
+    cacheControl?: string
+    etag?: boolean
+    maxAge?: number
+  } = {},
+) {
   return {
     baseUrl,
     prepareHeaders: (headers: Headers, { getState }: any) => {
@@ -133,7 +140,7 @@ export function createCachedBaseQuery(baseUrl: string, options: {
 export function createCacheErrorHandler(
   error: any,
   retryCount: number = 0,
-  maxRetries: number = 3
+  maxRetries: number = 3,
 ) {
   const isNetworkError = error?.status === 'FETCH_ERROR' || error?.status === 'TIMEOUT_ERROR'
   const isServerError = error?.status >= 500 && error?.status < 600
@@ -199,4 +206,4 @@ export function createCacheMonitor() {
       stats.updates = 0
     },
   }
-} 
+}

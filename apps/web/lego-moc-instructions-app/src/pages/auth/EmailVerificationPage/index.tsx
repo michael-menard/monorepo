@@ -3,12 +3,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
-import { AppCard, Button, Input, Label } from '@repo/ui'
+import { AppCard, Button, Input, Label, showSuccessToast, showErrorToast } from '@repo/ui'
 import { useState } from 'react'
 import { AuthApiError, authApi } from '../../../services/authApi'
 
 const EmailVerificationSchema = z.object({
-  code: z.string().min(6, 'Verification code must be 6 characters').max(6, 'Verification code must be 6 characters'),
+  code: z
+    .string()
+    .min(6, 'Verification code must be 6 characters')
+    .max(6, 'Verification code must be 6 characters'),
 })
 
 type EmailVerificationFormData = z.infer<typeof EmailVerificationSchema>
@@ -31,12 +34,12 @@ function EmailVerificationPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       // Call the auth API
       const response = await authApi.verifyEmail(data)
-      
+
       console.log('Email verification successful:', response)
-      
+
       setIsVerified(true)
     } catch (err) {
       if (err instanceof AuthApiError) {
@@ -57,25 +60,28 @@ function EmailVerificationPage() {
       // For now, we'll need to get the email from somewhere
       // This could be from a context, URL params, or stored in localStorage
       const email = localStorage.getItem('pendingVerificationEmail') || ''
-      
+
       if (!email) {
         alert('Email not found. Please try signing up again.')
         return
       }
-      
+
       // Call the auth API
       const response = await authApi.resendVerification(email)
-      
+
       console.log('Resend verification successful:', response)
-      
+
       // Show success message
-      alert('Verification code resent successfully!')
+      showSuccessToast(
+        'Verification code resent successfully!',
+        'Check your email for the new code.',
+      )
     } catch (err) {
       if (err instanceof AuthApiError) {
-        alert(err.message)
+        showErrorToast(err.message, 'Resend failed')
         console.error('Resend verification API error:', err)
       } else {
-        alert('Failed to resend code. Please try again.')
+        showErrorToast('Failed to resend code. Please try again.', 'Resend failed')
         console.error('Resend code error:', err)
       }
     }
@@ -136,26 +142,19 @@ function EmailVerificationPage() {
                 className="text-center text-lg tracking-widest"
                 {...register('code')}
               />
-              {errors.code && (
+              {errors.code ? (
                 <p className="text-red-500 text-sm mt-1">{errors.code.message}</p>
-              )}
+              ) : null}
             </div>
 
-            {error && (
+            {error ? (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
-            )}
+            ) : null}
 
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting || isLoading}
-              >
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
                 {isSubmitting || isLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
@@ -165,9 +164,7 @@ function EmailVerificationPage() {
             </motion.div>
 
             <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Didn't receive the code?
-              </p>
+              <p className="text-sm text-muted-foreground">Didn't receive the code?</p>
               <button
                 type="button"
                 onClick={handleResendCode}
@@ -183,4 +180,4 @@ function EmailVerificationPage() {
   )
 }
 
-export default EmailVerificationPage 
+export default EmailVerificationPage

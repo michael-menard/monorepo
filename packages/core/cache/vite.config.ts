@@ -1,9 +1,8 @@
-import { defineConfig } from 'vite';
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { defineConfig } from 'vite'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   build: {
@@ -28,4 +27,4 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
-});
+})

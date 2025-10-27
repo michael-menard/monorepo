@@ -1,15 +1,15 @@
-import * as React from "react"
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
-import { CheckIcon } from "lucide-react"
-import { cn } from "./lib/utils"
-import { getAriaAttributes, useUniqueId } from "./lib/keyboard-navigation"
+import * as React from 'react'
+import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
+import {CheckIcon} from 'lucide-react'
+import {cn} from './lib/utils'
+import {getAriaAttributes, useUniqueId} from './lib/keyboard-navigation'
 
 export interface CheckboxProps extends React.ComponentProps<typeof CheckboxPrimitive.Root> {
-  label?: string;
-  description?: string;
-  error?: string;
-  required?: boolean;
-  invalid?: boolean;
+  label?: string
+  description?: string
+  error?: string
+  required?: boolean
+  invalid?: boolean
 }
 
 function Checkbox({
@@ -26,7 +26,7 @@ function Checkbox({
   const checkboxId = id || uniqueId
   const errorId = `${checkboxId}-error`
   const descriptionId = `${checkboxId}-description`
-  
+
   const ariaAttributes = getAriaAttributes({
     invalid: invalid || !!error,
     required,
@@ -39,9 +39,9 @@ function Checkbox({
         data-slot="checkbox"
         id={checkboxId}
         className={cn(
-          "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-          (error || invalid) && "border-destructive focus-visible:ring-destructive",
-          className
+          'peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+          (error || invalid) && 'border-destructive focus-visible:ring-destructive',
+          className,
         )}
         aria-describedby={[descriptionId, errorId].filter(Boolean).join(' ') || undefined}
         aria-invalid={invalid || !!error}
@@ -56,40 +56,36 @@ function Checkbox({
           <CheckIcon className="size-3.5" />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>
-      
-      {(label || description || error) && (
+
+      {label || description || error ? (
         <div className="flex flex-col space-y-1">
-          {label && (
-            <label 
+          {label ? (
+            <label
               htmlFor={checkboxId}
               className="text-sm font-medium text-foreground cursor-pointer"
             >
               {label}
-              {required && <span className="text-destructive ml-1" aria-hidden="true">*</span>}
+              {required ? (
+                <span className="text-destructive ml-1" aria-hidden="true">
+                  *
+                </span>
+              ) : null}
             </label>
-          )}
-          
-          {description && (
-            <p 
-              id={descriptionId}
-              className="text-sm text-muted-foreground"
-            >
+          ) : null}
+
+          {description ? (
+            <p id={descriptionId} className="text-sm text-muted-foreground">
               {description}
             </p>
-          )}
-          
-          {error && (
-            <p 
-              id={errorId}
-              className="text-sm text-destructive" 
-              role="alert"
-              aria-live="polite"
-            >
+          ) : null}
+
+          {error ? (
+            <p id={errorId} className="text-sm text-destructive" role="alert" aria-live="polite">
               {error}
             </p>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import type { UploadPreset } from '../types/index.js';
+import type { UploadPreset } from '../types/index.js'
 
 // Predefined upload presets based on the existing shared-image-utils
 export const UPLOAD_PRESETS: Record<string, UploadPreset> = {
@@ -122,20 +122,20 @@ export const UPLOAD_PRESETS: Record<string, UploadPreset> = {
     acceptedFileTypes: ['*/*'], // Accept all file types
     validation: {},
   },
-};
+}
 
 export const getPreset = (name: string): UploadPreset | undefined => {
-  return UPLOAD_PRESETS[name];
-};
+  return UPLOAD_PRESETS[name]
+}
 
 export const getPresetNames = (): string[] => {
-  return Object.keys(UPLOAD_PRESETS);
-};
+  return Object.keys(UPLOAD_PRESETS)
+}
 
 export const isImagePreset = (preset: UploadPreset): boolean => {
-  return preset.acceptedFileTypes.some(type => type.startsWith('image/'));
-};
+  return preset.acceptedFileTypes.some(type => type.startsWith('image/'))
+}
 
 export const getImagePresets = (): UploadPreset[] => {
-  return Object.values(UPLOAD_PRESETS).filter(isImagePreset);
-};
+  return Object.values(UPLOAD_PRESETS).filter(isImagePreset)
+}

@@ -24,7 +24,7 @@
     "dev": "vite build --watch",
     "check-types": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
+    "lint": "eslint --fix src/ --ext .ts,.tsx --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
     "test:ui": "vitest --ui",

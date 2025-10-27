@@ -1,221 +1,141 @@
-import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
-import { db } from '../db/client';
-import { users } from '../db/schema';
-import { z } from 'zod';
+import { Request, Response } from 'express'
+import { eq, desc, count } from 'drizzle-orm'
+import { z } from 'zod'
+import { db } from '../db/client'
+import {
+  mocInstructions,
+  galleryImages,
+  galleryAlbums,
+  wishlistItems,
+  mocPartsLists
+} from '../db/schema'
 import {
   uploadAvatar as uploadAvatarFile,
   deleteAvatar as deleteAvatarFile,
-} from '../storage/avatar-storage';
-import { ProfileUpdateSchema, AvatarUploadSchema } from '../types';
+} from '../storage/avatar-storage'
 
-// Error handling middleware for multer
+// Profile aggregates user's LEGO-related data from various tables
+// User authentication data is managed in the auth service
+
 export const handleUploadError = (error: any, req: Request, res: Response, next: any) => {
   if (error && error.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File too large. Maximum size is 20MB.' });
+    return res.status(413).json({ error: 'File too large. Maximum size is 20MB.' })
   }
   if (error && error.message === 'Only JPEG, PNG, and HEIC files are supported') {
     return res
       .status(400)
-      .json({ error: 'Invalid file format. Only JPEG, PNG, and HEIC files are supported.' });
+      .json({ error: 'Invalid file format. Only JPEG, PNG, and HEIC files are supported.' })
   }
   if (error) {
-    return res.status(500).json({ error: 'Upload failed', details: error.message });
+    return res.status(500).json({ error: 'Upload failed', details: error.message })
   }
-  next();
-};
+  next()
+}
 
 export const getProfile = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id: userId } = req.params
+
   try {
-    const result = await db.select().from(users).where(eq(users.id, id));
-    const user = result[0];
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    // Aggregate profile data from various tables
+    const [mocsCount] = await db
+      .select({ count: count() })
+      .from(mocInstructions)
+      .where(eq(mocInstructions.userId, userId))
+
+    const [imagesCount] = await db
+      .select({ count: count() })
+      .from(galleryImages)
+      .where(eq(galleryImages.userId, userId))
+
+    const [albumsCount] = await db
+      .select({ count: count() })
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.userId, userId))
+
+    const [wishlistCount] = await db
+      .select({ count: count() })
+      .from(wishlistItems)
+      .where(eq(wishlistItems.userId, userId))
+
+    // Get recent MOCs
+    const recentMocs = await db
+      .select()
+      .from(mocInstructions)
+      .where(eq(mocInstructions.userId, userId))
+      .orderBy(desc(mocInstructions.createdAt))
+      .limit(5)
+
+    // Get recent images
+    const recentImages = await db
+      .select()
+      .from(galleryImages)
+      .where(eq(galleryImages.userId, userId))
+      .orderBy(desc(galleryImages.createdAt))
+      .limit(5)
+
+    const profile = {
+      userId,
+      stats: {
+        mocsCount: mocsCount.count,
+        imagesCount: imagesCount.count,
+        albumsCount: albumsCount.count,
+        wishlistCount: wishlistCount.count,
+      },
+      recentMocs,
+      recentImages,
     }
-    res.json(user);
+
+    res.json(profile)
   } catch (error) {
-    res.status(500).json({ error: 'Database error', details: (error as Error).message });
+    console.error('Error fetching profile:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
-};
+}
 
 export const createProfile = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { username, email, preferredName, bio } = req.body;
-  const { file } = req;
-
-  // Validate input - create a schema that includes all profile fields
-  const ProfileCreateSchema = ProfileUpdateSchema.extend({
-    email: z.string().email('Invalid email format'),
-    preferredName: z
-      .string()
-      .min(1, 'Preferred name must be at least 1 character')
-      .max(100, 'Preferred name must be less than 100 characters')
-      .optional(),
-  });
-  const parsed = ProfileCreateSchema.safeParse({ username, email, preferredName, bio });
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
-  }
-
-  if (!file) {
-    return res.status(400).json({ error: 'Avatar file is required' });
-  }
-
-  // File validation is now handled by security middleware
-  // (validateFileContent, virusScanFile)
-
-  try {
-    // Check if user already exists
-    const existing = await db.select().from(users).where(eq(users.id, id));
-    if (existing.length > 0) {
-      return res.status(409).json({ error: 'User already exists' });
-    }
-
-    // Upload avatar (S3 or local)
-    const avatarUrl = await uploadAvatarFile(id, file);
-
-    // Insert new user
-    const [user] = await db
-      .insert(users)
-      .values({
-        id,
-        username: parsed.data.username,
-        email,
-        preferredName,
-        bio: parsed.data.bio,
-        avatarUrl: avatarUrl,
-      })
-      .returning();
-
-    res.status(201).json(user);
-  } catch (error) {
-    // Log error for debugging
-    console.error('createProfile error:', error);
-    res.status(500).json({ error: 'Database error', details: (error as Error).message });
-  }
-};
+  // Profile is created implicitly when user creates their first MOC, image, etc.
+  // No separate profile table needed
+  res.status(200).json({ message: 'Profile will be created when you add your first content' })
+}
 
 export const updateProfile = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { username, email, preferredName, bio } = req.body;
-
-  // Validate input - create a schema that includes all profile fields
-  const ProfileUpdateFullSchema = ProfileUpdateSchema.extend({
-    email: z.string().email('Invalid email format').optional(),
-    preferredName: z
-      .string()
-      .min(1, 'Preferred name must be at least 1 character')
-      .max(100, 'Preferred name must be less than 100 characters')
-      .optional(),
-  });
-  const parsed = ProfileUpdateFullSchema.safeParse({ username, email, preferredName, bio });
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
-  }
-
-  try {
-    // Check if user exists
-    const existing = await db.select().from(users).where(eq(users.id, id));
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Update user profile
-    const updateData: any = { updatedAt: new Date() };
-    if (parsed.data.username !== undefined) updateData.username = parsed.data.username;
-    if (parsed.data.email !== undefined) updateData.email = parsed.data.email;
-    if (parsed.data.preferredName !== undefined)
-      updateData.preferredName = parsed.data.preferredName;
-    if (parsed.data.bio !== undefined) updateData.bio = parsed.data.bio;
-
-    const [updatedUser] = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, id))
-      .returning();
-
-    res.json(updatedUser);
-  } catch (error) {
-    res.status(500).json({ error: 'Database error', details: (error as Error).message });
-  }
-};
+  // Profile updates would be handled by updating individual content items
+  res.status(200).json({ message: 'Profile updated through individual content updates' })
+}
 
 export const uploadAvatar = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { file } = req;
+  const { id: userId } = req.params
+  const { file } = req
 
   if (!file) {
-    return res.status(400).json({ error: 'Avatar file is required' });
+    return res.status(400).json({ error: 'Avatar file is required' })
   }
 
-  // File validation is now handled by security middleware
-  // (validateFileContent, virusScanFile)
-
   try {
-    // Check if user exists
-    const existing = await db.select().from(users).where(eq(users.id, id));
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const user = existing[0];
-
-    // Delete old avatar if it exists
-    if (user.avatarUrl) {
-      await deleteAvatarFile(user.avatarUrl);
-    }
-
-    // Upload new avatar
-    const avatarUrl = await uploadAvatarFile(id, file);
-
-    // Update user with new avatar
-    const [updatedUser] = await db
-      .update(users)
-      .set({ avatarUrl: avatarUrl, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
+    // Upload avatar to storage
+    const avatarUrl = await uploadAvatarFile(userId, file)
 
     res.json({
       message: 'Avatar uploaded successfully',
       avatarUrl,
-      user: updatedUser,
-    });
+    })
   } catch (error) {
-    console.error('uploadAvatar error:', error);
+    console.error('uploadAvatar error:', error)
     res.status(500).json({
       error: 'Upload failed',
       details: (error as Error).message,
-    });
+    })
   }
-};
+}
 
 export const deleteAvatar = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id: userId } = req.params
 
   try {
-    // Check if user exists
-    const existing = await db.select().from(users).where(eq(users.id, id));
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const user = existing[0];
-
-    // Delete avatar file if it exists
-    if (user.avatarUrl) {
-      await deleteAvatarFile(user.avatarUrl);
-    }
-
-    // Update user to remove avatar reference
-    const [updatedUser] = await db
-      .update(users)
-      .set({ avatarUrl: null, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-
-    res.json({ message: 'Avatar deleted successfully', user: updatedUser });
+    // Note: We don't store avatar URLs in the database since there's no users table
+    // This would need to be coordinated with the auth service
+    res.json({ message: 'Avatar deletion should be handled through auth service' })
   } catch (error) {
-    res.status(500).json({ error: 'Database error', details: (error as Error).message });
+    res.status(500).json({ error: 'Database error', details: (error as Error).message })
   }
-};
+}

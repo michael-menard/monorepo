@@ -1,10 +1,10 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit'
+import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux'
 
 // Import reducers
-import wishlistReducer from './wishlistSlice';
-import mocInstructionsReducer from './mocInstructionsSlice';
-import profileReducer from './profileSlice';
+import wishlistReducer from './wishlistSlice'
+import mocInstructionsReducer from './mocInstructionsSlice'
+import profileReducer from './profileSlice'
 
 // Configure store
 export const store = configureStore({
@@ -13,7 +13,7 @@ export const store = configureStore({
     mocInstructions: mocInstructionsReducer,
     profile: profileReducer,
   },
-  middleware: (getDefaultMiddleware) =>
+  middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
         // Ignore these action types
@@ -25,20 +25,20 @@ export const store = configureStore({
       },
     }),
   devTools: process.env.NODE_ENV !== 'production',
-});
+})
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
 
 // Use throughout your app instead of plain `useDispatch` and `useSelector`
-export const useAppDispatch = () => useDispatch<AppDispatch>();
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+export const useAppDispatch = () => useDispatch<AppDispatch>()
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
 
 // Export reducers
-export { default as wishlistReducer } from './wishlistSlice';
-export { default as mocInstructionsReducer } from './mocInstructionsSlice';
-export { default as profileReducer } from './profileSlice';
+export { default as wishlistReducer } from './wishlistSlice'
+export { default as mocInstructionsReducer } from './mocInstructionsSlice'
+export { default as profileReducer } from './profileSlice'
 
 // Export specific actions and selectors to avoid naming conflicts
 export {
@@ -55,7 +55,7 @@ export {
   selectFilteredWishlistItems,
   selectWishlistCategories,
   type WishlistState,
-} from './wishlistSlice';
+} from './wishlistSlice'
 
 export {
   // MOC Instructions exports
@@ -77,7 +77,7 @@ export {
   selectFilteredMocInstructions,
   selectMocInstructionCategories,
   type MocInstructionsState,
-} from './mocInstructionsSlice';
+} from './mocInstructionsSlice'
 
 export {
   // Profile exports
@@ -94,10 +94,10 @@ export {
   selectProfileError,
   selectFilteredRecentActivities,
   type ProfileState,
-} from './profileSlice';
+} from './profileSlice'
 
 // Export store setup function for apps
-export const createMockDataStore = () => store;
+export const createMockDataStore = () => store
 
 // Helper function to get initial state
 export const getInitialState = (): RootState => ({
@@ -146,14 +146,14 @@ export const getInitialState = (): RootState => ({
       limit: 10,
     },
   },
-});
+})
 
 // Helper function to initialize data
 export const initializeStore = async (dispatch: AppDispatch) => {
   // Import the thunks dynamically to avoid circular dependencies
-  const { fetchWishlistItems } = await import('./wishlistSlice');
-  const { fetchMocInstructions } = await import('./mocInstructionsSlice');
-  const { fetchProfileData } = await import('./profileSlice');
+  const { fetchWishlistItems } = await import('./wishlistSlice')
+  const { fetchMocInstructions } = await import('./mocInstructionsSlice')
+  const { fetchProfileData } = await import('./profileSlice')
 
   try {
     // Fetch all initial data
@@ -161,13 +161,13 @@ export const initializeStore = async (dispatch: AppDispatch) => {
       dispatch(fetchWishlistItems()),
       dispatch(fetchMocInstructions({})),
       dispatch(fetchProfileData()),
-    ]);
+    ])
   } catch (error) {
-    console.error('Failed to initialize store:', error);
+    console.error('Failed to initialize store:', error)
   }
-};
+}
 
 // Re-export types for convenience
-export type { WishlistItem } from '../wishlist';
-export type { MockInstruction } from '../moc-instructions';
-export type { UserStats, RecentActivity, QuickAction } from '../profile';
+export type { WishlistItem } from '../wishlist'
+export type { MockInstruction } from '../moc-instructions'
+export type { UserStats, RecentActivity, QuickAction } from '../profile'

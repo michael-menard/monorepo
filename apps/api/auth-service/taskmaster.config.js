@@ -12,4 +12,4 @@ module.exports = {
   },
   priorityTag: '!priority',
   defaultPriority: 5,
-};
+}

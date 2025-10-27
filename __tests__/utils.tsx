@@ -1,10 +1,10 @@
-import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { axe } from 'vitest-axe';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import { BrowserRouter } from 'react-router-dom';
-import { expect } from 'vitest';
+import React, { ReactElement } from 'react'
+import { render, RenderOptions } from '@testing-library/react'
+import { axe } from 'vitest-axe'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { BrowserRouter } from 'react-router-dom'
+import { expect } from 'vitest'
 
 // Mock store for testing
 const createTestStore = (preloadedState = {}) => {
@@ -14,76 +14,73 @@ const createTestStore = (preloadedState = {}) => {
       auth: (state = {}, action: any) => state,
     },
     preloadedState,
-  });
-};
+  })
+}
 
 // Custom render function that includes providers
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  preloadedState?: any;
-  store?: ReturnType<typeof configureStore>;
-  withRouter?: boolean;
-  withRedux?: boolean;
+  preloadedState?: any
+  store?: ReturnType<typeof configureStore>
+  withRouter?: boolean
+  withRedux?: boolean
 }
 
-const AllTheProviders = ({ 
-  children, 
-  store, 
-  withRouter = false, 
-  withRedux = false 
-}: { 
-  children: React.ReactNode;
-  store?: ReturnType<typeof configureStore>;
-  withRouter?: boolean;
-  withRedux?: boolean;
+const AllTheProviders = ({
+  children,
+  store,
+  withRouter = false,
+  withRedux = false,
+}: {
+  children: React.ReactNode
+  store?: ReturnType<typeof configureStore>
+  withRouter?: boolean
+  withRedux?: boolean
 }) => {
-  let element = children;
+  let element = children
 
   if (withRedux && store) {
-    element = <Provider store={store}>{element}</Provider>;
+    element = <Provider store={store}>{element}</Provider>
   }
 
   if (withRouter) {
-    element = <BrowserRouter>{element}</BrowserRouter>;
+    element = <BrowserRouter>{element}</BrowserRouter>
   }
 
-  return <>{element}</>;
-};
+  return <>{element}</>
+}
 
-const customRender = (
-  ui: ReactElement,
-  options: CustomRenderOptions = {}
-) => {
+const customRender = (ui: ReactElement, options: CustomRenderOptions = {}) => {
   const {
     preloadedState = {},
     store = createTestStore(preloadedState),
     withRouter = false,
     withRedux = false,
     ...renderOptions
-  } = options;
+  } = options
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <AllTheProviders 
+    <AllTheProviders
       store={withRedux ? store : undefined}
       withRouter={withRouter}
       withRedux={withRedux}
     >
       {children}
     </AllTheProviders>
-  );
+  )
 
   return {
     store,
     ...render(ui, { wrapper: Wrapper, ...renderOptions }),
-  };
-};
+  }
+}
 
 // Accessibility testing utility
 export const testA11y = async (ui: ReactElement, options?: CustomRenderOptions) => {
-  const { container } = customRender(ui, options);
-  const results = await axe(container);
-  expect(results.violations).toHaveLength(0);
-  return results;
-};
+  const { container } = customRender(ui, options)
+  const results = await axe(container)
+  expect(results.violations).toHaveLength(0)
+  return results
+}
 
 // Mock user interactions
 export const mockUser = {
@@ -92,7 +89,7 @@ export const mockUser = {
   firstName: 'Test',
   lastName: 'User',
   avatar: null,
-};
+}
 
 // Mock API responses
 export const mockApiResponses = {
@@ -136,9 +133,9 @@ export const mockApiResponses = {
       total: 0,
     },
   },
-};
+}
 
 // Re-export everything
-export * from '@testing-library/react';
-export { customRender as render };
-export { createTestStore }; 
+export * from '@testing-library/react'
+export { customRender as render }
+export { createTestStore }

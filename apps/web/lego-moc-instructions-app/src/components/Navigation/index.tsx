@@ -4,15 +4,7 @@ import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
 import { useAuth, authApi } from '@repo/auth'
 // TODO: Import these when TypeScript cache resolves: clearCSRFToken, clearRefreshState, useCheckAuthQuery
 import { useDispatch } from 'react-redux'
-import {
-  Heart,
-  LogOut,
-  Search,
-  User,
-  Settings,
-  ChevronDown,
-  Lightbulb
-} from 'lucide-react'
+import { Heart, LogOut, Search, User, Settings, ChevronDown, Lightbulb } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 // Zod schema for navigation props
@@ -54,7 +46,7 @@ function Navigation({ className = '' }: NavigationProps) {
       // authLoading,
       // authError,
       isAuthenticated,
-      user: user ? { name: user.name, email: user.email } : null
+      user: user ? { name: user.name, email: user.email } : null,
     })
   }, [isAuthenticated, user])
 
@@ -62,7 +54,7 @@ function Navigation({ className = '' }: NavigationProps) {
   useEffect(() => {
     console.log('🔍 Navigation auth state:', {
       isAuthenticated,
-      user: user ? { name: user.name, email: user.email } : null
+      user: user ? { name: user.name, email: user.email } : null,
     })
   }, [isAuthenticated, user])
 
@@ -101,9 +93,11 @@ function Navigation({ className = '' }: NavigationProps) {
       console.log('🧹 Client-side tokens cleared')
 
       // Step 1: Manually update the checkAuth cache to indicate logged out state
-      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (_draft) => {
-        return null; // Set to null to indicate no user
-      }))
+      dispatch(
+        authApi.util.updateQueryData('checkAuth', undefined, _draft => {
+          return null // Set to null to indicate no user
+        }),
+      )
       console.log('🔄 Auth cache manually cleared')
 
       // Step 2: Remove the specific checkAuth query from cache
@@ -142,7 +136,6 @@ function Navigation({ className = '' }: NavigationProps) {
       setTimeout(() => {
         console.log('🔍 Final auth state check after logout')
       }, 1000)
-
     } catch (error) {
       console.error('❌ Logout failed:', error)
 
@@ -150,9 +143,11 @@ function Navigation({ className = '' }: NavigationProps) {
       // TODO: Re-enable when TypeScript cache resolves
       // clearCSRFToken()
       // clearRefreshState()
-      dispatch(authApi.util.updateQueryData('checkAuth', undefined, (_draft) => {
-        return null; // Set to null to indicate no user
-      }))
+      dispatch(
+        authApi.util.updateQueryData('checkAuth', undefined, _draft => {
+          return null // Set to null to indicate no user
+        }),
+      )
       dispatch(authApi.util.removeQueryData('checkAuth', undefined))
       dispatch(authApi.util.invalidateTags(['Auth', 'User']))
       dispatch(authApi.util.resetApiState())
@@ -192,7 +187,7 @@ function Navigation({ className = '' }: NavigationProps) {
         </Link>
 
         {/* Private Navigation Links - Only show when authenticated */}
-        {isAuthenticated && (
+        {isAuthenticated ? (
           <Link
             to="/wishlist"
             className="flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -200,7 +195,7 @@ function Navigation({ className = '' }: NavigationProps) {
             <Heart className="h-4 w-4" />
             <span>Wishlist</span>
           </Link>
-        )}
+        ) : null}
       </div>
 
       {/* User Actions */}
@@ -214,12 +209,9 @@ function Navigation({ className = '' }: NavigationProps) {
                 className="flex items-center space-x-2 p-1 rounded-full hover:bg-accent transition-colors"
               >
                 <Avatar className="h-8 w-8">
-                  {user?.avatarUrl && (
-                    <AvatarImage
-                      src={user.avatarUrl}
-                      alt={user?.name || user?.email || 'User'}
-                    />
-                  )}
+                  {user?.avatarUrl ? (
+                    <AvatarImage src={user.avatarUrl} alt={user?.name || user?.email || 'User'} />
+                  ) : null}
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                     {getInitials(user?.name, user?.email)}
                   </AvatarFallback>
@@ -228,7 +220,7 @@ function Navigation({ className = '' }: NavigationProps) {
               </button>
 
               {/* Dropdown Menu */}
-              {isUserMenuOpen && (
+              {isUserMenuOpen ? (
                 <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-md shadow-lg z-50">
                   <div className="p-3 border-b border-border">
                     <p className="text-sm font-medium">{user?.name || 'User'}</p>
@@ -263,7 +255,7 @@ function Navigation({ className = '' }: NavigationProps) {
                     </button>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           </>
         ) : (
@@ -274,9 +266,7 @@ function Navigation({ className = '' }: NavigationProps) {
               </Button>
             </Link>
             <Link to="/auth/signup">
-              <Button size="sm">
-                Sign Up
-              </Button>
+              <Button size="sm">Sign Up</Button>
             </Link>
           </>
         )}
@@ -285,4 +275,4 @@ function Navigation({ className = '' }: NavigationProps) {
   )
 }
 
-export default Navigation 
+export default Navigation

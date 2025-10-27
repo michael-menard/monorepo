@@ -14,7 +14,7 @@ export const LoadingExample = () => {
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-2xl font-bold">Loading Spinner Examples</h1>
-      
+
       {/* Loading Type Selector */}
       <div className="space-y-2">
         <label className="block text-sm font-medium">Loading Type:</label>
@@ -50,10 +50,10 @@ export const LoadingExample = () => {
       </button>
 
       {/* Loading Display */}
-      {isLoading && (
+      {isLoading ? (
         <div className="p-6 border rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Loading in progress...</h3>
-          
+
           {loadingType === 'spinner' && (
             <div className="space-y-4">
               <div className="flex gap-4 items-center">
@@ -105,7 +105,7 @@ export const LoadingExample = () => {
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* Variant Examples */}
       <div className="space-y-4">
@@ -138,7 +138,7 @@ export const LoadingContexts = () => {
   return (
     <div className="p-8 space-y-6">
       <h2 className="text-xl font-bold">Loading in Different Contexts</h2>
-      
+
       {/* Button Loading State */}
       <div className="space-y-2">
         <h3 className="font-semibold">Button Loading State</h3>
@@ -178,4 +178,4 @@ export const LoadingContexts = () => {
       </div>
     </div>
   )
-} 
+}

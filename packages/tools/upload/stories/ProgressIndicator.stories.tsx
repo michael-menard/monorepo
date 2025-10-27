@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ProgressIndicator } from '../src/components/ProgressIndicator/ProgressIndicator.tsx';
-import type { UploadProgress } from '../src/types/index.js';
+import type { Meta, StoryObj } from '@storybook/react'
+import { ProgressIndicator } from '../src/components/ProgressIndicator/ProgressIndicator.tsx'
+import type { UploadProgress } from '../src/types/index.js'
 
 const createProgress = (percentage: number, loaded?: number, total?: number): UploadProgress => ({
   percentage,
   loaded: loaded || (percentage * 1024 * 1024) / 100, // Mock loaded bytes
   total: total || 1024 * 1024, // Mock total bytes (1MB)
-});
+})
 
 const meta: Meta<typeof ProgressIndicator> = {
   title: 'Upload/ProgressIndicator',
@@ -15,7 +15,8 @@ const meta: Meta<typeof ProgressIndicator> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'ProgressIndicator component displays upload progress in linear or circular format.',
+        component:
+          'ProgressIndicator component displays upload progress in linear or circular format.',
       },
     },
   },
@@ -36,10 +37,10 @@ const meta: Meta<typeof ProgressIndicator> = {
       description: 'Whether to show percentage text',
     },
   },
-};
+}
 
-export default meta;
-type Story = StoryObj<typeof meta>;
+export default meta
+type Story = StoryObj<typeof meta>
 
 export const LinearDefault: Story = {
   args: {
@@ -55,7 +56,7 @@ export const LinearDefault: Story = {
       },
     },
   },
-};
+}
 
 export const LinearSmall: Story = {
   args: {
@@ -71,7 +72,7 @@ export const LinearSmall: Story = {
       },
     },
   },
-};
+}
 
 export const LinearLarge: Story = {
   args: {
@@ -87,7 +88,7 @@ export const LinearLarge: Story = {
       },
     },
   },
-};
+}
 
 export const LinearWithoutPercentage: Story = {
   args: {
@@ -103,7 +104,7 @@ export const LinearWithoutPercentage: Story = {
       },
     },
   },
-};
+}
 
 export const CircularDefault: Story = {
   args: {
@@ -119,7 +120,7 @@ export const CircularDefault: Story = {
       },
     },
   },
-};
+}
 
 export const CircularSmall: Story = {
   args: {
@@ -135,7 +136,7 @@ export const CircularSmall: Story = {
       },
     },
   },
-};
+}
 
 export const CircularLarge: Story = {
   args: {
@@ -151,7 +152,7 @@ export const CircularLarge: Story = {
       },
     },
   },
-};
+}
 
 export const CircularWithoutPercentage: Story = {
   args: {
@@ -167,7 +168,7 @@ export const CircularWithoutPercentage: Story = {
       },
     },
   },
-};
+}
 
 export const ZeroProgress: Story = {
   args: {
@@ -183,7 +184,7 @@ export const ZeroProgress: Story = {
       },
     },
   },
-};
+}
 
 export const CompleteProgress: Story = {
   args: {
@@ -199,7 +200,7 @@ export const CompleteProgress: Story = {
       },
     },
   },
-};
+}
 
 export const LargeFileProgress: Story = {
   args: {
@@ -215,4 +216,4 @@ export const LargeFileProgress: Story = {
       },
     },
   },
-};
+}

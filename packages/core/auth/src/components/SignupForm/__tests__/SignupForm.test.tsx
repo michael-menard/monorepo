@@ -1,16 +1,16 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import { SignupForm } from '../index.js';
-import authReducer from '../../../store/authSlice.js';
-import { authApi } from '../../../store/authApi.js';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { BrowserRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { SignupForm } from '../index.js'
+import authReducer from '../../../store/authSlice.js'
+import { authApi } from '../../../store/authApi.js'
 
 // Mock the auth hook
-const mockSignup = vi.fn();
-const mockClearError = vi.fn();
-const mockNavigate = vi.fn();
+const mockSignup = vi.fn()
+const mockClearError = vi.fn()
+const mockNavigate = vi.fn()
 
 vi.mock('../../../hooks/useAuth.js', () => ({
   useAuth: () => ({
@@ -31,15 +31,15 @@ vi.mock('../../../hooks/useAuth.js', () => ({
     socialLogin: vi.fn(),
     clearMessage: vi.fn(),
   }),
-}));
+}))
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-  };
-});
+  }
+})
 
 // Create a test store
 const createTestStore = () => {
@@ -48,186 +48,185 @@ const createTestStore = () => {
       auth: authReducer,
       [authApi.reducerPath]: authApi.reducer,
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(authApi.middleware),
-  });
-};
+    middleware: getDefaultMiddleware => getDefaultMiddleware().concat(authApi.middleware),
+  })
+}
 
 const renderSignupForm = () => {
-  const store = createTestStore();
+  const store = createTestStore()
   return render(
     <Provider store={store}>
       <BrowserRouter>
         <SignupForm />
       </BrowserRouter>
-    </Provider>
-  );
-};
+    </Provider>,
+  )
+}
 
 describe('SignupForm', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   describe('Rendering', () => {
     it('should render the signup form with all required elements', () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('First Name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Last Name')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Confirm Password')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Create Account' })).toBeInTheDocument();
-      expect(screen.getByText('Sign in')).toBeInTheDocument();
-    });
+      expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('First Name')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Last Name')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Confirm Password')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Create Account' })).toBeInTheDocument()
+      expect(screen.getByText('Sign in')).toBeInTheDocument()
+    })
 
     it('should have proper accessibility attributes', () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      expect(firstNameInput).toHaveAttribute('type', 'text');
-      expect(lastNameInput).toHaveAttribute('type', 'text');
-      expect(emailInput).toHaveAttribute('type', 'email');
-      expect(passwordInput).toHaveAttribute('type', 'password');
-      expect(confirmPasswordInput).toHaveAttribute('type', 'password');
-      expect(submitButton).toHaveAttribute('type', 'submit');
-    });
-  });
+      expect(firstNameInput).toHaveAttribute('type', 'text')
+      expect(lastNameInput).toHaveAttribute('type', 'text')
+      expect(emailInput).toHaveAttribute('type', 'email')
+      expect(passwordInput).toHaveAttribute('type', 'password')
+      expect(confirmPasswordInput).toHaveAttribute('type', 'password')
+      expect(submitButton).toHaveAttribute('type', 'submit')
+    })
+  })
 
   describe('Form Validation', () => {
     it('should show validation error for empty first name', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-      fireEvent.change(emailInput, { target: { value: 'john@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(lastNameInput, { target: { value: 'Doe' } })
+      fireEvent.change(emailInput, { target: { value: 'john@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
+      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('First Name is required')).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByText('First Name is required')).toBeInTheDocument()
+      })
+    })
 
     it('should show validation error for empty last name', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-      fireEvent.change(emailInput, { target: { value: 'john@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
+      fireEvent.change(emailInput, { target: { value: 'john@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
+      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Last Name is required')).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByText('Last Name is required')).toBeInTheDocument()
+      })
+    })
 
     it('should show validation error for invalid email', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
+      fireEvent.change(lastNameInput, { target: { value: 'Doe' } })
+      fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
+      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument()
+      })
+    })
 
     it('should show validation error for short password', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-      fireEvent.change(emailInput, { target: { value: 'john@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: '123' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
+      fireEvent.change(lastNameInput, { target: { value: 'Doe' } })
+      fireEvent.change(emailInput, { target: { value: 'john@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: '123' } })
+      fireEvent.change(confirmPasswordInput, { target: { value: '123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        const errorMessages = screen.getAllByText('Password must be at least 8 characters');
-        expect(errorMessages.length).toBeGreaterThanOrEqual(1);
-      });
-    });
+        const errorMessages = screen.getAllByText('Password must be at least 8 characters')
+        expect(errorMessages.length).toBeGreaterThanOrEqual(1)
+      })
+    })
 
     it('should show validation error for non-matching passwords', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-      fireEvent.change(emailInput, { target: { value: 'john@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'DifferentPassword123!' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
+      fireEvent.change(lastNameInput, { target: { value: 'Doe' } })
+      fireEvent.change(emailInput, { target: { value: 'john@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
+      fireEvent.change(confirmPasswordInput, { target: { value: 'DifferentPassword123!' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
-      });
-    });
-  });
+        expect(screen.getByText('Passwords do not match')).toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Form Submission', () => {
     it('should call signup function with valid data', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-      fireEvent.change(emailInput, { target: { value: 'john@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
-      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
+      fireEvent.change(lastNameInput, { target: { value: 'Doe' } })
+      fireEvent.change(emailInput, { target: { value: 'john@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
+      fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(mockSignup).toHaveBeenCalledWith({
@@ -235,81 +234,81 @@ describe('SignupForm', () => {
           password: 'Password123!',
           firstName: 'John',
           lastName: 'Doe',
-        });
-      });
-    });
+        })
+      })
+    })
 
     it('should not call signup function with invalid data', async () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(mockSignup).not.toHaveBeenCalled();
-      });
-    });
-  });
+        expect(mockSignup).not.toHaveBeenCalled()
+      })
+    })
+  })
 
   describe('Password Strength Indicator', () => {
     it('should show password strength indicator when password is entered', () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const passwordInput = screen.getByPlaceholderText('Password');
-      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
+      const passwordInput = screen.getByPlaceholderText('Password')
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
 
-      expect(screen.getByTestId('password-strength')).toBeInTheDocument();
-    });
+      expect(screen.getByTestId('password-strength')).toBeInTheDocument()
+    })
 
     it('should not show password strength indicator when password is empty', () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      expect(screen.queryByTestId('password-strength')).not.toBeInTheDocument();
-    });
-  });
+      expect(screen.queryByTestId('password-strength')).not.toBeInTheDocument()
+    })
+  })
 
   describe('Navigation', () => {
     it('should navigate to login page when sign in link is clicked', () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const signInLink = screen.getByText('Sign in');
-      fireEvent.click(signInLink);
+      const signInLink = screen.getByText('Sign in')
+      fireEvent.click(signInLink)
 
-      expect(mockNavigate).toHaveBeenCalledWith('/login');
-    });
-  });
+      expect(mockNavigate).toHaveBeenCalledWith('/login')
+    })
+  })
 
   describe('Accessibility', () => {
     it('should be keyboard navigable', () => {
-      renderSignupForm();
+      renderSignupForm()
 
-      const firstNameInput = screen.getByPlaceholderText('First Name');
-      const lastNameInput = screen.getByPlaceholderText('Last Name');
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-      const submitButton = screen.getByRole('button', { name: 'Create Account' });
+      const firstNameInput = screen.getByPlaceholderText('First Name')
+      const lastNameInput = screen.getByPlaceholderText('Last Name')
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password')
+      const submitButton = screen.getByRole('button', { name: 'Create Account' })
 
-      firstNameInput.focus();
-      expect(firstNameInput).toHaveFocus();
+      firstNameInput.focus()
+      expect(firstNameInput).toHaveFocus()
 
-      lastNameInput.focus();
-      expect(lastNameInput).toHaveFocus();
+      lastNameInput.focus()
+      expect(lastNameInput).toHaveFocus()
 
-      emailInput.focus();
-      expect(emailInput).toHaveFocus();
+      emailInput.focus()
+      expect(emailInput).toHaveFocus()
 
-      passwordInput.focus();
-      expect(passwordInput).toHaveFocus();
+      passwordInput.focus()
+      expect(passwordInput).toHaveFocus()
 
-      confirmPasswordInput.focus();
-      expect(confirmPasswordInput).toHaveFocus();
+      confirmPasswordInput.focus()
+      expect(confirmPasswordInput).toHaveFocus()
 
-      submitButton.focus();
-      expect(submitButton).toHaveFocus();
-    });
-  });
-}); 
+      submitButton.focus()
+      expect(submitButton).toHaveFocus()
+    })
+  })
+})

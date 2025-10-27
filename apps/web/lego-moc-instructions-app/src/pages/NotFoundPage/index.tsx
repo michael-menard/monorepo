@@ -12,7 +12,8 @@ function NotFoundPage() {
           </div>
           <CardTitle className="text-2xl">Page Not Found</CardTitle>
           <CardDescription>
-            The page you're looking for doesn't exist. It might have been moved, deleted, or you entered the wrong URL.
+            The page you're looking for doesn't exist. It might have been moved, deleted, or you
+            entered the wrong URL.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -23,11 +24,7 @@ function NotFoundPage() {
                 Go to Home
               </Button>
             </Link>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => window.history.back()}
-            >
+            <Button variant="outline" className="w-full" onClick={() => window.history.back()}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
             </Button>
@@ -38,4 +35,4 @@ function NotFoundPage() {
   )
 }
 
-export default NotFoundPage 
+export default NotFoundPage

@@ -1,0 +1,85 @@
+# Branch Protection Configuration
+# This file documents the required branch protection rules for the repository
+#
+# SETUP INSTRUCTIONS:
+# 1. Run the automated workflow: .github/workflows/setup-branch-protection.yml
+# 2. Or configure manually in GitHub Settings > Branches
+# 3. See .github/BRANCH_PROTECTION_SETUP.md for detailed instructions
+
+# 🔒 MAIN BRANCH PROTECTION - NO DIRECT PUSHES ALLOWED
+main:
+  # 📋 Pull Request Requirements
+  required_pull_request_reviews:
+    required_approving_review_count: 1        # At least 1 approval required
+    dismiss_stale_reviews: true               # Dismiss reviews when new commits pushed
+    require_code_owner_reviews: false         # CODEOWNERS approval not required
+    require_last_push_approval: false         # Don't require approval of latest push
+
+  # ✅ Required Status Checks - ALL must pass before merge
+  required_status_checks:
+    strict: true  # Require branches to be up to date before merging
+    checks:
+      # Core CI Pipeline (from ci.yml)
+      - "Lint & Type Check"
+      - "Unit Tests"
+      - "Build All Packages"
+
+      # Frontend Specific (from lego-moc-instructions-app.yml)
+      - "Build App"
+      - "Frontend Tests"
+
+      # Backend Specific (from lego-projects-api.yml and auth-service.yml)
+      - "API Tests"
+      - "Auth Service Tests"
+
+      # Security & Quality (from security.yml)
+      - "Security Audit"
+      - "Dependency Check"
+
+      # AI Code Review (from coderabbit-integration.yml)
+      - "Auggie + CodeRabbit Collaborative Review"
+      - "Quality Gates"
+
+  # 🛡️ Branch Protection Settings
+  enforce_admins: false           # Allow repository admins to bypass restrictions
+  allow_force_pushes: false       # Block force pushes (prevents history rewriting)
+  allow_deletions: false          # Block branch deletion
+  required_linear_history: true   # Require linear history (no merge commits)
+  block_creations: false          # Allow branch creation
+
+# 🌿 DEVELOP BRANCH PROTECTION (Optional - for GitFlow workflow)
+develop:
+  required_pull_request_reviews:
+    required_approving_review_count: 1
+    dismiss_stale_reviews: true
+    require_code_owner_reviews: false
+
+  required_status_checks:
+    strict: true
+    checks:
+      - "Lint & Type Check"
+      - "Unit Tests"
+      - "Build All Packages"
+      - "Security Audit"
+
+  enforce_admins: false
+  allow_force_pushes: false
+  allow_deletions: false
+  required_linear_history: false  # Allow merge commits in develop
+
+# 📝 WORKFLOW SUMMARY:
+# 1. Developers create feature branches from main
+# 2. Make changes and push to feature branch
+# 3. Create Pull Request to main
+# 4. All status checks must pass
+# 5. At least 1 approval required
+# 6. Branch must be up-to-date with main
+# 7. Use "Squash and merge" or "Rebase and merge"
+# 8. Feature branch is automatically deleted
+
+# 🚨 IMPORTANT NOTES:
+# - Direct pushes to main are BLOCKED
+# - Force pushes to main are BLOCKED
+# - Branch deletion of main is BLOCKED
+# - All changes must go through Pull Request process
+# - CI/CD pipelines will enforce code quality standards

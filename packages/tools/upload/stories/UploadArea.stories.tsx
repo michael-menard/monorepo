@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { action } from '@storybook/addon-actions';
-import { UploadArea } from '../src/components/UploadArea/UploadArea.tsx';
-import { useUpload } from '../src/hooks/useUpload.js';
-import { UPLOAD_PRESETS } from '../src/utils/presets.js';
+import type { Meta, StoryObj } from '@storybook/react'
+import { action } from '@storybook/addon-actions'
+import { UploadArea } from '../src/components/UploadArea/UploadArea.tsx'
+import { useUpload } from '../src/hooks/useUpload.js'
+import { UPLOAD_PRESETS } from '../src/utils/presets.js'
 
 // Wrapper component to provide upload hook
 const UploadAreaWrapper = (props: any) => {
@@ -12,10 +12,10 @@ const UploadAreaWrapper = (props: any) => {
     onUploadComplete: action('onUploadComplete'),
     onUploadError: action('onUploadError'),
     onFilesChange: action('onFilesChange'),
-  });
+  })
 
-  return <UploadArea upload={upload} {...props} />;
-};
+  return <UploadArea upload={upload} {...props} />
+}
 
 const meta: Meta<typeof UploadAreaWrapper> = {
   title: 'Upload/UploadArea',
@@ -49,10 +49,10 @@ const meta: Meta<typeof UploadAreaWrapper> = {
       description: 'Predefined upload preset',
     },
   },
-};
+}
 
-export default meta;
-type Story = StoryObj<typeof meta>;
+export default meta
+type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
@@ -65,7 +65,7 @@ export const Default: Story = {
       },
     },
   },
-};
+}
 
 export const Avatar: Story = {
   args: {
@@ -79,7 +79,7 @@ export const Avatar: Story = {
       },
     },
   },
-};
+}
 
 export const ImageOnly: Story = {
   args: {
@@ -96,7 +96,7 @@ export const ImageOnly: Story = {
       },
     },
   },
-};
+}
 
 export const SingleFile: Story = {
   args: {
@@ -113,7 +113,7 @@ export const SingleFile: Story = {
       },
     },
   },
-};
+}
 
 export const Disabled: Story = {
   args: {
@@ -126,7 +126,7 @@ export const Disabled: Story = {
       },
     },
   },
-};
+}
 
 export const WithPreset: Story = {
   args: {
@@ -139,4 +139,4 @@ export const WithPreset: Story = {
       },
     },
   },
-};
+}

@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react-swc';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import tailwindcss from '@tailwindcss/vite';
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import tailwindcss from '@tailwindcss/vite'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(({ mode }) => {
   return {
@@ -31,7 +31,15 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', 'react-router-dom', 'zod', '@repo/ui', '@repo/shared', '@repo/cache'],
+        external: [
+          'react',
+          'react-dom',
+          'react-router-dom',
+          'zod',
+          '@repo/ui',
+          '@repo/shared',
+          '@repo/cache',
+        ],
         output: {
           globals: {
             react: 'React',
@@ -49,5 +57,5 @@ export default defineConfig(({ mode }) => {
       include: ['react', 'react-dom'],
       exclude: ['@repo/ui', '@repo/shared', '@repo/cache'],
     },
-  };
-});
+  }
+})

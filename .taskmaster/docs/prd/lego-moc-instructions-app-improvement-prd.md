@@ -65,10 +65,7 @@ Goal: Achieve a clean, reproducible build and running dev server with correct AP
   - [ ] Migrate any styles from `src/styles.css` to Tailwind utilities; delete the CSS file
 
 - Security Headers & CSP
-  - [ ] Split CSP for dev vs prod; keep dev permissive if needed, but in prod:
-        - Remove `'unsafe-eval'`
-        - Replace `'unsafe-inline'` with nonces/hashes where possible
-        - Constrain `connect-src` to your API/auth origins + same-origin
+  - [ ] Split CSP for dev vs prod; keep dev permissive if needed, but in prod: - Remove `'unsafe-eval'` - Replace `'unsafe-inline'` with nonces/hashes where possible - Constrain `connect-src` to your API/auth origins + same-origin
   - [ ] Ensure HTML meta security headers reflect tightened prod CSP
 
 - Routing & Auth
@@ -94,11 +91,7 @@ Goal: Full test pass with repo thresholds (Lines ≥ 90%, Branches ≥ 85%, Func
 - Unit/Component (Vitest + Testing Library + MSW)
   - [ ] Ensure MSW handlers in `src/test/mocks` cover all API endpoints in `src/services/api.ts`
   - [ ] Add unit tests for RTK Query endpoints (success/error/caching invalidation)
-  - [ ] Add component tests for:
-        - [ ] MocInstructionsGallery (loading, error, empty, populated, pagination/filters if any)
-        - [ ] MocDetailPage (fetch by id, error state, parts rendering)
-        - [ ] Offline indicators/components behavior (online/offline toggles via mocked hooks)
-        - [ ] Auth flows (form validation with zod, happy path mocked)
+  - [ ] Add component tests for: - [ ] MocInstructionsGallery (loading, error, empty, populated, pagination/filters if any) - [ ] MocDetailPage (fetch by id, error state, parts rendering) - [ ] Offline indicators/components behavior (online/offline toggles via mocked hooks) - [ ] Auth flows (form validation with zod, happy path mocked)
   - [ ] Cover route guard behavior with mocked auth state
 
 - Integration (Router)
@@ -145,13 +138,8 @@ Goal: Improve responsiveness, bundle size, perceived performance, and general UX
 Goal: Move from stubbed offline to functional offline queue, background sync, and resilient UX.
 
 - Data Layer
-  - [ ] Replace `offlineApi` stub with real offline manager:
-        - IndexedDB storage (e.g., `idb`) for queue and cached detail entities
-        - Background sync strategy via Workbox (periodic sync or on regain connectivity)
-        - Conflict handling policy documented (last-write-wins or server-authoritative)
-  - [ ] Cache strategies tuned:
-        - API: stale-while-revalidate for reads, queue writes offline
-        - Images: CacheFirst with sensible TTL
+  - [ ] Replace `offlineApi` stub with real offline manager: - IndexedDB storage (e.g., `idb`) for queue and cached detail entities - Background sync strategy via Workbox (periodic sync or on regain connectivity) - Conflict handling policy documented (last-write-wins or server-authoritative)
+  - [ ] Cache strategies tuned: - API: stale-while-revalidate for reads, queue writes offline - Images: CacheFirst with sensible TTL
 
 - UI/UX
   - [ ] Make Offline Status Indicator reflect real queue depth and last sync
@@ -233,7 +221,7 @@ Goal: Smooth deployments and actionable telemetry.
 ## References
 
 - Repo rules: Build-First Gate, Tailwind-only, RTK Query standard, Testing policy (Vitest/Playwright)
-- Code: 
+- Code:
   - Vite config (PWA + Security headers): `apps/web/lego-moc-instructions-app/vite.config.ts`
   - Store composition: `src/store/store.ts`
   - API service (RTK Query + zod): `src/services/api.ts`

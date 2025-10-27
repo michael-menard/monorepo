@@ -1,8 +1,8 @@
-import React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import InstructionsCard from '../components/InstructionsCard';
-import type { MockInstruction } from '../schemas';
+import React from 'react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import InstructionsCard from '../components/InstructionsCard'
+import type { MockInstruction } from '../schemas'
 
 const mockInstruction: MockInstruction = {
   id: '1',
@@ -62,18 +62,18 @@ const mockInstruction: MockInstruction = {
   downloadCount: 150,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-15'),
-};
+}
 
 const mockHandlers = {
   onView: () => {},
   onEdit: () => {},
   onDelete: () => {},
-};
+}
 
 describe('Instructions Package', () => {
   it('exports InstructionsCard component', () => {
-    expect(InstructionsCard).toBeDefined();
-  });
+    expect(InstructionsCard).toBeDefined()
+  })
 
   it('renders InstructionsCard with correct data', () => {
     render(
@@ -81,26 +81,26 @@ describe('Instructions Package', () => {
         instruction={mockInstruction}
         onView={mockHandlers.onView}
         isEditable={false}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('LEGO Spaceship MOC')).toBeInTheDocument();
-    expect(screen.getByText('A detailed spaceship model with custom instructions')).toBeInTheDocument();
-    expect(screen.getByText('By John Builder')).toBeInTheDocument();
-    expect(screen.getByText('vehicles')).toBeInTheDocument();
-    expect(screen.getByText('Intermediate')).toBeInTheDocument();
-    expect(screen.getByText('Steps:')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Parts:')).toBeInTheDocument();
-    expect(screen.getByText('15')).toBeInTheDocument();
-    expect(screen.getByText('Time:')).toBeInTheDocument();
-    // Card renders formatted time from step estimates; accept either 1h 15min or 5h 15min depending on formatter
+    expect(screen.getByText('LEGO Spaceship MOC')).toBeInTheDocument()
     expect(
-      screen.getByText((t) => t === '1h 15min' || t === '5h 15min')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Rating:')).toBeInTheDocument();
-    expect(screen.getByText('4.5/5')).toBeInTheDocument();
-  });
+      screen.getByText('A detailed spaceship model with custom instructions'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('By John Builder')).toBeInTheDocument()
+    expect(screen.getByText('vehicles')).toBeInTheDocument()
+    expect(screen.getByText('Intermediate')).toBeInTheDocument()
+    expect(screen.getByText('Steps:')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('Parts:')).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.getByText('Time:')).toBeInTheDocument()
+    // Card renders formatted time from step estimates; accept either 1h 15min or 5h 15min depending on formatter
+    expect(screen.getByText(t => t === '1h 15min' || t === '5h 15min')).toBeInTheDocument()
+    expect(screen.getByText('Rating:')).toBeInTheDocument()
+    expect(screen.getByText('4.5/5')).toBeInTheDocument()
+  })
 
   it('shows view button when onView is provided', () => {
     render(
@@ -108,11 +108,11 @@ describe('Instructions Package', () => {
         instruction={mockInstruction}
         onView={mockHandlers.onView}
         isEditable={false}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('View')).toBeInTheDocument();
-  });
+    expect(screen.getByText('View')).toBeInTheDocument()
+  })
 
   it('shows edit and delete buttons when editable', () => {
     render(
@@ -122,12 +122,12 @@ describe('Instructions Package', () => {
         onEdit={mockHandlers.onEdit}
         onDelete={mockHandlers.onDelete}
         isEditable={true}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('Edit')).toBeInTheDocument();
-    expect(screen.getByText('Delete')).toBeInTheDocument();
-  });
+    expect(screen.getByText('Edit')).toBeInTheDocument()
+    expect(screen.getByText('Delete')).toBeInTheDocument()
+  })
 
   it('does not show edit and delete buttons when not editable', () => {
     render(
@@ -137,12 +137,12 @@ describe('Instructions Package', () => {
         onEdit={mockHandlers.onEdit}
         onDelete={mockHandlers.onDelete}
         isEditable={false}
-      />
-    );
+      />,
+    )
 
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
-    expect(screen.queryByText('Delete')).not.toBeInTheDocument();
-  });
+    expect(screen.queryByText('Edit')).not.toBeInTheDocument()
+    expect(screen.queryByText('Delete')).not.toBeInTheDocument()
+  })
 
   it('renders tags when available', () => {
     render(
@@ -150,47 +150,47 @@ describe('Instructions Package', () => {
         instruction={mockInstruction}
         onView={mockHandlers.onView}
         isEditable={false}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('spaceship')).toBeInTheDocument();
-    expect(screen.getByText('sci-fi')).toBeInTheDocument();
-    expect(screen.getByText('custom')).toBeInTheDocument();
-  });
+    expect(screen.getByText('spaceship')).toBeInTheDocument()
+    expect(screen.getByText('sci-fi')).toBeInTheDocument()
+    expect(screen.getByText('custom')).toBeInTheDocument()
+  })
 
   it('renders without cover image', () => {
     const instructionWithoutCover = {
       ...mockInstruction,
       coverImage: undefined,
-    };
+    }
 
     render(
       <InstructionsCard
         instruction={instructionWithoutCover}
         onView={mockHandlers.onView}
         isEditable={false}
-      />
-    );
+      />,
+    )
 
-    expect(screen.getByText('LEGO Spaceship MOC')).toBeInTheDocument();
-    expect(screen.queryByAltText('Cover for LEGO Spaceship MOC')).not.toBeInTheDocument();
-  });
+    expect(screen.getByText('LEGO Spaceship MOC')).toBeInTheDocument()
+    expect(screen.queryByAltText('Cover for LEGO Spaceship MOC')).not.toBeInTheDocument()
+  })
 
   it('renders without rating', () => {
     const instructionWithoutRating = {
       ...mockInstruction,
       rating: undefined,
-    };
+    }
 
     render(
       <InstructionsCard
         instruction={instructionWithoutRating}
         onView={mockHandlers.onView}
         isEditable={false}
-      />
-    );
+      />,
+    )
 
-    expect(screen.queryByText('Rating:')).not.toBeInTheDocument();
-    expect(screen.queryByText('4.5/5')).not.toBeInTheDocument();
-  });
-}); 
+    expect(screen.queryByText('Rating:')).not.toBeInTheDocument()
+    expect(screen.queryByText('4.5/5')).not.toBeInTheDocument()
+  })
+})

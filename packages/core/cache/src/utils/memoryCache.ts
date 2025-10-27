@@ -21,7 +21,11 @@ export class MemoryCache {
    */
   set(key: string, data: unknown, maxAge?: number): void {
     const now = Date.now()
-    const expiresAt = maxAge ? now + maxAge : this.config.maxAge ? now + this.config.maxAge : undefined
+    const expiresAt = maxAge
+      ? now + maxAge
+      : this.config.maxAge
+        ? now + this.config.maxAge
+        : undefined
 
     const entry: CacheEntry = {
       key,
@@ -51,7 +55,7 @@ export class MemoryCache {
    */
   get<T = unknown>(key: string): T | null {
     const entry = this.cache.get(key)
-    
+
     if (!entry) {
       this.stats.misses++
       return null
@@ -117,9 +121,10 @@ export class MemoryCache {
     const hitRate = totalHits > 0 ? this.stats.hits / totalHits : 0
 
     const timestamps = entries.map(entry => entry.timestamp)
-    const averageAge = timestamps.length > 0 
-      ? timestamps.reduce((sum, ts) => sum + (Date.now() - ts), 0) / timestamps.length 
-      : 0
+    const averageAge =
+      timestamps.length > 0
+        ? timestamps.reduce((sum, ts) => sum + (Date.now() - ts), 0) / timestamps.length
+        : 0
 
     return {
       hits: this.stats.hits,
@@ -206,4 +211,4 @@ export class MemoryCache {
       return 0
     }
   }
-} 
+}

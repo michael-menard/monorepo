@@ -34,16 +34,19 @@ All packages follow consistent naming conventions:
 ## 📦 Package Categories
 
 ### Core Packages
+
 - **@repo/shared** - Core shared utilities, store, design system
 - **@repo/ui** - Reusable UI components built with Radix UI and Tailwind
 - **@repo/auth** - Authentication utilities and route guards
 
 ### Utility Packages
+
 - **@repo/shared-cache** - Caching utilities (memory, storage, RTK Query)
 - **@repo/tech-radar** - Interactive technology radar component
 - **@monorepo/upload** - Unified file and image upload system with drag-and-drop, progress tracking, validation, and image processing
 
 ### Feature Packages
+
 - **@repo/gallery** - Image gallery components
 - **@repo/moc-instructions** - LEGO MOC instruction features
 - **@repo/profile** - User profile management
@@ -55,6 +58,7 @@ All packages follow consistent naming conventions:
 All packages follow these standards:
 
 ### package.json Structure
+
 ```json
 {
   "name": "@repo/package-name",
@@ -74,6 +78,7 @@ All packages follow these standards:
 ```
 
 ### Standard Scripts
+
 ```json
 {
   "scripts": {
@@ -92,6 +97,7 @@ All packages follow these standards:
 ```
 
 ### Dependencies
+
 - **React**: `^19.1.0` (consistent across all packages)
 - **TypeScript**: `5.8.3` (exact version for consistency)
 - **Vite**: `^5.2.10` (build tool)
@@ -100,6 +106,7 @@ All packages follow these standards:
 ## 🚀 Creating New Packages
 
 1. **Copy the template**:
+
    ```bash
    cp -r packages/.template packages/my-new-package
    ```
@@ -110,6 +117,7 @@ All packages follow these standards:
    - Add specific dependencies
 
 3. **Install dependencies**:
+
    ```bash
    cd packages/my-new-package
    pnpm install
@@ -125,23 +133,27 @@ All packages follow these standards:
 ## 📋 Development Guidelines
 
 ### Code Organization
+
 - Use `src/` directory for source code
 - Export main functionality from `src/index.ts`
 - Include tests in `src/__tests__/` or `__tests__/`
 - Add documentation in README.md
 
 ### Testing
+
 - Write unit tests for all public APIs
 - Use Vitest for testing framework
 - Include `@testing-library/react` for component testing
 - Aim for high test coverage
 
 ### TypeScript
+
 - Use strict TypeScript configuration
 - Export types alongside implementations
 - Use proper type definitions for all public APIs
 
 ### Dependencies
+
 - Keep dependencies minimal and focused
 - Use workspace dependencies (`workspace:*`) for internal packages
 - Prefer peer dependencies for React and common libraries
@@ -149,12 +161,14 @@ All packages follow these standards:
 ## 🔧 Maintenance
 
 ### Regular Tasks
+
 - Run `pnpm run sync-deps` to keep dependencies aligned
 - Update package versions using changesets
 - Run tests across all packages: `pnpm test`
 - Check types: `pnpm check-types`
 
 ### Troubleshooting
+
 - **Build issues**: Check TypeScript configuration and dependencies
 - **Import errors**: Verify package exports and workspace configuration
 - **Version conflicts**: Run dependency sync script

@@ -26,7 +26,10 @@ export {
 export { CachedImage, ImageGallery, CacheStatus } from './components/CachedImage'
 
 // Cache factory function
-export async function createCache(type: 'memory' | 'localStorage' | 'sessionStorage', config?: any) {
+export async function createCache(
+  type: 'memory' | 'localStorage' | 'sessionStorage',
+  config?: any,
+) {
   switch (type) {
     case 'memory':
       const { MemoryCache } = await import('./utils/memoryCache')
@@ -41,4 +44,4 @@ export async function createCache(type: 'memory' | 'localStorage' | 'sessionStor
     default:
       throw new Error(`Unknown cache type: ${type}`)
   }
-} 
+}

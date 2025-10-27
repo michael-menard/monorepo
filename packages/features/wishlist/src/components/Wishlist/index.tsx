@@ -1,26 +1,29 @@
-import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import WishlistItemCard from '../WishlistItemCard/index.js';
-import BatchOperationsToolbar from '../BatchOperationsToolbar/index.js';
-import { useGetWishlistItemsQuery, useReorderWishlistItemsMutation } from '../../store/wishlistApi.js';
-import { useKeyboardDragAndDrop, KeyboardDragDropArea } from '@repo/accessibility';
-import type { WishlistItem } from '../../schemas';
+import React, { useState, useCallback } from 'react'
+import { motion } from 'framer-motion'
+import { useKeyboardDragAndDrop, KeyboardDragDropArea } from '@repo/accessibility'
+import WishlistItemCard from '../WishlistItemCard/index.js'
+import BatchOperationsToolbar from '../BatchOperationsToolbar/index.js'
+import {
+  useGetWishlistItemsQuery,
+  useReorderWishlistItemsMutation,
+} from '../../store/wishlistApi.js'
+import type { WishlistItem } from '../../schemas'
 
 export interface WishlistProps {
-  wishlistId: string;
-  className?: string;
-  onItemEdit?: (item: WishlistItem) => void;
-  onItemDelete?: (id: string) => void;
-  onItemTogglePurchased?: (id: string) => void;
-  onItemsDeleted?: (deletedIds: string[]) => void;
-  onItemsUpdated?: (updatedIds: string[]) => void;
-  onItemsToggled?: (toggledIds: string[], isPurchased: boolean) => void;
+  wishlistId: string
+  className?: string
+  onItemEdit?: (item: WishlistItem) => void
+  onItemDelete?: (id: string) => void
+  onItemTogglePurchased?: (id: string) => void
+  onItemsDeleted?: (deletedIds: string[]) => void
+  onItemsUpdated?: (updatedIds: string[]) => void
+  onItemsToggled?: (toggledIds: string[], isPurchased: boolean) => void
   filters?: {
-    search?: string;
-    category?: string;
-    priority?: 'low' | 'medium' | 'high';
-    isPurchased?: boolean;
-  };
+    search?: string
+    category?: string
+    priority?: 'low' | 'medium' | 'high'
+    isPurchased?: boolean
+  }
 }
 
 const Wishlist: React.FC<WishlistProps> = ({
@@ -34,14 +37,18 @@ const Wishlist: React.FC<WishlistProps> = ({
   onItemsToggled,
   filters = {},
 }) => {
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [reorderWishlistItems] = useReorderWishlistItemsMutation();
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [reorderWishlistItems] = useReorderWishlistItemsMutation()
 
   // Fetch wishlist items
-  const { data: items = [], isLoading, error } = useGetWishlistItemsQuery({
+  const {
+    data: items = [],
+    isLoading,
+    error,
+  } = useGetWishlistItemsQuery({
     wishlistId,
     filters,
-  });
+  })
 
   // Keyboard drag and drop functionality
   const [keyboardDragState, keyboardDragActions] = useKeyboardDragAndDrop({
@@ -51,7 +58,7 @@ const Wishlist: React.FC<WishlistProps> = ({
         wishlistId,
         sourceIndex,
         destinationIndex,
-      });
+      })
     },
     onMove: (itemId, sourceIndex, destinationIndex) => {
       // This will be handled by the API call above
@@ -64,29 +71,36 @@ const Wishlist: React.FC<WishlistProps> = ({
     },
     itemType: 'wishlist item',
     source: 'wishlist',
-  });
+  })
 
   const handleItemSelect = useCallback((itemId: string, checked: boolean) => {
-    setSelectedItems((prev) =>
-      checked ? [...prev, itemId] : prev.filter((id) => id !== itemId)
-    );
-  }, []);
+    setSelectedItems(prev => (checked ? [...prev, itemId] : prev.filter(id => id !== itemId)))
+  }, [])
 
   const handleClearSelection = useCallback(() => {
-    setSelectedItems([]);
-  }, []);
+    setSelectedItems([])
+  }, [])
 
-  const handleItemsDeleted = useCallback((deletedIds: string[]) => {
-    onItemsDeleted?.(deletedIds);
-  }, [onItemsDeleted]);
+  const handleItemsDeleted = useCallback(
+    (deletedIds: string[]) => {
+      onItemsDeleted?.(deletedIds)
+    },
+    [onItemsDeleted],
+  )
 
-  const handleItemsUpdated = useCallback((updatedIds: string[]) => {
-    onItemsUpdated?.(updatedIds);
-  }, [onItemsUpdated]);
+  const handleItemsUpdated = useCallback(
+    (updatedIds: string[]) => {
+      onItemsUpdated?.(updatedIds)
+    },
+    [onItemsUpdated],
+  )
 
-  const handleItemsToggled = useCallback((toggledIds: string[], isPurchased: boolean) => {
-    onItemsToggled?.(toggledIds, isPurchased);
-  }, [onItemsToggled]);
+  const handleItemsToggled = useCallback(
+    (toggledIds: string[], isPurchased: boolean) => {
+      onItemsToggled?.(toggledIds, isPurchased)
+    },
+    [onItemsToggled],
+  )
 
   if (isLoading) {
     return (
@@ -96,17 +110,15 @@ const Wishlist: React.FC<WishlistProps> = ({
           Loading wishlist items...
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
       <div className={`flex items-center justify-center p-8 ${className}`}>
-        <div className="text-red-600">
-          Error loading wishlist items. Please try again.
-        </div>
+        <div className="text-red-600">Error loading wishlist items. Please try again.</div>
       </div>
-    );
+    )
   }
 
   if (items.length === 0) {
@@ -117,7 +129,7 @@ const Wishlist: React.FC<WishlistProps> = ({
           <p className="text-sm">Add some items to your wishlist to get started.</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -144,14 +156,20 @@ const Wishlist: React.FC<WishlistProps> = ({
                 onDelete={onItemDelete}
                 onTogglePurchased={onItemTogglePurchased}
                 selected={selectedItems.includes(item.id)}
-                onSelect={(checked) => handleItemSelect(item.id, checked)}
+                onSelect={checked => handleItemSelect(item.id, checked)}
                 showCheckbox={true}
                 // Keyboard accessibility props
-                onKeyDown={(e) => keyboardDragActions.handleKeyDown(e, item.id, index)}
+                onKeyDown={e => keyboardDragActions.handleKeyDown(e, item.id, index)}
                 onFocus={() => keyboardDragActions.handleFocus(item.id, index)}
                 onBlur={keyboardDragActions.handleBlur}
-                isKeyboardFocused={keyboardDragState.isFocused && keyboardDragState.draggedItemId === item.id}
-                isKeyboardDragging={keyboardDragState.isKeyboardDragging && keyboardDragState.draggedItemId === item.id}
+                isKeyboardFocused={
+                  keyboardDragState.isFocused ? keyboardDragState.draggedItemId === item.id : null
+                }
+                isKeyboardDragging={
+                  keyboardDragState.isKeyboardDragging
+                    ? keyboardDragState.draggedItemId === item.id
+                    : null
+                }
                 showKeyboardInstructions={keyboardDragState.isKeyboardDragging}
               />
             </motion.div>
@@ -170,7 +188,7 @@ const Wishlist: React.FC<WishlistProps> = ({
         onItemsToggled={handleItemsToggled}
       />
     </>
-  );
-};
+  )
+}
 
-export default Wishlist; 
+export default Wishlist

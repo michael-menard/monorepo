@@ -1,86 +1,86 @@
-import React, { useEffect, useState } from 'react';
-import { ProfileDashboard } from '../ProfileDashboard';
-import { ProfileWishlistSection } from '../ProfileWishlistSection';
-import { ProfileMocInstructionsSection } from '../ProfileMocInstructionsSection';
+import React, { useEffect, useState } from 'react'
+import { ProfileDashboard } from '../ProfileDashboard'
+import { ProfileWishlistSection } from '../ProfileWishlistSection'
+import { ProfileMocInstructionsSection } from '../ProfileMocInstructionsSection'
 
 // Mock data imports (in a real app, these would come from API/store)
 interface WishlistItem {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  url: string;
-  imageUrl: string;
-  priority: 'low' | 'medium' | 'high';
-  category?: string;
-  isPurchased: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  description?: string
+  price: number
+  url: string
+  imageUrl: string
+  priority: 'low' | 'medium' | 'high'
+  category?: string
+  isPurchased: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface MockInstruction {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  tags: string[];
-  coverImageUrl?: string;
-  rating?: number;
-  downloadCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  title: string
+  description: string
+  author: string
+  category: string
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  tags: string[]
+  coverImageUrl?: string
+  rating?: number
+  downloadCount: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface UserStats {
-  totalWishlistItems: number;
-  totalMocInstructions: number;
-  totalDownloads: number;
-  memberSince: string;
-  favoriteCategory: string;
-  totalSpent: number;
-  averageRating: number;
-  profileViews: number;
-  followersCount: number;
-  followingCount: number;
+  totalWishlistItems: number
+  totalMocInstructions: number
+  totalDownloads: number
+  memberSince: string
+  favoriteCategory: string
+  totalSpent: number
+  averageRating: number
+  profileViews: number
+  followersCount: number
+  followingCount: number
 }
 
 interface RecentActivity {
-  id: string;
-  type: 'download' | 'wishlist_add' | 'instruction_upload' | 'review' | 'follow';
-  title: string;
-  description: string;
-  timestamp: Date;
-  imageUrl?: string;
+  id: string
+  type: 'download' | 'wishlist_add' | 'instruction_upload' | 'review' | 'follow'
+  title: string
+  description: string
+  timestamp: Date
+  imageUrl?: string
 }
 
 interface QuickAction {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  href: string;
-  color: 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
+  id: string
+  title: string
+  description: string
+  icon: string
+  href: string
+  color: 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
 }
 
 interface ProfileContentProps {
   // Data props - in a real app these would come from Redux/RTK Query
-  wishlistItems?: WishlistItem[];
-  mocInstructions?: MockInstruction[];
-  userStats?: UserStats;
-  recentActivities?: RecentActivity[];
-  quickActions?: QuickAction[];
-  
+  wishlistItems?: WishlistItem[]
+  mocInstructions?: MockInstruction[]
+  userStats?: UserStats
+  recentActivities?: RecentActivity[]
+  quickActions?: QuickAction[]
+
   // Loading states
-  loading?: boolean;
-  wishlistLoading?: boolean;
-  instructionsLoading?: boolean;
-  
+  loading?: boolean
+  wishlistLoading?: boolean
+  instructionsLoading?: boolean
+
   // Configuration
-  wishlistLimit?: number;
-  instructionsLimit?: number;
-  showViewAllLinks?: boolean;
+  wishlistLimit?: number
+  instructionsLimit?: number
+  showViewAllLinks?: boolean
 }
 
 export const ProfileContent: React.FC<ProfileContentProps> = ({
@@ -96,34 +96,39 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
   instructionsLimit = 5,
   showViewAllLinks = true,
 }) => {
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
 
   useEffect(() => {
     // Simulate initial data loading
     const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 1000);
+      setIsInitialLoading(false)
+    }, 1000)
 
-    return () => clearTimeout(timer);
-  }, []);
+    return () => clearTimeout(timer)
+  }, [])
 
   // Default user stats if not provided
   const defaultStats: UserStats = {
     totalWishlistItems: wishlistItems.length,
     totalMocInstructions: mocInstructions.length,
-    totalDownloads: mocInstructions.reduce((sum, instruction) => sum + instruction.downloadCount, 0),
+    totalDownloads: mocInstructions.reduce(
+      (sum, instruction) => sum + instruction.downloadCount,
+      0,
+    ),
     memberSince: '2023-01-15',
     favoriteCategory: 'Star Wars',
     totalSpent: wishlistItems.reduce((sum, item) => sum + (item.isPurchased ? item.price : 0), 0),
-    averageRating: mocInstructions.length > 0 
-      ? mocInstructions.reduce((sum, instruction) => sum + (instruction.rating || 0), 0) / mocInstructions.length
-      : 0,
+    averageRating:
+      mocInstructions.length > 0
+        ? mocInstructions.reduce((sum, instruction) => sum + (instruction.rating || 0), 0) /
+          mocInstructions.length
+        : 0,
     profileViews: 1234,
     followersCount: 89,
     followingCount: 156,
-  };
+  }
 
-  const stats = userStats || defaultStats;
+  const stats = userStats || defaultStats
 
   // Default quick actions if not provided
   const defaultQuickActions: QuickAction[] = [
@@ -175,9 +180,9 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
       href: '/settings',
       color: 'secondary',
     },
-  ];
+  ]
 
-  const actions = quickActions.length > 0 ? quickActions : defaultQuickActions;
+  const actions = quickActions.length > 0 ? quickActions : defaultQuickActions
 
   if (isInitialLoading || loading) {
     return (
@@ -191,7 +196,7 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
             </div>
           ))}
         </div>
-        
+
         {/* Sections skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[...Array(2)].map((_, i) => (
@@ -206,7 +211,7 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
           ))}
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -240,5 +245,5 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
         />
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const confirmResetPasswordSchema = z
   .object({
@@ -12,9 +12,9 @@ export const confirmResetPasswordSchema = z
       .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
     confirmPassword: z.string(),
   })
-  .refine((data) => data.newPassword === data.confirmPassword, {
+  .refine(data => data.newPassword === data.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
-  });
+  })
 
-export type ConfirmResetPasswordFormData = z.infer<typeof confirmResetPasswordSchema>; 
+export type ConfirmResetPasswordFormData = z.infer<typeof confirmResetPasswordSchema>

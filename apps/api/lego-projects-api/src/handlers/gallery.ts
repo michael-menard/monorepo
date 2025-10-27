@@ -1,12 +1,12 @@
-import { Request, Response } from 'express';
-import { db } from '../db/client';
-import { galleryImages, galleryAlbums, galleryFlags } from '../db/schema';
-import { processImage, HIGH_QUALITY_CONFIG } from '../utils/imageProcessor';
-import path from 'path';
-import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
-import { eq, and, inArray, isNull, desc } from 'drizzle-orm';
-import { z } from 'zod';
+import path from 'path'
+import fs from 'fs'
+import { Request, Response } from 'express'
+import { v4 as uuidv4 } from 'uuid'
+import { eq, and, inArray, isNull, desc } from 'drizzle-orm'
+import { z } from 'zod'
+import { processImage, HIGH_QUALITY_CONFIG } from '../utils/imageProcessor'
+import { galleryImages, galleryAlbums, galleryFlags } from '../db/schema'
+import { db } from '../db/client'
 import {
   indexImage,
   updateImage,
@@ -15,40 +15,40 @@ import {
   updateAlbum,
   deleteAlbum,
   searchGalleryItems,
-} from '../utils/elasticsearch';
+} from '../utils/elasticsearch'
 
 // POST /api/images - Upload gallery image
 export const uploadGalleryImage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
-    const file = req.file;
+    const file = req.file
     if (!file) {
-      return res.status(400).json({ error: 'Image file is required' });
+      return res.status(400).json({ error: 'Image file is required' })
     }
     // Enforce max file size (50MB)
     if (file.size > 50 * 1024 * 1024) {
-      return res.status(413).json({ error: 'File too large. Maximum size is 50MB.' });
+      return res.status(413).json({ error: 'File too large. Maximum size is 50MB.' })
     }
     // Process image (strip EXIF, resize/compress)
-    const processedBuffer = await processImage(file.buffer, HIGH_QUALITY_CONFIG);
+    const processedBuffer = await processImage(file.buffer, HIGH_QUALITY_CONFIG)
     // Save processed image to disk (local dev)
-    const albumId = req.body?.albumId || 'uncategorized';
-    const imageId = uuidv4();
-    const ext = path.extname(file.originalname) || '.jpg';
-    const dir = path.join('uploads', 'gallery', userId, albumId);
+    const albumId = req.body?.albumId || 'uncategorized'
+    const imageId = uuidv4()
+    const ext = path.extname(file.originalname) || '.jpg'
+    const dir = path.join('uploads', 'gallery', userId, albumId)
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true })
     }
-    const filename = `${imageId}${ext}`;
-    const filepath = path.join(dir, filename);
-    fs.writeFileSync(filepath, processedBuffer);
+    const filename = `${imageId}${ext}`
+    const filepath = path.join(dir, filename)
+    fs.writeFileSync(filepath, processedBuffer)
     // Build image URL (local path)
-    const imageUrl = `/${filepath.replace(/\\/g, '/')}`;
+    const imageUrl = `/${filepath.replace(/\\/g, '/')}`
     // Insert metadata into DB
-    const { title, description, tags } = req.body;
+    const { title, description, tags } = req.body
     const [image] = await db
       .insert(galleryImages)
       .values({
@@ -63,159 +63,159 @@ export const uploadGalleryImage = async (req: Request, res: Response) => {
         createdAt: new Date(),
         lastUpdatedAt: new Date(),
       })
-      .returning();
+      .returning()
     // Index in Elasticsearch
-    await indexImage(image);
+    await indexImage(image)
     return res.status(201).json({
       message: 'Image uploaded successfully',
       image,
-    });
+    })
   } catch (error) {
-    console.error('uploadGalleryImage error:', error);
+    console.error('uploadGalleryImage error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to upload image', details: (error as Error).message });
+      .json({ error: 'Failed to upload image', details: (error as Error).message })
   }
-};
+}
 
 // PATCH /api/images/:id - Edit image metadata
 export const updateGalleryImage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    const { id } = req.params;
+    const userId = req.user?.id
+    const userRole = req.user?.role
+    const { id } = req.params
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Fetch image from DB
-    const [image] = await db.select().from(galleryImages).where(eq(galleryImages.id, id));
+    const [image] = await db.select().from(galleryImages).where(eq(galleryImages.id, id))
     if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
+      return res.status(404).json({ error: 'Image not found' })
     }
     // Only owner or admin can edit
     if (image.userId !== userId && userRole !== 'admin') {
       return res
         .status(403)
-        .json({ error: 'Forbidden: You do not have permission to edit this image' });
+        .json({ error: 'Forbidden: You do not have permission to edit this image' })
     }
     // Validate input
-    const { title, description, tags, albumId } = req.body;
-    const updateData: any = {};
+    const { title, description, tags, albumId } = req.body
+    const updateData: any = {}
     if (title !== undefined) {
       if (typeof title !== 'string' || !title.trim()) {
-        return res.status(400).json({ error: 'Title must be a non-empty string' });
+        return res.status(400).json({ error: 'Title must be a non-empty string' })
       }
-      updateData.title = title.trim();
+      updateData.title = title.trim()
     }
     if (description !== undefined) {
-      updateData.description = typeof description === 'string' ? description : null;
+      updateData.description = typeof description === 'string' ? description : null
     }
     if (tags !== undefined) {
       if (Array.isArray(tags)) {
-        if (!tags.every((t) => typeof t === 'string')) {
-          return res.status(400).json({ error: 'Tags must be an array of strings' });
+        if (!tags.every(t => typeof t === 'string')) {
+          return res.status(400).json({ error: 'Tags must be an array of strings' })
         }
-        updateData.tags = tags;
+        updateData.tags = tags
       } else if (typeof tags === 'string') {
-        updateData.tags = [tags];
+        updateData.tags = [tags]
       } else {
-        return res.status(400).json({ error: 'Tags must be an array of strings or a string' });
+        return res.status(400).json({ error: 'Tags must be an array of strings or a string' })
       }
     }
     if (albumId !== undefined) {
-      updateData.albumId = albumId || null;
+      updateData.albumId = albumId || null
     }
-    updateData.lastUpdatedAt = new Date();
+    updateData.lastUpdatedAt = new Date()
     // Update DB
     const [updatedImage] = await db
       .update(galleryImages)
       .set(updateData)
       .where(eq(galleryImages.id, id))
-      .returning();
+      .returning()
     // Update in Elasticsearch
-    await updateImage(updatedImage);
+    await updateImage(updatedImage)
     return res.json({
       message: 'Image metadata updated',
       image: updatedImage,
-    });
+    })
   } catch (error) {
-    console.error('updateGalleryImage error:', error);
+    console.error('updateGalleryImage error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to update image', details: (error as Error).message });
+      .json({ error: 'Failed to update image', details: (error as Error).message })
   }
-};
+}
 
 // DELETE /api/images/:id - Delete gallery image
 export const deleteGalleryImage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    const { id } = req.params;
+    const userId = req.user?.id
+    const userRole = req.user?.role
+    const { id } = req.params
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Fetch image from DB
-    const [image] = await db.select().from(galleryImages).where(eq(galleryImages.id, id));
+    const [image] = await db.select().from(galleryImages).where(eq(galleryImages.id, id))
     if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
+      return res.status(404).json({ error: 'Image not found' })
     }
     // Only owner or admin can delete
     if (image.userId !== userId && userRole !== 'admin') {
       return res
         .status(403)
-        .json({ error: 'Forbidden: You do not have permission to delete this image' });
+        .json({ error: 'Forbidden: You do not have permission to delete this image' })
     }
     // Remove file from local storage
     if (image.imageUrl && image.imageUrl.startsWith('/uploads/')) {
-      const filePath = image.imageUrl.startsWith('/') ? image.imageUrl.slice(1) : image.imageUrl;
+      const filePath = image.imageUrl.startsWith('/') ? image.imageUrl.slice(1) : image.imageUrl
       if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        fs.unlinkSync(filePath)
       }
     }
     // Remove from DB
     const [deletedImage] = await db
       .delete(galleryImages)
       .where(eq(galleryImages.id, id))
-      .returning();
+      .returning()
     // Remove from Elasticsearch
-    await deleteImageES(id);
+    await deleteImageES(id)
     return res.json({
       message: 'Image deleted successfully',
       image: deletedImage,
-    });
+    })
   } catch (error) {
-    console.error('deleteGalleryImage error:', error);
+    console.error('deleteGalleryImage error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to delete image', details: (error as Error).message });
+      .json({ error: 'Failed to delete image', details: (error as Error).message })
   }
-};
+}
 
 // POST /api/flag - Flag an image for moderation
 export const flagImage = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Validate input
     const FlagSchema = z.object({
       imageId: z.string().uuid(),
       reason: z.string().optional(),
-    });
-    const parse = FlagSchema.safeParse(req.body);
+    })
+    const parse = FlagSchema.safeParse(req.body)
     if (!parse.success) {
-      return res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
+      return res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() })
     }
-    const { imageId, reason } = parse.data;
+    const { imageId, reason } = parse.data
     // Check if already flagged
     const existing = await db
       .select()
       .from(galleryFlags)
-      .where(and(eq(galleryFlags.imageId, imageId), eq(galleryFlags.userId, userId)));
+      .where(and(eq(galleryFlags.imageId, imageId), eq(galleryFlags.userId, userId)))
     if (existing.length > 0) {
-      return res.status(409).json({ error: 'You have already flagged this image' });
+      return res.status(409).json({ error: 'You have already flagged this image' })
     }
     // Insert flag
     const [flag] = await db
@@ -227,64 +227,64 @@ export const flagImage = async (req: Request, res: Response) => {
         createdAt: new Date(),
         lastUpdatedAt: new Date(),
       })
-      .returning();
+      .returning()
     return res.status(201).json({
       message: 'Image flagged for moderation',
       flag,
-    });
+    })
   } catch (error) {
-    console.error('flagImage error:', error);
+    console.error('flagImage error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to flag image', details: (error as Error).message });
+      .json({ error: 'Failed to flag image', details: (error as Error).message })
   }
-};
+}
 
 // GET /api/albums/:id - Get album data and images
 export const getAlbum = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    const { id } = req.params;
+    const userId = req.user?.id
+    const userRole = req.user?.role
+    const { id } = req.params
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Fetch album
-    const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id));
+    const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id))
     if (!album) {
-      return res.status(404).json({ error: 'Album not found' });
+      return res.status(404).json({ error: 'Album not found' })
     }
     // Only owner or admin can view
     if (album.userId !== userId && userRole !== 'admin') {
       return res
         .status(403)
-        .json({ error: 'Forbidden: You do not have permission to view this album' });
+        .json({ error: 'Forbidden: You do not have permission to view this album' })
     }
     // Fetch images in album
-    const images = await db.select().from(galleryImages).where(eq(galleryImages.albumId, id));
+    const images = await db.select().from(galleryImages).where(eq(galleryImages.albumId, id))
     return res.json({
       album,
       images,
-    });
+    })
   } catch (error) {
-    console.error('getAlbum error:', error);
+    console.error('getAlbum error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to fetch album', details: (error as Error).message });
+      .json({ error: 'Failed to fetch album', details: (error as Error).message })
   }
-};
+}
 
 // GET /api/albums - List all albums for the authenticated user
 export const getAllAlbums = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Optionally include images if ?withImages=true
-    const withImages = req.query.withImages === 'true';
-    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100));
-    const cursor = Math.max(0, Number(req.query.cursor) || 0);
+    const withImages = req.query.withImages === 'true'
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100))
+    const cursor = Math.max(0, Number(req.query.cursor) || 0)
 
     const albums = await db
       .select()
@@ -292,52 +292,52 @@ export const getAllAlbums = async (req: Request, res: Response) => {
       .where(eq(galleryAlbums.userId, userId))
       .orderBy(desc(galleryAlbums.createdAt))
       .limit(limit)
-      .offset(cursor);
+      .offset(cursor)
     if (withImages) {
       // Fetch images for each album using inArray
-      const albumIds = albums.map((a) => a.id);
+      const albumIds = albums.map(a => a.id)
       const images =
         albumIds.length > 0
           ? await db.select().from(galleryImages).where(inArray(galleryImages.albumId, albumIds))
-          : [];
-      const albumsWithImages = albums.map((album) => ({
+          : []
+      const albumsWithImages = albums.map(album => ({
         ...album,
-        images: images.filter((img) => img.albumId === album.id),
-      }));
-      return res.json({ albums: albumsWithImages });
+        images: images.filter(img => img.albumId === album.id),
+      }))
+      return res.json({ albums: albumsWithImages })
     }
-    return res.json({ albums });
+    return res.json({ albums })
   } catch (error) {
-    console.error('getAllAlbums error:', error);
+    console.error('getAllAlbums error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to fetch albums', details: (error as Error).message });
+      .json({ error: 'Failed to fetch albums', details: (error as Error).message })
   }
-};
+}
 
 // GET /api/images - List all images for the authenticated user (with optional filters)
 export const getAllImages = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Optional filters
-    const { albumId, flagged, tag } = req.query;
+    const { albumId, flagged, tag } = req.query
 
     // Pagination (DB-level)
-    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100));
-    const cursor = Math.max(0, Number(req.query.cursor) || 0);
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100))
+    const cursor = Math.max(0, Number(req.query.cursor) || 0)
 
     // Build where clause as array
-    const conditions = [eq(galleryImages.userId, userId)];
+    const conditions = [eq(galleryImages.userId, userId)]
     if (albumId) {
-      conditions.push(eq(galleryImages.albumId, String(albumId)));
+      conditions.push(eq(galleryImages.albumId, String(albumId)))
     }
     if (flagged !== undefined) {
-      conditions.push(eq(galleryImages.flagged, flagged === 'true'));
+      conditions.push(eq(galleryImages.flagged, flagged === 'true'))
     }
-    const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+    const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0]
 
     let images = await db
       .select()
@@ -345,26 +345,26 @@ export const getAllImages = async (req: Request, res: Response) => {
       .where(whereClause)
       .orderBy(desc(galleryImages.createdAt))
       .limit(limit)
-      .offset(cursor);
+      .offset(cursor)
     if (tag) {
       // Filter by tag (array contains)
-      images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(String(tag)));
+      images = images.filter(img => Array.isArray(img.tags) && img.tags.includes(String(tag)))
     }
-    return res.json({ images });
+    return res.json({ images })
   } catch (error) {
-    console.error('getAllImages error:', error);
+    console.error('getAllImages error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to fetch images', details: (error as Error).message });
+      .json({ error: 'Failed to fetch images', details: (error as Error).message })
   }
-};
+}
 
 // POST /api/albums - Create album (stub for demonstration)
 export const createAlbum = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { title, description, coverImageId } = req.body;
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const { title, description, coverImageId } = req.body
     const [album] = await db
       .insert(galleryAlbums)
       .values({
@@ -375,91 +375,91 @@ export const createAlbum = async (req: Request, res: Response) => {
         createdAt: new Date(),
         lastUpdatedAt: new Date(),
       })
-      .returning();
-    await indexAlbum(album);
-    return res.status(201).json({ album });
+      .returning()
+    await indexAlbum(album)
+    return res.status(201).json({ album })
   } catch (error) {
     return res
       .status(500)
-      .json({ error: 'Failed to create album', details: (error as Error).message });
+      .json({ error: 'Failed to create album', details: (error as Error).message })
   }
-};
+}
 
 // PATCH /api/albums/:id - Update album (stub for demonstration)
 export const updateAlbumHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    const { id } = req.params;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.user?.id
+    const { id } = req.params
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     // Ensure ownership
-    const [existing] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id));
+    const [existing] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id))
     if (!existing) {
-      return res.status(404).json({ error: 'Album not found' });
+      return res.status(404).json({ error: 'Album not found' })
     }
     if (existing.userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden: You do not own this album' });
+      return res.status(403).json({ error: 'Forbidden: You do not own this album' })
     }
 
-    const { title, description, coverImageId } = req.body;
+    const { title, description, coverImageId } = req.body
     const [album] = await db
       .update(galleryAlbums)
       .set({ title, description, coverImageId, lastUpdatedAt: new Date() })
       .where(eq(galleryAlbums.id, id))
-      .returning();
-    await updateAlbum(album);
-    return res.json({ album });
+      .returning()
+    await updateAlbum(album)
+    return res.json({ album })
   } catch (error) {
     return res
       .status(500)
-      .json({ error: 'Failed to update album', details: (error as Error).message });
+      .json({ error: 'Failed to update album', details: (error as Error).message })
   }
-};
+}
 
 // DELETE /api/albums/:id - Delete album (stub for demonstration)
 export const deleteAlbumHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    const { id } = req.params;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.user?.id
+    const { id } = req.params
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     // Ensure ownership
-    const [existing] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id));
+    const [existing] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, id))
     if (!existing) {
-      return res.status(404).json({ error: 'Album not found' });
+      return res.status(404).json({ error: 'Album not found' })
     }
     if (existing.userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden: You do not own this album' });
+      return res.status(403).json({ error: 'Forbidden: You do not own this album' })
     }
 
-    const [album] = await db.delete(galleryAlbums).where(eq(galleryAlbums.id, id)).returning();
-    await deleteAlbum(id);
-    return res.json({ album });
+    const [album] = await db.delete(galleryAlbums).where(eq(galleryAlbums.id, id)).returning()
+    await deleteAlbum(id)
+    return res.json({ album })
   } catch (error) {
     return res
       .status(500)
-      .json({ error: 'Failed to delete album', details: (error as Error).message });
+      .json({ error: 'Failed to delete album', details: (error as Error).message })
   }
-};
+}
 
 // GET /api/gallery - Unified gallery endpoint (with ES search for albums and images)
 export const getGallery = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' })
     }
     // Query params
-    const type = (req.query.type as string) || 'all';
-    const tag = req.query.tag as string | undefined;
-    const albumId = req.query.albumId as string | undefined;
-    const flagged = req.query.flagged as string | undefined;
-    const search = req.query.search as string | undefined;
-    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100));
-    const cursor = Number(req.query.cursor) || 0; // offset-based for now
+    const type = (req.query.type as string) || 'all'
+    const tag = req.query.tag as string | undefined
+    const albumId = req.query.albumId as string | undefined
+    const flagged = req.query.flagged as string | undefined
+    const search = req.query.search as string | undefined
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100))
+    const cursor = Number(req.query.cursor) || 0 // offset-based for now
 
-    let items: any[] = [];
-    let esResults: any[] | null = null;
+    let items: any[] = []
+    let esResults: any[] | null = null
     if (search || type !== 'all') {
       esResults = await searchGalleryItems({
         userId,
@@ -470,9 +470,9 @@ export const getGallery = async (req: Request, res: Response) => {
         type: type as any,
         from: cursor,
         size: limit,
-      });
+      })
       if (esResults) {
-        items = esResults;
+        items = esResults
       }
     }
 
@@ -484,25 +484,25 @@ export const getGallery = async (req: Request, res: Response) => {
           .select()
           .from(galleryAlbums)
           .where(eq(galleryAlbums.userId, userId))
-          .orderBy(desc(galleryAlbums.createdAt));
+          .orderBy(desc(galleryAlbums.createdAt))
 
         // Apply DB-level limit/offset only when requesting albums specifically
         const baseAlbums =
-          type === 'album' ? await albumsQuery.limit(limit).offset(cursor) : await albumsQuery;
+          type === 'album' ? await albumsQuery.limit(limit).offset(cursor) : await albumsQuery
         const albums = search
           ? baseAlbums.filter(
-              (a) =>
+              a =>
                 a.title?.toLowerCase().includes(search.toLowerCase()) ||
                 a.description?.toLowerCase().includes(search.toLowerCase()),
             )
-          : baseAlbums;
-        items.push(...albums.map((a) => ({ ...a, type: 'album' })));
+          : baseAlbums
+        items.push(...albums.map(a => ({ ...a, type: 'album' })))
       }
       // Fetch images (standalone only unless albumId is specified)
       if ((type === 'image' || type === 'all') && !albumId) {
-        const conditions = [eq(galleryImages.userId, userId), isNull(galleryImages.albumId)];
+        const conditions = [eq(galleryImages.userId, userId), isNull(galleryImages.albumId)]
         if (flagged !== undefined) {
-          conditions.push(eq(galleryImages.flagged, flagged === 'true'));
+          conditions.push(eq(galleryImages.flagged, flagged === 'true'))
         }
         let images = await db
           .select()
@@ -510,25 +510,25 @@ export const getGallery = async (req: Request, res: Response) => {
           .where(and(...conditions))
           .orderBy(desc(galleryImages.createdAt))
           .limit(limit)
-          .offset(cursor);
+          .offset(cursor)
         if (tag) {
-          images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(tag));
+          images = images.filter(img => Array.isArray(img.tags) && img.tags.includes(tag))
         }
         if (search) {
-          const q = search.toLowerCase();
+          const q = search.toLowerCase()
           images = images.filter(
-            (img) =>
+            img =>
               img.title?.toLowerCase().includes(q) ||
               img.description?.toLowerCase().includes(q) ||
-              (Array.isArray(img.tags) && img.tags.some((t) => t.toLowerCase().includes(q))),
-          );
+              (Array.isArray(img.tags) && img.tags.some(t => t.toLowerCase().includes(q))),
+          )
         }
-        items.push(...images.map((i) => ({ ...i, type: 'image' })));
+        items.push(...images.map(i => ({ ...i, type: 'image' })))
       } else if ((type === 'image' || type === 'all') && albumId) {
         // If albumId is specified, show images in that album
-        const conditions = [eq(galleryImages.userId, userId), eq(galleryImages.albumId, albumId)];
+        const conditions = [eq(galleryImages.userId, userId), eq(galleryImages.albumId, albumId)]
         if (flagged !== undefined) {
-          conditions.push(eq(galleryImages.flagged, flagged === 'true'));
+          conditions.push(eq(galleryImages.flagged, flagged === 'true'))
         }
         let images = await db
           .select()
@@ -536,36 +536,36 @@ export const getGallery = async (req: Request, res: Response) => {
           .where(and(...conditions))
           .orderBy(desc(galleryImages.createdAt))
           .limit(limit)
-          .offset(cursor);
+          .offset(cursor)
         if (tag) {
-          images = images.filter((img) => Array.isArray(img.tags) && img.tags.includes(tag));
+          images = images.filter(img => Array.isArray(img.tags) && img.tags.includes(tag))
         }
         if (search) {
-          const q = search.toLowerCase();
+          const q = search.toLowerCase()
           images = images.filter(
-            (img) =>
+            img =>
               img.title?.toLowerCase().includes(q) ||
               img.description?.toLowerCase().includes(q) ||
-              (Array.isArray(img.tags) && img.tags.some((t) => t.toLowerCase().includes(q))),
-          );
+              (Array.isArray(img.tags) && img.tags.some(t => t.toLowerCase().includes(q))),
+          )
         }
-        items.push(...images.map((i) => ({ ...i, type: 'image' })));
+        items.push(...images.map(i => ({ ...i, type: 'image' })))
       }
     }
 
     // Sort by createdAt descending (most recent first)
-    items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     // Pagination (offset-based)
-    const paged = items.slice(0, limit); // already paged if using ES
-    const nextCursor = items.length > limit ? cursor + limit : null;
-    const hasMore = nextCursor !== null;
+    const paged = items.slice(0, limit) // already paged if using ES
+    const nextCursor = items.length > limit ? cursor + limit : null
+    const hasMore = nextCursor !== null
 
-    return res.json({ items: paged, nextCursor, hasMore });
+    return res.json({ items: paged, nextCursor, hasMore })
   } catch (error) {
-    console.error('getGallery error:', error);
+    console.error('getGallery error:', error)
     return res
       .status(500)
-      .json({ error: 'Failed to fetch gallery', details: (error as Error).message });
+      .json({ error: 'Failed to fetch gallery', details: (error as Error).message })
   }
-};
+}

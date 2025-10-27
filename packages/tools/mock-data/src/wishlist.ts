@@ -2,17 +2,17 @@
  * Wishlist item type definition
  */
 export interface WishlistItem {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  url: string;
-  imageUrl: string;
-  priority: 'low' | 'medium' | 'high';
-  category?: string;
-  isPurchased: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  description?: string
+  price: number
+  url: string
+  imageUrl: string
+  priority: 'low' | 'medium' | 'high'
+  category?: string
+  isPurchased: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 /**
@@ -22,7 +22,8 @@ export const mockWishlistItems: WishlistItem[] = [
   {
     id: '1',
     name: 'Millennium Falcon',
-    description: 'The ultimate collector series Millennium Falcon with incredible detail and features.',
+    description:
+      'The ultimate collector series Millennium Falcon with incredible detail and features.',
     price: 849.99,
     url: 'https://www.lego.com/en-us/product/millennium-falcon-75257',
     imageUrl: '/images/sets/millennium-falcon.jpg',
@@ -123,53 +124,59 @@ export const mockWishlistItems: WishlistItem[] = [
     createdAt: new Date('2023-12-05T10:45:00Z'),
     updatedAt: new Date('2023-12-05T10:45:00Z'),
   },
-];
+]
 
 /**
  * Get wishlist items by category
  */
 export const getWishlistItemsByCategory = (category: string): WishlistItem[] => {
-  return mockWishlistItems.filter(item => item.category === category);
-};
+  return mockWishlistItems.filter(item => item.category === category)
+}
 
 /**
  * Get wishlist items by priority
  */
 export const getWishlistItemsByPriority = (priority: 'low' | 'medium' | 'high'): WishlistItem[] => {
-  return mockWishlistItems.filter(item => item.priority === priority);
-};
+  return mockWishlistItems.filter(item => item.priority === priority)
+}
 
 /**
  * Get purchased wishlist items
  */
 export const getPurchasedWishlistItems = (): WishlistItem[] => {
-  return mockWishlistItems.filter(item => item.isPurchased);
-};
+  return mockWishlistItems.filter(item => item.isPurchased)
+}
 
 /**
  * Get unpurchased wishlist items
  */
 export const getUnpurchasedWishlistItems = (): WishlistItem[] => {
-  return mockWishlistItems.filter(item => !item.isPurchased);
-};
+  return mockWishlistItems.filter(item => !item.isPurchased)
+}
 
 /**
  * Get wishlist categories
  */
 export const getWishlistCategories = (): string[] => {
-  return Array.from(new Set(mockWishlistItems.map(item => item.category).filter((category): category is string => Boolean(category))));
-};
+  return Array.from(
+    new Set(
+      mockWishlistItems
+        .map(item => item.category)
+        .filter((category): category is string => Boolean(category)),
+    ),
+  )
+}
 
 /**
  * Get wishlist stats
  */
 export const getWishlistStats = () => {
-  const total = mockWishlistItems.length;
-  const purchased = getPurchasedWishlistItems().length;
-  const unpurchased = getUnpurchasedWishlistItems().length;
-  const totalValue = mockWishlistItems.reduce((sum, item) => sum + item.price, 0);
-  const purchasedValue = getPurchasedWishlistItems().reduce((sum, item) => sum + item.price, 0);
-  const unpurchasedValue = getUnpurchasedWishlistItems().reduce((sum, item) => sum + item.price, 0);
+  const total = mockWishlistItems.length
+  const purchased = getPurchasedWishlistItems().length
+  const unpurchased = getUnpurchasedWishlistItems().length
+  const totalValue = mockWishlistItems.reduce((sum, item) => sum + item.price, 0)
+  const purchasedValue = getPurchasedWishlistItems().reduce((sum, item) => sum + item.price, 0)
+  const unpurchasedValue = getUnpurchasedWishlistItems().reduce((sum, item) => sum + item.price, 0)
 
   return {
     total,
@@ -179,5 +186,5 @@ export const getWishlistStats = () => {
     purchasedValue,
     unpurchasedValue,
     categories: getWishlistCategories().length,
-  };
-};
+  }
+}

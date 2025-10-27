@@ -56,22 +56,26 @@ Different TTL values are used based on data volatility:
 ### Cached Endpoints
 
 #### Gallery Endpoints
+
 - `GET /api/gallery` - Cached with MEDIUM TTL
 - `GET /api/images` - Cached with MEDIUM TTL
 - `GET /api/albums` - Cached with MEDIUM TTL
 - `GET /api/albums/:id` - Cached with MEDIUM TTL
 
 #### MOC Instructions Endpoints
+
 - `GET /api/mocs` - Cached with LONG TTL
 - `GET /api/mocs/:id` - Cached with LONG TTL
 - `GET /api/mocs/search` - Cached with LONG TTL
 - `GET /api/mocs/:id/gallery-images` - Cached with LONG TTL
 
 #### Wishlist Endpoints
+
 - `GET /api/wishlist` - Cached with MEDIUM TTL
 - `GET /api/wishlist/search` - Cached with MEDIUM TTL
 
 #### Profile Endpoints
+
 - `GET /api/users/:id` - Cached with LONG TTL
 
 ### Cache Invalidation
@@ -87,42 +91,42 @@ Cache invalidation is automatically triggered for write operations:
 ### Manual Cache Operations
 
 ```typescript
-import { cacheUtils, CACHE_KEYS, CACHE_TTL } from './src/utils/redis';
+import { cacheUtils, CACHE_KEYS, CACHE_TTL } from './src/utils/redis'
 
 // Set cache
-await cacheUtils.set('my-key', data, CACHE_TTL.MEDIUM);
+await cacheUtils.set('my-key', data, CACHE_TTL.MEDIUM)
 
 // Get cache
-const data = await cacheUtils.get('my-key');
+const data = await cacheUtils.get('my-key')
 
 // Delete cache
-await cacheUtils.del('my-key');
+await cacheUtils.del('my-key')
 
 // Invalidate pattern
-await cacheUtils.invalidatePattern('gallery:*');
+await cacheUtils.invalidatePattern('gallery:*')
 
 // Get or set (cache-aside pattern)
 const data = await cacheUtils.getOrSet(
   'my-key',
   async () => fetchDataFromDatabase(),
-  CACHE_TTL.MEDIUM
-);
+  CACHE_TTL.MEDIUM,
+)
 ```
 
 ### Cache Middleware
 
 ```typescript
-import { createCacheMiddleware } from './src/middleware/cache';
+import { createCacheMiddleware } from './src/middleware/cache'
 
 // Create custom cache middleware
 const customCache = createCacheMiddleware({
   ttl: CACHE_TTL.SHORT,
-  key: (req) => `custom:${req.user?.id}:${req.params.id}`,
-  condition: (req) => req.method === 'GET' && req.user?.id,
-});
+  key: req => `custom:${req.user?.id}:${req.params.id}`,
+  condition: req => req.method === 'GET' && req.user?.id,
+})
 
 // Use in routes
-router.get('/custom-endpoint', customCache, handler);
+router.get('/custom-endpoint', customCache, handler)
 ```
 
 ## Monitoring
@@ -192,4 +196,4 @@ For development, you can disable caching by not setting the `REDIS_URL` environm
 - **Cache warming** for frequently accessed data
 - **Distributed caching** for multi-instance deployments
 - **Cache analytics** and monitoring
-- **Advanced eviction policies** based on access patterns 
+- **Advanced eviction policies** based on access patterns

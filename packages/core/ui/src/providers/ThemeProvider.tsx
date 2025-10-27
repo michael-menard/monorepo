@@ -79,11 +79,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     resolvedTheme,
   }
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  )
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export const useTheme = (): ThemeContextType => {
@@ -92,4 +88,4 @@ export const useTheme = (): ThemeContextType => {
     throw new Error('useTheme must be used within a ThemeProvider')
   }
   return context
-} 
+}

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Filter, Tag, ChevronDown } from 'lucide-react';
-import type { FilterBarProps, FilterState } from '../../schemas';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, X, Filter, Tag, ChevronDown } from 'lucide-react'
+import type { FilterBarProps, FilterState } from '../../schemas'
 
 const FilterBar: React.FC<FilterBarProps> = ({
   onSearchChange,
@@ -18,71 +18,74 @@ const FilterBar: React.FC<FilterBarProps> = ({
     searchQuery: '',
     selectedTags: [],
     selectedCategory: '',
-  });
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const isInitialRender = useRef(true);
+  })
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  const isInitialRender = useRef(true)
 
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchQuery(filters.searchQuery);
-    }, debounceMs);
+      setDebouncedSearchQuery(filters.searchQuery)
+    }, debounceMs)
 
-    return () => clearTimeout(timer);
-  }, [filters.searchQuery, debounceMs]);
+    return () => clearTimeout(timer)
+  }, [filters.searchQuery, debounceMs])
 
   // Call search callback when debounced query changes
   useEffect(() => {
     // Skip the initial render to avoid calling onSearchChange with empty string
     if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
+      isInitialRender.current = false
+      return
     }
 
-    onSearchChange(debouncedSearchQuery);
-  }, [debouncedSearchQuery, onSearchChange]);
+    onSearchChange(debouncedSearchQuery)
+  }, [debouncedSearchQuery, onSearchChange])
 
   const handleSearchChange = useCallback((value: string) => {
-    setFilters((prev) => ({ ...prev, searchQuery: value }));
-  }, []);
+    setFilters(prev => ({ ...prev, searchQuery: value }))
+  }, [])
 
   const handleTagToggle = useCallback(
     (tag: string) => {
-      setFilters((prev) => {
+      setFilters(prev => {
         const newTags = prev.selectedTags.includes(tag)
-          ? prev.selectedTags.filter((t) => t !== tag)
-          : [...prev.selectedTags, tag];
+          ? prev.selectedTags.filter(t => t !== tag)
+          : [...prev.selectedTags, tag]
 
-        onTagsChange(newTags);
-        return { ...prev, selectedTags: newTags };
-      });
+        onTagsChange(newTags)
+        return { ...prev, selectedTags: newTags }
+      })
     },
     [onTagsChange],
-  );
+  )
 
   const handleCategoryChange = useCallback(
     (category: string) => {
-      setFilters((prev) => ({ ...prev, selectedCategory: category }));
-      onCategoryChange(category);
+      setFilters(prev => ({ ...prev, selectedCategory: category }))
+      onCategoryChange(category)
     },
     [onCategoryChange],
-  );
+  )
 
   const handleClearFilters = useCallback(() => {
     setFilters({
       searchQuery: '',
       selectedTags: [],
       selectedCategory: '',
-    });
-    onClearFilters();
-  }, [onClearFilters]);
+    })
+    onClearFilters()
+  }, [onClearFilters])
 
   const hasActiveFilters =
-    filters.searchQuery || filters.selectedTags.length > 0 || filters.selectedCategory;
+    filters.searchQuery || filters.selectedTags.length > 0 || filters.selectedCategory
 
   return (
-    <div data-testid="filter-bar" className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+    <div
+      data-testid="filter-bar"
+      className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}
+    >
       {/* Main Search Bar */}
       <div className="flex items-center p-4">
         <div className="relative flex-1">
@@ -90,18 +93,18 @@ const FilterBar: React.FC<FilterBarProps> = ({
           <input
             type="text"
             value={filters.searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={e => handleSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          {filters.searchQuery && (
+          {filters.searchQuery ? (
             <button
               onClick={() => handleSearchChange('')}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <X className="h-4 w-4" />
             </button>
-          )}
+          ) : null}
         </div>
 
         {/* Filter Toggle Button */}
@@ -118,19 +121,19 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </button>
 
         {/* Clear Filters Button */}
-        {hasActiveFilters && (
+        {hasActiveFilters ? (
           <button
             onClick={handleClearFilters}
             className="ml-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
           >
             Clear
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Expanded Filters */}
       <AnimatePresence>
-        {isExpanded && (
+        {isExpanded ? (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -147,7 +150,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     Tags
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {availableTags.map((tag) => (
+                    {availableTags.map(tag => (
                       <button
                         key={tag}
                         onClick={() => handleTagToggle(tag)}
@@ -171,11 +174,11 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   <div className="relative">
                     <select
                       value={filters.selectedCategory}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      onChange={e => handleCategoryChange(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
                     >
                       <option value="">All Categories</option>
-                      {availableCategories.map((category) => (
+                      {availableCategories.map(category => (
                         <option key={category} value={category}>
                           {category}
                         </option>
@@ -187,10 +190,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
               )}
 
               {/* Active Filters Summary */}
-              {hasActiveFilters && (
+              {hasActiveFilters ? (
                 <div className="pt-2 border-t border-gray-200">
                   <div className="flex flex-wrap gap-2">
-                    {filters.searchQuery && (
+                    {filters.searchQuery ? (
                       <span className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
                         Search: "{filters.searchQuery}"
                         <button
@@ -200,8 +203,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
                           <X className="h-3 w-3" />
                         </button>
                       </span>
-                    )}
-                    {filters.selectedTags.map((tag) => (
+                    ) : null}
+                    {filters.selectedTags.map(tag => (
                       <span
                         key={tag}
                         className="inline-flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full"
@@ -215,7 +218,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         </button>
                       </span>
                     ))}
-                    {filters.selectedCategory && (
+                    {filters.selectedCategory ? (
                       <span className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">
                         {filters.selectedCategory}
                         <button
@@ -225,16 +228,16 @@ const FilterBar: React.FC<FilterBarProps> = ({
                           <X className="h-3 w-3" />
                         </button>
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
-  );
-};
+  )
+}
 
-export default FilterBar;
+export default FilterBar

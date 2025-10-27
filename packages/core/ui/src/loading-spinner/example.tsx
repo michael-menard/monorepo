@@ -5,7 +5,7 @@ export const LoadingSpinnerExamples = () => {
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-2xl font-bold mb-6">Loading Spinner Examples</h1>
-      
+
       {/* Basic Loading Spinner */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Basic Loading Spinner</h2>
@@ -74,21 +74,11 @@ export const LoadingSpinnerExamples = () => {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Custom Styling</h2>
         <div className="flex gap-8 items-center">
-          <LoadingSpinner 
-            className="p-4 bg-gray-100 rounded-lg" 
-            showText 
-            text="Custom styled"
-          />
-          <PulseSpinner 
-            className="p-4 bg-blue-50 rounded-lg" 
-            variant="default"
-          />
-          <DotsSpinner 
-            className="p-4 bg-green-50 rounded-lg" 
-            variant="default"
-          />
+          <LoadingSpinner className="p-4 bg-gray-100 rounded-lg" showText text="Custom styled" />
+          <PulseSpinner className="p-4 bg-blue-50 rounded-lg" variant="default" />
+          <DotsSpinner className="p-4 bg-green-50 rounded-lg" variant="default" />
         </div>
       </section>
     </div>
   )
-} 
+}

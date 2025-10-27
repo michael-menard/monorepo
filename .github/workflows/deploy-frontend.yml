@@ -1,0 +1,239 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/lego-moc-instructions-app/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+
+jobs:
+  deploy:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Load environment configuration
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
+          ENV_FILE=".github/environments/${ENV_NAME}.env"
+
+          echo "Loading environment configuration from: $ENV_FILE"
+
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "❌ Environment file not found: $ENV_FILE"
+            exit 1
+          fi
+
+          # Load environment variables from file
+          set -a  # automatically export all variables
+          source "$ENV_FILE"
+          set +a  # stop automatically exporting
+
+          # Export to GitHub environment for subsequent steps
+          cat "$ENV_FILE" >> $GITHUB_ENV
+
+          echo "✅ Environment configuration loaded for: $ENV_NAME"
+          echo "Frontend URL: $FRONTEND_URL"
+          echo "S3 Bucket: $S3_BUCKET_NAME"
+          echo "CloudFront Distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate environment variables
+        run: |
+          echo "Validating required environment variables..."
+          echo "Environment: ${{ github.event.inputs.environment || 'staging' }}"
+          echo "AWS Region: ${{ env.AWS_REGION }}"
+
+          # Check if required secrets exist (without exposing values)
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "❌ AWS_ACCESS_KEY_ID secret is not set"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "❌ AWS_SECRET_ACCESS_KEY secret is not set"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.AWS_ACCOUNT_ID }}" ]; then
+            echo "❌ AWS_ACCOUNT_ID secret is not set"
+            exit 1
+          fi
+
+          # Check if required variables exist (loaded from environment file)
+          if [ -z "$S3_BUCKET_NAME" ]; then
+            echo "❌ S3_BUCKET_NAME is not set in environment file"
+            exit 1
+          fi
+
+          if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+            echo "❌ CLOUDFRONT_DISTRIBUTION_ID is not set in environment file"
+            exit 1
+          fi
+
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "❌ FRONTEND_URL is not set in environment file"
+            exit 1
+          fi
+
+          echo "✅ All required environment variables are set"
+
+      - name: Build essential packages
+        run: |
+          echo "Building core packages required for frontend..."
+          pnpm --filter @repo/ui build
+          pnpm --filter @repo/cache build
+          echo "Building auth package (required for login form)..."
+          pnpm --filter @repo/auth build
+        continue-on-error: false
+
+      - name: Build frontend dependencies
+        run: |
+          echo "Building frontend dependencies..."
+          pnpm turbo build --filter="@repo/lego-moc-instructions-app^..." --continue
+        continue-on-error: true
+
+      - name: Build frontend
+        run: |
+          echo "Building frontend application..."
+          echo "Environment: $VITE_ENVIRONMENT"
+          echo "Auth API URL: $VITE_AUTH_API_URL"
+          echo "LEGO API URL: $VITE_LEGO_API_URL"
+          cd apps/web/lego-moc-instructions-app
+          pnpm build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy infrastructure
+        run: |
+          echo "Deploying CDK infrastructure..."
+          cd apps/web/lego-moc-instructions-app/infrastructure/aws-cdk
+          npm install
+          ENVIRONMENT=${{ github.event.inputs.environment || 'staging' }} npx cdk deploy --require-approval never
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: Verify build artifacts
+        run: |
+          echo "Verifying build artifacts exist..."
+          ls -la apps/web/lego-moc-instructions-app/dist/
+          echo "Checking for index.html..."
+          test -f apps/web/lego-moc-instructions-app/dist/index.html || (echo "ERROR: index.html not found!" && exit 1)
+          echo "Build artifacts verified ✓"
+
+      - name: Deploy to S3
+        run: |
+          echo "Deploying to S3 bucket: $S3_BUCKET_NAME"
+          aws s3 sync apps/web/lego-moc-instructions-app/dist/ s3://$S3_BUCKET_NAME --delete
+          echo "S3 deployment completed ✓"
+
+      - name: Invalidate CloudFront
+        run: |
+          echo "Invalidating CloudFront distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+          INVALIDATION_ID=$(aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*" --query 'Invalidation.Id' --output text)
+          echo "CloudFront invalidation created: $INVALIDATION_ID"
+          echo "Waiting for invalidation to complete..."
+          aws cloudfront wait invalidation-completed --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --id $INVALIDATION_ID
+          echo "CloudFront invalidation completed ✓"
+
+      - name: Health check
+        run: |
+          echo "Performing health check on deployed frontend..."
+          echo "Frontend URL: $FRONTEND_URL"
+          sleep 10
+
+          # Check if the site returns 200
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)
+          echo "HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Health check passed - Frontend is accessible"
+          else
+            echo "❌ Health check failed - HTTP Status: $HTTP_STATUS"
+            echo "Attempting to fetch content for debugging..."
+            curl -v $FRONTEND_URL || true
+            exit 1
+          fi
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 Deployment URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend:** $FRONTEND_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **Login Page:** $FRONTEND_URL/auth/login" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Infrastructure" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket:** $S3_BUCKET_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution:** $CLOUDFRONT_DISTRIBUTION_ID" >> $GITHUB_STEP_SUMMARY
+          echo "- **AWS Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "### ✅ Deployment Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+            echo "The frontend has been successfully deployed and is accessible." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Deployment Status: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "The deployment encountered errors. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi

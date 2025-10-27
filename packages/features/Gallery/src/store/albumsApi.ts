@@ -1,46 +1,38 @@
-import {
-  createApi,
-  fetchBaseQuery,
-} from '@reduxjs/toolkit/query/react';
-import type { 
-  BaseQueryFn,
-  FetchArgs,
-  FetchBaseQueryError,
-  EndpointBuilder 
-} from '@reduxjs/toolkit/query';
+import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react'
+import type {BaseQueryFn, EndpointBuilder, FetchArgs, FetchBaseQueryError,} from '@reduxjs/toolkit/query'
 
 export interface GalleryAlbum {
-  id: string;
-  userId: string;
-  title: string;
-  description?: string;
-  coverImageId?: string;
-  createdAt: string;
-  lastUpdatedAt: string;
-  images?: GalleryImage[];
+  id: string
+  userId: string
+  title: string
+  description?: string
+  coverImageId?: string
+  createdAt: string
+  lastUpdatedAt: string
+  images?: GalleryImage[]
 }
 
 export interface GalleryImage {
-  id: string;
-  url: string;
-  title: string;
-  description?: string;
-  author?: string;
-  uploadDate: string;
-  tags?: string[];
-  [key: string]: any;
+  id: string
+  url: string
+  title: string
+  description?: string
+  author?: string
+  uploadDate: string
+  tags?: string[]
+  [key: string]: any
 }
 
 export interface GalleryAlbumResponse {
-  album: GalleryAlbum;
-  images: GalleryImage[];
+  album: GalleryAlbum
+  images: GalleryImage[]
 }
 
 export interface GalleryAlbumsResponse {
-  albums: GalleryAlbum[];
+  albums: GalleryAlbum[]
 }
 
-const baseUrl = 'http://localhost/api'; // Base URL for the API
+const baseUrl = 'http://localhost/api' // Base URL for the API
 
 export const albumsApi = createApi({
   reducerPath: 'albumsApi',
@@ -48,9 +40,9 @@ export const albumsApi = createApi({
     baseUrl,
     prepareHeaders: (headers: Headers) => {
       // Add auth token if needed
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      return headers;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+      return headers
     },
   }),
   tagTypes: ['GalleryAlbum'],
@@ -62,7 +54,7 @@ export const albumsApi = createApi({
     >,
   ) => ({
     getAlbums: builder.query<GalleryAlbumsResponse, { withImages?: boolean }>({
-      query: (params) => ({
+      query: params => ({
         url: '/albums',
         ...(params.withImages && { params: { withImages: 'true' } }),
       }),
@@ -85,7 +77,7 @@ export const albumsApi = createApi({
       ],
     }),
     createAlbum: builder.mutation<GalleryAlbumResponse, Partial<GalleryAlbum>>({
-      query: (albumData) => ({
+      query: albumData => ({
         url: '/albums',
         method: 'POST',
         body: albumData,
@@ -153,7 +145,7 @@ export const albumsApi = createApi({
       ],
     }),
   }),
-});
+})
 
 // Export hooks for usage in components
 export const {
@@ -164,4 +156,4 @@ export const {
   useDeleteAlbumMutation,
   useAddImageToAlbumMutation,
   useRemoveImageFromAlbumMutation,
-} = albumsApi;
+} = albumsApi

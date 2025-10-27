@@ -1,14 +1,14 @@
 // Shared API response utility
 
-import { z } from 'zod';
+import { z } from 'zod'
 
 export type ApiResponse<T = any> = {
-  status: number;
-  message: string;
-  data?: T;
-  error?: string;
-  details?: any;
-};
+  status: number
+  message: string
+  data?: T
+  error?: string
+  details?: any
+}
 
 export function apiResponse<T = any>(
   status: number,
@@ -17,11 +17,11 @@ export function apiResponse<T = any>(
   error?: string,
   details?: any,
 ): ApiResponse<T> {
-  const response: ApiResponse<T> = { status, message };
-  if (data !== undefined) response.data = data;
-  if (error) response.error = error;
-  if (details) response.details = details;
-  return response;
+  const response: ApiResponse<T> = { status, message }
+  if (data !== undefined) response.data = data
+  if (error) response.error = error
+  if (details) response.details = details
+  return response
 }
 
 export const ApiErrorTypeSchema = z.union([
@@ -36,8 +36,8 @@ export const ApiErrorTypeSchema = z.union([
   z.literal('FILE_ERROR'),
   z.literal('SEARCH_ERROR'),
   // Add more as needed
-]);
-export type ApiErrorType = z.infer<typeof ApiErrorTypeSchema>;
+])
+export type ApiErrorType = z.infer<typeof ApiErrorTypeSchema>
 
 export function apiErrorResponse(
   status: number,
@@ -50,5 +50,5 @@ export function apiErrorResponse(
     message,
     error: errorType,
     details,
-  };
+  }
 }

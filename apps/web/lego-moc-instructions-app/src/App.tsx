@@ -6,13 +6,11 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-r from-secondary via-tertiary to-info text-foreground flex items-center justify-center">
       <div className="text-center space-y-6">
-        <h1 className="text-4xl font-bold">
-          {config.app.name}
-        </h1>
+        <h1 className="text-4xl font-bold">{config.app.name}</h1>
         <p className="text-lg text-muted-foreground">
           Welcome to the LEGO MOC Instructions application
         </p>
-        
+
         {/* Custom Color Test */}
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold">Custom Colors Test</h2>
@@ -27,12 +25,10 @@ function App() {
             <div className="p-4 bg-info text-info-foreground rounded">Info</div>
           </div>
         </div>
-        
+
         <div className="flex justify-center space-x-4">
           <Link to="/">
-            <Button>
-              Go to Home
-            </Button>
+            <Button>Go to Home</Button>
           </Link>
         </div>
       </div>

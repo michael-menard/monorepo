@@ -1,12 +1,12 @@
-import React from 'react';
-import { TourProvider, TourStep, TourTrigger } from '@repo/ui';
-import { ProfilePage } from '../ProfilePage';
-import type { ProfilePageProps } from '../../types';
+import React from 'react'
+import { TourProvider, TourStep, TourTrigger } from '@repo/ui'
+import { ProfilePage } from '../ProfilePage'
+import type { ProfilePageProps } from '../../types'
 
 export interface ProfilePageWithTourProps extends ProfilePageProps {
-  showTour?: boolean;
-  onTourComplete?: () => void;
-  onTourSkip?: () => void;
+  showTour?: boolean
+  onTourComplete?: () => void
+  onTourSkip?: () => void
 }
 
 export const ProfilePageWithTour: React.FC<ProfilePageWithTourProps> = ({
@@ -113,7 +113,7 @@ export const ProfilePageWithTour: React.FC<ProfilePageWithTourProps> = ({
               <h3 className="text-xl font-semibold mb-4">About Me</h3>
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <p className="text-gray-700 dark:text-gray-300">
-                  {profilePageProps.profile?.bio || "Tell us about yourself..."}
+                  {profilePageProps.profile?.bio || 'Tell us about yourself...'}
                 </p>
               </div>
             </div>
@@ -170,7 +170,7 @@ export const ProfilePageWithTour: React.FC<ProfilePageWithTourProps> = ({
         </ProfilePage>
       </div>
     </TourProvider>
-  );
-};
+  )
+}
 
-export default ProfilePageWithTour; 
+export default ProfilePageWithTour

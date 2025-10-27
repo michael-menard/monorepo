@@ -1,113 +1,110 @@
 // If you see a type error for '@reduxjs/toolkit/query/react', ensure you have @reduxjs/toolkit installed.
-import {
-  createApi,
-  fetchBaseQuery,
-} from '@reduxjs/toolkit/query/react';
-import type { 
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import type {
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
-  EndpointBuilder 
-} from '@reduxjs/toolkit/query';
+  EndpointBuilder,
+} from '@reduxjs/toolkit/query'
 
 export interface GalleryImage {
-  id: string;
-  url: string;
-  title: string;
-  description?: string;
-  author?: string;
-  uploadDate: string;
-  tags?: string[];
-  [key: string]: any;
+  id: string
+  url: string
+  title: string
+  description?: string
+  author?: string
+  uploadDate: string
+  tags?: string[]
+  [key: string]: any
 }
 
 export interface GalleryImageResponse {
-  data: GalleryImage;
-  message?: string;
+  data: GalleryImage
+  message?: string
 }
 
 export interface GalleryImagesResponse {
-  data: GalleryImage[];
-  message?: string;
+  data: GalleryImage[]
+  message?: string
 }
 
 export interface SearchFilters {
-  query?: string;
-  tags?: string[];
-  category?: string;
-  from?: number;
-  size?: number;
+  query?: string
+  tags?: string[]
+  category?: string
+  from?: number
+  size?: number
 }
 
 export interface SearchResponse {
-  data: GalleryImage[];
-  total: number;
-  source: 'elasticsearch' | 'database';
-  message?: string;
+  data: GalleryImage[]
+  total: number
+  source: 'elasticsearch' | 'database'
+  message?: string
 }
 
 // New interfaces for unified gallery with pagination
 export interface GalleryItem {
-  id: string;
-  type: 'image' | 'album';
-  url?: string;
-  title: string;
-  description?: string;
-  author?: string;
-  tags?: string[];
-  createdAt: string;
-  updatedAt: string;
-  [key: string]: any;
+  id: string
+  type: 'image' | 'album'
+  url?: string
+  title: string
+  description?: string
+  author?: string
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
+  [key: string]: any
 }
 
 export interface GalleryFilters {
-  type?: 'album' | 'image' | 'all';
-  tag?: string;
-  albumId?: string;
-  flagged?: boolean;
-  search?: string;
-  limit?: number;
-  cursor?: number;
+  type?: 'album' | 'image' | 'all'
+  tag?: string
+  albumId?: string
+  flagged?: boolean
+  search?: string
+  limit?: number
+  cursor?: number
 }
 
 export interface GalleryResponse {
-  items: GalleryItem[];
-  nextCursor: number | null;
-  hasMore: boolean;
+  items: GalleryItem[]
+  nextCursor: number | null
+  hasMore: boolean
 }
 
 // Inspiration-specific interfaces
 export interface InspirationItem {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  category: string;
-  tags: string[];
-  imageUrl: string;
-  likes: number;
-  isLiked: boolean;
-  createdAt: string;
-  updatedAt: string;
+  id: string
+  title: string
+  description: string
+  author: string
+  category: string
+  tags: string[]
+  imageUrl: string
+  likes: number
+  isLiked: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface InspirationResponse {
-  data: InspirationItem[];
-  total: number;
-  message?: string;
+  data: InspirationItem[]
+  total: number
+  message?: string
 }
 
 export interface InspirationFilters {
-  category?: string;
-  tags?: string[];
-  search?: string;
-  limit?: number;
-  offset?: number;
-  sortBy?: 'likes' | 'createdAt' | 'title';
-  sortOrder?: 'asc' | 'desc';
+  category?: string
+  tags?: string[]
+  search?: string
+  limit?: number
+  offset?: number
+  sortBy?: 'likes' | 'createdAt' | 'title'
+  sortOrder?: 'asc' | 'desc'
 }
 
-const baseUrl = 'http://localhost/api/gallery'; // Always use absolute URL for consistency in tests and dev
+const baseUrl = 'http://localhost/api/gallery' // Always use absolute URL for consistency in tests and dev
 
 export const galleryApi = createApi({
   reducerPath: 'galleryApi',
@@ -115,9 +112,9 @@ export const galleryApi = createApi({
     baseUrl,
     prepareHeaders: (headers: Headers) => {
       // Example: Add auth token if needed
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      return headers;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+      return headers
     },
   }),
   tagTypes: ['GalleryImage', 'GalleryAlbum', 'GalleryItem', 'InspirationItem'],
@@ -130,23 +127,25 @@ export const galleryApi = createApi({
   ) => ({
     // New unified gallery endpoint with infinite scroll support
     getGallery: builder.query<GalleryResponse, GalleryFilters>({
-      query: (filters) => {
-        const params = new URLSearchParams();
-        if (filters.type) params.append('type', filters.type);
-        if (filters.tag) params.append('tag', filters.tag);
-        if (filters.albumId) params.append('albumId', filters.albumId);
-        if (filters.flagged !== undefined) params.append('flagged', filters.flagged.toString());
-        if (filters.search) params.append('search', filters.search);
-        if (filters.limit) params.append('limit', filters.limit.toString());
-        if (filters.cursor !== undefined) params.append('cursor', filters.cursor.toString());
+      query: filters => {
+        const params = new URLSearchParams()
+        if (filters.type) params.append('type', filters.type)
+        if (filters.tag) params.append('tag', filters.tag)
+        if (filters.albumId) params.append('albumId', filters.albumId)
+        if (filters.flagged !== undefined) params.append('flagged', filters.flagged.toString())
+        if (filters.search) params.append('search', filters.search)
+        if (filters.limit) params.append('limit', filters.limit.toString())
+        if (filters.cursor !== undefined) params.append('cursor', filters.cursor.toString())
 
-        return `/?${params.toString()}`;
+        return `/?${params.toString()}`
       },
       providesTags: (result: GalleryResponse | undefined) =>
         result?.items
           ? [
               ...result.items.map(({ id, type }) => ({
-                type: (type === 'image' ? 'GalleryImage' : 'GalleryAlbum') as 'GalleryImage' | 'GalleryAlbum',
+                type: (type === 'image' ? 'GalleryImage' : 'GalleryAlbum') as
+                  | 'GalleryImage'
+                  | 'GalleryAlbum',
                 id,
               })),
               { type: 'GalleryItem' as const, id: 'LIST' },
@@ -174,17 +173,17 @@ export const galleryApi = createApi({
       ],
     }),
     searchImages: builder.query<SearchResponse, SearchFilters>({
-      query: (filters) => {
-        const params = new URLSearchParams();
-        if (filters.query) params.append('q', filters.query);
+      query: filters => {
+        const params = new URLSearchParams()
+        if (filters.query) params.append('q', filters.query)
         if (filters.tags && filters.tags.length > 0) {
-          filters.tags.forEach((tag) => params.append('tag', tag));
+          filters.tags.forEach(tag => params.append('tag', tag))
         }
-        if (filters.category) params.append('category', filters.category);
-        if (filters.from !== undefined) params.append('from', filters.from.toString());
-        if (filters.size !== undefined) params.append('size', filters.size.toString());
+        if (filters.category) params.append('category', filters.category)
+        if (filters.from !== undefined) params.append('from', filters.from.toString())
+        if (filters.size !== undefined) params.append('size', filters.size.toString())
 
-        return `/search?${params.toString()}`;
+        return `/search?${params.toString()}`
       },
       providesTags: (result: SearchResponse | undefined) =>
         result?.data
@@ -207,19 +206,19 @@ export const galleryApi = createApi({
     }),
     uploadImage: builder.mutation<GalleryImageResponse, Partial<GalleryImage> & { file: File }>({
       query: (body: Partial<GalleryImage> & { file: File }) => {
-        const formData = new FormData();
+        const formData = new FormData()
         Object.entries(body).forEach(([key, value]) => {
           if (key === 'file' && value instanceof File) {
-            formData.append('file', value);
+            formData.append('file', value)
           } else if (value !== undefined) {
-            formData.append(key, value as string);
+            formData.append(key, value as string)
           }
-        });
+        })
         return {
           url: '/',
           method: 'POST',
           body: formData,
-        };
+        }
       },
       invalidatesTags: [
         { type: 'GalleryImage', id: 'LIST' },
@@ -263,7 +262,7 @@ export const galleryApi = createApi({
         _error: unknown,
         imageIds: string[],
       ) => [
-        ...imageIds.map((id) => ({ type: 'GalleryImage' as const, id })),
+        ...imageIds.map(id => ({ type: 'GalleryImage' as const, id })),
         { type: 'GalleryImage', id: 'LIST' },
         { type: 'GalleryItem', id: 'LIST' },
       ],
@@ -284,7 +283,7 @@ export const galleryApi = createApi({
       ) => [
         { type: 'GalleryAlbum', id: arg.albumId },
         { type: 'GalleryAlbum', id: 'LIST' },
-        ...arg.imageIds.map((id) => ({ type: 'GalleryImage' as const, id })),
+        ...arg.imageIds.map(id => ({ type: 'GalleryImage' as const, id })),
         { type: 'GalleryImage', id: 'LIST' },
         { type: 'GalleryItem', id: 'LIST' },
       ],
@@ -292,19 +291,19 @@ export const galleryApi = createApi({
 
     // Inspiration-specific endpoints
     getInspirationItems: builder.query<InspirationResponse, InspirationFilters>({
-      query: (filters) => {
-        const params = new URLSearchParams();
-        if (filters.category) params.append('category', filters.category);
+      query: filters => {
+        const params = new URLSearchParams()
+        if (filters.category) params.append('category', filters.category)
         if (filters.tags && filters.tags.length > 0) {
-          filters.tags.forEach((tag) => params.append('tag', tag));
+          filters.tags.forEach(tag => params.append('tag', tag))
         }
-        if (filters.search) params.append('search', filters.search);
-        if (filters.limit) params.append('limit', filters.limit.toString());
-        if (filters.offset) params.append('offset', filters.offset.toString());
-        if (filters.sortBy) params.append('sortBy', filters.sortBy);
-        if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+        if (filters.search) params.append('search', filters.search)
+        if (filters.limit) params.append('limit', filters.limit.toString())
+        if (filters.offset) params.append('offset', filters.offset.toString())
+        if (filters.sortBy) params.append('sortBy', filters.sortBy)
+        if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
 
-        return `/inspiration?${params.toString()}`;
+        return `/inspiration?${params.toString()}`
       },
       providesTags: (result: InspirationResponse | undefined) =>
         result?.data
@@ -320,9 +319,11 @@ export const galleryApi = createApi({
 
     getInspirationItemById: builder.query<{ data: InspirationItem; message?: string }, string>({
       query: (id: string) => `/inspiration/${id}`,
-      providesTags: (_result: { data: InspirationItem; message?: string } | undefined, _error: unknown, id: string) => [
-        { type: 'InspirationItem', id },
-      ],
+      providesTags: (
+        _result: { data: InspirationItem; message?: string } | undefined,
+        _error: unknown,
+        id: string,
+      ) => [{ type: 'InspirationItem', id }],
     }),
 
     likeInspirationItem: builder.mutation<{ message: string; isLiked: boolean }, string>({
@@ -330,27 +331,34 @@ export const galleryApi = createApi({
         url: `/inspiration/${id}/like`,
         method: 'POST',
       }),
-      invalidatesTags: (_result: { message: string; isLiked: boolean } | undefined, _error: unknown, id: string) => [
+      invalidatesTags: (
+        _result: { message: string; isLiked: boolean } | undefined,
+        _error: unknown,
+        id: string,
+      ) => [
         { type: 'InspirationItem', id },
         { type: 'InspirationItem', id: 'LIST' },
       ],
     }),
 
-    createInspirationItem: builder.mutation<{ data: InspirationItem; message?: string }, Partial<InspirationItem> & { file: File }>({
+    createInspirationItem: builder.mutation<
+      { data: InspirationItem; message?: string },
+      Partial<InspirationItem> & { file: File }
+    >({
       query: (body: Partial<InspirationItem> & { file: File }) => {
-        const formData = new FormData();
+        const formData = new FormData()
         Object.entries(body).forEach(([key, value]) => {
           if (key === 'file' && value instanceof File) {
-            formData.append('file', value);
+            formData.append('file', value)
           } else if (value !== undefined) {
-            formData.append(key, value as string);
+            formData.append(key, value as string)
           }
-        });
+        })
         return {
           url: '/inspiration',
           method: 'POST',
           body: formData,
-        };
+        }
       },
       invalidatesTags: [{ type: 'InspirationItem', id: 'LIST' }],
     }),
@@ -382,7 +390,7 @@ export const galleryApi = createApi({
       ],
     }),
   }),
-});
+})
 
 // Export hooks for usage in components
 export const {
@@ -404,6 +412,6 @@ export const {
   useCreateInspirationItemMutation,
   useUpdateInspirationItemMutation,
   useDeleteInspirationItemMutation,
-} = galleryApi;
+} = galleryApi
 
 // For testing: mock fetchBaseQuery or use MSW to mock endpoints

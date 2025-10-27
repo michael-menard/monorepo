@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { z } from 'zod';
-import { Button } from '@repo/ui';
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { z } from 'zod'
+import { Button } from '@repo/ui'
 
 // Zod schemas for type safety
 const GalleryImageSchema = z.object({
@@ -12,20 +12,20 @@ const GalleryImageSchema = z.object({
   tags: z.array(z.string()).optional(),
   createdAt: z.string(),
   lastUpdatedAt: z.string(),
-});
+})
 
 const GalleryImageLinkerPropsSchema = z.object({
   mocId: z.string(),
   onImageLinked: z.function().args(z.string()).returns(z.void()).optional(),
   onImageUnlinked: z.function().args(z.string()).returns(z.void()).optional(),
   className: z.string().optional(),
-});
+})
 
-export type GalleryImage = z.infer<typeof GalleryImageSchema>;
-export type GalleryImageLinkerProps = z.infer<typeof GalleryImageLinkerPropsSchema>;
+export type GalleryImage = z.infer<typeof GalleryImageSchema>
+export type GalleryImageLinkerProps = z.infer<typeof GalleryImageLinkerPropsSchema>
 
 interface LinkedImage extends GalleryImage {
-  linkedAt: string;
+  linkedAt: string
 }
 
 export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
@@ -34,59 +34,59 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
   onImageUnlinked,
   className = '',
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [linkedImages, setLinkedImages] = useState<LinkedImage[]>([]);
-  const [availableImages, setAvailableImages] = useState<GalleryImage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const [linkedImages, setLinkedImages] = useState<LinkedImage[]>([])
+  const [availableImages, setAvailableImages] = useState<GalleryImage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Fetch linked images for this MOC
   const fetchLinkedImages = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
+      setIsLoading(true)
+      setError(null)
+
       const response = await fetch(`/api/mocs/${mocId}/gallery-images`, {
         credentials: 'include',
-      });
-      
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to fetch linked images');
+        throw new Error('Failed to fetch linked images')
       }
-      
-      const data = await response.json();
-      setLinkedImages(data.images || []);
+
+      const data = await response.json()
+      setLinkedImages(data.images || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch linked images');
+      setError(err instanceof Error ? err.message : 'Failed to fetch linked images')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Fetch available gallery images
   const fetchAvailableImages = async () => {
     try {
       const response = await fetch('/api/gallery?type=image', {
         credentials: 'include',
-      });
-      
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to fetch available images');
+        throw new Error('Failed to fetch available images')
       }
-      
-      const data = await response.json();
-      setAvailableImages(data.items || []);
+
+      const data = await response.json()
+      setAvailableImages(data.items || [])
     } catch (err) {
-      console.error('Failed to fetch available images:', err);
+      console.error('Failed to fetch available images:', err)
     }
-  };
+  }
 
   // Link an image to the MOC
   const linkImage = async (imageId: string) => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
+      setIsLoading(true)
+      setError(null)
+
       const response = await fetch(`/api/mocs/${mocId}/gallery-images`, {
         method: 'POST',
         headers: {
@@ -94,86 +94,81 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
         },
         credentials: 'include',
         body: JSON.stringify({ galleryImageId: imageId }),
-      });
-      
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to link image');
+        throw new Error('Failed to link image')
       }
-      
+
       // Refresh linked images
-      await fetchLinkedImages();
-      onImageLinked?.(imageId);
+      await fetchLinkedImages()
+      onImageLinked?.(imageId)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to link image');
+      setError(err instanceof Error ? err.message : 'Failed to link image')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Unlink an image from the MOC
   const unlinkImage = async (imageId: string) => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
+      setIsLoading(true)
+      setError(null)
+
       const response = await fetch(`/api/mocs/${mocId}/gallery-images/${imageId}`, {
         method: 'DELETE',
         credentials: 'include',
-      });
-      
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to unlink image');
+        throw new Error('Failed to unlink image')
       }
-      
+
       // Refresh linked images
-      await fetchLinkedImages();
-      onImageUnlinked?.(imageId);
+      await fetchLinkedImages()
+      onImageUnlinked?.(imageId)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unlink image');
+      setError(err instanceof Error ? err.message : 'Failed to unlink image')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Load data when component mounts or MOC ID changes
   useEffect(() => {
     if (mocId) {
-      fetchLinkedImages();
-      fetchAvailableImages();
+      fetchLinkedImages()
+      fetchAvailableImages()
     }
-  }, [mocId]);
+  }, [mocId])
 
   // Get images that are not already linked
   const unlinkedImages = availableImages.filter(
-    (image) => !linkedImages.some((linked) => linked.id === image.id)
-  );
+    image => !linkedImages.some(linked => linked.id === image.id),
+  )
 
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Linked Gallery Images</h3>
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          variant="outline"
-          size="sm"
-          disabled={isLoading}
-        >
+        <Button onClick={() => setIsOpen(!isOpen)} variant="outline" size="sm" disabled={isLoading}>
           {isOpen ? 'Hide' : 'Link Images'}
         </Button>
       </div>
 
       {/* Error Display */}
-      {error && (
+      {error ? (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-600">{error}</p>
         </div>
-      )}
+      ) : null}
 
       {/* Linked Images Display */}
       {linkedImages.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {linkedImages.map((image) => (
+          {linkedImages.map(image => (
             <motion.div
               key={image.id}
               className="relative bg-white rounded-lg shadow-md overflow-hidden"
@@ -182,21 +177,13 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
               exit={{ opacity: 0, y: -20 }}
             >
               <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
-                <img
-                  src={image.url}
-                  alt={image.title}
-                  className="w-full h-full object-cover"
-                />
+                <img src={image.url} alt={image.title} className="w-full h-full object-cover" />
               </div>
               <div className="p-3">
-                <h4 className="font-medium text-sm text-gray-900 truncate">
-                  {image.title}
-                </h4>
-                {image.description && (
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                    {image.description}
-                  </p>
-                )}
+                <h4 className="font-medium text-sm text-gray-900 truncate">{image.title}</h4>
+                {image.description ? (
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{image.description}</p>
+                ) : null}
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-gray-400">
                     Linked {new Date(image.linkedAt).toLocaleDateString()}
@@ -227,7 +214,7 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
 
       {/* Image Selection Modal */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen ? (
           <motion.div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             initial={{ opacity: 0 }}
@@ -240,7 +227,7 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
             >
               {/* Modal Header */}
               <div className="p-6 border-b border-gray-200">
@@ -254,7 +241,7 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 {unlinkedImages.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {unlinkedImages.map((image) => (
+                    {unlinkedImages.map(image => (
                       <motion.div
                         key={image.id}
                         className="relative bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
@@ -272,12 +259,12 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
                           <h4 className="font-medium text-sm text-gray-900 truncate">
                             {image.title}
                           </h4>
-                          {image.description && (
+                          {image.description ? (
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                               {image.description}
                             </p>
-                          )}
-                          {image.tags && image.tags.length > 0 && (
+                          ) : null}
+                          {image.tags && image.tags.length > 0 ? (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {image.tags.slice(0, 2).map((tag, index) => (
                                 <span
@@ -293,7 +280,7 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
                                 </span>
                               )}
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </motion.div>
                     ))}
@@ -301,28 +288,23 @@ export const GalleryImageLinker: React.FC<GalleryImageLinkerProps> = ({
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <p>No available images to link.</p>
-                    <p className="text-sm mt-1">
-                      Upload some images to your gallery first.
-                    </p>
+                    <p className="text-sm mt-1">Upload some images to your gallery first.</p>
                   </div>
                 )}
               </div>
 
               {/* Modal Footer */}
               <div className="p-6 border-t border-gray-200 flex justify-end">
-                <Button
-                  onClick={() => setIsOpen(false)}
-                  variant="outline"
-                >
+                <Button onClick={() => setIsOpen(false)} variant="outline">
                   Close
                 </Button>
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
-  );
-};
+  )
+}
 
-export default GalleryImageLinker; 
+export default GalleryImageLinker

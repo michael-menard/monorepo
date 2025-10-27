@@ -1,53 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   useGetAlbumByIdQuery,
   useUpdateAlbumMutation,
   useDeleteAlbumMutation,
   useRemoveImageFromAlbumMutation,
-} from '../../store/albumsApi.js';
-import ImageCard from '../ImageCard/index.js';
-import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
-import { motion } from 'framer-motion';
+} from '../../store/albumsApi.js'
+import ImageCard from '../ImageCard/index.js'
+import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js'
 
 interface AlbumViewProps {
-  albumId: string;
-  onBack?: () => void;
-  onEdit?: () => void;
-  onShare?: () => void;
-  onImagesSelected?: (imageIds: string[]) => void;
-  selectedImages?: string[];
+  albumId: string
+  onBack?: () => void
+  onEdit?: () => void
+  onShare?: () => void
+  onImagesSelected?: (imageIds: string[]) => void
+  selectedImages?: string[]
 }
 
-const AlbumView: React.FC<AlbumViewProps> = ({ 
-  albumId, 
-  onBack, 
-  onEdit, 
+const AlbumView: React.FC<AlbumViewProps> = ({
+  albumId,
+  onBack,
+  onEdit,
   onShare,
   onImagesSelected,
   selectedImages = [],
 }) => {
-  const { data, error, isLoading, refetch } = useGetAlbumByIdQuery(albumId);
-  const [updateAlbum] = useUpdateAlbumMutation();
-  const [deleteAlbum] = useDeleteAlbumMutation();
-  const [removeImageFromAlbum] = useRemoveImageFromAlbumMutation();
+  const { data, error, isLoading, refetch } = useGetAlbumByIdQuery(albumId)
+  const [updateAlbum] = useUpdateAlbumMutation()
+  const [deleteAlbum] = useDeleteAlbumMutation()
+  const [removeImageFromAlbum] = useRemoveImageFromAlbumMutation()
 
-  const { actions: dragActions } = useAlbumDragAndDrop();
+  const { actions: dragActions } = useAlbumDragAndDrop()
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Set edit form values when data loads
   useEffect(() => {
     if (data?.album) {
-      setEditTitle(data.album.title);
-      setEditDescription(data.album.description || '');
+      setEditTitle(data.album.title)
+      setEditDescription(data.album.description || '')
     }
-  }, [data?.album]);
+  }, [data?.album])
 
   const handleSaveEdit = async () => {
-    if (!data?.album) return;
+    if (!data?.album) return
 
     try {
       await updateAlbum({
@@ -56,63 +56,63 @@ const AlbumView: React.FC<AlbumViewProps> = ({
           title: editTitle,
           description: editDescription,
         },
-      }).unwrap();
-      setIsEditing(false);
+      }).unwrap()
+      setIsEditing(false)
     } catch (error) {
-      console.error('Failed to update album:', error);
+      console.error('Failed to update album:', error)
     }
-  };
+  }
 
   const handleCancelEdit = () => {
-    setEditTitle(data?.album?.title || '');
-    setEditDescription(data?.album?.description || '');
-    setIsEditing(false);
-  };
+    setEditTitle(data?.album?.title || '')
+    setEditDescription(data?.album?.description || '')
+    setIsEditing(false)
+  }
 
   const handleDeleteAlbum = async () => {
     try {
-      await deleteAlbum(albumId).unwrap();
-      onBack?.();
+      await deleteAlbum(albumId).unwrap()
+      onBack?.()
     } catch (error) {
-      console.error('Failed to delete album:', error);
+      console.error('Failed to delete album:', error)
     }
-  };
+  }
 
   const handleRemoveImage = async (imageId: string) => {
     try {
-      await removeImageFromAlbum({ albumId, imageId }).unwrap();
+      await removeImageFromAlbum({ albumId, imageId }).unwrap()
     } catch (error) {
-      console.error('Failed to remove image from album:', error);
+      console.error('Failed to remove image from album:', error)
     }
-  };
+  }
 
   const handleViewImage = (imageId: string) => {
-    console.log('View image:', imageId);
+    console.log('View image:', imageId)
     // TODO: Implement lightbox or modal for image viewing
-  };
+  }
 
   const handleShareImage = (imageId: string) => {
-    console.log('Share image:', imageId);
+    console.log('Share image:', imageId)
     // TODO: Implement image sharing
-  };
+  }
 
   const handleDownloadImage = (imageId: string) => {
-    console.log('Download image:', imageId);
+    console.log('Download image:', imageId)
     // TODO: Implement image download
-  };
+  }
 
   const handleDragStart = (e: React.DragEvent, imageId: string) => {
-    dragActions.handleDragStart(e, [imageId]);
-  };
+    dragActions.handleDragStart(e, [imageId])
+  }
 
   const handleImageSelect = (imageId: string, checked: boolean) => {
     if (onImagesSelected) {
       const newSelected = checked
         ? [...selectedImages, imageId]
-        : selectedImages.filter((id) => id !== imageId);
-      onImagesSelected(newSelected);
+        : selectedImages.filter(id => id !== imageId)
+      onImagesSelected(newSelected)
     }
-  };
+  }
 
   // Loading state
   if (isLoading) {
@@ -134,7 +134,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   // Error state
@@ -151,18 +151,18 @@ const AlbumView: React.FC<AlbumViewProps> = ({
             >
               Retry
             </button>
-            {onBack && (
+            {onBack ? (
               <button
                 onClick={onBack}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
               >
                 Go Back
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (!data?.album) {
@@ -170,20 +170,20 @@ const AlbumView: React.FC<AlbumViewProps> = ({
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-2">Album not found</div>
-          {onBack && (
+          {onBack ? (
             <button
               onClick={onBack}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Go Back
             </button>
-          )}
+          ) : null}
         </div>
       </div>
-    );
+    )
   }
 
-  const { album, images } = data;
+  const { album, images } = data
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -196,7 +196,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            {onBack && (
+            {onBack ? (
               <button
                 onClick={onBack}
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -211,20 +211,20 @@ const AlbumView: React.FC<AlbumViewProps> = ({
                   />
                 </svg>
               </button>
-            )}
+            ) : null}
 
             {isEditing ? (
               <div className="flex-1 max-w-2xl">
                 <input
                   type="text"
                   value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
+                  onChange={e => setEditTitle(e.target.value)}
                   className="w-full text-3xl font-bold text-gray-900 border-b-2 border-blue-500 focus:outline-none focus:border-blue-600"
                   placeholder="Album title"
                 />
                 <textarea
                   value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
+                  onChange={e => setEditDescription(e.target.value)}
                   className="w-full mt-2 text-gray-600 border-b border-gray-300 focus:outline-none focus:border-blue-500 resize-none"
                   placeholder="Album description (optional)"
                   rows={2}
@@ -233,7 +233,9 @@ const AlbumView: React.FC<AlbumViewProps> = ({
             ) : (
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900">{album.title}</h1>
-                {album.description && <p className="text-gray-600 mt-2">{album.description}</p>}
+                {album.description ? (
+                  <p className="text-gray-600 mt-2">{album.description}</p>
+                ) : null}
               </div>
             )}
           </div>
@@ -262,14 +264,14 @@ const AlbumView: React.FC<AlbumViewProps> = ({
                 >
                   Edit
                 </button>
-                {onShare && (
+                {onShare ? (
                   <button
                     onClick={onShare}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                   >
                     Share
                   </button>
-                )}
+                ) : null}
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
@@ -295,7 +297,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
           className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
           role="grid"
         >
-          {images?.map((image) => (
+          {images?.map(image => (
             <ImageCard
               key={image.id}
               src={image.url}
@@ -309,16 +311,16 @@ const AlbumView: React.FC<AlbumViewProps> = ({
               onDownload={() => handleDownloadImage(image.id)}
               onDelete={() => handleRemoveImage(image.id)}
               draggableId={image.id}
-              onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
+              onDragStart={id => handleDragStart({} as React.DragEvent, id)}
               selected={selectedImages.includes(image.id)}
-              onSelect={(checked) => handleImageSelect(image.id, checked)}
+              onSelect={checked => handleImageSelect(image.id, checked)}
             />
           ))}
         </div>
       </motion.div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
+      {showDeleteConfirm ? (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Album</h3>
@@ -341,9 +343,9 @@ const AlbumView: React.FC<AlbumViewProps> = ({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default AlbumView;
+export default AlbumView

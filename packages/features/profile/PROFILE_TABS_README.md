@@ -15,69 +15,73 @@ The Profile Tabs component provides a comprehensive tabbed interface for the pro
 ### Basic Usage
 
 ```tsx
-import { ProfileTabs } from '@repo/profile';
+import { ProfileTabs } from '@repo/profile'
 
 function ProfilePage() {
   return (
     <div className="p-6">
       <ProfileTabs />
     </div>
-  );
+  )
 }
 ```
 
 ### With Custom Default Tab
 
 ```tsx
-import { ProfileTabs } from '@repo/profile';
+import { ProfileTabs } from '@repo/profile'
 
 function ProfilePage() {
   return (
     <div className="p-6">
       <ProfileTabs defaultTab="wishlist" />
     </div>
-  );
+  )
 }
 ```
 
 ### With ProfileMain Component
 
 ```tsx
-import { ProfileMain } from '@repo/profile';
+import { ProfileMain } from '@repo/profile'
 
 function ProfilePage() {
   return (
-    <ProfileMain 
+    <ProfileMain
       title="My Profile"
       description="Manage your profile and preferences"
       showTabs={true}
       defaultTab="instructions"
     />
-  );
+  )
 }
 ```
 
 ## Tab Content
 
 ### Instructions Tab
+
 - **My Instructions**: View and manage saved building instructions
 - **Drafts**: Continue working on instruction drafts
 - **In Progress**: Instructions currently being worked on
 - **Recent Activity**: Timeline of instruction-related activities
 
 ### Wishlist Tab
+
 - **Wishlist Items**: Total items in your wishlist
 - **Purchased**: Items acquired from wishlist
 - **Priority**: High priority wishlist items
 - **Recent Activity**: Wishlist updates and purchases
 
 ### Inspiration Gallery Tab
+
 - **Saved Images**: Images saved for inspiration
 - **Favorites**: Most loved inspirational builds
 - **Collections**: Organized inspiration collections
 - **Recent Inspiration**: Latest saved inspirational content
 
 ### Settings Tab
+
 - **Profile Settings**: Display name, email, avatar management
 - **Notifications**: Email, push, and wishlist alerts
 - **Appearance**: Theme, language, timezone settings
@@ -87,18 +91,18 @@ function ProfilePage() {
 
 ### ProfileTabs Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `className` | `string` | `''` | Additional CSS classes |
-| `defaultTab` | `string` | `'instructions'` | Initial active tab |
+| Prop         | Type     | Default          | Description            |
+| ------------ | -------- | ---------------- | ---------------------- |
+| `className`  | `string` | `''`             | Additional CSS classes |
+| `defaultTab` | `string` | `'instructions'` | Initial active tab     |
 
 ### ProfileMain Props (Updated)
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `showTabs` | `boolean` | `true` | Whether to show tabs or custom content |
-| `defaultTab` | `string` | `'instructions'` | Default tab when tabs are shown |
-| `children` | `React.ReactNode` | - | Custom content when `showTabs` is false |
+| Prop         | Type              | Default          | Description                             |
+| ------------ | ----------------- | ---------------- | --------------------------------------- |
+| `showTabs`   | `boolean`         | `true`           | Whether to show tabs or custom content  |
+| `defaultTab` | `string`          | `'instructions'` | Default tab when tabs are shown         |
+| `children`   | `React.ReactNode` | -                | Custom content when `showTabs` is false |
 
 ## Tab Values
 
@@ -110,6 +114,7 @@ function ProfilePage() {
 ## Styling
 
 The tabs use a clean, modern design with:
+
 - Horizontal tab navigation
 - Active tab indicators
 - Hover effects
@@ -140,7 +145,8 @@ pnpm test
 ```
 
 The component includes comprehensive tests for:
+
 - Tab rendering
 - Tab switching
 - Props handling
-- Accessibility features 
+- Accessibility features

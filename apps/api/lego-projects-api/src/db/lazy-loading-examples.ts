@@ -1,14 +1,13 @@
-import { eq, desc, and, sql } from 'drizzle-orm';
-import { db } from './client';
+import { eq, desc, and, sql } from 'drizzle-orm'
+import { db } from './client'
 import {
-  users,
   galleryImages,
   galleryAlbums,
   mocInstructions,
   mocFiles,
   mocGalleryImages,
   mocGalleryAlbums,
-} from './schema';
+} from './schema'
 
 /**
  * Lazy Loading Examples for the MOC Instructions API
@@ -17,24 +16,7 @@ import {
  * for efficient lazy loading and cascading deletes.
  */
 
-// Example 1: Get user with lazy-loaded gallery images (only when needed)
-export async function getUserWithGalleryImages(userId: string) {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    with: {
-      galleryImages: {
-        orderBy: [desc(galleryImages.createdAt)],
-        limit: 10, // Only load first 10 images
-      },
-      galleryAlbums: {
-        orderBy: [desc(galleryAlbums.createdAt)],
-        limit: 5, // Only load first 5 albums
-      },
-    },
-  });
-
-  return user;
-}
+// Note: User-related examples removed - users are managed in auth service, not in this PostgreSQL database
 
 // Example 2: Get MOC instructions with lazy-loaded files and gallery links
 export async function getMocWithDetails(mocId: string) {
@@ -46,17 +28,7 @@ export async function getMocWithDetails(mocId: string) {
       },
       galleryImages: {
         with: {
-          galleryImage: {
-            with: {
-              user: {
-                columns: {
-                  id: true,
-                  username: true,
-                  preferredName: true,
-                },
-              },
-            },
-          },
+          galleryImage: true,
         },
       },
       galleryAlbums: {
@@ -71,14 +43,14 @@ export async function getMocWithDetails(mocId: string) {
         },
       },
     },
-  });
+  })
 
-  return moc;
+  return moc
 }
 
 // Example 3: Get user's MOCs with pagination and lazy loading
 export async function getUserMocs(userId: string, page: number = 1, limit: number = 10) {
-  const offset = (page - 1) * limit;
+  const offset = (page - 1) * limit
 
   const mocs = await db.query.mocInstructions.findMany({
     where: eq(mocInstructions.userId, userId),
@@ -103,9 +75,9 @@ export async function getUserMocs(userId: string, page: number = 1, limit: numbe
         },
       },
     },
-  });
+  })
 
-  return mocs;
+  return mocs
 }
 
 // Example 4: Get album with lazy-loaded images (cascading delete will work automatically)
@@ -129,9 +101,9 @@ export async function getAlbumWithImages(albumId: string) {
         },
       },
     },
-  });
+  })
 
-  return album;
+  return album
 }
 
 // Example 5: Search MOCs with lazy-loaded related data
@@ -139,10 +111,10 @@ export async function searchMocs(searchTerm: string, userId?: string) {
   const whereConditions = [
     // Search in title and description
     // Note: This is a simple text search - for production, consider using full-text search
-  ];
+  ]
 
   if (userId) {
-    whereConditions.push(eq(mocInstructions.userId, userId));
+    whereConditions.push(eq(mocInstructions.userId, userId))
   }
 
   const mocs = await db.query.mocInstructions.findMany({
@@ -150,21 +122,14 @@ export async function searchMocs(searchTerm: string, userId?: string) {
     orderBy: [desc(mocInstructions.createdAt)],
     limit: 20,
     with: {
-      user: {
-        columns: {
-          id: true,
-          username: true,
-          preferredName: true,
-        },
-      },
       files: {
         where: eq(mocFiles.fileType, 'thumbnail'),
         limit: 1,
       },
     },
-  });
+  })
 
-  return mocs;
+  return mocs
 }
 
 // Example 6: Get gallery images with lazy-loaded MOC associations
@@ -172,13 +137,6 @@ export async function getGalleryImageWithMocs(imageId: string) {
   const image = await db.query.galleryImages.findFirst({
     where: eq(galleryImages.id, imageId),
     with: {
-      user: {
-        columns: {
-          id: true,
-          username: true,
-          preferredName: true,
-        },
-      },
       album: {
         columns: {
           id: true,
@@ -197,35 +155,26 @@ export async function getGalleryImageWithMocs(imageId: string) {
         },
       },
     },
-  });
+  })
 
-  return image;
+  return image
 }
 
-// Example 7: Delete user (cascading delete will automatically handle all related data)
-export async function deleteUser(userId: string) {
-  // This will automatically cascade delete:
-  // - All user's gallery images
-  // - All user's gallery albums (which cascade delete their images)
-  // - All user's gallery flags
-  // - All user's MOC instructions (which cascade delete their files and join tables)
-  const result = await db.delete(users).where(eq(users.id, userId));
-  return result;
-}
+// Note: User deletion examples removed - users are managed in auth service
 
 // Example 8: Delete album (cascading delete will automatically delete all images in the album)
 export async function deleteAlbum(albumId: string) {
   // This will automatically cascade delete all images in the album
-  const result = await db.delete(galleryAlbums).where(eq(galleryAlbums.id, albumId));
-  return result;
+  const result = await db.delete(galleryAlbums).where(eq(galleryAlbums.id, albumId))
+  return result
 }
 
 // Example 9: Delete MOC instructions (uses the safe delete function from migration)
 export async function deleteMocInstructions(mocId: string) {
   // This will use the safe delete function that preserves images/albums
   // used by other MOCs or albums
-  const result = await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId));
-  return result;
+  const result = await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId))
+  return result
 }
 
 // Example 10: Get user statistics with lazy loading
@@ -244,11 +193,11 @@ export async function getUserStats(userId: string) {
       .select({ count: sql`count(*)` })
       .from(galleryAlbums)
       .where(eq(galleryAlbums.userId, userId)),
-  ]);
+  ])
 
   return {
     mocs: mocCount[0]?.count || 0,
     images: imageCount[0]?.count || 0,
     albums: albumCount[0]?.count || 0,
-  };
+  }
 }

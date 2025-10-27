@@ -1,6 +1,6 @@
 /**
  * CSRF Protection Examples
- * 
+ *
  * Comprehensive examples showing different ways to handle CSRF protection
  * in various scenarios throughout the application.
  */
@@ -11,7 +11,7 @@ import {
   getCSRFToken,
   initializeCSRF,
   refreshCSRFToken,
-  useFetchCSRFTokenQuery
+  useFetchCSRFTokenQuery,
 } from '@repo/auth'
 import { api } from './api'
 import { authApi } from './authApi'
@@ -31,14 +31,14 @@ export const rtkQueryExamples = {
 
     // In a React component:
     // const [createMOC, { isLoading, error }] = useCreateMOCInstructionMutation()
-    
+
     const mocData = {
       title: 'Starship Enterprise',
       difficulty: 'expert' as const,
       pieces: 2500,
       estimatedTime: 480,
       instructions: [],
-      tags: ['starship', 'star-trek', 'sci-fi']
+      tags: ['starship', 'star-trek', 'sci-fi'],
     }
 
     try {
@@ -62,8 +62,8 @@ export const rtkQueryExamples = {
       id: 'moc-123',
       body: {
         title: 'Updated Starship Enterprise',
-        pieces: 2600
-      }
+        pieces: 2600,
+      },
     }
 
     try {
@@ -73,7 +73,7 @@ export const rtkQueryExamples = {
     } catch (error) {
       console.error('Update failed:', error)
     }
-  }
+  },
 }
 
 // ============================================================================
@@ -90,7 +90,7 @@ export const authApiExamples = {
       // CSRF token automatically added for mutation requests
       // Automatic retry on CSRF failure
       const response = await authApi.login({ email, password })
-      
+
       console.log('Login successful:', response.data?.user)
       return response.data?.user
     } catch (error) {
@@ -104,7 +104,7 @@ export const authApiExamples = {
     try {
       // CSRF protection built-in
       const response = await authApi.signup({ name, email, password })
-      
+
       console.log('Signup successful:', response.data?.user)
       return response.data?.user
     } catch (error) {
@@ -117,16 +117,16 @@ export const authApiExamples = {
   async logoutUser() {
     try {
       await authApi.logout()
-      
+
       // Clear CSRF token after successful logout
       clearCSRFToken()
-      
+
       console.log('Logout successful')
     } catch (error) {
       console.error('Logout failed:', error)
       throw error
     }
-  }
+  },
 }
 
 // ============================================================================
@@ -141,12 +141,12 @@ export const customFetchExamples = {
   async basicCustomRequest() {
     try {
       const headers = await getCSRFHeaders()
-      
+
       const response = await fetch('/api/custom-endpoint', {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ data: 'example' })
+        body: JSON.stringify({ data: 'example' }),
       })
 
       if (!response.ok) {
@@ -166,9 +166,9 @@ export const customFetchExamples = {
   async requestWithManualRetry() {
     const makeRequest = async (token?: string) => {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       }
-      
+
       if (token) {
         headers['X-CSRF-Token'] = token
       } else {
@@ -180,7 +180,7 @@ export const customFetchExamples = {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ action: 'sensitive-operation' })
+        body: JSON.stringify({ action: 'sensitive-operation' }),
       })
     }
 
@@ -190,10 +190,10 @@ export const customFetchExamples = {
       // Handle CSRF failure with manual retry
       if (response.status === 403) {
         const errorData = await response.json()
-        
+
         if (errorData.code === 'CSRF_FAILED') {
           console.log('CSRF token failed, refreshing and retrying...')
-          
+
           // Get fresh token and retry
           const newToken = await refreshCSRFToken()
           response = await makeRequest(newToken)
@@ -226,11 +226,11 @@ export const customFetchExamples = {
       const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
-          'X-CSRF-Token': token
+          'X-CSRF-Token': token,
           // Don't set Content-Type - let browser set it for FormData
         },
         credentials: 'include',
-        body: formData
+        body: formData,
       })
 
       if (!response.ok) {
@@ -244,7 +244,7 @@ export const customFetchExamples = {
       console.error('File upload failed:', error)
       throw error
     }
-  }
+  },
 }
 
 // ============================================================================
@@ -272,17 +272,17 @@ export const lifecycleExamples = {
     try {
       // Perform logout request (includes CSRF protection)
       await authApi.logout()
-      
+
       // Clear CSRF token from memory
       clearCSRFToken()
-      
+
       // Clear other user data
       localStorage.removeItem('user-preferences')
-      
+
       console.log('User logged out successfully')
     } catch (error) {
       console.error('Logout failed:', error)
-      
+
       // Still clear local data even if logout request failed
       clearCSRFToken()
       localStorage.removeItem('user-preferences')
@@ -298,11 +298,11 @@ export const lifecycleExamples = {
       return newToken
     } catch (error) {
       console.error('CSRF token refresh failed:', error)
-      
+
       // Might need to redirect to login or show error
       throw new Error('Security token expired. Please refresh the page.')
     }
-  }
+  },
 }
 
 // ============================================================================
@@ -317,12 +317,12 @@ export const errorHandlingExamples = {
   async handleRequestWithFeedback(showError: (message: string) => void) {
     try {
       const headers = await getCSRFHeaders()
-      
+
       const response = await fetch('/api/user-action', {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ action: 'update-profile' })
+        body: JSON.stringify({ action: 'update-profile' }),
       })
 
       const data = await response.json()
@@ -351,12 +351,12 @@ export const errorHandlingExamples = {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const headers = await getCSRFHeaders()
-        
+
         const response = await fetch('/api/important-action', {
           method: 'POST',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ critical: true })
+          body: JSON.stringify({ critical: true }),
         })
 
         if (response.ok) {
@@ -366,7 +366,7 @@ export const errorHandlingExamples = {
         }
 
         const errorData = await response.json()
-        
+
         if (response.status === 403 && errorData.code === 'CSRF_FAILED') {
           console.log(`CSRF failure on attempt ${attempt + 1}, refreshing token...`)
           await refreshCSRFToken()
@@ -378,18 +378,18 @@ export const errorHandlingExamples = {
       } catch (error) {
         lastError = error as Error
         console.error(`Attempt ${attempt + 1} failed:`, error)
-        
+
         if (attempt === maxRetries) {
           break // Max retries reached
         }
-        
+
         // Wait before retry (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
       }
     }
 
     throw new Error(`Request failed after ${maxRetries + 1} attempts: ${lastError?.message}`)
-  }
+  },
 }
 
 // ============================================================================
@@ -405,17 +405,17 @@ export const reactHookExamples = {
     // This would be implemented as a custom React hook
     const mutate = async (data: any) => {
       const headers = await getCSRFHeaders()
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        
+
         if (response.status === 403 && errorData.code === 'CSRF_FAILED') {
           // Attempt automatic retry with fresh token
           const newToken = await refreshCSRFToken()
@@ -423,10 +423,10 @@ export const reactHookExamples = {
             method: 'POST',
             headers: {
               ...headers,
-              'X-CSRF-Token': newToken
+              'X-CSRF-Token': newToken,
             },
             credentials: 'include',
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
           })
 
           if (!retryResponse.ok) {
@@ -443,7 +443,7 @@ export const reactHookExamples = {
     }
 
     return { mutate }
-  }
+  },
 }
 
 // ============================================================================
@@ -456,28 +456,28 @@ export const csrfExamples = {
   customFetch: customFetchExamples,
   lifecycle: lifecycleExamples,
   errorHandling: errorHandlingExamples,
-  reactHooks: reactHookExamples
+  reactHooks: reactHookExamples,
 }
 
 // Make examples available globally for development/debugging
 if (typeof window !== 'undefined') {
   const globalWindow = window as any
   globalWindow.csrfExamples = csrfExamples
-  
+
   // Quick test function for immediate verification
   globalWindow.testCSRFExample = async () => {
     try {
       console.log('🔒 Running CSRF Example Test')
       console.log('==============================')
-      
+
       // Test token fetching
       const token = await getCSRFToken()
       console.log('✅ CSRF Token Retrieved:', token ? 'Success' : 'Failed')
-      
+
       // Test header preparation
       const headers = await getCSRFHeaders()
       console.log('✅ CSRF Headers Prepared:', headers['X-CSRF-Token'] ? 'Success' : 'Failed')
-      
+
       console.log('==============================')
       console.log('CSRF Example Test Complete')
     } catch (error) {

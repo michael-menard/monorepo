@@ -1,6 +1,6 @@
 /**
  * Mock Email Service for E2E Testing
- * 
+ *
  * This is a simple in-memory email service for testing.
  * Perfect for personal projects where you don't need real email delivery.
  */
@@ -39,7 +39,7 @@ export class MockEmailService {
       subject,
       html,
       text,
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
     }
 
     // Store email by recipient
@@ -49,10 +49,10 @@ export class MockEmailService {
     this.emails.get(to)!.push(email)
 
     console.log(`📧 Mock email sent to ${to}: ${subject}`)
-    
+
     // Simulate email delivery delay
     await new Promise(resolve => setTimeout(resolve, this.config.emailDelay))
-    
+
     return email.id
   }
 
@@ -68,10 +68,13 @@ export class MockEmailService {
    */
   async findVerificationEmail(to: string): Promise<MockEmail | null> {
     const emails = await this.getEmails(to)
-    return emails.find(email => 
-      email.subject.toLowerCase().includes('verification') ||
-      email.subject.toLowerCase().includes('verify')
-    ) || null
+    return (
+      emails.find(
+        email =>
+          email.subject.toLowerCase().includes('verification') ||
+          email.subject.toLowerCase().includes('verify'),
+      ) || null
+    )
   }
 
   /**
@@ -125,13 +128,13 @@ export class MockEmailService {
    */
   async waitForVerificationEmail(to: string, timeoutMs: number = 30000): Promise<string | null> {
     const startTime = Date.now()
-    
+
     while (Date.now() - startTime < timeoutMs) {
       const code = await this.getVerificationCode(to)
       if (code) {
         return code
       }
-      
+
       // Wait 1 second before checking again
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
@@ -160,9 +163,12 @@ export class MockEmailService {
    * Get email statistics
    */
   getStats(): { totalEmails: number; recipients: number } {
-    const totalEmails = Array.from(this.emails.values()).reduce((sum, emails) => sum + emails.length, 0)
+    const totalEmails = Array.from(this.emails.values()).reduce(
+      (sum, emails) => sum + emails.length,
+      0,
+    )
     const recipients = this.emails.size
-    
+
     return { totalEmails, recipients }
   }
 
@@ -181,7 +187,12 @@ export class MockEmailService {
 export const mockEmailService = new MockEmailService()
 
 // Utility functions
-export async function sendMockEmail(to: string, subject: string, html: string, text: string): Promise<string> {
+export async function sendMockEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+): Promise<string> {
   return mockEmailService.sendEmail(to, subject, html, text)
 }
 
@@ -189,7 +200,10 @@ export async function getVerificationCodeFromMock(email: string): Promise<string
   return mockEmailService.getVerificationCode(email)
 }
 
-export async function waitForVerificationEmail(email: string, timeoutMs: number = 30000): Promise<string | null> {
+export async function waitForVerificationEmail(
+  email: string,
+  timeoutMs: number = 30000,
+): Promise<string | null> {
   return mockEmailService.waitForVerificationEmail(email, timeoutMs)
 }
 
@@ -199,4 +213,4 @@ export function clearMockEmails(): void {
 
 export function getMockEmailStats(): { totalEmails: number; recipients: number } {
   return mockEmailService.getStats()
-} 
+}

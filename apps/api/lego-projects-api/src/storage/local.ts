@@ -1,34 +1,34 @@
-import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import fs from 'fs';
+import path from 'path'
+import fs from 'fs'
+import multer from 'multer'
+import { v4 as uuidv4 } from 'uuid'
 
-const uploadsDir = 'uploads';
+const uploadsDir = 'uploads'
 if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+  fs.mkdirSync(uploadsDir, { recursive: true })
 }
 
 export const localStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    cb(null, uploadsDir)
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar-${uuidv4()}${ext}`);
+    const ext = path.extname(file.originalname)
+    cb(null, `avatar-${uuidv4()}${ext}`)
   },
-});
+})
 
 export function getLocalAvatarUrl(filename: string): string {
-  return `/uploads/${filename}`;
+  return `/uploads/${filename}`
 }
 
 export function deleteLocalAvatar(avatarUrl: string): void {
   const filePath = path.join(
     process.cwd(),
     avatarUrl.startsWith('/') ? avatarUrl.substring(1) : avatarUrl,
-  );
+  )
   if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
+    fs.unlinkSync(filePath)
   }
 }
 
@@ -36,17 +36,17 @@ export function deleteLocalAvatar(avatarUrl: string): void {
 export const galleryLocalStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Assume req.user.id is available via auth middleware, fallback to 'unknown'
-    const userId = req.user?.id || 'unknown';
+    const userId = req.user?.id || 'unknown'
     // Album ID can be passed as req.body.albumId or default to 'uncategorized'
-    const albumId = req.body?.albumId || 'uncategorized';
-    const dir = path.join(uploadsDir, 'gallery', userId, albumId);
+    const albumId = req.body?.albumId || 'uncategorized'
+    const dir = path.join(uploadsDir, 'gallery', userId, albumId)
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true })
     }
-    cb(null, dir);
+    cb(null, dir)
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
+    const ext = path.extname(file.originalname)
+    cb(null, `${uuidv4()}${ext}`)
   },
-});
+})

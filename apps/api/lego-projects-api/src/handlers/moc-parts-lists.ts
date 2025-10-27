@@ -1,18 +1,18 @@
-import { Request, Response } from 'express';
-import { eq, and, asc, desc } from 'drizzle-orm';
-import { db } from '../db/client';
-import { mocPartsLists, mocInstructions } from '../db/schema';
-import { apiResponse, apiErrorResponse } from '../utils/response';
-import { CreateMocPartsListSchema, UpdateMocPartsListSchema } from '../types';
+import { Request, Response } from 'express'
+import { eq, and, asc, desc } from 'drizzle-orm'
+import { db } from '../db/client'
+import { mocPartsLists, mocInstructions } from '../db/schema'
+import { apiResponse, apiErrorResponse } from '../utils/response'
+import { CreateMocPartsListSchema, UpdateMocPartsListSchema } from '../types'
 
 // GET /api/moc-instructions/:mocId/parts-lists - Get all parts lists for a MOC
 export const getMocPartsLists = async (req: Request, res: Response) => {
   try {
-    const userId = req.authenticatedUserId;
-    const { mocId } = req.params;
+    const userId = req.authenticatedUserId
+    const { mocId } = req.params
 
     if (!userId) {
-      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'));
+      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'))
     }
 
     // Verify MOC belongs to user
@@ -20,47 +20,47 @@ export const getMocPartsLists = async (req: Request, res: Response) => {
       .select()
       .from(mocInstructions)
       .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
-      .limit(1);
+      .limit(1)
 
     if (moc.length === 0) {
       return res
         .status(404)
-        .json(apiErrorResponse(404, 'NOT_FOUND', 'MOC instruction not found or not authorized'));
+        .json(apiErrorResponse(404, 'NOT_FOUND', 'MOC instruction not found or not authorized'))
     }
 
     const partsLists = await db
       .select()
       .from(mocPartsLists)
       .where(eq(mocPartsLists.mocId, mocId))
-      .orderBy(asc(mocPartsLists.createdAt));
+      .orderBy(asc(mocPartsLists.createdAt))
 
-    return res.status(200).json(apiResponse(200, 'Parts lists retrieved successfully', partsLists));
+    return res.status(200).json(apiResponse(200, 'Parts lists retrieved successfully', partsLists))
   } catch (error) {
-    console.error('Error getting MOC parts lists:', error);
+    console.error('Error getting MOC parts lists:', error)
     return res
       .status(500)
-      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to retrieve parts lists'));
+      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to retrieve parts lists'))
   }
-};
+}
 
 // POST /api/moc-instructions/:mocId/parts-lists - Create new parts list
 export const createMocPartsList = async (req: Request, res: Response) => {
   try {
-    const userId = req.authenticatedUserId;
-    const { mocId } = req.params;
+    const userId = req.authenticatedUserId
+    const { mocId } = req.params
 
     if (!userId) {
-      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'));
+      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'))
     }
 
     // Validate request body
-    const validation = CreateMocPartsListSchema.safeParse({ ...req.body, mocId });
+    const validation = CreateMocPartsListSchema.safeParse({ ...req.body, mocId })
     if (!validation.success) {
       return res
         .status(400)
         .json(
           apiErrorResponse(400, 'VALIDATION_ERROR', 'Invalid input data', validation.error.issues),
-        );
+        )
     }
 
     // Verify MOC belongs to user
@@ -68,15 +68,15 @@ export const createMocPartsList = async (req: Request, res: Response) => {
       .select()
       .from(mocInstructions)
       .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
-      .limit(1);
+      .limit(1)
 
     if (moc.length === 0) {
       return res
         .status(404)
-        .json(apiErrorResponse(404, 'NOT_FOUND', 'MOC instruction not found or not authorized'));
+        .json(apiErrorResponse(404, 'NOT_FOUND', 'MOC instruction not found or not authorized'))
     }
 
-    const { title, description, fileId, totalPartsCount, costEstimate, notes } = validation.data;
+    const { title, description, fileId, totalPartsCount, costEstimate, notes } = validation.data
 
     const [newPartsList] = await db
       .insert(mocPartsLists)
@@ -89,35 +89,35 @@ export const createMocPartsList = async (req: Request, res: Response) => {
         costEstimate,
         notes,
       })
-      .returning();
+      .returning()
 
-    return res.status(201).json(apiResponse(201, 'Parts list created successfully', newPartsList));
+    return res.status(201).json(apiResponse(201, 'Parts list created successfully', newPartsList))
   } catch (error) {
-    console.error('Error creating MOC parts list:', error);
+    console.error('Error creating MOC parts list:', error)
     return res
       .status(500)
-      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to create parts list'));
+      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to create parts list'))
   }
-};
+}
 
 // PUT /api/moc-instructions/:mocId/parts-lists/:partsListId - Update parts list
 export const updateMocPartsList = async (req: Request, res: Response) => {
   try {
-    const userId = req.authenticatedUserId;
-    const { mocId, partsListId } = req.params;
+    const userId = req.authenticatedUserId
+    const { mocId, partsListId } = req.params
 
     if (!userId) {
-      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'));
+      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'))
     }
 
     // Validate request body
-    const validation = UpdateMocPartsListSchema.safeParse(req.body);
+    const validation = UpdateMocPartsListSchema.safeParse(req.body)
     if (!validation.success) {
       return res
         .status(400)
         .json(
           apiErrorResponse(400, 'VALIDATION_ERROR', 'Invalid input data', validation.error.issues),
-        );
+        )
     }
 
     // Verify MOC belongs to user and parts list exists
@@ -135,51 +135,51 @@ export const updateMocPartsList = async (req: Request, res: Response) => {
           eq(mocInstructions.userId, userId),
         ),
       )
-      .limit(1);
+      .limit(1)
 
     if (partsList.length === 0) {
       return res
         .status(404)
-        .json(apiErrorResponse(404, 'NOT_FOUND', 'Parts list not found or not authorized'));
+        .json(apiErrorResponse(404, 'NOT_FOUND', 'Parts list not found or not authorized'))
     }
 
     // Only update fields that were provided
-    const updateData: any = { updatedAt: new Date() };
-    const validatedData = validation.data;
+    const updateData: any = { updatedAt: new Date() }
+    const validatedData = validation.data
 
-    Object.keys(validatedData).forEach((key) => {
+    Object.keys(validatedData).forEach(key => {
       if (validatedData[key as keyof typeof validatedData] !== undefined) {
-        updateData[key] = validatedData[key as keyof typeof validatedData];
+        updateData[key] = validatedData[key as keyof typeof validatedData]
       }
-    });
+    })
 
     const [updatedPartsList] = await db
       .update(mocPartsLists)
       .set(updateData)
       .where(eq(mocPartsLists.id, partsListId))
-      .returning();
+      .returning()
 
     return res
       .status(200)
-      .json(apiResponse(200, 'Parts list updated successfully', updatedPartsList));
+      .json(apiResponse(200, 'Parts list updated successfully', updatedPartsList))
   } catch (error) {
-    console.error('Error updating MOC parts list:', error);
+    console.error('Error updating MOC parts list:', error)
     return res
       .status(500)
-      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update parts list'));
+      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update parts list'))
   }
-};
+}
 
 // PATCH /api/moc-instructions/:mocId/parts-lists/:partsListId/status - Update build/purchase status
 export const updatePartsListStatus = async (req: Request, res: Response) => {
   try {
-    const userId = req.authenticatedUserId;
-    const { mocId, partsListId } = req.params;
+    const userId = req.authenticatedUserId
+    const { mocId, partsListId } = req.params
     const { built, purchased, inventoryPercentage, acquiredPartsCount, actualCost, notes } =
-      req.body;
+      req.body
 
     if (!userId) {
-      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'));
+      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'))
     }
 
     // Verify MOC belongs to user and parts list exists
@@ -197,48 +197,48 @@ export const updatePartsListStatus = async (req: Request, res: Response) => {
           eq(mocInstructions.userId, userId),
         ),
       )
-      .limit(1);
+      .limit(1)
 
     if (partsList.length === 0) {
       return res
         .status(404)
-        .json(apiErrorResponse(404, 'NOT_FOUND', 'Parts list not found or not authorized'));
+        .json(apiErrorResponse(404, 'NOT_FOUND', 'Parts list not found or not authorized'))
     }
 
     // Build update object with only provided fields
-    const updateData: any = { updatedAt: new Date() };
-    if (built !== undefined) updateData.built = built;
-    if (purchased !== undefined) updateData.purchased = purchased;
-    if (inventoryPercentage !== undefined) updateData.inventoryPercentage = inventoryPercentage;
-    if (acquiredPartsCount !== undefined) updateData.acquiredPartsCount = acquiredPartsCount;
-    if (actualCost !== undefined) updateData.actualCost = actualCost;
-    if (notes !== undefined) updateData.notes = notes;
+    const updateData: any = { updatedAt: new Date() }
+    if (built !== undefined) updateData.built = built
+    if (purchased !== undefined) updateData.purchased = purchased
+    if (inventoryPercentage !== undefined) updateData.inventoryPercentage = inventoryPercentage
+    if (acquiredPartsCount !== undefined) updateData.acquiredPartsCount = acquiredPartsCount
+    if (actualCost !== undefined) updateData.actualCost = actualCost
+    if (notes !== undefined) updateData.notes = notes
 
     const [updatedPartsList] = await db
       .update(mocPartsLists)
       .set(updateData)
       .where(eq(mocPartsLists.id, partsListId))
-      .returning();
+      .returning()
 
     return res
       .status(200)
-      .json(apiResponse(200, 'Parts list status updated successfully', updatedPartsList));
+      .json(apiResponse(200, 'Parts list status updated successfully', updatedPartsList))
   } catch (error) {
-    console.error('Error updating parts list status:', error);
+    console.error('Error updating parts list status:', error)
     return res
       .status(500)
-      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update parts list status'));
+      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update parts list status'))
   }
-};
+}
 
 // DELETE /api/moc-instructions/:mocId/parts-lists/:partsListId - Delete parts list
 export const deleteMocPartsList = async (req: Request, res: Response) => {
   try {
-    const userId = req.authenticatedUserId;
-    const { mocId, partsListId } = req.params;
+    const userId = req.authenticatedUserId
+    const { mocId, partsListId } = req.params
 
     if (!userId) {
-      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'));
+      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'))
     }
 
     // Verify MOC belongs to user and parts list exists
@@ -256,32 +256,32 @@ export const deleteMocPartsList = async (req: Request, res: Response) => {
           eq(mocInstructions.userId, userId),
         ),
       )
-      .limit(1);
+      .limit(1)
 
     if (partsList.length === 0) {
       return res
         .status(404)
-        .json(apiErrorResponse(404, 'NOT_FOUND', 'Parts list not found or not authorized'));
+        .json(apiErrorResponse(404, 'NOT_FOUND', 'Parts list not found or not authorized'))
     }
 
-    await db.delete(mocPartsLists).where(eq(mocPartsLists.id, partsListId));
+    await db.delete(mocPartsLists).where(eq(mocPartsLists.id, partsListId))
 
-    return res.status(200).json(apiResponse(200, 'Parts list deleted successfully', null));
+    return res.status(200).json(apiResponse(200, 'Parts list deleted successfully', null))
   } catch (error) {
-    console.error('Error deleting MOC parts list:', error);
+    console.error('Error deleting MOC parts list:', error)
     return res
       .status(500)
-      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete parts list'));
+      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete parts list'))
   }
-};
+}
 
 // GET /api/user/parts-lists/summary - Get user's parts list summary
 export const getUserPartsListSummary = async (req: Request, res: Response) => {
   try {
-    const userId = req.authenticatedUserId;
+    const userId = req.authenticatedUserId
 
     if (!userId) {
-      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'));
+      return res.status(403).json(apiErrorResponse(403, 'UNAUTHORIZED', 'User not authenticated'))
     }
 
     // Get summary of user's parts lists across all MOCs
@@ -297,13 +297,13 @@ export const getUserPartsListSummary = async (req: Request, res: Response) => {
       .from(mocPartsLists)
       .innerJoin(mocInstructions, eq(mocPartsLists.mocId, mocInstructions.id))
       .where(eq(mocInstructions.userId, userId))
-      .orderBy(desc(mocPartsLists.updatedAt));
+      .orderBy(desc(mocPartsLists.updatedAt))
 
     // Calculate summary statistics
     const stats = {
       totalPartsLists: summary.length,
-      builtCount: summary.filter((item) => item.built).length,
-      purchasedCount: summary.filter((item) => item.purchased).length,
+      builtCount: summary.filter(item => item.built).length,
+      purchasedCount: summary.filter(item => item.purchased).length,
       averageInventoryPercentage:
         summary.length > 0
           ? (
@@ -311,18 +311,18 @@ export const getUserPartsListSummary = async (req: Request, res: Response) => {
               summary.length
             ).toFixed(2)
           : '0.00',
-    };
+    }
 
     return res.status(200).json(
       apiResponse(200, 'Parts list summary retrieved successfully', {
         statistics: stats,
         recentPartsLists: summary.slice(0, 10), // Return 10 most recent
       }),
-    );
+    )
   } catch (error) {
-    console.error('Error getting user parts list summary:', error);
+    console.error('Error getting user parts list summary:', error)
     return res
       .status(500)
-      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to retrieve parts list summary'));
+      .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to retrieve parts list summary'))
   }
-};
+}

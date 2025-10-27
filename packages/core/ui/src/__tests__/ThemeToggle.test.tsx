@@ -30,11 +30,7 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 const renderWithTheme = (component: React.ReactElement) => {
-  return render(
-    <ThemeProvider>
-      {component}
-    </ThemeProvider>
-  )
+  return render(<ThemeProvider>{component}</ThemeProvider>)
 }
 
 describe('ThemeToggle', () => {
@@ -74,4 +70,4 @@ describe('ThemeToggle', () => {
     const button = screen.getByRole('button')
     expect(button).toHaveClass('h-11')
   })
-}) 
+})

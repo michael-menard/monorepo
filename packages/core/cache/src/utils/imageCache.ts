@@ -8,11 +8,13 @@ export class ImageCache {
   private maxAge = 24 * 60 * 60 * 1000 // 24 hours default
   private maxSize = 50 * 1024 * 1024 // 50MB default
 
-  constructor(options: {
-    cacheName?: string
-    maxAge?: number
-    maxSize?: number
-  } = {}) {
+  constructor(
+    options: {
+      cacheName?: string
+      maxAge?: number
+      maxSize?: number
+    } = {},
+  ) {
     this.cacheName = options.cacheName || this.cacheName
     this.maxAge = options.maxAge || this.maxAge
     this.maxSize = options.maxSize || this.maxSize
@@ -28,7 +30,7 @@ export class ImageCache {
 
     try {
       const cache = await caches.open(this.cacheName)
-      
+
       // Check if already cached
       const cachedResponse = await cache.match(url)
       if (cachedResponse) {
@@ -63,7 +65,7 @@ export class ImageCache {
     try {
       const cache = await caches.open(this.cacheName)
       const response = await cache.match(url)
-      
+
       if (!response) {
         return null
       }
@@ -140,7 +142,7 @@ export class ImageCache {
       if (!cached) return null
 
       const entry: ImageCacheEntry = JSON.parse(cached)
-      
+
       // Check if expired
       if (entry.expiresAt && Date.now() > entry.expiresAt) {
         localStorage.removeItem(`image_cache_${this.hashUrl(url)}`)
@@ -239,7 +241,7 @@ export class ImageCache {
     let hash = 0
     for (let i = 0; i < url.length; i++) {
       const char = url.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(36)
@@ -279,4 +281,4 @@ export function useImageCache() {
     clearCache,
     getStats,
   }
-} 
+}

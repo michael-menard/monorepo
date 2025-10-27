@@ -7,4 +7,4 @@ declare module 'virtual:pwa-register' {
     onRegistered?: (swRegistration: ServiceWorkerRegistration) => void
     onRegisterError?: (error: Error) => void
   }): (reloadPage?: boolean) => void
-} 
+}

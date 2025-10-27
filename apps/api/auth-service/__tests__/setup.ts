@@ -1,36 +1,36 @@
-import { vi, beforeAll, afterAll } from 'vitest';
+import { vi, beforeAll, afterAll } from 'vitest'
 
 // Load test environment variables if present
 try {
   // Dynamically import dotenv only if available, to avoid errors if not installed
   // This prevents test failures if dotenv is not a dependency
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require('dotenv').config({ path: '.env.test' });
+
+  require('dotenv').config({ path: '.env.test' })
 } catch (e) {
   // dotenv is optional for CI or environments where env vars are set differently
 }
 
 // Set test environment
-process.env.NODE_ENV = 'test';
+process.env.NODE_ENV = 'test'
 
 // Mock console methods to reduce noise in tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
+const originalConsoleLog = console.log
+const originalConsoleError = console.error
+const originalConsoleWarn = console.warn
 
 beforeAll(() => {
   // Suppress console output during tests unless explicitly needed
   // console.log = () => {};
   // console.error = () => {};
   // console.warn = () => {};
-});
+})
 
 afterAll(() => {
   // Restore console methods
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
-});
+  console.log = originalConsoleLog
+  console.error = originalConsoleError
+  console.warn = originalConsoleWarn
+})
 
 // Mock MongoDB
 vi.mock('mongoose', () => ({
@@ -53,20 +53,20 @@ vi.mock('mongoose', () => ({
       save: vi.fn(),
       deleteMany: vi.fn(),
     }),
-  }
-}));
+  },
+}))
 
 // Mock bcryptjs
 vi.mock('bcryptjs', () => ({
   hash: vi.fn().mockResolvedValue('hashedPassword'),
   compare: vi.fn().mockResolvedValue(true),
-}));
+}))
 
 // Mock jsonwebtoken
 vi.mock('jsonwebtoken', () => ({
   sign: vi.fn().mockReturnValue('mock-jwt-token'),
   verify: vi.fn().mockReturnValue({ userId: 'test-user-id' }),
-}));
+}))
 
 // Mock email service
 vi.mock('../email/ethereal.service', () => ({
@@ -74,7 +74,7 @@ vi.mock('../email/ethereal.service', () => ({
   sendWelcomeEmail: vi.fn().mockResolvedValue({}),
   sendPasswordResetEmail: vi.fn().mockResolvedValue({}),
   sendResetSuccessEmail: vi.fn().mockResolvedValue({}),
-}));
+}))
 
 // Mock crypto
 vi.mock('crypto', () => ({
@@ -84,11 +84,11 @@ vi.mock('crypto', () => ({
       toString: vi.fn().mockReturnValue('mock-reset-token'),
     }),
   },
-}));
+}))
 
 // Mock express - FIXED to properly handle Router constructor
 vi.mock('express', async () => {
-  const actual = await vi.importActual('express');
+  const actual = await vi.importActual('express')
 
   const mockRouter = {
     get: vi.fn().mockReturnThis(),
@@ -98,7 +98,7 @@ vi.mock('express', async () => {
     patch: vi.fn().mockReturnThis(),
     options: vi.fn().mockReturnThis(),
     use: vi.fn().mockReturnThis(),
-  };
+  }
 
   const mockApp = {
     use: vi.fn().mockReturnThis(),
@@ -109,21 +109,21 @@ vi.mock('express', async () => {
     delete: vi.fn().mockReturnThis(),
     patch: vi.fn().mockReturnThis(),
     options: vi.fn().mockReturnThis(),
-  };
+  }
 
   // Create a proper Router constructor function
-  const mockRouterConstructor = vi.fn(() => mockRouter);
+  const mockRouterConstructor = vi.fn(() => mockRouter)
 
   // Create a mock express function that returns the app
-  const mockExpress = vi.fn(() => mockApp);
+  const mockExpress = vi.fn(() => mockApp)
 
   // Attach all express methods and properties
-  mockExpress.Router = mockRouterConstructor;
-  mockExpress.json = vi.fn(() => (req: any, res: any, next: any) => next());
-  mockExpress.urlencoded = vi.fn(() => (req: any, res: any, next: any) => next());
-  mockExpress.static = vi.fn(() => (req: any, res: any, next: any) => next());
-  mockExpress.raw = vi.fn(() => (req: any, res: any, next: any) => next());
-  mockExpress.text = vi.fn(() => (req: any, res: any, next: any) => next());
+  mockExpress.Router = mockRouterConstructor
+  mockExpress.json = vi.fn(() => (req: any, res: any, next: any) => next())
+  mockExpress.urlencoded = vi.fn(() => (req: any, res: any, next: any) => next())
+  mockExpress.static = vi.fn(() => (req: any, res: any, next: any) => next())
+  mockExpress.raw = vi.fn(() => (req: any, res: any, next: any) => next())
+  mockExpress.text = vi.fn(() => (req: any, res: any, next: any) => next())
 
   return {
     ...actual,
@@ -132,25 +132,25 @@ vi.mock('express', async () => {
     Router: mockRouterConstructor,
     json: vi.fn(() => (req: any, res: any, next: any) => next()),
     urlencoded: vi.fn(() => (req: any, res: any, next: any) => next()),
-  };
-});
+  }
+})
 
 // Mock helmet
-vi.mock('helmet', () => vi.fn(() => (req: any, res: any, next: any) => next()));
+vi.mock('helmet', () => vi.fn(() => (req: any, res: any, next: any) => next()))
 
 // Mock cors
-vi.mock('cors', () => vi.fn(() => (req: any, res: any, next: any) => next()));
+vi.mock('cors', () => vi.fn(() => (req: any, res: any, next: any) => next()))
 
 // Mock cookie-parser
-vi.mock('cookie-parser', () => vi.fn(() => (req: any, res: any, next: any) => next()));
+vi.mock('cookie-parser', () => vi.fn(() => (req: any, res: any, next: any) => next()))
 
 // Mock dotenv
 vi.mock('dotenv', () => ({
   default: { config: vi.fn() },
-}));
+}))
 
 // Mock process.env
-process.env.JWT_SECRET = 'test-jwt-secret';
-process.env.MONGODB_URI = 'mongodb://localhost:27017/test';
-process.env.NODE_ENV = 'test';
-process.env.CLIENT_URL = 'http://localhost:3000'; 
+process.env.JWT_SECRET = 'test-jwt-secret'
+process.env.MONGODB_URI = 'mongodb://localhost:27017/test'
+process.env.NODE_ENV = 'test'
+process.env.CLIENT_URL = 'http://localhost:3000'

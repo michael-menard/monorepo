@@ -18,7 +18,7 @@ export const RadarEntry: React.FC<RadarEntryProps> = ({
   x,
   y,
   onClick,
-  isSelected
+  isSelected,
 }) => {
   const radius = 1.2
   const strokeWidth = 0.1
@@ -35,7 +35,7 @@ export const RadarEntry: React.FC<RadarEntryProps> = ({
         strokeWidth={strokeWidth}
         className="radar-entry-bg"
       />
-      
+
       {/* Inner circle with ring color */}
       <circle
         cx={x}
@@ -45,9 +45,9 @@ export const RadarEntry: React.FC<RadarEntryProps> = ({
         opacity="0.8"
         className="radar-entry-fill"
       />
-      
+
       {/* Selection indicator */}
-      {isSelected && (
+      {isSelected ? (
         <circle
           cx={x}
           cy={y}
@@ -57,8 +57,8 @@ export const RadarEntry: React.FC<RadarEntryProps> = ({
           strokeWidth="0.2"
           className="radar-entry-selected"
         />
-      )}
-      
+      ) : null}
+
       {/* Entry name */}
       <text
         x={x}
@@ -72,9 +72,9 @@ export const RadarEntry: React.FC<RadarEntryProps> = ({
       >
         {entry.name}
       </text>
-      
+
       {/* Movement indicator */}
-      {entry.moved && entry.moved !== 'none' && (
+      {entry.moved && entry.moved !== 'none' ? (
         <g transform={`translate(${x}, ${y})`}>
           {entry.moved === 'in' && (
             <path
@@ -96,7 +96,7 @@ export const RadarEntry: React.FC<RadarEntryProps> = ({
             />
           )}
         </g>
-      )}
+      ) : null}
     </g>
   )
-} 
+}

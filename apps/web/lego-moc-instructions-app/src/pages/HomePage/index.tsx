@@ -1,23 +1,22 @@
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
-import { 
-  BookOpen, 
+import {
+  BookOpen,
   Download,
-  Heart, 
-  Search, 
+  Heart,
+  Search,
   Shield,
   Star,
-  Upload, 
-  User, 
+  Upload,
+  User,
   Users,
-  Zap
+  Zap,
 } from 'lucide-react'
 import { config } from '../../config/environment.js'
 import DesignSystemGrid from '../../components/DesignSystemGrid'
 import ColorTest from '../../components/ColorTest'
 import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo'
 import TypographyShowcase from '../../components/TypographyShowcase'
-
 
 function HomePage() {
   // Mock authentication hook - will be replaced with real auth later
@@ -30,50 +29,50 @@ function HomePage() {
       role: 'user',
       emailVerified: true,
     },
-  };
+  }
 
   const features = [
     {
       icon: BookOpen,
-      title: "Browse MOC Instructions",
-      description: "Explore thousands of custom LEGO MOC instructions from the community",
-      action: "Browse Gallery",
-      href: "/moc-gallery"
+      title: 'Browse MOC Instructions',
+      description: 'Explore thousands of custom LEGO MOC instructions from the community',
+      action: 'Browse Gallery',
+      href: '/moc-gallery',
     },
     {
       icon: Heart,
-      title: "Personal Wishlist",
-      description: "Save your favorite MOCs and track your building progress",
-      action: "View Wishlist",
-      href: "/wishlist",
-      requiresAuth: true
+      title: 'Personal Wishlist',
+      description: 'Save your favorite MOCs and track your building progress',
+      action: 'View Wishlist',
+      href: '/wishlist',
+      requiresAuth: true,
     },
     {
       icon: User,
-      title: "User Profiles",
-      description: "Manage your profile, uploads, and building history",
-      action: "View Profile",
-      href: "/profile",
-      requiresAuth: true
+      title: 'User Profiles',
+      description: 'Manage your profile, uploads, and building history',
+      action: 'View Profile',
+      href: '/profile',
+      requiresAuth: true,
     },
     {
       icon: Upload,
-      title: "Share Your MOCs",
-      description: "Upload and share your own custom LEGO creations",
-      action: "Upload MOC",
-      href: "/moc-gallery",
-      requiresAuth: true
-    }
-  ];
+      title: 'Share Your MOCs',
+      description: 'Upload and share your own custom LEGO creations',
+      action: 'Upload MOC',
+      href: '/moc-gallery',
+      requiresAuth: true,
+    },
+  ]
 
   const stats = [
-    { label: "MOC Instructions", value: "10,000+", icon: BookOpen },
-    { label: "Active Users", value: "5,000+", icon: Users },
-    { label: "Downloads", value: "50,000+", icon: Download },
-    { label: "Community Rating", value: "4.8★", icon: Star }
-  ];
+    { label: 'MOC Instructions', value: '10,000+', icon: BookOpen },
+    { label: 'Active Users', value: '5,000+', icon: Users },
+    { label: 'Downloads', value: '50,000+', icon: Download },
+    { label: 'Community Rating', value: '4.8★', icon: Star },
+  ]
 
-    return (
+  return (
     <>
       {/* Typography Showcase - Inter Font & Color Palette */}
       <div className="container mx-auto px-4 py-8">
@@ -96,9 +95,7 @@ function HomePage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center space-y-6">
-          <h1 className="text-5xl font-bold tracking-tight">
-            {config.app.name}
-          </h1>
+          <h1 className="text-5xl font-bold tracking-tight">{config.app.name}</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Discover, build, and share custom LEGO MOC instructions. Join our community of builders
             and explore thousands of unique creations from around the world.
@@ -108,14 +105,18 @@ function HomePage() {
           <div className="flex justify-center space-x-4">
             {mockAuth.isAuthenticated ? (
               <>
-                 <Link to="/moc-gallery">
+                <Link to="/moc-gallery">
                   <Button size="lg" className="gap-2">
                     <Search className="h-4 w-4" />
                     Browse MOCs
                   </Button>
                 </Link>
                 <Link to="/wishlist">
-                  <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="gap-2 border border-input bg-background"
+                  >
                     <Heart className="h-4 w-4" />
                     My Wishlist
                   </Button>
@@ -123,14 +124,18 @@ function HomePage() {
               </>
             ) : (
               <>
-                 <Link to="/moc-gallery">
+                <Link to="/moc-gallery">
                   <Button size="lg" className="gap-2">
                     <Search className="h-4 w-4" />
                     Browse MOCs
                   </Button>
                 </Link>
                 <Link to="/auth/signup">
-                  <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="gap-2 border border-input bg-background"
+                  >
                     <User className="h-4 w-4" />
                     Sign Up
                   </Button>
@@ -139,14 +144,14 @@ function HomePage() {
             )}
           </div>
 
-          {mockAuth.isAuthenticated && (
+          {mockAuth.isAuthenticated ? (
             <p className="text-sm text-muted-foreground">
               Welcome back, {mockAuth.user.name}!
               <Link to="/profile" className="text-primary hover:underline ml-1">
                 View Profile
               </Link>
             </p>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -184,7 +189,11 @@ function HomePage() {
               </CardHeader>
               <CardContent>
                 {feature.requiresAuth && !mockAuth.isAuthenticated ? (
-                  <Button variant="outline" className="w-full border border-input bg-background" disabled>
+                  <Button
+                    variant="outline"
+                    className="w-full border border-input bg-background"
+                    disabled
+                  >
                     Login Required
                   </Button>
                 ) : (
@@ -204,9 +213,7 @@ function HomePage() {
       <section className="container mx-auto px-4 py-16 bg-muted/50 rounded-lg">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Why Choose Our Platform?</h2>
-          <p className="text-lg text-muted-foreground">
-            Built by builders, for builders
-          </p>
+          <p className="text-lg text-muted-foreground">Built by builders, for builders</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -251,7 +258,11 @@ function HomePage() {
               </Button>
             </Link>
             {!mockAuth.isAuthenticated && (
-              <Button variant="outline" size="lg" className="gap-2 border border-input bg-background">
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 border border-input bg-background"
+              >
                 <User className="h-4 w-4" />
                 Create Account
               </Button>
@@ -263,4 +274,4 @@ function HomePage() {
   )
 }
 
-export default HomePage 
+export default HomePage

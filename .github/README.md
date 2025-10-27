@@ -7,6 +7,7 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
 ### Core Workflows
 
 #### 1. **CI (`ci.yml`)**
+
 - **Triggers**: Push/PR to `main` or `develop`
 - **Purpose**: Main continuous integration pipeline
 - **Features**:
@@ -16,6 +17,7 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
   - Only runs jobs for changed components
 
 #### 2. **Auth Service (`auth-service.yml`)**
+
 - **Triggers**: Changes to `apps/api/auth-service/**` or `packages/**`
 - **Features**:
   - PostgreSQL service for testing
@@ -25,6 +27,7 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
   - Codecov integration
 
 #### 3. **LEGO Projects API (`lego-projects-api.yml`)**
+
 - **Triggers**: Changes to `apps/api/lego-projects-api/**` or `packages/**`
 - **Features**:
   - PostgreSQL service for testing
@@ -33,6 +36,7 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
   - Security scanning
 
 #### 4. **LEGO MOC Instructions App (`lego-moc-instructions-app.yml`)**
+
 - **Triggers**: Changes to `apps/web/lego-moc-instructions-app/**` or `packages/**`
 - **Features**:
   - Unit tests with Vitest
@@ -43,7 +47,8 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
 
 ### Deployment & Maintenance
 
-#### 5. **Deploy (`deploy.yml`)** - *Currently Disabled*
+#### 5. **Deploy (`deploy.yml`)** - _Currently Disabled_
+
 - **Status**: Template ready, but disabled until deployment is configured
 - **Features** (when enabled):
   - Environment-specific deployments (staging/production)
@@ -52,6 +57,7 @@ This directory contains comprehensive GitHub Actions workflows for the LEGO MOC 
   - Environment protection rules
 
 #### 6. **Dependencies (`dependencies.yml`)**
+
 - **Triggers**: Weekly schedule or manual dispatch
 - **Features**:
   - Security auditing with `pnpm audit`
@@ -90,16 +96,19 @@ The workflows use these environment variables:
 ## 📊 Features
 
 ### Smart Change Detection
+
 - Uses `dorny/paths-filter` to detect which apps/packages changed
 - Only runs relevant workflows to save CI time
 - Supports monorepo-aware dependency tracking
 
 ### Parallel Execution
+
 - Jobs run in parallel when possible
 - Separate workflows for each app
 - Independent deployment pipelines
 
 ### Quality Gates
+
 - **Linting**: ESLint with strict rules
 - **Type Checking**: TypeScript compilation
 - **Testing**: Unit, integration, and E2E tests
@@ -108,6 +117,7 @@ The workflows use these environment variables:
 - **Coverage**: Codecov integration
 
 ### Deployment Strategy
+
 - **Staging**: Automatic deployment on develop branch
 - **Production**: Manual approval required
 - **Rollback**: Tagged releases for easy rollback
@@ -125,18 +135,21 @@ The workflows use these environment variables:
 ### Deployment Platforms
 
 #### Vercel
+
 ```yaml
 - name: Deploy to Vercel
   run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
 ```
 
 #### Netlify
+
 ```yaml
 - name: Deploy to Netlify
   run: netlify deploy --prod --auth ${{ secrets.NETLIFY_AUTH_TOKEN }}
 ```
 
 #### Railway
+
 ```yaml
 - name: Deploy to Railway
   run: railway deploy --service your-service
@@ -154,16 +167,19 @@ Update the test steps in each workflow:
 ## 📈 Monitoring
 
 ### Build Status
+
 - Check the Actions tab for build status
 - Failed builds block deployments
 - Notifications via GitHub/Slack/email
 
 ### Performance
+
 - Lighthouse CI reports in PR comments
 - Performance budgets enforced
 - Core Web Vitals tracking
 
 ### Security
+
 - Weekly dependency audits
 - Automated security updates
 - Vulnerability scanning on every push

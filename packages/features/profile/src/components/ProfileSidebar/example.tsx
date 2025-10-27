@@ -1,6 +1,6 @@
-import React from 'react';
-import { ProfileSidebar } from './index';
-import type { Profile } from '../../schemas';
+import React from 'react'
+import type { Profile } from '../../schemas'
+import { ProfileSidebar } from './index'
 
 const exampleProfile: Profile = {
   id: '1',
@@ -9,7 +9,8 @@ const exampleProfile: Profile = {
   email: 'john.doe@example.com',
   username: 'johndoe',
   bio: 'Software developer with 5+ years of experience in React, TypeScript, and Node.js. Passionate about creating user-friendly applications and contributing to open source projects.',
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+  avatar:
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
   phone: '+1 (555) 123-4567',
   dateOfBirth: new Date('1990-05-15'),
   location: 'San Francisco, CA',
@@ -28,33 +29,30 @@ const exampleProfile: Profile = {
   },
   createdAt: new Date('2023-01-01'),
   updatedAt: new Date('2024-01-15'),
-};
+}
 
 export const ProfileSidebarExample: React.FC = () => {
   const handleEditProfile = () => {
-    console.log('Edit profile clicked');
-  };
+    console.log('Edit profile clicked')
+  }
 
   const handleUploadAvatar = (file: File) => {
-    console.log('Avatar upload:', file.name);
+    console.log('Avatar upload:', file.name)
     // Here you would typically upload the file to your server
-  };
+  }
 
   const handleViewProfile = () => {
-    console.log('View profile clicked');
-  };
+    console.log('View profile clicked')
+  }
 
   return (
     <div className="max-w-md mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">ProfileSidebar Examples</h1>
-      
+
       {/* Read-only Profile Sidebar */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Read-only Profile Sidebar</h2>
-        <ProfileSidebar
-          profile={exampleProfile}
-          onViewProfile={handleViewProfile}
-        />
+        <ProfileSidebar profile={exampleProfile} onViewProfile={handleViewProfile} />
       </div>
 
       {/* Editable Profile Sidebar */}
@@ -87,7 +85,7 @@ export const ProfileSidebarExample: React.FC = () => {
         />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProfileSidebarExample; 
+export default ProfileSidebarExample

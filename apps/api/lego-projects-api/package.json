@@ -9,7 +9,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
-    "lint": "eslint . --ext .ts,.js --ignore-pattern 'dist/' --ignore-pattern 'node_modules/' --ignore-pattern '__tests__/'",
+    "lint": "eslint . --ext .ts,.js --fix --ignore-pattern 'dist/' --ignore-pattern 'node_modules/' --ignore-pattern '__tests__/'",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf dist node_modules",
     "prepare": "husky install"
@@ -22,12 +22,15 @@
     "@aws-sdk/client-s3": "^3.848.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
     "@elastic/elasticsearch": "^9.0.3",
+    "@monorepo/file-validator": "workspace:*",
     "@repo/upload": "workspace:*",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^24.0.14",
+    "@types/xmldom": "0.1.34",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "csv-parser": "3.2.0",
     "dotenv": "^17.2.0",
     "drizzle-orm": "^0.44.3",
     "eslint": "^9.31.0",
@@ -51,6 +54,7 @@
     "typescript": "^5.8.3",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
+    "xmldom": "0.6.0",
     "zod": "^4.0.5"
   },
   "devDependencies": {

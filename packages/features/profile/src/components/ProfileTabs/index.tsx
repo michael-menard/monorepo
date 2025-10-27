@@ -1,13 +1,13 @@
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui';
-import { InstructionsTab } from './InstructionsTab';
-import { WishlistTab } from './WishlistTab';
-import { InspirationGalleryTab } from './InspirationGalleryTab';
-import { SettingsTab } from './SettingsTab';
+import React from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui'
+import { InstructionsTab } from './InstructionsTab'
+import { WishlistTab } from './WishlistTab'
+import { InspirationGalleryTab } from './InspirationGalleryTab'
+import { SettingsTab } from './SettingsTab'
 
 export interface ProfileTabsProps {
-  className?: string;
-  defaultTab?: string;
+  className?: string
+  defaultTab?: string
 }
 
 export const ProfileTabs: React.FC<ProfileTabsProps> = ({
@@ -59,7 +59,7 @@ export const ProfileTabs: React.FC<ProfileTabsProps> = ({
         <SettingsTab />
       </TabsContent>
     </Tabs>
-  );
-};
+  )
+}
 
-export default ProfileTabs; 
+export default ProfileTabs

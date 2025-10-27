@@ -1,7 +1,7 @@
-import React from 'react';
-import { ProfileLayout } from '../ProfileLayout';
-import { ProfileAvatar } from '../ProfileAvatar';
-import type { ProfilePageProps } from '../../types';
+import React from 'react'
+import { ProfileLayout } from '../ProfileLayout'
+import { ProfileAvatar } from '../ProfileAvatar'
+import type { ProfilePageProps } from '../../types'
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   sidebarContent,
@@ -23,7 +23,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     >
       {children}
     </ProfileLayout>
-  );
-};
+  )
+}
 
-export default ProfilePage;
+export default ProfilePage

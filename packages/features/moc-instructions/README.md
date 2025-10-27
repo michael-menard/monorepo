@@ -26,18 +26,18 @@ pnpm add @repo/features/moc-instructions
 ### 1. Basic Instruction Creation
 
 ```tsx
-import { MOCInstructionsBuilder } from '@repo/features/moc-instructions';
+import { MOCInstructionsBuilder } from '@repo/features/moc-instructions'
 
 function CreateInstructions() {
   const handleSave = async (instructions: MOCInstruction[]) => {
     try {
       // Save instructions to backend
-      await saveInstructions(instructions);
-      console.log('Instructions saved successfully');
+      await saveInstructions(instructions)
+      console.log('Instructions saved successfully')
     } catch (error) {
-      console.error('Failed to save instructions:', error);
+      console.error('Failed to save instructions:', error)
     }
-  };
+  }
 
   return (
     <MOCInstructionsBuilder
@@ -45,14 +45,14 @@ function CreateInstructions() {
       onCancel={() => console.log('Cancelled')}
       initialInstructions={[]}
     />
-  );
+  )
 }
 ```
 
 ### 2. Instruction Viewer
 
 ```tsx
-import { MOCInstructionsViewer } from '@repo/features/moc-instructions';
+import { MOCInstructionsViewer } from '@repo/features/moc-instructions'
 
 function ViewInstructions() {
   const instructions = [
@@ -63,38 +63,38 @@ function ViewInstructions() {
       description: 'Start with a 2x4 brick as the foundation',
       images: ['/path/to/step1.jpg'],
       parts: ['3001', '3002'], // LEGO part numbers
-      estimatedTime: 5 // minutes
+      estimatedTime: 5, // minutes
     },
     // ... more steps
-  ];
+  ]
 
   return (
     <MOCInstructionsViewer
       instructions={instructions}
-      onStepComplete={(stepId) => console.log('Step completed:', stepId)}
-      onStepClick={(stepId) => console.log('Step clicked:', stepId)}
+      onStepComplete={stepId => console.log('Step completed:', stepId)}
+      onStepClick={stepId => console.log('Step clicked:', stepId)}
     />
-  );
+  )
 }
 ```
 
 ### 3. With Image Upload
 
 ```tsx
-import { MOCInstructionsBuilder, useImageUpload } from '@repo/features/moc-instructions';
+import { MOCInstructionsBuilder, useImageUpload } from '@repo/features/moc-instructions'
 
 function InstructionsWithImages() {
-  const { uploadImage, isUploading } = useImageUpload();
+  const { uploadImage, isUploading } = useImageUpload()
 
   const handleImageUpload = async (file: File) => {
     try {
-      const imageUrl = await uploadImage(file);
-      return imageUrl;
+      const imageUrl = await uploadImage(file)
+      return imageUrl
     } catch (error) {
-      console.error('Image upload failed:', error);
-      return null;
+      console.error('Image upload failed:', error)
+      return null
     }
-  };
+  }
 
   return (
     <MOCInstructionsBuilder
@@ -102,7 +102,7 @@ function InstructionsWithImages() {
       onImageUpload={handleImageUpload}
       isImageUploading={isUploading}
     />
-  );
+  )
 }
 ```
 
@@ -114,25 +114,25 @@ The main component for creating and editing MOC instructions.
 
 ```tsx
 interface MOCInstructionsBuilderProps {
-  onSave: (instructions: MOCInstruction[]) => Promise<void> | void;
-  onCancel?: () => void;
-  initialInstructions?: MOCInstruction[];
-  onImageUpload?: (file: File) => Promise<string | null>;
-  isImageUploading?: boolean;
-  className?: string;
+  onSave: (instructions: MOCInstruction[]) => Promise<void> | void
+  onCancel?: () => void
+  initialInstructions?: MOCInstruction[]
+  onImageUpload?: (file: File) => Promise<string | null>
+  isImageUploading?: boolean
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `onSave` | `(instructions: MOCInstruction[]) => Promise<void> \| void` | Save handler |
-| `onCancel` | `() => void` | Cancel handler |
-| `initialInstructions` | `MOCInstruction[]` | Initial instruction data |
-| `onImageUpload` | `(file: File) => Promise<string \| null>` | Image upload handler |
-| `isImageUploading` | `boolean` | Image upload loading state |
-| `className` | `string` | Additional CSS classes |
+| Property              | Type                                                        | Description                |
+| --------------------- | ----------------------------------------------------------- | -------------------------- |
+| `onSave`              | `(instructions: MOCInstruction[]) => Promise<void> \| void` | Save handler               |
+| `onCancel`            | `() => void`                                                | Cancel handler             |
+| `initialInstructions` | `MOCInstruction[]`                                          | Initial instruction data   |
+| `onImageUpload`       | `(file: File) => Promise<string \| null>`                   | Image upload handler       |
+| `isImageUploading`    | `boolean`                                                   | Image upload loading state |
+| `className`           | `string`                                                    | Additional CSS classes     |
 
 ### MOCInstructionsViewer Component
 
@@ -140,23 +140,23 @@ Component for displaying MOC instructions to users.
 
 ```tsx
 interface MOCInstructionsViewerProps {
-  instructions: MOCInstruction[];
-  onStepComplete?: (stepId: string) => void;
-  onStepClick?: (stepId: string) => void;
-  showProgress?: boolean;
-  className?: string;
+  instructions: MOCInstruction[]
+  onStepComplete?: (stepId: string) => void
+  onStepClick?: (stepId: string) => void
+  showProgress?: boolean
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `instructions` | `MOCInstruction[]` | Array of instruction steps |
-| `onStepComplete` | `(stepId: string) => void` | Step completion callback |
-| `onStepClick` | `(stepId: string) => void` | Step click callback |
-| `showProgress` | `boolean` | Show progress indicator |
-| `className` | `string` | Additional CSS classes |
+| Property         | Type                       | Description                |
+| ---------------- | -------------------------- | -------------------------- |
+| `instructions`   | `MOCInstruction[]`         | Array of instruction steps |
+| `onStepComplete` | `(stepId: string) => void` | Step completion callback   |
+| `onStepClick`    | `(stepId: string) => void` | Step click callback        |
+| `showProgress`   | `boolean`                  | Show progress indicator    |
+| `className`      | `string`                   | Additional CSS classes     |
 
 ### useMOCInstructions Hook
 
@@ -172,23 +172,23 @@ const {
   currentStep,
   setCurrentStep,
   isEditing,
-  setIsEditing
-} = useMOCInstructions(initialInstructions);
+  setIsEditing,
+} = useMOCInstructions(initialInstructions)
 ```
 
 #### Return Values
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `instructions` | `MOCInstruction[]` | Current instructions |
-| `addStep` | `(step: MOCInstruction) => void` | Add new step |
-| `updateStep` | `(stepId: string, updates: Partial<MOCInstruction>) => void` | Update step |
-| `removeStep` | `(stepId: string) => void` | Remove step |
-| `reorderSteps` | `(fromIndex: number, toIndex: number) => void` | Reorder steps |
-| `currentStep` | `string` | Current step ID |
-| `setCurrentStep` | `(stepId: string) => void` | Set current step |
-| `isEditing` | `boolean` | Edit mode state |
-| `setIsEditing` | `(editing: boolean) => void` | Set edit mode |
+| Property         | Type                                                         | Description          |
+| ---------------- | ------------------------------------------------------------ | -------------------- |
+| `instructions`   | `MOCInstruction[]`                                           | Current instructions |
+| `addStep`        | `(step: MOCInstruction) => void`                             | Add new step         |
+| `updateStep`     | `(stepId: string, updates: Partial<MOCInstruction>) => void` | Update step          |
+| `removeStep`     | `(stepId: string) => void`                                   | Remove step          |
+| `reorderSteps`   | `(fromIndex: number, toIndex: number) => void`               | Reorder steps        |
+| `currentStep`    | `string`                                                     | Current step ID      |
+| `setCurrentStep` | `(stepId: string) => void`                                   | Set current step     |
+| `isEditing`      | `boolean`                                                    | Edit mode state      |
+| `setIsEditing`   | `(editing: boolean) => void`                                 | Set edit mode        |
 
 ## Types
 
@@ -196,17 +196,17 @@ const {
 
 ```tsx
 interface MOCInstruction {
-  id: string;
-  stepNumber: number;
-  title: string;
-  description: string;
-  images: string[];
-  parts: string[]; // LEGO part numbers
-  estimatedTime: number; // minutes
-  difficulty: 'easy' | 'medium' | 'hard';
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  stepNumber: number
+  title: string
+  description: string
+  images: string[]
+  parts: string[] // LEGO part numbers
+  estimatedTime: number // minutes
+  difficulty: 'easy' | 'medium' | 'hard'
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -214,12 +214,12 @@ interface MOCInstruction {
 
 ```tsx
 interface MOCInstructionsConfig {
-  allowImageUpload: boolean;
-  maxImagesPerStep: number;
-  maxImageSize: number;
-  allowedImageTypes: string[];
-  autoSave: boolean;
-  autoSaveInterval: number; // milliseconds
+  allowImageUpload: boolean
+  maxImagesPerStep: number
+  maxImageSize: number
+  allowedImageTypes: string[]
+  autoSave: boolean
+  autoSaveInterval: number // milliseconds
 }
 ```
 
@@ -239,27 +239,27 @@ const addStep = () => {
     estimatedTime: 5,
     difficulty: 'medium',
     createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  addStep(newStep);
-};
+    updatedAt: new Date(),
+  }
+
+  addStep(newStep)
+}
 ```
 
 ### Reordering Steps
 
 ```tsx
 const handleReorder = (fromIndex: number, toIndex: number) => {
-  reorderSteps(fromIndex, toIndex);
-  
+  reorderSteps(fromIndex, toIndex)
+
   // Update step numbers
   const updatedInstructions = instructions.map((step, index) => ({
     ...step,
-    stepNumber: index + 1
-  }));
-  
-  setInstructions(updatedInstructions);
-};
+    stepNumber: index + 1,
+  }))
+
+  setInstructions(updatedInstructions)
+}
 ```
 
 ## Image Management
@@ -269,40 +269,40 @@ const handleReorder = (fromIndex: number, toIndex: number) => {
 ```tsx
 const handleImageUpload = async (file: File) => {
   try {
-    const formData = new FormData();
-    formData.append('image', file);
-    
+    const formData = new FormData()
+    formData.append('image', file)
+
     const response = await fetch('/api/upload', {
       method: 'POST',
-      body: formData
-    });
-    
-    const { imageUrl } = await response.json();
-    return imageUrl;
+      body: formData,
+    })
+
+    const { imageUrl } = await response.json()
+    return imageUrl
   } catch (error) {
-    console.error('Upload failed:', error);
-    return null;
+    console.error('Upload failed:', error)
+    return null
   }
-};
+}
 ```
 
 ### Image Validation
 
 ```tsx
 const validateImage = (file: File) => {
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+
   if (file.size > maxSize) {
-    throw new Error('Image size exceeds 5MB limit');
+    throw new Error('Image size exceeds 5MB limit')
   }
-  
+
   if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid image type. Use JPEG, PNG, or WebP');
+    throw new Error('Invalid image type. Use JPEG, PNG, or WebP')
   }
-  
-  return true;
-};
+
+  return true
+}
 ```
 
 ## Styling

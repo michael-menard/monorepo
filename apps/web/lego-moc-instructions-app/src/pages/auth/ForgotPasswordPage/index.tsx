@@ -32,12 +32,12 @@ function ForgotPasswordPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       // Call the auth API
       const response = await authApi.forgotPassword(data.email)
-      
+
       console.log('Forgot password successful:', response)
-      
+
       setIsSubmitted(true)
     } catch (err) {
       if (err instanceof AuthApiError) {
@@ -74,10 +74,7 @@ function ForgotPasswordPage() {
               <p className="text-muted-foreground">
                 If you don't see the email, check your spam folder.
               </p>
-              <button
-                onClick={handleBackToLogin}
-                className="text-primary hover:underline"
-              >
+              <button onClick={handleBackToLogin} className="text-primary hover:underline">
                 Back to Sign In
               </button>
             </div>
@@ -115,26 +112,19 @@ function ForgotPasswordPage() {
                   {...register('email')}
                 />
               </div>
-              {errors.email && (
+              {errors.email ? (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-              )}
+              ) : null}
             </div>
 
-            {error && (
+            {error ? (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
-            )}
+            ) : null}
 
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting || isLoading}
-              >
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
                 {isSubmitting || isLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
@@ -162,4 +152,4 @@ function ForgotPasswordPage() {
   )
 }
 
-export default ForgotPasswordPage 
+export default ForgotPasswordPage

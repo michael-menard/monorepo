@@ -1,6 +1,6 @@
 /**
  * CSRF Protection Demo Page
- * 
+ *
  * Interactive demo showing CSRF protection features including:
  * - Token fetching and display
  * - RTK Query mutations with CSRF protection
@@ -34,7 +34,7 @@ export default function CSRFDemoPage() {
   const [isTokenAvailable, setIsTokenAvailable] = useState(false)
   const [demoResults, setDemoResults] = useState<Array<DemoResult>>([])
   const [isLoading, setIsLoading] = useState(false)
-  
+
   // RTK Query mutation hook
   const [createMOC, { isLoading: isMOCLoading }] = useCreateMOCInstructionMutation()
 
@@ -45,7 +45,7 @@ export default function CSRFDemoPage() {
   const addResult = (result: Omit<DemoResult, 'timestamp'>) => {
     const newResult: DemoResult = {
       ...result,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
     }
     setDemoResults(prev => [newResult, ...prev])
   }
@@ -54,7 +54,7 @@ export default function CSRFDemoPage() {
     try {
       const hasToken = hasCSRFToken()
       setIsTokenAvailable(hasToken)
-      
+
       if (hasToken) {
         const token = await getCSRFToken()
         setCsrfToken(token.substring(0, 20) + '...')
@@ -74,12 +74,12 @@ export default function CSRFDemoPage() {
       await updateTokenStatus()
       addResult({
         success: true,
-        message: 'CSRF protection initialized successfully'
+        message: 'CSRF protection initialized successfully',
       })
     } catch (error: any) {
       addResult({
         success: false,
-        message: `CSRF initialization failed: ${error.message}`
+        message: `CSRF initialization failed: ${error.message}`,
       })
     } finally {
       setIsLoading(false)
@@ -95,12 +95,12 @@ export default function CSRFDemoPage() {
       addResult({
         success: true,
         message: `CSRF token fetched successfully`,
-        data: { tokenPreview: token.substring(0, 20) + '...' }
+        data: { tokenPreview: token.substring(0, 20) + '...' },
       })
     } catch (error: any) {
       addResult({
         success: false,
-        message: `Token fetch failed: ${error.message}`
+        message: `Token fetch failed: ${error.message}`,
       })
     } finally {
       setIsLoading(false)
@@ -116,12 +116,12 @@ export default function CSRFDemoPage() {
       addResult({
         success: true,
         message: 'CSRF token refreshed successfully',
-        data: { tokenPreview: newToken.substring(0, 20) + '...' }
+        data: { tokenPreview: newToken.substring(0, 20) + '...' },
       })
     } catch (error: any) {
       addResult({
         success: false,
-        message: `Token refresh failed: ${error.message}`
+        message: `Token refresh failed: ${error.message}`,
       })
     } finally {
       setIsLoading(false)
@@ -142,25 +142,23 @@ export default function CSRFDemoPage() {
             step: 1,
             image: 'https://example.com/step1.jpg',
             description: 'Build the hull',
-            parts: [
-              { partNumber: '3001', color: 'white', quantity: 10 }
-            ]
-          }
+            parts: [{ partNumber: '3001', color: 'white', quantity: 10 }],
+          },
         ],
-        tags: ['demo', 'csrf', 'starship']
+        tags: ['demo', 'csrf', 'starship'],
       }
 
       const result = await createMOC(mockMOC).unwrap()
       addResult({
         success: true,
         message: 'RTK Query mutation with CSRF protection succeeded',
-        data: { mocId: result.data?.id }
+        data: { mocId: result.data?.id },
       })
     } catch (error: any) {
       addResult({
         success: false,
         message: `RTK Query mutation failed: ${error.message}`,
-        data: { errorCode: error.data?.code }
+        data: { errorCode: error.data?.code },
       })
     } finally {
       setIsLoading(false)
@@ -176,7 +174,7 @@ export default function CSRFDemoPage() {
       addResult({
         success: true,
         message: 'Auth API call with CSRF protection succeeded',
-        data: { user: result.data?.user?.email }
+        data: { user: result.data?.user?.email },
       })
     } catch (error: any) {
       // This might fail if not logged in, but should still show CSRF protection
@@ -184,13 +182,13 @@ export default function CSRFDemoPage() {
         addResult({
           success: true,
           message: 'Auth API call with CSRF protection executed (not authenticated)',
-          data: { status: error.status }
+          data: { status: error.status },
         })
       } else {
         addResult({
           success: false,
           message: `Auth API call failed: ${error.message}`,
-          data: { status: error.status, code: error.code }
+          data: { status: error.status, code: error.code },
         })
       }
     } finally {
@@ -203,15 +201,15 @@ export default function CSRFDemoPage() {
     setIsLoading(true)
     try {
       const headers = await getCSRFHeaders()
-      
+
       const response = await fetch('/api/moc-instructions', {
         method: 'POST',
         headers,
         credentials: 'include',
         body: JSON.stringify({
           title: 'Custom Fetch Demo MOC',
-          difficulty: 'beginner'
-        })
+          difficulty: 'beginner',
+        }),
       })
 
       if (response.ok) {
@@ -219,24 +217,24 @@ export default function CSRFDemoPage() {
         addResult({
           success: true,
           message: 'Custom fetch with CSRF headers succeeded',
-          data: { status: response.status }
+          data: { status: response.status },
         })
       } else {
         const errorData = await response.json()
         addResult({
           success: false,
           message: `Custom fetch failed: ${errorData.message || response.statusText}`,
-          data: { 
-            status: response.status, 
+          data: {
+            status: response.status,
             code: errorData.code,
-            csrfHeaderPresent: !!headers['X-CSRF-Token']
-          }
+            csrfHeaderPresent: !!headers['X-CSRF-Token'],
+          },
         })
       }
     } catch (error: any) {
       addResult({
         success: false,
-        message: `Custom fetch error: ${error.message}`
+        message: `Custom fetch error: ${error.message}`,
       })
     } finally {
       setIsLoading(false)
@@ -249,7 +247,7 @@ export default function CSRFDemoPage() {
     updateTokenStatus()
     addResult({
       success: true,
-      message: 'CSRF token cleared from memory'
+      message: 'CSRF token cleared from memory',
     })
   }
 
@@ -261,18 +259,18 @@ export default function CSRFDemoPage() {
         await window.testCSRFIntegration()
         addResult({
           success: true,
-          message: 'CSRF audit completed - check browser console for details'
+          message: 'CSRF audit completed - check browser console for details',
         })
       } else {
         addResult({
           success: false,
-          message: 'CSRF audit tools not available'
+          message: 'CSRF audit tools not available',
         })
       }
     } catch (error: any) {
       addResult({
         success: false,
-        message: `CSRF audit failed: ${error.message}`
+        message: `CSRF audit failed: ${error.message}`,
       })
     }
   }
@@ -281,14 +279,12 @@ export default function CSRFDemoPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
-            🔒 CSRF Protection Demo
-          </h1>
-          
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">🔒 CSRF Protection Demo</h1>
+
           <p className="text-gray-600 mb-8">
-            This demo page shows the CSRF protection features in action. 
-            Use the buttons below to test different aspects of CSRF token management,
-            automatic retry logic, and integration with RTK Query and Auth APIs.
+            This demo page shows the CSRF protection features in action. Use the buttons below to
+            test different aspects of CSRF token management, automatic retry logic, and integration
+            with RTK Query and Auth APIs.
           </p>
 
           {/* Current Status */}
@@ -301,14 +297,12 @@ export default function CSRFDemoPage() {
                   {isTokenAvailable ? '✅ Yes' : '❌ No'}
                 </span>
               </p>
-              {csrfToken && (
+              {csrfToken ? (
                 <p className="text-sm">
                   <span className="font-medium">Token Preview:</span>{' '}
-                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                    {csrfToken}
-                  </code>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">{csrfToken}</code>
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -384,11 +378,9 @@ export default function CSRFDemoPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Demo Results ({demoResults.length})
             </h3>
-            
+
             {demoResults.length === 0 ? (
-              <p className="text-gray-500 italic">
-                No results yet. Try running some demos above.
-              </p>
+              <p className="text-gray-500 italic">No results yet. Try running some demos above.</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {demoResults.map((result, index) => (
@@ -405,15 +397,13 @@ export default function CSRFDemoPage() {
                         <p className="font-medium">
                           {result.success ? '✅' : '❌'} {result.message}
                         </p>
-                        {result.data && (
+                        {result.data ? (
                           <pre className="mt-2 text-xs bg-white bg-opacity-50 p-2 rounded overflow-x-auto">
                             {JSON.stringify(result.data, null, 2)}
                           </pre>
-                        )}
+                        ) : null}
                       </div>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {result.timestamp}
-                      </span>
+                      <span className="text-xs text-gray-500 ml-2">{result.timestamp}</span>
                     </div>
                   </div>
                 ))}
@@ -432,9 +422,7 @@ export default function CSRFDemoPage() {
 
           {/* Developer Tools */}
           <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-              Developer Tools
-            </h3>
+            <h3 className="text-lg font-semibold text-yellow-900 mb-2">Developer Tools</h3>
             <p className="text-sm text-yellow-800 mb-3">
               Open your browser's developer console and try these commands:
             </p>

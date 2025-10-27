@@ -1,35 +1,34 @@
-import React, { useState, useRef } from 'react';
-import type { ChangeEvent } from 'react';
-import { Edit, User, LogOut, Settings, Upload, X } from 'lucide-react';
-import { z } from 'zod';
-
-// Global types for DOM elements
-declare global {
-  interface Window {
-    URL: {
-      createObjectURL: (file: File) => string;
-    };
-  }
-}
-
+import type {ChangeEvent} from 'react'
+import React, {useRef, useState} from 'react'
+import {Edit, LogOut, Settings, Upload, User} from 'lucide-react'
+import {z} from 'zod'
+import {showErrorToast} from './toast-utils'
+import {ConfirmationDialog} from './ConfirmationDialog'
 import {
   Avatar,
-  AvatarImage,
   AvatarFallback,
+  AvatarImage,
   Button,
+  cn,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  cn,
-} from './index';
+} from './index'
 
-import { ConfirmationDialog } from './ConfirmationDialog';
+// Global types for DOM elements
+declare global {
+  interface Window {
+    URL: {
+      createObjectURL: (file: File) => string
+    }
+  }
+}
 
 // Zod schema for component props
 const AppAvatarSchema = z.object({
@@ -45,9 +44,9 @@ const AppAvatarSchema = z.object({
   showEditButton: z.boolean().default(true),
   disabled: z.boolean().default(false),
   clickable: z.boolean().default(true),
-});
+})
 
-type AppAvatarProps = z.infer<typeof AppAvatarSchema>;
+type AppAvatarProps = z.infer<typeof AppAvatarSchema>
 
 // Size configurations
 const sizeConfig = {
@@ -69,23 +68,23 @@ const sizeConfig = {
     icon: 'h-5 w-5',
     text: 'text-base',
   },
-};
+}
 
 // Helper function to get user initials
 const getInitials = (name?: string, email?: string): string => {
   if (name) {
     return name
       .split(' ')
-      .map((word) => word.charAt(0))
+      .map(word => word.charAt(0))
       .join('')
       .toUpperCase()
-      .slice(0, 2);
+      .slice(0, 2)
   }
   if (email) {
-    return email.charAt(0).toUpperCase();
+    return email.charAt(0).toUpperCase()
   }
-  return 'U';
-};
+  return 'U'
+}
 
 export const AppAvatar: React.FC<AppAvatarProps> = ({
   avatarUrl,
@@ -101,89 +100,89 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
   disabled = false,
   clickable = true,
 }) => {
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const config = sizeConfig[size];
-  const initials = getInitials(userName, userEmail);
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const config = sizeConfig[size]
+  const initials = getInitials(userName, userEmail)
 
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const file = event.target.files?.[0]
+    if (!file) return
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
-      return;
+      showErrorToast('Please select an image file', 'Invalid file type')
+      return
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
-      return;
+      showErrorToast('File size must be less than 5MB', 'File too large')
+      return
     }
 
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    setIsUploadModalOpen(true);
-  };
+    setSelectedFile(file)
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    setIsUploadModalOpen(true)
+  }
 
   const handleAvatarUpload = async () => {
-    if (!selectedFile || !onAvatarUpload) return;
+    if (!selectedFile || !onAvatarUpload) return
 
-    setIsUploading(true);
+    setIsUploading(true)
 
     try {
-      await onAvatarUpload(selectedFile);
-      setIsUploadModalOpen(false);
-      setSelectedFile(null);
-      setPreviewUrl(null);
+      await onAvatarUpload(selectedFile)
+      setIsUploadModalOpen(false)
+      setSelectedFile(null)
+      setPreviewUrl(null)
     } catch (error) {
-      console.error('Avatar upload failed:', error);
-      alert('Failed to upload avatar. Please try again.');
+      console.error('Avatar upload failed:', error)
+      showErrorToast(error, 'Failed to upload avatar')
     } finally {
-      setIsUploading(false);
+      setIsUploading(false)
     }
-  };
+  }
 
   const handleLogout = () => {
     if (onLogout) {
-      onLogout();
+      onLogout()
     }
-    setIsLogoutDialogOpen(false);
-  };
+    setIsLogoutDialogOpen(false)
+  }
 
   const handleProfileClick = () => {
     if (onProfileClick) {
-      onProfileClick();
+      onProfileClick()
     }
-  };
+  }
 
   const handleUserSettingsClick = () => {
     if (onUserSettingsClick) {
-      onUserSettingsClick();
+      onUserSettingsClick()
     }
-  };
+  }
 
   const handleModalClose = () => {
     if (!isUploading) {
-      setIsUploadModalOpen(false);
-      setSelectedFile(null);
+      setIsUploadModalOpen(false)
+      setSelectedFile(null)
       if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
       }
     }
-  };
+  }
 
   const handleFileInputClick = () => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click()
+  }
 
   return (
     <div className={cn('relative inline-block', className)}>
@@ -233,15 +232,13 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
         <div className={cn('relative', config.avatar)}>
           <Avatar className={config.avatar}>
             <AvatarImage src={avatarUrl} alt={`${userName || 'User'}'s avatar`} />
-            <AvatarFallback className={cn('font-semibold', config.text)}>
-              {initials}
-            </AvatarFallback>
+            <AvatarFallback className={cn('font-semibold', config.text)}>{initials}</AvatarFallback>
           </Avatar>
         </div>
       )}
 
       {/* Edit Button Overlay */}
-      {showEditButton && onAvatarUpload && (
+      {showEditButton && onAvatarUpload ? (
         <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-full bg-black/20 pointer-events-none">
           <Button
             variant="secondary"
@@ -256,7 +253,7 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
             <Edit className={config.icon} />
           </Button>
         </div>
-      )}
+      ) : null}
 
       {/* Hidden File Input */}
       <input
@@ -280,35 +277,26 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
                 <div className="relative">
                   <Avatar className="w-24 h-24">
                     <AvatarImage src={previewUrl || avatarUrl} alt="Preview" />
-                    <AvatarFallback className="text-lg font-semibold">
-                      {initials}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-lg font-semibold">{initials}</AvatarFallback>
                   </Avatar>
                 </div>
               </div>
 
               {/* File Info */}
-              {selectedFile && (
+              {selectedFile ? (
                 <div className="text-sm text-gray-600">
                   <p>Selected: {selectedFile.name}</p>
                   <p>Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
-              )}
+              ) : null}
 
               {/* Upload Button */}
               <div className="flex justify-center gap-2">
-                <Button
-                  onClick={handleFileInputClick}
-                  variant="outline"
-                  disabled={isUploading}
-                >
+                <Button onClick={handleFileInputClick} variant="outline" disabled={isUploading}>
                   <Upload className="mr-2 h-4 w-4" />
                   Choose Different Image
                 </Button>
-                <Button
-                  onClick={handleAvatarUpload}
-                  disabled={!selectedFile || isUploading}
-                >
+                <Button onClick={handleAvatarUpload} disabled={!selectedFile || isUploading}>
                   {isUploading ? 'Uploading...' : 'Upload'}
                 </Button>
               </div>
@@ -329,7 +317,7 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
         onConfirm={handleLogout}
       />
     </div>
-  );
-};
+  )
+}
 
-AppAvatar.displayName = 'AppAvatar'; 
+AppAvatar.displayName = 'AppAvatar'

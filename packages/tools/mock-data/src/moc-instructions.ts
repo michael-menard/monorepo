@@ -2,72 +2,74 @@
  * MOC instruction step type definition
  */
 export interface MockInstructionStep {
-  id: string;
-  instructionsId: string;
-  stepNumber: number;
-  title: string;
-  description: string;
-  imageUrl?: string;
+  id: string
+  instructionsId: string
+  stepNumber: number
+  title: string
+  description: string
+  imageUrl?: string
   parts?: Array<{
-    partNumber: string;
-    quantity: number;
-    color?: string;
-    description?: string;
-  }>;
-  notes?: string;
-  estimatedTime?: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  createdAt: string; // ISO string instead of Date
-  updatedAt: string; // ISO string instead of Date
+    partNumber: string
+    quantity: number
+    color?: string
+    description?: string
+  }>
+  notes?: string
+  estimatedTime?: number
+  difficulty: 'easy' | 'medium' | 'hard'
+  createdAt: string // ISO string instead of Date
+  updatedAt: string // ISO string instead of Date
 }
 
 /**
  * MOC instruction type definition - Enhanced to match existing structure
  */
 export interface MockInstruction {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  theme: 'modular' | 'Automobile' | 'ideas' | 'creator expert' | 'Lord Of The Rings' | 'city';
-  tags: string[];
-  coverImageUrl?: string;
-  coverImageFile?: File;
-  steps: MockInstructionStep[];
+  id: string
+  title: string
+  description: string
+  author: string
+  theme: 'modular' | 'Automobile' | 'ideas' | 'creator expert' | 'Lord Of The Rings' | 'city'
+  tags: string[]
+  coverImageUrl?: string
+  coverImageFile?: any // File type not available in Node.js context
+  steps: MockInstructionStep[]
   partsList: Array<{
-    partNumber: string;
-    quantity: number;
-    color?: string;
-    description?: string;
-    category?: string;
-  }>;
-  isPublic: boolean;
-  isPublished: boolean;
-  rating?: number;
-  downloadCount: number;
-  estimatedTime?: number; // in hours
-  totalParts?: number;
-  createdAt: string; // ISO string instead of Date
-  updatedAt: string; // ISO string instead of Date
+    partNumber: string
+    quantity: number
+    color?: string
+    description?: string
+    category?: string
+  }>
+  isPublic: boolean
+  isPublished: boolean
+  rating?: number
+  downloadCount: number
+  estimatedTime?: number // in hours
+  totalParts?: number
+  createdAt: string // ISO string instead of Date
+  category?: string // Added missing property
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert' // Added missing property
+  updatedAt: string // ISO string instead of Date
 }
 
 /**
  * Filter interface for MOC instructions
  */
 export interface MockInstructionFilter {
-  search?: string;
-  category?: string;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  author?: string;
-  tags?: string[];
-  minParts?: number;
-  maxParts?: number;
-  minTime?: number;
-  maxTime?: number;
-  sortBy?: 'title' | 'createdAt' | 'updatedAt' | 'rating' | 'downloadCount';
-  sortOrder?: 'asc' | 'desc';
-  isPublic?: boolean;
-  isPublished?: boolean;
+  search?: string
+  category?: string
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  author?: string
+  tags?: string[]
+  minParts?: number
+  maxParts?: number
+  minTime?: number
+  maxTime?: number
+  sortBy?: 'title' | 'createdAt' | 'updatedAt' | 'rating' | 'downloadCount'
+  sortOrder?: 'asc' | 'desc'
+  isPublic?: boolean
+  isPublished?: boolean
 }
 
 /**
@@ -77,8 +79,10 @@ export const mockMocInstructions: MockInstruction[] = [
   {
     id: '1',
     title: 'Custom Batmobile',
-    description: 'A detailed custom Batmobile with working features including opening cockpit, rotating wheels, and detailed interior.',
+    description:
+      'A detailed custom Batmobile with working features including opening cockpit, rotating wheels, and detailed interior.',
     author: 'BrickMaster3000',
+    theme: 'city',
     category: 'vehicles',
     difficulty: 'advanced',
     tags: ['Batman', 'Vehicles', 'Advanced', 'Custom'],
@@ -112,7 +116,12 @@ export const mockMocInstructions: MockInstruction[] = [
         imageUrl: '/images/mocs/batmobile-step-2.jpg',
         parts: [
           { partNumber: '55982', quantity: 4, color: 'Black', description: 'Tire 30.4x14 VR' },
-          { partNumber: '56145', quantity: 4, color: 'Dark Bluish Gray', description: 'Wheel 30.4x14 VR' },
+          {
+            partNumber: '56145',
+            quantity: 4,
+            color: 'Dark Bluish Gray',
+            description: 'Wheel 30.4x14 VR',
+          },
         ],
         estimatedTime: 20,
         difficulty: 'medium',
@@ -121,10 +130,34 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '32524', quantity: 4, color: 'Black', description: 'Technic Beam 1x7', category: 'Technic' },
-      { partNumber: '32316', quantity: 2, color: 'Black', description: 'Technic Beam 1x5', category: 'Technic' },
-      { partNumber: '55982', quantity: 4, color: 'Black', description: 'Tire 30.4x14 VR', category: 'Wheels' },
-      { partNumber: '56145', quantity: 4, color: 'Dark Bluish Gray', description: 'Wheel 30.4x14 VR', category: 'Wheels' },
+      {
+        partNumber: '32524',
+        quantity: 4,
+        color: 'Black',
+        description: 'Technic Beam 1x7',
+        category: 'Technic',
+      },
+      {
+        partNumber: '32316',
+        quantity: 2,
+        color: 'Black',
+        description: 'Technic Beam 1x5',
+        category: 'Technic',
+      },
+      {
+        partNumber: '55982',
+        quantity: 4,
+        color: 'Black',
+        description: 'Tire 30.4x14 VR',
+        category: 'Wheels',
+      },
+      {
+        partNumber: '56145',
+        quantity: 4,
+        color: 'Dark Bluish Gray',
+        description: 'Wheel 30.4x14 VR',
+        category: 'Wheels',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -138,6 +171,7 @@ export const mockMocInstructions: MockInstruction[] = [
     title: 'Medieval Castle',
     description: 'A magnificent medieval castle with towers, walls, and detailed interior rooms.',
     author: 'CastleBuilder42',
+    theme: 'creator expert',
     category: 'buildings',
     difficulty: 'expert',
     tags: ['Medieval', 'Castle', 'Architecture', 'Large Build'],
@@ -153,7 +187,12 @@ export const mockMocInstructions: MockInstruction[] = [
         description: 'Build the foundation using large baseplates and basic bricks.',
         imageUrl: '/images/mocs/castle-step-1.jpg',
         parts: [
-          { partNumber: '3811', quantity: 4, color: 'Dark Bluish Gray', description: 'Baseplate 32x32' },
+          {
+            partNumber: '3811',
+            quantity: 4,
+            color: 'Dark Bluish Gray',
+            description: 'Baseplate 32x32',
+          },
           { partNumber: '3001', quantity: 50, color: 'Dark Bluish Gray', description: 'Brick 2x4' },
         ],
         estimatedTime: 45,
@@ -163,8 +202,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '3811', quantity: 4, color: 'Dark Bluish Gray', description: 'Baseplate 32x32', category: 'Baseplates' },
-      { partNumber: '3001', quantity: 50, color: 'Dark Bluish Gray', description: 'Brick 2x4', category: 'Bricks' },
+      {
+        partNumber: '3811',
+        quantity: 4,
+        color: 'Dark Bluish Gray',
+        description: 'Baseplate 32x32',
+        category: 'Baseplates',
+      },
+      {
+        partNumber: '3001',
+        quantity: 50,
+        color: 'Dark Bluish Gray',
+        description: 'Brick 2x4',
+        category: 'Bricks',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -178,6 +229,7 @@ export const mockMocInstructions: MockInstruction[] = [
     title: 'Space Station Alpha',
     description: 'Modular space station with rotating sections and detailed interior modules.',
     author: 'SpaceBuilder99',
+    theme: 'ideas',
     category: 'scenes',
     difficulty: 'intermediate',
     tags: ['Space', 'Modular', 'Sci-Fi', 'Station'],
@@ -194,7 +246,12 @@ export const mockMocInstructions: MockInstruction[] = [
         imageUrl: '/images/mocs/station-step-1.jpg',
         parts: [
           { partNumber: '3024', quantity: 20, color: 'White', description: 'Plate 1x1' },
-          { partNumber: '3023', quantity: 15, color: 'Light Bluish Gray', description: 'Plate 1x2' },
+          {
+            partNumber: '3023',
+            quantity: 15,
+            color: 'Light Bluish Gray',
+            description: 'Plate 1x2',
+          },
         ],
         estimatedTime: 30,
         difficulty: 'medium',
@@ -203,8 +260,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '3024', quantity: 20, color: 'White', description: 'Plate 1x1', category: 'Plates' },
-      { partNumber: '3023', quantity: 15, color: 'Light Bluish Gray', description: 'Plate 1x2', category: 'Plates' },
+      {
+        partNumber: '3024',
+        quantity: 20,
+        color: 'White',
+        description: 'Plate 1x1',
+        category: 'Plates',
+      },
+      {
+        partNumber: '3023',
+        quantity: 15,
+        color: 'Light Bluish Gray',
+        description: 'Plate 1x2',
+        category: 'Plates',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -218,6 +287,7 @@ export const mockMocInstructions: MockInstruction[] = [
     title: 'Steampunk Airship',
     description: 'Victorian-era inspired airship with brass details and working propellers.',
     author: 'SteamCraftMaster',
+    theme: 'creator expert',
     category: 'vehicles',
     difficulty: 'advanced',
     tags: ['Steampunk', 'Airship', 'Victorian', 'Fantasy'],
@@ -243,8 +313,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '4162', quantity: 8, color: 'Reddish Brown', description: 'Tile 1x8', category: 'Tiles' },
-      { partNumber: '2357', quantity: 6, color: 'Dark Tan', description: 'Brick Corner 1x2x2', category: 'Bricks' },
+      {
+        partNumber: '4162',
+        quantity: 8,
+        color: 'Reddish Brown',
+        description: 'Tile 1x8',
+        category: 'Tiles',
+      },
+      {
+        partNumber: '2357',
+        quantity: 6,
+        color: 'Dark Tan',
+        description: 'Brick Corner 1x2x2',
+        category: 'Bricks',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -256,8 +338,10 @@ export const mockMocInstructions: MockInstruction[] = [
   {
     id: '5',
     title: 'Modular City Street',
-    description: 'A detailed city street scene with shops, apartments, and realistic street elements.',
+    description:
+      'A detailed city street scene with shops, apartments, and realistic street elements.',
     author: 'UrbanBuilder',
+    theme: 'modular',
     category: 'buildings',
     difficulty: 'intermediate',
     tags: ['City', 'Modular', 'Street', 'Buildings'],
@@ -273,8 +357,18 @@ export const mockMocInstructions: MockInstruction[] = [
         description: 'Create the street base using road plates and sidewalk elements.',
         imageUrl: '/images/mocs/city-step-1.jpg',
         parts: [
-          { partNumber: '44336', quantity: 8, color: 'Dark Bluish Gray', description: 'Road Plate 32x32' },
-          { partNumber: '3024', quantity: 50, color: 'Light Bluish Gray', description: 'Plate 1x1' },
+          {
+            partNumber: '44336',
+            quantity: 8,
+            color: 'Dark Bluish Gray',
+            description: 'Road Plate 32x32',
+          },
+          {
+            partNumber: '3024',
+            quantity: 50,
+            color: 'Light Bluish Gray',
+            description: 'Plate 1x1',
+          },
         ],
         estimatedTime: 45,
         difficulty: 'easy',
@@ -283,8 +377,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '44336', quantity: 8, color: 'Dark Bluish Gray', description: 'Road Plate 32x32', category: 'Baseplates' },
-      { partNumber: '3024', quantity: 50, color: 'Light Bluish Gray', description: 'Plate 1x1', category: 'Plates' },
+      {
+        partNumber: '44336',
+        quantity: 8,
+        color: 'Dark Bluish Gray',
+        description: 'Road Plate 32x32',
+        category: 'Baseplates',
+      },
+      {
+        partNumber: '3024',
+        quantity: 50,
+        color: 'Light Bluish Gray',
+        description: 'Plate 1x1',
+        category: 'Plates',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -298,6 +404,7 @@ export const mockMocInstructions: MockInstruction[] = [
     title: 'Pirate Ship Adventure',
     description: 'Classic pirate ship with detailed sails, cannons, and treasure room.',
     author: 'SeafarerMOCs',
+    theme: 'ideas',
     category: 'vehicles',
     difficulty: 'advanced',
     tags: ['Pirates', 'Ship', 'Adventure', 'Classic'],
@@ -313,7 +420,12 @@ export const mockMocInstructions: MockInstruction[] = [
         description: 'Build the main hull of the pirate ship using curved pieces.',
         imageUrl: '/images/mocs/ship-step-1.jpg',
         parts: [
-          { partNumber: '2877', quantity: 12, color: 'Reddish Brown', description: 'Brick Corner 1x2x3' },
+          {
+            partNumber: '2877',
+            quantity: 12,
+            color: 'Reddish Brown',
+            description: 'Brick Corner 1x2x3',
+          },
           { partNumber: '3001', quantity: 30, color: 'Reddish Brown', description: 'Brick 2x4' },
         ],
         estimatedTime: 60,
@@ -323,8 +435,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '2877', quantity: 12, color: 'Reddish Brown', description: 'Brick Corner 1x2x3', category: 'Bricks' },
-      { partNumber: '3001', quantity: 30, color: 'Reddish Brown', description: 'Brick 2x4', category: 'Bricks' },
+      {
+        partNumber: '2877',
+        quantity: 12,
+        color: 'Reddish Brown',
+        description: 'Brick Corner 1x2x3',
+        category: 'Bricks',
+      },
+      {
+        partNumber: '3001',
+        quantity: 30,
+        color: 'Reddish Brown',
+        description: 'Brick 2x4',
+        category: 'Bricks',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -338,6 +462,7 @@ export const mockMocInstructions: MockInstruction[] = [
     title: 'Cyberpunk Motorcycle',
     description: 'Futuristic motorcycle with neon details and advanced building techniques.',
     author: 'CyberBuilder2077',
+    theme: 'creator expert',
     category: 'vehicles',
     difficulty: 'expert',
     tags: ['Cyberpunk', 'Motorcycle', 'Futuristic', 'Neon'],
@@ -354,7 +479,12 @@ export const mockMocInstructions: MockInstruction[] = [
         imageUrl: '/images/mocs/cyber-step-1.jpg',
         parts: [
           { partNumber: '32524', quantity: 6, color: 'Black', description: 'Technic Beam 1x7' },
-          { partNumber: '32140', quantity: 4, color: 'Dark Bluish Gray', description: 'Technic Brick 1x4' },
+          {
+            partNumber: '32140',
+            quantity: 4,
+            color: 'Dark Bluish Gray',
+            description: 'Technic Brick 1x4',
+          },
         ],
         estimatedTime: 30,
         difficulty: 'hard',
@@ -363,8 +493,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '32524', quantity: 6, color: 'Black', description: 'Technic Beam 1x7', category: 'Technic' },
-      { partNumber: '32140', quantity: 4, color: 'Dark Bluish Gray', description: 'Technic Brick 1x4', category: 'Technic' },
+      {
+        partNumber: '32524',
+        quantity: 6,
+        color: 'Black',
+        description: 'Technic Beam 1x7',
+        category: 'Technic',
+      },
+      {
+        partNumber: '32140',
+        quantity: 4,
+        color: 'Dark Bluish Gray',
+        description: 'Technic Brick 1x4',
+        category: 'Technic',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -378,6 +520,7 @@ export const mockMocInstructions: MockInstruction[] = [
     title: 'Fantasy Dragon',
     description: 'Majestic dragon with articulated wings, detailed scales, and poseable limbs.',
     author: 'DragonCrafter',
+    theme: 'Lord Of The Rings',
     category: 'characters',
     difficulty: 'expert',
     tags: ['Dragon', 'Fantasy', 'Articulated', 'Creature'],
@@ -403,8 +546,20 @@ export const mockMocInstructions: MockInstruction[] = [
       },
     ],
     partsList: [
-      { partNumber: '3001', quantity: 25, color: 'Dark Red', description: 'Brick 2x4', category: 'Bricks' },
-      { partNumber: '3002', quantity: 20, color: 'Dark Red', description: 'Brick 2x3', category: 'Bricks' },
+      {
+        partNumber: '3001',
+        quantity: 25,
+        color: 'Dark Red',
+        description: 'Brick 2x4',
+        category: 'Bricks',
+      },
+      {
+        partNumber: '3002',
+        quantity: 20,
+        color: 'Dark Red',
+        description: 'Brick 2x3',
+        category: 'Bricks',
+      },
     ],
     isPublic: true,
     isPublished: true,
@@ -413,53 +568,59 @@ export const mockMocInstructions: MockInstruction[] = [
     createdAt: new Date('2024-01-08T09:00:00Z').toISOString(),
     updatedAt: new Date('2024-01-17T16:30:00Z').toISOString(),
   },
-];
+]
 
 /**
  * Get MOC instructions by category
  */
 export const getMocInstructionsByCategory = (category: string): MockInstruction[] => {
-  return mockMocInstructions.filter(instruction => instruction.category === category);
-};
+  return mockMocInstructions.filter(instruction => instruction.category === category)
+}
 
 /**
  * Get MOC instructions by difficulty
  */
 export const getMocInstructionsByDifficulty = (difficulty: string): MockInstruction[] => {
-  return mockMocInstructions.filter(instruction => instruction.difficulty === difficulty);
-};
+  return mockMocInstructions.filter(instruction => instruction.difficulty === difficulty)
+}
 
 /**
  * Get MOC instructions by author
  */
 export const getMocInstructionsByAuthor = (author: string): MockInstruction[] => {
-  return mockMocInstructions.filter(instruction => instruction.author === author);
-};
+  return mockMocInstructions.filter(instruction => instruction.author === author)
+}
 
 /**
  * Get published MOC instructions
  */
 export const getPublishedMocInstructions = (): MockInstruction[] => {
-  return mockMocInstructions.filter(instruction => instruction.isPublished);
-};
+  return mockMocInstructions.filter(instruction => instruction.isPublished)
+}
 
 /**
  * Get MOC instruction categories
  */
 export const getMocInstructionCategories = (): string[] => {
-  return Array.from(new Set(mockMocInstructions.map(instruction => instruction.category)));
-};
+  return Array.from(new Set(mockMocInstructions.map(instruction => instruction.category).filter((category): category is string => category !== undefined)))
+}
 
 /**
  * Get MOC instruction stats
  */
 export const getMocInstructionStats = () => {
-  const total = mockMocInstructions.length;
-  const published = getPublishedMocInstructions().length;
-  const totalDownloads = mockMocInstructions.reduce((sum, instruction) => sum + instruction.downloadCount, 0);
-  const averageRating = mockMocInstructions.reduce((sum, instruction) => sum + (instruction.rating || 0), 0) / total;
-  const categories = getMocInstructionCategories().length;
-  const authors = Array.from(new Set(mockMocInstructions.map(instruction => instruction.author))).length;
+  const total = mockMocInstructions.length
+  const published = getPublishedMocInstructions().length
+  const totalDownloads = mockMocInstructions.reduce(
+    (sum, instruction) => sum + instruction.downloadCount,
+    0,
+  )
+  const averageRating =
+    mockMocInstructions.reduce((sum, instruction) => sum + (instruction.rating || 0), 0) / total
+  const categories = getMocInstructionCategories().length
+  const authors = Array.from(
+    new Set(mockMocInstructions.map(instruction => instruction.author)),
+  ).length
 
   return {
     total,
@@ -468,5 +629,5 @@ export const getMocInstructionStats = () => {
     averageRating: Math.round(averageRating * 10) / 10,
     categories,
     authors,
-  };
-};
+  }
+}

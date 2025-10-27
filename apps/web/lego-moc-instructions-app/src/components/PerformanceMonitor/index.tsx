@@ -20,10 +20,14 @@ export const PerformanceMonitor = ({ show = shouldShowMonitor() }: PerformanceMo
 
   const getRatingColor = (rating: string) => {
     switch (rating) {
-      case 'good': return 'text-green-600'
-      case 'needs-improvement': return 'text-yellow-600'
-      case 'poor': return 'text-red-600'
-      default: return 'text-gray-600'
+      case 'good':
+        return 'text-green-600'
+      case 'needs-improvement':
+        return 'text-yellow-600'
+      case 'poor':
+        return 'text-red-600'
+      default:
+        return 'text-gray-600'
     }
   }
 
@@ -43,47 +47,35 @@ export const PerformanceMonitor = ({ show = shouldShowMonitor() }: PerformanceMo
 
       <div className="space-y-3 text-xs">
         {/* Session Info */}
-        {analytics && (
+        {analytics ? (
           <div className="border-b pb-2">
             <div className="font-medium text-gray-700 mb-1">Session</div>
-            <div className="text-gray-600">
-              ID: {analytics.sessionId.slice(-8)}...
-            </div>
-            <div className="text-gray-600">
-              Page Views: {analytics.pageViews.length}
-            </div>
-            <div className="text-gray-600">
-              Interactions: {analytics.interactions.length}
-            </div>
+            <div className="text-gray-600">ID: {analytics.sessionId.slice(-8)}...</div>
+            <div className="text-gray-600">Page Views: {analytics.pageViews.length}</div>
+            <div className="text-gray-600">Interactions: {analytics.interactions.length}</div>
           </div>
-        )}
+        ) : null}
 
         {/* Performance Summary */}
-        {performanceSummary && (
+        {performanceSummary ? (
           <div className="border-b pb-2">
             <div className="font-medium text-gray-700 mb-1">Performance Metrics</div>
             {Object.entries(performanceSummary).map(([metric, stats]) => (
               <div key={metric} className="flex justify-between items-center py-1">
                 <span className="text-gray-600">{metric}:</span>
-                <span className="text-gray-900 font-mono">
-                  {formatMetric(stats.avg)} avg
-                </span>
+                <span className="text-gray-900 font-mono">{formatMetric(stats.avg)} avg</span>
               </div>
             ))}
           </div>
-        )}
+        ) : null}
 
         {/* Recent Performance Metrics */}
         {analytics?.performance.slice(-5).map((metric, index) => (
           <div key={index} className="flex justify-between items-center">
             <span className="text-gray-600">{metric.name}:</span>
             <div className="flex items-center space-x-2">
-              <span className="text-gray-900 font-mono">
-                {formatMetric(metric.value)}
-              </span>
-              <span className={`text-xs ${getRatingColor(metric.rating)}`}>
-                {metric.rating}
-              </span>
+              <span className="text-gray-900 font-mono">{formatMetric(metric.value)}</span>
+              <span className={`text-xs ${getRatingColor(metric.rating)}`}>{metric.rating}</span>
             </div>
           </div>
         ))}
@@ -107,4 +99,4 @@ export const PerformanceMonitor = ({ show = shouldShowMonitor() }: PerformanceMo
   )
 }
 
-export default PerformanceMonitor 
+export default PerformanceMonitor

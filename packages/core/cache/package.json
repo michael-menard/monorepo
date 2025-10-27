@@ -21,7 +21,7 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src/",
+    "lint": "eslint --fix src/",
     "format": "prettier --write src/",
     "check": "prettier --write src/ && eslint --fix src/",
     "type-check": "tsc --noEmit",

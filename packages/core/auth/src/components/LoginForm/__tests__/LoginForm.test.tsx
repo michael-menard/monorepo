@@ -1,16 +1,16 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import LoginForm from '../index.js';
-import authReducer from '../../../store/authSlice.js';
-import { authApi } from '../../../store/authApi.js';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { BrowserRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import LoginForm from '../index.js'
+import authReducer from '../../../store/authSlice.js'
+import { authApi } from '../../../store/authApi.js'
 
 // Mock the auth hook
-const mockLogin = vi.fn();
-const mockClearError = vi.fn();
-const mockNavigate = vi.fn();
+const mockLogin = vi.fn()
+const mockClearError = vi.fn()
+const mockNavigate = vi.fn()
 
 vi.mock('../../../hooks/useAuth.js', () => ({
   useAuth: () => ({
@@ -30,15 +30,15 @@ vi.mock('../../../hooks/useAuth.js', () => ({
     confirmReset: vi.fn(),
     socialLogin: vi.fn(),
   }),
-}));
+}))
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-  };
-});
+  }
+})
 
 // Create a test store
 const createTestStore = () => {
@@ -47,160 +47,159 @@ const createTestStore = () => {
       auth: authReducer,
       [authApi.reducerPath]: authApi.reducer,
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(authApi.middleware),
-  });
-};
+    middleware: getDefaultMiddleware => getDefaultMiddleware().concat(authApi.middleware),
+  })
+}
 
 const renderLoginForm = () => {
-  const store = createTestStore();
+  const store = createTestStore()
   return render(
     <Provider store={store}>
       <BrowserRouter>
         <LoginForm />
       </BrowserRouter>
-    </Provider>
-  );
-};
+    </Provider>,
+  )
+}
 
 describe('LoginForm', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   describe('Rendering', () => {
     it('should render the login form with all required elements', () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      expect(screen.getByText('Welcome Back')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
-      expect(screen.getByText('Forgot password?')).toBeInTheDocument();
-      expect(screen.getByText('Sign up')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Welcome Back')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument()
+      expect(screen.getByText('Forgot password?')).toBeInTheDocument()
+      expect(screen.getByText('Sign up')).toBeInTheDocument()
+    })
 
     it('should have proper accessibility attributes', () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const submitButton = screen.getByRole('button', { name: 'Login' });
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const submitButton = screen.getByRole('button', { name: 'Login' })
 
-      expect(emailInput).toHaveAttribute('type', 'email');
-      expect(passwordInput).toHaveAttribute('type', 'password');
-      expect(submitButton).toHaveAttribute('type', 'submit');
-    });
-  });
+      expect(emailInput).toHaveAttribute('type', 'email')
+      expect(passwordInput).toHaveAttribute('type', 'password')
+      expect(submitButton).toHaveAttribute('type', 'submit')
+    })
+  })
 
   describe('Form Validation', () => {
     it('should show validation error for invalid email', async () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const submitButton = screen.getByRole('button', { name: 'Login' });
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const submitButton = screen.getByRole('button', { name: 'Login' })
 
-      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument()
+      })
+    })
 
     it('should show validation error for short password', async () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const submitButton = screen.getByRole('button', { name: 'Login' });
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const submitButton = screen.getByRole('button', { name: 'Login' })
 
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: '123' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: '123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
-      });
-    });
-  });
+        expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Form Submission', () => {
     it('should call login function with valid data', async () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const submitButton = screen.getByRole('button', { name: 'Login' });
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const submitButton = screen.getByRole('button', { name: 'Login' })
 
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+
       // Debug: Check if inputs have values
-      expect(emailInput).toHaveValue('test@example.com');
-      expect(passwordInput).toHaveValue('password123');
-      
-      fireEvent.click(submitButton);
+      expect(emailInput).toHaveValue('test@example.com')
+      expect(passwordInput).toHaveValue('password123')
+
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalledWith({
           email: 'test@example.com',
           password: 'password123',
-        });
-      });
-    });
+        })
+      })
+    })
 
     it('should not call login function with invalid data', async () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const submitButton = screen.getByRole('button', { name: 'Login' });
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const submitButton = screen.getByRole('button', { name: 'Login' })
 
-      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-      fireEvent.click(submitButton);
+      fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(mockLogin).not.toHaveBeenCalled();
-      });
-    });
-  });
+        expect(mockLogin).not.toHaveBeenCalled()
+      })
+    })
+  })
 
   describe('Navigation', () => {
     it('should navigate to forgot password page when forgot password link is clicked', () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const forgotPasswordLink = screen.getByText('Forgot password?');
-      fireEvent.click(forgotPasswordLink);
+      const forgotPasswordLink = screen.getByText('Forgot password?')
+      fireEvent.click(forgotPasswordLink)
 
-      expect(mockNavigate).toHaveBeenCalledWith('/forgot-password');
-    });
+      expect(mockNavigate).toHaveBeenCalledWith('/forgot-password')
+    })
 
     it('should navigate to signup page when sign up link is clicked', () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const signUpLink = screen.getByText('Sign up');
-      fireEvent.click(signUpLink);
+      const signUpLink = screen.getByText('Sign up')
+      fireEvent.click(signUpLink)
 
-      expect(mockNavigate).toHaveBeenCalledWith('/signup');
-    });
-  });
+      expect(mockNavigate).toHaveBeenCalledWith('/signup')
+    })
+  })
 
   describe('Accessibility', () => {
     it('should be keyboard navigable', () => {
-      renderLoginForm();
+      renderLoginForm()
 
-      const emailInput = screen.getByPlaceholderText('Email Address');
-      const passwordInput = screen.getByPlaceholderText('Password');
-      const submitButton = screen.getByRole('button', { name: 'Login' });
+      const emailInput = screen.getByPlaceholderText('Email Address')
+      const passwordInput = screen.getByPlaceholderText('Password')
+      const submitButton = screen.getByRole('button', { name: 'Login' })
 
-      emailInput.focus();
-      expect(emailInput).toHaveFocus();
+      emailInput.focus()
+      expect(emailInput).toHaveFocus()
 
-      passwordInput.focus();
-      expect(passwordInput).toHaveFocus();
+      passwordInput.focus()
+      expect(passwordInput).toHaveFocus()
 
-      submitButton.focus();
-      expect(submitButton).toHaveFocus();
-    });
-  });
-}); 
+      submitButton.focus()
+      expect(submitButton).toHaveFocus()
+    })
+  })
+})

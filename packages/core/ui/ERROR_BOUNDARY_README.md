@@ -19,9 +19,9 @@ This package provides comprehensive error boundary components for React applicat
 The main error boundary component that catches JavaScript errors anywhere in the child component tree.
 
 ```tsx
-import { ErrorBoundary } from '@repo/ui';
+import { ErrorBoundary } from '@repo/ui'
 
-<ErrorBoundary onError={handleError}>
+;<ErrorBoundary onError={handleError}>
   <YourComponent />
 </ErrorBoundary>
 ```
@@ -33,9 +33,9 @@ import { ErrorBoundary } from '@repo/ui';
 For handling API/network-related errors with retry functionality.
 
 ```tsx
-import { ApiErrorBoundary } from '@repo/ui';
+import { ApiErrorBoundary } from '@repo/ui'
 
-<ApiErrorBoundary onRetry={retryApiCall}>
+;<ApiErrorBoundary onRetry={retryApiCall}>
   <ApiComponent />
 </ApiErrorBoundary>
 ```
@@ -45,9 +45,9 @@ import { ApiErrorBoundary } from '@repo/ui';
 For handling form validation and processing errors.
 
 ```tsx
-import { FormErrorBoundary } from '@repo/ui';
+import { FormErrorBoundary } from '@repo/ui'
 
-<FormErrorBoundary onReset={resetForm}>
+;<FormErrorBoundary onReset={resetForm}>
   <FormComponent />
 </FormErrorBoundary>
 ```
@@ -57,9 +57,9 @@ import { FormErrorBoundary } from '@repo/ui';
 For handling data loading and processing errors.
 
 ```tsx
-import { DataErrorBoundary } from '@repo/ui';
+import { DataErrorBoundary } from '@repo/ui'
 
-<DataErrorBoundary onRetry={reloadData}>
+;<DataErrorBoundary onRetry={reloadData}>
   <DataComponent />
 </DataErrorBoundary>
 ```
@@ -69,9 +69,9 @@ import { DataErrorBoundary } from '@repo/ui';
 For component-specific error handling with component name display.
 
 ```tsx
-import { ComponentErrorBoundary } from '@repo/ui';
+import { ComponentErrorBoundary } from '@repo/ui'
 
-<ComponentErrorBoundary componentName="UserProfile">
+;<ComponentErrorBoundary componentName="UserProfile">
   <UserProfileComponent />
 </ComponentErrorBoundary>
 ```
@@ -83,19 +83,19 @@ import { ComponentErrorBoundary } from '@repo/ui';
 Hook for functional components to trigger error boundaries.
 
 ```tsx
-import { useErrorHandler } from '@repo/ui';
+import { useErrorHandler } from '@repo/ui'
 
 const Component = () => {
-  const handleError = useErrorHandler();
-  
+  const handleError = useErrorHandler()
+
   const handleAsyncOperation = async () => {
     try {
-      await riskyOperation();
+      await riskyOperation()
     } catch (error) {
-      handleError(error);
+      handleError(error)
     }
-  };
-};
+  }
+}
 ```
 
 ### useAsyncError
@@ -103,17 +103,17 @@ const Component = () => {
 Hook for handling asynchronous errors in functional components.
 
 ```tsx
-import { useAsyncError } from '@repo/ui';
+import { useAsyncError } from '@repo/ui'
 
 const Component = () => {
-  const throwAsyncError = useAsyncError();
-  
+  const throwAsyncError = useAsyncError()
+
   const handleAsyncError = () => {
     setTimeout(() => {
-      throwAsyncError(new Error('Async error'));
-    }, 100);
-  };
-};
+      throwAsyncError(new Error('Async error'))
+    }, 100)
+  }
+}
 ```
 
 ### Error Reporting Utilities
@@ -123,14 +123,14 @@ const Component = () => {
 Generate structured error reports with additional context.
 
 ```tsx
-import { generateErrorReport } from '@repo/ui';
+import { generateErrorReport } from '@repo/ui'
 
-const error = new Error('Something went wrong');
+const error = new Error('Something went wrong')
 const report = generateErrorReport(error, {
   userId: '123',
   action: 'save_profile',
-  component: 'ProfileForm'
-});
+  component: 'ProfileForm',
+})
 ```
 
 #### sendErrorReport
@@ -138,12 +138,12 @@ const report = generateErrorReport(error, {
 Send error reports to external services (placeholder implementation).
 
 ```tsx
-import { sendErrorReport } from '@repo/ui';
+import { sendErrorReport } from '@repo/ui'
 
 const handleError = async (error: Error) => {
-  const report = generateErrorReport(error);
-  await sendErrorReport(report);
-};
+  const report = generateErrorReport(error)
+  await sendErrorReport(report)
+}
 ```
 
 ## Higher-Order Component
@@ -153,14 +153,14 @@ const handleError = async (error: Error) => {
 Wrap components with error boundaries using HOC pattern.
 
 ```tsx
-import { withErrorBoundary } from '@repo/ui';
+import { withErrorBoundary } from '@repo/ui'
 
 const SafeComponent = withErrorBoundary(RiskyComponent, {
   onError: handleError,
-  fallback: <CustomErrorUI />
-});
+  fallback: <CustomErrorUI />,
+})
 
-<SafeComponent />
+;<SafeComponent />
 ```
 
 ## Props
@@ -169,11 +169,11 @@ const SafeComponent = withErrorBoundary(RiskyComponent, {
 
 ```tsx
 interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode | ((error: Error, errorInfo: ErrorInfo) => ReactNode);
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  resetKeys?: any[];
-  errorId?: string;
+  children: ReactNode
+  fallback?: ReactNode | ((error: Error, errorInfo: ErrorInfo) => ReactNode)
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
+  resetKeys?: any[]
+  errorId?: string
 }
 ```
 
@@ -181,13 +181,13 @@ interface ErrorBoundaryProps {
 
 ```tsx
 interface ErrorInfo {
-  message: string;
-  stack?: string;
-  componentStack?: string;
-  timestamp: Date;
-  errorId: string;
-  userAgent?: string;
-  url?: string;
+  message: string
+  stack?: string
+  componentStack?: string
+  timestamp: Date
+  errorId: string
+  userAgent?: string
+  url?: string
 }
 ```
 
@@ -202,7 +202,7 @@ You can provide custom fallback components or functions:
 </ErrorBoundary>
 
 // Custom function
-<ErrorBoundary 
+<ErrorBoundary
   fallback={(error, errorInfo) => (
     <div>
       <h1>Custom Error: {error.message}</h1>
@@ -231,15 +231,16 @@ Use reset keys to automatically reset error boundaries when dependencies change:
 Error boundaries provide reset functionality through their UI or programmatically:
 
 ```tsx
-const ErrorBoundaryRef = useRef<ErrorBoundary>(null);
+const ErrorBoundaryRef = useRef<ErrorBoundary>(null)
 
 // Programmatic reset
-ErrorBoundaryRef.current?.handleReset();
+ErrorBoundaryRef.current?.handleReset()
 ```
 
 ## Development vs Production
 
 In development mode, error boundaries show detailed error information including:
+
 - Error message and stack trace
 - Error ID and timestamp
 - Component stack trace
@@ -249,6 +250,7 @@ In production mode, only user-friendly error messages are displayed.
 ## Testing
 
 The error boundary components include comprehensive tests covering:
+
 - Error catching and display
 - Custom fallbacks
 - Error recovery mechanisms
@@ -266,13 +268,13 @@ pnpm test
 ### App-Level Error Boundary
 
 ```tsx
-import { ErrorBoundary } from '@repo/ui';
+import { ErrorBoundary } from '@repo/ui'
 
 function App() {
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
     // Log to external service
-    console.error('App error:', error, errorInfo);
-  };
+    console.error('App error:', error, errorInfo)
+  }
 
   return (
     <ErrorBoundary onError={handleError}>
@@ -283,14 +285,14 @@ function App() {
         </Routes>
       </Router>
     </ErrorBoundary>
-  );
+  )
 }
 ```
 
 ### Feature-Level Error Boundaries
 
 ```tsx
-import { ApiErrorBoundary, DataErrorBoundary } from '@repo/ui';
+import { ApiErrorBoundary, DataErrorBoundary } from '@repo/ui'
 
 function UserProfile() {
   return (
@@ -298,33 +300,31 @@ function UserProfile() {
       <ApiErrorBoundary onRetry={fetchUserData}>
         <UserDataComponent />
       </ApiErrorBoundary>
-      
+
       <DataErrorBoundary onRetry={loadUserPosts}>
         <UserPostsComponent />
       </DataErrorBoundary>
     </div>
-  );
+  )
 }
 ```
 
 ### Form Error Handling
 
 ```tsx
-import { FormErrorBoundary } from '@repo/ui';
+import { FormErrorBoundary } from '@repo/ui'
 
 function ProfileForm() {
   const handleFormReset = () => {
     // Reset form state
-    form.reset();
-  };
+    form.reset()
+  }
 
   return (
     <FormErrorBoundary onReset={handleFormReset}>
-      <form onSubmit={handleSubmit}>
-        {/* Form fields */}
-      </form>
+      <form onSubmit={handleSubmit}>{/* Form fields */}</form>
     </FormErrorBoundary>
-  );
+  )
 }
 ```
 
@@ -343,19 +343,19 @@ To integrate with external error reporting services:
 
 ```tsx
 // Example: Sentry integration
-import * as Sentry from '@sentry/react';
+import * as Sentry from '@sentry/react'
 
 const handleError = (error: Error, errorInfo: ErrorInfo) => {
   Sentry.captureException(error, {
     extra: errorInfo,
     tags: {
       component: 'UserProfile',
-      errorId: errorInfo.errorId
-    }
-  });
-};
+      errorId: errorInfo.errorId,
+    },
+  })
+}
 
-<ErrorBoundary onError={handleError}>
+;<ErrorBoundary onError={handleError}>
   <UserProfile />
 </ErrorBoundary>
 ```
@@ -363,6 +363,7 @@ const handleError = (error: Error, errorInfo: ErrorInfo) => {
 ## Accessibility
 
 Error boundaries include proper accessibility features:
+
 - Semantic HTML structure
 - ARIA labels and descriptions
 - Keyboard navigation support
@@ -372,7 +373,8 @@ Error boundaries include proper accessibility features:
 ## Performance
 
 Error boundaries are optimized for performance:
+
 - Minimal re-renders
 - Efficient error state management
 - Lazy error reporting
-- Memory leak prevention 
+- Memory leak prevention

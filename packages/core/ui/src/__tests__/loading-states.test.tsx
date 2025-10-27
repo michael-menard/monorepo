@@ -23,8 +23,16 @@ import {
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, className, ...props }: any) => <div className={className} {...props}>{children}</div>,
-    p: ({ children, className, ...props }: any) => <p className={className} {...props}>{children}</p>,
+    div: ({ children, className, ...props }: any) => (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    ),
+    p: ({ children, className, ...props }: any) => (
+      <p className={className} {...props}>
+        {children}
+      </p>
+    ),
     circle: ({ className, ...props }: any) => <circle className={className} {...props} />,
   },
 }))
@@ -73,9 +81,7 @@ describe('Loading Spinner Components', () => {
 
     it('renders correct number of dots', () => {
       render(<PulseSpinner count={5} />)
-      const dots = screen.getAllByRole('generic').filter(el => 
-        el.className.includes('bg-primary')
-      )
+      const dots = screen.getAllByRole('generic').filter(el => el.className.includes('bg-primary'))
       expect(dots).toHaveLength(5)
     })
   })
@@ -89,9 +95,7 @@ describe('Loading Spinner Components', () => {
 
     it('renders correct number of dots', () => {
       render(<DotsSpinner count={4} />)
-      const dots = screen.getAllByRole('generic').filter(el => 
-        el.className.includes('bg-primary')
-      )
+      const dots = screen.getAllByRole('generic').filter(el => el.className.includes('bg-primary'))
       expect(dots).toHaveLength(4)
     })
   })
@@ -288,7 +292,7 @@ describe('Progress Indicator Components', () => {
       render(
         <LoadingOverlay isLoading={false}>
           <div>Content</div>
-        </LoadingOverlay>
+        </LoadingOverlay>,
       )
       expect(screen.getByText('Content')).toBeInTheDocument()
     })
@@ -297,7 +301,7 @@ describe('Progress Indicator Components', () => {
       render(
         <LoadingOverlay isLoading={true} text="Loading...">
           <div>Content</div>
-        </LoadingOverlay>
+        </LoadingOverlay>,
       )
       expect(screen.getByText('Loading...')).toBeInTheDocument()
     })
@@ -306,7 +310,7 @@ describe('Progress Indicator Components', () => {
       const { rerender } = render(
         <LoadingOverlay isLoading={true} variant="spinner">
           <div>Content</div>
-        </LoadingOverlay>
+        </LoadingOverlay>,
       )
       const elements = screen.getAllByRole('generic')
       expect(elements.length).toBeGreaterThan(0)
@@ -314,7 +318,7 @@ describe('Progress Indicator Components', () => {
       rerender(
         <LoadingOverlay isLoading={true} variant="progress">
           <div>Content</div>
-        </LoadingOverlay>
+        </LoadingOverlay>,
       )
       const progressElements = screen.getAllByRole('generic')
       expect(progressElements.length).toBeGreaterThan(0)
@@ -325,17 +329,14 @@ describe('Progress Indicator Components', () => {
 describe('useLoadingStates Hook', () => {
   const TestComponent = ({ options = {} }: { options?: any }) => {
     const loadingStates = useLoadingStates(options)
-    
+
     const handleAsyncOperation = async () => {
-      await loadingStates.withLoading(
-        async () => {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          return 'Operation completed'
-        },
-        'Processing...'
-      )
+      await loadingStates.withLoading(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        return 'Operation completed'
+      }, 'Processing...')
     }
-    
+
     return (
       <div>
         <div data-testid="loading-type">{loadingStates.loadingState.type}</div>
@@ -346,32 +347,20 @@ describe('useLoadingStates Hook', () => {
         <div data-testid="progress">{loadingStates.loadingState.progress}</div>
         <div data-testid="message">{loadingStates.loadingState.message || ''}</div>
         <div data-testid="error">{String(loadingStates.loadingState.error || '')}</div>
-        
-        <button onClick={() => loadingStates.startLoading('Test loading')}>
-          Start Loading
-        </button>
-        <button onClick={() => loadingStates.setProgress(50)}>
-          Set Progress
-        </button>
-        <button onClick={() => loadingStates.setSuccess('Success!')}>
-          Set Success
-        </button>
-        <button onClick={() => loadingStates.setError('Test error')}>
-          Set Error
-        </button>
-        <button onClick={() => loadingStates.reset()}>
-          Reset
-        </button>
-        <button onClick={handleAsyncOperation}>
-          Async Operation
-        </button>
+
+        <button onClick={() => loadingStates.startLoading('Test loading')}>Start Loading</button>
+        <button onClick={() => loadingStates.setProgress(50)}>Set Progress</button>
+        <button onClick={() => loadingStates.setSuccess('Success!')}>Set Success</button>
+        <button onClick={() => loadingStates.setError('Test error')}>Set Error</button>
+        <button onClick={() => loadingStates.reset()}>Reset</button>
+        <button onClick={handleAsyncOperation}>Async Operation</button>
       </div>
     )
   }
 
   it('initializes with default state', () => {
     render(<TestComponent />)
-    
+
     expect(screen.getByTestId('loading-type')).toHaveTextContent('idle')
     expect(screen.getByTestId('is-loading')).toHaveTextContent('false')
     expect(screen.getByTestId('is-success')).toHaveTextContent('false')
@@ -382,9 +371,9 @@ describe('useLoadingStates Hook', () => {
 
   it('handles loading state changes', () => {
     render(<TestComponent />)
-    
+
     fireEvent.click(screen.getByText('Start Loading'))
-    
+
     expect(screen.getByTestId('loading-type')).toHaveTextContent('loading')
     expect(screen.getByTestId('is-loading')).toHaveTextContent('true')
     expect(screen.getByTestId('message')).toHaveTextContent('Test loading')
@@ -392,17 +381,17 @@ describe('useLoadingStates Hook', () => {
 
   it('handles progress updates', () => {
     render(<TestComponent />)
-    
+
     fireEvent.click(screen.getByText('Set Progress'))
-    
+
     expect(screen.getByTestId('progress')).toHaveTextContent('50')
   })
 
   it('handles success state', () => {
     render(<TestComponent />)
-    
+
     fireEvent.click(screen.getByText('Set Success'))
-    
+
     expect(screen.getByTestId('loading-type')).toHaveTextContent('success')
     expect(screen.getByTestId('is-success')).toHaveTextContent('true')
     expect(screen.getByTestId('message')).toHaveTextContent('Success!')
@@ -411,9 +400,9 @@ describe('useLoadingStates Hook', () => {
 
   it('handles error state', () => {
     render(<TestComponent />)
-    
+
     fireEvent.click(screen.getByText('Set Error'))
-    
+
     expect(screen.getByTestId('loading-type')).toHaveTextContent('error')
     expect(screen.getByTestId('is-error')).toHaveTextContent('true')
     expect(screen.getByTestId('error')).toHaveTextContent('Test error')
@@ -422,10 +411,10 @@ describe('useLoadingStates Hook', () => {
 
   it('resets state', () => {
     render(<TestComponent />)
-    
+
     fireEvent.click(screen.getByText('Start Loading'))
     fireEvent.click(screen.getByText('Reset'))
-    
+
     expect(screen.getByTestId('loading-type')).toHaveTextContent('idle')
     expect(screen.getByTestId('is-idle')).toHaveTextContent('true')
     expect(screen.getByTestId('progress')).toHaveTextContent('0')
@@ -433,29 +422,35 @@ describe('useLoadingStates Hook', () => {
 
   it('handles async operations with withLoading', async () => {
     render(<TestComponent />)
-    
+
     fireEvent.click(screen.getByText('Async Operation'))
-    
+
     // Should start loading
     expect(screen.getByTestId('loading-type')).toHaveTextContent('loading')
     expect(screen.getByTestId('message')).toHaveTextContent('Processing...')
-    
+
     // Should complete successfully
-    await waitFor(() => {
-      expect(screen.getByTestId('loading-type')).toHaveTextContent('success')
-    }, { timeout: 200 })
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('loading-type')).toHaveTextContent('success')
+      },
+      { timeout: 200 },
+    )
   })
 
   it('handles auto reset', async () => {
     render(<TestComponent options={{ autoReset: true, resetDelay: 100 }} />)
-    
+
     fireEvent.click(screen.getByText('Set Success'))
-    
+
     expect(screen.getByTestId('loading-type')).toHaveTextContent('success')
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('loading-type')).toHaveTextContent('idle')
-    }, { timeout: 200 })
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('loading-type')).toHaveTextContent('idle')
+      },
+      { timeout: 200 },
+    )
   })
 })
 
@@ -464,39 +459,27 @@ describe('useMultipleLoadingStates Hook', () => {
     const multipleStates = useMultipleLoadingStates()
     const uploadState = multipleStates.createLoadingState('upload')
     const downloadState = multipleStates.createLoadingState('download')
-    
+
     return (
       <div>
         <div data-testid="upload-type">{uploadState.state.type}</div>
         <div data-testid="upload-progress">{uploadState.state.progress}</div>
         <div data-testid="download-type">{downloadState.state.type}</div>
         <div data-testid="download-progress">{downloadState.state.progress}</div>
-        
-        <button onClick={() => uploadState.startLoading('Uploading...')}>
-          Start Upload
-        </button>
-        <button onClick={() => uploadState.setProgress(50)}>
-          Set Upload Progress
-        </button>
-        <button onClick={() => uploadState.setSuccess('Upload complete!')}>
-          Complete Upload
-        </button>
-        <button onClick={() => downloadState.startLoading('Downloading...')}>
-          Start Download
-        </button>
-        <button onClick={() => downloadState.setError('Download failed')}>
-          Fail Download
-        </button>
-        <button onClick={() => uploadState.reset()}>
-          Reset Upload
-        </button>
+
+        <button onClick={() => uploadState.startLoading('Uploading...')}>Start Upload</button>
+        <button onClick={() => uploadState.setProgress(50)}>Set Upload Progress</button>
+        <button onClick={() => uploadState.setSuccess('Upload complete!')}>Complete Upload</button>
+        <button onClick={() => downloadState.startLoading('Downloading...')}>Start Download</button>
+        <button onClick={() => downloadState.setError('Download failed')}>Fail Download</button>
+        <button onClick={() => uploadState.reset()}>Reset Upload</button>
       </div>
     )
   }
 
   it('initializes multiple states independently', () => {
     render(<MultipleTestComponent />)
-    
+
     expect(screen.getByTestId('upload-type')).toHaveTextContent('idle')
     expect(screen.getByTestId('upload-progress')).toHaveTextContent('0')
     expect(screen.getByTestId('download-type')).toHaveTextContent('idle')
@@ -505,17 +488,17 @@ describe('useMultipleLoadingStates Hook', () => {
 
   it('manages multiple states independently', () => {
     render(<MultipleTestComponent />)
-    
+
     // Start upload
     fireEvent.click(screen.getByText('Start Upload'))
     expect(screen.getByTestId('upload-type')).toHaveTextContent('loading')
     expect(screen.getByTestId('download-type')).toHaveTextContent('idle')
-    
+
     // Start download while upload is running
     fireEvent.click(screen.getByText('Start Download'))
     expect(screen.getByTestId('upload-type')).toHaveTextContent('loading')
     expect(screen.getByTestId('download-type')).toHaveTextContent('loading')
-    
+
     // Set upload progress
     fireEvent.click(screen.getByText('Set Upload Progress'))
     expect(screen.getByTestId('upload-progress')).toHaveTextContent('50')
@@ -524,12 +507,12 @@ describe('useMultipleLoadingStates Hook', () => {
 
   it('handles success and error states for different operations', () => {
     render(<MultipleTestComponent />)
-    
+
     // Complete upload successfully
     fireEvent.click(screen.getByText('Complete Upload'))
     expect(screen.getByTestId('upload-type')).toHaveTextContent('success')
     expect(screen.getByTestId('upload-progress')).toHaveTextContent('100')
-    
+
     // Fail download
     fireEvent.click(screen.getByText('Fail Download'))
     expect(screen.getByTestId('download-type')).toHaveTextContent('error')
@@ -538,12 +521,12 @@ describe('useMultipleLoadingStates Hook', () => {
 
   it('resets individual states', () => {
     render(<MultipleTestComponent />)
-    
+
     // Start and complete upload
     fireEvent.click(screen.getByText('Start Upload'))
     fireEvent.click(screen.getByText('Complete Upload'))
     expect(screen.getByTestId('upload-type')).toHaveTextContent('success')
-    
+
     // Reset upload
     fireEvent.click(screen.getByText('Reset Upload'))
     expect(screen.getByTestId('upload-type')).toHaveTextContent('idle')
@@ -559,7 +542,7 @@ describe('LoadingStatesExample', () => {
 
   it('displays all sections', () => {
     render(<LoadingStatesExample />)
-    
+
     expect(screen.getByText('Loading Spinners')).toBeInTheDocument()
     expect(screen.getByText('Progress Indicators')).toBeInTheDocument()
     expect(screen.getByText('Skeleton Components')).toBeInTheDocument()
@@ -570,9 +553,9 @@ describe('LoadingStatesExample', () => {
 
   it('has interactive buttons', () => {
     render(<LoadingStatesExample />)
-    
+
     expect(screen.getByText('Start Progress')).toBeInTheDocument()
     expect(screen.getByText('Show Spinner Overlay')).toBeInTheDocument()
     expect(screen.getByText('Start Async Operation')).toBeInTheDocument()
   })
-}) 
+})

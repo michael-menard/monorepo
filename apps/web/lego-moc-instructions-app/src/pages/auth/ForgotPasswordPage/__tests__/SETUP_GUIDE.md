@@ -40,7 +40,7 @@ npx playwright test src/pages/auth/ForgotPasswordPage/__tests__/ForgotPasswordPa
 # Form validation tests
 npx playwright test --grep "Form Validation E2E"
 
-# Accessibility tests  
+# Accessibility tests
 npx playwright test --grep "Accessibility E2E"
 
 # Email integration tests (requires Ethereal setup)
@@ -125,4 +125,4 @@ npx playwright test --grep "Email Integration E2E" --reporter=list
 3. Verify email flow works correctly
 4. Use the extracted tokens in ResetPasswordPage tests
 
-The setup is now complete! You can test the full password reset flow with real email integration using Ethereal Email. 
+The setup is now complete! You can test the full password reset flow with real email integration using Ethereal Email.

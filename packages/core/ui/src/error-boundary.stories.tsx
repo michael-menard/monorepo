@@ -25,7 +25,8 @@ const meta: Meta<typeof ErrorBoundary> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'An error boundary component that catches JavaScript errors anywhere in the child component tree.',
+        component:
+          'An error boundary component that catches JavaScript errors anywhere in the child component tree.',
       },
     },
   },
@@ -162,7 +163,7 @@ export const MultipleComponents: Story = {
       >
         <BuggyComponent shouldThrow={true} />
       </ErrorBoundary>
-      
+
       <ErrorBoundary
         fallback={
           <div className="p-2 border border-red-200 rounded bg-red-50 text-red-800 text-sm">
@@ -172,7 +173,7 @@ export const MultipleComponents: Story = {
       >
         <div>This component works fine</div>
       </ErrorBoundary>
-      
+
       <ErrorBoundary
         fallback={
           <div className="p-2 border border-red-200 rounded bg-red-50 text-red-800 text-sm">
@@ -191,4 +192,4 @@ export const MultipleComponents: Story = {
       },
     },
   },
-} 
+}

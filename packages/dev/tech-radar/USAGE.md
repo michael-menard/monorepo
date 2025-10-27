@@ -91,19 +91,20 @@ Open `packages/tech-radar/radar.json` and add your new technology to the `entrie
 
 Each technology entry must include these fields:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | ✅ | The name of the technology |
-| `quadrant` | string | ✅ | One of: "Techniques", "Tools", "Platforms", "Languages & Frameworks" |
-| `ring` | string | ✅ | One of: "Adopt", "Trial", "Assess", "Hold" |
-| `description` | string | ✅ | Detailed description of the technology and its purpose |
-| `moved` | string | ❌ | Movement indicator: "in", "out", or "none" (defaults to "none") |
+| Field         | Type   | Required | Description                                                          |
+| ------------- | ------ | -------- | -------------------------------------------------------------------- |
+| `name`        | string | ✅       | The name of the technology                                           |
+| `quadrant`    | string | ✅       | One of: "Techniques", "Tools", "Platforms", "Languages & Frameworks" |
+| `ring`        | string | ✅       | One of: "Adopt", "Trial", "Assess", "Hold"                           |
+| `description` | string | ✅       | Detailed description of the technology and its purpose               |
+| `moved`       | string | ❌       | Movement indicator: "in", "out", or "none" (defaults to "none")      |
 
 ### Step 3: Example Entries
 
 Here are examples of different types of technology entries:
 
 #### New Technology to Trial
+
 ```json
 {
   "name": "Svelte",
@@ -115,6 +116,7 @@ Here are examples of different types of technology entries:
 ```
 
 #### Technology Moving to Adopt
+
 ```json
 {
   "name": "TypeScript",
@@ -126,6 +128,7 @@ Here are examples of different types of technology entries:
 ```
 
 #### Technology Being Phased Out
+
 ```json
 {
   "name": "jQuery",
@@ -137,6 +140,7 @@ Here are examples of different types of technology entries:
 ```
 
 #### Technology Under Assessment
+
 ```json
 {
   "name": "WebAssembly",
@@ -206,7 +210,7 @@ const loadRadarData = async () => {
     // Load from your custom API endpoint
     const response = await fetch('/api/tech-radar')
     const data = await response.json()
-    
+
     // Process the data...
     setRadarData(data)
   } catch (error) {
@@ -242,10 +246,7 @@ To change the quadrants, edit the `quadrants` array in `radar.json`:
 
 ```json
 {
-  "quadrants": [
-    { "name": "Your Custom Quadrant" },
-    { "name": "Another Quadrant" }
-  ]
+  "quadrants": [{ "name": "Your Custom Quadrant" }, { "name": "Another Quadrant" }]
 }
 ```
 
@@ -309,16 +310,19 @@ export interface Entry {
 ### Common Issues
 
 #### Technology Not Appearing
+
 - Check that the `quadrant` and `ring` values match exactly (case-sensitive)
 - Verify the JSON syntax is valid
 - Ensure the entry is properly added to the `entries` array
 
 #### Styling Issues
+
 - Make sure the CSS is properly imported
 - Check for CSS conflicts with parent applications
 - Verify that the component has sufficient space to render
 
 #### Performance Issues
+
 - Large numbers of entries (>50) may impact performance
 - Consider pagination or filtering for very large datasets
 - Optimize images or assets referenced in descriptions
@@ -356,4 +360,4 @@ export interface Entry {
 }
 ```
 
-This guide should help you effectively use and maintain your Tech Radar component. For additional support, refer to the main README.md file or the component source code. 
+This guide should help you effectively use and maintain your Tech Radar component. For additional support, refer to the main README.md file or the component source code.

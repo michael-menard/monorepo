@@ -1,11 +1,11 @@
-import * as crypto from 'crypto';
+import * as crypto from 'crypto'
 
 /**
  * Generate a cryptographically secure CSRF token
  * @returns A 64-character hex string suitable for CSRF protection
  */
 export function generateCsrfToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString('hex')
 }
 
 /**
@@ -13,9 +13,9 @@ export function generateCsrfToken(): string {
  * @returns Object containing the raw token (to be sent) and its hash (to be stored)
  */
 export function generateSecureToken(): { raw: string; hash: string } {
-  const raw = crypto.randomBytes(32).toString('hex');
-  const hash = crypto.createHash('sha256').update(raw).digest('hex');
-  return { raw, hash };
+  const raw = crypto.randomBytes(32).toString('hex')
+  const hash = crypto.createHash('sha256').update(raw).digest('hex')
+  return { raw, hash }
 }
 
 /**
@@ -23,9 +23,9 @@ export function generateSecureToken(): { raw: string; hash: string } {
  * @returns Object containing the raw code (to be sent) and its hash (to be stored)
  */
 export function generateSecureVerificationCode(): { raw: string; hash: string } {
-  const raw = Math.floor(100000 + Math.random() * 900000).toString();
-  const hash = crypto.createHash('sha256').update(raw).digest('hex');
-  return { raw, hash };
+  const raw = Math.floor(100000 + Math.random() * 900000).toString()
+  const hash = crypto.createHash('sha256').update(raw).digest('hex')
+  return { raw, hash }
 }
 
 /**
@@ -36,9 +36,9 @@ export function generateSecureVerificationCode(): { raw: string; hash: string } 
  */
 export function verifyToken(rawToken: string, hashedToken: string): boolean {
   if (!rawToken || !hashedToken) {
-    return false;
+    return false
   }
 
-  const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
-  return hash === hashedToken;
+  const hash = crypto.createHash('sha256').update(rawToken).digest('hex')
+  return hash === hashedToken
 }

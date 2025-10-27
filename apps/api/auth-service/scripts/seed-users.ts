@@ -2,22 +2,22 @@
 
 /**
  * Seed Users Script for Auth Service
- * 
+ *
  * Creates test users based on South Park characters for development and testing.
- * 
+ *
  * Usage:
  *   pnpm seed:users
  *   pnpm seed:users --clear  # Clear existing users first
  *   pnpm seed:users --env=test  # Use test database
  */
 
-import mongoose from 'mongoose';
-import bcryptjs from 'bcryptjs';
-import dotenv from 'dotenv';
-import { User } from '../models/User';
+import mongoose from 'mongoose'
+import bcryptjs from 'bcryptjs'
+import dotenv from 'dotenv'
+import { User } from '../models/User'
 
 // Load environment variables
-dotenv.config();
+dotenv.config()
 
 // South Park characters data
 const SOUTH_PARK_USERS = [
@@ -27,7 +27,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: true,
     role: 'user',
-    bio: 'I\'m just a regular kid from South Park. Oh my God, they killed Kenny!',
+    bio: "I'm just a regular kid from South Park. Oh my God, they killed Kenny!",
   },
   {
     name: 'Kyle Broflovski',
@@ -43,7 +43,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: true,
     role: 'user',
-    bio: 'Respect my authoritah! I\'m the coolest kid in South Park.',
+    bio: "Respect my authoritah! I'm the coolest kid in South Park.",
   },
   {
     name: 'Kenny McCormick',
@@ -59,7 +59,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: true,
     role: 'user',
-    bio: 'Oh hamburgers! I\'m just trying to be a good kid and not get grounded.',
+    bio: "Oh hamburgers! I'm just trying to be a good kid and not get grounded.",
   },
   {
     name: 'Wendy Testaburger',
@@ -75,7 +75,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: true,
     role: 'admin',
-    bio: 'I\'m a geologist and Stan\'s dad. I thought this was America!',
+    bio: "I'm a geologist and Stan's dad. I thought this was America!",
   },
   {
     name: 'Chef Jerome',
@@ -83,7 +83,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: true,
     role: 'admin',
-    bio: 'Hello there children! I\'m the school chef and I love to sing.',
+    bio: "Hello there children! I'm the school chef and I love to sing.",
   },
   {
     name: 'Mr. Garrison',
@@ -91,7 +91,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: false,
     role: 'user',
-    bio: 'I\'m a teacher at South Park Elementary. Mkay?',
+    bio: "I'm a teacher at South Park Elementary. Mkay?",
   },
   {
     name: 'Towelie',
@@ -99,7 +99,7 @@ const SOUTH_PARK_USERS = [
     password: 'SouthPark123!',
     isVerified: false,
     role: 'user',
-    bio: 'Don\'t forget to bring a towel! Wanna get high?',
+    bio: "Don't forget to bring a towel! Wanna get high?",
   },
   {
     name: 'Jimmy Valmer',
@@ -117,7 +117,7 @@ const SOUTH_PARK_USERS = [
     role: 'user',
     bio: 'Timmy! Timmy Timmy Timmy!',
   },
-];
+]
 
 // Test user for automated testing
 const TEST_USERS = [
@@ -137,16 +137,16 @@ const TEST_USERS = [
     role: 'admin',
     bio: 'Admin test user for E2E testing',
   },
-];
+]
 
 interface SeedOptions {
-  clear?: boolean;
-  env?: 'development' | 'test';
-  verbose?: boolean;
+  clear?: boolean
+  env?: 'development' | 'test'
+  verbose?: boolean
 }
 
 class UserSeeder {
-  private options: SeedOptions;
+  private options: SeedOptions
 
   constructor(options: SeedOptions = {}) {
     this.options = {
@@ -154,59 +154,60 @@ class UserSeeder {
       env: 'development',
       verbose: true,
       ...options,
-    };
+    }
   }
 
   async connect(): Promise<void> {
-    const isTest = this.options.env === 'test';
-    const dbName = isTest ? 'auth-app-test' : 'auth-app';
-    const uri = process.env.MONGO_URI || `mongodb://localhost:27017/${dbName}`;
+    const isTest = this.options.env === 'test'
+    const dbName = isTest ? 'auth-app-test' : 'auth-app'
+    const uri = process.env.MONGO_URI || `mongodb://localhost:27017/${dbName}`
 
     if (this.options.verbose) {
-      console.log(`🔌 Connecting to MongoDB: ${uri}`);
+      console.log(`🔌 Connecting to MongoDB: ${uri}`)
     }
 
-    await mongoose.connect(uri);
-    
+    await mongoose.connect(uri)
+
     if (this.options.verbose) {
-      console.log('✅ Connected to MongoDB');
+      console.log('✅ Connected to MongoDB')
     }
   }
 
   async clearUsers(): Promise<void> {
     if (this.options.verbose) {
-      console.log('🗑️  Clearing existing users...');
+      console.log('🗑️  Clearing existing users...')
     }
 
-    const result = await User.deleteMany({});
-    
+    const result = await User.deleteMany({})
+
     if (this.options.verbose) {
-      console.log(`🗑️  Deleted ${result.deletedCount} existing users`);
+      console.log(`🗑️  Deleted ${result.deletedCount} existing users`)
     }
   }
 
   async createUsers(): Promise<void> {
-    const usersToCreate = this.options.env === 'test' 
-      ? [...TEST_USERS, ...SOUTH_PARK_USERS.slice(0, 4)] // Fewer users for testing
-      : [...TEST_USERS, ...SOUTH_PARK_USERS];
+    const usersToCreate =
+      this.options.env === 'test'
+        ? [...TEST_USERS, ...SOUTH_PARK_USERS.slice(0, 4)] // Fewer users for testing
+        : [...TEST_USERS, ...SOUTH_PARK_USERS]
 
     if (this.options.verbose) {
-      console.log(`👥 Creating ${usersToCreate.length} users...`);
+      console.log(`👥 Creating ${usersToCreate.length} users...`)
     }
 
     for (const userData of usersToCreate) {
       try {
         // Check if user already exists
-        const existingUser = await User.findOne({ email: userData.email });
+        const existingUser = await User.findOne({ email: userData.email })
         if (existingUser) {
           if (this.options.verbose) {
-            console.log(`⚠️  User ${userData.email} already exists, skipping...`);
+            console.log(`⚠️  User ${userData.email} already exists, skipping...`)
           }
-          continue;
+          continue
         }
 
         // Hash password
-        const hashedPassword = await bcryptjs.hash(userData.password, 10);
+        const hashedPassword = await bcryptjs.hash(userData.password, 10)
 
         // Create user
         const user = new User({
@@ -215,78 +216,77 @@ class UserSeeder {
           password: hashedPassword,
           isVerified: userData.isVerified,
           lastLogin: new Date(),
-        });
+        })
 
-        await user.save();
+        await user.save()
 
         if (this.options.verbose) {
-          const status = userData.isVerified ? '✅' : '⏳';
-          const role = userData.role === 'admin' ? '👑' : '👤';
-          console.log(`${status} ${role} Created: ${userData.name} (${userData.email})`);
+          const status = userData.isVerified ? '✅' : '⏳'
+          const role = userData.role === 'admin' ? '👑' : '👤'
+          console.log(`${status} ${role} Created: ${userData.name} (${userData.email})`)
         }
       } catch (error) {
-        console.error(`❌ Failed to create user ${userData.email}:`, error);
+        console.error(`❌ Failed to create user ${userData.email}:`, error)
       }
     }
   }
 
   async printSummary(): Promise<void> {
-    const totalUsers = await User.countDocuments();
-    const verifiedUsers = await User.countDocuments({ isVerified: true });
-    const unverifiedUsers = await User.countDocuments({ isVerified: false });
+    const totalUsers = await User.countDocuments()
+    const verifiedUsers = await User.countDocuments({ isVerified: true })
+    const unverifiedUsers = await User.countDocuments({ isVerified: false })
 
-    console.log('\n📊 Database Summary:');
-    console.log(`   Total Users: ${totalUsers}`);
-    console.log(`   ✅ Verified: ${verifiedUsers}`);
-    console.log(`   ⏳ Unverified: ${unverifiedUsers}`);
+    console.log('\n📊 Database Summary:')
+    console.log(`   Total Users: ${totalUsers}`)
+    console.log(`   ✅ Verified: ${verifiedUsers}`)
+    console.log(`   ⏳ Unverified: ${unverifiedUsers}`)
 
     if (this.options.verbose) {
-      console.log('\n👥 Sample Users for Testing:');
-      console.log('   📧 Email: stan.marsh@southpark.co');
-      console.log('   🔑 Password: SouthPark123!');
-      console.log('   📧 Email: test@example.com');
-      console.log('   🔑 Password: TestPassword123!');
-      console.log('   📧 Email: admin@example.com (Admin)');
-      console.log('   🔑 Password: AdminPassword123!');
+      console.log('\n👥 Sample Users for Testing:')
+      console.log('   📧 Email: stan.marsh@southpark.co')
+      console.log('   🔑 Password: SouthPark123!')
+      console.log('   📧 Email: test@example.com')
+      console.log('   🔑 Password: TestPassword123!')
+      console.log('   📧 Email: admin@example.com (Admin)')
+      console.log('   🔑 Password: AdminPassword123!')
     }
   }
 
   async disconnect(): Promise<void> {
-    await mongoose.disconnect();
+    await mongoose.disconnect()
     if (this.options.verbose) {
-      console.log('🔌 Disconnected from MongoDB');
+      console.log('🔌 Disconnected from MongoDB')
     }
   }
 
   async seed(): Promise<void> {
     try {
-      await this.connect();
+      await this.connect()
 
       if (this.options.clear) {
-        await this.clearUsers();
+        await this.clearUsers()
       }
 
-      await this.createUsers();
-      await this.printSummary();
-
+      await this.createUsers()
+      await this.printSummary()
     } catch (error) {
-      console.error('❌ Seeding failed:', error);
-      throw error;
+      console.error('❌ Seeding failed:', error)
+      throw error
     } finally {
-      await this.disconnect();
+      await this.disconnect()
     }
   }
 }
 
 // CLI interface
 async function main() {
-  const args = process.argv.slice(2);
-  
+  const args = process.argv.slice(2)
+
   const options: SeedOptions = {
     clear: args.includes('--clear'),
     env: args.includes('--env=test') ? 'test' : 'development',
     verbose: !args.includes('--quiet'),
-  };
+  }
 
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
@@ -311,29 +311,29 @@ Created Users:
   - South Park characters (stan.marsh@southpark.co, etc.)
   - Test users (test@example.com, admin@example.com)
   - All passwords: SouthPark123! or TestPassword123!
-    `);
-    process.exit(0);
+    `)
+    process.exit(0)
   }
 
-  console.log('🎬 South Park User Seeder');
-  console.log(`📊 Environment: ${options.env}`);
-  console.log(`🗑️  Clear existing: ${options.clear ? 'Yes' : 'No'}`);
-  console.log('');
+  console.log('🎬 South Park User Seeder')
+  console.log(`📊 Environment: ${options.env}`)
+  console.log(`🗑️  Clear existing: ${options.clear ? 'Yes' : 'No'}`)
+  console.log('')
 
-  const seeder = new UserSeeder(options);
-  await seeder.seed();
+  const seeder = new UserSeeder(options)
+  await seeder.seed()
 
-  console.log('\n🎉 Seeding completed successfully!');
-  console.log('\n💡 You can now login with any of the created users.');
-  console.log('   Try: stan.marsh@southpark.co / SouthPark123!');
+  console.log('\n🎉 Seeding completed successfully!')
+  console.log('\n💡 You can now login with any of the created users.')
+  console.log('   Try: stan.marsh@southpark.co / SouthPark123!')
 }
 
 // Run if called directly
 if (require.main === module) {
   main().catch(error => {
-    console.error('💥 Seeder failed:', error);
-    process.exit(1);
-  });
+    console.error('💥 Seeder failed:', error)
+    process.exit(1)
+  })
 }
 
-export { UserSeeder, SOUTH_PARK_USERS, TEST_USERS };
+export { UserSeeder, SOUTH_PARK_USERS, TEST_USERS }

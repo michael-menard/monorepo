@@ -1,35 +1,35 @@
-import { renderHook, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { useAlbumDragAndDrop } from '../useAlbumDragAndDrop.js';
+import { renderHook, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { useAlbumDragAndDrop } from '../useAlbumDragAndDrop.js'
 
 describe('useAlbumDragAndDrop', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   it('initializes with correct state', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
-    expect(result.current.state.isDragOver).toBe(false);
-    expect(result.current.state.isDragging).toBe(false);
-    expect(result.current.state.draggedImages).toEqual([]);
-  });
+    expect(result.current.state.isDragOver).toBe(false)
+    expect(result.current.state.isDragging).toBe(false)
+    expect(result.current.state.draggedImages).toEqual([])
+  })
 
   it('handles drag start correctly', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     const mockEvent = {
       dataTransfer: {
         setData: vi.fn(),
         effectAllowed: '',
       },
-    } as any;
+    } as any
 
-    const imageIds = ['1', '2', '3'];
+    const imageIds = ['1', '2', '3']
 
     act(() => {
-      result.current.actions.handleDragStart(mockEvent, imageIds);
-    });
+      result.current.actions.handleDragStart(mockEvent, imageIds)
+    })
 
     expect(mockEvent.dataTransfer.setData).toHaveBeenCalledWith(
       'application/json',
@@ -38,14 +38,14 @@ describe('useAlbumDragAndDrop', () => {
         imageIds,
         source: 'gallery',
       }),
-    );
-    expect(mockEvent.dataTransfer.effectAllowed).toBe('copy');
-    expect(result.current.state.isDragging).toBe(true);
-    expect(result.current.state.draggedImages).toEqual(imageIds);
-  });
+    )
+    expect(mockEvent.dataTransfer.effectAllowed).toBe('copy')
+    expect(result.current.state.isDragging).toBe(true)
+    expect(result.current.state.draggedImages).toEqual(imageIds)
+  })
 
   it('handles drag over correctly', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -53,19 +53,19 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         dropEffect: '',
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDragOver(mockEvent);
-    });
+      result.current.actions.handleDragOver(mockEvent)
+    })
 
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockEvent.stopPropagation).toHaveBeenCalled();
-    expect(mockEvent.dataTransfer.dropEffect).toBe('copy');
-  });
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+    expect(mockEvent.stopPropagation).toHaveBeenCalled()
+    expect(mockEvent.dataTransfer.dropEffect).toBe('copy')
+  })
 
   it('handles drag enter with gallery images', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -73,19 +73,19 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         types: ['application/json'],
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDragEnter(mockEvent);
-    });
+      result.current.actions.handleDragEnter(mockEvent)
+    })
 
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockEvent.stopPropagation).toHaveBeenCalled();
-    expect(result.current.state.isDragOver).toBe(true);
-  });
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+    expect(mockEvent.stopPropagation).toHaveBeenCalled()
+    expect(result.current.state.isDragOver).toBe(true)
+  })
 
   it('handles drag enter without gallery images', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -93,19 +93,19 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         types: ['text/plain'],
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDragEnter(mockEvent);
-    });
+      result.current.actions.handleDragEnter(mockEvent)
+    })
 
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockEvent.stopPropagation).toHaveBeenCalled();
-    expect(result.current.state.isDragOver).toBe(false);
-  });
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+    expect(mockEvent.stopPropagation).toHaveBeenCalled()
+    expect(result.current.state.isDragOver).toBe(false)
+  })
 
   it('handles drag leave correctly', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     // First enter drag
     const enterEvent = {
@@ -114,31 +114,31 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         types: ['application/json'],
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDragEnter(enterEvent);
-    });
+      result.current.actions.handleDragEnter(enterEvent)
+    })
 
-    expect(result.current.state.isDragOver).toBe(true);
+    expect(result.current.state.isDragOver).toBe(true)
 
     // Then leave drag
     const leaveEvent = {
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDragLeave(leaveEvent);
-    });
+      result.current.actions.handleDragLeave(leaveEvent)
+    })
 
-    expect(leaveEvent.preventDefault).toHaveBeenCalled();
-    expect(leaveEvent.stopPropagation).toHaveBeenCalled();
-    expect(result.current.state.isDragOver).toBe(false);
-  });
+    expect(leaveEvent.preventDefault).toHaveBeenCalled()
+    expect(leaveEvent.stopPropagation).toHaveBeenCalled()
+    expect(result.current.state.isDragOver).toBe(false)
+  })
 
   it('handles multiple drag enter/leave events correctly', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -146,38 +146,38 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         types: ['application/json'],
       },
-    } as any;
+    } as any
 
     // First enter
     act(() => {
-      result.current.actions.handleDragEnter(mockEvent);
-    });
-    expect(result.current.state.isDragOver).toBe(true);
+      result.current.actions.handleDragEnter(mockEvent)
+    })
+    expect(result.current.state.isDragOver).toBe(true)
 
     // Second enter (nested element)
     act(() => {
-      result.current.actions.handleDragEnter(mockEvent);
-    });
-    expect(result.current.state.isDragOver).toBe(true);
+      result.current.actions.handleDragEnter(mockEvent)
+    })
+    expect(result.current.state.isDragOver).toBe(true)
 
     // First leave (nested element)
     act(() => {
-      result.current.actions.handleDragLeave(mockEvent);
-    });
-    expect(result.current.state.isDragOver).toBe(true);
+      result.current.actions.handleDragLeave(mockEvent)
+    })
+    expect(result.current.state.isDragOver).toBe(true)
 
     // Second leave (outer element)
     act(() => {
-      result.current.actions.handleDragLeave(mockEvent);
-    });
-    expect(result.current.state.isDragOver).toBe(false);
-  });
+      result.current.actions.handleDragLeave(mockEvent)
+    })
+    expect(result.current.state.isDragOver).toBe(false)
+  })
 
   it('handles drop with valid gallery image data', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
-    const onImagesDropped = vi.fn();
-    const imageIds = ['1', '2'];
+    const onImagesDropped = vi.fn()
+    const imageIds = ['1', '2']
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -191,25 +191,25 @@ describe('useAlbumDragAndDrop', () => {
           }),
         ),
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDrop(mockEvent, onImagesDropped);
-    });
+      result.current.actions.handleDrop(mockEvent, onImagesDropped)
+    })
 
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockEvent.stopPropagation).toHaveBeenCalled();
-    expect(onImagesDropped).toHaveBeenCalledWith(imageIds);
-    expect(result.current.state.isDragOver).toBe(false);
-    expect(result.current.state.isDragging).toBe(false);
-    expect(result.current.state.draggedImages).toEqual([]);
-  });
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+    expect(mockEvent.stopPropagation).toHaveBeenCalled()
+    expect(onImagesDropped).toHaveBeenCalledWith(imageIds)
+    expect(result.current.state.isDragOver).toBe(false)
+    expect(result.current.state.isDragging).toBe(false)
+    expect(result.current.state.draggedImages).toEqual([])
+  })
 
   it('handles drop with invalid data gracefully', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
-    const onImagesDropped = vi.fn();
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const onImagesDropped = vi.fn()
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -217,25 +217,25 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         getData: vi.fn().mockReturnValue('invalid json'),
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDrop(mockEvent, onImagesDropped);
-    });
+      result.current.actions.handleDrop(mockEvent, onImagesDropped)
+    })
 
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockEvent.stopPropagation).toHaveBeenCalled();
-    expect(onImagesDropped).not.toHaveBeenCalled();
-    expect(consoleWarnSpy).toHaveBeenCalledWith('Invalid drag data format:', expect.any(Error));
-    expect(result.current.state.isDragOver).toBe(false);
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+    expect(mockEvent.stopPropagation).toHaveBeenCalled()
+    expect(onImagesDropped).not.toHaveBeenCalled()
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Invalid drag data format:', expect.any(Error))
+    expect(result.current.state.isDragOver).toBe(false)
 
-    consoleWarnSpy.mockRestore();
-  });
+    consoleWarnSpy.mockRestore()
+  })
 
   it('handles drop with empty image ids', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
-    const onImagesDropped = vi.fn();
+    const onImagesDropped = vi.fn()
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -249,20 +249,20 @@ describe('useAlbumDragAndDrop', () => {
           }),
         ),
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDrop(mockEvent, onImagesDropped);
-    });
+      result.current.actions.handleDrop(mockEvent, onImagesDropped)
+    })
 
-    expect(onImagesDropped).not.toHaveBeenCalled();
-    expect(result.current.state.isDragOver).toBe(false);
-  });
+    expect(onImagesDropped).not.toHaveBeenCalled()
+    expect(result.current.state.isDragOver).toBe(false)
+  })
 
   it('handles drop with no data', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
-    const onImagesDropped = vi.fn();
+    const onImagesDropped = vi.fn()
 
     const mockEvent = {
       preventDefault: vi.fn(),
@@ -270,32 +270,32 @@ describe('useAlbumDragAndDrop', () => {
       dataTransfer: {
         getData: vi.fn().mockReturnValue(''),
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDrop(mockEvent, onImagesDropped);
-    });
+      result.current.actions.handleDrop(mockEvent, onImagesDropped)
+    })
 
-    expect(onImagesDropped).not.toHaveBeenCalled();
-    expect(result.current.state.isDragOver).toBe(false);
-  });
+    expect(onImagesDropped).not.toHaveBeenCalled()
+    expect(result.current.state.isDragOver).toBe(false)
+  })
 
   it('provides drag area props', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
     expect(result.current.actions.dragAreaProps).toEqual({
       onDragOver: expect.any(Function),
       onDragEnter: expect.any(Function),
       onDragLeave: expect.any(Function),
       onDrop: expect.any(Function),
-    });
-  });
+    })
+  })
 
   it('validates drag data schema correctly', () => {
-    const { result } = renderHook(() => useAlbumDragAndDrop());
+    const { result } = renderHook(() => useAlbumDragAndDrop())
 
-    const onImagesDropped = vi.fn();
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const onImagesDropped = vi.fn()
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // Test with invalid schema (missing required fields)
     const mockEvent = {
@@ -309,15 +309,15 @@ describe('useAlbumDragAndDrop', () => {
           }),
         ),
       },
-    } as any;
+    } as any
 
     act(() => {
-      result.current.actions.handleDrop(mockEvent, onImagesDropped);
-    });
+      result.current.actions.handleDrop(mockEvent, onImagesDropped)
+    })
 
-    expect(onImagesDropped).not.toHaveBeenCalled();
-    expect(consoleWarnSpy).toHaveBeenCalledWith('Invalid drag data format:', expect.any(Error));
+    expect(onImagesDropped).not.toHaveBeenCalled()
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Invalid drag data format:', expect.any(Error))
 
-    consoleWarnSpy.mockRestore();
-  });
-}); 
+    consoleWarnSpy.mockRestore()
+  })
+})

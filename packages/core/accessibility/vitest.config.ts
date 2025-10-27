@@ -12,7 +12,7 @@ export default defineConfig({
     poolOptions: {
       forks: {
         singleFork: true,
-      }
+      },
     },
     maxConcurrency: 1,
     testTimeout: 30000,

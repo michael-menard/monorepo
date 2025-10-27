@@ -1,13 +1,13 @@
-import React from 'react';
-import { createTanStackRouteGuard } from '@repo/auth';
-import { ProfilePage } from '../ProfilePage';
-import type { ProfilePageProps } from '../../types';
+import React from 'react'
+import { createTanStackRouteGuard } from '@repo/auth'
+import { ProfilePage } from '../ProfilePage'
+import type { ProfilePageProps } from '../../types'
 
 export interface ProtectedProfilePageProps extends ProfilePageProps {
-  requiredRole?: string;
-  requireVerified?: boolean;
-  redirectTo?: string;
-  unauthorizedTo?: string;
+  requiredRole?: string
+  requireVerified?: boolean
+  redirectTo?: string
+  unauthorizedTo?: string
 }
 
 export const ProtectedProfilePage: React.FC<ProtectedProfilePageProps> = ({
@@ -22,13 +22,13 @@ export const ProtectedProfilePage: React.FC<ProtectedProfilePageProps> = ({
     requireVerified,
     redirectTo,
     unauthorizedTo,
-  });
+  })
 
   return (
     <RouteGuard>
       <ProfilePage {...profilePageProps} />
     </RouteGuard>
-  );
-};
+  )
+}
 
-export default ProtectedProfilePage;
+export default ProtectedProfilePage

@@ -1,28 +1,28 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { Gallery } from '@repo/gallery';
-import { BookOpen, Download, Star, ArrowRight, Upload } from 'lucide-react';
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
+import { Gallery } from '@repo/gallery'
+import { BookOpen, Download, Star, ArrowRight, Upload } from 'lucide-react'
 
 interface MockInstruction {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  theme: 'modular' | 'Automobile' | 'ideas' | 'creator expert' | 'Lord Of The Rings' | 'city';
-  tags: string[];
-  coverImageUrl?: string;
-  rating?: number;
-  downloadCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  title: string
+  description: string
+  author: string
+  theme: 'modular' | 'Automobile' | 'ideas' | 'creator expert' | 'Lord Of The Rings' | 'city'
+  tags: string[]
+  coverImageUrl?: string
+  rating?: number
+  downloadCount: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface ProfileMocInstructionsSectionProps {
-  instructions: MockInstruction[];
-  loading?: boolean;
-  limit?: number;
-  showViewAll?: boolean;
-  viewAllHref?: string;
+  instructions: MockInstruction[]
+  loading?: boolean
+  limit?: number
+  showViewAll?: boolean
+  viewAllHref?: string
 }
 
 export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSectionProps> = ({
@@ -32,7 +32,7 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
   showViewAll = true,
   viewAllHref = '/moc-instructions',
 }) => {
-  const displayInstructions = limit ? instructions.slice(0, limit) : instructions;
+  const displayInstructions = limit ? instructions.slice(0, limit) : instructions
 
   const galleryConfig = {
     layout: 'list' as const,
@@ -46,50 +46,47 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
       categoryFilter: false,
     },
     columns: { xs: 1, sm: 1, md: 1, lg: 1, xl: 1 },
-  };
+  }
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return 'bg-green-100 text-green-800';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'advanced': return 'bg-orange-100 text-orange-800';
-      case 'expert': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'beginner':
+        return 'bg-green-100 text-green-800'
+      case 'intermediate':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'advanced':
+        return 'bg-orange-100 text-orange-800'
+      case 'expert':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
-  };
+  }
 
   const renderMocInstructionItem = (item: any) => {
-    const originalInstruction = item.originalData as MockInstruction;
-    
+    const originalInstruction = item.originalData as MockInstruction
+
     return (
       <div className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border hover:shadow-md transition-shadow">
-        <img 
-          src={item.imageUrl} 
-          alt={item.title}
-          className="w-16 h-16 object-cover rounded-lg"
-        />
+        <img src={item.imageUrl} alt={item.title} className="w-16 h-16 object-cover rounded-lg" />
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
-            {item.title}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-            {item.description}
-          </p>
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{item.description}</p>
           <div className="flex items-center space-x-4 mt-2">
-            <span className={`px-2 py-1 text-xs rounded-full ${getDifficultyColor(originalInstruction.difficulty)}`}>
+            <span
+              className={`px-2 py-1 text-xs rounded-full ${getDifficultyColor(originalInstruction.difficulty)}`}
+            >
               {originalInstruction.difficulty}
             </span>
-            <span className="text-sm text-gray-500">
-              {originalInstruction.category}
-            </span>
-            {originalInstruction.rating && (
+            <span className="text-sm text-gray-500">{originalInstruction.category}</span>
+            {originalInstruction.rating ? (
               <div className="flex items-center space-x-1">
                 <Star className="h-3 w-3 text-yellow-500 fill-current" />
                 <span className="text-sm text-gray-600">
                   {originalInstruction.rating.toFixed(1)}
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
         <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -102,8 +99,8 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   if (loading) {
     return (
@@ -119,7 +116,10 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
         <CardContent>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg animate-pulse">
+              <div
+                key={i}
+                className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg animate-pulse"
+              >
                 <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
                 <div className="flex-1">
                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -130,7 +130,7 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
           </div>
         </CardContent>
       </Card>
-    );
+    )
   }
 
   return (
@@ -144,7 +144,7 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
               ({displayInstructions.length} instructions)
             </span>
           </div>
-          {showViewAll && (
+          {showViewAll ? (
             <a
               href={viewAllHref}
               className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
@@ -152,7 +152,7 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
               <span>View All</span>
               <ArrowRight className="h-4 w-4" />
             </a>
-          )}
+          ) : null}
         </div>
       </CardHeader>
       <CardContent>
@@ -186,14 +186,14 @@ export const ProfileMocInstructionsSection: React.FC<ProfileMocInstructionsSecti
               updatedAt: instruction.updatedAt,
             }))}
             layout="grid"
-            onImageClick={(image) => {
+            onImageClick={image => {
               // Navigate to MOC detail page
-              window.location.href = `/moc-detail/${image.id}`;
+              window.location.href = `/moc-detail/${image.id}`
             }}
             className="mt-4"
           />
         )}
       </CardContent>
     </Card>
-  );
-};
+  )
+}

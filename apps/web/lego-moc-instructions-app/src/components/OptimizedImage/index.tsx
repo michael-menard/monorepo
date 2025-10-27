@@ -5,7 +5,7 @@ const RESPONSIVE_BREAKPOINTS = {
   mobile: { width: 480 },
   tablet: { width: 768 },
   desktop: { width: 1024 },
-  large: { width: 1200 }
+  large: { width: 1200 },
 }
 
 // Fallback preset configurations
@@ -15,7 +15,7 @@ const getPreset = (preset: string) => {
     thumbnail: { maxWidth: 400, quality: 85, format: 'webp' },
     gallery: { maxWidth: 800, quality: 80, format: 'webp' },
     hero: { maxWidth: 1200, quality: 85, format: 'webp' },
-    background: { maxWidth: 1600, quality: 75, format: 'webp' }
+    background: { maxWidth: 1600, quality: 75, format: 'webp' },
   }
   return presets[preset as keyof typeof presets] || presets.gallery
 }
@@ -25,8 +25,8 @@ const createResponsiveVariants = (baseConfig: any, breakpoints: Array<any>) => {
   return breakpoints.map(breakpoint => ({
     config: {
       ...baseConfig,
-      maxWidth: breakpoint.width
-    }
+      maxWidth: breakpoint.width,
+    },
   }))
 }
 
@@ -46,28 +46,30 @@ interface OptimizedImageProps {
   blurDataURL?: string
 }
 
-// Generate srcset for responsive images  
+// Generate srcset for responsive images
 const generateSrcSet = (src: string, preset: string) => {
   const baseConfig = getPreset(preset)
   const variants = createResponsiveVariants(baseConfig, Object.values(RESPONSIVE_BREAKPOINTS))
-  
-  return variants.map((variant: any) => {
-    // In a real implementation, these would be pre-generated URLs
-    // For now, we'll use query parameters to indicate the desired size
-    const url = `${src}?w=${variant.config.maxWidth}&q=${variant.config.quality}`
-    return `${url} ${variant.config.maxWidth}w`
-  }).join(', ')
+
+  return variants
+    .map((variant: any) => {
+      // In a real implementation, these would be pre-generated URLs
+      // For now, we'll use query parameters to indicate the desired size
+      const url = `${src}?w=${variant.config.maxWidth}&q=${variant.config.quality}`
+      return `${url} ${variant.config.maxWidth}w`
+    })
+    .join(', ')
 }
 
 // Generate sizes attribute based on breakpoints
 const generateSizes = (customSizes?: string) => {
   if (customSizes) return customSizes
-  
+
   return [
     `(max-width: ${RESPONSIVE_BREAKPOINTS.mobile.width}px) ${RESPONSIVE_BREAKPOINTS.mobile.width}px`,
     `(max-width: ${RESPONSIVE_BREAKPOINTS.tablet.width}px) ${RESPONSIVE_BREAKPOINTS.tablet.width}px`,
     `(max-width: ${RESPONSIVE_BREAKPOINTS.desktop.width}px) ${RESPONSIVE_BREAKPOINTS.desktop.width}px`,
-    `${RESPONSIVE_BREAKPOINTS.large.width}px`
+    `${RESPONSIVE_BREAKPOINTS.large.width}px`,
   ].join(', ')
 }
 
@@ -84,7 +86,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   onLoad,
   onError,
   placeholder = 'empty',
-  blurDataURL
+  blurDataURL,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isError, setIsError] = useState(false)
@@ -104,8 +106,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         }
       },
       {
-        rootMargin: '50px' // Start loading 50px before the image comes into view
-      }
+        rootMargin: '50px', // Start loading 50px before the image comes into view
+      },
     )
 
     if (containerRef.current) {
@@ -135,7 +137,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const optimizedSrc = `${src}?w=${baseConfig.maxWidth}&q=${baseConfig.quality}&f=${baseConfig.format}`
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={`relative overflow-hidden ${className}`}
       style={{ width, height }}
@@ -152,17 +154,17 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
             />
           ) : (
             <div className="animate-pulse bg-gray-200 w-full h-full flex items-center justify-center">
-              <svg 
-                className="w-8 h-8 text-gray-400" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-8 h-8 text-gray-400"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={1.5} 
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
             </div>
@@ -171,29 +173,29 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       )}
 
       {/* Error State */}
-      {isError && (
+      {isError ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <div className="text-center text-gray-500">
-            <svg 
-              className="w-8 h-8 mx-auto mb-2 text-gray-400" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="w-8 h-8 mx-auto mb-2 text-gray-400"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={1.5} 
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
             <p className="text-xs">Failed to load</p>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Actual Image */}
-      {isInView && (
+      {isInView ? (
         <img
           ref={imgRef}
           src={optimizedSrc}
@@ -209,27 +211,27 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
           decoding="async"
           fetchPriority={priority ? 'high' : 'auto'}
         />
-      )}
+      ) : null}
     </div>
   )
 }
 
 // Gallery-specific image component with preset configurations
-export const GalleryImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (
+export const GalleryImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = props => (
   <OptimizedImage {...props} preset="gallery" />
 )
 
 // Thumbnail image component
-export const ThumbnailImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (
+export const ThumbnailImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = props => (
   <OptimizedImage {...props} preset="thumbnail" />
 )
 
 // Hero image component with priority loading
-export const HeroImage: React.FC<Omit<OptimizedImageProps, 'preset' | 'priority'>> = (props) => (
+export const HeroImage: React.FC<Omit<OptimizedImageProps, 'preset' | 'priority'>> = props => (
   <OptimizedImage {...props} preset="hero" priority={true} />
 )
 
 // Avatar image component
-export const AvatarImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (
+export const AvatarImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = props => (
   <OptimizedImage {...props} preset="avatar" />
 )

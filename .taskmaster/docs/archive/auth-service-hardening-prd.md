@@ -49,15 +49,22 @@ Last updated: 2025-09-01
   - CSRF middleware rejects state-changing requests if header missing/mismatch or origin not allowed
   - Applies to: POST/PUT/PATCH/DELETE (incl. `/login`, `/sign-up`, `/log-out`, `/reset-password`, `/verify-email`, `/resend-verification`, `/forgot-password`)
 - Middleware logic (pseudocode)
+
   ```ts
   // middleware/csrf.ts
   export function csrf(req, res, next) {
     const method = req.method.toUpperCase()
-    if (!['POST','PUT','PATCH','DELETE'].includes(method)) return next()
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return next()
 
-    const allowed = new Set(['http://localhost:5173', process.env.APP_ORIGIN, process.env.FRONTEND_URL].filter(Boolean))
+    const allowed = new Set(
+      ['http://localhost:5173', process.env.APP_ORIGIN, process.env.FRONTEND_URL].filter(Boolean),
+    )
     const origin = req.get('origin') || req.get('referer') || ''
-    if (process.env.NODE_ENV === 'production' && origin && ![...allowed].some(o => origin.startsWith(o))) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      origin &&
+      ![...allowed].some(o => origin.startsWith(o))
+    ) {
       return res.status(403).json({ success: false, message: 'Invalid origin' })
     }
 
@@ -69,6 +76,7 @@ Last updated: 2025-09-01
     next()
   }
   ```
+
 - Issuance
   - On successful login and signup, set `XSRF-TOKEN` cookie with a cryptographically random value (`crypto.randomBytes(32).toString('hex')`, 2h TTL)
   - Expose `GET /api/auth/csrf` to refresh the CSRF cookie + return token body `{ token }` for convenience

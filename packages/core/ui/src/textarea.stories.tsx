@@ -43,10 +43,7 @@ export const WithLabel: Story = {
   render: () => (
     <div className="grid w-full max-w-sm items-center gap-1.5">
       <Label htmlFor="message">Message</Label>
-      <Textarea
-        id="message"
-        placeholder="Type your message here."
-      />
+      <Textarea id="message" placeholder="Type your message here." />
     </div>
   ),
 }
@@ -68,11 +65,7 @@ export const Required: Story = {
   render: () => (
     <div className="grid w-full max-w-sm items-center gap-1.5">
       <Label htmlFor="required-message">Required Message *</Label>
-      <Textarea
-        id="required-message"
-        placeholder="This field is required"
-        required
-      />
+      <Textarea id="required-message" placeholder="This field is required" required />
     </div>
   ),
 }
@@ -101,9 +94,7 @@ export const WithCharacterCount: Story = {
         maxLength={280}
         className="min-h-[100px]"
       />
-      <div className="text-xs text-muted-foreground text-right">
-        0/280 characters
-      </div>
+      <div className="text-xs text-muted-foreground text-right">0/280 characters</div>
     </div>
   ),
 }
@@ -119,7 +110,7 @@ export const FormExample: Story = {
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
         />
       </div>
-      
+
       <div className="grid items-center gap-1.5">
         <Label htmlFor="email">Email</Label>
         <input
@@ -129,16 +120,12 @@ export const FormExample: Story = {
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
         />
       </div>
-      
+
       <div className="grid items-center gap-1.5">
         <Label htmlFor="message">Message</Label>
-        <Textarea
-          id="message"
-          placeholder="Enter your message..."
-          className="min-h-[120px]"
-        />
+        <Textarea id="message" placeholder="Enter your message..." className="min-h-[120px]" />
       </div>
-      
+
       <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
         Send Message
       </button>
@@ -151,29 +138,17 @@ export const DifferentSizes: Story = {
     <div className="space-y-4 w-[400px]">
       <div className="grid items-center gap-1.5">
         <Label htmlFor="small">Small Textarea</Label>
-        <Textarea
-          id="small"
-          placeholder="Small textarea..."
-          className="min-h-[60px] text-sm"
-        />
+        <Textarea id="small" placeholder="Small textarea..." className="min-h-[60px] text-sm" />
       </div>
-      
+
       <div className="grid items-center gap-1.5">
         <Label htmlFor="default">Default Textarea</Label>
-        <Textarea
-          id="default"
-          placeholder="Default textarea..."
-          className="min-h-[100px]"
-        />
+        <Textarea id="default" placeholder="Default textarea..." className="min-h-[100px]" />
       </div>
-      
+
       <div className="grid items-center gap-1.5">
         <Label htmlFor="large">Large Textarea</Label>
-        <Textarea
-          id="large"
-          placeholder="Large textarea..."
-          className="min-h-[200px] text-lg"
-        />
+        <Textarea id="large" placeholder="Large textarea..." className="min-h-[200px] text-lg" />
       </div>
     </div>
   ),
@@ -188,9 +163,7 @@ export const WithError: Story = {
         placeholder="Enter your message..."
         className="border-red-500 focus:border-red-500"
       />
-      <p className="text-sm text-red-600">
-        This field is required.
-      </p>
+      <p className="text-sm text-red-600">This field is required.</p>
     </div>
   ),
-} 
+}

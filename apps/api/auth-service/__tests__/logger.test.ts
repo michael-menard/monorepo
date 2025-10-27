@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
-import { Request, Response } from 'express';
+import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'
+import { Request, Response } from 'express'
 import {
   logAuthEvent,
   logSecurityEvent,
@@ -11,7 +11,7 @@ import {
   sanitizeUserForLogging,
   getOrCreateCorrelationId,
   logPerformance,
-} from '../utils/logger';
+} from '../utils/logger'
 
 // Mock request and response objects
 const createMockRequest = (overrides = {}): any => ({
@@ -35,25 +35,25 @@ const createMockRequest = (overrides = {}): any => ({
   },
   userId: 'user-456',
   ...overrides,
-});
+})
 
 describe('Logger Utils', () => {
-  let mockReq: any;
-  let mockRes: any;
+  let mockReq: any
+  let mockRes: any
 
   beforeEach(() => {
-    mockReq = createMockRequest();
+    mockReq = createMockRequest()
     mockRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
-    };
-  });
+    }
+  })
 
   describe('logAuthEvent', () => {
     it('should log auth event with user context and request details', () => {
-      const details = { action: 'login', success: true };
+      const details = { action: 'login', success: true }
 
-      logAuthEvent(mockReq, 'user_login', details, 'info');
+      logAuthEvent(mockReq, 'user_login', details, 'info')
 
       expect(mockReq.log.info).toHaveBeenCalledWith(
         {
@@ -66,14 +66,14 @@ describe('Logger Utils', () => {
           userAgent: 'test-agent',
           timestamp: expect.any(String),
         },
-        'Auth event: user_login'
-      );
-    });
+        'Auth event: user_login',
+      )
+    })
 
     it('should handle missing user context gracefully', () => {
-      const mockReqNoUser = createMockRequest({ user: undefined, userId: undefined });
+      const mockReqNoUser = createMockRequest({ user: undefined, userId: undefined })
 
-      logAuthEvent(mockReqNoUser, 'anonymous_action', {}, 'info');
+      logAuthEvent(mockReqNoUser, 'anonymous_action', {}, 'info')
 
       expect(mockReqNoUser.log.info).toHaveBeenCalledWith(
         {
@@ -85,33 +85,33 @@ describe('Logger Utils', () => {
           userAgent: 'test-agent',
           timestamp: expect.any(String),
         },
-        'Auth event: anonymous_action'
-      );
-    });
+        'Auth event: anonymous_action',
+      )
+    })
 
     it('should support different log levels', () => {
-      logAuthEvent(mockReq, 'error_event', {}, 'error');
-      logAuthEvent(mockReq, 'warning_event', {}, 'warn');
+      logAuthEvent(mockReq, 'error_event', {}, 'error')
+      logAuthEvent(mockReq, 'warning_event', {}, 'warn')
 
       expect(mockReq.log.error).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'error_event',
         }),
-        'Auth event: error_event'
-      );
+        'Auth event: error_event',
+      )
 
       expect(mockReq.log.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'warning_event',
         }),
-        'Auth event: warning_event'
-      );
-    });
-  });
+        'Auth event: warning_event',
+      )
+    })
+  })
 
   describe('logSecurityEvent', () => {
     it('should log security events with security flag', () => {
-      logSecurityEvent(mockReq, 'failed_login_attempt', { attempts: 3 });
+      logSecurityEvent(mockReq, 'failed_login_attempt', { attempts: 3 })
 
       expect(mockReq.log.warn).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -120,14 +120,14 @@ describe('Logger Utils', () => {
           security: true,
           userId: 'user-456',
         }),
-        'Auth event: failed_login_attempt'
-      );
-    });
-  });
+        'Auth event: failed_login_attempt',
+      )
+    })
+  })
 
   describe('logUserAction', () => {
     it('should log user actions with info level', () => {
-      logUserAction(mockReq, 'profile_updated', { field: 'email' });
+      logUserAction(mockReq, 'profile_updated', { field: 'email' })
 
       expect(mockReq.log.info).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -135,17 +135,17 @@ describe('Logger Utils', () => {
           field: 'email',
           userId: 'user-456',
         }),
-        'Auth event: profile_updated'
-      );
-    });
-  });
+        'Auth event: profile_updated',
+      )
+    })
+  })
 
   describe('logAuthError', () => {
     it('should log Error objects with stack trace', () => {
-      const error = new Error('Authentication failed');
-      error.stack = 'Error: Authentication failed\n    at test';
+      const error = new Error('Authentication failed')
+      error.stack = 'Error: Authentication failed\n    at test'
 
-      logAuthError(mockReq, error, { context: 'login' });
+      logAuthError(mockReq, error, { context: 'login' })
 
       expect(mockReq.log.error).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -155,12 +155,12 @@ describe('Logger Utils', () => {
           stack: 'Error: Authentication failed\n    at test',
           userId: 'user-456',
         }),
-        'Auth event: auth_error'
-      );
-    });
+        'Auth event: auth_error',
+      )
+    })
 
     it('should log string errors without stack trace', () => {
-      logAuthError(mockReq, 'Simple error message', { context: 'signup' });
+      logAuthError(mockReq, 'Simple error message', { context: 'signup' })
 
       expect(mockReq.log.error).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -170,14 +170,14 @@ describe('Logger Utils', () => {
           stack: undefined,
           userId: 'user-456',
         }),
-        'Auth event: auth_error'
-      );
-    });
-  });
+        'Auth event: auth_error',
+      )
+    })
+  })
 
   describe('logDatabaseOperation', () => {
     it('should log database operations with operation details', () => {
-      logDatabaseOperation(mockReq, 'findOne', 'users', { email: 'test@example.com' });
+      logDatabaseOperation(mockReq, 'findOne', 'users', { email: 'test@example.com' })
 
       expect(mockReq.log.info).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -187,14 +187,14 @@ describe('Logger Utils', () => {
           email: 'test@example.com',
           userId: 'user-456',
         }),
-        'Auth event: database_operation'
-      );
-    });
-  });
+        'Auth event: database_operation',
+      )
+    })
+  })
 
   describe('logEmailEvent', () => {
     it('should log successful email events as info', () => {
-      logEmailEvent(mockReq, 'welcome', 'user@example.com', true, { extraData: 'test' });
+      logEmailEvent(mockReq, 'welcome', 'user@example.com', true, { extraData: 'test' })
 
       expect(mockReq.log.info).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -205,14 +205,14 @@ describe('Logger Utils', () => {
           userId: 'user-456', // Uses userId from request context
           extraData: 'test',
         }),
-        'Auth event: email_sent'
-      );
-    });
+        'Auth event: email_sent',
+      )
+    })
 
     it('should log failed email events as warning', () => {
-      logEmailEvent(mockReq, 'verification', 'user@example.com', false, { 
-        error: 'SMTP connection failed' 
-      });
+      logEmailEvent(mockReq, 'verification', 'user@example.com', false, {
+        error: 'SMTP connection failed',
+      })
 
       expect(mockReq.log.warn).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -223,16 +223,16 @@ describe('Logger Utils', () => {
           error: 'SMTP connection failed',
           userId: 'user-456',
         }),
-        'Auth event: email_sent'
-      );
-    });
-  });
+        'Auth event: email_sent',
+      )
+    })
+  })
 
   describe('logValidationError', () => {
     it('should log validation errors with field information', () => {
-      logValidationError(mockReq, 'email', 'Invalid email format', { 
-        providedValue: 'invalid-email' 
-      });
+      logValidationError(mockReq, 'email', 'Invalid email format', {
+        providedValue: 'invalid-email',
+      })
 
       expect(mockReq.log.warn).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -242,10 +242,10 @@ describe('Logger Utils', () => {
           providedValue: 'invalid-email',
           userId: 'user-456',
         }),
-        'Auth event: validation_error'
-      );
-    });
-  });
+        'Auth event: validation_error',
+      )
+    })
+  })
 
   describe('sanitizeUserForLogging', () => {
     it('should remove sensitive fields from user object', () => {
@@ -260,9 +260,9 @@ describe('Logger Utils', () => {
         lastLogin: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      }
 
-      const sanitized = sanitizeUserForLogging(user);
+      const sanitized = sanitizeUserForLogging(user)
 
       expect(sanitized).toEqual({
         id: 'user-123',
@@ -272,17 +272,17 @@ describe('Logger Utils', () => {
         lastLogin: user.lastLogin,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-      });
+      })
 
-      expect(sanitized).not.toHaveProperty('password');
-      expect(sanitized).not.toHaveProperty('resetPasswordToken');
-      expect(sanitized).not.toHaveProperty('verificationToken');
-    });
+      expect(sanitized).not.toHaveProperty('password')
+      expect(sanitized).not.toHaveProperty('resetPasswordToken')
+      expect(sanitized).not.toHaveProperty('verificationToken')
+    })
 
     it('should handle null user gracefully', () => {
-      expect(sanitizeUserForLogging(null)).toBeNull();
-      expect(sanitizeUserForLogging(undefined)).toBeNull();
-    });
+      expect(sanitizeUserForLogging(null)).toBeNull()
+      expect(sanitizeUserForLogging(undefined)).toBeNull()
+    })
 
     it('should handle user with id instead of _id', () => {
       const user = {
@@ -290,13 +290,13 @@ describe('Logger Utils', () => {
         email: 'test@example.com',
         name: 'Test User',
         isVerified: false,
-      };
+      }
 
-      const sanitized = sanitizeUserForLogging(user);
-      expect(sanitized).not.toBeNull();
-      expect(sanitized?.id).toBe('user-456');
-    });
-  });
+      const sanitized = sanitizeUserForLogging(user)
+      expect(sanitized).not.toBeNull()
+      expect(sanitized?.id).toBe('user-456')
+    })
+  })
 
   describe('getOrCreateCorrelationId', () => {
     it('should return x-correlation-id when available', () => {
@@ -306,10 +306,10 @@ describe('Logger Utils', () => {
           'x-request-id': 'req-456',
         },
         id: 'fallback-id',
-      } as any;
+      } as any
 
-      expect(getOrCreateCorrelationId(req)).toBe('corr-123');
-    });
+      expect(getOrCreateCorrelationId(req)).toBe('corr-123')
+    })
 
     it('should fallback to x-request-id when correlation-id is not available', () => {
       const req = {
@@ -317,24 +317,24 @@ describe('Logger Utils', () => {
           'x-request-id': 'req-456',
         },
         id: 'fallback-id',
-      } as any;
+      } as any
 
-      expect(getOrCreateCorrelationId(req)).toBe('req-456');
-    });
+      expect(getOrCreateCorrelationId(req)).toBe('req-456')
+    })
 
     it('should fallback to request id when headers are not available', () => {
       const req = {
         headers: {},
         id: 'fallback-id',
-      } as any;
+      } as any
 
-      expect(getOrCreateCorrelationId(req)).toBe('fallback-id');
-    });
-  });
+      expect(getOrCreateCorrelationId(req)).toBe('fallback-id')
+    })
+  })
 
   describe('logPerformance', () => {
     it('should log performance metrics with duration', () => {
-      logPerformance(mockReq, 'database_query', 250, { query: 'findUser' });
+      logPerformance(mockReq, 'database_query', 250, { query: 'findUser' })
 
       expect(mockReq.log.info).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -345,24 +345,24 @@ describe('Logger Utils', () => {
           query: 'findUser',
           userId: 'user-456',
         }),
-        'Auth event: performance_metric'
-      );
-    });
-  });
+        'Auth event: performance_metric',
+      )
+    })
+  })
 
   describe('Request ID and Context Integration', () => {
     it('should include request ID from pino-http in logs', () => {
-      const mockReqWithId = createMockRequest({ id: 'pino-generated-id' });
+      const mockReqWithId = createMockRequest({ id: 'pino-generated-id' })
 
-      logUserAction(mockReqWithId, 'test_action', {});
+      logUserAction(mockReqWithId, 'test_action', {})
 
       expect(mockReqWithId.log.info).toHaveBeenCalledWith(
         expect.objectContaining({
           requestId: 'pino-generated-id',
         }),
-        'Auth event: test_action'
-      );
-    });
+        'Auth event: test_action',
+      )
+    })
 
     it('should include IP address and user agent in logs', () => {
       const mockReqWithDetails = createMockRequest({
@@ -370,51 +370,51 @@ describe('Logger Utils', () => {
         headers: {
           'user-agent': 'Mozilla/5.0 Custom Browser',
         },
-      });
+      })
 
-      logSecurityEvent(mockReqWithDetails, 'suspicious_activity', {});
+      logSecurityEvent(mockReqWithDetails, 'suspicious_activity', {})
 
       expect(mockReqWithDetails.log.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           ip: '192.168.1.100',
           userAgent: 'Mozilla/5.0 Custom Browser',
         }),
-        'Auth event: suspicious_activity'
-      );
-    });
+        'Auth event: suspicious_activity',
+      )
+    })
 
     it('should handle missing IP gracefully', () => {
       const mockReqNoIp = createMockRequest({
         ip: undefined,
         connection: { remoteAddress: '10.0.0.1' },
-      });
+      })
 
-      logUserAction(mockReqNoIp, 'test_action', {});
+      logUserAction(mockReqNoIp, 'test_action', {})
 
       expect(mockReqNoIp.log.info).toHaveBeenCalledWith(
         expect.objectContaining({
           ip: '10.0.0.1',
         }),
-        'Auth event: test_action'
-      );
-    });
-  });
+        'Auth event: test_action',
+      )
+    })
+  })
 
   describe('Timestamp Generation', () => {
     it('should include ISO timestamp in all logs', () => {
-      const beforeTime = Date.now();
-      
-      logAuthEvent(mockReq, 'timestamp_test', {});
-      
-      const afterTime = Date.now();
-      const callArgs = (mockReq.log.info as Mock).mock.calls[0][0];
-      
-      expect(callArgs.timestamp).toBeDefined();
-      expect(callArgs.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-      
-      const logTimestamp = new Date(callArgs.timestamp).getTime();
-      expect(logTimestamp).toBeGreaterThanOrEqual(beforeTime);
-      expect(logTimestamp).toBeLessThanOrEqual(afterTime);
-    });
-  });
-});
+      const beforeTime = Date.now()
+
+      logAuthEvent(mockReq, 'timestamp_test', {})
+
+      const afterTime = Date.now()
+      const callArgs = (mockReq.log.info as Mock).mock.calls[0][0]
+
+      expect(callArgs.timestamp).toBeDefined()
+      expect(callArgs.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+
+      const logTimestamp = new Date(callArgs.timestamp).getTime()
+      expect(logTimestamp).toBeGreaterThanOrEqual(beforeTime)
+      expect(logTimestamp).toBeLessThanOrEqual(afterTime)
+    })
+  })
+})

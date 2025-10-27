@@ -1,26 +1,23 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, FolderPlus, Download, Share2, X, Check } from 'lucide-react';
-import { Button } from '@repo/ui';
-import { useDeleteImageMutation } from '../../store/galleryApi.js';
-import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js';
-import CreateAlbumDialog from '../CreateAlbumDialog/index.js';
+import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Trash2, FolderPlus, Download, Share2, X, Check } from 'lucide-react'
+import { Button } from '@repo/ui'
+import { useDeleteImageMutation } from '../../store/galleryApi.js'
+import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js'
+import CreateAlbumDialog from '../CreateAlbumDialog/index.js'
 // import { z } from 'zod';
-
 
 // Schema not used at runtime currently; remove to avoid unused var error
 
-
-
 interface BatchOperationsToolbarProps {
-  selectedImages: string[];
-  totalImages: number;
-  onClearSelection: () => void;
-  onImagesDeleted?: (deletedIds: string[]) => void;
-  onImagesAddedToAlbum?: (imageIds: string[], albumId: string) => void;
-  onImagesDownloaded?: (imageIds: string[]) => void;
-  onImagesShared?: (imageIds: string[]) => void;
-  className?: string;
+  selectedImages: string[]
+  totalImages: number
+  onClearSelection: () => void
+  onImagesDeleted?: (deletedIds: string[]) => void
+  onImagesAddedToAlbum?: (imageIds: string[], albumId: string) => void
+  onImagesDownloaded?: (imageIds: string[]) => void
+  onImagesShared?: (imageIds: string[]) => void
+  className?: string
 }
 
 const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
@@ -33,117 +30,119 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
   onImagesShared,
   className = '',
 }) => {
-  const [showCreateAlbumDialog, setShowCreateAlbumDialog] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [showCreateAlbumDialog, setShowCreateAlbumDialog] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // RTK Query mutations
-  const [deleteImage] = useDeleteImageMutation();
-  const [addImageToAlbum] = useAddImageToAlbumMutation();
-  const [createAlbum] = useCreateAlbumMutation();
+  const [deleteImage] = useDeleteImageMutation()
+  const [addImageToAlbum] = useAddImageToAlbumMutation()
+  const [createAlbum] = useCreateAlbumMutation()
 
-  const selectedCount = selectedImages.length;
-  const isVisible = selectedCount > 0;
+  const selectedCount = selectedImages.length
+  const isVisible = selectedCount > 0
 
   const handleBatchDelete = async () => {
     if (!showDeleteConfirm) {
-      setShowDeleteConfirm(true);
-      return;
+      setShowDeleteConfirm(true)
+      return
     }
 
-    setIsProcessing(true);
+    setIsProcessing(true)
     try {
       // Delete all selected images
-      const deletePromises = selectedImages.map((imageId) => deleteImage(imageId).unwrap());
+      const deletePromises = selectedImages.map(imageId => deleteImage(imageId).unwrap())
 
-      await Promise.all(deletePromises);
+      await Promise.all(deletePromises)
 
-      onImagesDeleted?.(selectedImages);
-      onClearSelection();
-      setShowDeleteConfirm(false);
+      onImagesDeleted?.(selectedImages)
+      onClearSelection()
+      setShowDeleteConfirm(false)
     } catch (error) {
-      console.error('Failed to delete images:', error);
+      console.error('Failed to delete images:', error)
       // You might want to show a toast notification here
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
 
   const handleBatchAddToAlbum = async (albumId: string) => {
-    setIsProcessing(true);
+    setIsProcessing(true)
     try {
       // Add all selected images to the album
-      const addPromises = selectedImages.map((imageId) => addImageToAlbum({ albumId, imageId }).unwrap());
+      const addPromises = selectedImages.map(imageId =>
+        addImageToAlbum({ albumId, imageId }).unwrap(),
+      )
 
-      await Promise.all(addPromises);
+      await Promise.all(addPromises)
 
-      onImagesAddedToAlbum?.(selectedImages, albumId);
-      onClearSelection();
-      setShowCreateAlbumDialog(false);
+      onImagesAddedToAlbum?.(selectedImages, albumId)
+      onClearSelection()
+      setShowCreateAlbumDialog(false)
     } catch (error) {
-      console.error('Failed to add images to album:', error);
+      console.error('Failed to add images to album:', error)
       // You might want to show a toast notification here
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
 
   const handleBatchDownload = async () => {
     try {
       // Create download links for all selected images
-      const downloadPromises = selectedImages.map(async (imageId) => {
+      const downloadPromises = selectedImages.map(async imageId => {
         // This would typically fetch the image URL and trigger download
         // For now, we'll just simulate the download
-        const link = document.createElement('a');
-        link.href = `/api/gallery/${imageId}/download`;
-        link.download = `image-${imageId}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      });
-      
-      await Promise.all(downloadPromises);
-      onImagesDownloaded?.(selectedImages);
+        const link = document.createElement('a')
+        link.href = `/api/gallery/${imageId}/download`
+        link.download = `image-${imageId}.jpg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      })
+
+      await Promise.all(downloadPromises)
+      onImagesDownloaded?.(selectedImages)
     } catch (error) {
-      console.error('Failed to download images:', error);
+      console.error('Failed to download images:', error)
     }
-  };
+  }
 
   const handleBatchShare = async () => {
     try {
       // This would typically open a share dialog or copy links to clipboard
-      const shareUrls = selectedImages.map((imageId) => 
-        `${window.location.origin}/gallery/${imageId}`
-      );
-      
+      const shareUrls = selectedImages.map(
+        imageId => `${window.location.origin}/gallery/${imageId}`,
+      )
+
       if (navigator.share) {
         await navigator.share({
           title: 'Shared Images',
           text: `Sharing ${selectedCount} images`,
           url: shareUrls[0],
-        });
+        })
       } else {
         // Fallback: copy URLs to clipboard
-        await navigator.clipboard.writeText(shareUrls.join('\n'));
+        await navigator.clipboard.writeText(shareUrls.join('\n'))
       }
-      
-      onImagesShared?.(selectedImages);
+
+      onImagesShared?.(selectedImages)
     } catch (error) {
-      console.error('Failed to share images:', error);
+      console.error('Failed to share images:', error)
     }
-  };
+  }
 
   const handleCreateAlbum = async (albumData: { name: string; description?: string }) => {
     try {
-      const result = await createAlbum(albumData).unwrap();
-      await handleBatchAddToAlbum(result.album.id);
+      const result = await createAlbum(albumData).unwrap()
+      await handleBatchAddToAlbum(result.album.id)
     } catch (error) {
-      console.error('Failed to create album:', error);
+      console.error('Failed to create album:', error)
     }
-  };
+  }
 
   if (!isVisible) {
-    return null;
+    return null
   }
 
   return (
@@ -225,7 +224,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
 
         {/* Processing Indicator */}
         <AnimatePresence>
-          {isProcessing && (
+          {isProcessing ? (
             <motion.div
               className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg"
               initial={{ opacity: 0 }}
@@ -237,7 +236,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                 Processing...
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </motion.div>
 
@@ -245,14 +244,20 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
       <CreateAlbumDialog
         isOpen={showCreateAlbumDialog}
         onClose={() => setShowCreateAlbumDialog(false)}
-        selectedImages={selectedImages.map((id) => ({ id, url: '', title: `Image ${id}`, createdAt: new Date(), updatedAt: new Date() }))}
+        selectedImages={selectedImages.map(id => ({
+          id,
+          url: '',
+          title: `Image ${id}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }))}
         onAlbumCreated={handleCreateAlbum}
         onImagesSelected={() => {}} // Not needed for this use case
       />
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
-        {showDeleteConfirm && (
+        {showDeleteConfirm ? (
           <motion.div
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             initial={{ opacity: 0 }}
@@ -269,8 +274,8 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                 Delete {selectedCount} Image{selectedCount !== 1 ? 's' : ''}
               </h3>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to delete {selectedCount} selected image{selectedCount !== 1 ? 's' : ''}? 
-                This action cannot be undone.
+                Are you sure you want to delete {selectedCount} selected image
+                {selectedCount !== 1 ? 's' : ''}? This action cannot be undone.
               </p>
               <div className="flex justify-end space-x-3">
                 <Button
@@ -280,20 +285,16 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
                 >
                   Cancel
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleBatchDelete}
-                  disabled={isProcessing}
-                >
+                <Button variant="destructive" onClick={handleBatchDelete} disabled={isProcessing}>
                   {isProcessing ? 'Deleting...' : 'Delete'}
                 </Button>
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </>
-  );
-};
+  )
+}
 
-export default BatchOperationsToolbar; 
+export default BatchOperationsToolbar

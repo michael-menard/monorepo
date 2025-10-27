@@ -22,9 +22,9 @@ The form error messaging system consists of several components and utilities des
 The base error message component that provides consistent styling and accessibility features.
 
 ```tsx
-import { FormErrorMessage } from '@repo/ui';
+import { FormErrorMessage } from '@repo/ui'
 
-<FormErrorMessage
+;<FormErrorMessage
   message="This is an error message"
   type="error" // 'error' | 'warning' | 'info' | 'success'
   fieldName="Email" // Optional field name prefix
@@ -39,12 +39,9 @@ import { FormErrorMessage } from '@repo/ui';
 Specialized component for field-specific errors with consistent styling.
 
 ```tsx
-import { FieldErrorMessage } from '@repo/ui';
+import { FieldErrorMessage } from '@repo/ui'
 
-<FieldErrorMessage
-  error={form.formState.errors.email}
-  fieldName="Email Address"
-/>
+;<FieldErrorMessage error={form.formState.errors.email} fieldName="Email Address" />
 ```
 
 ### FormLevelErrorMessage
@@ -52,9 +49,9 @@ import { FieldErrorMessage } from '@repo/ui';
 Component for form-level errors that appear at the top of forms.
 
 ```tsx
-import { FormLevelErrorMessage } from '@repo/ui';
+import { FormLevelErrorMessage } from '@repo/ui'
 
-<FormLevelErrorMessage
+;<FormLevelErrorMessage
   error="Network error. Please try again."
   onClose={() => setFormError(null)}
 />
@@ -65,9 +62,9 @@ import { FormLevelErrorMessage } from '@repo/ui';
 Enhanced version of the standard FormMessage component with better styling.
 
 ```tsx
-import { EnhancedFormMessage } from '@repo/ui';
+import { EnhancedFormMessage } from '@repo/ui'
 
-<FormField
+;<FormField
   control={form.control}
   name="email"
   render={({ field }) => (
@@ -89,7 +86,7 @@ import { EnhancedFormMessage } from '@repo/ui';
 Pre-built Zod schemas with consistent error messages:
 
 ```tsx
-import { createEnhancedSchemas } from '@repo/ui';
+import { createEnhancedSchemas } from '@repo/ui'
 
 const schema = z.object({
   email: createEnhancedSchemas.email('Email Address'),
@@ -99,36 +96,36 @@ const schema = z.object({
   bio: createEnhancedSchemas.optionalString('Bio', 500),
   price: createEnhancedSchemas.price('Price'),
   url: createEnhancedSchemas.url('Website URL'),
-});
+})
 ```
 
 ### Password Strength Validation
 
 ```tsx
-import { validatePasswordStrength } from '@repo/ui';
+import { validatePasswordStrength } from '@repo/ui'
 
-const strength = validatePasswordStrength('MyPassword123!');
+const strength = validatePasswordStrength('MyPassword123!')
 // Returns: { isValid: boolean, strength: 'weak' | 'medium' | 'strong', message: string, score: number }
 ```
 
 ### File Validation
 
 ```tsx
-import { validateFile } from '@repo/ui';
+import { validateFile } from '@repo/ui'
 
 const result = validateFile(file, {
   maxSize: 5 * 1024 * 1024, // 5MB
   allowedTypes: ['jpg', 'png', 'pdf'],
-  required: true
-});
+  required: true,
+})
 ```
 
 ### Network Error Handling
 
 ```tsx
-import { getNetworkErrorMessage } from '@repo/ui';
+import { getNetworkErrorMessage } from '@repo/ui'
 
-const errorMessage = getNetworkErrorMessage(error);
+const errorMessage = getNetworkErrorMessage(error)
 // Automatically determines appropriate error message based on error type
 ```
 
@@ -137,7 +134,7 @@ const errorMessage = getNetworkErrorMessage(error);
 The system provides consistent validation messages for common scenarios:
 
 ```tsx
-import { validationMessages } from '@repo/ui';
+import { validationMessages } from '@repo/ui'
 
 // Basic messages
 validationMessages.required('Email') // "Email is required"
@@ -162,8 +159,8 @@ validationMessages.server // "Server error. Please try again later"
 ### Basic Form with Error Handling
 
 ```tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Form,
   FormControl,
@@ -175,31 +172,31 @@ import {
   FieldErrorMessage,
   FormLevelErrorMessage,
   createEnhancedSchemas,
-} from '@repo/ui';
+} from '@repo/ui'
 
 const schema = z.object({
   email: createEnhancedSchemas.email('Email'),
   password: createEnhancedSchemas.password('Password'),
-});
+})
 
 export const LoginForm = () => {
   const form = useForm({
     resolver: zodResolver(schema),
-  });
+  })
 
-  const onSubmit = async (data) => {
+  const onSubmit = async data => {
     try {
       // Submit form
     } catch (error) {
       // Handle error
     }
-  };
+  }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <FormLevelErrorMessage error={formError} />
-        
+
         <FormField
           control={form.control}
           name="email"
@@ -209,37 +206,34 @@ export const LoginForm = () => {
               <FormControl>
                 <Input {...field} />
               </FormControl>
-              <FieldErrorMessage 
-                error={form.formState.errors.email}
-                fieldName="Email"
-              />
+              <FieldErrorMessage error={form.formState.errors.email} fieldName="Email" />
             </FormItem>
           )}
         />
-        
+
         <Button type="submit">Login</Button>
       </form>
     </Form>
-  );
-};
+  )
+}
 ```
 
 ### Password Field with Strength Indicator
 
 ```tsx
-import { useState } from 'react';
-import { validatePasswordStrength } from '@repo/ui';
+import { useState } from 'react'
+import { validatePasswordStrength } from '@repo/ui'
 
 export const PasswordField = () => {
-  const [passwordStrength, setPasswordStrength] = useState(null);
+  const [passwordStrength, setPasswordStrength] = useState(null)
 
-  const handlePasswordChange = (value) => {
+  const handlePasswordChange = value => {
     if (value) {
-      setPasswordStrength(validatePasswordStrength(value));
+      setPasswordStrength(validatePasswordStrength(value))
     } else {
-      setPasswordStrength(null);
+      setPasswordStrength(null)
     }
-  };
+  }
 
   return (
     <FormField
@@ -249,70 +243,66 @@ export const PasswordField = () => {
         <FormItem>
           <FormLabel>Password</FormLabel>
           <FormControl>
-            <Input 
+            <Input
               type="password"
               {...field}
-              onChange={(e) => {
-                field.onChange(e);
-                handlePasswordChange(e.target.value);
+              onChange={e => {
+                field.onChange(e)
+                handlePasswordChange(e.target.value)
               }}
             />
           </FormControl>
-          <FieldErrorMessage 
-            error={form.formState.errors.password}
-            fieldName="Password"
-          />
+          <FieldErrorMessage error={form.formState.errors.password} fieldName="Password" />
           {passwordStrength && (
             <FormErrorMessage
               message={passwordStrength.message}
-              type={passwordStrength.strength === 'weak' ? 'error' : 
-                    passwordStrength.strength === 'medium' ? 'warning' : 'success'}
+              type={
+                passwordStrength.strength === 'weak'
+                  ? 'error'
+                  : passwordStrength.strength === 'medium'
+                    ? 'warning'
+                    : 'success'
+              }
             />
           )}
         </FormItem>
       )}
     />
-  );
-};
+  )
+}
 ```
 
 ### File Upload with Validation
 
 ```tsx
-import { validateFile } from '@repo/ui';
+import { validateFile } from '@repo/ui'
 
 export const FileUploadField = () => {
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
+  const handleFileChange = event => {
+    const file = event.target.files[0]
     const validation = validateFile(file, {
       maxSize: 5 * 1024 * 1024, // 5MB
       allowedTypes: ['jpg', 'png'],
-      required: true
-    });
+      required: true,
+    })
 
     if (!validation.isValid) {
-      setFileError(validation.message);
+      setFileError(validation.message)
     } else {
-      setFileError(null);
+      setFileError(null)
     }
-  };
+  }
 
   return (
     <FormItem>
       <FormLabel>Profile Picture</FormLabel>
       <FormControl>
-        <Input 
-          type="file" 
-          accept="image/*"
-          onChange={handleFileChange}
-        />
+        <Input type="file" accept="image/*" onChange={handleFileChange} />
       </FormControl>
-      {fileError && (
-        <FormErrorMessage message={fileError} />
-      )}
+      {fileError && <FormErrorMessage message={fileError} />}
     </FormItem>
-  );
-};
+  )
+}
 ```
 
 ## Accessibility Features
@@ -330,7 +320,7 @@ All error message components include proper accessibility features:
 Error messages use consistent styling with different color schemes:
 
 - **Error**: Red/destructive colors
-- **Warning**: Amber/orange colors  
+- **Warning**: Amber/orange colors
 - **Info**: Blue colors
 - **Success**: Green colors
 
@@ -359,4 +349,4 @@ To migrate existing forms to use the new error messaging system:
 
 ## Example Component
 
-See `FormErrorExample` component for a comprehensive demonstration of all features. 
+See `FormErrorExample` component for a comprehensive demonstration of all features.

@@ -1,4 +1,4 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type {
   WishlistItem,
   Wishlist,
@@ -7,10 +7,10 @@ import type {
   CreateWishlist,
   UpdateWishlist,
   WishlistFilter,
-} from '../schemas';
+} from '../schemas'
 
 const baseUrl =
-  process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api/wishlist' : '/api/wishlist';
+  process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api/wishlist' : '/api/wishlist'
 
 export const wishlistApi = createApi({
   reducerPath: 'wishlistApi',
@@ -19,18 +19,18 @@ export const wishlistApi = createApi({
     credentials: 'include',
   }),
   tagTypes: ['Wishlist', 'WishlistItem'],
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     // Wishlist endpoints
     getWishlists: builder.query<Wishlist[], void>({
       query: () => '/',
       providesTags: ['Wishlist'],
     }),
     getWishlist: builder.query<Wishlist, string>({
-      query: (id) => `/${id}`,
+      query: id => `/${id}`,
       providesTags: (result, error, id) => [{ type: 'Wishlist', id }],
     }),
     createWishlist: builder.mutation<Wishlist, CreateWishlist>({
-      query: (body) => ({
+      query: body => ({
         url: '/',
         method: 'POST',
         body,
@@ -46,7 +46,7 @@ export const wishlistApi = createApi({
       invalidatesTags: (result, error, { id }) => [{ type: 'Wishlist', id }],
     }),
     deleteWishlist: builder.mutation<void, string>({
-      query: (id) => ({
+      query: id => ({
         url: `/${id}`,
         method: 'DELETE',
       }),
@@ -54,38 +54,43 @@ export const wishlistApi = createApi({
     }),
 
     // Wishlist item endpoints
-    getWishlistItems: builder.query<WishlistItem[], { wishlistId: string; filters?: WishlistFilter }>({
+    getWishlistItems: builder.query<
+      WishlistItem[],
+      { wishlistId: string; filters?: WishlistFilter }
+    >({
       query: ({ wishlistId, filters }) => ({
         url: `/${wishlistId}/items`,
         params: filters,
       }),
-      providesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
-      ],
+      providesTags: (result, error, { wishlistId }) => [{ type: 'WishlistItem', id: wishlistId }],
     }),
     getWishlistItem: builder.query<WishlistItem, { wishlistId: string; itemId: string }>({
       query: ({ wishlistId, itemId }) => `/${wishlistId}/items/${itemId}`,
       providesTags: (result, error, { itemId }) => [{ type: 'WishlistItem', id: itemId }],
     }),
-    createWishlistItem: builder.mutation<WishlistItem, { wishlistId: string; data: CreateWishlistItem }>({
+    createWishlistItem: builder.mutation<
+      WishlistItem,
+      { wishlistId: string; data: CreateWishlistItem }
+    >({
       query: ({ wishlistId, data }) => ({
         url: `/${wishlistId}/items`,
         method: 'POST',
         body: data,
       }),
       invalidatesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
+        { type: 'WishlistItem', id: wishlistId },
       ],
     }),
-    updateWishlistItem: builder.mutation<WishlistItem, { wishlistId: string; itemId: string; data: UpdateWishlistItem }>({
+    updateWishlistItem: builder.mutation<
+      WishlistItem,
+      { wishlistId: string; itemId: string; data: UpdateWishlistItem }
+    >({
       query: ({ wishlistId, itemId, data }) => ({
         url: `/${wishlistId}/items/${itemId}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (result, error, { itemId }) => [
-        { type: 'WishlistItem', id: itemId }
-      ],
+      invalidatesTags: (result, error, { itemId }) => [{ type: 'WishlistItem', id: itemId }],
     }),
     deleteWishlistItem: builder.mutation<void, { wishlistId: string; itemId: string }>({
       query: ({ wishlistId, itemId }) => ({
@@ -93,53 +98,65 @@ export const wishlistApi = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
+        { type: 'WishlistItem', id: wishlistId },
       ],
     }),
-    reorderWishlistItems: builder.mutation<void, { wishlistId: string; sourceIndex: number; destinationIndex: number }>({
+    reorderWishlistItems: builder.mutation<
+      void,
+      { wishlistId: string; sourceIndex: number; destinationIndex: number }
+    >({
       query: ({ wishlistId, sourceIndex, destinationIndex }) => ({
         url: `/${wishlistId}/items/reorder`,
         method: 'PUT',
         body: { sourceIndex, destinationIndex },
       }),
       invalidatesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
+        { type: 'WishlistItem', id: wishlistId },
       ],
     }),
 
     // Batch operations endpoints
-    batchDeleteWishlistItems: builder.mutation<{ message: string; deletedIds: string[] }, { wishlistId: string; itemIds: string[] }>({
+    batchDeleteWishlistItems: builder.mutation<
+      { message: string; deletedIds: string[] },
+      { wishlistId: string; itemIds: string[] }
+    >({
       query: ({ wishlistId, itemIds }) => ({
         url: `/${wishlistId}/items/batch-delete`,
         method: 'DELETE',
         body: { itemIds },
       }),
       invalidatesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
+        { type: 'WishlistItem', id: wishlistId },
       ],
     }),
-    batchUpdateWishlistItems: builder.mutation<{ message: string; updatedIds: string[] }, { wishlistId: string; itemIds: string[]; data: Partial<UpdateWishlistItem> }>({
+    batchUpdateWishlistItems: builder.mutation<
+      { message: string; updatedIds: string[] },
+      { wishlistId: string; itemIds: string[]; data: Partial<UpdateWishlistItem> }
+    >({
       query: ({ wishlistId, itemIds, data }) => ({
         url: `/${wishlistId}/items/batch-update`,
         method: 'PUT',
         body: { itemIds, data },
       }),
       invalidatesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
+        { type: 'WishlistItem', id: wishlistId },
       ],
     }),
-    batchTogglePurchased: builder.mutation<{ message: string; updatedIds: string[] }, { wishlistId: string; itemIds: string[]; isPurchased: boolean }>({
+    batchTogglePurchased: builder.mutation<
+      { message: string; updatedIds: string[] },
+      { wishlistId: string; itemIds: string[]; isPurchased: boolean }
+    >({
       query: ({ wishlistId, itemIds, isPurchased }) => ({
         url: `/${wishlistId}/items/batch-toggle-purchased`,
         method: 'PUT',
         body: { itemIds, isPurchased },
       }),
       invalidatesTags: (result, error, { wishlistId }) => [
-        { type: 'WishlistItem', id: wishlistId }
+        { type: 'WishlistItem', id: wishlistId },
       ],
     }),
   }),
-});
+})
 
 export const {
   useGetWishlistsQuery,
@@ -156,4 +173,4 @@ export const {
   useBatchDeleteWishlistItemsMutation,
   useBatchUpdateWishlistItemsMutation,
   useBatchTogglePurchasedMutation,
-} = wishlistApi; 
+} = wishlistApi

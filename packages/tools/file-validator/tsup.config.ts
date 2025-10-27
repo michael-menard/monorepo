@@ -1,9 +1,9 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from 'tsup'
 
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
-    multer: 'src/multer.ts'
+    multer: 'src/multer.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
@@ -11,5 +11,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   external: ['multer', 'uuid', 'fs', 'path'],
-  treeshake: true
-});
+  treeshake: true,
+})

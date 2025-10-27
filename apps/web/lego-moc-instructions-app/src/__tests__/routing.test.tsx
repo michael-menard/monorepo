@@ -11,7 +11,7 @@ vi.mock('../components/PWAProvider/PWAProvider', () => ({
   }),
 }))
 // Also mock Vite PWA virtual import at transform time
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
 // @ts-ignore
 vi.mock('virtual:pwa-register', () => ({ registerSW: () => ({}) }))
 
@@ -53,9 +53,11 @@ vi.mock('@repo/auth', () => ({
     reducer: (state = {}, action: any) => state,
     middleware: () => (next: any) => (action: any) => next(action),
   },
-  authReducer: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) => state,
+  authReducer: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
+    state,
   authSlice: {
-    reducer: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) => state,
+    reducer: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
+      state,
   },
 }))
 
@@ -153,7 +155,7 @@ describe('Routing Configuration', () => {
         <Provider store={store}>
           <RouterProvider router={router} />
         </Provider>
-      </ThemeProvider>
+      </ThemeProvider>,
     )
   }
 
@@ -161,7 +163,9 @@ describe('Routing Configuration', () => {
     it('should allow access to home route without authentication', async () => {
       const router = createTestRouter([homeRoute])
       renderWithRouter(router)
-      await act(async () => { await router.navigate({ to: '/' }) })
+      await act(async () => {
+        await router.navigate({ to: '/' })
+      })
       // Assert specific app title text to avoid ambiguity from other h1s on the page
       expect(screen.getByText(/LEGO MOC Instructions App/i)).toBeInTheDocument()
     })
@@ -169,10 +173,10 @@ describe('Routing Configuration', () => {
     it('should allow access to MOC gallery without authentication', () => {
       const router = createTestRouter([mocGalleryRoute])
       renderWithRouter(router)
-      
+
       // Navigate to MOC gallery
       router.navigate({ to: '/moc-gallery' })
-      
+
       // Should not redirect (no auth required)
       expect(vi.mocked(redirect)).not.toHaveBeenCalled()
     })
@@ -180,14 +184,18 @@ describe('Routing Configuration', () => {
     it('should allow access to unauthorized page without authentication', async () => {
       const router = createTestRouter([unauthorizedRoute])
       renderWithRouter(router)
-      await act(async () => { await router.navigate({ to: '/unauthorized' }) })
+      await act(async () => {
+        await router.navigate({ to: '/unauthorized' })
+      })
       expect(screen.getByText('Access Denied')).toBeInTheDocument()
     })
 
     it('should render 404 page for unknown routes', async () => {
       const router = createTestRouter([notFoundRoute])
       renderWithRouter(router)
-      await act(async () => { await router.navigate({ to: '/unknown-route' }) })
+      await act(async () => {
+        await router.navigate({ to: '/unknown-route' })
+      })
       // App shows generic Not Found text; accept that as valid 404 render
       expect(screen.getByText(/Not Found/i)).toBeInTheDocument()
     })
@@ -228,10 +236,10 @@ describe('Routing Configuration', () => {
 
       const router = createTestRouter([loginRoute])
       renderWithRouter(router)
-      
+
       // Navigate to login (guest route)
       router.navigate({ to: '/auth/login' })
-      
+
       // In this mocked environment, just assert router exists
       expect(router).toBeDefined()
     })
@@ -253,10 +261,10 @@ describe('Routing Configuration', () => {
 
       const router = createTestRouter([signupRoute])
       renderWithRouter(router)
-      
+
       // Navigate to signup (guest route)
       router.navigate({ to: '/auth/signup' })
-      
+
       expect(router).toBeDefined()
     })
   })
@@ -285,7 +293,9 @@ describe('Routing Configuration', () => {
       expect(routePaths).toContain('/auth/signup')
       expect(routePaths).toContain('/unauthorized')
       // NotFound route fullPath may be normalized; ensure route exists by matching last route's path
-      expect(routePaths.some((p: string) => p.includes('*')) || routePaths.includes('/not-found')).toBeTruthy()
+      expect(
+        routePaths.some((p: string) => p.includes('*')) || routePaths.includes('/not-found'),
+      ).toBeTruthy()
     })
   })
-}) 
+})

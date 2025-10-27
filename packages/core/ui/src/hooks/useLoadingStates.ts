@@ -24,17 +24,17 @@ export interface UseLoadingStatesReturn {
   isSuccess: boolean
   isError: boolean
   isIdle: boolean
-  
+
   // Actions
   startLoading: (message?: string) => void
   setProgress: (progress: number) => void
   setSuccess: (message?: string) => void
   setError: (error: Error | string) => void
   reset: () => void
-  
+
   // Async wrapper
   withLoading: <T>(asyncFn: () => Promise<T>, message?: string) => Promise<T>
-  
+
   // Multiple loading states
   createLoadingState: (key: string) => {
     startLoading: (message?: string) => void
@@ -65,13 +65,16 @@ export const useLoadingStates = (options: UseLoadingStatesOptions = {}): UseLoad
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const multipleStatesRef = useRef<Map<string, LoadingState>>(new Map())
 
-  const updateState = useCallback((updates: Partial<LoadingState>) => {
-    setLoadingState(prev => {
-      const newState = { ...prev, ...updates }
-      onStateChange?.(newState)
-      return newState
-    })
-  }, [onStateChange])
+  const updateState = useCallback(
+    (updates: Partial<LoadingState>) => {
+      setLoadingState(prev => {
+        const newState = { ...prev, ...updates }
+        onStateChange?.(newState)
+        return newState
+      })
+    },
+    [onStateChange],
+  )
 
   const clearResetTimeout = useCallback(() => {
     if (resetTimeoutRef.current) {
@@ -80,50 +83,62 @@ export const useLoadingStates = (options: UseLoadingStatesOptions = {}): UseLoad
     }
   }, [])
 
-  const startLoading = useCallback((message?: string) => {
-    clearResetTimeout()
-    updateState({
-      type: 'loading',
-      message,
-      progress: 0,
-      error: null,
-    })
-  }, [updateState, clearResetTimeout])
-
-  const setProgress = useCallback((progress: number) => {
-    updateState({ progress: Math.min(Math.max(progress, 0), 100) })
-  }, [updateState])
-
-  const setSuccess = useCallback((message?: string) => {
-    updateState({
-      type: 'success',
-      message,
-      progress: 100,
-      error: null,
-    })
-
-    if (autoReset) {
+  const startLoading = useCallback(
+    (message?: string) => {
       clearResetTimeout()
-      resetTimeoutRef.current = setTimeout(() => {
-        updateState({ type: 'idle', message: undefined, progress: 0, error: null })
-      }, resetDelay)
-    }
-  }, [updateState, autoReset, resetDelay, clearResetTimeout])
+      updateState({
+        type: 'loading',
+        message,
+        progress: 0,
+        error: null,
+      })
+    },
+    [updateState, clearResetTimeout],
+  )
 
-  const setError = useCallback((error: Error | string) => {
-    updateState({
-      type: 'error',
-      error,
-      progress: 0,
-    })
+  const setProgress = useCallback(
+    (progress: number) => {
+      updateState({ progress: Math.min(Math.max(progress, 0), 100) })
+    },
+    [updateState],
+  )
 
-    if (autoReset) {
-      clearResetTimeout()
-      resetTimeoutRef.current = setTimeout(() => {
-        updateState({ type: 'idle', message: undefined, progress: 0, error: null })
-      }, resetDelay)
-    }
-  }, [updateState, autoReset, resetDelay, clearResetTimeout])
+  const setSuccess = useCallback(
+    (message?: string) => {
+      updateState({
+        type: 'success',
+        message,
+        progress: 100,
+        error: null,
+      })
+
+      if (autoReset) {
+        clearResetTimeout()
+        resetTimeoutRef.current = setTimeout(() => {
+          updateState({ type: 'idle', message: undefined, progress: 0, error: null })
+        }, resetDelay)
+      }
+    },
+    [updateState, autoReset, resetDelay, clearResetTimeout],
+  )
+
+  const setError = useCallback(
+    (error: Error | string) => {
+      updateState({
+        type: 'error',
+        error,
+        progress: 0,
+      })
+
+      if (autoReset) {
+        clearResetTimeout()
+        resetTimeoutRef.current = setTimeout(() => {
+          updateState({ type: 'idle', message: undefined, progress: 0, error: null })
+        }, resetDelay)
+      }
+    },
+    [updateState, autoReset, resetDelay, clearResetTimeout],
+  )
 
   const reset = useCallback(() => {
     clearResetTimeout()
@@ -135,20 +150,20 @@ export const useLoadingStates = (options: UseLoadingStatesOptions = {}): UseLoad
     })
   }, [updateState, clearResetTimeout])
 
-  const withLoading = useCallback(async <T>(
-    asyncFn: () => Promise<T>,
-    message?: string
-  ): Promise<T> => {
-    try {
-      startLoading(message)
-      const result = await asyncFn()
-      setSuccess()
-      return result
-    } catch (error) {
-      setError(error instanceof Error ? error : String(error))
-      throw error
-    }
-  }, [startLoading, setSuccess, setError])
+  const withLoading = useCallback(
+    async <T>(asyncFn: () => Promise<T>, message?: string): Promise<T> => {
+      try {
+        startLoading(message)
+        const result = await asyncFn()
+        setSuccess()
+        return result
+      } catch (error) {
+        setError(error instanceof Error ? error : String(error))
+        throw error
+      }
+    },
+    [startLoading, setSuccess, setError],
+  )
 
   const createLoadingState = useCallback((key: string) => {
     const updateMultipleState = (updates: Partial<LoadingState>) => {
@@ -164,11 +179,13 @@ export const useLoadingStates = (options: UseLoadingStatesOptions = {}): UseLoad
     }
 
     const getState = (): LoadingState => {
-      return multipleStatesRef.current.get(key) || {
-        type: 'idle',
-        progress: 0,
-        error: null,
-      }
+      return (
+        multipleStatesRef.current.get(key) || {
+          type: 'idle',
+          progress: 0,
+          error: null,
+        }
+      )
     }
 
     return {
@@ -224,17 +241,17 @@ export const useLoadingStates = (options: UseLoadingStatesOptions = {}): UseLoad
     isSuccess: loadingState.type === 'success',
     isError: loadingState.type === 'error',
     isIdle: loadingState.type === 'idle',
-    
+
     // Actions
     startLoading,
     setProgress,
     setSuccess,
     setError,
     reset,
-    
+
     // Async wrapper
     withLoading,
-    
+
     // Multiple loading states
     createLoadingState,
   }
@@ -257,59 +274,67 @@ export const useMultipleLoadingStates = () => {
     })
   }, [])
 
-  const getState = useCallback((key: string): LoadingState => {
-    return states.get(key) || {
-      type: 'idle',
-      progress: 0,
-      error: null,
-    }
-  }, [states])
-
-  const createLoadingState = useCallback((key: string) => {
-    return {
-      startLoading: (message?: string) => {
-        updateState(key, {
-          type: 'loading',
-          message,
-          progress: 0,
-          error: null,
-        })
-      },
-      setProgress: (progress: number) => {
-        updateState(key, { progress: Math.min(Math.max(progress, 0), 100) })
-      },
-      setSuccess: (message?: string) => {
-        updateState(key, {
-          type: 'success',
-          message,
-          progress: 100,
-          error: null,
-        })
-      },
-      setError: (error: Error | string) => {
-        updateState(key, {
-          type: 'error',
-          error,
-          progress: 0,
-        })
-      },
-      reset: () => {
-        updateState(key, {
+  const getState = useCallback(
+    (key: string): LoadingState => {
+      return (
+        states.get(key) || {
           type: 'idle',
-          message: undefined,
           progress: 0,
           error: null,
-        })
-      },
-      get state() {
-        return getState(key)
-      },
-    }
-  }, [updateState, getState])
+        }
+      )
+    },
+    [states],
+  )
+
+  const createLoadingState = useCallback(
+    (key: string) => {
+      return {
+        startLoading: (message?: string) => {
+          updateState(key, {
+            type: 'loading',
+            message,
+            progress: 0,
+            error: null,
+          })
+        },
+        setProgress: (progress: number) => {
+          updateState(key, { progress: Math.min(Math.max(progress, 0), 100) })
+        },
+        setSuccess: (message?: string) => {
+          updateState(key, {
+            type: 'success',
+            message,
+            progress: 100,
+            error: null,
+          })
+        },
+        setError: (error: Error | string) => {
+          updateState(key, {
+            type: 'error',
+            error,
+            progress: 0,
+          })
+        },
+        reset: () => {
+          updateState(key, {
+            type: 'idle',
+            message: undefined,
+            progress: 0,
+            error: null,
+          })
+        },
+        get state() {
+          return getState(key)
+        },
+      }
+    },
+    [updateState, getState],
+  )
 
   return {
     states,
     getState,
     createLoadingState,
   }
-} 
+}

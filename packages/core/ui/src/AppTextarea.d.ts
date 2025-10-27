@@ -1,23 +1,24 @@
-import * as React from 'react';
-import { TextareaProps } from './textarea';
-import { SanitizationConfig } from './lib/sanitization';
+import * as React from 'react'
+import {TextareaProps} from './textarea'
+import {SanitizationConfig} from './lib/sanitization'
+
 export interface AppTextareaProps extends Omit<TextareaProps, 'onChange' | 'onBlur'> {
-    /** Custom sanitization configuration */
-    sanitizationConfig?: SanitizationConfig;
-    /** Whether to sanitize on every change or only on blur */
-    sanitizeOnChange?: boolean;
-    /** Whether to show warnings when content is sanitized */
-    showSanitizationWarnings?: boolean;
-    /** Callback when sanitization warnings occur */
-    onSanitizationWarning?: (warnings: string[]) => void;
-    /** Original onChange handler that receives sanitized value */
-    onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    /** Original onBlur handler that receives sanitized value */
-    onBlur?: (event: React.FocusEvent<HTMLTextAreaElement>) => void;
-    /** Debounce delay in milliseconds for onChange events (0 = no debounce) */
-    debounceMs?: number;
-    /** Whether to debounce sanitization as well (default: true) */
-    debounceSanitization?: boolean;
+  /** Custom sanitization configuration */
+  sanitizationConfig?: SanitizationConfig
+  /** Whether to sanitize on every change or only on blur */
+  sanitizeOnChange?: boolean
+  /** Whether to show warnings when content is sanitized */
+  showSanitizationWarnings?: boolean
+  /** Callback when sanitization warnings occur */
+  onSanitizationWarning?: (warnings: string[]) => void
+  /** Original onChange handler that receives sanitized value */
+  onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void
+  /** Original onBlur handler that receives sanitized value */
+  onBlur?: (event: React.FocusEvent<HTMLTextAreaElement>) => void
+  /** Debounce delay in milliseconds for onChange events (0 = no debounce) */
+  debounceMs?: number
+  /** Whether to debounce sanitization as well (default: true) */
+  debounceSanitization?: boolean
 }
 /**
  * Secure Textarea component that automatically sanitizes user input using DOMPurify
@@ -55,5 +56,7 @@ export interface AppTextareaProps extends Omit<TextareaProps, 'onChange' | 'onBl
  * />
  * ```
  */
-export declare const AppTextarea: React.ForwardRefExoticComponent<Omit<AppTextareaProps, "ref"> & React.RefAttributes<HTMLTextAreaElement>>;
+export declare const AppTextarea: React.ForwardRefExoticComponent<
+  Omit<AppTextareaProps, 'ref'> & React.RefAttributes<HTMLTextAreaElement>
+>
 //# sourceMappingURL=AppTextarea.d.ts.map

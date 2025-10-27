@@ -1,21 +1,21 @@
 /**
  * Test Setup and Configuration for Auth Package
- * 
+ *
  * This file provides utilities and configurations for testing the auth package
  * across unit tests, integration tests, and E2E tests.
  */
 
-import { vi, expect } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
-import { authApi } from '../../store/authApi';
-import authReducer from '../../store/authSlice';
+import { vi, expect } from 'vitest'
+import { configureStore } from '@reduxjs/toolkit'
+import { authApi } from '../../store/authApi'
+import authReducer from '../../store/authSlice'
 
 // Mock environment variables for testing
 export const TEST_ENV = {
   NODE_ENV: 'test',
   API_BASE_URL: 'http://localhost:9000',
   FRONTEND_URL: 'http://localhost:5173',
-};
+}
 
 // Test user data
 export const TEST_USERS = {
@@ -47,7 +47,7 @@ export const TEST_USERS = {
     createdAt: '2023-01-01T00:00:00Z',
     updatedAt: '2023-01-01T00:00:00Z',
   },
-};
+}
 
 // Mock API responses
 export const MOCK_RESPONSES = {
@@ -96,7 +96,7 @@ export const MOCK_RESPONSES = {
     code: 'CSRF_FAILED',
     message: 'CSRF token validation failed',
   },
-};
+}
 
 /**
  * Create a test store with auth reducers
@@ -114,16 +114,16 @@ export function createTestStore(preloadedState?: any) {
         },
       }).concat(authApi.middleware),
     preloadedState,
-  });
+  })
 }
 
 /**
  * Mock fetch for testing
  */
 export function createMockFetch() {
-  const mockFetch = vi.fn();
-  global.fetch = mockFetch;
-  return mockFetch;
+  const mockFetch = vi.fn()
+  global.fetch = mockFetch
+  return mockFetch
 }
 
 /**
@@ -141,7 +141,7 @@ export function mockCSRFUtils() {
     hasCSRFToken: vi.fn().mockReturnValue(true),
     fetchCSRFToken: vi.fn().mockResolvedValue('test-csrf-token'),
     getCSRFToken: vi.fn().mockResolvedValue('test-csrf-token'),
-  };
+  }
 }
 
 /**
@@ -151,7 +151,7 @@ export function mockDocumentCookie(cookieValue = '') {
   Object.defineProperty(document, 'cookie', {
     writable: true,
     value: cookieValue,
-  });
+  })
 }
 
 /**
@@ -163,7 +163,7 @@ export function createMockApiResponse(data: any, status = 200) {
     status,
     json: () => Promise.resolve(data),
     text: () => Promise.resolve(JSON.stringify(data)),
-  };
+  }
 }
 
 /**
@@ -182,13 +182,13 @@ export const VALIDATION_TEST_CASES = {
     valid: ['John Doe', 'Jane Smith-Wilson', 'José García'],
     invalid: ['', '   ', 'A', '123'],
   },
-};
+}
 
 /**
  * Wait for async operations in tests
  */
 export function waitForAsync(ms = 0) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
@@ -201,7 +201,7 @@ export function createMockUserEvent() {
     clear: vi.fn(),
     selectOptions: vi.fn(),
     upload: vi.fn(),
-  };
+  }
 }
 
 /**
@@ -210,50 +210,41 @@ export function createMockUserEvent() {
 export const ERROR_SCENARIOS = {
   networkError: new Error('Network error'),
   timeoutError: new Error('Request timeout'),
-  serverError: createMockApiResponse(
-    { success: false, message: 'Internal server error' },
-    500
-  ),
-  unauthorizedError: createMockApiResponse(
-    { success: false, message: 'Unauthorized' },
-    401
-  ),
-  forbiddenError: createMockApiResponse(
-    { success: false, message: 'Forbidden' },
-    403
-  ),
+  serverError: createMockApiResponse({ success: false, message: 'Internal server error' }, 500),
+  unauthorizedError: createMockApiResponse({ success: false, message: 'Unauthorized' }, 401),
+  forbiddenError: createMockApiResponse({ success: false, message: 'Forbidden' }, 403),
   csrfError: createMockApiResponse(MOCK_RESPONSES.csrfFailure, 403),
-};
+}
 
 /**
  * Setup function for tests
  */
 export function setupAuthTests() {
   // Mock environment
-  Object.assign(process.env, TEST_ENV);
+  Object.assign(process.env, TEST_ENV)
 
   // Mock console methods to reduce noise in tests
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'info').mockImplementation(() => {});
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'log').mockImplementation(() => {})
+  vi.spyOn(console, 'info').mockImplementation(() => {})
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+  vi.spyOn(console, 'error').mockImplementation(() => {})
 
   // Mock document.cookie
-  mockDocumentCookie();
+  mockDocumentCookie()
 
   return {
     mockFetch: createMockFetch(),
     mockCSRF: mockCSRFUtils(),
     testStore: createTestStore(),
-  };
+  }
 }
 
 /**
  * Cleanup function for tests
  */
 export function cleanupAuthTests() {
-  vi.restoreAllMocks();
-  vi.clearAllMocks();
+  vi.restoreAllMocks()
+  vi.clearAllMocks()
 }
 
 /**
@@ -261,48 +252,46 @@ export function cleanupAuthTests() {
  */
 export const testAssertions = {
   expectValidationError: (container: HTMLElement, fieldName: string, errorMessage: string) => {
-    const errorElement = container.querySelector(`[data-testid="${fieldName}-error"], .error-message`);
-    expect(errorElement).toBeInTheDocument();
-    expect(errorElement).toHaveTextContent(errorMessage);
+    const errorElement = container.querySelector(
+      `[data-testid="${fieldName}-error"], .error-message`,
+    )
+    expect(errorElement).toBeInTheDocument()
+    expect(errorElement).toHaveTextContent(errorMessage)
   },
 
   expectFormSubmission: (mockFn: any, expectedData: any) => {
-    expect(mockFn).toHaveBeenCalledWith(
-      expect.objectContaining(expectedData)
-    );
+    expect(mockFn).toHaveBeenCalledWith(expect.objectContaining(expectedData))
   },
 
   expectRedirect: (mockNavigate: any, expectedPath: string) => {
-    expect(mockNavigate).toHaveBeenCalledWith(
-      expect.objectContaining({ to: expectedPath })
-    );
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: expectedPath }))
   },
 
   expectLoadingState: (container: HTMLElement, isLoading: boolean) => {
-    const loadingElement = container.querySelector('[data-testid="loading"], .loading');
+    const loadingElement = container.querySelector('[data-testid="loading"], .loading')
     if (isLoading) {
-      expect(loadingElement).toBeInTheDocument();
+      expect(loadingElement).toBeInTheDocument()
     } else {
-      expect(loadingElement).not.toBeInTheDocument();
+      expect(loadingElement).not.toBeInTheDocument()
     }
   },
-};
+}
 
 /**
  * Performance testing utilities
  */
 export const performanceUtils = {
   measureRenderTime: async (renderFn: () => void) => {
-    const start = performance.now();
-    renderFn();
-    const end = performance.now();
-    return end - start;
+    const start = performance.now()
+    renderFn()
+    const end = performance.now()
+    return end - start
   },
 
   expectFastRender: (renderTime: number, maxTime = 100) => {
-    expect(renderTime).toBeLessThan(maxTime);
+    expect(renderTime).toBeLessThan(maxTime)
   },
-};
+}
 
 /**
  * Accessibility testing utilities
@@ -310,15 +299,15 @@ export const performanceUtils = {
 export const a11yUtils = {
   expectAriaLabels: (container: HTMLElement, expectedLabels: string[]) => {
     expectedLabels.forEach(label => {
-      const element = container.querySelector(`[aria-label="${label}"]`);
-      expect(element).toBeInTheDocument();
-    });
+      const element = container.querySelector(`[aria-label="${label}"]`)
+      expect(element).toBeInTheDocument()
+    })
   },
 
   expectKeyboardNavigation: async (container: HTMLElement) => {
     const focusableElements = container.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    expect(focusableElements.length).toBeGreaterThan(0);
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    expect(focusableElements.length).toBeGreaterThan(0)
   },
-};
+}

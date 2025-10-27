@@ -1,29 +1,29 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { action } from '@storybook/addon-actions';
-import { FilePreview } from '../src/components/FilePreview/FilePreview.tsx';
-import type { UploadFile } from '../src/types/index.js';
+import type { Meta, StoryObj } from '@storybook/react'
+import { action } from '@storybook/addon-actions'
+import { FilePreview } from '../src/components/FilePreview/FilePreview.tsx'
+import type { UploadFile } from '../src/types/index.js'
 
 // Mock file objects for stories
 const createMockFile = (name: string, type: string, size: number): File => {
-  const file = new File(['mock content'], name, { type });
-  Object.defineProperty(file, 'size', { value: size });
-  return file;
-};
+  const file = new File(['mock content'], name, { type })
+  Object.defineProperty(file, 'size', { value: size })
+  return file
+}
 
 const createUploadFile = (
-  name: string, 
-  type: string, 
-  size: number, 
+  name: string,
+  type: string,
+  size: number,
   status: UploadFile['status'] = 'pending',
   progress: number = 0,
-  error?: string
+  error?: string,
 ): UploadFile => ({
   id: crypto.randomUUID(),
   file: createMockFile(name, type, size),
   status,
   progress,
   error,
-});
+})
 
 const meta: Meta<typeof FilePreview> = {
   title: 'Upload/FilePreview',
@@ -46,10 +46,10 @@ const meta: Meta<typeof FilePreview> = {
   args: {
     onRemove: action('onRemove'),
   },
-};
+}
 
-export default meta;
-type Story = StoryObj<typeof meta>;
+export default meta
+type Story = StoryObj<typeof meta>
 
 export const ImagePending: Story = {
   args: {
@@ -62,7 +62,7 @@ export const ImagePending: Story = {
       },
     },
   },
-};
+}
 
 export const ImageUploading: Story = {
   args: {
@@ -75,7 +75,7 @@ export const ImageUploading: Story = {
       },
     },
   },
-};
+}
 
 export const ImageCompleted: Story = {
   args: {
@@ -91,17 +91,17 @@ export const ImageCompleted: Story = {
       },
     },
   },
-};
+}
 
 export const ImageError: Story = {
   args: {
     file: createUploadFile(
-      'corrupted-image.jpg', 
-      'image/jpeg', 
-      15 * 1024 * 1024, 
-      'error', 
-      0, 
-      'File size exceeds maximum limit'
+      'corrupted-image.jpg',
+      'image/jpeg',
+      15 * 1024 * 1024,
+      'error',
+      0,
+      'File size exceeds maximum limit',
     ),
   },
   parameters: {
@@ -111,7 +111,7 @@ export const ImageError: Story = {
       },
     },
   },
-};
+}
 
 export const DocumentPending: Story = {
   args: {
@@ -124,11 +124,17 @@ export const DocumentPending: Story = {
       },
     },
   },
-};
+}
 
 export const DocumentUploading: Story = {
   args: {
-    file: createUploadFile('presentation.pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 12.8 * 1024 * 1024, 'uploading', 42),
+    file: createUploadFile(
+      'presentation.pptx',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      12.8 * 1024 * 1024,
+      'uploading',
+      42,
+    ),
   },
   parameters: {
     docs: {
@@ -137,7 +143,7 @@ export const DocumentUploading: Story = {
       },
     },
   },
-};
+}
 
 export const VideoFile: Story = {
   args: {
@@ -150,11 +156,17 @@ export const VideoFile: Story = {
       },
     },
   },
-};
+}
 
 export const AudioFile: Story = {
   args: {
-    file: createUploadFile('podcast-episode.mp3', 'audio/mpeg', 8.4 * 1024 * 1024, 'completed', 100),
+    file: createUploadFile(
+      'podcast-episode.mp3',
+      'audio/mpeg',
+      8.4 * 1024 * 1024,
+      'completed',
+      100,
+    ),
   },
   parameters: {
     docs: {
@@ -163,11 +175,17 @@ export const AudioFile: Story = {
       },
     },
   },
-};
+}
 
 export const LargeFile: Story = {
   args: {
-    file: createUploadFile('database-backup.sql', 'application/sql', 156.7 * 1024 * 1024, 'uploading', 23),
+    file: createUploadFile(
+      'database-backup.sql',
+      'application/sql',
+      156.7 * 1024 * 1024,
+      'uploading',
+      23,
+    ),
   },
   parameters: {
     docs: {
@@ -176,7 +194,7 @@ export const LargeFile: Story = {
       },
     },
   },
-};
+}
 
 export const WithoutRemoveButton: Story = {
   args: {
@@ -190,4 +208,4 @@ export const WithoutRemoveButton: Story = {
       },
     },
   },
-};
+}

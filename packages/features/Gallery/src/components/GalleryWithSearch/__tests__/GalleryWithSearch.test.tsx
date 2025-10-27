@@ -1,6 +1,6 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { vi, describe, it, expect } from 'vitest';
+import React from 'react'
+import { render, screen } from '@testing-library/react'
+import { vi, describe, it, expect } from 'vitest'
 
 // Mock all dependencies
 vi.mock('framer-motion', () => ({
@@ -9,11 +9,11 @@ vi.mock('framer-motion', () => ({
   },
   AnimatePresence: ({ children }: any) => <div>{children}</div>,
   LayoutGroup: ({ children }: any) => <div>{children}</div>,
-}));
+}))
 
 vi.mock('../FilterBar', () => ({
   default: () => <div data-testid="filter-bar">FilterBar Component</div>,
-}));
+}))
 
 vi.mock('../../../hooks/useFilterBar', () => ({
   useFilterBar: () => ({
@@ -31,7 +31,7 @@ vi.mock('../../../hooks/useFilterBar', () => ({
     clearFilters: vi.fn(),
     toggleTag: vi.fn(),
   }),
-}));
+}))
 
 vi.mock('../../index', () => ({
   default: ({ images }: any) => (
@@ -43,10 +43,10 @@ vi.mock('../../index', () => ({
       ))}
     </div>
   ),
-}));
+}))
 
 // Import after mocking
-import GalleryWithSearch from '../index';
+import GalleryWithSearch from '../index'
 
 const mockImages = [
   {
@@ -69,60 +69,52 @@ const mockImages = [
     createdAt: new Date('2023-01-02'),
     updatedAt: new Date('2023-01-02'),
   },
-];
+]
 
 describe('GalleryWithSearch', () => {
   it('renders gallery with search functionality', () => {
-    render(<GalleryWithSearch images={mockImages} />);
-    
-    expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('gallery')).toBeInTheDocument();
-    expect(screen.getByTestId('gallery-item-1')).toBeInTheDocument();
-    expect(screen.getByTestId('gallery-item-2')).toBeInTheDocument();
-  });
+    render(<GalleryWithSearch images={mockImages} />)
+
+    expect(screen.getByTestId('filter-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('gallery')).toBeInTheDocument()
+    expect(screen.getByTestId('gallery-item-1')).toBeInTheDocument()
+    expect(screen.getByTestId('gallery-item-2')).toBeInTheDocument()
+  })
 
   it('hides filter bar when showFilterBar is false', () => {
-    render(<GalleryWithSearch images={mockImages} showFilterBar={false} />);
-    
-    expect(screen.queryByTestId('filter-bar')).not.toBeInTheDocument();
-    expect(screen.getByTestId('gallery')).toBeInTheDocument();
-  });
+    render(<GalleryWithSearch images={mockImages} showFilterBar={false} />)
+
+    expect(screen.queryByTestId('filter-bar')).not.toBeInTheDocument()
+    expect(screen.getByTestId('gallery')).toBeInTheDocument()
+  })
 
   it('displays all images when no filters are active', () => {
-    render(<GalleryWithSearch images={mockImages} />);
-    
-    expect(screen.getByTestId('gallery-item-1')).toBeInTheDocument();
-    expect(screen.getByTestId('gallery-item-2')).toBeInTheDocument();
-  });
+    render(<GalleryWithSearch images={mockImages} />)
+
+    expect(screen.getByTestId('gallery-item-1')).toBeInTheDocument()
+    expect(screen.getByTestId('gallery-item-2')).toBeInTheDocument()
+  })
 
   it('renders with custom search placeholder', () => {
-    render(
-      <GalleryWithSearch 
-        images={mockImages} 
-        searchPlaceholder="Custom search placeholder"
-      />
-    );
-    
-    expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('gallery')).toBeInTheDocument();
-  });
+    render(<GalleryWithSearch images={mockImages} searchPlaceholder="Custom search placeholder" />)
+
+    expect(screen.getByTestId('filter-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('gallery')).toBeInTheDocument()
+  })
 
   it('renders with custom className', () => {
     const { container } = render(
-      <GalleryWithSearch 
-        images={mockImages} 
-        className="custom-gallery-class"
-      />
-    );
-    
-    expect(container.firstChild).toHaveClass('custom-gallery-class');
-  });
+      <GalleryWithSearch images={mockImages} className="custom-gallery-class" />,
+    )
+
+    expect(container.firstChild).toHaveClass('custom-gallery-class')
+  })
 
   it('handles empty images array', () => {
-    render(<GalleryWithSearch images={[]} />);
-    
-    expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('gallery')).toBeInTheDocument();
-    expect(screen.queryByTestId('gallery-item-1')).not.toBeInTheDocument();
-  });
-}); 
+    render(<GalleryWithSearch images={[]} />)
+
+    expect(screen.getByTestId('filter-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('gallery')).toBeInTheDocument()
+    expect(screen.queryByTestId('gallery-item-1')).not.toBeInTheDocument()
+  })
+})

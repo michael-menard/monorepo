@@ -26,32 +26,29 @@ pnpm add @monorepo/file-validator
 ### Browser Usage
 
 ```typescript
-import { validateFile, createImageValidationConfig } from '@monorepo/file-validator';
+import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
 
 // Validate an image file
-const config = createImageValidationConfig(5 * 1024 * 1024); // 5MB max
-const result = validateFile(file, config);
+const config = createImageValidationConfig(5 * 1024 * 1024) // 5MB max
+const result = validateFile(file, config)
 
 if (!result.isValid) {
-  console.error('Validation errors:', result.errors);
+  console.error('Validation errors:', result.errors)
 }
 ```
 
 ### Node.js/Express with Multer
 
 ```typescript
-import { createLegoPartsListMulterConfig } from '@monorepo/file-validator/multer';
+import { createLegoPartsListMulterConfig } from '@monorepo/file-validator/multer'
 
 // Create a Multer configuration for LEGO parts lists
-const upload = createLegoPartsListMulterConfig(
-  'uploads/moc-files',
-  (req) => req.user?.id
-);
+const upload = createLegoPartsListMulterConfig('uploads/moc-files', req => req.user?.id)
 
 app.post('/upload-parts-list', upload.single('partsListFile'), (req, res) => {
   // File is automatically validated
-  res.json({ message: 'File uploaded successfully' });
-});
+  res.json({ message: 'File uploaded successfully' })
+})
 ```
 
 ## Predefined File Types
@@ -68,38 +65,42 @@ The library comes with predefined configurations for common file types:
 ### Custom Validation Config
 
 ```typescript
-import { validateFile, FILE_TYPES } from '@monorepo/file-validator';
+import { validateFile, FILE_TYPES } from '@monorepo/file-validator'
 
 const config = {
   allowedTypes: ['image-jpeg', 'image-png'],
   maxSize: 10 * 1024 * 1024, // 10MB
   requireExtensionMatch: true,
-  allowMimeTypeFallback: true
-};
+  allowMimeTypeFallback: true,
+}
 
-const result = validateFile(file, config);
+const result = validateFile(file, config)
 ```
 
 ### Custom File Type
 
 ```typescript
-import { validateFile } from '@monorepo/file-validator';
+import { validateFile } from '@monorepo/file-validator'
 
 const customTypes = {
   'my-custom-type': {
     name: 'My Custom File',
     mimeTypes: ['application/x-custom'],
     extensions: ['.custom'],
-    maxSize: 5 * 1024 * 1024
-  }
-};
+    maxSize: 5 * 1024 * 1024,
+  },
+}
 
-const result = validateFile(file, {
-  allowedTypes: ['my-custom-type']
-}, {
-  environment: 'browser',
-  customTypes
-});
+const result = validateFile(
+  file,
+  {
+    allowedTypes: ['my-custom-type'],
+  },
+  {
+    environment: 'browser',
+    customTypes,
+  },
+)
 ```
 
 ## API Reference
@@ -138,26 +139,28 @@ const result = validateFile(file, {
 ### From Manual Validation
 
 **Before:**
+
 ```typescript
 // Scattered validation logic
-const allowedTypes = ['text/csv', 'application/json'];
+const allowedTypes = ['text/csv', 'application/json']
 if (!allowedTypes.includes(file.mimetype)) {
-  throw new Error('Invalid file type');
+  throw new Error('Invalid file type')
 }
 if (file.size > 10 * 1024 * 1024) {
-  throw new Error('File too large');
+  throw new Error('File too large')
 }
 ```
 
 **After:**
-```typescript
-import { validateFile, createLegoPartsListValidationConfig } from '@monorepo/file-validator';
 
-const config = createLegoPartsListValidationConfig();
-const result = validateFile(file, config);
+```typescript
+import { validateFile, createLegoPartsListValidationConfig } from '@monorepo/file-validator'
+
+const config = createLegoPartsListValidationConfig()
+const result = validateFile(file, config)
 
 if (!result.isValid) {
-  throw new Error(result.errors.map(e => e.message).join('; '));
+  throw new Error(result.errors.map(e => e.message).join('; '))
 }
 ```
 

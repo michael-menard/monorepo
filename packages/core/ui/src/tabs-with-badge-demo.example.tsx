@@ -1,9 +1,9 @@
-import React from 'react';
-import TabsWithBadgeDemo from './tabs-with-badge-demo';
+import React from 'react'
+import TabsWithBadgeDemo from './tabs-with-badge-demo'
 
 /**
  * Example usage of the TabsWithBadgeDemo component
- * 
+ *
  * This component demonstrates a tabs interface with badges showing counts
  * for different package managers and their installation commands.
  */
@@ -16,9 +16,9 @@ export function TabsWithBadgeDemoExample() {
           Choose your preferred package manager to install the tabs component:
         </p>
       </div>
-      
+
       <TabsWithBadgeDemo />
-      
+
       <div className="mt-6 p-4 bg-muted rounded-lg">
         <h3 className="font-semibold mb-2">Features:</h3>
         <ul className="text-sm space-y-1">
@@ -30,7 +30,7 @@ export function TabsWithBadgeDemoExample() {
         </ul>
       </div>
     </div>
-  );
+  )
 }
 
-export default TabsWithBadgeDemoExample; 
+export default TabsWithBadgeDemoExample

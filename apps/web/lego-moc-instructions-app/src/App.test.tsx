@@ -6,9 +6,9 @@ import App from './App'
 vi.mock('./config/environment.js', () => ({
   config: {
     app: {
-      name: 'LEGO MOC Instructions'
-    }
-  }
+      name: 'LEGO MOC Instructions',
+    },
+  },
 }))
 
 // Mock UI components
@@ -22,7 +22,7 @@ vi.mock('@tanstack/react-router', () => ({
     <a href={to} {...props}>
       {children}
     </a>
-  )
+  ),
 }))
 
 describe('App', () => {

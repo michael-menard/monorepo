@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { 
-  LoadingSpinner, 
-  PulseSpinner, 
+import { useLoadingStates } from './hooks/useLoadingStates'
+import {
+  LoadingSpinner,
+  PulseSpinner,
   DotsSpinner,
   Skeleton,
   CardSkeleton,
@@ -14,13 +15,12 @@ import {
   CircularProgress,
   LoadingOverlay,
 } from './index'
-import { useLoadingStates } from './hooks/useLoadingStates'
 
 export const LoadingStatesExample: React.FC = () => {
   const [isOverlayLoading, setIsOverlayLoading] = useState(false)
   const [progressValue, setProgressValue] = useState(0)
   const [isIndeterminate, setIsIndeterminate] = useState(false)
-  
+
   const loadingStates = useLoadingStates({
     autoReset: true,
     resetDelay: 2000,
@@ -45,13 +45,10 @@ export const LoadingStatesExample: React.FC = () => {
   }
 
   const simulateAsyncOperation = async () => {
-    await loadingStates.withLoading(
-      async () => {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        return 'Operation completed!'
-      },
-      'Processing your request...'
-    )
+    await loadingStates.withLoading(async () => {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      return 'Operation completed!'
+    }, 'Processing your request...')
   }
 
   return (
@@ -66,7 +63,7 @@ export const LoadingStatesExample: React.FC = () => {
       {/* Loading Spinners */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Loading Spinners</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Basic Spinners</h3>
@@ -113,38 +110,29 @@ export const LoadingStatesExample: React.FC = () => {
       {/* Progress Indicators */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Progress Indicators</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Linear Progress</h3>
             <div className="space-y-4">
-              <ProgressIndicator 
-                value={progressValue} 
-                max={100} 
-                showLabel 
-                labelPosition="top"
-              />
+              <ProgressIndicator value={progressValue} max={100} showLabel labelPosition="top" />
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={simulateProgress}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
                 >
                   Start Progress
                 </button>
-                <button 
+                <button
                   onClick={() => setIsIndeterminate(!isIndeterminate)}
                   className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
                 >
                   {isIndeterminate ? 'Determinate' : 'Indeterminate'}
                 </button>
               </div>
-              {isIndeterminate && (
-                <ProgressIndicator 
-                  indeterminate 
-                  showLabel 
-                  labelPosition="bottom"
-                />
-              )}
+              {isIndeterminate ? (
+                <ProgressIndicator indeterminate showLabel labelPosition="bottom" />
+              ) : null}
             </div>
           </div>
 
@@ -152,18 +140,14 @@ export const LoadingStatesExample: React.FC = () => {
             <h3 className="text-lg font-medium">Circular Progress</h3>
             <div className="flex gap-4 items-center">
               <CircularProgress value={progressValue} max={100} showLabel />
-              <CircularProgress 
-                value={progressValue} 
-                max={100} 
-                size="lg" 
-                variant="success" 
-                showLabel 
+              <CircularProgress
+                value={progressValue}
+                max={100}
+                size="lg"
+                variant="success"
+                showLabel
               />
-              <CircularProgress 
-                indeterminate 
-                size="xl" 
-                variant="warning" 
-              />
+              <CircularProgress indeterminate size="xl" variant="warning" />
             </div>
           </div>
         </div>
@@ -172,7 +156,7 @@ export const LoadingStatesExample: React.FC = () => {
       {/* Skeletons */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Skeleton Components</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Card Skeleton</h3>
@@ -220,11 +204,11 @@ export const LoadingStatesExample: React.FC = () => {
       {/* Loading Overlay */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Loading Overlay</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Spinner Overlay</h3>
-            <LoadingOverlay 
+            <LoadingOverlay
               isLoading={isOverlayLoading}
               text="Loading content..."
               variant="spinner"
@@ -233,7 +217,7 @@ export const LoadingStatesExample: React.FC = () => {
                 <p>Content that gets overlaid</p>
               </div>
             </LoadingOverlay>
-            <button 
+            <button
               onClick={simulateOverlayLoading}
               className="w-full px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
             >
@@ -243,7 +227,7 @@ export const LoadingStatesExample: React.FC = () => {
 
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Progress Overlay</h3>
-            <LoadingOverlay 
+            <LoadingOverlay
               isLoading={progressValue > 0 && progressValue < 100}
               text={`Uploading... ${progressValue}%`}
               variant="progress"
@@ -254,7 +238,7 @@ export const LoadingStatesExample: React.FC = () => {
                 <p>Content that gets overlaid</p>
               </div>
             </LoadingOverlay>
-            <button 
+            <button
               onClick={simulateProgress}
               className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
             >
@@ -264,7 +248,7 @@ export const LoadingStatesExample: React.FC = () => {
 
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Circular Overlay</h3>
-            <LoadingOverlay 
+            <LoadingOverlay
               isLoading={isOverlayLoading}
               text="Processing..."
               variant="circular"
@@ -275,7 +259,7 @@ export const LoadingStatesExample: React.FC = () => {
                 <p>Content that gets overlaid</p>
               </div>
             </LoadingOverlay>
-            <button 
+            <button
               onClick={simulateOverlayLoading}
               className="w-full px-4 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/90"
             >
@@ -288,18 +272,18 @@ export const LoadingStatesExample: React.FC = () => {
       {/* Loading States Hook */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Loading States Hook</h2>
-        
+
         <div className="space-y-4">
           <div className="flex gap-4 items-center">
-            <button 
+            <button
               onClick={simulateAsyncOperation}
               disabled={loadingStates.isLoading}
               className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
             >
               {loadingStates.isLoading ? 'Processing...' : 'Start Async Operation'}
             </button>
-            
-            <button 
+
+            <button
               onClick={loadingStates.reset}
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
             >
@@ -317,31 +301,35 @@ export const LoadingStatesExample: React.FC = () => {
             </div>
           </div>
 
-          {loadingStates.isLoading && (
+          {loadingStates.isLoading ? (
             <div className="flex items-center gap-4">
               <LoadingSpinner size="sm" />
               <span>{loadingStates.loadingState.message}</span>
             </div>
-          )}
+          ) : null}
 
-          {loadingStates.isSuccess && (
+          {loadingStates.isSuccess ? (
             <div className="p-4 bg-green-100 border border-green-200 rounded-lg">
-              <p className="text-green-800">✅ {loadingStates.loadingState.message || 'Operation completed successfully!'}</p>
+              <p className="text-green-800">
+                ✅ {loadingStates.loadingState.message || 'Operation completed successfully!'}
+              </p>
             </div>
-          )}
+          ) : null}
 
-          {loadingStates.isError && (
+          {loadingStates.isError ? (
             <div className="p-4 bg-red-100 border border-red-200 rounded-lg">
-              <p className="text-red-800">❌ Error: {loadingStates.loadingState.error?.toString()}</p>
+              <p className="text-red-800">
+                ❌ Error: {loadingStates.loadingState.error?.toString()}
+              </p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 
       {/* Usage Examples */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Usage Examples</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Gallery Loading</h3>
@@ -369,4 +357,4 @@ export const LoadingStatesExample: React.FC = () => {
       </section>
     </div>
   )
-} 
+}

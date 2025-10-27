@@ -1,7 +1,8 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@repo/ui'
+import { AccountSettingsPage } from '../index'
 
 // Mock matchMedia before any imports that might use it
 const mockMatchMedia = vi.fn()
@@ -15,8 +16,6 @@ Object.defineProperty(window.navigator, 'standalone', {
   writable: true,
   value: false,
 })
-
-import { AccountSettingsPage } from '../index'
 
 // Mock the UserPreferencesProvider
 const mockUserPreferencesContext = {
@@ -59,7 +58,7 @@ const mockPWAContext = {
   updateServiceWorker: vi.fn(),
   closePrompt: vi.fn(),
   canInstall: false,
-  installPrompt: vi.fn()
+  installPrompt: vi.fn(),
 }
 
 vi.mock('../../../components/PWAProvider', () => ({
@@ -77,14 +76,8 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 })
 
-
-
 const renderWithProviders = (component: React.ReactElement) => {
-  return render(
-    <ThemeProvider>
-      {component}
-    </ThemeProvider>
-  )
+  return render(<ThemeProvider>{component}</ThemeProvider>)
 }
 
 describe('AccountSettingsPage', () => {
@@ -114,9 +107,11 @@ describe('AccountSettingsPage', () => {
 
   it('renders the page header', () => {
     renderWithProviders(<AccountSettingsPage />)
-    
+
     expect(screen.getByText('Account Settings')).toBeInTheDocument()
-    expect(screen.getByText('Manage your account preferences and customize your experience.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Manage your account preferences and customize your experience.'),
+    ).toBeInTheDocument()
   })
 
   it('renders all settings sections', () => {
@@ -151,16 +146,16 @@ describe('AccountSettingsPage', () => {
 
   it('shows loading state when preferences are loading', () => {
     mockUserPreferencesContext.isLoading = true
-    
+
     renderWithProviders(<AccountSettingsPage />)
-    
+
     expect(screen.getByText('Loading preferences...')).toBeInTheDocument()
     expect(screen.queryByText('Account Settings')).not.toBeInTheDocument()
   })
 
   it('renders coming soon messages for unimplemented sections', () => {
     renderWithProviders(<AccountSettingsPage />)
-    
+
     expect(screen.getByText(/Coming soon - manage your profile information/)).toBeInTheDocument()
     expect(screen.getByText(/Coming soon - manage email notifications/)).toBeInTheDocument()
     expect(screen.getByText(/Coming soon - password management/)).toBeInTheDocument()
@@ -170,24 +165,28 @@ describe('AccountSettingsPage', () => {
   it('has proper section descriptions', () => {
     renderWithProviders(<AccountSettingsPage />)
 
-    expect(screen.getByText('Update your personal information and profile details')).toBeInTheDocument()
+    expect(
+      screen.getByText('Update your personal information and profile details'),
+    ).toBeInTheDocument()
     expect(screen.getByText('Customize the look and feel of your interface')).toBeInTheDocument()
     expect(screen.getByText('Install and manage the progressive web app')).toBeInTheDocument()
     expect(screen.getByText('Control how and when you receive notifications')).toBeInTheDocument()
-    expect(screen.getByText('Manage your privacy settings and account security')).toBeInTheDocument()
+    expect(
+      screen.getByText('Manage your privacy settings and account security'),
+    ).toBeInTheDocument()
     expect(screen.getByText('Export, import, or delete your account data')).toBeInTheDocument()
   })
 
   it('applies correct icon colors to sections', () => {
     renderWithProviders(<AccountSettingsPage />)
-    
+
     // Check that icons are present (we can't easily test specific colors without data-testid)
     const profileSection = screen.getByText('Profile').closest('div')
     const appearanceSection = screen.getByText('Appearance').closest('div')
     const notificationsSection = screen.getByText('Notifications').closest('div')
     const securitySection = screen.getByText('Privacy & Security').closest('div')
     const dataSection = screen.getByText('Data Management').closest('div')
-    
+
     expect(profileSection?.querySelector('svg')).toBeInTheDocument()
     expect(appearanceSection?.querySelector('svg')).toBeInTheDocument()
     expect(notificationsSection?.querySelector('svg')).toBeInTheDocument()

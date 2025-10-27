@@ -1,28 +1,28 @@
-import React, { useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import Gallery from '../../index';
-import FilterBar from '../FilterBar';
-import { useFilterBar } from '../../hooks/useFilterBar';
-import type { GalleryImage } from '../../schemas';
+import React, { useCallback, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import Gallery from '../../index'
+import FilterBar from '../FilterBar'
+import { useFilterBar } from '../../hooks/useFilterBar'
+import type { GalleryImage } from '../../schemas'
 
 export interface GalleryWithSearchProps {
-  images: GalleryImage[];
-  className?: string;
-  onImageClick?: (image: GalleryImage) => void;
-  onImageLike?: (imageId: string, liked: boolean) => void;
-  onImageShare?: (imageId: string) => void;
-  onImageDelete?: (imageId: string) => void;
-  onImageDownload?: (imageId: string) => void;
-  onImageAddToAlbum?: (imageId: string) => void;
-  onImagesSelected?: (imageIds: string[]) => void;
-  selectedImages?: string[];
-  onImagesDeleted?: (imageIds: string[]) => void;
-  onImagesAddedToAlbum?: (imageIds: string[], albumId: string) => void;
-  onImagesDownloaded?: (imageIds: string[]) => void;
-  onImagesShared?: (imageIds: string[]) => void;
-  layout?: 'grid' | 'masonry';
-  searchPlaceholder?: string;
-  showFilterBar?: boolean;
+  images: GalleryImage[]
+  className?: string
+  onImageClick?: (image: GalleryImage) => void
+  onImageLike?: (imageId: string, liked: boolean) => void
+  onImageShare?: (imageId: string) => void
+  onImageDelete?: (imageId: string) => void
+  onImageDownload?: (imageId: string) => void
+  onImageAddToAlbum?: (imageId: string) => void
+  onImagesSelected?: (imageIds: string[]) => void
+  selectedImages?: string[]
+  onImagesDeleted?: (imageIds: string[]) => void
+  onImagesAddedToAlbum?: (imageIds: string[], albumId: string) => void
+  onImagesDownloaded?: (imageIds: string[]) => void
+  onImagesShared?: (imageIds: string[]) => void
+  layout?: 'grid' | 'masonry'
+  searchPlaceholder?: string
+  showFilterBar?: boolean
 }
 
 const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
@@ -66,36 +66,36 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
     },
     debounceMs: 300,
     pageSize: 50,
-  });
+  })
 
   // Determine which images to display
   const displayImages = useMemo(() => {
     // If we have active filters and search results, use those
     if (hasActiveFilters && searchResults.length > 0) {
-      return searchResults;
+      return searchResults
     }
-    
+
     // If we have active filters but no search results, filter the provided images
     if (hasActiveFilters) {
-      let filtered = images;
+      let filtered = images
 
       // Apply search filter
       if (filters.searchQuery.trim()) {
-        const query = filters.searchQuery.toLowerCase();
+        const query = filters.searchQuery.toLowerCase()
         filtered = filtered.filter(
-          (image) =>
-            (image.title?.toLowerCase().includes(query)) ||
-            (image.description?.toLowerCase().includes(query)) ||
-            (image.author?.toLowerCase().includes(query)) ||
-            (image.tags?.some((tag) => tag.toLowerCase().includes(query)))
-        );
+          image =>
+            image.title?.toLowerCase().includes(query) ||
+            image.description?.toLowerCase().includes(query) ||
+            image.author?.toLowerCase().includes(query) ||
+            image.tags?.some(tag => tag.toLowerCase().includes(query)),
+        )
       }
 
       // Apply tag filters
       if (filters.selectedTags.length > 0) {
-        filtered = filtered.filter((image) =>
-          image.tags?.some((tag) => filters.selectedTags.includes(tag))
-        );
+        filtered = filtered.filter(image =>
+          image.tags?.some(tag => filters.selectedTags.includes(tag)),
+        )
       }
 
       // Apply category filter (if categories are implemented)
@@ -104,48 +104,57 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
         // For now, we'll skip category filtering
       }
 
-      return filtered;
+      return filtered
     }
 
     // No active filters, return all images
-    return images;
-  }, [images, searchResults, hasActiveFilters, filters]);
+    return images
+  }, [images, searchResults, hasActiveFilters, filters])
 
   // Extract available tags and categories from the images
   const extractedTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    images.forEach((image) => {
-      image.tags?.forEach((tag) => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort();
-  }, [images]);
+    const tagSet = new Set<string>()
+    images.forEach(image => {
+      image.tags?.forEach(tag => tagSet.add(tag))
+    })
+    return Array.from(tagSet).sort()
+  }, [images])
 
   const extractedCategories: string[] = []
 
   // Handle search change
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, [setSearchQuery]);
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query)
+    },
+    [setSearchQuery],
+  )
 
   // Handle tags change
-  const handleTagsChange = useCallback((tags: string[]) => {
-    setSelectedTags(tags);
-  }, [setSelectedTags]);
+  const handleTagsChange = useCallback(
+    (tags: string[]) => {
+      setSelectedTags(tags)
+    },
+    [setSelectedTags],
+  )
 
   // Handle category change
-  const handleCategoryChange = useCallback((category: string) => {
-    setSelectedCategory(category);
-  }, [setSelectedCategory]);
+  const handleCategoryChange = useCallback(
+    (category: string) => {
+      setSelectedCategory(category)
+    },
+    [setSelectedCategory],
+  )
 
   // Handle clear filters
   const handleClearFilters = useCallback(() => {
-    clearFilters();
-  }, [clearFilters]);
+    clearFilters()
+  }, [clearFilters])
 
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Search and Filter Bar */}
-      {showFilterBar && (
+      {showFilterBar ? (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -157,16 +166,18 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
             onCategoryChange={handleCategoryChange}
             onClearFilters={handleClearFilters}
             availableTags={availableTags.length > 0 ? availableTags : extractedTags}
-            availableCategories={availableCategories.length > 0 ? availableCategories : extractedCategories}
+            availableCategories={
+              availableCategories.length > 0 ? availableCategories : extractedCategories
+            }
             searchPlaceholder={searchPlaceholder}
             debounceMs={300}
             className="mb-6"
           />
         </motion.div>
-      )}
+      ) : null}
 
       {/* Search Results Summary */}
-      {hasActiveFilters && (
+      {hasActiveFilters ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -182,16 +193,15 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
               </span>
             )}
           </div>
-          {error && (
-            <span className="text-red-500">
-              Search error: {error.message || 'Unknown error'}
-            </span>
-          )}
+          {error ? (
+            <span className="text-red-500">Search error: {error.message || 'Unknown error'}</span>
+          ) : null}
         </motion.div>
-      )}
+      ) : null}
 
       {/* Gallery */}
-      <motion.div role="main"
+      <motion.div
+        role="main"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.1 }}
@@ -202,7 +212,7 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
          */}
         {import.meta && (import.meta as any).env && (import.meta as any).env.MODE === 'test' ? (
           <div data-testid="gallery">
-            {displayImages?.map((image) => (
+            {displayImages?.map(image => (
               <div key={image.id} data-testid={`gallery-item-${image.id}`}>
                 {image.title}
               </div>
@@ -210,27 +220,27 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
           </div>
         ) : (
           <Gallery
-          className=""
-          images={displayImages}
-          layout={layout}
-          onImageClick={onImageClick}
-          onImageLike={onImageLike}
-          onImageShare={onImageShare}
-          onImageDelete={onImageDelete}
-          onImageDownload={onImageDownload}
-          onImageAddToAlbum={onImageAddToAlbum}
-          onImagesSelected={onImagesSelected}
-          selectedImages={selectedImages}
-          onImagesDeleted={onImagesDeleted}
-          onImagesAddedToAlbum={onImagesAddedToAlbum}
-          onImagesDownloaded={onImagesDownloaded}
-          onImagesShared={onImagesShared}
+            className=""
+            images={displayImages}
+            layout={layout}
+            onImageClick={onImageClick}
+            onImageLike={onImageLike}
+            onImageShare={onImageShare}
+            onImageDelete={onImageDelete}
+            onImageDownload={onImageDownload}
+            onImageAddToAlbum={onImageAddToAlbum}
+            onImagesSelected={onImagesSelected}
+            selectedImages={selectedImages}
+            onImagesDeleted={onImagesDeleted}
+            onImagesAddedToAlbum={onImagesAddedToAlbum}
+            onImagesDownloaded={onImagesDownloaded}
+            onImagesShared={onImagesShared}
           />
         )}
       </motion.div>
 
       {/* No Results Message */}
-      {hasActiveFilters && displayImages.length === 0 && !isLoading && (
+      {hasActiveFilters && displayImages.length === 0 && !isLoading ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -248,9 +258,9 @@ const GalleryWithSearch: React.FC<GalleryWithSearchProps> = ({
             Clear all filters
           </button>
         </motion.div>
-      )}
+      ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default GalleryWithSearch; 
+export default GalleryWithSearch

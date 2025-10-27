@@ -1,6 +1,11 @@
-import { expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import { DEFAULT_TEST_USER, DEFAULT_ADMIN_USER, DEFAULT_FUN_USER, SOUTH_PARK_USERS } from './test-users';
+import { expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import {
+  DEFAULT_TEST_USER,
+  DEFAULT_ADMIN_USER,
+  DEFAULT_FUN_USER,
+  SOUTH_PARK_USERS,
+} from './test-users'
 
 // Test data for consistent testing
 export const TEST_USER = {
@@ -9,7 +14,7 @@ export const TEST_USER = {
   firstName: 'Test',
   lastName: 'User',
   confirmPassword: 'TestPassword123!',
-};
+}
 
 export const TEST_USER_2 = {
   email: 'test2@example.com',
@@ -17,7 +22,7 @@ export const TEST_USER_2 = {
   firstName: 'Test2',
   lastName: 'User2',
   confirmPassword: 'TestPassword456!',
-};
+}
 
 // Additional test users from seed data
 export const ADMIN_USER = {
@@ -26,7 +31,7 @@ export const ADMIN_USER = {
   firstName: DEFAULT_ADMIN_USER.name.split(' ')[0],
   lastName: DEFAULT_ADMIN_USER.name.split(' ')[1] || 'User',
   confirmPassword: DEFAULT_ADMIN_USER.password,
-};
+}
 
 export const STAN_USER = {
   email: SOUTH_PARK_USERS.STAN.email,
@@ -34,7 +39,7 @@ export const STAN_USER = {
   firstName: SOUTH_PARK_USERS.STAN.name.split(' ')[0],
   lastName: SOUTH_PARK_USERS.STAN.name.split(' ')[1] || 'User',
   confirmPassword: SOUTH_PARK_USERS.STAN.password,
-};
+}
 
 export const KYLE_USER = {
   email: SOUTH_PARK_USERS.KYLE.email,
@@ -42,14 +47,14 @@ export const KYLE_USER = {
   firstName: SOUTH_PARK_USERS.KYLE.name.split(' ')[0],
   lastName: SOUTH_PARK_USERS.KYLE.name.split(' ')[1] || 'User',
   confirmPassword: SOUTH_PARK_USERS.KYLE.password,
-};
+}
 
 // Native backend URLs for testing
 export const BACKEND_URLS = {
   auth: 'http://localhost:5000',
   api: 'http://localhost:3001',
   frontend: 'http://localhost:5173',
-};
+}
 
 // Validation error messages
 export const VALIDATION_MESSAGES = {
@@ -59,7 +64,7 @@ export const VALIDATION_MESSAGES = {
   passwordMismatch: 'Passwords do not match',
   invalidCredentials: 'Invalid email or password',
   emailAlreadyExists: 'An account with this email already exists',
-};
+}
 
 export class AuthTestUtils {
   constructor(private page: Page) {}
@@ -67,44 +72,77 @@ export class AuthTestUtils {
   /**
    * Navigate to a specific auth page and verify it loaded
    */
-  async navigateToAuthPage(route: 'login' | 'signup' | 'forgot-password' | 'reset-password', expectedText?: string) {
-    await this.page.goto(`/auth/${route}`, { waitUntil: 'networkidle', timeout: 15000 });
+  async navigateToAuthPage(
+    route: 'login' | 'signup' | 'forgot-password' | 'reset-password',
+    expectedText?: string,
+  ) {
+    await this.page.goto(`/auth/${route}`, { waitUntil: 'networkidle', timeout: 15000 })
 
     if (expectedText) {
-      await expect(this.page.getByText(expectedText)).toBeVisible();
+      await expect(this.page.getByText(expectedText)).toBeVisible()
     }
-    
+
     // Wait for page to be fully loaded
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('networkidle')
   }
 
   /**
    * Fill and submit login form
    */
   async login(email: string, password: string) {
-    await this.page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', email);
-    await this.page.fill('[data-testid="password-input"], input[type="password"], input[name="password"]', password);
-    await this.page.click('[data-testid="login-button"], button[type="submit"], button:has-text("Sign In")');
+    await this.page.fill(
+      '[data-testid="email-input"], input[type="email"], input[name="email"]',
+      email,
+    )
+    await this.page.fill(
+      '[data-testid="password-input"], input[type="password"], input[name="password"]',
+      password,
+    )
+    await this.page.click(
+      '[data-testid="login-button"], button[type="submit"], button:has-text("Sign In")',
+    )
   }
 
   /**
    * Fill and submit signup form
    */
   async signup(userData: typeof TEST_USER) {
-    await this.page.fill('[data-testid="first-name-input"], input[name="firstName"]', userData.firstName);
-    await this.page.fill('[data-testid="last-name-input"], input[name="lastName"]', userData.lastName);
-    await this.page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', userData.email);
-    await this.page.fill('[data-testid="password-input"], input[name="password"]', userData.password);
-    await this.page.fill('[data-testid="confirm-password-input"], input[name="confirmPassword"]', userData.confirmPassword);
-    await this.page.click('[data-testid="signup-button"], button[type="submit"], button:has-text("Sign Up")');
+    await this.page.fill(
+      '[data-testid="first-name-input"], input[name="firstName"]',
+      userData.firstName,
+    )
+    await this.page.fill(
+      '[data-testid="last-name-input"], input[name="lastName"]',
+      userData.lastName,
+    )
+    await this.page.fill(
+      '[data-testid="email-input"], input[type="email"], input[name="email"]',
+      userData.email,
+    )
+    await this.page.fill(
+      '[data-testid="password-input"], input[name="password"]',
+      userData.password,
+    )
+    await this.page.fill(
+      '[data-testid="confirm-password-input"], input[name="confirmPassword"]',
+      userData.confirmPassword,
+    )
+    await this.page.click(
+      '[data-testid="signup-button"], button[type="submit"], button:has-text("Sign Up")',
+    )
   }
 
   /**
    * Request password reset
    */
   async requestPasswordReset(email: string) {
-    await this.page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', email);
-    await this.page.click('[data-testid="reset-button"], button[type="submit"], button:has-text("Send Reset")');
+    await this.page.fill(
+      '[data-testid="email-input"], input[type="email"], input[name="email"]',
+      email,
+    )
+    await this.page.click(
+      '[data-testid="reset-button"], button[type="submit"], button:has-text("Send Reset")',
+    )
   }
 
   /**
@@ -112,30 +150,30 @@ export class AuthTestUtils {
    * This function tracks actual network requests to verify real API integration
    */
   async monitorRealApiCalls() {
-    const authRequests: any[] = [];
-    const apiRequests: any[] = [];
-    const errors: any[] = [];
+    const authRequests: any[] = []
+    const apiRequests: any[] = []
+    const errors: any[] = []
 
     // Monitor auth service calls (no mocking - just observation)
     this.page.on('request', request => {
-      const url = request.url();
+      const url = request.url()
       if (url.includes('/api/auth/')) {
         authRequests.push({
           url,
           method: request.method(),
           timestamp: new Date().toISOString(),
-        });
-        console.log(`📡 Real Auth API Request: ${request.method()} ${url}`);
+        })
+        console.log(`📡 Real Auth API Request: ${request.method()} ${url}`)
       }
       if (url.includes('/api/') && !url.includes('/api/auth/')) {
         apiRequests.push({
           url,
           method: request.method(),
           timestamp: new Date().toISOString(),
-        });
-        console.log(`📡 Real API Request: ${request.method()} ${url}`);
+        })
+        console.log(`📡 Real API Request: ${request.method()} ${url}`)
       }
-    });
+    })
 
     // Monitor responses for errors
     this.page.on('response', response => {
@@ -145,12 +183,12 @@ export class AuthTestUtils {
           status: response.status(),
           statusText: response.statusText(),
           timestamp: new Date().toISOString(),
-        });
-        console.log(`❌ API Error: ${response.status()} ${response.url()}`);
+        })
+        console.log(`❌ API Error: ${response.status()} ${response.url()}`)
       }
-    });
+    })
 
-    return { authRequests, apiRequests, errors };
+    return { authRequests, apiRequests, errors }
   }
 
   /**
@@ -158,30 +196,30 @@ export class AuthTestUtils {
    * This function tracks actual network requests to verify real API integration
    */
   async monitorRealApiCalls() {
-    const authRequests: any[] = [];
-    const apiRequests: any[] = [];
-    const errors: any[] = [];
+    const authRequests: any[] = []
+    const apiRequests: any[] = []
+    const errors: any[] = []
 
     // Monitor auth service calls (no mocking - just observation)
     this.page.on('request', request => {
-      const url = request.url();
+      const url = request.url()
       if (url.includes('/api/auth/')) {
         authRequests.push({
           url,
           method: request.method(),
           timestamp: new Date().toISOString(),
-        });
-        console.log(`📡 Real Auth API Request: ${request.method()} ${url}`);
+        })
+        console.log(`📡 Real Auth API Request: ${request.method()} ${url}`)
       }
       if (url.includes('/api/') && !url.includes('/api/auth/')) {
         apiRequests.push({
           url,
           method: request.method(),
           timestamp: new Date().toISOString(),
-        });
-        console.log(`📡 Real API Request: ${request.method()} ${url}`);
+        })
+        console.log(`📡 Real API Request: ${request.method()} ${url}`)
       }
-    });
+    })
 
     // Monitor responses for errors
     this.page.on('response', response => {
@@ -191,12 +229,12 @@ export class AuthTestUtils {
           status: response.status(),
           statusText: response.statusText(),
           timestamp: new Date().toISOString(),
-        });
-        console.log(`❌ API Error: ${response.status()} ${response.url()}`);
+        })
+        console.log(`❌ API Error: ${response.status()} ${response.url()}`)
       }
-    });
+    })
 
-    return { authRequests, apiRequests, errors };
+    return { authRequests, apiRequests, errors }
   }
 
   /**
@@ -204,8 +242,8 @@ export class AuthTestUtils {
    */
   async waitForAuthSuccess(expectedPath = '/') {
     // Wait for redirect after successful auth
-    await this.page.waitForURL(`**${expectedPath}`, { timeout: 10000 });
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForURL(`**${expectedPath}`, { timeout: 10000 })
+    await this.page.waitForLoadState('networkidle')
   }
 
   /**
@@ -213,7 +251,7 @@ export class AuthTestUtils {
    */
   async expectValidationErrors(errors: string[]) {
     for (const error of errors) {
-      await expect(this.page.getByText(error)).toBeVisible();
+      await expect(this.page.getByText(error)).toBeVisible()
     }
   }
 
@@ -222,8 +260,10 @@ export class AuthTestUtils {
    */
   async expectFormFields(fields: string[]) {
     for (const field of fields) {
-      const input = this.page.locator(`[data-testid="${field}-input"], input[name="${field}"]`).first();
-      await expect(input).toBeVisible();
+      const input = this.page
+        .locator(`[data-testid="${field}-input"], input[name="${field}"]`)
+        .first()
+      await expect(input).toBeVisible()
     }
   }
 
@@ -232,12 +272,12 @@ export class AuthTestUtils {
    */
   async testKeyboardNavigation() {
     // Test Tab navigation
-    await this.page.keyboard.press('Tab');
-    await this.page.keyboard.press('Tab');
-    await this.page.keyboard.press('Tab');
-    
+    await this.page.keyboard.press('Tab')
+    await this.page.keyboard.press('Tab')
+    await this.page.keyboard.press('Tab')
+
     // Test Enter submission on focused button
-    await this.page.keyboard.press('Enter');
+    await this.page.keyboard.press('Enter')
   }
 
   /**
@@ -245,16 +285,16 @@ export class AuthTestUtils {
    */
   async testResponsiveDesign() {
     // Test mobile viewport
-    await this.page.setViewportSize({ width: 375, height: 667 });
-    await this.page.waitForTimeout(500);
-    
+    await this.page.setViewportSize({ width: 375, height: 667 })
+    await this.page.waitForTimeout(500)
+
     // Test tablet viewport
-    await this.page.setViewportSize({ width: 768, height: 1024 });
-    await this.page.waitForTimeout(500);
-    
+    await this.page.setViewportSize({ width: 768, height: 1024 })
+    await this.page.waitForTimeout(500)
+
     // Reset to desktop
-    await this.page.setViewportSize({ width: 1280, height: 720 });
-    await this.page.waitForTimeout(500);
+    await this.page.setViewportSize({ width: 1280, height: 720 })
+    await this.page.waitForTimeout(500)
   }
 
   /**
@@ -262,23 +302,23 @@ export class AuthTestUtils {
    */
   async clearAuthData() {
     try {
-      await this.page.context().clearCookies();
+      await this.page.context().clearCookies()
     } catch (error) {
-      console.log('Could not clear cookies:', error);
+      console.log('Could not clear cookies:', error)
     }
 
     try {
       await this.page.evaluate(() => {
         try {
-          localStorage.clear();
-          sessionStorage.clear();
+          localStorage.clear()
+          sessionStorage.clear()
         } catch (error) {
           // Handle SecurityError for localStorage access
-          console.log('Could not clear localStorage/sessionStorage:', error);
+          console.log('Could not clear localStorage/sessionStorage:', error)
         }
-      });
+      })
     } catch (error) {
-      console.log('Could not evaluate localStorage clear:', error);
+      console.log('Could not evaluate localStorage clear:', error)
     }
   }
 
@@ -286,38 +326,41 @@ export class AuthTestUtils {
    * Check if user is authenticated (has auth cookie or token)
    */
   async isAuthenticated(): Promise<boolean> {
-    const cookies = await this.page.context().cookies();
-    const authCookie = cookies.find(cookie => 
-      cookie.name.includes('auth') || 
-      cookie.name.includes('token') || 
-      cookie.name.includes('session')
-    );
-    
-    if (authCookie) return true;
-    
+    const cookies = await this.page.context().cookies()
+    const authCookie = cookies.find(
+      cookie =>
+        cookie.name.includes('auth') ||
+        cookie.name.includes('token') ||
+        cookie.name.includes('session'),
+    )
+
+    if (authCookie) return true
+
     // Check localStorage for auth tokens
     const authToken = await this.page.evaluate(() => {
-      return localStorage.getItem('authToken') || 
-             localStorage.getItem('accessToken') || 
-             sessionStorage.getItem('authToken');
-    });
-    
-    return !!authToken;
+      return (
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('accessToken') ||
+        sessionStorage.getItem('authToken')
+      )
+    })
+
+    return !!authToken
   }
 
   /**
    * Wait for network requests to complete
    */
   async waitForNetworkIdle() {
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('networkidle')
   }
 
   /**
    * Intercept and verify API calls to native backends
    */
   async interceptApiCalls() {
-    const authRequests: any[] = [];
-    const apiRequests: any[] = [];
+    const authRequests: any[] = []
+    const apiRequests: any[] = []
 
     // Intercept auth service calls
     await this.page.route(`${BACKEND_URLS.auth}/**`, async route => {
@@ -325,9 +368,9 @@ export class AuthTestUtils {
         url: route.request().url(),
         method: route.request().method(),
         headers: route.request().headers(),
-      });
-      await route.continue();
-    });
+      })
+      await route.continue()
+    })
 
     // Intercept LEGO projects API calls
     await this.page.route(`${BACKEND_URLS.api}/**`, async route => {
@@ -335,11 +378,11 @@ export class AuthTestUtils {
         url: route.request().url(),
         method: route.request().method(),
         headers: route.request().headers(),
-      });
-      await route.continue();
-    });
+      })
+      await route.continue()
+    })
 
-    return { authRequests, apiRequests };
+    return { authRequests, apiRequests }
   }
 
   /**
@@ -347,29 +390,29 @@ export class AuthTestUtils {
    */
   async verifyBackendHealth() {
     // Check auth service health
-    const authResponse = await this.page.request.get(`${BACKEND_URLS.auth}/api/auth/health`);
-    expect(authResponse.status()).toBeLessThan(500);
+    const authResponse = await this.page.request.get(`${BACKEND_URLS.auth}/api/auth/health`)
+    expect(authResponse.status()).toBeLessThan(500)
 
     // Check LEGO projects API health
-    const apiResponse = await this.page.request.get(`${BACKEND_URLS.api}/api/health`);
-    expect(apiResponse.status()).toBeLessThan(500);
+    const apiResponse = await this.page.request.get(`${BACKEND_URLS.api}/api/health`)
+    expect(apiResponse.status()).toBeLessThan(500)
   }
 
   /**
    * Setup common test environment
    */
   async setup() {
-    await this.clearAuthData();
-    await this.page.goto('/');
-    await this.waitForNetworkIdle();
+    await this.clearAuthData()
+    await this.page.goto('/')
+    await this.waitForNetworkIdle()
   }
 
   /**
    * Cleanup after tests
    */
   async cleanup() {
-    await this.clearAuthData();
-    await this.page.unrouteAll();
+    await this.clearAuthData()
+    await this.page.unrouteAll()
   }
 }
 
@@ -377,7 +420,7 @@ export class AuthTestUtils {
  * Factory function to create AuthTestUtils instance
  */
 export function createAuthTestUtils(page: Page): AuthTestUtils {
-  return new AuthTestUtils(page);
+  return new AuthTestUtils(page)
 }
 
 /**
@@ -388,23 +431,23 @@ export const TestPatterns = {
    * Standard auth flow test setup
    */
   async setupAuthTest(page: Page) {
-    const utils = createAuthTestUtils(page);
-    await utils.setup();
-    return utils;
+    const utils = createAuthTestUtils(page)
+    await utils.setup()
+    return utils
   },
 
   /**
    * Test for native backend connectivity
    */
   async testNativeBackendConnectivity(page: Page) {
-    const utils = createAuthTestUtils(page);
-    await utils.verifyBackendHealth();
+    const utils = createAuthTestUtils(page)
+    await utils.verifyBackendHealth()
   },
 
   /**
    * Standard teardown for auth tests
    */
   async teardownAuthTest(utils: AuthTestUtils) {
-    await utils.cleanup();
+    await utils.cleanup()
   },
-};
+}

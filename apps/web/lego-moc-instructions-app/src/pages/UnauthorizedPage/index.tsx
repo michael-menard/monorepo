@@ -12,7 +12,8 @@ function UnauthorizedPage() {
           </div>
           <CardTitle className="text-2xl">Access Denied</CardTitle>
           <CardDescription>
-            You don't have permission to access this page. Please contact an administrator if you believe this is an error.
+            You don't have permission to access this page. Please contact an administrator if you
+            believe this is an error.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -23,11 +24,7 @@ function UnauthorizedPage() {
                 Go to Home
               </Button>
             </Link>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => window.history.back()}
-            >
+            <Button variant="outline" className="w-full" onClick={() => window.history.back()}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
             </Button>
@@ -38,4 +35,4 @@ function UnauthorizedPage() {
   )
 }
 
-export default UnauthorizedPage 
+export default UnauthorizedPage

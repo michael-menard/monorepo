@@ -1,15 +1,12 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
-import { ThemeToggle } from '@repo/ui';
-import { User, Bell, Shield, Palette } from 'lucide-react';
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle, ThemeToggle } from '@repo/ui'
+import { User, Bell, Shield, Palette } from 'lucide-react'
 
 export const SettingsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Settings
-        </h2>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Settings</h2>
         <p className="text-gray-600 dark:text-gray-400">
           Manage your account preferences and settings.
         </p>
@@ -159,5 +156,5 @@ export const SettingsTab: React.FC = () => {
         </Card>
       </div>
     </div>
-  );
-}; 
+  )
+}

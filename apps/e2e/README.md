@@ -5,6 +5,7 @@ This app contains all end-to-end (E2E) tests for the monorepo using Playwright.
 ## Overview
 
 All Playwright tests have been centralized in this dedicated e2e app to:
+
 - Provide a single location for all E2E tests
 - Simplify test organization and maintenance
 - Enable better test isolation and configuration
@@ -29,6 +30,7 @@ apps/e2e/
 ## Running Tests
 
 ### Prerequisites
+
 - Ensure the web application is running on `http://localhost:3002`
 - Database and backend services should be running
 
@@ -101,6 +103,7 @@ pnpm test:auth:privacy
 ## Configuration
 
 The Playwright configuration is optimized for:
+
 - Sequential test execution (workers: 1)
 - Comprehensive error reporting
 - Screenshot and video capture on failures
@@ -109,6 +112,7 @@ The Playwright configuration is optimized for:
 ## Test Organization
 
 Tests are organized by functionality:
+
 - **auth/**: Complete authentication workflows
 - **navigation/**: App navigation and routing
 - **pages/**: Page-specific functionality
@@ -117,14 +121,16 @@ Tests are organized by functionality:
 ## Development
 
 When adding new tests:
+
 1. Place them in the appropriate category directory
-2. Follow existing naming conventions (*.spec.ts)
+2. Follow existing naming conventions (\*.spec.ts)
 3. Use the shared utilities in helpers/
 4. Add appropriate test data to fixtures/
 
 ## Integration
 
 This e2e app integrates with:
+
 - The main web application at `apps/web/lego-moc-instructions-app`
 - Backend services for authentication and data
 - The monorepo's turbo configuration for coordinated testing

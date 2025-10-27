@@ -26,7 +26,7 @@ pnpm add @repo/features-gallery
 ### 1. Basic Gallery Usage
 
 ```tsx
-import { Gallery } from '@repo/features-gallery';
+import { Gallery } from '@repo/features-gallery'
 
 function MyGallery() {
   const images = [
@@ -35,28 +35,28 @@ function MyGallery() {
       url: '/path/to/image1.jpg',
       title: 'Image 1',
       description: 'Description for image 1',
-      tags: ['nature', 'landscape']
+      tags: ['nature', 'landscape'],
     },
     // ... more images
-  ];
+  ]
 
   return (
     <Gallery
       images={images}
-      onImageClick={(image) => console.log('Clicked:', image)}
-      onUpload={(files) => console.log('Uploading:', files)}
+      onImageClick={image => console.log('Clicked:', image)}
+      onUpload={files => console.log('Uploading:', files)}
     />
-  );
+  )
 }
 ```
 
 ### 2. With Search and Filtering
 
 ```tsx
-import { Gallery, useGalleryFilters } from '@repo/features/gallery';
+import { Gallery, useGalleryFilters } from '@repo/features/gallery'
 
 function AdvancedGallery() {
-  const { filters, setFilters, filteredImages } = useGalleryFilters(images);
+  const { filters, setFilters, filteredImages } = useGalleryFilters(images)
 
   return (
     <div>
@@ -65,13 +65,9 @@ function AdvancedGallery() {
         onFiltersChange={setFilters}
         availableTags={['nature', 'landscape', 'portrait']}
       />
-      <Gallery
-        images={filteredImages}
-        onImageClick={handleImageClick}
-        onUpload={handleUpload}
-      />
+      <Gallery images={filteredImages} onImageClick={handleImageClick} onUpload={handleUpload} />
     </div>
-  );
+  )
 }
 ```
 
@@ -83,55 +79,49 @@ The main gallery component for displaying images.
 
 ```tsx
 interface GalleryProps {
-  images: Image[];
-  onImageClick?: (image: Image) => void;
-  onUpload?: (files: File[]) => void;
-  onDelete?: (imageId: string) => void;
-  onEdit?: (image: Image) => void;
-  loading?: boolean;
-  error?: string;
-  className?: string;
+  images: Image[]
+  onImageClick?: (image: Image) => void
+  onUpload?: (files: File[]) => void
+  onDelete?: (imageId: string) => void
+  onEdit?: (image: Image) => void
+  loading?: boolean
+  error?: string
+  className?: string
 }
 ```
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `images` | `Image[]` | Array of images to display |
-| `onImageClick` | `(image: Image) => void` | Callback when image is clicked |
-| `onUpload` | `(files: File[]) => void` | Callback for file upload |
-| `onDelete` | `(imageId: string) => void` | Callback for image deletion |
-| `onEdit` | `(image: Image) => void` | Callback for image editing |
-| `loading` | `boolean` | Loading state |
-| `error` | `string` | Error message |
-| `className` | `string` | Additional CSS classes |
+| Property       | Type                        | Description                    |
+| -------------- | --------------------------- | ------------------------------ |
+| `images`       | `Image[]`                   | Array of images to display     |
+| `onImageClick` | `(image: Image) => void`    | Callback when image is clicked |
+| `onUpload`     | `(files: File[]) => void`   | Callback for file upload       |
+| `onDelete`     | `(imageId: string) => void` | Callback for image deletion    |
+| `onEdit`       | `(image: Image) => void`    | Callback for image editing     |
+| `loading`      | `boolean`                   | Loading state                  |
+| `error`        | `string`                    | Error message                  |
+| `className`    | `string`                    | Additional CSS classes         |
 
 ### useGalleryFilters Hook
 
 Hook for managing gallery filters and search functionality.
 
 ```tsx
-const {
-  filters,
-  setFilters,
-  filteredImages,
-  searchTerm,
-  setSearchTerm,
-  clearFilters
-} = useGalleryFilters(images);
+const { filters, setFilters, filteredImages, searchTerm, setSearchTerm, clearFilters } =
+  useGalleryFilters(images)
 ```
 
 #### Return Values
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `filters` | `GalleryFilters` | Current filter state |
-| `setFilters` | `(filters: GalleryFilters) => void` | Update filters |
-| `filteredImages` | `Image[]` | Images filtered by current criteria |
-| `searchTerm` | `string` | Current search term |
-| `setSearchTerm` | `(term: string) => void` | Update search term |
-| `clearFilters` | `() => void` | Clear all filters |
+| Property         | Type                                | Description                         |
+| ---------------- | ----------------------------------- | ----------------------------------- |
+| `filters`        | `GalleryFilters`                    | Current filter state                |
+| `setFilters`     | `(filters: GalleryFilters) => void` | Update filters                      |
+| `filteredImages` | `Image[]`                           | Images filtered by current criteria |
+| `searchTerm`     | `string`                            | Current search term                 |
+| `setSearchTerm`  | `(term: string) => void`            | Update search term                  |
+| `clearFilters`   | `() => void`                        | Clear all filters                   |
 
 ### GalleryFilters Component
 
@@ -139,10 +129,10 @@ Component for displaying and managing gallery filters.
 
 ```tsx
 interface GalleryFiltersProps {
-  filters: GalleryFilters;
-  onFiltersChange: (filters: GalleryFilters) => void;
-  availableTags: string[];
-  className?: string;
+  filters: GalleryFilters
+  onFiltersChange: (filters: GalleryFilters) => void
+  availableTags: string[]
+  className?: string
 }
 ```
 
@@ -152,14 +142,14 @@ interface GalleryFiltersProps {
 
 ```tsx
 interface Image {
-  id: string;
-  url: string;
-  title: string;
-  description?: string;
-  tags: string[];
-  metadata?: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  url: string
+  title: string
+  description?: string
+  tags: string[]
+  metadata?: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -167,14 +157,14 @@ interface Image {
 
 ```tsx
 interface GalleryFilters {
-  tags: string[];
-  categories: string[];
+  tags: string[]
+  categories: string[]
   dateRange?: {
-    start: Date;
-    end: Date;
-  };
-  sortBy: 'date' | 'title' | 'size';
-  sortOrder: 'asc' | 'desc';
+    start: Date
+    end: Date
+  }
+  sortBy: 'date' | 'title' | 'size'
+  sortOrder: 'asc' | 'desc'
 }
 ```
 
@@ -189,10 +179,7 @@ The gallery components use Tailwind CSS for styling. You can customize the appea
 ### Custom Styling Example
 
 ```tsx
-<Gallery
-  images={images}
-  className="custom-gallery bg-gray-100 rounded-lg p-4"
-/>
+<Gallery images={images} className="custom-gallery bg-gray-100 rounded-lg p-4" />
 ```
 
 ## Testing

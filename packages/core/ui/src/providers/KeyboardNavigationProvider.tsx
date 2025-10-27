@@ -13,8 +13,8 @@ interface KeyboardNavigationProviderProps {
   children: ReactNode
 }
 
-export const KeyboardNavigationProvider: React.FC<KeyboardNavigationProviderProps> = ({ 
-  children 
+export const KeyboardNavigationProvider: React.FC<KeyboardNavigationProviderProps> = ({
+  children,
 }) => {
   const { registerShortcut, unregisterShortcut } = useKeyboardNavigationContext()
   const { announce } = useLiveRegion()
@@ -44,7 +44,7 @@ export const useKeyboardNavigation = (): KeyboardNavigationContextType => {
 export const useGlobalKeyboardShortcut = (
   key: string,
   handler: () => void,
-  dependencies: React.DependencyList = []
+  dependencies: React.DependencyList = [],
 ) => {
   const { registerShortcut, unregisterShortcut } = useKeyboardNavigation()
 
@@ -58,4 +58,4 @@ export const useGlobalKeyboardShortcut = (
 export const useScreenReaderAnnouncement = () => {
   const { announce } = useKeyboardNavigation()
   return announce
-} 
+}

@@ -12,7 +12,7 @@ export const TechRadar: React.FC = () => {
   const [filters, setFilters] = useState({
     quadrants: [] as string[],
     rings: [] as string[],
-    search: ''
+    search: '',
   })
 
   useEffect(() => {
@@ -29,12 +29,12 @@ export const TechRadar: React.FC = () => {
         // Add indices to quadrants and rings
         const quadrants = data.quadrants.map((q: any, index: number) => ({
           ...q,
-          index
+          index,
         }))
 
         const rings = data.rings.map((r: any, index: number) => ({
           ...r,
-          index
+          index,
         }))
 
         setRadarData({ ...data, quadrants, rings })
@@ -47,15 +47,15 @@ export const TechRadar: React.FC = () => {
             { name: 'Techniques', index: 0 },
             { name: 'Tools', index: 1 },
             { name: 'Platforms', index: 2 },
-            { name: 'Languages & Frameworks', index: 3 }
+            { name: 'Languages & Frameworks', index: 3 },
           ],
           rings: [
             { name: 'Adopt', color: '#93c47d', index: 0 },
             { name: 'Trial', color: '#93d2c2', index: 1 },
             { name: 'Assess', color: '#fbdb84', index: 2 },
-            { name: 'Hold', color: '#efafa9', index: 3 }
+            { name: 'Hold', color: '#efafa9', index: 3 },
           ],
-          entries: []
+          entries: [],
         }
         setRadarData(defaultData)
         setFilteredEntries([])
@@ -72,24 +72,21 @@ export const TechRadar: React.FC = () => {
 
     // Filter by quadrants
     if (filters.quadrants.length > 0) {
-      filtered = filtered.filter(entry => 
-        filters.quadrants.includes(entry.quadrant)
-      )
+      filtered = filtered.filter(entry => filters.quadrants.includes(entry.quadrant))
     }
 
     // Filter by rings
     if (filters.rings.length > 0) {
-      filtered = filtered.filter(entry => 
-        filters.rings.includes(entry.ring)
-      )
+      filtered = filtered.filter(entry => filters.rings.includes(entry.ring))
     }
 
     // Filter by search
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(entry =>
-        entry.name.toLowerCase().includes(searchLower) ||
-        entry.description.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        entry =>
+          entry.name.toLowerCase().includes(searchLower) ||
+          entry.description.toLowerCase().includes(searchLower),
       )
     }
 
@@ -123,7 +120,7 @@ export const TechRadar: React.FC = () => {
       <div className="tech-radar-content">
         <aside className="tech-radar-sidebar">
           <RadarLegend quadrants={radarData.quadrants} rings={radarData.rings} />
-          <RadarFilters 
+          <RadarFilters
             quadrants={radarData.quadrants}
             rings={radarData.rings}
             filters={filters}
@@ -141,12 +138,7 @@ export const TechRadar: React.FC = () => {
         </main>
       </div>
 
-      {selectedEntry && (
-        <EntryDetails
-          entry={selectedEntry}
-          onClose={handleCloseDetails}
-        />
-      )}
+      {selectedEntry ? <EntryDetails entry={selectedEntry} onClose={handleCloseDetails} /> : null}
     </div>
   )
-} 
+}

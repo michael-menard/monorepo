@@ -5,17 +5,21 @@ This document outlines the standards and best practices for developing packages 
 ## 🎯 Package Design Principles
 
 ### Single Responsibility
+
 Each package should have a clear, focused purpose:
+
 - **@repo/auth** - Only authentication-related functionality
 - **@repo/ui** - Only reusable UI components
 - **@repo/shared-cache** - Only caching utilities
 
 ### Minimal Dependencies
+
 - Keep external dependencies to a minimum
 - Use peer dependencies for common libraries (React, etc.)
 - Prefer workspace dependencies for internal packages
 
 ### Tree-Shakable Exports
+
 - Use named exports instead of default exports
 - Structure exports to enable tree-shaking
 - Avoid side effects in modules
@@ -23,6 +27,7 @@ Each package should have a clear, focused purpose:
 ## 📝 Code Standards
 
 ### File Structure
+
 ```
 src/
 ├── __tests__/          # Unit tests
@@ -35,6 +40,7 @@ src/
 ```
 
 ### TypeScript Guidelines
+
 - Use strict TypeScript configuration
 - Export all public types
 - Use proper JSDoc comments for public APIs
@@ -46,9 +52,9 @@ src/
  */
 export interface CacheConfig {
   /** Maximum number of items to store */
-  maxSize: number;
+  maxSize: number
   /** Time to live in milliseconds */
-  ttl?: number;
+  ttl?: number
 }
 
 /**
@@ -60,6 +66,7 @@ export function createCache(config: CacheConfig): Cache {
 ```
 
 ### React Component Guidelines
+
 - Use functional components with hooks
 - Implement proper TypeScript props interfaces
 - Include displayName for debugging
@@ -88,37 +95,39 @@ Button.displayName = 'Button';
 ## 🧪 Testing Standards
 
 ### Test Structure
+
 - Place tests in `src/__tests__/` directory
 - Use descriptive test names
 - Group related tests with `describe` blocks
 - Test both happy path and error cases
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { createCache } from '../cache';
+import { describe, it, expect } from 'vitest'
+import { createCache } from '../cache'
 
 describe('createCache', () => {
   describe('when creating a memory cache', () => {
     it('should create cache with default configuration', () => {
-      const cache = createCache('memory');
-      expect(cache).toBeDefined();
-    });
+      const cache = createCache('memory')
+      expect(cache).toBeDefined()
+    })
 
     it('should respect custom configuration', () => {
-      const cache = createCache('memory', { maxSize: 100 });
-      expect(cache.maxSize).toBe(100);
-    });
-  });
+      const cache = createCache('memory', { maxSize: 100 })
+      expect(cache.maxSize).toBe(100)
+    })
+  })
 
   describe('error handling', () => {
     it('should throw error for invalid cache type', () => {
-      expect(() => createCache('invalid')).toThrow();
-    });
-  });
-});
+      expect(() => createCache('invalid')).toThrow()
+    })
+  })
+})
 ```
 
 ### Component Testing
+
 - Use React Testing Library
 - Test user interactions, not implementation details
 - Use semantic queries (getByRole, getByLabelText)
@@ -136,7 +145,7 @@ describe('Button', () => {
   it('should call onClick when clicked', () => {
     const handleClick = vi.fn();
     render(<Button onClick={handleClick}>Click me</Button>);
-    
+
     fireEvent.click(screen.getByRole('button'));
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
@@ -146,6 +155,7 @@ describe('Button', () => {
 ## 📦 Package Configuration
 
 ### Exports Configuration
+
 Structure your exports for optimal tree-shaking:
 
 ```json
@@ -169,13 +179,14 @@ Structure your exports for optimal tree-shaking:
 ```
 
 ### Build Configuration
+
 Use consistent Vite configuration:
 
 ```typescript
 // vite.config.ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
@@ -184,7 +195,7 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'PackageName',
       formats: ['es', 'cjs'],
-      fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
+      fileName: format => `index.${format === 'es' ? 'js' : 'cjs'}`,
     },
     rollupOptions: {
       external: ['react', 'react-dom'],
@@ -196,12 +207,13 @@ export default defineConfig({
       },
     },
   },
-});
+})
 ```
 
 ## 🔄 Development Workflow
 
 ### 1. Development
+
 ```bash
 # Start development mode
 pnpm dev
@@ -214,6 +226,7 @@ pnpm check-types --watch
 ```
 
 ### 2. Before Committing
+
 ```bash
 # Run all checks
 pnpm build
@@ -226,6 +239,7 @@ pnpm run check-all
 ```
 
 ### 3. Publishing
+
 ```bash
 # Create changeset
 pnpm changeset
@@ -254,6 +268,7 @@ pnpm changeset publish
 ## 🚨 Common Pitfalls
 
 ### Avoid These Mistakes
+
 - Don't use default exports (breaks tree-shaking)
 - Don't include unnecessary dependencies
 - Don't skip TypeScript types for public APIs
@@ -262,6 +277,7 @@ pnpm changeset publish
 - Don't include build artifacts in version control
 
 ### Performance Considerations
+
 - Use dynamic imports for large dependencies
 - Implement proper code splitting
 - Avoid importing entire libraries when only using parts
@@ -270,12 +286,14 @@ pnpm changeset publish
 ## 🔧 Debugging Tips
 
 ### Common Issues
+
 1. **Import errors**: Check package exports and workspace configuration
 2. **Type errors**: Verify TypeScript configuration and type exports
 3. **Build failures**: Check Vite configuration and dependencies
 4. **Test failures**: Ensure proper test setup and mocking
 
 ### Useful Commands
+
 ```bash
 # Check package dependencies
 pnpm list --depth=0

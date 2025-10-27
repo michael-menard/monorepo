@@ -1,6 +1,5 @@
 import React from 'react'
-import { Button } from '@repo/ui'
-import { useTheme } from '@repo/ui'
+import { Button, useTheme } from '@repo/ui'
 import { Moon, Sun, Monitor, Check } from 'lucide-react'
 
 type Theme = 'light' | 'dark' | 'system'
@@ -17,20 +16,20 @@ const themeOptions: ThemeOption[] = [
     value: 'light',
     label: 'Light',
     description: 'Clean and bright interface',
-    icon: Sun
+    icon: Sun,
   },
   {
     value: 'dark',
     label: 'Dark',
     description: 'Easy on the eyes in low light',
-    icon: Moon
+    icon: Moon,
   },
   {
     value: 'system',
     label: 'System',
     description: 'Matches your device settings',
-    icon: Monitor
-  }
+    icon: Monitor,
+  },
 ]
 
 interface ThemeSelectorProps {
@@ -43,10 +42,10 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = '' }) 
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="grid gap-3">
-        {themeOptions.map((option) => {
+        {themeOptions.map(option => {
           const Icon = option.icon
           const isSelected = theme === option.value
-          
+
           return (
             <Button
               key={option.value}
@@ -61,11 +60,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = '' }) 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{option.label}</span>
-                    {isSelected && <Check className="h-4 w-4 flex-shrink-0" />}
+                    {isSelected ? <Check className="h-4 w-4 flex-shrink-0" /> : null}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {option.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">{option.description}</p>
                 </div>
               </div>
             </Button>

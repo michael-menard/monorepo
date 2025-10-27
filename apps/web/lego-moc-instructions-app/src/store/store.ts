@@ -2,19 +2,17 @@ import { configureStore } from '@reduxjs/toolkit'
 import { authApi, authReducer } from '@repo/auth'
 import { instructionsApi } from '@repo/moc-instructions'
 import { galleryApi } from '@repo/gallery'
+import { wishlistReducer, mocInstructionsReducer, profileReducer } from '@repo/mock-data'
 import { api } from '../services/api'
 import { offlineApi } from '../services/offlineApi'
+import galleryReducer from './gallerySlice'
 
 // Import centralized RTK reducers
-import {
-  wishlistReducer,
-  mocInstructionsReducer,
-  profileReducer,
-} from '@repo/mock-data'
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    gallery: galleryReducer,
     // Centralized RTK reducers (replacing old instructions reducer)
     wishlist: wishlistReducer,
     mocInstructions: mocInstructionsReducer,
@@ -27,7 +25,7 @@ export const store = configureStore({
     [api.reducerPath]: api.reducer,
     [offlineApi.reducerPath]: offlineApi.reducer,
   },
-  middleware: (getDefaultMiddleware) =>
+  middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
         // Ignore these action types
@@ -47,9 +45,9 @@ export const store = configureStore({
       // Temporarily commented out due to import resolution issue
       // galleryApi.middleware,
       api.middleware,
-      offlineApi.middleware
+      offlineApi.middleware,
     ),
 })
 
 export type RootState = ReturnType<typeof store.getState>
-export type AppDispatch = typeof store.dispatch 
+export type AppDispatch = typeof store.dispatch

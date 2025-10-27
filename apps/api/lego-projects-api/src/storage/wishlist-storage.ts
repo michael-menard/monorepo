@@ -1,44 +1,44 @@
-import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import fs from 'fs';
-import { uploadWishlistImageToS3, deleteWishlistImageFromS3 } from './s3';
+import path from 'path'
+import fs from 'fs'
+import multer from 'multer'
+import { v4 as uuidv4 } from 'uuid'
+import { uploadWishlistImageToS3, deleteWishlistImageFromS3 } from './s3'
 
-const uploadsDir = 'uploads';
-const wishlistDir = path.join(uploadsDir, 'wishlist');
+const uploadsDir = 'uploads'
+const wishlistDir = path.join(uploadsDir, 'wishlist')
 
 // Ensure wishlist uploads directory exists
 if (!fs.existsSync(wishlistDir)) {
-  fs.mkdirSync(wishlistDir, { recursive: true });
+  fs.mkdirSync(wishlistDir, { recursive: true })
 }
 
-const USE_S3 = process.env.NODE_ENV !== 'development';
+const USE_S3 = process.env.NODE_ENV !== 'development'
 
 // Supported file types for wishlist images
-const SUPPORTED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/heic'];
+const SUPPORTED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/heic']
 
 // 20MB file size limit
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_FILE_SIZE = 20 * 1024 * 1024
 
 // Local storage configuration for wishlist images
 export const wishlistLocalStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Create user-specific directory structure
-    const userId = req.authenticatedUserId || req.user?.sub || 'unknown';
-    const userDir = path.join(wishlistDir, userId);
+    const userId = req.authenticatedUserId || req.user?.sub || 'unknown'
+    const userDir = path.join(wishlistDir, userId)
 
     if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
+      fs.mkdirSync(userDir, { recursive: true })
     }
 
-    cb(null, userDir);
+    cb(null, userDir)
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `wishlist-${uuidv4()}${ext}`;
-    cb(null, filename);
+    const ext = path.extname(file.originalname)
+    const filename = `wishlist-${uuidv4()}${ext}`
+    cb(null, filename)
   },
-});
+})
 
 // Custom error types for better error handling
 export class WishlistUploadError extends Error {
@@ -46,8 +46,8 @@ export class WishlistUploadError extends Error {
     message: string,
     public statusCode: number,
   ) {
-    super(message);
-    this.name = 'WishlistUploadError';
+    super(message)
+    this.name = 'WishlistUploadError'
   }
 }
 
@@ -64,12 +64,12 @@ export const wishlistFileFilter = (
         `Unsupported file type: ${file.mimetype}. Only JPEG and HEIC files are supported.`,
         400,
       ),
-    );
+    )
   }
 
   // Additional validation based on file extension
-  const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExtensions = ['.jpg', '.jpeg', '.heic'];
+  const ext = path.extname(file.originalname).toLowerCase()
+  const allowedExtensions = ['.jpg', '.jpeg', '.heic']
 
   if (!allowedExtensions.includes(ext)) {
     return cb(
@@ -77,11 +77,11 @@ export const wishlistFileFilter = (
         `Unsupported file extension: ${ext}. Only .jpg, .jpeg, and .heic files are supported.`,
         400,
       ),
-    );
+    )
   }
 
-  cb(null, true);
-};
+  cb(null, true)
+}
 
 // Multer configuration for wishlist images
 export const wishlistImageUpload = multer({
@@ -91,7 +91,7 @@ export const wishlistImageUpload = multer({
     files: 1, // Only allow one file at a time
   },
   fileFilter: wishlistFileFilter,
-});
+})
 
 // Save wishlist image (handles both S3 and local storage)
 export async function saveWishlistImage(
@@ -99,24 +99,24 @@ export async function saveWishlistImage(
   file: Express.Multer.File,
 ): Promise<string> {
   if (USE_S3) {
-    return uploadWishlistImageToS3(userId, file);
+    return uploadWishlistImageToS3(userId, file)
   } else {
     // For local storage, return the relative URL
-    return getLocalWishlistImageUrl(userId, file.filename);
+    return getLocalWishlistImageUrl(userId, file.filename)
   }
 }
 
 // Get local wishlist image URL
 export function getLocalWishlistImageUrl(userId: string, filename: string): string {
-  return `/uploads/wishlist/${userId}/${filename}`;
+  return `/uploads/wishlist/${userId}/${filename}`
 }
 
 // Delete wishlist image (handles both S3 and local storage)
 export async function deleteWishlistImage(imageUrl: string): Promise<void> {
   if (USE_S3) {
-    await deleteWishlistImageFromS3(imageUrl);
+    await deleteWishlistImageFromS3(imageUrl)
   } else {
-    deleteLocalWishlistImage(imageUrl);
+    deleteLocalWishlistImage(imageUrl)
   }
 }
 
@@ -126,12 +126,12 @@ export function deleteLocalWishlistImage(imageUrl: string): void {
     const filePath = path.join(
       process.cwd(),
       imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl,
-    );
+    )
     if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(filePath)
     }
   } catch (error) {
-    console.error('Error deleting local wishlist image:', error);
+    console.error('Error deleting local wishlist image:', error)
     // Don't throw error for cleanup operations
   }
 }
@@ -142,7 +142,7 @@ export function validateFileSize(fileSize: number): void {
     throw new WishlistUploadError(
       `File size too large: ${Math.round(fileSize / (1024 * 1024))}MB. Maximum allowed size is ${MAX_FILE_SIZE / (1024 * 1024)}MB.`,
       413,
-    );
+    )
   }
 }
 
@@ -152,17 +152,17 @@ export function validateFileType(mimetype: string, originalname: string): void {
     throw new WishlistUploadError(
       `Unsupported file type: ${mimetype}. Only JPEG and HEIC files are supported.`,
       400,
-    );
+    )
   }
 
-  const ext = path.extname(originalname).toLowerCase();
-  const allowedExtensions = ['.jpg', '.jpeg', '.heic'];
+  const ext = path.extname(originalname).toLowerCase()
+  const allowedExtensions = ['.jpg', '.jpeg', '.heic']
 
   if (!allowedExtensions.includes(ext)) {
     throw new WishlistUploadError(
       `Unsupported file extension: ${ext}. Only .jpg, .jpeg, and .heic files are supported.`,
       400,
-    );
+    )
   }
 }
 
@@ -174,5 +174,5 @@ export function getFileInfo(file: Express.Multer.File) {
     size: file.size,
     sizeInMB: Math.round((file.size / (1024 * 1024)) * 100) / 100,
     extension: path.extname(file.originalname).toLowerCase(),
-  };
+  }
 }

@@ -16,8 +16,15 @@ set -e  # Exit on any error
 echo "🚀 Starting Full Development Environment..."
 echo ""
 
-# Load port configuration
-source scripts/load-ports.sh
+# Load environment configuration
+if [ -f ".env" ]; then
+    set -a  # automatically export all variables
+    source .env
+    set +a
+    echo "📋 Loaded environment configuration from .env"
+else
+    echo "⚠️  No .env file found, using defaults..."
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -113,8 +120,8 @@ fi
 # Step 0: Kill any processes running on our application ports
 if [ "$SKIP_PORT_CLEANUP" = false ]; then
     echo -e "${BLUE}🧹 Cleaning up ports for application services...${NC}"
-    kill_port $WEB_APP_PORT "Web App"
-    kill_port $AUTH_API_PORT "Auth API"
+    kill_port $FRONTEND_PORT "Frontend"
+    kill_port $AUTH_SERVICE_PORT "Auth Service"
     kill_port $LEGO_API_PORT "LEGO Projects API"
 else
     echo -e "${YELLOW}⏭️  Skipping port cleanup (lsof not available)${NC}"
@@ -144,7 +151,7 @@ docker-compose -f docker-compose.dev.yml ps
 echo ""
 
 # Step 2: Start Auth API service
-echo -e "${GREEN}🔐 Starting Auth API service (port $AUTH_API_PORT)...${NC}"
+echo -e "${GREEN}🔐 Starting Auth Service (port $AUTH_SERVICE_PORT)...${NC}"
 cd apps/api/auth-service
 pnpm dev > ../../../logs/auth-service.log 2>&1 &
 AUTH_PID=$!
@@ -154,8 +161,8 @@ cd ../../..
 sleep 5
 
 # Test auth service
-if curl -s http://localhost:$AUTH_API_PORT/api/auth/csrf > /dev/null; then
-    echo -e "${GREEN}✅ Auth service is running on http://localhost:$AUTH_API_PORT${NC}"
+if curl -s http://localhost:$AUTH_SERVICE_PORT/api/auth/csrf > /dev/null; then
+    echo -e "${GREEN}✅ Auth service is running on http://localhost:$AUTH_SERVICE_PORT${NC}"
 else
     echo -e "${YELLOW}⚠️  Auth service may still be starting...${NC}"
 fi
@@ -188,8 +195,8 @@ echo ""
 echo -e "${GREEN}🎉 Full Development Environment Started!${NC}"
 echo ""
 echo -e "${BLUE}📋 Service URLs:${NC}"
-echo "   🌐 Web App:              http://localhost:$WEB_APP_PORT (or check terminal output)"
-echo "   🔐 Auth API:             http://localhost:$AUTH_API_PORT/api"
+echo "   🌐 Frontend:             http://localhost:$FRONTEND_PORT (or check terminal output)"
+echo "   🔐 Auth Service:         http://localhost:$AUTH_SERVICE_PORT/api"
 echo "   🧱 LEGO Projects API:    http://localhost:$LEGO_API_PORT/api (if running)"
 echo ""
 echo -e "${BLUE}📊 Infrastructure Services:${NC}"

@@ -9,11 +9,13 @@ This document outlines the refactoring of the auth package to better leverage RT
 ### 1. **Simplified Auth Slice**
 
 **Before:**
+
 - Managed user data, tokens, authentication state, loading states, and errors
 - Duplicated state that RTK Query already handles
 - Complex state synchronization between auth slice and RTK Query
 
 **After:**
+
 - Only manages UI-specific state:
   - `isCheckingAuth`: Initial auth check loading state
   - `lastActivity`: Session management
@@ -23,11 +25,13 @@ This document outlines the refactoring of the auth package to better leverage RT
 ### 2. **Removed Auth Slice Dependencies from RTK Query**
 
 **Before:**
+
 - RTK Query endpoints had `onQueryStarted` callbacks that dispatched auth slice actions
 - Complex state synchronization between API cache and auth slice
 - Potential for state inconsistencies
 
 **After:**
+
 - RTK Query handles all API state independently
 - Uses cache tags for invalidation (`['Auth', 'User']`)
 - No direct coupling between RTK Query and auth slice
@@ -35,11 +39,13 @@ This document outlines the refactoring of the auth package to better leverage RT
 ### 3. **Updated useAuth Hook**
 
 **Before:**
+
 - Mixed data from auth slice and RTK Query
 - Complex error and loading state management
 - Potential for state conflicts
 
 **After:**
+
 - Gets user data directly from RTK Query cache: `authData?.data?.user`
 - Gets tokens directly from RTK Query cache: `authData?.data?.tokens`
 - Computes `isAuthenticated` from user data: `!!user`
@@ -50,26 +56,31 @@ This document outlines the refactoring of the auth package to better leverage RT
 ## Benefits of the Refactoring
 
 ### 1. **Single Source of Truth**
+
 - RTK Query cache is the authoritative source for API data
 - No more state synchronization issues
 - Consistent data across the application
 
 ### 2. **Automatic Cache Management**
+
 - RTK Query handles cache invalidation automatically
 - Optimistic updates and background refetching
 - Built-in deduplication and caching strategies
 
 ### 3. **Reduced Complexity**
+
 - Less state to manage manually
 - Fewer potential bugs from state synchronization
 - Cleaner separation of concerns
 
 ### 4. **Better Performance**
+
 - RTK Query's built-in optimizations
 - Automatic request deduplication
 - Intelligent cache invalidation
 
 ### 5. **Consistent Error Handling**
+
 - All API errors handled by RTK Query
 - Consistent error format across the application
 - Better error recovery mechanisms
@@ -112,7 +123,7 @@ This document outlines the refactoring of the auth package to better leverage RT
 Components using the `useAuth` hook don't need any changes. The interface remains the same:
 
 ```typescript
-const { user, isAuthenticated, isLoading, error, login, signup } = useAuth();
+const { user, isAuthenticated, isLoading, error, login, signup } = useAuth()
 ```
 
 ### For New Features
@@ -135,16 +146,19 @@ When adding new auth-related features:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Test auth slice for UI-specific state only
 - Test RTK Query endpoints independently
 - Test useAuth hook integration
 
 ### Integration Tests
+
 - Test component integration with RTK Query
 - Test cache invalidation scenarios
 - Test error handling flows
 
 ### Mock Strategy
+
 - Mock RTK Query responses for component tests
 - Use MSW for integration tests
 - Test cache behavior with real API calls
@@ -161,4 +175,4 @@ When adding new auth-related features:
 
 This refactoring successfully leverages RTK Query's strengths while reducing the complexity of state management. The auth system is now more maintainable, performant, and less prone to bugs from state synchronization issues.
 
-The refactoring maintains backward compatibility for components while providing a cleaner, more efficient architecture for future development. 
+The refactoring maintains backward compatibility for components while providing a cleaner, more efficient architecture for future development.

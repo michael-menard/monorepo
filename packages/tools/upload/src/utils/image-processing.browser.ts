@@ -1,103 +1,103 @@
 // Browser-only image processing using Canvas API
-import type { ImageProcessingOptions } from '../types/index.js';
+import type { ImageProcessingOptions } from '../types/index.js'
 
 export const processImageBrowser = async (
   file: File,
-  options: ImageProcessingOptions
+  options: ImageProcessingOptions,
 ): Promise<Blob> => {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const img = new Image()
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
 
     if (!ctx) {
-      reject(new Error('Canvas context not available'));
-      return;
+      reject(new Error('Canvas context not available'))
+      return
     }
 
     img.onload = () => {
-      const { naturalWidth: originalWidth, naturalHeight: originalHeight } = img;
-      
+      const { naturalWidth: originalWidth, naturalHeight: originalHeight } = img
+
       // Calculate target dimensions
-      let targetWidth = options.width || originalWidth;
-      let targetHeight = options.height || originalHeight;
+      let targetWidth = options.width || originalWidth
+      let targetHeight = options.height || originalHeight
 
       // Apply fit logic
       if (options.width && options.height) {
-        const aspectRatio = originalWidth / originalHeight;
-        const targetAspectRatio = options.width / options.height;
+        const aspectRatio = originalWidth / originalHeight
+        const targetAspectRatio = options.width / options.height
 
         switch (options.fit) {
           case 'contain':
             if (aspectRatio > targetAspectRatio) {
-              targetHeight = options.width / aspectRatio;
+              targetHeight = options.width / aspectRatio
             } else {
-              targetWidth = options.height * aspectRatio;
+              targetWidth = options.height * aspectRatio
             }
-            break;
+            break
           case 'cover':
             if (aspectRatio > targetAspectRatio) {
-              targetWidth = options.height * aspectRatio;
+              targetWidth = options.height * aspectRatio
             } else {
-              targetHeight = options.width / aspectRatio;
+              targetHeight = options.width / aspectRatio
             }
-            break;
+            break
           case 'fill':
             // Use specified dimensions exactly
-            break;
+            break
           case 'inside':
             if (originalWidth > options.width || originalHeight > options.height) {
               if (aspectRatio > targetAspectRatio) {
-                targetHeight = options.width / aspectRatio;
+                targetHeight = options.width / aspectRatio
               } else {
-                targetWidth = options.height * aspectRatio;
+                targetWidth = options.height * aspectRatio
               }
             } else {
-              targetWidth = originalWidth;
-              targetHeight = originalHeight;
+              targetWidth = originalWidth
+              targetHeight = originalHeight
             }
-            break;
+            break
           case 'outside':
             if (originalWidth < options.width && originalHeight < options.height) {
               if (aspectRatio > targetAspectRatio) {
-                targetWidth = options.height * aspectRatio;
+                targetWidth = options.height * aspectRatio
               } else {
-                targetHeight = options.width / aspectRatio;
+                targetHeight = options.width / aspectRatio
               }
             }
-            break;
+            break
         }
       }
 
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
+      canvas.width = targetWidth
+      canvas.height = targetHeight
 
       // Draw image
-      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
 
       // Convert to blob
       canvas.toBlob(
-        (blob) => {
-          URL.revokeObjectURL(img.src);
+        blob => {
+          URL.revokeObjectURL(img.src)
           if (blob) {
-            resolve(blob);
+            resolve(blob)
           } else {
-            reject(new Error('Failed to process image'));
+            reject(new Error('Failed to process image'))
           }
         },
         `image/${options.format || 'jpeg'}`,
-        (options.quality || 85) / 100
-      );
-    };
+        (options.quality || 85) / 100,
+      )
+    }
 
     img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      reject(new Error('Failed to load image'));
-    };
+      URL.revokeObjectURL(img.src)
+      reject(new Error('Failed to load image'))
+    }
 
-    img.src = URL.createObjectURL(file);
-  });
-};
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 export const cropImageBrowser = async (
   file: File,
@@ -105,52 +105,52 @@ export const cropImageBrowser = async (
   y: number,
   width: number,
   height: number,
-  options: Partial<ImageProcessingOptions> = {}
+  options: Partial<ImageProcessingOptions> = {},
 ): Promise<Blob> => {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const img = new Image()
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
 
     if (!ctx) {
-      reject(new Error('Canvas context not available'));
-      return;
+      reject(new Error('Canvas context not available'))
+      return
     }
 
     img.onload = () => {
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = width
+      canvas.height = height
 
       // Draw cropped image
-      ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+      ctx.drawImage(img, x, y, width, height, 0, 0, width, height)
 
       // Convert to blob
       canvas.toBlob(
-        (blob) => {
-          URL.revokeObjectURL(img.src);
+        blob => {
+          URL.revokeObjectURL(img.src)
           if (blob) {
-            resolve(blob);
+            resolve(blob)
           } else {
-            reject(new Error('Failed to crop image'));
+            reject(new Error('Failed to crop image'))
           }
         },
         `image/${options.format || 'jpeg'}`,
-        (options.quality || 85) / 100
-      );
-    };
+        (options.quality || 85) / 100,
+      )
+    }
 
     img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      reject(new Error('Failed to load image'));
-    };
+      URL.revokeObjectURL(img.src)
+      reject(new Error('Failed to load image'))
+    }
 
-    img.src = URL.createObjectURL(file);
-  });
-};
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 export const getImageMetadataBrowser = async (file: File) => {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new Image()
 
     img.onload = () => {
       const metadata = {
@@ -159,26 +159,26 @@ export const getImageMetadataBrowser = async (file: File) => {
         format: file.type.split('/')[1],
         size: file.size,
         density: window.devicePixelRatio || 1,
-      };
-      
-      URL.revokeObjectURL(img.src);
-      resolve(metadata);
-    };
+      }
+
+      URL.revokeObjectURL(img.src)
+      resolve(metadata)
+    }
 
     img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      reject(new Error('Failed to load image metadata'));
-    };
+      URL.revokeObjectURL(img.src)
+      reject(new Error('Failed to load image metadata'))
+    }
 
-    img.src = URL.createObjectURL(file);
-  });
-};
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 export const resizeImageBrowser = async (
   file: File,
   maxWidth: number,
   maxHeight: number,
-  quality: number = 85
+  quality: number = 85,
 ): Promise<Blob> => {
   return processImageBrowser(file, {
     width: maxWidth,
@@ -186,16 +186,16 @@ export const resizeImageBrowser = async (
     fit: 'inside',
     quality,
     format: file.type.split('/')[1] as any,
-  });
-};
+  })
+}
 
 export const convertImageFormatBrowser = async (
   file: File,
   format: 'jpeg' | 'png' | 'webp',
-  quality: number = 85
+  quality: number = 85,
 ): Promise<Blob> => {
   return processImageBrowser(file, {
     format,
     quality,
-  });
-};
+  })
+}

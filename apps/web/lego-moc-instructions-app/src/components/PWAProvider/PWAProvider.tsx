@@ -45,7 +45,7 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
       },
       onRegisterError(error: Error) {
         console.log('SW registration error', error)
-      }
+      },
     })
 
     // Handle PWA installation prompt
@@ -87,13 +87,13 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
 
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    
+
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt')
     } else {
       console.log('User dismissed the install prompt')
     }
-    
+
     setDeferredPrompt(null)
     setCanInstall(false)
   }
@@ -104,12 +104,8 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
     updateServiceWorker,
     closePrompt,
     canInstall,
-    installPrompt
+    installPrompt,
   }
 
-  return (
-    <PWAContext.Provider value={value}>
-      {children}
-    </PWAContext.Provider>
-  )
-} 
+  return <PWAContext.Provider value={value}>{children}</PWAContext.Provider>
+}

@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { AppAvatar } from './AppAvatar'
+import type {Meta, StoryObj} from '@storybook/react'
+import {AppAvatar} from './AppAvatar'
 
 const meta: Meta<typeof AppAvatar> = {
   title: 'UI/AppAvatar',
@@ -8,7 +8,8 @@ const meta: Meta<typeof AppAvatar> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'A specialized avatar component for displaying user profiles with various states and configurations.',
+        component:
+          'A specialized avatar component for displaying user profiles with various states and configurations.',
       },
     },
   },
@@ -35,7 +36,8 @@ export const Default: Story = {
 export const WithImage: Story = {
   args: {
     userName: 'Jane Smith',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
   },
 }
 
@@ -103,9 +105,27 @@ export const NoEmail: Story = {
 export const AllSizes: Story = {
   render: () => (
     <div className="flex items-center gap-4">
-      <AppAvatar userName="Small" size="sm" disabled={false} showEditButton={false} clickable={true} />
-      <AppAvatar userName="Medium" size="md" disabled={false} showEditButton={false} clickable={true} />
-      <AppAvatar userName="Large" size="lg" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar
+        userName="Small"
+        size="sm"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
+      <AppAvatar
+        userName="Medium"
+        size="md"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
+      <AppAvatar
+        userName="Large"
+        size="lg"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
     </div>
   ),
   parameters: {
@@ -120,10 +140,34 @@ export const AllSizes: Story = {
 export const AllStatuses: Story = {
   render: () => (
     <div className="flex items-center gap-4">
-      <AppAvatar userName="Online" size="md" disabled={false} showEditButton={false} clickable={true} />
-      <AppAvatar userName="Offline" size="md" disabled={false} showEditButton={false} clickable={true} />
-      <AppAvatar userName="Away" size="md" disabled={false} showEditButton={false} clickable={true} />
-      <AppAvatar userName="Busy" size="md" disabled={false} showEditButton={false} clickable={true} />
+      <AppAvatar
+        userName="Online"
+        size="md"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
+      <AppAvatar
+        userName="Offline"
+        size="md"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
+      <AppAvatar
+        userName="Away"
+        size="md"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
+      <AppAvatar
+        userName="Busy"
+        size="md"
+        disabled={false}
+        showEditButton={false}
+        clickable={true}
+      />
     </div>
   ),
   parameters: {
@@ -147,4 +191,4 @@ export const WithFallback: Story = {
       },
     },
   },
-} 
+}

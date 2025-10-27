@@ -76,7 +76,7 @@ export const MultipleProgressBars: Story = {
         </div>
         <Progress value={75} />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Data Processing</span>
@@ -84,7 +84,7 @@ export const MultipleProgressBars: Story = {
         </div>
         <Progress value={45} />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Validation</span>
@@ -92,7 +92,7 @@ export const MultipleProgressBars: Story = {
         </div>
         <Progress value={90} />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Finalization</span>
@@ -111,12 +111,12 @@ export const DifferentSizes: Story = {
         <span className="text-sm font-medium">Small Progress</span>
         <Progress value={60} className="h-1" />
       </div>
-      
+
       <div className="space-y-2">
         <span className="text-sm font-medium">Default Progress</span>
         <Progress value={60} />
       </div>
-      
+
       <div className="space-y-2">
         <span className="text-sm font-medium">Large Progress</span>
         <Progress value={60} className="h-4" />
@@ -135,7 +135,7 @@ export const CustomColors: Story = {
         </div>
         <Progress value={80} className="bg-green-100" />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Warning Progress</span>
@@ -143,7 +143,7 @@ export const CustomColors: Story = {
         </div>
         <Progress value={60} className="bg-yellow-100" />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Error Progress</span>
@@ -167,7 +167,7 @@ export const AnimatedProgress: Story = {
           <div className="h-full bg-blue-600 rounded-full animate-pulse"></div>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Processing</span>
@@ -177,4 +177,4 @@ export const AnimatedProgress: Story = {
       </div>
     </div>
   ),
-} 
+}

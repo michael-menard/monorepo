@@ -8,24 +8,16 @@ export default {
   ],
 
   // JSON files
-  '**/*.json': [
-    'prettier --write',
-  ],
+  '**/*.json': ['prettier --write'],
 
   // Markdown files
-  '**/*.md': [
-    'prettier --write',
-  ],
+  '**/*.md': ['prettier --write'],
 
   // CSS, SCSS files
-  '**/*.{css,scss}': [
-    'prettier --write',
-  ],
+  '**/*.{css,scss}': ['prettier --write'],
 
   // YAML files
-  '**/*.{yml,yaml}': [
-    'prettier --write',
-  ],
+  '**/*.{yml,yaml}': ['prettier --write'],
 
   // Package.json files - run dependency sync after changes
   '**/package.json': [
@@ -35,12 +27,9 @@ export default {
   ],
 
   // Specific configurations for different areas of the monorepo
-  
+
   // Root level files - use root ESLint config
-  './*.{js,jsx,ts,tsx}': [
-    'eslint --fix --max-warnings 0',
-    'prettier --write',
-  ],
+  './*.{js,jsx,ts,tsx}': ['eslint --fix --max-warnings 0', 'prettier --write'],
 
   // Apps - use turbo for consistent linting across apps
   'apps/**/*.{js,jsx,ts,tsx}': [
@@ -55,22 +44,13 @@ export default {
   ],
 
   // Test files - lighter linting rules
-  '**/*.{test,spec}.{js,jsx,ts,tsx}': [
-    'eslint --fix --max-warnings 0',
-    'prettier --write',
-  ],
+  '**/*.{test,spec}.{js,jsx,ts,tsx}': ['eslint --fix --max-warnings 0', 'prettier --write'],
 
   // Storybook files
-  '**/*.stories.{js,jsx,ts,tsx}': [
-    'eslint --fix --max-warnings 0',
-    'prettier --write',
-  ],
+  '**/*.stories.{js,jsx,ts,tsx}': ['eslint --fix --max-warnings 0', 'prettier --write'],
 
   // Configuration files
-  '**/*.config.{js,ts}': [
-    'eslint --fix --max-warnings 0',
-    'prettier --write',
-  ],
+  '**/*.config.{js,ts}': ['eslint --fix --max-warnings 0', 'prettier --write'],
 
   // Docker files
   '**/Dockerfile*': [
@@ -79,7 +59,5 @@ export default {
   ],
 
   // Environment files - just validate they exist and have proper format
-  '**/.env*': [
-    'bash -c \'echo "Environment file updated: $0"\'',
-  ],
-};
+  '**/.env*': ['bash -c \'echo "Environment file updated: $0"\''],
+}

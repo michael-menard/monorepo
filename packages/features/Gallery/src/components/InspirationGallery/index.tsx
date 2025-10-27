@@ -1,31 +1,31 @@
-import React, { useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import ImageCard from '../ImageCard/index.js';
-import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js';
-import { useIntersectionObserver } from '../../hooks/useIntersectionObserver.js';
-import type { GalleryImage } from '../../types/index.js';
+import React, { useCallback, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import ImageCard from '../ImageCard/index.js'
+import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js'
+import { useIntersectionObserver } from '../../hooks/useIntersectionObserver.js'
+import type { GalleryImage } from '../../types/index.js'
 
 export interface InspirationGalleryProps {
-  images: GalleryImage[];
-  className?: string;
-  onImageClick?: (image: GalleryImage) => void;
-  onImageLike?: (imageId: string, liked: boolean) => void;
-  onImageShare?: (imageId: string) => void;
-  onImageDelete?: (imageId: string) => void;
-  onImageDownload?: (imageId: string) => void;
-  onImageAddToAlbum?: (imageId: string) => void;
-  onImagesSelected?: (imageIds: string[]) => void;
-  selectedImages?: string[];
-  onLoadMore?: () => Promise<void>;
-  hasMore?: boolean;
-  loading?: boolean;
+  images: GalleryImage[]
+  className?: string
+  onImageClick?: (image: GalleryImage) => void
+  onImageLike?: (imageId: string, liked: boolean) => void
+  onImageShare?: (imageId: string) => void
+  onImageDelete?: (imageId: string) => void
+  onImageDownload?: (imageId: string) => void
+  onImageAddToAlbum?: (imageId: string) => void
+  onImagesSelected?: (imageIds: string[]) => void
+  selectedImages?: string[]
+  onLoadMore?: () => Promise<void>
+  hasMore?: boolean
+  loading?: boolean
   columns?: {
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-  };
-  gap?: number;
+    sm?: number
+    md?: number
+    lg?: number
+    xl?: number
+  }
+  gap?: number
 }
 
 const InspirationGallery: React.FC<InspirationGalleryProps> = ({
@@ -45,52 +45,47 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
   columns = { sm: 2, md: 3, lg: 4, xl: 5 },
   gap = 4,
 }) => {
-
   // const [imageHeights] = useState<{ [key: string]: number }>({});
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const { actions: dragActions } = useAlbumDragAndDrop();
+  const { actions: dragActions } = useAlbumDragAndDrop()
 
   // Intersection Observer for infinite scroll
   const handleIntersection = useCallback(
     (isIntersecting: boolean) => {
       if (isIntersecting && hasMore && !loading && onLoadMore) {
-        onLoadMore();
+        onLoadMore()
       }
     },
     [hasMore, loading, onLoadMore],
-  );
+  )
 
   const { ref: loadMoreRef } = useIntersectionObserver(handleIntersection, {
     threshold: 0.1,
     rootMargin: '100px',
-  });
+  })
 
   // Generate CSS columns based on breakpoints
   const getColumnClasses = () => {
-    const { sm, md, lg, xl } = columns;
-    return `columns-1 ${sm ? `sm:columns-${sm}` : ''} ${md ? `md:columns-${md}` : ''} ${lg ? `lg:columns-${lg}` : ''} ${xl ? `xl:columns-${xl}` : ''}`;
-  };
+    const { sm, md, lg, xl } = columns
+    return `columns-1 ${sm ? `sm:columns-${sm}` : ''} ${md ? `md:columns-${md}` : ''} ${lg ? `lg:columns-${lg}` : ''} ${xl ? `xl:columns-${xl}` : ''}`
+  }
 
   // Organize images into columns for masonry layout
   // const organizeImagesIntoColumns = (_images: GalleryImage[]) => [] as GalleryImage[][];
 
-
-
-
-
   const handleDragStart = (e: React.DragEvent, imageId: string) => {
-    dragActions.handleDragStart(e, [imageId]);
-  };
+    dragActions.handleDragStart(e, [imageId])
+  }
 
   const handleImageSelect = (imageId: string, checked: boolean) => {
     if (onImagesSelected) {
       const newSelected = checked
         ? [...selectedImages, imageId]
-        : selectedImages.filter((id) => id !== imageId);
-      onImagesSelected(newSelected);
+        : selectedImages.filter(id => id !== imageId)
+      onImagesSelected(newSelected)
     }
-  };
+  }
 
   if (!images || images.length === 0) {
     return (
@@ -106,7 +101,7 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
           <p className="text-gray-600 text-lg">Start adding images to your inspiration gallery!</p>
         </motion.div>
       </div>
-    );
+    )
   }
 
   return (
@@ -133,7 +128,7 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
               layout
             >
               <div
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
                     onImageClick?.(image)
@@ -149,15 +144,15 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
                   uploadDate={image.createdAt}
                   tags={image.tags}
                   onView={() => onImageClick?.(image)}
-                  onLike={(liked) => onImageLike?.(image.id, liked)}
+                  onLike={liked => onImageLike?.(image.id, liked)}
                   onShare={() => onImageShare?.(image.id)}
                   onDelete={() => onImageDelete?.(image.id)}
                   onDownload={() => onImageDownload?.(image.id)}
                   onAddToAlbum={() => onImageAddToAlbum?.(image.id)}
                   draggableId={image.id}
-                  onDragStart={(id) => handleDragStart({} as React.DragEvent, id)}
+                  onDragStart={id => handleDragStart({} as React.DragEvent, id)}
                   selected={selectedImages.includes(image.id)}
-                  onSelect={(checked) => handleImageSelect(image.id, checked)}
+                  onSelect={checked => handleImageSelect(image.id, checked)}
                 />
               </div>
             </motion.div>
@@ -166,7 +161,7 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
       </div>
 
       {/* Load More Trigger */}
-      {hasMore && (
+      {hasMore ? (
         <div ref={loadMoreRef} className="flex justify-center py-8">
           {loading ? (
             <div className="flex items-center space-x-2">
@@ -177,7 +172,7 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
             <div className="h-8" data-testid="load-more-trigger" />
           )}
         </div>
-      )}
+      ) : null}
 
       {/* End of gallery message */}
       {!hasMore && images.length > 0 && (
@@ -190,7 +185,7 @@ const InspirationGallery: React.FC<InspirationGalleryProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default InspirationGallery;
+export default InspirationGallery

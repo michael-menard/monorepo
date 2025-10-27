@@ -1,18 +1,19 @@
-import * as React from 'react';
-import { SanitizationConfig } from './lib/sanitization';
+import * as React from 'react'
+import {SanitizationConfig} from './lib/sanitization'
+
 export interface AppSafeContentProps {
-    /** Content to sanitize and display */
-    content: string;
-    /** HTML element to render as */
-    as?: keyof JSX.IntrinsicElements;
-    /** Custom sanitization configuration */
-    sanitizationConfig?: SanitizationConfig;
-    /** Whether to show warnings when content is sanitized */
-    showSanitizationWarnings?: boolean;
-    /** Callback when sanitization warnings occur */
-    onSanitizationWarning?: (warnings: string[]) => void;
-    /** Additional props to pass to the rendered element */
-    [key: string]: any;
+  /** Content to sanitize and display */
+  content: string
+  /** HTML element to render as */
+  as?: keyof JSX.IntrinsicElements
+  /** Custom sanitization configuration */
+  sanitizationConfig?: SanitizationConfig
+  /** Whether to show warnings when content is sanitized */
+  showSanitizationWarnings?: boolean
+  /** Callback when sanitization warnings occur */
+  onSanitizationWarning?: (warnings: string[]) => void
+  /** Additional props to pass to the rendered element */
+  [key: string]: any
 }
 /**
  * Safe Content component for displaying user-generated content with automatic sanitization
@@ -46,5 +47,5 @@ export interface AppSafeContentProps {
  * />
  * ```
  */
-export declare const AppSafeContent: React.FC<AppSafeContentProps>;
+export declare const AppSafeContent: React.FC<AppSafeContentProps>
 //# sourceMappingURL=AppSafeContent.d.ts.map

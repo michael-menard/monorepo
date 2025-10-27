@@ -51,4 +51,4 @@ Object.defineProperty(window, 'localStorage', {
     clear: vi.fn(),
   },
   writable: true,
-}) 
+})

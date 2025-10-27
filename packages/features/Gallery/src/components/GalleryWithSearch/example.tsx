@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { GalleryWithSearch } from '../../index';
-import type { GalleryImage } from '../../schemas';
+import React, { useState } from 'react'
+import { GalleryWithSearch } from '../../index'
+import type { GalleryImage } from '../../schemas'
 
 // Example usage of GalleryWithSearch component
 const GalleryWithSearchExample: React.FC = () => {
@@ -45,19 +45,19 @@ const GalleryWithSearchExample: React.FC = () => {
       createdAt: new Date('2023-01-04'),
       updatedAt: new Date('2023-01-04'),
     },
-  ]);
+  ])
 
   const handleImageClick = (image: GalleryImage) => {
-    console.log('Image clicked:', image.title);
-  };
+    console.log('Image clicked:', image.title)
+  }
 
   const handleImageLike = (imageId: string, liked: boolean) => {
-    console.log('Image liked:', imageId, liked);
-  };
+    console.log('Image liked:', imageId, liked)
+  }
 
   const handleImageDelete = (imageId: string) => {
-    console.log('Image deleted:', imageId);
-  };
+    console.log('Image deleted:', imageId)
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -80,7 +80,7 @@ const GalleryWithSearchExample: React.FC = () => {
         className="bg-white rounded-lg shadow-lg p-6"
       />
     </div>
-  );
-};
+  )
+}
 
-export default GalleryWithSearchExample; 
+export default GalleryWithSearchExample

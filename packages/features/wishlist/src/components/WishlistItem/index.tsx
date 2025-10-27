@@ -1,5 +1,5 @@
-import React from 'react';
-import type { WishlistItemProps } from '../../types';
+import React from 'react'
+import type { WishlistItemProps } from '../../types'
 
 export const WishlistItem: React.FC<WishlistItemProps> = ({
   item,
@@ -19,19 +19,11 @@ export const WishlistItem: React.FC<WishlistItemProps> = ({
     >
       <div className="wishlist-item-content">
         <h3 className="wishlist-item-name">{item.name}</h3>
-        {item.description && (
-          <p className="wishlist-item-description">{item.description}</p>
-        )}
-        {item.price && (
-          <p className="wishlist-item-price">${item.price.toFixed(2)}</p>
-        )}
+        {item.description ? <p className="wishlist-item-description">{item.description}</p> : null}
+        {item.price ? <p className="wishlist-item-price">${item.price.toFixed(2)}</p> : null}
         <div className="wishlist-item-meta">
-          <span className={`priority priority-${item.priority}`}>
-            {item.priority}
-          </span>
-          {item.category && (
-            <span className="category">{item.category}</span>
-          )}
+          <span className={`priority priority-${item.priority}`}>{item.priority}</span>
+          {item.category ? <span className="category">{item.category}</span> : null}
         </div>
         <div className="wishlist-item-actions">
           <button
@@ -50,7 +42,7 @@ export const WishlistItem: React.FC<WishlistItemProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default WishlistItem; 
+export default WishlistItem

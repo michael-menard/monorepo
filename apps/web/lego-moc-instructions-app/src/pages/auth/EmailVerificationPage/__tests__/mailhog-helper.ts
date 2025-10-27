@@ -1,6 +1,6 @@
 /**
  * MailHog Helper for E2E Testing
- * 
+ *
  * MailHog is a local email testing tool that runs on your machine.
  * It captures emails sent by your application and provides a web interface.
  */
@@ -50,7 +50,9 @@ export class MailHogHelper {
   private baseUrl: string
   private apiUrl: string
 
-  constructor(config: MailHogConfig = { host: 'localhost', port: 1025, apiPort: 8025, webPort: 8025 }) {
+  constructor(
+    config: MailHogConfig = { host: 'localhost', port: 1025, apiPort: 8025, webPort: 8025 },
+  ) {
     this.config = config
     this.baseUrl = `http://${config.host}:${config.webPort}`
     this.apiUrl = `http://${config.host}:${config.apiPort}`
@@ -78,7 +80,7 @@ export class MailHogHelper {
       if (!response.ok) {
         throw new Error(`Failed to fetch emails: ${response.statusText}`)
       }
-      
+
       const data = await response.json()
       return data.items || []
     } catch (error) {
@@ -92,10 +94,10 @@ export class MailHogHelper {
    */
   async findEmailsForRecipient(to: string): Promise<Array<MailHogEmail>> {
     const emails = await this.fetchEmails()
-    return emails.filter(email => 
-      email.To.some(recipient => 
-        `${recipient.Mailbox}@${recipient.Domain}`.toLowerCase() === to.toLowerCase()
-      )
+    return emails.filter(email =>
+      email.To.some(
+        recipient => `${recipient.Mailbox}@${recipient.Domain}`.toLowerCase() === to.toLowerCase(),
+      ),
     )
   }
 
@@ -104,11 +106,14 @@ export class MailHogHelper {
    */
   async findVerificationEmail(to: string): Promise<MailHogEmail | null> {
     const emails = await this.findEmailsForRecipient(to)
-    return emails.find(email => {
-      const subject = email.Content.Headers.Subject[0] || ''
-      return subject.toLowerCase().includes('verification') ||
-             subject.toLowerCase().includes('verify')
-    }) || null
+    return (
+      emails.find(email => {
+        const subject = email.Content.Headers.Subject[0] || ''
+        return (
+          subject.toLowerCase().includes('verification') || subject.toLowerCase().includes('verify')
+        )
+      }) || null
+    )
   }
 
   /**
@@ -116,7 +121,7 @@ export class MailHogHelper {
    */
   extractVerificationCode(email: MailHogEmail): string | null {
     const body = email.Content.Body || ''
-    
+
     // Try to extract from HTML body first
     const htmlMatch = body.match(/(?:verification|code|otp)[\s\S]*?(\d{6})/i)
     if (htmlMatch) {
@@ -164,13 +169,13 @@ export class MailHogHelper {
    */
   async waitForVerificationEmail(to: string, timeoutMs: number = 30000): Promise<string | null> {
     const startTime = Date.now()
-    
+
     while (Date.now() - startTime < timeoutMs) {
       const code = await this.getVerificationCode(to)
       if (code) {
         return code
       }
-      
+
       // Wait 2 seconds before checking again
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
@@ -213,13 +218,13 @@ export class MailHogHelper {
   async getStats(): Promise<{ totalEmails: number; recipients: Set<string> }> {
     const emails = await this.fetchEmails()
     const recipients = new Set<string>()
-    
+
     emails.forEach(email => {
       email.To.forEach(recipient => {
         recipients.add(`${recipient.Mailbox}@${recipient.Domain}`)
       })
     })
-    
+
     return { totalEmails: emails.length, recipients }
   }
 
@@ -262,7 +267,7 @@ export const defaultMailHogConfig: MailHogConfig = {
   host: 'localhost',
   port: 1025,
   apiPort: 8025,
-  webPort: 8025
+  webPort: 8025,
 }
 
 // Default helper instance
@@ -273,7 +278,10 @@ export async function getVerificationCodeFromMailHog(email: string): Promise<str
   return mailHogHelper.getVerificationCode(email)
 }
 
-export async function waitForVerificationEmail(email: string, timeoutMs: number = 30000): Promise<string | null> {
+export async function waitForVerificationEmail(
+  email: string,
+  timeoutMs: number = 30000,
+): Promise<string | null> {
   return mailHogHelper.waitForVerificationEmail(email, timeoutMs)
 }
 
@@ -283,4 +291,4 @@ export async function clearMailHogEmails(): Promise<void> {
 
 export async function getMailHogStats(): Promise<{ totalEmails: number; recipients: Set<string> }> {
   return mailHogHelper.getStats()
-} 
+}

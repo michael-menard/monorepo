@@ -29,27 +29,23 @@ function DebugAuth() {
           <div>
             <strong>Is Authenticated:</strong> {isAuthenticated ? 'Yes' : 'No'}
           </div>
-          
-          {user && (
+
+          {user ? (
             <div>
               <strong>User:</strong>
               <pre className="bg-gray-100 p-2 rounded text-sm mt-1">
                 {JSON.stringify(user, null, 2)}
               </pre>
             </div>
-          )}
-          
-          {isAuthenticated && (
+          ) : null}
+
+          {isAuthenticated ? (
             <Button onClick={handleLogout} variant="destructive">
               Test Logout
             </Button>
-          )}
-          
-          {!isAuthenticated && (
-            <div className="text-green-600">
-              ✅ User is logged out
-            </div>
-          )}
+          ) : null}
+
+          {!isAuthenticated && <div className="text-green-600">✅ User is logged out</div>}
         </CardContent>
       </Card>
     </div>

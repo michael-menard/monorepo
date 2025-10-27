@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -103,18 +103,18 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './index';
+} from './index'
 
 export const ComponentShowcase: React.FC = () => {
-  const [progress, setProgress] = React.useState(13);
-  const [sliderValue, setSliderValue] = React.useState([50]);
-  const [radioValue, setRadioValue] = React.useState('option-one');
-  const [toggleValue, setToggleValue] = React.useState('bold');
+  const [progress, setProgress] = React.useState(13)
+  const [sliderValue, setSliderValue] = React.useState([50])
+  const [radioValue, setRadioValue] = React.useState('option-one')
+  const [toggleValue, setToggleValue] = React.useState('bold')
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setProgress(66), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    const timer = setTimeout(() => setProgress(66), 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <TooltipProvider>
@@ -417,7 +417,8 @@ export const ComponentShowcase: React.FC = () => {
                 <AccordionItem value="item-2">
                   <AccordionTrigger>Is it styled?</AccordionTrigger>
                   <AccordionContent>
-                    Yes. It comes with default styles that matches the other components&apos; aesthetic.
+                    Yes. It comes with default styles that matches the other components&apos;
+                    aesthetic.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
@@ -540,5 +541,5 @@ export const ComponentShowcase: React.FC = () => {
       </div>
       <Toaster />
     </TooltipProvider>
-  );
-}; 
+  )
+}

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
-import { server } from '../../../../test/mocks/server'
+import { server } from '../../../../__tests__/mocks/server'
 import EmailVerificationPage from '../index'
 
 // Mock localStorage
@@ -78,7 +78,7 @@ describe('EmailVerificationPage API Integration', () => {
       server.use(
         http.post('*/auth/verify-email', () => {
           return HttpResponse.error()
-        })
+        }),
       )
 
       const user = userEvent.setup()
@@ -103,18 +103,18 @@ describe('EmailVerificationPage API Integration', () => {
           return HttpResponse.json({
             success: true,
             message: 'Email verified successfully',
-            data: { 
-              user: { 
-                _id: '1', 
-                email: 'test@example.com', 
+            data: {
+              user: {
+                _id: '1',
+                email: 'test@example.com',
                 isVerified: true,
                 lastLogin: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              } 
-            }
+                updatedAt: new Date().toISOString(),
+              },
+            },
           })
-        })
+        }),
       )
 
       const user = userEvent.setup()
@@ -141,20 +141,26 @@ describe('EmailVerificationPage API Integration', () => {
       await user.click(resendButton)
 
       // Wait for success alert
-      await waitFor(() => {
-        expect(global.alert).toHaveBeenCalledWith('Verification code resent successfully!')
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(global.alert).toHaveBeenCalledWith('Verification code resent successfully!')
+        },
+        { timeout: 3000 },
+      )
     })
 
     it('should handle failed resend verification', async () => {
       // Override handler to simulate failure
       server.use(
         http.post('*/auth/resend-verification', () => {
-          return HttpResponse.json({
-            success: false,
-            message: 'Email is required'
-          }, { status: 400 })
-        })
+          return HttpResponse.json(
+            {
+              success: false,
+              message: 'Email is required',
+            },
+            { status: 400 },
+          )
+        }),
       )
 
       const user = userEvent.setup()
@@ -163,14 +169,17 @@ describe('EmailVerificationPage API Integration', () => {
       const resendButton = screen.getByRole('button', { name: 'Resend Code' })
       await user.click(resendButton)
 
-      await waitFor(() => {
-        expect(global.alert).toHaveBeenCalledWith('Email is required')
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(global.alert).toHaveBeenCalledWith('Email is required')
+        },
+        { timeout: 3000 },
+      )
     })
 
     it('should handle missing email in localStorage', async () => {
       localStorageMock.getItem.mockReturnValue(null)
-      
+
       const user = userEvent.setup()
       renderComponent()
 
@@ -186,7 +195,7 @@ describe('EmailVerificationPage API Integration', () => {
       server.use(
         http.post('*/auth/resend-verification', () => {
           return HttpResponse.error()
-        })
+        }),
       )
 
       const user = userEvent.setup()
@@ -195,9 +204,12 @@ describe('EmailVerificationPage API Integration', () => {
       const resendButton = screen.getByRole('button', { name: 'Resend Code' })
       await user.click(resendButton)
 
-      await waitFor(() => {
-        expect(global.alert).toHaveBeenCalledWith('Network error. Please check your connection.')
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(global.alert).toHaveBeenCalledWith('Network error. Please check your connection.')
+        },
+        { timeout: 3000 },
+      )
     })
   })
 
@@ -207,7 +219,7 @@ describe('EmailVerificationPage API Integration', () => {
       renderComponent()
 
       const codeInput = screen.getByPlaceholderText('Enter 6-digit code')
-      
+
       // Try to submit with 5 characters
       await user.type(codeInput, '12345')
       const submitButton = screen.getByRole('button', { name: 'Verify Email' })
@@ -223,10 +235,10 @@ describe('EmailVerificationPage API Integration', () => {
       renderComponent()
 
       const codeInput = screen.getByPlaceholderText('Enter 6-digit code')
-      
+
       // Try to type more than 6 characters
       await user.type(codeInput, '1234567')
-      
+
       // Check that only 6 characters are accepted
       expect(codeInput).toHaveValue('123456')
     })
@@ -273,11 +285,14 @@ describe('EmailVerificationPage API Integration', () => {
       // Override handler to return AuthApiError format
       server.use(
         http.post('*/auth/verify-email', () => {
-          return HttpResponse.json({
-            success: false,
-            message: 'Custom auth error message'
-          }, { status: 401 })
-        })
+          return HttpResponse.json(
+            {
+              success: false,
+              message: 'Custom auth error message',
+            },
+            { status: 401 },
+          )
+        }),
       )
 
       const user = userEvent.setup()
@@ -288,9 +303,12 @@ describe('EmailVerificationPage API Integration', () => {
       const submitButton = screen.getByRole('button', { name: 'Verify Email' })
       await user.click(submitButton)
 
-      await waitFor(() => {
-        expect(screen.getByText('Custom auth error message')).toBeInTheDocument()
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(screen.getByText('Custom auth error message')).toBeInTheDocument()
+        },
+        { timeout: 3000 },
+      )
     })
   })
-}) 
+})

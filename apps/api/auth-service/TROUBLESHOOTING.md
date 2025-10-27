@@ -7,17 +7,21 @@
 If you're seeing "localhost refused to connect" or "ERR_CONNECTION_REFUSED" errors:
 
 1. **Check if the server is running**
+
    ```bash
    ps aux | grep node
    ```
 
 2. **Try the minimal debug server**
+
    ```bash
    pnpm run debug-server
    ```
+
    Then visit http://localhost:5001
 
 3. **Check for port conflicts**
+
    ```bash
    pnpm run killport 5000
    pnpm run killport 5001
@@ -38,6 +42,7 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
    This often happens when copying/pasting code or merging files incorrectly.
 
 2. **Run the TypeScript type checker**
+
    ```bash
    pnpm run check
    ```
@@ -48,12 +53,14 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
 ## MongoDB Connection Issues
 
 1. **Verify MongoDB is running**
+
    ```bash
    brew services list  # on macOS with Homebrew
    ```
 
 2. **Try running without database**
    Comment out the MongoDB connection in index.ts temporarily:
+
    ```typescript
    // await connectDB();
    ```
@@ -64,6 +71,7 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
 ## Quick Fixes
 
 1. **Start completely fresh**
+
    ```bash
    pnpm run clean
    pnpm install
@@ -71,16 +79,19 @@ If you see errors like "The symbol has already been declared" or "Multiple expor
    ```
 
 2. **Try the most basic server**
+
    ```bash
    pnpm run basic-server
    ```
 
 3. **Debug with minimal dependencies**
+
    ```bash
    pnpm run debug-server
    ```
 
 4. **Check for port conflicts**
+
    ```bash
    lsof -i :5000
    lsof -i :5001

@@ -22,16 +22,16 @@ A wrapper component that adds guided tour functionality to the standard ProfileP
 #### Usage
 
 ```tsx
-import { ProfilePageWithTour } from '@repo/profile';
+import { ProfilePageWithTour } from '@repo/profile'
 
 const MyProfilePage = () => {
   const handleTourComplete = () => {
-    console.log('Tour completed!');
-  };
+    console.log('Tour completed!')
+  }
 
   const handleTourSkip = () => {
-    console.log('Tour skipped.');
-  };
+    console.log('Tour skipped.')
+  }
 
   return (
     <ProfilePageWithTour
@@ -41,8 +41,8 @@ const MyProfilePage = () => {
       onTourComplete={handleTourComplete}
       onTourSkip={handleTourSkip}
     />
-  );
-};
+  )
+}
 ```
 
 ### ProfileTourExample
@@ -52,11 +52,11 @@ A complete example component that demonstrates the guided tour functionality wit
 #### Usage
 
 ```tsx
-import { ProfileTourExample } from '@repo/profile';
+import { ProfileTourExample } from '@repo/profile'
 
 const ExamplePage = () => {
-  return <ProfileTourExample showTour={true} />;
-};
+  return <ProfileTourExample showTour={true} />
+}
 ```
 
 ## Tour Steps
@@ -73,21 +73,25 @@ The guided tour includes the following steps:
 ## Features
 
 ### Interactive Guidance
+
 - Highlights specific elements on the interface
 - Provides contextual explanations
 - Guides users through complex workflows
 
 ### Smart Positioning
+
 - Automatically calculates optimal popover positioning
 - Works perfectly on any screen size
 - Responsive design
 
 ### Completion Tracking
+
 - Tracks tour completion status in localStorage
 - Prevents showing the tour repeatedly
 - Customizable storage key
 
 ### Progress Tracking
+
 - Built-in progress indicator
 - Smooth transitions between steps
 - Clear navigation controls
@@ -95,6 +99,7 @@ The guided tour includes the following steps:
 ## Customization
 
 ### Tour Content
+
 You can customize the tour content by modifying the `ProfilePageWithTour` component:
 
 ```tsx
@@ -110,6 +115,7 @@ You can customize the tour content by modifying the `ProfilePageWithTour` compon
 ```
 
 ### Styling
+
 The tour trigger button and popovers can be styled using Tailwind CSS classes:
 
 ```tsx
@@ -119,12 +125,11 @@ The tour trigger button and popovers can be styled using Tailwind CSS classes:
 ```
 
 ### Storage
+
 The tour completion status is stored in localStorage with the key `profile-tour-completed`. You can customize this:
 
 ```tsx
-<TourProvider storageKey="my-custom-tour-key">
-  {/* Your content */}
-</TourProvider>
+<TourProvider storageKey="my-custom-tour-key">{/* Your content */}</TourProvider>
 ```
 
 ## Integration with Existing Profile Components
@@ -148,16 +153,19 @@ The guided tour works seamlessly with existing profile components:
 ## Troubleshooting
 
 ### Tour not showing
+
 - Check that `showTour` prop is set to `true`
 - Verify that the tour hasn't been completed before (check localStorage)
 - Ensure all required dependencies are installed
 
 ### Import errors
+
 - Make sure `@repo/ui` is properly installed and built
 - Verify that the guided tour components are exported from the UI package
 - Check that the profile package has `@repo/ui` as a dependency
 
 ### Styling issues
+
 - Ensure Tailwind CSS is properly configured
 - Check that the tour components are using the correct CSS classes
 - Verify that the theme (light/dark) is properly applied
@@ -172,4 +180,4 @@ The guided tour works seamlessly with existing profile components:
 
 - [RigidUI Guided Tour Documentation](https://www.rigidui.com/docs/components/guided-tour)
 - [Profile Feature Documentation](./README.md)
-- [UI Package Documentation](../ui/README.md) 
+- [UI Package Documentation](../ui/README.md)

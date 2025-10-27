@@ -17,7 +17,7 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   location: text('location'), // <-- new column
-});
+})
 ```
 
 ---
@@ -62,14 +62,14 @@ npx drizzle-kit push:pg
 
 ## Summary Table
 
-| Step                | What to do                                      |
-|---------------------|-------------------------------------------------|
-| 1. Update schema    | Add column in `schema.ts`                       |
-| 2. Generate migrate | `npx drizzle-kit generate:pg`                   |
-| 3. Review migration | Check generated SQL file                        |
-| 4. Run migration    | `npx drizzle-kit push:pg`                       |
-| 5. Update code      | Update types, validation, and usage in code     |
+| Step                | What to do                                  |
+| ------------------- | ------------------------------------------- |
+| 1. Update schema    | Add column in `schema.ts`                   |
+| 2. Generate migrate | `npx drizzle-kit generate:pg`               |
+| 3. Review migration | Check generated SQL file                    |
+| 4. Run migration    | `npx drizzle-kit push:pg`                   |
+| 5. Update code      | Update types, validation, and usage in code |
 
 ---
 
-**Need help?** Ask for a step-by-step or example for your specific case! 
+**Need help?** Ask for a step-by-step or example for your specific case!

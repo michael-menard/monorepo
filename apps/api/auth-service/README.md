@@ -26,6 +26,7 @@ apps/auth-service/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+
 - MongoDB (local or cloud)
 - pnpm (recommended package manager)
@@ -33,11 +34,13 @@ apps/auth-service/
 ### Installation
 
 1. **Install dependencies from the root:**
+
    ```bash
    pnpm install
    ```
 
 2. **Set up environment variables:**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
@@ -46,16 +49,19 @@ apps/auth-service/
 3. **Start the development servers:**
 
    **Backend only:**
+
    ```bash
    pnpm --filter @repo/auth-service dev
    ```
 
    **Frontend only:**
+
    ```bash
    pnpm --filter @repo/auth-service-frontend dev
    ```
 
    **Both backend and frontend:**
+
    ```bash
    pnpm dev
    ```
@@ -63,12 +69,14 @@ apps/auth-service/
 ## 🔧 Development
 
 ### Backend Development
+
 - **Port:** 5000 (default)
 - **Hot reload:** Enabled with nodemon
 - **TypeScript:** Full type checking
 - **ESLint:** Code linting
 
 ### Frontend Development
+
 - **Port:** 5173 (default)
 - **Vite:** Fast development server
 - **React:** Latest version with hooks
@@ -77,6 +85,7 @@ apps/auth-service/
 ### Available Scripts
 
 **Backend:**
+
 ```bash
 pnpm --filter @repo/auth-service dev          # Start development server
 pnpm --filter @repo/auth-service build        # Build for production
@@ -86,6 +95,7 @@ pnpm --filter @repo/auth-service check-types  # TypeScript type checking
 ```
 
 **Frontend:**
+
 ```bash
 pnpm --filter @repo/auth-service-frontend dev     # Start development server
 pnpm --filter @repo/auth-service-frontend build   # Build for production
@@ -96,6 +106,7 @@ pnpm --filter @repo/auth-service-frontend lint    # Run ESLint
 ## 🔐 Authentication Features
 
 ### Backend API Endpoints
+
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
@@ -105,6 +116,7 @@ pnpm --filter @repo/auth-service-frontend lint    # Run ESLint
 - `GET /api/auth/verify-email` - Email verification
 
 ### Security Features
+
 - **JWT Tokens:** Access and refresh tokens
 - **Password Hashing:** bcrypt with 12 salt rounds
 - **CORS Protection:** Configurable origins
@@ -116,21 +128,25 @@ pnpm --filter @repo/auth-service-frontend lint    # Run ESLint
 ## 🗄️ Database
 
 ### MongoDB Models
+
 - **User:** Authentication and profile data
 - **Session:** User session management
 - **EmailVerification:** Email verification tokens
 
 ### Database Connection
+
 The service uses Mongoose ODM with automatic connection management and error handling.
 
 ## 📧 Email Integration
 
 ### Email Configuration
+
 - **Development:** Uses Ethereal Email for email testing
 - **Production:** Configurable SMTP settings
 - **Templates:** Pre-built email templates
 
 ### Email Features
+
 - Welcome emails
 - Password reset emails
 - Email verification
@@ -139,6 +155,7 @@ The service uses Mongoose ODM with automatic connection management and error han
 ## 🔒 Security Configuration
 
 ### Environment Variables
+
 ```bash
 # Server
 PORT=5000
@@ -162,6 +179,7 @@ ETHEREAL_PASS=your-ethereal-password
 ## 🧪 Testing
 
 ### Backend Testing
+
 ```bash
 # Run tests
 pnpm --filter @repo/auth-service test
@@ -171,6 +189,7 @@ pnpm --filter @repo/auth-service test:coverage
 ```
 
 ### Frontend Testing
+
 ```bash
 # Run tests
 pnpm --filter @repo/auth-service-frontend test
@@ -182,7 +201,9 @@ pnpm --filter @repo/auth-service-frontend test:ui
 ## 🚀 Deployment
 
 ### Backend Deployment
+
 1. Build the application:
+
    ```bash
    pnpm --filter @repo/auth-service build
    ```
@@ -193,7 +214,9 @@ pnpm --filter @repo/auth-service-frontend test:ui
    ```
 
 ### Frontend Deployment
+
 1. Build the application:
+
    ```bash
    pnpm --filter @repo/auth-service-frontend build
    ```
@@ -205,19 +228,23 @@ pnpm --filter @repo/auth-service-frontend test:ui
 ### Common Issues
 
 **MongoDB Connection:**
+
 - Ensure MongoDB is running
 - Check connection string in `.env`
 - Verify network connectivity
 
 **CORS Errors:**
+
 - Check `ALLOWED_ORIGINS` in `.env`
 - Ensure frontend URL is included
 
 **JWT Issues:**
+
 - Verify `JWT_SECRET` is set
 - Check token expiration settings
 
 ### Debug Mode
+
 ```bash
 # Enable debug logging
 NODE_ENV=development DEBUG=* pnpm --filter @repo/auth-service dev
@@ -226,6 +253,7 @@ NODE_ENV=development DEBUG=* pnpm --filter @repo/auth-service dev
 ## 📚 API Documentation
 
 ### Authentication Flow
+
 1. **Register:** `POST /api/auth/register`
 2. **Login:** `POST /api/auth/login`
 3. **Access Protected Routes:** Include `Authorization: Bearer <token>`
@@ -235,6 +263,7 @@ NODE_ENV=development DEBUG=* pnpm --filter @repo/auth-service dev
 ### Request/Response Examples
 
 **Registration:**
+
 ```json
 POST /api/auth/register
 {
@@ -245,6 +274,7 @@ POST /api/auth/register
 ```
 
 **Login:**
+
 ```json
 POST /api/auth/login
 {

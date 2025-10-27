@@ -1,38 +1,39 @@
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form'
 // import { useState } from 'react'; // Removed - not needed
-import { zodResolver } from '@hookform/resolvers/zod';
-import { motion } from 'framer-motion';
+import { zodResolver } from '@hookform/resolvers/zod'
+import { motion } from 'framer-motion'
 // import { Mail, Lock } from 'lucide-react'; // Removed - icons not used with shadcn Input
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth.js';
-import { LoginSchema, type LoginFormData } from '../../schemas/index.js';
-import { Input, Button } from '@repo/ui';
-import { FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui';
-import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
-import type { SerializedError } from '@reduxjs/toolkit';
+import { useNavigate } from 'react-router-dom'
+import { Input, Button, FieldErrorMessage, FormLevelErrorMessage } from '@repo/ui'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
+import type { SerializedError } from '@reduxjs/toolkit'
+import { LoginSchema, type LoginFormData } from '../../schemas/index.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 // Helper function to convert RTK Query errors to the format expected by FormLevelErrorMessage
-const convertError = (error: FetchBaseQueryError | SerializedError | undefined): string | { message?: string } | undefined => {
-  if (!error) return undefined;
-  
+const convertError = (
+  error: FetchBaseQueryError | SerializedError | undefined,
+): string | { message?: string } | undefined => {
+  if (!error) return undefined
+
   if ('status' in error) {
     // FetchBaseQueryError
     if (typeof error.data === 'string') {
-      return error.data;
+      return error.data
     }
     if (error.data && typeof error.data === 'object' && 'message' in error.data) {
-      return { message: String(error.data.message) };
+      return { message: String(error.data.message) }
     }
-    return `Error ${error.status}: ${error.data || 'Unknown error'}`;
+    return `Error ${error.status}: ${error.data || 'Unknown error'}`
   }
-  
+
   // SerializedError
-  return error.message || 'An error occurred';
-};
+  return error.message || 'An error occurred'
+}
 
 export const LoginForm = () => {
-  const { login, isLoading, error } = useAuth();
-  const navigate = useNavigate();
+  const { login, isLoading, error } = useAuth()
+  const navigate = useNavigate()
   // Removed showPassword state - using simple password input
 
   const {
@@ -42,24 +43,24 @@ export const LoginForm = () => {
   } = useForm<LoginFormData>({
     resolver: zodResolver(LoginSchema),
     mode: 'onChange',
-  });
+  })
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await login({ email: data.email, password: data.password });
+      await login({ email: data.email, password: data.password })
     } catch (err) {
       // Handle any additional errors here if needed
-      console.error('Login error:', err);
+      console.error('Login error:', err)
     }
-  };
+  }
 
   const handleForgotPassword = () => {
-    navigate('/forgot-password');
-  };
+    navigate('/forgot-password')
+  }
 
   const handleSignUp = () => {
-    navigate('/signup');
-  };
+    navigate('/signup')
+  }
 
   return (
     <motion.div
@@ -81,10 +82,7 @@ export const LoginForm = () => {
               {...register('email')}
               className={errors.email ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            <FieldErrorMessage
-              error={errors.email}
-              fieldName="Email"
-            />
+            <FieldErrorMessage error={errors.email} fieldName="Email" />
           </div>
 
           <div>
@@ -94,10 +92,7 @@ export const LoginForm = () => {
               {...register('password')}
               className={errors.password ? 'border-red-500 focus:ring-red-500' : ''}
             />
-            <FieldErrorMessage
-              error={errors.password}
-              fieldName="Password"
-            />
+            <FieldErrorMessage error={errors.password} fieldName="Password" />
           </div>
 
           <div className="flex items-center mb-6">
@@ -112,17 +107,17 @@ export const LoginForm = () => {
 
           <FormLevelErrorMessage error={error ? convertError(error) : undefined} />
 
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               type="submit"
               disabled={isSubmitting || isLoading}
               className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200"
             >
               {isSubmitting || isLoading ? (
-                <div data-testid="loader-icon" className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                <div
+                  data-testid="loader-icon"
+                  className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"
+                />
               ) : (
                 'Login'
               )}
@@ -134,17 +129,13 @@ export const LoginForm = () => {
       <div className="px-8 py-4 bg-gray-900 bg-opacity-50 flex justify-center">
         <p className="text-sm text-gray-400">
           Don't have an account?{' '}
-          <button
-            type="button"
-            onClick={handleSignUp}
-            className="text-green-400 hover:underline"
-          >
+          <button type="button" onClick={handleSignUp} className="text-green-400 hover:underline">
             Sign up
           </button>
         </p>
       </div>
     </motion.div>
-  );
-};
+  )
+}
 
-export default LoginForm; 
+export default LoginForm

@@ -1,7 +1,7 @@
-import js from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import security from 'eslint-plugin-security';
+import js from '@eslint/js'
+import tseslint from '@typescript-eslint/eslint-plugin'
+import tsparser from '@typescript-eslint/parser'
+import security from 'eslint-plugin-security'
 
 export default [
   js.configs.recommended,
@@ -125,4 +125,4 @@ export default [
       '**/node_modules/**',
     ],
   },
-];
+]

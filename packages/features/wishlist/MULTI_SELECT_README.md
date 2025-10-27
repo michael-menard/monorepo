@@ -21,13 +21,14 @@ Enhanced with checkbox selection functionality:
 <WishlistItemCard
   item={item}
   selected={selectedItems.includes(item.id)}
-  onSelect={(checked) => handleItemSelect(item.id, checked)}
+  onSelect={checked => handleItemSelect(item.id, checked)}
   showCheckbox={true}
   // ... other props
 />
 ```
 
 **New Props:**
+
 - `selected?: boolean` - Whether the item is selected
 - `onSelect?: (checked: boolean) => void` - Callback when selection changes
 - `showCheckbox?: boolean` - Whether to show the selection checkbox
@@ -49,6 +50,7 @@ A floating toolbar that appears when items are selected:
 ```
 
 **Features:**
+
 - Shows selection count (e.g., "3 of 10 selected")
 - Batch operations buttons with confirmation dialogs
 - Processing indicators during operations
@@ -76,6 +78,7 @@ Integrates all multi-select functionality:
 New batch operation endpoints have been added to the wishlist API:
 
 ### Batch Delete
+
 ```typescript
 batchDeleteWishlistItems: builder.mutation<
   { message: string; deletedIds: string[] },
@@ -84,6 +87,7 @@ batchDeleteWishlistItems: builder.mutation<
 ```
 
 ### Batch Update
+
 ```typescript
 batchUpdateWishlistItems: builder.mutation<
   { message: string; updatedIds: string[] },
@@ -92,6 +96,7 @@ batchUpdateWishlistItems: builder.mutation<
 ```
 
 ### Batch Toggle Purchased
+
 ```typescript
 batchTogglePurchased: builder.mutation<
   { message: string; updatedIds: string[] },
@@ -102,26 +107,26 @@ batchTogglePurchased: builder.mutation<
 ## Usage Example
 
 ```tsx
-import React, { useState } from 'react';
-import { Wishlist } from '@packages/features/wishlist';
+import React, { useState } from 'react'
+import { Wishlist } from '@packages/features/wishlist'
 
 const WishlistPage: React.FC = () => {
-  const [wishlistId] = useState('my-wishlist-id');
+  const [wishlistId] = useState('my-wishlist-id')
 
   const handleItemsDeleted = (deletedIds: string[]) => {
-    console.log('Deleted items:', deletedIds);
+    console.log('Deleted items:', deletedIds)
     // Handle success notification
-  };
+  }
 
   const handleItemsUpdated = (updatedIds: string[]) => {
-    console.log('Updated items:', updatedIds);
+    console.log('Updated items:', updatedIds)
     // Handle success notification
-  };
+  }
 
   const handleItemsToggled = (toggledIds: string[], isPurchased: boolean) => {
-    console.log('Toggled items:', toggledIds, 'isPurchased:', isPurchased);
+    console.log('Toggled items:', toggledIds, 'isPurchased:', isPurchased)
     // Handle success notification
-  };
+  }
 
   return (
     <Wishlist
@@ -130,8 +135,8 @@ const WishlistPage: React.FC = () => {
       onItemsUpdated={handleItemsUpdated}
       onItemsToggled={handleItemsToggled}
     />
-  );
-};
+  )
+}
 ```
 
 ## User Experience
@@ -153,6 +158,7 @@ Comprehensive tests have been written for:
 - **Integration**: End-to-end multi-select workflow
 
 Run tests with:
+
 ```bash
 pnpm test:run
 ```
@@ -160,16 +166,19 @@ pnpm test:run
 ## Implementation Details
 
 ### State Management
+
 - Selection state is managed locally in the Wishlist component
 - RTK Query handles API calls and cache invalidation
 - Optimistic updates for better UX
 
 ### Error Handling
+
 - API errors are caught and logged
 - Users can retry failed operations
 - Graceful degradation if batch operations fail
 
 ### Performance
+
 - Efficient re-rendering with React.memo and useCallback
 - Debounced API calls to prevent excessive requests
 - Optimistic UI updates for immediate feedback
@@ -183,4 +192,4 @@ Potential improvements for the multi-select functionality:
 3. **Bulk Import/Export**: Import/export selected items
 4. **Advanced Filtering**: Filter by selection state
 5. **Undo/Redo**: Support for undoing batch operations
-6. **Progress Tracking**: Show progress for large batch operations 
+6. **Progress Tracking**: Show progress for large batch operations

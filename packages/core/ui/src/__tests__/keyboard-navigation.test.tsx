@@ -16,10 +16,10 @@ describe('Keyboard Navigation', () => {
     test('should activate button with Enter key', async () => {
       const handleClick = vi.fn()
       render(<Button onClick={handleClick}>Test Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Test Button' })
       button.focus()
-      
+
       await user.keyboard('{Enter}')
       expect(handleClick).toHaveBeenCalledTimes(1)
     })
@@ -27,17 +27,21 @@ describe('Keyboard Navigation', () => {
     test('should activate button with Space key', async () => {
       const handleClick = vi.fn()
       render(<Button onClick={handleClick}>Test Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Test Button' })
       button.focus()
-      
+
       await user.keyboard(' ')
       expect(handleClick).toHaveBeenCalledTimes(1)
     })
 
     test('should have proper ARIA attributes', () => {
-      render(<Button pressed disabled>Test Button</Button>)
-      
+      render(
+        <Button pressed disabled>
+          Test Button
+        </Button>,
+      )
+
       const button = screen.getByRole('button', { name: 'Test Button' })
       expect(button).toHaveAttribute('aria-pressed', 'true')
       expect(button).toHaveAttribute('aria-disabled', 'true')
@@ -57,7 +61,7 @@ describe('Keyboard Navigation', () => {
             <Input placeholder="Test input" />
             <Button>Close</Button>
           </DialogContent>
-        </Dialog>
+        </Dialog>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Open Dialog' })
@@ -88,7 +92,7 @@ describe('Keyboard Navigation', () => {
             <h2>Dialog Title</h2>
             <Button>Close</Button>
           </DialogContent>
-        </Dialog>
+        </Dialog>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Open Dialog' })
@@ -98,7 +102,7 @@ describe('Keyboard Navigation', () => {
       expect(dialog).toBeInTheDocument()
 
       await user.keyboard('{Escape}')
-      
+
       await waitFor(() => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       })
@@ -115,7 +119,7 @@ describe('Keyboard Navigation', () => {
             <h2>Dialog Title</h2>
             <Button>Close</Button>
           </DialogContent>
-        </Dialog>
+        </Dialog>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Open Dialog' })
@@ -142,7 +146,7 @@ describe('Keyboard Navigation', () => {
             <SelectItem value="option1">Option 1</SelectItem>
             <SelectItem value="option2">Option 2</SelectItem>
           </SelectContent>
-        </Select>
+        </Select>,
       )
 
       const trigger = screen.getByRole('combobox')
@@ -162,7 +166,7 @@ describe('Keyboard Navigation', () => {
           <TabsContent value="tab1">Content 1</TabsContent>
           <TabsContent value="tab2">Content 2</TabsContent>
           <TabsContent value="tab3">Content 3</TabsContent>
-        </Tabs>
+        </Tabs>,
       )
 
       const tab1 = screen.getByRole('tab', { name: 'Tab 1' })
@@ -198,14 +202,14 @@ describe('Keyboard Navigation', () => {
           </TabsList>
           <TabsContent value="tab1">Content 1</TabsContent>
           <TabsContent value="tab2">Content 2</TabsContent>
-        </Tabs>
+        </Tabs>,
       )
 
       const tab2 = screen.getByRole('tab', { name: 'Tab 2' })
       tab2.focus()
-      
+
       await user.keyboard('{Enter}')
-      
+
       expect(tab2).toHaveAttribute('aria-selected', 'true')
       expect(screen.getByText('Content 2')).toBeInTheDocument()
     })
@@ -219,14 +223,14 @@ describe('Keyboard Navigation', () => {
           </TabsList>
           <TabsContent value="tab1">Content 1</TabsContent>
           <TabsContent value="tab2">Content 2</TabsContent>
-        </Tabs>
+        </Tabs>,
       )
 
       const tab2 = screen.getByRole('tab', { name: 'Tab 2' })
       tab2.focus()
-      
+
       await user.keyboard(' ')
-      
+
       expect(tab2).toHaveAttribute('aria-selected', 'true')
       expect(screen.getByText('Content 2')).toBeInTheDocument()
     })
@@ -240,21 +244,21 @@ describe('Keyboard Navigation', () => {
             <AccordionTrigger>Section 1</AccordionTrigger>
             <AccordionContent>Content 1</AccordionContent>
           </AccordionItem>
-        </Accordion>
+        </Accordion>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Section 1' })
       trigger.focus()
-      
+
       await user.keyboard('{Enter}')
-      
+
       await waitFor(() => {
         expect(screen.getByText('Content 1')).toBeInTheDocument()
         expect(trigger).toHaveAttribute('aria-expanded', 'true')
       })
 
       await user.keyboard('{Enter}')
-      
+
       await waitFor(() => {
         expect(screen.queryByText('Content 1')).not.toBeInTheDocument()
         expect(trigger).toHaveAttribute('aria-expanded', 'false')
@@ -268,14 +272,14 @@ describe('Keyboard Navigation', () => {
             <AccordionTrigger>Section 1</AccordionTrigger>
             <AccordionContent>Content 1</AccordionContent>
           </AccordionItem>
-        </Accordion>
+        </Accordion>,
       )
 
       const trigger = screen.getByRole('button', { name: 'Section 1' })
       trigger.focus()
-      
+
       await user.keyboard(' ')
-      
+
       await waitFor(() => {
         expect(screen.getByText('Content 1')).toBeInTheDocument()
         expect(trigger).toHaveAttribute('aria-expanded', 'true')
@@ -290,7 +294,7 @@ describe('Keyboard Navigation', () => {
           <Button>First Button</Button>
           <Input placeholder="Test input" />
           <Button>Second Button</Button>
-        </div>
+        </div>,
       )
 
       const firstButton = screen.getByRole('button', { name: 'First Button' })
@@ -317,7 +321,7 @@ describe('Keyboard Navigation', () => {
           <Button>First Button</Button>
           <Button disabled>Disabled Button</Button>
           <Button>Second Button</Button>
-        </div>
+        </div>,
       )
 
       const firstButton = screen.getByRole('button', { name: 'First Button' })
@@ -337,7 +341,7 @@ describe('Keyboard Navigation', () => {
     test('should handle all keyboard keys correctly', async () => {
       const handleClick = vi.fn()
       render(<Button onClick={handleClick}>Test Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Test Button' })
       button.focus()
 
@@ -353,16 +357,16 @@ describe('Keyboard Navigation', () => {
     test.skip('should prevent default behavior for handled keys', async () => {
       const handleClick = vi.fn()
       render(<Button onClick={handleClick}>Test Button</Button>)
-      
+
       const button = screen.getByRole('button', { name: 'Test Button' })
       button.focus()
 
       const keyDownEvent = new KeyboardEvent('keydown', { key: 'Enter' })
       const preventDefaultSpy = vi.spyOn(keyDownEvent, 'preventDefault')
-      
+
       fireEvent(button, keyDownEvent)
-      
+
       expect(preventDefaultSpy).toHaveBeenCalled()
     })
   })
-}) 
+})

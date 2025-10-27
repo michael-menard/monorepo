@@ -82,4 +82,4 @@ coverage/
 .cache/
 
 
-apps/api/lego-projects-api/uploads/**/*.jpg
+apps/api/lego-projects-api/uploads/**/*.jpg.envrc

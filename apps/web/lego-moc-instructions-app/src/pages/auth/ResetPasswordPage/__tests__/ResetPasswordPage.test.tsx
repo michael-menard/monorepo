@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
-import { server } from '../../../../test/mocks/server'
+import { server } from '../../../../__tests__/mocks/server'
 import ResetPasswordPage from '../index'
 
 // Mock window.location
@@ -60,7 +60,7 @@ describe('ResetPasswordPage API Integration', () => {
       // Find and fill the password inputs
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -80,11 +80,14 @@ describe('ResetPasswordPage API Integration', () => {
       // Override handler to simulate invalid token
       server.use(
         http.post('*/auth/reset-password/*', () => {
-          return HttpResponse.json({
-            success: false,
-            message: 'Invalid or expired reset token'
-          }, { status: 400 })
-        })
+          return HttpResponse.json(
+            {
+              success: false,
+              message: 'Invalid or expired reset token',
+            },
+            { status: 400 },
+          )
+        }),
       )
 
       const user = userEvent.setup()
@@ -92,7 +95,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -113,7 +116,7 @@ describe('ResetPasswordPage API Integration', () => {
       server.use(
         http.post('*/auth/reset-password/*', () => {
           return HttpResponse.error()
-        })
+        }),
       )
 
       const user = userEvent.setup()
@@ -121,7 +124,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -140,9 +143,9 @@ describe('ResetPasswordPage API Integration', () => {
           await new Promise(resolve => setTimeout(resolve, 100))
           return HttpResponse.json({
             success: true,
-            message: 'Password reset successful'
+            message: 'Password reset successful',
           })
-        })
+        }),
       )
 
       const user = userEvent.setup()
@@ -150,7 +153,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -168,7 +171,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -183,13 +186,13 @@ describe('ResetPasswordPage API Integration', () => {
 
     it('should handle empty token from URL', async () => {
       mockLocation.pathname = '/auth/reset-password/'
-      
+
       const user = userEvent.setup()
       renderComponent()
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -210,11 +213,11 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       // Try to submit with short password
       await user.type(passwordInput, 'short')
       await user.type(confirmPasswordInput, 'short')
-      
+
       const submitButton = screen.getByRole('button', { name: 'Update Password' })
       await user.click(submitButton)
 
@@ -229,11 +232,11 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       // Try to submit with mismatched passwords
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'DifferentPassword123!')
-      
+
       const submitButton = screen.getByRole('button', { name: 'Update Password' })
       await user.click(submitButton)
 
@@ -275,7 +278,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       // Trigger validation error
       const submitButton = screen.getByRole('button', { name: 'Update Password' })
       await user.click(submitButton)
@@ -300,11 +303,14 @@ describe('ResetPasswordPage API Integration', () => {
       // First trigger an error
       server.use(
         http.post('*/auth/reset-password/*', () => {
-          return HttpResponse.json({
-            success: false,
-            message: 'Invalid or expired reset token'
-          }, { status: 400 })
-        })
+          return HttpResponse.json(
+            {
+              success: false,
+              message: 'Invalid or expired reset token',
+            },
+            { status: 400 },
+          )
+        }),
       )
 
       const user = userEvent.setup()
@@ -312,7 +318,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -338,11 +344,14 @@ describe('ResetPasswordPage API Integration', () => {
       // Override handler to return AuthApiError format
       server.use(
         http.post('*/auth/reset-password/*', () => {
-          return HttpResponse.json({
-            success: false,
-            message: 'Custom auth error message'
-          }, { status: 401 })
-        })
+          return HttpResponse.json(
+            {
+              success: false,
+              message: 'Custom auth error message',
+            },
+            { status: 401 },
+          )
+        }),
       )
 
       const user = userEvent.setup()
@@ -350,7 +359,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -367,7 +376,7 @@ describe('ResetPasswordPage API Integration', () => {
       server.use(
         http.post('*/auth/reset-password/*', () => {
           throw new Error('Generic error')
-        })
+        }),
       )
 
       const user = userEvent.setup()
@@ -375,7 +384,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -396,7 +405,7 @@ describe('ResetPasswordPage API Integration', () => {
       // First complete the reset
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -420,7 +429,7 @@ describe('ResetPasswordPage API Integration', () => {
 
       const passwordInput = screen.getByLabelText('New Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password')
-      
+
       await user.type(passwordInput, 'NewPassword123!')
       await user.type(confirmPasswordInput, 'NewPassword123!')
 
@@ -434,4 +443,4 @@ describe('ResetPasswordPage API Integration', () => {
       })
     })
   })
-}) 
+})

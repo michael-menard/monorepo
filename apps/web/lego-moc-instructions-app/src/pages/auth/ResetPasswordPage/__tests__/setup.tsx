@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import { HttpResponse, http } from 'msw'
-import { server } from '../../../../test/mocks/server'
+import { server } from '../../../../__tests__/mocks/server'
 
 // Establish API mocking before all tests
 beforeAll(() => {
@@ -57,4 +57,4 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
-})) 
+}))
