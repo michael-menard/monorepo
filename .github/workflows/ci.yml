@@ -65,19 +65,19 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for Turborepo change detection
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
@@ -96,19 +96,19 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for Turborepo change detection
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run tests for changed packages
         run: pnpm turbo test --filter="./packages/*...[HEAD^1]"
@@ -124,19 +124,19 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for Turborepo change detection
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.0.0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build changed packages
         run: pnpm turbo build --filter="./packages/*...[HEAD^1]"

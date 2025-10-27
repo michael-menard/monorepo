@@ -1,0 +1,172 @@
+#!/bin/sh
+# CodeRabbit-style Pre-push Analysis
+
+echo "🤖 Running CodeRabbit-style analysis before push..."
+echo "=================================================="
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Track issues found
+ISSUES_FOUND=0
+
+# Get the range of commits being pushed
+remote="$1"
+url="$2"
+
+# Get commits being pushed
+if [ "$remote" = "origin" ]; then
+    # Get commits that are ahead of origin/main
+    COMMITS=$(git rev-list origin/main..HEAD 2>/dev/null || git rev-list HEAD)
+    if [ -z "$COMMITS" ]; then
+        echo "ℹ️  No new commits to analyze."
+        exit 0
+    fi
+    
+    echo "📊 Analyzing $(echo "$COMMITS" | wc -l | tr -d ' ') commit(s)..."
+    echo ""
+fi
+
+# 1. Security Analysis
+echo -e "${BLUE}🔒 Security Analysis${NC}"
+echo "-------------------"
+
+# Check for hardcoded secrets
+echo "🔍 Scanning for hardcoded secrets..."
+if git diff --cached --name-only | xargs grep -l "api[_-]key\|secret\|password\|token" 2>/dev/null; then
+    echo -e "${RED}❌ Potential secrets found in staged files${NC}"
+    echo "💡 Consider using environment variables instead"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+else
+    echo -e "${GREEN}✅ No obvious secrets detected${NC}"
+fi
+
+# Run security audit
+echo "🔍 Running dependency security audit..."
+if pnpm audit --audit-level moderate --json > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ No security vulnerabilities found${NC}"
+else
+    echo -e "${YELLOW}⚠️  Security vulnerabilities detected${NC}"
+    echo "💡 Run 'pnpm audit' for details"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+echo ""
+
+# 2. Code Quality Analysis
+echo -e "${BLUE}📝 Code Quality Analysis${NC}"
+echo "------------------------"
+
+# TypeScript strict checks
+echo "🔍 Running TypeScript strict checks..."
+if pnpm turbo type-check --filter="...[HEAD]" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ TypeScript checks passed${NC}"
+else
+    echo -e "${RED}❌ TypeScript errors found${NC}"
+    echo "💡 Run 'pnpm turbo type-check --filter=\"...[HEAD]\"' for details"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+# Linting checks
+echo "🔍 Running ESLint analysis..."
+if pnpm turbo lint --filter="...[HEAD]" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Linting checks passed${NC}"
+else
+    echo -e "${YELLOW}⚠️  Linting issues found${NC}"
+    echo "💡 Run 'pnpm turbo lint --filter=\"...[HEAD]\"' for details"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+echo ""
+
+# 3. Performance Analysis
+echo -e "${BLUE}⚡ Performance Analysis${NC}"
+echo "-----------------------"
+
+# Check for common React performance issues
+echo "🔍 Scanning for React performance issues..."
+PERF_ISSUES=0
+
+# Check for missing useCallback/useMemo
+if git diff --cached --name-only | grep -E '\.(tsx?|jsx?)$' | xargs grep -l "useState\|useEffect" 2>/dev/null | xargs grep -L "useCallback\|useMemo" 2>/dev/null | head -1 > /dev/null; then
+    echo -e "${YELLOW}⚠️  Consider using useCallback/useMemo for performance optimization${NC}"
+    PERF_ISSUES=$((PERF_ISSUES + 1))
+fi
+
+# Check for expensive operations in render
+if git diff --cached --name-only | grep -E '\.(tsx?|jsx?)$' | xargs grep -l "\.map\|\.filter\|\.reduce" 2>/dev/null | head -1 > /dev/null; then
+    echo -e "${YELLOW}⚠️  Consider memoizing expensive array operations${NC}"
+    PERF_ISSUES=$((PERF_ISSUES + 1))
+fi
+
+if [ $PERF_ISSUES -eq 0 ]; then
+    echo -e "${GREEN}✅ No obvious performance issues detected${NC}"
+fi
+
+echo ""
+
+# 4. Test Coverage
+echo -e "${BLUE}🧪 Test Analysis${NC}"
+echo "----------------"
+
+echo "🔍 Running tests for affected code..."
+if pnpm turbo test --filter="...[HEAD]" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ All tests passing${NC}"
+else
+    echo -e "${RED}❌ Test failures detected${NC}"
+    echo "💡 Run 'pnpm turbo test --filter=\"...[HEAD]\"' for details"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+echo ""
+
+# 5. Build Verification
+echo -e "${BLUE}🏗️  Build Verification${NC}"
+echo "--------------------"
+
+echo "🔍 Verifying build integrity..."
+if pnpm turbo build --filter="...[HEAD]" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Build successful${NC}"
+else
+    echo -e "${RED}❌ Build failed${NC}"
+    echo "💡 Run 'pnpm turbo build --filter=\"...[HEAD]\"' for details"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+echo ""
+
+# Summary
+echo "=================================================="
+if [ $ISSUES_FOUND -eq 0 ]; then
+    echo -e "${GREEN}🎉 All checks passed! Ready to push.${NC}"
+    echo ""
+    echo -e "${BLUE}📋 Analysis Summary:${NC}"
+    echo "✅ Security: No issues"
+    echo "✅ Code Quality: Passed"
+    echo "✅ Performance: No obvious issues"
+    echo "✅ Tests: Passing"
+    echo "✅ Build: Successful"
+    exit 0
+else
+    echo -e "${RED}❌ Found $ISSUES_FOUND issue(s) that should be addressed${NC}"
+    echo ""
+    echo -e "${YELLOW}💡 Recommendations:${NC}"
+    echo "1. Fix the issues listed above"
+    echo "2. Run the suggested commands for detailed information"
+    echo "3. Consider running 'pnpm turbo lint --fix' to auto-fix some issues"
+    echo ""
+    echo -e "${BLUE}🤖 This analysis mimics CodeRabbit's review process${NC}"
+    echo "Push anyway? (y/N)"
+    read -r response
+    if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
+        echo -e "${YELLOW}⚠️  Pushing with known issues...${NC}"
+        exit 0
+    else
+        echo -e "${GREEN}👍 Good choice! Fix the issues and try again.${NC}"
+        exit 1
+    fi
+fi
