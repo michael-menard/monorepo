@@ -25,6 +25,14 @@ if ! pnpm turbo format --filter="...[HEAD]" > /dev/null 2>&1; then
     exit 1
 fi
 
+# Lint affected projects
+echo "🔍 Linting affected projects..."
+if ! pnpm turbo lint --filter="...[HEAD]" > /dev/null 2>&1; then
+    echo "❌ Lint failed in affected projects. Please fix errors and try again."
+    echo "💡 Run: pnpm turbo lint --filter=\"...[HEAD]\" to see detailed errors"
+    exit 1
+fi
+
 # Build affected projects to catch compilation errors
 echo "🔍 Building affected projects..."
 if ! pnpm turbo build --filter="...[HEAD]" > /dev/null 2>&1; then
@@ -34,7 +42,6 @@ if ! pnpm turbo build --filter="...[HEAD]" > /dev/null 2>&1; then
 fi
 
 echo "✅ All affected projects passed pre-commit checks!"
-echo "💡 Tip: Run 'pnpm turbo lint --filter=\"...[HEAD]\"' to check for code quality issues"
 
 # Run lint-staged for file-level checks
 npx lint-staged
