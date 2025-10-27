@@ -1,0 +1,14 @@
+# PNPM Configuration
+# Enable lockfile for CI/CD consistency
+lockfile=true
+
+# Workspace settings
+prefer-workspace-packages=true
+link-workspace-packages=true
+
+# Performance
+store-dir=~/.pnpm-store
+verify-store-integrity=true
+
+# Security
+audit-level=moderate
