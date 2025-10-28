@@ -1,18 +1,8 @@
-import { Request, Response } from 'express'
-import { eq, desc, count } from 'drizzle-orm'
-import { z } from 'zod'
-import { db } from '../db/client'
-import {
-  mocInstructions,
-  galleryImages,
-  galleryAlbums,
-  wishlistItems,
-  mocPartsLists
-} from '../db/schema'
-import {
-  uploadAvatar as uploadAvatarFile,
-  deleteAvatar as deleteAvatarFile,
-} from '../storage/avatar-storage'
+import {Request, Response} from 'express'
+import {count, desc, eq} from 'drizzle-orm'
+import {db} from '../db/client'
+import {galleryAlbums, galleryImages, mocInstructions, wishlistItems,} from '../db/schema'
+import {uploadAvatar as uploadAvatarFile,} from '../storage/avatar-storage'
 
 // Profile aggregates user's LEGO-related data from various tables
 // User authentication data is managed in the auth service

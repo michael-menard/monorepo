@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 import CognitoLoginPage from '../index'
 
 // Mock the Cognito auth hook
@@ -17,7 +17,7 @@ vi.mock('../../../../hooks/useCognitoAuth', () => ({
 }))
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', async (importOriginal) => {
+vi.mock('@tanstack/react-router', async importOriginal => {
   const actual = await importOriginal()
   return {
     ...actual,
@@ -40,27 +40,17 @@ vi.mock('framer-motion', () => ({
 // Mock @repo/ui components
 vi.mock('@repo/ui', () => ({
   AppCard: ({ children, className, ...props }: any) => (
-    <div className={className} {...props}>{children}</div>
+    <div className={className} {...props}>
+      {children}
+    </div>
   ),
   Button: ({ children, className, disabled, type, onClick, ...props }: any) => (
-    <button
-      className={className}
-      disabled={disabled}
-      type={type}
-      onClick={onClick}
-      {...props}
-    >
+    <button className={className} disabled={disabled} type={type} onClick={onClick} {...props}>
       {children}
     </button>
   ),
   Input: ({ className, type, placeholder, id, ...props }: any) => (
-    <input
-      className={className}
-      type={type}
-      placeholder={placeholder}
-      id={id}
-      {...props}
-    />
+    <input className={className} type={type} placeholder={placeholder} id={id} {...props} />
   ),
   Label: ({ children, htmlFor, className, ...props }: any) => (
     <label htmlFor={htmlFor} className={className} {...props}>
@@ -95,11 +85,14 @@ describe('CognitoLoginPage', () => {
     const submitButton = screen.getByRole('button', { name: /sign in/i })
     fireEvent.click(submitButton)
 
-    await waitFor(() => {
-      // Check for validation error messages (they might be rendered differently)
-      const errorMessages = screen.getAllByText(/email|password/i)
-      expect(errorMessages.length).toBeGreaterThan(0)
-    }, { timeout: 3000 })
+    await waitFor(
+      () => {
+        // Check for validation error messages (they might be rendered differently)
+        const errorMessages = screen.getAllByText(/email|password/i)
+        expect(errorMessages.length).toBeGreaterThan(0)
+      },
+      {timeout: 3000},
+    )
   })
 
   it('should call signIn with correct data on form submission', async () => {
@@ -166,9 +159,10 @@ describe('CognitoLoginPage', () => {
     const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement
     // Find the toggle button by looking for buttons near the password field
     const toggleButtons = screen.getAllByRole('button')
-    const toggleButton = toggleButtons.find(button =>
-      button.getAttribute('type') === 'button' &&
-      button.closest('div')?.querySelector('input[type="password"], input[type="text"]')
+    const toggleButton = toggleButtons.find(
+      button =>
+        button.getAttribute('type') === 'button' &&
+        button.closest('div')?.querySelector('input[type="password"], input[type="text"]'),
     )
 
     expect(passwordInput.type).toBe('password')
@@ -219,8 +213,8 @@ describe('CognitoLoginPage', () => {
 
     // Look for disabled submit button or loading text
     const buttons = screen.getAllByRole('button')
-    const submitButton = buttons.find(button =>
-      button.textContent?.includes('Sign') || button.getAttribute('type') === 'submit'
+    const submitButton = buttons.find(
+      button => button.textContent?.includes('Sign') || button.getAttribute('type') === 'submit',
     )
 
     if (submitButton) {

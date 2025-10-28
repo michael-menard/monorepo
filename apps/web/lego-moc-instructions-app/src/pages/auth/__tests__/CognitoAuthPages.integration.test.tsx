@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {useCognitoAuth} from '../../../hooks/useCognitoAuth'
 
 /**
  * Integration tests for Cognito Authentication Pages
- * 
+ *
  * These tests focus on the integration between the auth hook and pages
  * without complex component rendering that can be problematic with React 19
  */
@@ -42,7 +42,7 @@ describe('Cognito Auth Pages Integration', () => {
 
       // Test the hook directly (this is what the signup page uses)
       const { useCognitoAuth: useAuth } = await import('../../../hooks/useCognitoAuth')
-      
+
       // This simulates what happens when the signup form is submitted
       const signupData = {
         email: 'test@example.com',
@@ -52,7 +52,7 @@ describe('Cognito Auth Pages Integration', () => {
 
       // The hook should call Amplify with correct parameters
       expect(mockSignUp).not.toHaveBeenCalled()
-      
+
       // Verify the hook exists and can be imported
       expect(useAuth).toBeDefined()
       expect(typeof useAuth).toBe('function')
@@ -100,7 +100,7 @@ describe('Cognito Auth Pages Integration', () => {
 
       // Test the hook directly (this is what the login page uses)
       const { useCognitoAuth: useAuth } = await import('../../../hooks/useCognitoAuth')
-      
+
       // This simulates what happens when the login form is submitted
       const loginData = {
         email: 'test@example.com',
@@ -144,7 +144,7 @@ describe('Cognito Auth Pages Integration', () => {
 
       // Test the hook directly (this is what the verify email page uses)
       const { useCognitoAuth: useAuth } = await import('../../../hooks/useCognitoAuth')
-      
+
       // This simulates what happens when the verification form is submitted
       const verificationData = {
         email: 'test@example.com',
@@ -178,14 +178,14 @@ describe('Cognito Auth Pages Integration', () => {
     })
 
     it('should handle resend code functionality', async () => {
-      mockResendCode.mockResolvedValue({ 
-        success: true, 
-        message: 'Code sent' 
+      mockResendCode.mockResolvedValue({
+        success: true,
+        message: 'Code sent',
       })
 
       // Test the hook directly (this is what the resend button uses)
       const { useCognitoAuth: useAuth } = await import('../../../hooks/useCognitoAuth')
-      
+
       // The hook should be available for resend functionality
       expect(useAuth).toBeDefined()
       expect(typeof useAuth).toBe('function')
@@ -266,7 +266,7 @@ describe('Cognito Auth Pages Integration', () => {
       Object.entries(formStates).forEach(([stateName, state]) => {
         expect(typeof state.isLoading).toBe('boolean')
         expect(typeof state.isSubmitting).toBe('boolean')
-        
+
         // Forms should be disabled when loading or submitting
         const shouldDisable = state.isLoading || state.isSubmitting
         expect(typeof shouldDisable).toBe('boolean')
@@ -284,7 +284,7 @@ describe('Cognito Auth Pages Integration', () => {
       Object.entries(validationStates).forEach(([stateName, state]) => {
         expect(typeof state.hasErrors).toBe('boolean')
         expect(typeof state.errors).toBe('object')
-        
+
         if ('isValidating' in state) {
           expect(typeof state.isValidating).toBe('boolean')
         }

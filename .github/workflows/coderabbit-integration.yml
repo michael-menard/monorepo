@@ -99,9 +99,9 @@ jobs:
         
       - name: Run linting and type checking
         run: |
-          echo "🔍 Running pre-review checks..."
-          pnpm run lint
-          pnpm run check-types
+          echo "🔍 Running pre-review checks on changed packages..."
+          pnpm turbo lint --filter="...[origin/main]"
+          pnpm turbo check-types --filter="...[origin/main]"
           
       - name: Generate Auggie context for CodeRabbit
         run: |
@@ -220,23 +220,23 @@ jobs:
         
       - name: Run comprehensive checks
         run: |
-          echo "🔍 Running quality gates..."
-          
+          echo "🔍 Running quality gates on changed packages..."
+
           # Linting
-          echo "📝 Linting..."
-          pnpm run lint
-          
+          echo "📝 Linting changed packages..."
+          pnpm turbo lint --filter="...[origin/main]"
+
           # Type checking
-          echo "🔍 Type checking..."
-          pnpm run check-types
-          
+          echo "🔍 Type checking changed packages..."
+          pnpm turbo check-types --filter="...[origin/main]"
+
           # Security checks
           echo "🔒 Security checks..."
           pnpm run security:lint
-          
+
           # Tests
-          echo "🧪 Running tests..."
-          pnpm run test
+          echo "🧪 Running tests on changed packages..."
+          pnpm turbo test --filter="...[origin/main]"
           
           echo "✅ All quality gates passed!"
           

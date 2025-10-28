@@ -1,12 +1,11 @@
-import {renderHook, act} from '@testing-library/react'
-import {describe, it, expect, vi, beforeEach} from 'vitest'
+import {act, renderHook} from '@testing-library/react'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {useCognitoAuth} from '../useCognitoAuth'
 import * as amplifyAuth from 'aws-amplify/auth'
 
-
 /**
  * Error handling tests for useCognitoAuth hook
- * 
+ *
  * These tests validate that the hook properly handles various error scenarios
  * that can occur during email verification and other auth operations.
  */
@@ -33,10 +32,10 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle CodeMismatchException (invalid code)', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       // Mock getCurrentUser to avoid clearing error state on mount
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('CodeMismatchException')
       error.name = 'CodeMismatchException'
       mockConfirmSignUp.mockRejectedValue(error)
@@ -68,9 +67,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle ExpiredCodeException', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('ExpiredCodeException')
       error.name = 'ExpiredCodeException'
       mockConfirmSignUp.mockRejectedValue(error)
@@ -100,9 +99,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle UserNotFoundException', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('UserNotFoundException')
       error.name = 'UserNotFoundException'
       mockConfirmSignUp.mockRejectedValue(error)
@@ -130,9 +129,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle network errors', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('Network Error')
       error.name = 'NetworkError'
       mockConfirmSignUp.mockRejectedValue(error)
@@ -160,9 +159,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle TooManyRequestsException (rate limiting)', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('TooManyRequestsException')
       error.name = 'TooManyRequestsException'
       mockConfirmSignUp.mockRejectedValue(error)
@@ -192,9 +191,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle UserNotFoundException for resend', async () => {
       const mockResendSignUpCode = vi.mocked(amplifyAuth.resendSignUpCode)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('UserNotFoundException')
       error.name = 'UserNotFoundException'
       mockResendSignUpCode.mockRejectedValue(error)
@@ -219,9 +218,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle TooManyRequestsException for resend', async () => {
       const mockResendSignUpCode = vi.mocked(amplifyAuth.resendSignUpCode)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('TooManyRequestsException')
       error.name = 'TooManyRequestsException'
       mockResendSignUpCode.mockRejectedValue(error)
@@ -246,9 +245,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should handle InvalidParameterException for resend', async () => {
       const mockResendSignUpCode = vi.mocked(amplifyAuth.resendSignUpCode)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('InvalidParameterException')
       error.name = 'InvalidParameterException'
       mockResendSignUpCode.mockRejectedValue(error)
@@ -275,9 +274,9 @@ describe('useCognitoAuth Error Handling', () => {
     it('should set loading to false after error', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const error = new Error('CodeMismatchException')
       mockConfirmSignUp.mockRejectedValue(error)
 
@@ -307,7 +306,7 @@ describe('useCognitoAuth Error Handling', () => {
     it('should clear previous errors when starting new operation', async () => {
       const mockConfirmSignUp = vi.mocked(amplifyAuth.confirmSignUp)
       const mockGetCurrentUser = vi.mocked(amplifyAuth.getCurrentUser)
-      
+
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
 
       const { result } = renderHook(() => useCognitoAuth())
@@ -318,7 +317,7 @@ describe('useCognitoAuth Error Handling', () => {
 
       // First operation - cause error
       mockConfirmSignUp.mockRejectedValue(new Error('First error'))
-      
+
       await act(async () => {
         await result.current.verifyEmail({
           email: 'test@example.com',

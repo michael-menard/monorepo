@@ -76,7 +76,6 @@ export class EtherealHelper {
    * Get verification code for a user
    */
   async getVerificationCode(userEmail: string): Promise<string | null> {
-
     // For testing purposes, return a mock code
     // In real usage, you'd check the Ethereal web interface
     return '123456'
@@ -89,7 +88,6 @@ export class EtherealHelper {
     userEmail: string,
     timeoutMs: number = 30000,
   ): Promise<string | null> {
-
     // For testing, return mock code after a short delay
     await new Promise(resolve => setTimeout(resolve, 2000))
     return '123456'

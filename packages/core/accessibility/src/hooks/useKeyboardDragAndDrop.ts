@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { z } from 'zod'
+import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {z} from 'zod'
 
 // Schema for keyboard drag and drop data
 export const KeyboardDragDropDataSchema = z.object({
@@ -11,18 +11,33 @@ export const KeyboardDragDropDataSchema = z.object({
 
 export type KeyboardDragDropData = z.infer<typeof KeyboardDragDropDataSchema>
 
-export interface KeyboardDragState {
-  isKeyboardDragging: boolean
-  draggedItemId: string | null
-  sourceIndex: number | null
-  targetIndex: number | null
-  isFocused: boolean
-  totalItems: number
-}
+// Zod schemas for type safety and validation
+export const keyboardDragStateSchema = z.object({
+  isKeyboardDragging: z.boolean(),
+  draggedItemId: z.string().nullable(),
+  sourceIndex: z.number().nullable(),
+  targetIndex: z.number().nullable(),
+  isFocused: z.boolean(),
+  totalItems: z.number(),
+})
 
+export const useKeyboardDragAndDropOptionsSchema = z.object({
+  totalItems: z.number(),
+  onReorder: z.function().args(z.number(), z.number()).returns(z.void()).optional(),
+  onMove: z.function().args(z.string(), z.number(), z.number()).returns(z.void()).optional(),
+  onCancel: z.function().returns(z.void()).optional(),
+  onConfirm: z.function().returns(z.void()).optional(),
+  itemType: z.string().optional(),
+})
+
+// Inferred types from Zod schemas
+export type KeyboardDragState = z.infer<typeof keyboardDragStateSchema>
+export type UseKeyboardDragAndDropOptions = z.infer<typeof useKeyboardDragAndDropOptionsSchema>
+
+// Actions interface (keeping as interface since it's a return type with functions)
 export interface KeyboardDragActions {
   handleKeyDown: (e: React.KeyboardEvent, itemId: string, index: number) => void
-  handleFocus: (itemId: string, index: number) => void
+  handleFocus: (index: number) => void
   handleBlur: () => void
   handleMoveUp: () => void
   handleMoveDown: () => void
@@ -31,16 +46,6 @@ export interface KeyboardDragActions {
   handleCancel: () => void
   handleConfirm: () => void
   getKeyboardInstructions: () => string
-}
-
-export interface UseKeyboardDragAndDropOptions {
-  totalItems: number
-  onReorder?: (sourceIndex: number, destinationIndex: number) => void
-  onMove?: (itemId: string, sourceIndex: number, destinationIndex: number) => void
-  onCancel?: () => void
-  onConfirm?: () => void
-  itemType?: string
-  _source?: string
 }
 
 export const useKeyboardDragAndDrop = ({
@@ -177,7 +182,7 @@ export const useKeyboardDragAndDrop = ({
   )
 
   const handleFocus = useCallback(
-    (_itemId: string, index: number) => {
+    (index: number) => {
       if (!state.isKeyboardDragging) {
         setState(prev => ({ ...prev, isFocused: true }))
         focusedIndexRef.current = index

@@ -22,5 +22,18 @@ new LegoApiStack(
       Project: 'lego-moc-instructions',
       Component: 'lego-projects-api',
     },
+
   },
-)
+  tags
+:
+{
+  Environment: environment,
+    Project
+:
+  'lego-moc-instructions',
+    Component
+:
+  'lego-projects-api',
+}
+,
+})

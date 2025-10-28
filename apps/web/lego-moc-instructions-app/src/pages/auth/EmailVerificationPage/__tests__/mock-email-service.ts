@@ -48,7 +48,6 @@ export class MockEmailService {
     }
     this.emails.get(to)!.push(email)
 
-
     // Simulate email delivery delay
     await new Promise(resolve => setTimeout(resolve, this.config.emailDelay))
 

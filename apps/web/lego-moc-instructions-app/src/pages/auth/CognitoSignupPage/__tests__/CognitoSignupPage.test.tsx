@@ -1,7 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createMemoryRouter, RouterProvider } from '@tanstack/react-router'
-import { createRootRoute } from '@tanstack/react-router'
+import {fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {createMemoryRouter, createRootRoute, RouterProvider} from '@tanstack/react-router'
 import CognitoSignupPage from '../index'
 
 // Mock the Cognito auth hook
@@ -39,27 +38,17 @@ vi.mock('framer-motion', () => ({
 // Mock @repo/ui components
 vi.mock('@repo/ui', () => ({
   AppCard: ({ children, className, ...props }: any) => (
-    <div className={className} {...props}>{children}</div>
+    <div className={className} {...props}>
+      {children}
+    </div>
   ),
   Button: ({ children, className, disabled, type, onClick, ...props }: any) => (
-    <button 
-      className={className} 
-      disabled={disabled} 
-      type={type} 
-      onClick={onClick}
-      {...props}
-    >
+    <button className={className} disabled={disabled} type={type} onClick={onClick} {...props}>
       {children}
     </button>
   ),
   Input: ({ className, type, placeholder, id, ...props }: any) => (
-    <input 
-      className={className} 
-      type={type} 
-      placeholder={placeholder} 
-      id={id}
-      {...props}
-    />
+    <input className={className} type={type} placeholder={placeholder} id={id} {...props} />
   ),
   Label: ({ children, htmlFor, className, ...props }: any) => (
     <label htmlFor={htmlFor} className={className} {...props}>
@@ -72,12 +61,12 @@ const renderWithRouter = (component: React.ReactElement) => {
   const rootRoute = createRootRoute({
     component: () => component,
   })
-  
+
   const router = createMemoryRouter({
     routeTree: rootRoute,
     history: ['/auth/signup'],
   })
-  
+
   return render(<RouterProvider router={router} />)
 }
 
@@ -104,11 +93,14 @@ describe('CognitoSignupPage', () => {
     const submitButton = screen.getByRole('button', { name: /create account/i })
     fireEvent.click(submitButton)
 
-    await waitFor(() => {
-      // Check for validation error messages
-      const errorMessages = screen.getAllByText(/name|email|password/i)
-      expect(errorMessages.length).toBeGreaterThan(0)
-    }, { timeout: 3000 })
+    await waitFor(
+      () => {
+        // Check for validation error messages
+        const errorMessages = screen.getAllByText(/name|email|password/i)
+        expect(errorMessages.length).toBeGreaterThan(0)
+      },
+      {timeout: 3000},
+    )
   })
 
   it('should call signUp with correct data on form submission', async () => {
@@ -140,9 +132,9 @@ describe('CognitoSignupPage', () => {
   })
 
   it('should navigate to verification page on successful signup', async () => {
-    mockSignUp.mockResolvedValue({ 
-      success: true, 
-      message: 'Account created successfully' 
+    mockSignUp.mockResolvedValue({
+      success: true,
+      message: 'Account created successfully',
     })
 
     renderWithRouter(<CognitoSignupPage />)
@@ -166,12 +158,15 @@ describe('CognitoSignupPage', () => {
     })
 
     // Wait for navigation timeout
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith({
-        to: '/auth/verify-email',
-        search: { email: 'test@example.com' }
-      })
-    }, { timeout: 3000 })
+    await waitFor(
+      () => {
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: '/auth/verify-email',
+          search: {email: 'test@example.com'},
+        })
+      },
+      {timeout: 3000},
+    )
   })
 
   it('should display error message on signup failure', async () => {
@@ -206,7 +201,7 @@ describe('CognitoSignupPage', () => {
 
     // Test weak password
     fireEvent.change(passwordInput, { target: { value: 'weak' } })
-    
+
     await waitFor(() => {
       // Look for password strength indicator
       const strengthElements = screen.queryAllByText(/password strength|weak|strong/i)
@@ -215,7 +210,7 @@ describe('CognitoSignupPage', () => {
 
     // Test strong password
     fireEvent.change(passwordInput, { target: { value: 'StrongPass123!' } })
-    
+
     await waitFor(() => {
       // Password strength should update
       expect(passwordInput).toHaveValue('StrongPass123!')

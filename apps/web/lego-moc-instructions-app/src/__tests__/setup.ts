@@ -79,35 +79,47 @@ vi.mock('@repo/ui', async () => {
   return {
     ...actual,
     AppCard: ({ children, className, ...props }: any) => {
-      return React.createElement('div', {
-        className,
-        'data-testid': 'app-card',
-        ...props
-      }, children)
+      return React.createElement(
+        'div',
+        {
+          className,
+          'data-testid': 'app-card',
+          ...props,
+        },
+        children,
+      )
     },
     Button: ({ children, className, disabled, type, onClick, variant, ...props }: any) => {
-      return React.createElement('button', {
-        className,
-        disabled,
-        type,
-        onClick,
-        ...props
-      }, children)
+      return React.createElement(
+        'button',
+        {
+          className,
+          disabled,
+          type,
+          onClick,
+          ...props,
+        },
+        children,
+      )
     },
     Input: ({ className, type, placeholder, ...props }: any) => {
       return React.createElement('input', {
         className,
         type,
         placeholder,
-        ...props
+        ...props,
       })
     },
     Label: ({ children, className, htmlFor, ...props }: any) => {
-      return React.createElement('label', {
-        className,
-        htmlFor,
-        ...props
-      }, children)
+      return React.createElement(
+        'label',
+        {
+          className,
+          htmlFor,
+          ...props,
+        },
+        children,
+      )
     },
     showSuccessToast: vi.fn(),
     showErrorToast: vi.fn(),

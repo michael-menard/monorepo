@@ -1,7 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createMemoryRouter, RouterProvider } from '@tanstack/react-router'
-import { createRootRoute } from '@tanstack/react-router'
+import {fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {createMemoryRouter, createRootRoute, RouterProvider} from '@tanstack/react-router'
 import CognitoVerifyEmailPage from '../index'
 
 // Mock the Cognito auth hook
@@ -44,13 +43,15 @@ vi.mock('framer-motion', () => ({
 // Mock @repo/ui components
 vi.mock('@repo/ui', () => ({
   AppCard: ({ children, className, ...props }: any) => (
-    <div className={className} {...props}>{children}</div>
+    <div className={className} {...props}>
+      {children}
+    </div>
   ),
   Button: ({ children, className, disabled, type, onClick, variant, ...props }: any) => (
-    <button 
-      className={className} 
-      disabled={disabled} 
-      type={type} 
+    <button
+      className={className}
+      disabled={disabled}
+      type={type}
       onClick={onClick}
       data-variant={variant}
       {...props}
@@ -59,10 +60,10 @@ vi.mock('@repo/ui', () => ({
     </button>
   ),
   Input: ({ className, type, placeholder, id, maxLength, ...props }: any) => (
-    <input 
-      className={className} 
-      type={type} 
-      placeholder={placeholder} 
+    <input
+      className={className}
+      type={type}
+      placeholder={placeholder}
       id={id}
       maxLength={maxLength}
       {...props}
@@ -79,12 +80,12 @@ const renderWithRouter = (component: React.ReactElement) => {
   const rootRoute = createRootRoute({
     component: () => component,
   })
-  
+
   const router = createMemoryRouter({
     routeTree: rootRoute,
     history: ['/auth/verify-email?email=test@example.com'],
   })
-  
+
   return render(<RouterProvider router={router} />)
 }
 
@@ -117,11 +118,14 @@ describe('CognitoVerifyEmailPage', () => {
     const submitButton = screen.getByRole('button', { name: /verify email/i })
     fireEvent.click(submitButton)
 
-    await waitFor(() => {
-      // Check for validation error messages
-      const errorMessages = screen.getAllByText(/email|code|verification/i)
-      expect(errorMessages.length).toBeGreaterThan(0)
-    }, { timeout: 3000 })
+    await waitFor(
+      () => {
+        // Check for validation error messages
+        const errorMessages = screen.getAllByText(/email|code|verification/i)
+        expect(errorMessages.length).toBeGreaterThan(0)
+      },
+      {timeout: 3000},
+    )
   })
 
   it('should call verifyEmail with correct data on form submission', async () => {
@@ -146,9 +150,9 @@ describe('CognitoVerifyEmailPage', () => {
   })
 
   it('should navigate to login page on successful verification', async () => {
-    mockVerifyEmail.mockResolvedValue({ 
-      success: true, 
-      message: 'Email verified successfully' 
+    mockVerifyEmail.mockResolvedValue({
+      success: true,
+      message: 'Email verified successfully',
     })
 
     renderWithRouter(<CognitoVerifyEmailPage />)
@@ -166,9 +170,12 @@ describe('CognitoVerifyEmailPage', () => {
     })
 
     // Wait for navigation timeout
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
-    }, { timeout: 3000 })
+    await waitFor(
+      () => {
+        expect(mockNavigate).toHaveBeenCalledWith({to: '/auth/login'})
+      },
+      {timeout: 3000},
+    )
   })
 
   it('should display error message on verification failure', async () => {
@@ -191,9 +198,9 @@ describe('CognitoVerifyEmailPage', () => {
   })
 
   it('should handle resend code functionality', async () => {
-    mockResendCode.mockResolvedValue({ 
-      success: true, 
-      message: 'Verification code sent' 
+    mockResendCode.mockResolvedValue({
+      success: true,
+      message: 'Verification code sent',
     })
 
     renderWithRouter(<CognitoVerifyEmailPage />)
@@ -263,10 +270,10 @@ describe('CognitoVerifyEmailPage', () => {
 
     // Look for disabled submit button or loading text
     const buttons = screen.getAllByRole('button')
-    const submitButton = buttons.find(button => 
-      button.textContent?.includes('Verify') || button.getAttribute('type') === 'submit'
+    const submitButton = buttons.find(
+      button => button.textContent?.includes('Verify') || button.getAttribute('type') === 'submit',
     )
-    
+
     if (submitButton) {
       expect(submitButton).toBeInTheDocument()
       // Note: Loading state test may need adjustment based on actual implementation

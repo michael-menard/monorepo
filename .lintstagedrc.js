@@ -1,9 +1,7 @@
 export default {
   // JavaScript, TypeScript, JSX, TSX files
   '**/*.{js,jsx,ts,tsx}': [
-    // Run ESLint with auto-fix
-    'eslint --fix --max-warnings 0',
-    // Format with Prettier
+    // Format with Prettier (linting handled by Turborepo in pre-commit hook)
     'prettier --write',
   ],
 
@@ -28,29 +26,23 @@ export default {
 
   // Specific configurations for different areas of the monorepo
 
-  // Root level files - use root ESLint config
-  './*.{js,jsx,ts,tsx}': ['eslint --fix --max-warnings 0', 'prettier --write'],
+  // Root level files - format only (linting handled by Turborepo)
+  './*.{js,jsx,ts,tsx}': ['prettier --write'],
 
-  // Apps - use turbo for consistent linting across apps
-  'apps/**/*.{js,jsx,ts,tsx}': [
-    'bash -c \'cd "$(dirname "$0")" && if [ -f "package.json" ] && grep -q "\\"lint\\"" package.json; then pnpm lint --fix 2>/dev/null || eslint --fix --max-warnings 0 "$0"; else eslint --fix --max-warnings 0 "$0"; fi\'',
-    'prettier --write',
-  ],
+  // Apps - format only (linting handled by Turborepo)
+  'apps/**/*.{js,jsx,ts,tsx}': ['prettier --write'],
 
-  // Packages - use turbo for consistent linting across packages
-  'packages/**/*.{js,jsx,ts,tsx}': [
-    'bash -c \'cd "$(dirname "$0")" && if [ -f "package.json" ] && grep -q "\\"lint\\"" package.json; then pnpm lint --fix 2>/dev/null || eslint --fix --max-warnings 0 "$0"; else eslint --fix --max-warnings 0 "$0"; fi\'',
-    'prettier --write',
-  ],
+  // Packages - format only (linting handled by Turborepo)
+  'packages/**/*.{js,jsx,ts,tsx}': ['prettier --write'],
 
-  // Test files - lighter linting rules
-  '**/*.{test,spec}.{js,jsx,ts,tsx}': ['eslint --fix --max-warnings 0', 'prettier --write'],
+  // Test files - format only (linting handled by Turborepo)
+  '**/*.{test,spec}.{js,jsx,ts,tsx}': ['prettier --write'],
 
-  // Storybook files
-  '**/*.stories.{js,jsx,ts,tsx}': ['eslint --fix --max-warnings 0', 'prettier --write'],
+  // Storybook files - format only (linting handled by Turborepo)
+  '**/*.stories.{js,jsx,ts,tsx}': ['prettier --write'],
 
-  // Configuration files
-  '**/*.config.{js,ts}': ['eslint --fix --max-warnings 0', 'prettier --write'],
+  // Configuration files - format only (linting handled by Turborepo)
+  '**/*.config.{js,ts}': ['prettier --write'],
 
   // Docker files
   '**/Dockerfile*': [
