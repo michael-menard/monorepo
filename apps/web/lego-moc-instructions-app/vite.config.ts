@@ -11,14 +11,24 @@ export default defineConfig(({ mode }) => {
 
   // Extract ports from environment variables with fallbacks
   const FRONTEND_PORT = parseInt(env.VITE_FRONTEND_PORT || env.FRONTEND_PORT || '5173')
-  const AUTH_SERVICE_PORT = parseInt(env.VITE_AUTH_API_PORT || env.AUTH_SERVICE_PORT || '3001')
-  const LEGO_API_PORT = parseInt(env.VITE_LEGO_API_PORT || env.LEGO_API_PORT || '3000')
+  const AUTH_SERVICE_PORT = parseInt(env.VITE_AUTH_API_PORT || env.AUTH_SERVICE_PORT || '9300')
+  const LEGO_API_PORT = parseInt(env.VITE_LEGO_API_PORT || env.LEGO_API_PORT || '9000')
+  const USE_AWS_SERVICES = env.VITE_USE_AWS_SERVICES === 'true'
 
-  // Validate that all required ports are set
-  if (!FRONTEND_PORT || !AUTH_SERVICE_PORT || !LEGO_API_PORT) {
+  // Validate that all required ports are set for local development
+  if (!USE_AWS_SERVICES && (!FRONTEND_PORT || !AUTH_SERVICE_PORT || !LEGO_API_PORT)) {
     console.warn(
-      'Using default ports for development. Set VITE_FRONTEND_PORT, VITE_AUTH_API_PORT, VITE_LEGO_API_PORT for custom configuration.',
+      'Using default ports for local development. Set VITE_FRONTEND_PORT, VITE_AUTH_API_PORT, VITE_LEGO_API_PORT for custom configuration.',
     )
+  }
+
+  // Log configuration
+  console.log('🔧 Vite Configuration:')
+  console.log(`   Frontend Port: ${FRONTEND_PORT}`)
+  console.log(`   AWS Services: ${USE_AWS_SERVICES ? 'enabled' : 'disabled'}`)
+  if (!USE_AWS_SERVICES) {
+    console.log(`   Auth Service Port: ${AUTH_SERVICE_PORT}`)
+    console.log(`   LEGO API Port: ${LEGO_API_PORT}`)
   }
 
   return {
@@ -233,7 +243,8 @@ export default defineConfig(({ mode }) => {
       port: FRONTEND_PORT, // Dynamically loaded from .env file
       strictPort: true, // Fail if port is already in use instead of switching to another port
       host: true,
-      proxy: {
+      // Only use proxy for local development (not AWS services)
+      proxy: USE_AWS_SERVICES ? {} : {
         // Auth service routes - proxy to auth-service on configured port
         '/api/auth': {
           target: `http://localhost:${AUTH_SERVICE_PORT}`,

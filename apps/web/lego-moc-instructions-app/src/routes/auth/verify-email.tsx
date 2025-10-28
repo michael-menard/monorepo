@@ -1,9 +1,15 @@
 import { createRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { rootRoute } from '../root'
-import EmailVerificationPage from '../../pages/auth/EmailVerificationPage'
+import CognitoVerifyEmailPage from '../../pages/auth/CognitoVerifyEmailPage'
+
+const verifyEmailSearchSchema = z.object({
+  email: z.string().optional(),
+})
 
 export const verifyEmailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/verify-email',
-  component: EmailVerificationPage,
+  validateSearch: verifyEmailSearchSchema,
+  component: CognitoVerifyEmailPage,
 })

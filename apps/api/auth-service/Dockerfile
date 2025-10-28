@@ -14,18 +14,19 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/*/package.json ./packages/*/
 COPY apps/api/auth-service/package.json ./apps/api/auth-service/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (ignore optional dependencies like canvas)
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy source code
 COPY packages/ ./packages/
+COPY shared/ ./shared/
 COPY apps/api/auth-service/ ./apps/api/auth-service/
 
 # Build packages first
 RUN pnpm turbo build --filter="./packages/*"
 
 # Build the auth service
-RUN pnpm turbo build --filter="auth-service"
+RUN pnpm turbo build --filter="@repo/api-auth-service"
 
 # Production stage
 FROM node:20-alpine AS production
@@ -46,10 +47,11 @@ COPY packages/*/package.json ./packages/*/
 COPY apps/api/auth-service/package.json ./apps/api/auth-service/
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy built application
 COPY --from=base --chown=nodejs:nodejs /app/packages/*/dist ./packages/*/dist
+COPY --from=base --chown=nodejs:nodejs /app/shared ./shared
 COPY --from=base --chown=nodejs:nodejs /app/apps/api/auth-service/dist ./apps/api/auth-service/dist
 
 # Copy any additional files needed at runtime

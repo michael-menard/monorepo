@@ -9,9 +9,10 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import { Construct } from 'constructs'
 
 export interface AuthServiceStackProps extends cdk.StackProps {
-  environment: 'staging' | 'production'
-  vpcId?: string // Optional: use existing VPC
+  environment: 'dev' | 'staging' | 'production'
+  vpcId?: string // Optional: use existing VPC (deprecated - use shared infrastructure)
   domainName?: string
+  useSharedInfrastructure?: boolean // Use shared VPC and DocumentDB
 }
 
 export class AuthServiceStack extends cdk.Stack {
@@ -22,10 +23,28 @@ export class AuthServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AuthServiceStackProps) {
     super(scope, id, props)
 
-    const { environment, vpcId, domainName } = props
+    const { environment, vpcId, useSharedInfrastructure = true } = props
+    // domainName is available in props but not used in this implementation
 
-    // VPC - use existing or create new
-    const vpc = vpcId
+    // VPC - use shared infrastructure or fallback to existing/new VPC
+    const vpc = useSharedInfrastructure
+      ? ec2.Vpc.fromVpcAttributes(this, 'SharedVpc', {
+          vpcId: cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-VpcId`),
+          availabilityZones: ['us-east-1a', 'us-east-1b'],
+          publicSubnetIds: [
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PublicSubnet1Id`),
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PublicSubnet2Id`),
+          ],
+          privateSubnetIds: [
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PrivateSubnet1Id`),
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PrivateSubnet2Id`),
+          ],
+          isolatedSubnetIds: [
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-IsolatedSubnet1Id`),
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-IsolatedSubnet2Id`),
+          ],
+        })
+      : vpcId
       ? ec2.Vpc.fromLookup(this, 'Vpc', { vpcId })
       : new ec2.Vpc(this, 'AuthServiceVpc', {
           maxAzs: 2,
@@ -55,10 +74,10 @@ export class AuthServiceStack extends cdk.Stack {
     })
     dbSecurityGroup.addIngressRule(ecsSecurityGroup, ec2.Port.tcp(27017))
 
-    // DocumentDB Cluster
+    // DocumentDB Cluster - Keep separate for now (will migrate to PostgreSQL later)
     const dbCredentials = new secretsmanager.Secret(this, 'DbCredentials', {
       generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'admin' }),
+        secretStringTemplate: JSON.stringify({ username: 'dbuser' }),
         generateStringKey: 'password',
         excludeCharacters: '"@/\\',
       },
@@ -66,16 +85,18 @@ export class AuthServiceStack extends cdk.Stack {
 
     this.database = new docdb.DatabaseCluster(this, 'Database', {
       masterUser: {
-        username: 'admin',
+        username: 'dbuser',
         password: dbCredentials.secretValueFromJson('password'),
       },
       instanceType:
         environment === 'production'
-          ? ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MEDIUM)
-          : ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
+          ? ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MEDIUM)
+          : ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MEDIUM),
       instances: environment === 'production' ? 2 : 1,
       vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      vpcSubnets: useSharedInfrastructure
+        ? { subnets: vpc.isolatedSubnets } // Use isolated subnets from shared VPC
+        : { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroup: dbSecurityGroup,
       backup: {
         retention: environment === 'production' ? cdk.Duration.days(7) : cdk.Duration.days(1),
@@ -121,9 +142,13 @@ export class AuthServiceStack extends cdk.Stack {
       environment: {
         NODE_ENV: environment,
         PORT: '3001',
+        DB_HOST: this.database.clusterEndpoint.hostname,
+        DB_PORT: '27017',
+        DB_NAME: 'lego-auth',
       },
       secrets: {
-        MONGODB_URI: ecs.Secret.fromSecretsManager(dbCredentials, 'connectionString'),
+        DB_USERNAME: ecs.Secret.fromSecretsManager(dbCredentials, 'username'),
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(dbCredentials, 'password'),
       },
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'auth-service',
@@ -232,5 +257,17 @@ export class AuthServiceStack extends cdk.Stack {
       value: this.database.clusterEndpoint.hostname,
       description: 'DocumentDB Cluster Endpoint',
     })
+
+    new cdk.CfnOutput(this, 'InfrastructureMode', {
+      value: useSharedInfrastructure ? 'shared' : 'dedicated',
+      description: 'Infrastructure mode: shared (uses LegoMoc shared infrastructure) or dedicated (creates own VPC/DB)',
+    })
+
+    if (useSharedInfrastructure) {
+      new cdk.CfnOutput(this, 'SharedVpcId', {
+        value: cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-VpcId`),
+        description: 'Shared VPC ID being used',
+      })
+    }
   }
 }

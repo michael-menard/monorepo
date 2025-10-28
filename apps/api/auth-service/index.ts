@@ -1,5 +1,7 @@
 // Load centralized environment configuration first
-require('../../../shared/config/env-loader')
+const path = require('path');
+const envLoaderPath = path.resolve(__dirname, '../../../shared/config/env-loader.js');
+require(envLoaderPath);
 
 import express, { Request, Response, NextFunction, ErrorRequestHandler } from 'express'
 import cors from 'cors'

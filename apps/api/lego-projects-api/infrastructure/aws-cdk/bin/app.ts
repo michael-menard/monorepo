@@ -5,13 +5,24 @@ import { LegoApiStack } from '../lib/lego-api-stack'
 
 const app = new cdk.App()
 
-const environment = process.env.ENVIRONMENT || 'staging'
+const environment = process.env.ENVIRONMENT || 'dev'
 
-new LegoApiStack(app, `LegoApiStack${environment.charAt(0).toUpperCase() + environment.slice(1)}`, {
-  environment: environment as 'staging' | 'production',
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+new LegoApiStack(
+  app,
+  `LegoApiStack${environment.charAt(0).toUpperCase() + environment.slice(1)}`,
+  {
+    environment: environment as 'dev' | 'staging' | 'production',
+    useSharedInfrastructure: true, // Use shared VPC, RDS, Redis, and monitoring
+    env: {
+      account: process.env.CDK_DEFAULT_ACCOUNT,
+      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    },
+    tags: {
+      Environment: environment,
+      Project: 'lego-moc-instructions',
+      Component: 'lego-projects-api',
+    },
+
   },
   tags: {
     Environment: environment,
