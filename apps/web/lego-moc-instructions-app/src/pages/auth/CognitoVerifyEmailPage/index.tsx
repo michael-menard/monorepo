@@ -10,7 +10,10 @@ import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 const VerifyEmailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  code: z.string().min(6, 'Verification code must be 6 digits').max(6, 'Verification code must be 6 digits'),
+  code: z
+    .string()
+    .min(6, 'Verification code must be 6 digits')
+    .max(6, 'Verification code must be 6 digits'),
 })
 
 type VerifyEmailFormData = z.infer<typeof VerifyEmailSchema>
@@ -50,25 +53,22 @@ function CognitoVerifyEmailPage() {
 
       if (result.success) {
         setSuccess('Email verified successfully! Redirecting to login...')
-        console.log('Email verification successful with Cognito')
-        
+
         // Navigate to login page after verification
         setTimeout(() => {
           router.navigate({ to: '/auth/login' })
         }, 2000)
       } else {
         setError(result.error || 'Email verification failed. Please try again.')
-        console.error('Cognito email verification error:', result.error)
       }
     } catch (err) {
       setError('Email verification failed. Please try again.')
-      console.error('Unexpected email verification error:', err)
     }
   }
 
   const handleResendCode = async () => {
     const email = (document.getElementById('email') as HTMLInputElement)?.value
-    
+
     if (!email) {
       setError('Please enter your email address first')
       return
@@ -77,9 +77,9 @@ function CognitoVerifyEmailPage() {
     try {
       setIsResending(true)
       setError(null)
-      
+
       const result = await resendCode(email)
-      
+
       if (result.success) {
         setSuccess('Verification code sent! Please check your email.')
       } else {
@@ -87,7 +87,6 @@ function CognitoVerifyEmailPage() {
       }
     } catch (err) {
       setError('Failed to resend verification code')
-      console.error('Resend code error:', err)
     } finally {
       setIsResending(false)
     }
@@ -113,12 +112,13 @@ function CognitoVerifyEmailPage() {
             </motion.div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
             <p className="text-gray-600">
-              We've sent a verification code to your email address. Please enter it below to complete your registration.
+              We've sent a verification code to your email address. Please enter it below to
+              complete your registration.
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {error && (
+            {error ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -126,9 +126,9 @@ function CognitoVerifyEmailPage() {
               >
                 {error}
               </motion.div>
-            )}
+            ) : null}
 
-            {success && (
+            {success ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -136,7 +136,7 @@ function CognitoVerifyEmailPage() {
               >
                 {success}
               </motion.div>
-            )}
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
@@ -153,7 +153,7 @@ function CognitoVerifyEmailPage() {
                   aria-invalid={errors.email ? 'true' : 'false'}
                 />
               </div>
-              {errors.email && (
+              {errors.email ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -161,7 +161,7 @@ function CognitoVerifyEmailPage() {
                 >
                   {errors.email.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -180,7 +180,7 @@ function CognitoVerifyEmailPage() {
                   aria-invalid={errors.code ? 'true' : 'false'}
                 />
               </div>
-              {errors.code && (
+              {errors.code ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -188,7 +188,7 @@ function CognitoVerifyEmailPage() {
                 >
                   {errors.code.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <Button
@@ -209,9 +209,7 @@ function CognitoVerifyEmailPage() {
 
           <div className="mt-6 text-center space-y-4">
             <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Didn't receive the code?
-              </p>
+              <p className="text-sm text-gray-600 mb-2">Didn't receive the code?</p>
               <Button
                 type="button"
                 variant="outline"

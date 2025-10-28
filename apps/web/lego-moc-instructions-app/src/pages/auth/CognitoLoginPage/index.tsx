@@ -38,16 +38,13 @@ function CognitoLoginPage() {
       const result = await signIn(data)
 
       if (result.success) {
-        console.log('Login successful with Cognito')
         // Navigate to profile page on success
         router.navigate({ to: '/profile' })
       } else {
         setError(result.error || 'Login failed. Please try again.')
-        console.error('Cognito login error:', result.error)
       }
     } catch (err) {
       setError('Login failed. Please try again.')
-      console.error('Unexpected login error:', err)
     }
   }
 
@@ -74,7 +71,7 @@ function CognitoLoginPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {error && (
+            {error ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -82,7 +79,7 @@ function CognitoLoginPage() {
               >
                 {error}
               </motion.div>
-            )}
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
@@ -99,7 +96,7 @@ function CognitoLoginPage() {
                   aria-invalid={errors.email ? 'true' : 'false'}
                 />
               </div>
-              {errors.email && (
+              {errors.email ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -107,7 +104,7 @@ function CognitoLoginPage() {
                 >
                   {errors.email.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -132,7 +129,7 @@ function CognitoLoginPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              {errors.password && (
+              {errors.password ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -140,7 +137,7 @@ function CognitoLoginPage() {
                 >
                   {errors.password.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center justify-between">
@@ -205,12 +202,7 @@ function CognitoLoginPage() {
             </div>
 
             <div className="mt-6">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                disabled
-              >
+              <Button type="button" variant="outline" className="w-full" disabled>
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"

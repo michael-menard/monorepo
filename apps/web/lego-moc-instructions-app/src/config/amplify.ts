@@ -7,23 +7,23 @@ const amplifyConfig = {
       // User Pool configuration
       userPoolId: 'us-east-1_b0UJziNnZ',
       userPoolClientId: '21qsttnb5r7io49eslnq2pur9j',
-      
+
       // Identity Pool configuration (for AWS resource access)
       identityPoolId: 'us-east-1:4dffa274-13c4-4be5-9478-9231e658a1fa',
-      
+
       // AWS Region
       region: 'us-east-1',
-      
+
       // Sign up configuration
-      signUpVerificationMethod: 'code', // 'code' | 'link'
-      
+      signUpVerificationMethod: 'code' as const,
+
       // Login configuration
       loginWith: {
         email: true,
         username: false,
         phone: false,
       },
-      
+
       // User attributes
       userAttributes: {
         email: {
@@ -36,7 +36,7 @@ const amplifyConfig = {
           required: false,
         },
       },
-      
+
       // Password policy (matches our Cognito configuration)
       passwordFormat: {
         minLength: 8,
@@ -45,7 +45,7 @@ const amplifyConfig = {
         requireNumbers: true,
         requireSpecialCharacters: false,
       },
-      
+
       // OAuth configuration (for future Google login)
       oauth: {
         domain: 'us-east-1_b0UJziNnZ.auth.us-east-1.amazoncognito.com',
@@ -58,11 +58,11 @@ const amplifyConfig = {
           'http://localhost:3002/auth/logout',
           'https://lego-moc-instructions.com/auth/logout',
         ],
-        responseType: 'code',
+        responseType: 'code' as const,
       },
     },
   },
-  
+
   // Storage configuration (for future file uploads)
   Storage: {
     S3: {

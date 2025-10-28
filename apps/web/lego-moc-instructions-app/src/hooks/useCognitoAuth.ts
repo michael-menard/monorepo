@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
-import { 
-  signUp, 
-  signIn, 
-  signOut, 
-  confirmSignUp, 
+import {
+  signUp,
+  signIn,
+  signOut,
+  confirmSignUp,
   resendSignUpCode,
   resetPassword,
   confirmResetPassword,
   getCurrentUser,
   fetchAuthSession,
-  type AuthUser
+  type AuthUser,
 } from 'aws-amplify/auth'
 
 export interface CognitoUser {
@@ -66,7 +66,7 @@ export const useCognitoAuth = () => {
   const convertUser = useCallback((amplifyUser: AuthUser): CognitoUser => {
     const { userId, signInDetails } = amplifyUser
     const email = signInDetails?.loginId || ''
-    
+
     return {
       id: userId,
       email,
@@ -81,10 +81,10 @@ export const useCognitoAuth = () => {
   const checkAuthState = useCallback(async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       const user = await getCurrentUser()
       const session = await fetchAuthSession()
-      
+
       if (user && session.tokens) {
         const cognitoUser = convertUser(user)
         setAuthState({
@@ -102,7 +102,7 @@ export const useCognitoAuth = () => {
         })
       }
     } catch (error) {
-      console.log('No authenticated user:', error)
+      // No authenticated user - this is expected when not logged in
       setAuthState({
         user: null,
         isLoading: false,
@@ -121,7 +121,7 @@ export const useCognitoAuth = () => {
   const handleSignUp = useCallback(async (data: SignUpData) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       const { isSignUpComplete, userId, nextStep } = await signUp({
         username: data.email,
         password: data.password,
@@ -142,14 +142,14 @@ export const useCognitoAuth = () => {
         userId,
         message: 'Account created successfully. Please check your email for verification code.',
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Sign up failed'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Sign up failed'
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -158,52 +158,55 @@ export const useCognitoAuth = () => {
   }, [])
 
   // Sign in user
-  const handleSignIn = useCallback(async (data: SignInData) => {
-    try {
-      setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
-      const { isSignedIn, nextStep } = await signIn({
-        username: data.email,
-        password: data.password,
-      })
+  const handleSignIn = useCallback(
+    async (data: SignInData) => {
+      try {
+        setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
 
-      if (isSignedIn) {
-        // Refresh auth state to get user info
-        await checkAuthState()
-        return {
-          success: true,
-          message: 'Signed in successfully',
+        const { isSignedIn, nextStep } = await signIn({
+          username: data.email,
+          password: data.password,
+        })
+
+        if (isSignedIn) {
+          // Refresh auth state to get user info
+          await checkAuthState()
+          return {
+            success: true,
+            message: 'Signed in successfully',
+          }
+        } else {
+          setAuthState(prev => ({ ...prev, isLoading: false }))
+          return {
+            success: false,
+            error: 'Sign in incomplete',
+            nextStep,
+          }
         }
-      } else {
-        setAuthState(prev => ({ ...prev, isLoading: false }))
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Sign in failed'
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: errorMessage,
+        }))
+
         return {
           success: false,
-          error: 'Sign in incomplete',
-          nextStep,
+          error: errorMessage,
         }
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Sign in failed'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
-      }))
-      
-      return {
-        success: false,
-        error: errorMessage,
-      }
-    }
-  }, [checkAuthState])
+    },
+    [checkAuthState],
+  )
 
   // Sign out user
   const handleSignOut = useCallback(async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       await signOut()
-      
+
       setAuthState({
         user: null,
         isLoading: false,
@@ -215,14 +218,14 @@ export const useCognitoAuth = () => {
         success: true,
         message: 'Signed out successfully',
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Sign out failed'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Sign out failed'
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -234,7 +237,7 @@ export const useCognitoAuth = () => {
   const handleVerifyEmail = useCallback(async (data: VerifyEmailData) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       const { isSignUpComplete, nextStep } = await confirmSignUp({
         username: data.email,
         confirmationCode: data.code,
@@ -248,14 +251,14 @@ export const useCognitoAuth = () => {
         nextStep,
         message: 'Email verified successfully',
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Email verification failed'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Email verification failed'
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -267,7 +270,7 @@ export const useCognitoAuth = () => {
   const handleResendCode = useCallback(async (email: string) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       await resendSignUpCode({
         username: email,
       })
@@ -278,14 +281,14 @@ export const useCognitoAuth = () => {
         success: true,
         message: 'Verification code sent',
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to resend code'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to resend code'
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -297,7 +300,7 @@ export const useCognitoAuth = () => {
   const handleForgotPassword = useCallback(async (data: ForgotPasswordData) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       await resetPassword({
         username: data.email,
       })
@@ -308,14 +311,14 @@ export const useCognitoAuth = () => {
         success: true,
         message: 'Password reset code sent to your email',
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to send reset code'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send reset code'
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -327,7 +330,7 @@ export const useCognitoAuth = () => {
   const handleResetPassword = useCallback(async (data: ResetPasswordData) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }))
-      
+
       await confirmResetPassword({
         username: data.email,
         confirmationCode: data.code,
@@ -340,14 +343,14 @@ export const useCognitoAuth = () => {
         success: true,
         message: 'Password reset successfully',
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Password reset failed'
-      setAuthState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage 
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset failed'
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -358,7 +361,7 @@ export const useCognitoAuth = () => {
   return {
     // State
     ...authState,
-    
+
     // Actions
     signUp: handleSignUp,
     signIn: handleSignIn,

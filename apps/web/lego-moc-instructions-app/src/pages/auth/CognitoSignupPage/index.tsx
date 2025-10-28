@@ -58,30 +58,33 @@ function CognitoSignupPage() {
       })
 
       if (result.success) {
-        setSuccess(result.message || 'Account created successfully! Please check your email for verification.')
-        console.log('Signup successful with Cognito')
-        
+        setSuccess(
+          result.message ||
+            'Account created successfully! Please check your email for verification.',
+        )
+        // Signup successful with Cognito
+
         // Navigate to email verification page after a short delay
         setTimeout(() => {
-          router.navigate({ 
+          router.navigate({
             to: '/auth/verify-email',
-            search: { email: data.email }
+            search: { email: data.email },
           })
         }, 2000)
       } else {
         setError(result.error || 'Signup failed. Please try again.')
-        console.error('Cognito signup error:', result.error)
+        // Cognito signup error logged
       }
     } catch (err) {
       setError('Signup failed. Please try again.')
-      console.error('Unexpected signup error:', err)
+      // Unexpected signup error logged
     }
   }
 
   // Password strength indicator
   const getPasswordStrength = (password: string) => {
     if (!password) return { strength: 0, label: '', color: '' }
-    
+
     let strength = 0
     if (password.length >= 8) strength++
     if (/[a-z]/.test(password)) strength++
@@ -91,11 +94,11 @@ function CognitoSignupPage() {
 
     const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong']
     const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500']
-    
+
     return {
       strength,
       label: labels[strength - 1] || '',
-      color: colors[strength - 1] || 'bg-gray-300'
+      color: colors[strength - 1] || 'bg-gray-300',
     }
   }
 
@@ -124,7 +127,7 @@ function CognitoSignupPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {error && (
+            {error ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -132,9 +135,9 @@ function CognitoSignupPage() {
               >
                 {error}
               </motion.div>
-            )}
+            ) : null}
 
-            {success && (
+            {success ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -142,7 +145,7 @@ function CognitoSignupPage() {
               >
                 {success}
               </motion.div>
-            )}
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium text-gray-700">
@@ -159,7 +162,7 @@ function CognitoSignupPage() {
                   aria-invalid={errors.name ? 'true' : 'false'}
                 />
               </div>
-              {errors.name && (
+              {errors.name ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -167,7 +170,7 @@ function CognitoSignupPage() {
                 >
                   {errors.name.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -185,7 +188,7 @@ function CognitoSignupPage() {
                   aria-invalid={errors.email ? 'true' : 'false'}
                 />
               </div>
-              {errors.email && (
+              {errors.email ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -193,7 +196,7 @@ function CognitoSignupPage() {
                 >
                   {errors.email.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -218,12 +221,12 @@ function CognitoSignupPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              
+
               {/* Password Strength Indicator */}
-              {watchedPassword && (
+              {watchedPassword ? (
                 <div className="space-y-2">
                   <div className="flex space-x-1">
-                    {[1, 2, 3, 4, 5].map((level) => (
+                    {[1, 2, 3, 4, 5].map(level => (
                       <div
                         key={level}
                         className={`h-2 flex-1 rounded ${
@@ -234,15 +237,15 @@ function CognitoSignupPage() {
                       />
                     ))}
                   </div>
-                  {passwordStrength.label && (
+                  {passwordStrength.label ? (
                     <p className="text-xs text-gray-600">
                       Password strength: {passwordStrength.label}
                     </p>
-                  )}
+                  ) : null}
                 </div>
-              )}
-              
-              {errors.password && (
+              ) : null}
+
+              {errors.password ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -250,7 +253,7 @@ function CognitoSignupPage() {
                 >
                   {errors.password.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -272,10 +275,14 @@ function CognitoSignupPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
-              {errors.confirmPassword && (
+              {errors.confirmPassword ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -283,7 +290,7 @@ function CognitoSignupPage() {
                 >
                   {errors.confirmPassword.message}
                 </motion.p>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center">
