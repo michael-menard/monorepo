@@ -1,19 +1,21 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Mail, Shield, ArrowLeft } from 'lucide-react'
+import { Mail, Shield, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useRouter, useSearch } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState, useEffect } from 'react'
 import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
+import { OTPInput } from '../../../components/OTPInput'
 
 const VerifyEmailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   code: z
     .string()
     .min(6, 'Verification code must be 6 digits')
-    .max(6, 'Verification code must be 6 digits'),
+    .max(6, 'Verification code must be 6 digits')
+    .regex(/^\d{6}$/, 'Verification code must contain only digits'),
 })
 
 type VerifyEmailFormData = z.infer<typeof VerifyEmailSchema>
@@ -25,16 +27,20 @@ function CognitoVerifyEmailPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isResending, setIsResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<VerifyEmailFormData>({
     resolver: zodResolver(VerifyEmailSchema),
     mode: 'onChange',
   })
+
+  const codeValue = watch('code') || ''
 
   // Pre-fill email from URL search params
   useEffect(() => {
@@ -42,6 +48,17 @@ function CognitoVerifyEmailPage() {
       setValue('email', search.email)
     }
   }, [search?.email, setValue])
+
+  // Handle resend cooldown
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => {
+        setResendCooldown(prev => prev - 1)
+      }, 1000)
+    }
+    return () => clearTimeout(timer)
+  }, [resendCooldown])
 
   const onSubmit = async (data: VerifyEmailFormData) => {
     try {
@@ -67,46 +84,57 @@ function CognitoVerifyEmailPage() {
   }
 
   const handleResendCode = async () => {
-    const email = (document.getElementById('email') as HTMLInputElement)?.value
-
-    if (!email) {
-      setError('Please enter your email address first')
-      return
-    }
+    if (resendCooldown > 0) return
 
     try {
       setIsResending(true)
       setError(null)
 
-      const result = await resendCode(email)
+      const email = watch('email')
+      if (!email) {
+        setError('Please enter your email address first.')
+        return
+      }
+
+      const result = await resendCode({ email })
 
       if (result.success) {
         setSuccess('Verification code sent! Please check your email.')
+        setResendCooldown(60) // 60 second cooldown
+        setTimeout(() => setSuccess(null), 3000)
       } else {
-        setError(result.error || 'Failed to resend verification code')
+        setError(result.error || 'Failed to resend code. Please try again.')
       }
     } catch (err) {
-      setError('Failed to resend verification code')
+      setError('Failed to resend code. Please try again.')
     } finally {
       setIsResending(false)
     }
   }
 
+  const handleBackToLogin = () => {
+    router.navigate({ to: '/auth/login' })
+  }
+
+  const handleCodeChange = (code: string) => {
+    setValue('code', code, { shouldValidate: true })
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <AppCard className="p-8 shadow-xl">
+        <AppCard className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <div className="text-center mb-8">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="mx-auto w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-600 rounded-full flex items-center justify-center mb-4"
+              className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4"
             >
               <Shield className="w-8 h-8 text-white" />
             </motion.div>
@@ -164,79 +192,82 @@ function CognitoVerifyEmailPage() {
               ) : null}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="code" className="text-sm font-medium text-gray-700">
+            <div className="space-y-4">
+              <Label className="text-sm font-medium text-gray-700 block text-center">
                 Verification Code
               </Label>
-              <div className="relative">
-                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  id="code"
-                  type="text"
-                  placeholder="Enter 6-digit code"
-                  className="pl-10 text-center text-lg tracking-widest"
-                  maxLength={6}
-                  {...register('code')}
-                  aria-invalid={errors.code ? 'true' : 'false'}
-                />
-              </div>
+
+              <OTPInput
+                value={codeValue}
+                onChange={handleCodeChange}
+                length={6}
+                disabled={isSubmitting || isLoading}
+                error={!!errors.code}
+                autoFocus
+                className="mb-2"
+              />
+
               {errors.code ? (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-red-600 text-sm"
+                  className="text-red-600 text-sm text-center"
                 >
                   {errors.code.message}
                 </motion.p>
               ) : null}
             </div>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting || isLoading}
-              className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-md transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {isSubmitting || isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Verifying...
-                </div>
-              ) : (
-                'Verify Email'
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Didn't receive the code?</p>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
-                type="button"
-                variant="outline"
-                onClick={handleResendCode}
-                disabled={isResending}
-                className="text-sm"
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                disabled={isSubmitting || isLoading || codeValue.length !== 6}
               >
-                {isResending ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                    Sending...
+                {isSubmitting || isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Verifying...</span>
                   </div>
                 ) : (
-                  'Resend Code'
+                  'Verify Email'
                 )}
               </Button>
-            </div>
+            </motion.div>
+          </form>
 
-            <div className="pt-4 border-t border-gray-200">
-              <button
-                onClick={() => router.navigate({ to: '/auth/login' })}
-                className="flex items-center justify-center text-sm text-gray-600 hover:text-gray-800 font-medium"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Login
-              </button>
-            </div>
+          <div className="text-center space-y-3">
+            <p className="text-sm text-gray-600">Didn't receive the code?</p>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleResendCode}
+              disabled={resendCooldown > 0 || isResending}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              {isResending ? (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Sending...</span>
+                </div>
+              ) : resendCooldown > 0 ? (
+                `Resend in ${resendCooldown}s`
+              ) : (
+                'Resend Code'
+              )}
+            </Button>
+          </div>
+
+          <div className="text-center">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleBackToLogin}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Login
+            </Button>
           </div>
         </AppCard>
       </motion.div>
