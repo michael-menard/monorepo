@@ -11,12 +11,8 @@ function DebugAuth() {
 
   const handleLogout = async () => {
     try {
-      console.log('🔄 Debug: Starting logout...')
       await logout()
-      console.log('✅ Debug: Logout completed')
-    } catch (error) {
-      console.error('❌ Debug: Logout failed:', error)
-    }
+    } catch (error) {}
   }
 
   return (

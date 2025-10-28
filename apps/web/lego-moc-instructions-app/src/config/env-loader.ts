@@ -193,7 +193,6 @@ function loadEnvironmentConfig(): ValidatedConfig {
   if (useAwsServices) {
     // AWS Services: Use AWS Load Balancer endpoints
     if (!env.VITE_API_BASE_URL) {
-      console.warn(
         '⚠️ AWS services enabled but VITE_API_BASE_URL not configured. Using fallback URLs.',
       )
     }
@@ -235,18 +234,8 @@ try {
 
   // Log configuration in development
   if (config.isDevelopment) {
-    console.group('🔧 Frontend Environment Configuration')
-    console.log('✅ Configuration loaded successfully')
-    console.log('Ports:', config.ports)
-    console.log('URLs:', config.urls)
-    console.log('Environment:', config.environment)
-    console.log('AWS Services:', config.useAwsServices ? 'enabled' : 'disabled')
-    console.groupEnd()
   }
 } catch (error) {
-  console.error('❌ Frontend Environment Configuration Error:')
-  console.error(error instanceof Error ? error.message : String(error))
-  console.error('\n💡 Check your .env file and ensure all required variables are set.')
 
   // In development, show the error prominently
   if (import.meta.env.DEV) {

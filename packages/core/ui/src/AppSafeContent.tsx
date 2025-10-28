@@ -1,5 +1,10 @@
 import * as React from 'react'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 // Ensure JSX namespace is available
 declare global {
@@ -74,7 +79,6 @@ export const AppSafeContent: React.FC<AppSafeContentProps> = ({
       const validation = validateSanitizedInput(content, sanitized)
       if (validation.warnings.length > 0) {
         if (showSanitizationWarnings) {
-          console.warn('AppSafeContent sanitization warnings:', validation.warnings)
         }
         onSanitizationWarning?.(validation.warnings)
       }

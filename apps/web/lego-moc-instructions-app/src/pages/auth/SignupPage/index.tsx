@@ -1,12 +1,12 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Lock, Mail, User, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react'
 import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState } from 'react'
-import { AuthApiError, authApi } from '../../../services/authApi'
+import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 const SignupSchema = z
   .object({
@@ -27,7 +27,7 @@ type SignupFormData = z.infer<typeof SignupSchema>
 
 function SignupPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const { signUp, isLoading: authLoading } = useCognitoAuth()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -46,32 +46,25 @@ function SignupPage() {
 
   const onSubmit = async (data: SignupFormData) => {
     try {
-      setIsLoading(true)
       setError(null)
 
-      // Remove confirmPassword before sending to backend
+      // Remove confirmPassword before sending to Cognito
       const { confirmPassword, ...signupData } = data
 
-      // Call the auth API
-      const response = await authApi.signup(signupData)
+      // Call Cognito sign up
+      const result = await signUp(signupData)
 
-      console.log('Signup successful:', response)
+      if (result.success) {
+        // Store email for verification page
+        localStorage.setItem('pendingVerificationEmail', signupData.email)
 
-      // Store email for verification page
-      localStorage.setItem('pendingVerificationEmail', signupData.email)
-
-      // Navigate to email verification page
-      router.navigate({ to: '/auth/verify-email' })
-    } catch (err) {
-      if (err instanceof AuthApiError) {
-        setError(err.message)
-        console.error('Signup API error:', err)
+        // Navigate to email verification page
+        router.navigate({ to: '/auth/verify-email' })
       } else {
-        setError('Signup failed. Please try again.')
-        console.error('Signup error:', err)
+        setError(result.error || 'Signup failed. Please try again.')
       }
-    } finally {
-      setIsLoading(false)
+    } catch (err) {
+      setError('Signup failed. Please try again.')
     }
   }
 
@@ -223,8 +216,8 @@ function SignupPage() {
             ) : null}
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
-                {isSubmitting || isLoading ? (
+              <Button type="submit" className="w-full" disabled={isSubmitting || authLoading}>
+                {isSubmitting || authLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   'Create Account'

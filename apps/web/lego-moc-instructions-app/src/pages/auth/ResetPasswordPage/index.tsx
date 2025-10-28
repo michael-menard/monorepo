@@ -2,14 +2,18 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Lock } from 'lucide-react'
-import { useParams, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState } from 'react'
-import { AuthApiError, authApi } from '../../../services/authApi'
+import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 const ResetPasswordSchema = z
   .object({
+    code: z
+      .string()
+      .min(6, 'Verification code must be 6 characters')
+      .max(6, 'Verification code must be 6 characters'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
   })
@@ -22,8 +26,7 @@ type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>
 
 function ResetPasswordPage() {
   const router = useRouter()
-  const { token } = useParams({ from: '/auth/reset-password/$token' })
-  const [isLoading, setIsLoading] = useState(false)
+  const { resetPassword, isLoading: authLoading } = useCognitoAuth()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
@@ -37,28 +40,28 @@ function ResetPasswordPage() {
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {
-      setIsLoading(true)
       setError(null)
 
-      // Remove confirmPassword before sending to backend
-      const { confirmPassword, ...resetData } = data
+      // Get email from localStorage (set in ForgotPasswordPage)
+      const email = localStorage.getItem('resetPasswordEmail') || ''
 
-      // Call the auth API with token from route params
-      const response = await authApi.resetPassword(token, resetData)
-
-      console.log('Reset password successful:', response)
-
-      setIsSubmitted(true)
-    } catch (err) {
-      if (err instanceof AuthApiError) {
-        setError(err.message)
-        console.error('Reset password API error:', err)
-      } else {
-        setError('Failed to reset password. Please try again.')
-        console.error('Reset password error:', err)
+      if (!email) {
+        setError('Email not found. Please request a new password reset.')
+        return
       }
-    } finally {
-      setIsLoading(false)
+
+      // Call Cognito reset password with code and new password
+      const result = await resetPassword(email, data.code, data.password)
+
+      if (result.success) {
+        // Clear the email from localStorage
+        localStorage.removeItem('resetPasswordEmail')
+        setIsSubmitted(true)
+      } else {
+        setError(result.error || 'Failed to reset password. Please try again.')
+      }
+    } catch (err) {
+      setError('Failed to reset password. Please try again.')
     }
   }
 
@@ -109,6 +112,26 @@ function ResetPasswordPage() {
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="code">Verification Code</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Lock className="w-5 h-5" />
+                </span>
+                <Input
+                  id="code"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  className="pl-10 text-center text-lg tracking-widest"
+                  {...register('code')}
+                />
+              </div>
+              {errors.code ? (
+                <p className="text-red-500 text-sm mt-1">{errors.code.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -153,8 +176,8 @@ function ResetPasswordPage() {
             ) : null}
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
-                {isSubmitting || isLoading ? (
+              <Button type="submit" className="w-full" disabled={isSubmitting || authLoading}>
+                {isSubmitting || authLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   'Update Password'

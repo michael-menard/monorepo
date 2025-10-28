@@ -80,9 +80,5 @@ export const API_ENDPOINTS = {
 
 // Debug logging in development
 if (getEnvironment() === 'development') {
-  console.log('🔧 API Configuration:', {
-    environment: getEnvironment(),
-    config: currentConfig,
-    endpoints: API_ENDPOINTS,
-  })
+  // API configuration logging removed for production
 }

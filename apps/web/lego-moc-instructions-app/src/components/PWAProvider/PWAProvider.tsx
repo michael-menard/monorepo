@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { registerSW } from 'virtual:pwa-register'
 import type { ReactNode } from 'react'
 
@@ -40,11 +40,11 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
       onOfflineReady() {
         setOfflineReady(true)
       },
-      onRegistered(swRegistration: ServiceWorkerRegistration) {
-        console.log('SW registered: ', swRegistration)
+      onRegistered() {
+        // Service worker registered
       },
-      onRegisterError(error: Error) {
-        console.log('SW registration error', error)
+      onRegisterError() {
+        // Service worker registration error
       },
     })
 
@@ -58,7 +58,6 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
     const handleAppInstalled = () => {
       setCanInstall(false)
       setDeferredPrompt(null)
-      console.log('PWA was installed')
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -89,23 +88,26 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
     const { outcome } = await deferredPrompt.userChoice
 
     if (outcome === 'accepted') {
-      console.log('User accepted the install prompt')
+      // User accepted the install prompt
     } else {
-      console.log('User dismissed the install prompt')
+      // User dismissed the install prompt
     }
 
     setDeferredPrompt(null)
     setCanInstall(false)
   }
 
-  const value: PWAContextType = {
-    needRefresh,
-    offlineReady,
-    updateServiceWorker,
-    closePrompt,
-    canInstall,
-    installPrompt,
-  }
+  const value: PWAContextType = useMemo(
+    () => ({
+      needRefresh,
+      offlineReady,
+      updateServiceWorker,
+      closePrompt,
+      canInstall,
+      installPrompt,
+    }),
+    [needRefresh, offlineReady, updateServiceWorker, closePrompt, canInstall, installPrompt],
+  )
 
   return <PWAContext.Provider value={value}>{children}</PWAContext.Provider>
 }

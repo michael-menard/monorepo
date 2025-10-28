@@ -107,8 +107,6 @@ export const ErrorBoundaryExample: React.FC = () => {
   const [dataError, setDataError] = useState(false)
 
   const handleError = (error: Error, errorInfo: any) => {
-    console.log('Error caught:', error, errorInfo)
-
     // Generate and send error report
     const report = generateErrorReport(error, {
       component: 'ErrorBoundaryExample',

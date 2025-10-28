@@ -3,9 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
-import { AppCard, Button, Input, Label, showSuccessToast, showErrorToast } from '@repo/ui'
+import { AppCard, Button, Input, Label, showErrorToast, showSuccessToast } from '@repo/ui'
 import { useState } from 'react'
-import { AuthApiError, authApi } from '../../../services/authApi'
+import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 const EmailVerificationSchema = z.object({
   code: z
@@ -18,7 +18,7 @@ type EmailVerificationFormData = z.infer<typeof EmailVerificationSchema>
 
 function EmailVerificationPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const { verifyEmail, resendCode, isLoading: authLoading } = useCognitoAuth()
   const [error, setError] = useState<string | null>(null)
   const [isVerified, setIsVerified] = useState(false)
 
@@ -32,58 +32,54 @@ function EmailVerificationPage() {
 
   const onSubmit = async (data: EmailVerificationFormData) => {
     try {
-      setIsLoading(true)
       setError(null)
 
-      // Call the auth API
-      const response = await authApi.verifyEmail(data)
+      // Get email from localStorage (set during signup)
+      const email = localStorage.getItem('pendingVerificationEmail') || ''
 
-      console.log('Email verification successful:', response)
-
-      setIsVerified(true)
-    } catch (err) {
-      if (err instanceof AuthApiError) {
-        setError(err.message)
-        console.error('Email verification API error:', err)
-      } else {
-        setError('Verification failed. Please try again.')
-        console.error('Email verification error:', err)
+      if (!email) {
+        setError('Email not found. Please try signing up again.')
+        return
       }
-    } finally {
-      setIsLoading(false)
+
+      // Call Cognito verify email
+      const result = await verifyEmail({ email, code: data.code })
+
+      if (result.success) {
+        setIsVerified(true)
+        // Clear the pending email from localStorage
+        localStorage.removeItem('pendingVerificationEmail')
+      } else {
+        setError(result.error || 'Verification failed. Please try again.')
+      }
+    } catch (err) {
+      setError('Verification failed. Please try again.')
     }
   }
 
   const handleResendCode = async () => {
     try {
-      // TODO: Get email from context or URL params
-      // For now, we'll need to get the email from somewhere
-      // This could be from a context, URL params, or stored in localStorage
+      // Get email from localStorage (set during signup)
       const email = localStorage.getItem('pendingVerificationEmail') || ''
 
       if (!email) {
-        alert('Email not found. Please try signing up again.')
+        showErrorToast('Email not found. Please try signing up again.', 'Resend failed')
         return
       }
 
-      // Call the auth API
-      const response = await authApi.resendVerification(email)
+      // Call Cognito resend code
+      const result = await resendCode(email)
 
-      console.log('Resend verification successful:', response)
-
-      // Show success message
-      showSuccessToast(
-        'Verification code resent successfully!',
-        'Check your email for the new code.',
-      )
-    } catch (err) {
-      if (err instanceof AuthApiError) {
-        showErrorToast(err.message, 'Resend failed')
-        console.error('Resend verification API error:', err)
+      if (result.success) {
+        showSuccessToast(
+          'Verification code resent successfully!',
+          'Check your email for the new code.',
+        )
       } else {
-        showErrorToast('Failed to resend code. Please try again.', 'Resend failed')
-        console.error('Resend code error:', err)
+        showErrorToast(result.error || 'Failed to resend code. Please try again.', 'Resend failed')
       }
+    } catch (err) {
+      showErrorToast('Failed to resend code. Please try again.', 'Resend failed')
     }
   }
 
@@ -154,8 +150,8 @@ function EmailVerificationPage() {
             ) : null}
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
-                {isSubmitting || isLoading ? (
+              <Button type="submit" className="w-full" disabled={isSubmitting || authLoading}>
+                {isSubmitting || authLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   'Verify Email'

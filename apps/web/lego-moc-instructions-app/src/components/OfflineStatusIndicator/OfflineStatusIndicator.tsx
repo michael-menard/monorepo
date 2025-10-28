@@ -22,12 +22,11 @@ export const OfflineStatusIndicator = () => {
 
   const handleSync = async () => {
     try {
-      const result = await processActions().unwrap()
-      console.log(`Sync completed: ${result.processed} processed, ${result.failed} failed`)
+      await processActions().unwrap()
       // Refetch status to get updated counts
       refetch()
     } catch (error) {
-      console.error('Failed to sync offline actions:', error)
+      // Error handling removed
     }
   }
 

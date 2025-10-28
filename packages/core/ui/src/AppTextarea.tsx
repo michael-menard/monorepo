@@ -1,6 +1,11 @@
 import * as React from 'react'
-import {Textarea, TextareaProps} from './textarea'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import { Textarea, TextareaProps } from './textarea'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 // Simple debounce hook (internal to avoid external dependencies)
 function useDebounce<T>(value: T, delay: number): T {
@@ -107,7 +112,6 @@ export const AppTextarea = React.forwardRef<HTMLTextAreaElement, AppTextareaProp
           const validation = validateSanitizedInput(inputValue, sanitized)
           if (validation.warnings.length > 0) {
             if (showSanitizationWarnings) {
-              console.warn('AppTextarea sanitization warnings:', validation.warnings)
             }
             onSanitizationWarning?.(validation.warnings)
           }
@@ -201,7 +205,6 @@ export const AppTextarea = React.forwardRef<HTMLTextAreaElement, AppTextareaProp
         if (sanitized !== value) {
           // If the parent provided an unsanitized value, we should warn
           if (showSanitizationWarnings) {
-            console.warn('AppTextarea: Initial value was sanitized', { original: value, sanitized })
           }
         }
       }

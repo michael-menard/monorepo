@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { RadarData, Entry, Quadrant, Ring } from './types'
+import { RadarData, Entry } from './types'
 import { RadarEntry } from './RadarEntry'
 
 interface RadarVisualizationProps {

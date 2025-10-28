@@ -102,17 +102,14 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
 
   // Debug component mount
   useEffect(() => {
-    console.log('🎯 LegoProfileContent component mounted')
   }, [])
 
   // Fetch real MOC statistics by category
-  console.log('🚀 Profile page rendering, about to call MOC stats API')
   const {
     data: mocStatsResponse,
     isLoading: mocStatsLoading,
     error: mocStatsError,
   } = useGetMOCStatsByCategoryQuery()
-  console.log('🚀 MOC stats hook result:', { mocStatsResponse, mocStatsLoading, mocStatsError })
 
   // Fetch MOC uploads over time data
   const {
@@ -120,12 +117,10 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
     isLoading: uploadsLoading,
     error: uploadsError,
   } = useGetMOCUploadsOverTimeQuery()
-  console.log('📈 Uploads over time hook result:', {
     uploadsOverTimeResponse,
     uploadsLoading,
     uploadsError,
   })
-  console.log('📈 Raw uploads data:', uploadsOverTimeResponse?.data)
 
   // Transform the data for the line chart
   const transformUploadsData = (
@@ -165,8 +160,6 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
     ? transformUploadsData(uploadsOverTimeResponse.data)
     : { chartData: [], categories: [] }
 
-  console.log('📈 Transformed chart data:', chartData)
-  console.log('📈 Categories:', categories)
 
   // Mock data for sets purchased by manufacturer over time
   const mockSetsPurchasedData = [
@@ -677,9 +670,6 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
       })) || []
 
   // Debug logging
-  console.log('🔍 MOC Stats API Response:', mocStatsResponse)
-  console.log('🔍 MOC Theme Data for Chart:', mocThemeData)
-  console.log('🔍 Loading:', mocStatsLoading, 'Error:', mocStatsError)
 
   // Fallback to mock data if API returns empty data (for testing)
   const finalMocThemeData =

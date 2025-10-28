@@ -20,7 +20,6 @@ export const offlineApi = createApi({
           const status = await offlineManager.getOfflineStatusAsync()
           return { data: status }
         } catch (error) {
-          console.error('Failed to get offline status:', error)
           // Fallback to sync method if async fails
           const fallbackStatus = offlineManager.getOfflineStatus()
           return { data: fallbackStatus }
@@ -42,7 +41,6 @@ export const offlineApi = createApi({
             data: { processed, failed },
           }
         } catch (error) {
-          console.error('Failed to process offline actions:', error)
           return {
             error: {
               status: 'CUSTOM_ERROR',

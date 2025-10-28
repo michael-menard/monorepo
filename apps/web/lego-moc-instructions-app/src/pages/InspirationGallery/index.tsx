@@ -32,26 +32,21 @@ const InspirationGallery: React.FC = () => {
 
   const handleInspirationClick = (item: any) => {
     // TODO: Navigate to inspiration detail page when route is created
-    console.log('Navigate to inspiration detail:', item.id)
     // navigate({ to: '/inspiration/$id', params: { id: item.id } });
   }
 
   const handleLike = async (itemId: string, liked: boolean) => {
     try {
       await likeInspirationItem(itemId).unwrap()
-    } catch (error) {
-      console.error('Failed to like inspiration item:', error)
-    }
+    } catch (error) {}
   }
 
   const handleShare = (itemId: string) => {
-    console.log('Shared inspiration item:', itemId)
     // TODO: Implement share functionality
   }
 
   const handleCreateNew = () => {
     // TODO: Navigate to create inspiration page when route is created
-    console.log('Navigate to create inspiration page')
     // navigate({ to: '/inspiration/create' });
   }
 

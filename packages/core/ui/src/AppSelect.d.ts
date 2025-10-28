@@ -1,6 +1,6 @@
 import * as React from 'react'
-import {SelectProps} from './select'
-import {SanitizationConfig} from './lib/sanitization'
+import { SelectProps } from './select'
+import { SanitizationConfig } from './lib/sanitization'
 
 export interface AppSelectOption {
   value: string

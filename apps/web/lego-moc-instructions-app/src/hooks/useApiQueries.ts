@@ -1,6 +1,6 @@
 // React Query hooks that adapt to different environments
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient, API_ENDPOINTS, handleApiError, getRetryConfig } from '../services/apiClient'
+import { apiClient, API_ENDPOINTS, getRetryConfig } from '../services/apiClient'
 import { isDevelopment } from '../config/environment'
 
 /**
@@ -95,9 +95,9 @@ export const useLogin = () => {
       // Invalidate auth queries on successful login
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.auth.profile })
     },
-    onError: error => {
+    onError: () => {
       if (isDevelopment) {
-        console.error('Login error:', error)
+        // Error logging removed
       }
     },
   })
@@ -159,9 +159,9 @@ export const useCreateMoc = () => {
       // Invalidate MOC list queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.mocs.all })
     },
-    onError: error => {
+    onError: () => {
       if (isDevelopment) {
-        console.error('Create MOC error:', error)
+        // Error logging removed
       }
     },
   })
@@ -271,9 +271,9 @@ export const useFileUpload = () => {
         headers: {}, // Let browser set Content-Type for FormData
       })
     },
-    onError: error => {
+    onError: () => {
       if (isDevelopment) {
-        console.error('File upload error:', error)
+        // Error logging removed
       }
     },
   })

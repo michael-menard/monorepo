@@ -1,6 +1,11 @@
 import * as React from 'react'
-import {Label, LabelProps} from './label'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import { Label, LabelProps } from './label'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 export interface AppLabelProps extends Omit<LabelProps, 'children'> {
   /** Label text content */
@@ -59,7 +64,6 @@ export const AppLabel = React.forwardRef<React.ElementRef<typeof Label>, AppLabe
           const validation = validateSanitizedInput(children, sanitized)
           if (validation.warnings.length > 0) {
             if (showSanitizationWarnings) {
-              console.warn('AppLabel sanitization warnings:', validation.warnings)
             }
             onSanitizationWarning?.(validation.warnings)
           }

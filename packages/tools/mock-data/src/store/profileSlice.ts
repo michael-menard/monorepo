@@ -1,13 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { UserStats, RecentActivity, QuickAction } from '../profile'
-import {
-  mockUserStats,
-  mockRecentActivities,
-  mockQuickActions,
-  getProfileDashboardData,
-  getRecentActivities,
-  getRecentActivitiesByType,
-} from '../profile'
+import { mockUserStats, getProfileDashboardData, getRecentActivities } from '../profile'
 
 export interface ProfileState {
   userStats: UserStats | null
@@ -116,7 +109,7 @@ export const updateUserStats = createAsyncThunk(
 
 export const refreshProfileStats = createAsyncThunk(
   'profile/refreshStats',
-  async (_, { getState, rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
       // This would typically recalculate stats based on current data
       // For now, we'll simulate an API call that returns updated stats

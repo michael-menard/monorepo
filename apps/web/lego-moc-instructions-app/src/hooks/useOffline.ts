@@ -37,7 +37,6 @@ export const useOffline = () => {
         await processActions().unwrap()
         refetch()
       } catch (error) {
-        console.error('Failed to sync offline actions:', error)
         throw error
       }
     }

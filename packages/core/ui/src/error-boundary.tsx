@@ -41,7 +41,6 @@ const DefaultErrorFallback: React.FC<{
 }> = ({ error, errorInfo, onReset }) => {
   const handleReportError = () => {
     // In a real application, this would send the error to an error reporting service
-    console.error('Error reported:', { error, errorInfo })
 
     // Example: Send to error reporting service
     // reportErrorToService(errorInfo);
@@ -155,7 +154,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     // Log error for debugging
-    console.error('ErrorBoundary caught an error:', error, errorData)
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
@@ -229,15 +227,11 @@ export const sendErrorReport = async (errorInfo: ErrorInfo): Promise<void> => {
   try {
     // In a real application, this would send to your error reporting service
     // Example: Sentry, LogRocket, Bugsnag, etc.
-    console.log('Sending error report:', errorInfo)
-
     // Placeholder for actual error reporting service call
     // await fetch('/api/error-reporting', {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
     //   body: JSON.stringify(errorInfo),
     // });
-  } catch (reportingError) {
-    console.error('Failed to send error report:', reportingError)
-  }
+  } catch (reportingError) {}
 }

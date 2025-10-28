@@ -22,13 +22,11 @@ export default function Header() {
 
   const handleLogout = () => {
     // Handle logout logic
-    console.log('Logout clicked')
     // In a real app, this would clear auth tokens and redirect to login
   }
 
-  const handleAvatarUpload = async (file: File) => {
+  const handleAvatarUpload = async () => {
     // Handle avatar upload
-    console.log('Avatar upload:', file)
     // In a real app, this would upload to server and update user profile
   }
 

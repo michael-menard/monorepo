@@ -44,7 +44,6 @@ export const ProfilePage: React.FC = () => {
   // Redirect to login if not authenticated (after logout)
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      console.log('🔄 ProfilePage: User not authenticated, redirecting to login')
       router.navigate({ to: '/auth/login', replace: true })
     }
   }, [isAuthLoading, isAuthenticated, router])
@@ -147,7 +146,6 @@ export const ProfilePage: React.FC = () => {
       }))
     } catch (error) {
       // Handle upload errors gracefully
-      console.error('Avatar upload failed:', error)
       // Optionally show a toast notification or error message
     }
   }

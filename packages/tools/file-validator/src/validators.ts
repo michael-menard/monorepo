@@ -29,7 +29,7 @@ export function validateFile(
     errors.push({
       code: 'FILE_TOO_LARGE',
       message: `File size ${formatFileSize(file.size)} exceeds maximum allowed size of ${formatFileSize(config.maxSize)}`,
-      file: file as any,
+      file,
     })
   }
 
@@ -37,7 +37,7 @@ export function validateFile(
     errors.push({
       code: 'FILE_TOO_SMALL',
       message: `File size ${formatFileSize(file.size)} is below minimum required size of ${formatFileSize(config.minSize)}`,
-      file: file as any,
+      file,
     })
   }
 
@@ -61,14 +61,14 @@ export function validateFile(
           errors.push({
             code: 'INVALID_MIME_TYPE',
             message: `File type ${mimeType} with extension ${extension} is not allowed. Allowed MIME types: ${config.allowedMimeTypes.join(', ')}`,
-            file: file as any,
+            file,
           })
         }
       } else {
         errors.push({
           code: 'INVALID_MIME_TYPE',
           message: `File type ${mimeType} is not allowed. Allowed types: ${config.allowedMimeTypes.join(', ')}`,
-          file: file as any,
+          file,
         })
       }
     }
@@ -80,7 +80,7 @@ export function validateFile(
       errors.push({
         code: 'INVALID_EXTENSION',
         message: `File extension ${extension} is not allowed. Allowed extensions: ${config.allowedExtensions.join(', ')}`,
-        file: file as any,
+        file,
       })
     }
   }
@@ -96,7 +96,7 @@ export function validateFile(
   // Run custom validators
   if (config.customValidators) {
     for (const validator of config.customValidators) {
-      const error = validator.validate(file as any)
+      const error = validator.validate(file)
       if (error) {
         errors.push(error)
       }
@@ -158,7 +158,7 @@ export function validateFileTypes(
     errors.push({
       code: 'INVALID_FILE_TYPE',
       message: `File type ${mimeType} with extension ${extension} is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
-      file: file as any,
+      file,
     })
   }
 

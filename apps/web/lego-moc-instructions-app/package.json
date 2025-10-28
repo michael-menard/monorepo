@@ -33,6 +33,7 @@
     "@repo/features-wishlist": "workspace:*",
     "@repo/file-list": "workspace:*",
     "@repo/gallery": "workspace:*",
+    "@repo/logger": "workspace:*",
     "@repo/moc-instructions": "workspace:*",
     "@repo/mock-data": "workspace:*",
     "@repo/profile": "workspace:*",

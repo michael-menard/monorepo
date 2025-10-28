@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { RadarData, Entry } from './types'
+import { RadarData, Entry, Quadrant, Ring } from './types'
 import { RadarVisualization } from './RadarVisualization'
 import { RadarLegend } from './RadarLegend'
 import { EntryDetails } from './EntryDetails'
@@ -27,12 +27,12 @@ export const TechRadar: React.FC = () => {
         }
 
         // Add indices to quadrants and rings
-        const quadrants = data.quadrants.map((q: any, index: number) => ({
+        const quadrants = data.quadrants.map((q: Omit<Quadrant, 'index'>, index: number) => ({
           ...q,
           index,
         }))
 
-        const rings = data.rings.map((r: any, index: number) => ({
+        const rings = data.rings.map((r: Omit<Ring, 'index'>, index: number) => ({
           ...r,
           index,
         }))
@@ -40,7 +40,8 @@ export const TechRadar: React.FC = () => {
         setRadarData({ ...data, quadrants, rings })
         setFilteredEntries(data.entries)
       } catch (error) {
-        console.error('Failed to load radar data:', error)
+        // Silently handle error and fall back to default data
+        // Error details are available in the error variable for debugging if needed
         // Fallback to default data
         const defaultData: RadarData = {
           quadrants: [

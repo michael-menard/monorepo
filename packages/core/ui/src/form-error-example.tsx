@@ -73,7 +73,6 @@ export const FormErrorExample: React.FC = () => {
 
   const onSubmit = async (data: ExampleFormData) => {
     // Simulate API call
-    console.log('Form data:', data)
 
     // Simulate error
     throw new Error('Network error. Please try again.')
@@ -104,7 +103,7 @@ export const FormErrorExample: React.FC = () => {
               {/* Form-level error message */}
               <FormLevelErrorMessage
                 error="This is a form-level error message that appears at the top of the form."
-                onClose={() => console.log('Form error closed')}
+                onClose={() => }
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -337,7 +336,7 @@ export const FormErrorExample: React.FC = () => {
             type="error"
             showIcon={true}
             showCloseButton={true}
-            onClose={() => console.log('Message closed')}
+            onClose={() => }
           />
         </CardContent>
       </Card>

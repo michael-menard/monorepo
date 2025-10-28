@@ -61,21 +61,17 @@ class OfflineManager {
   }
 
   private handleOnlineEvent(): void {
-    console.log('Network came back online, attempting to sync pending actions...')
     this.processQueuedActions().catch(error => {
-      console.error('Auto-sync failed when network came online:', error)
     })
   }
 
   private handleOfflineEvent(): void {
-    console.log('Network went offline, queued actions will be synced when reconnected')
   }
 
   private handleVisibilityChange(): void {
     // Sync when app becomes visible and we're online
     if (!document.hidden && navigator.onLine) {
       this.processQueuedActions().catch(error => {
-        console.error('Auto-sync failed on visibility change:', error)
       })
     }
   }
@@ -128,7 +124,6 @@ class OfflineManager {
     try {
       localStorage.setItem(this.OFFLINE_DATA_KEY, JSON.stringify(data))
     } catch (error) {
-      console.error('Failed to set offline data:', error)
     }
   }
 
@@ -149,7 +144,6 @@ class OfflineManager {
         this.setOfflineDataLocal(offlineData)
       }
     } catch (error) {
-      console.error('Failed to store offline data:', error)
     }
   }
 
@@ -160,7 +154,6 @@ class OfflineManager {
       const stored = offlineData.data[key]
       return stored ? stored.data : null
     } catch (error) {
-      console.error('Failed to retrieve offline data:', error)
       return null
     }
   }
@@ -186,7 +179,6 @@ class OfflineManager {
         this.setOfflineActionsLocal(actions)
       }
     } catch (error) {
-      console.error('Failed to queue offline action:', error)
     }
   }
 
@@ -205,7 +197,6 @@ class OfflineManager {
         await this.processAction(action)
         processedActions.push(action)
       } catch (error) {
-        console.error('Failed to process action:', action, error)
         if (action.retryCount < this.MAX_RETRY_COUNT) {
           action.retryCount++
           failedActions.push(action)
@@ -222,7 +213,6 @@ class OfflineManager {
     await this.setOfflineData(offlineData)
 
     // eslint-disable-next-line no-console
-    console.log(
       `Processed ${processedActions.length} offline actions, ${failedActions.length} failed`,
     )
   }
@@ -361,7 +351,6 @@ class OfflineManager {
         this.initializeOfflineDataLocal()
       }
     } catch (error) {
-      console.error('Failed to clear offline data:', error)
     }
   }
 
@@ -392,7 +381,6 @@ class OfflineManager {
       const stored = localStorage.getItem(this.OFFLINE_ACTIONS_KEY)
       return stored ? JSON.parse(stored) : []
     } catch (error) {
-      console.error('Failed to get offline actions:', error)
       return []
     }
   }
@@ -401,7 +389,6 @@ class OfflineManager {
     try {
       localStorage.setItem(this.OFFLINE_ACTIONS_KEY, JSON.stringify(actions))
     } catch (error) {
-      console.error('Failed to set offline actions:', error)
     }
   }
 

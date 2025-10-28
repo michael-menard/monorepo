@@ -5,20 +5,7 @@ const ColorTest: React.FC = () => {
 
   useEffect(() => {
     if (testRef.current) {
-      const computedStyle = window.getComputedStyle(testRef.current)
-      console.log('=== COLOR TEST RESULTS ===')
-      console.log('Primary background:', computedStyle.backgroundColor)
-      console.log('Primary text color:', computedStyle.color)
-
-      // Test CSS variables
-      const rootStyle = getComputedStyle(document.documentElement)
-      console.log('--primary CSS variable:', rootStyle.getPropertyValue('--primary'))
-      console.log(
-        '--primary-foreground CSS variable:',
-        rootStyle.getPropertyValue('--primary-foreground'),
-      )
-      console.log('--background CSS variable:', rootStyle.getPropertyValue('--background'))
-      console.log('--foreground CSS variable:', rootStyle.getPropertyValue('--foreground'))
+      // Test CSS variables (logging removed for production)
     }
   }, [])
 

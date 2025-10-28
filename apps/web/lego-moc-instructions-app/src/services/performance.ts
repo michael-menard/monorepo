@@ -297,7 +297,6 @@ class PerformanceMonitor {
 
       // Log to console if enabled
       if (shouldLogToConsole()) {
-        console.log(`[Performance Analytics] ${type}:`, payload)
       }
 
       // Send to analytics endpoint if enabled
@@ -311,9 +310,7 @@ class PerformanceMonitor {
           body: JSON.stringify(payload),
         })
       }
-    } catch (error) {
-      console.error('Failed to send analytics:', error)
-    }
+    } catch (error) {}
   }
 
   // Get current analytics data

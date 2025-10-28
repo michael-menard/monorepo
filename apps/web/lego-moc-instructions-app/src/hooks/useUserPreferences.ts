@@ -98,16 +98,13 @@ export const useUserPreferences = () => {
           setPreferences(defaultPreferences)
         }
       } catch (err) {
-        console.error('Failed to load user preferences:', err)
         setError('Failed to load preferences')
         // Fall back to defaults
         setPreferences(defaultPreferences)
         // Try to save defaults
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultPreferences))
-        } catch (saveErr) {
-          console.error('Failed to save default preferences:', saveErr)
-        }
+        } catch (saveErr) {}
       } finally {
         setIsLoading(false)
       }
@@ -126,7 +123,6 @@ export const useUserPreferences = () => {
       setPreferences(validated)
       return true
     } catch (err) {
-      console.error('Failed to save user preferences:', err)
       setError('Failed to save preferences')
       return false
     }
@@ -178,7 +174,6 @@ export const useUserPreferences = () => {
         const validated = UserPreferencesSchema.parse(parsed)
         return savePreferences(validated)
       } catch (err) {
-        console.error('Failed to import preferences:', err)
         setError('Invalid preferences format')
         return false
       }

@@ -31,16 +31,18 @@ export async function createCache(
   config?: any,
 ) {
   switch (type) {
-    case 'memory':
+    case 'memory': {
       const { MemoryCache } = await import('./utils/memoryCache')
       return new MemoryCache(config)
+    }
     case 'localStorage':
-    case 'sessionStorage':
+    case 'sessionStorage': {
       const { StorageCache } = await import('./utils/storageCache')
       return new StorageCache({
         ...config,
         storage: type,
       })
+    }
     default:
       throw new Error(`Unknown cache type: ${type}`)
   }

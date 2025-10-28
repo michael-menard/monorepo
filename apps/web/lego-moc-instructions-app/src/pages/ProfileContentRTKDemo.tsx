@@ -100,9 +100,7 @@ export default function ProfileContentRTKDemo() {
           }),
         )
       }
-    } catch (error) {
-      console.error('Failed to toggle purchase status:', error)
-    }
+    } catch (error) {}
   }
 
   const handleDownloadInstruction = async (instructionId: string) => {
@@ -122,9 +120,7 @@ export default function ProfileContentRTKDemo() {
           }),
         )
       }
-    } catch (error) {
-      console.error('Failed to download instruction:', error)
-    }
+    } catch (error) {}
   }
 
   const handleRefreshStats = () => {

@@ -1,13 +1,15 @@
-import { Button } from '@repo/ui'
-import { Download } from 'lucide-react'
-import { usePWA } from '../PWAProvider'
+// PWA Install Button component (currently disabled)
+// Uncomment and import dependencies when ready to use:
+// import { Button } from '@repo/ui'
+// import { Download } from 'lucide-react'
+// import { usePWA } from '../PWAProvider'
 
-interface PWAInstallButtonProps {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-  size?: 'default' | 'sm' | 'lg' | 'icon'
-  className?: string
-  children?: React.ReactNode
-}
+// interface PWAInstallButtonProps {
+//   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+//   size?: 'default' | 'sm' | 'lg' | 'icon'
+//   className?: string
+//   children?: React.ReactNode
+// }
 
 // export const PWAInstallButton = ({
 //   variant = 'default',

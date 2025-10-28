@@ -1,12 +1,12 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState } from 'react'
-import { AuthApiError, authApi } from '../../../services/authApi'
+import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 const LoginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -17,7 +17,7 @@ type LoginFormData = z.infer<typeof LoginSchema>
 
 function LoginPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const { signIn, isLoading: authLoading } = useCognitoAuth()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -32,26 +32,19 @@ function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      setIsLoading(true)
       setError(null)
 
-      // Call the auth API
-      const response = await authApi.login(data)
+      // Call Cognito sign in
+      const result = await signIn(data)
 
-      console.log('Login successful:', response)
-
-      // Navigate to profile page on success
-      router.navigate({ to: '/profile' })
-    } catch (err) {
-      if (err instanceof AuthApiError) {
-        setError(err.message)
-        console.error('Login API error:', err)
+      if (result.success) {
+        // Navigate to profile page on success
+        router.navigate({ to: '/profile' })
       } else {
-        setError('Login failed. Please try again.')
-        console.error('Login error:', err)
+        setError(result.error || 'Login failed. Please try again.')
       }
-    } finally {
-      setIsLoading(false)
+    } catch (err) {
+      setError('Login failed. Please try again.')
     }
   }
 
@@ -140,8 +133,8 @@ function LoginPage() {
             ) : null}
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
-                {isSubmitting || isLoading ? (
+              <Button type="submit" className="w-full" disabled={isSubmitting || authLoading}>
+                {isSubmitting || authLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   'Sign In'

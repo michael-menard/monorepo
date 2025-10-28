@@ -48,7 +48,6 @@ export class MockEmailService {
     }
     this.emails.get(to)!.push(email)
 
-    console.log(`📧 Mock email sent to ${to}: ${subject}`)
 
     // Simulate email delivery delay
     await new Promise(resolve => setTimeout(resolve, this.config.emailDelay))
@@ -109,17 +108,14 @@ export class MockEmailService {
   async getVerificationCode(to: string): Promise<string | null> {
     const email = await this.findVerificationEmail(to)
     if (!email) {
-      console.log(`No verification email found for ${to}`)
       return null
     }
 
     const code = this.extractVerificationCode(email)
     if (!code) {
-      console.log(`Could not extract verification code from email for ${to}`)
       return this.config.defaultVerificationCode
     }
 
-    console.log(`Found verification code ${code} for ${to}`)
     return code
   }
 
@@ -139,7 +135,6 @@ export class MockEmailService {
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
-    console.log(`Timeout waiting for verification email for ${to}`)
     return this.config.defaultVerificationCode
   }
 
@@ -148,7 +143,6 @@ export class MockEmailService {
    */
   clearEmails(): void {
     this.emails.clear()
-    console.log('📧 All mock emails cleared')
   }
 
   /**
@@ -156,7 +150,6 @@ export class MockEmailService {
    */
   clearEmailsForRecipient(to: string): void {
     this.emails.delete(to)
-    console.log(`📧 Emails cleared for ${to}`)
   }
 
   /**
@@ -177,9 +170,6 @@ export class MockEmailService {
    */
   printStats(): void {
     const stats = this.getStats()
-    console.log(`📧 Mock Email Service Stats:`)
-    console.log(`   Total Emails: ${stats.totalEmails}`)
-    console.log(`   Recipients: ${stats.recipients}`)
   }
 }
 

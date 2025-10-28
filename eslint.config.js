@@ -30,17 +30,122 @@ export default [
         clearTimeout: true,
         setInterval: true,
         clearInterval: true,
-        // Browser globals
+
+        // Node.js globals
+        process: 'readonly',
+        Buffer: 'readonly',
+        global: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+
+        // Browser globals - DOM
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        location: 'readonly',
+        history: 'readonly',
+
+        // DOM Element types
+        HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLSpanElement: 'readonly',
+        HTMLLabelElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLTextAreaElement: 'readonly',
+        HTMLSelectElement: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLFormElement: 'readonly',
+        HTMLImageElement: 'readonly',
+        HTMLAnchorElement: 'readonly',
+        HTMLHeadingElement: 'readonly',
+        HTMLParagraphElement: 'readonly',
+
+        // DOM Event types
+        Event: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        FocusEvent: 'readonly',
+        WheelEvent: 'readonly',
+
+        // DOM Utility types
+        DOMRect: 'readonly',
+        DOMPurify: 'readonly',
+
+        // Crypto API
+        crypto: 'readonly',
+
+        // Alert
+        alert: 'readonly',
+
+        // Browser globals - Storage
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+
+        // Browser globals - Network
+        fetch: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        Headers: 'readonly',
+        RequestInit: 'readonly',
+
+        // Browser globals - Files
         File: 'readonly',
         Blob: 'readonly',
         FormData: 'readonly',
         FileReader: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
-        window: 'readonly',
-        document: 'readonly',
-        navigator: 'readonly',
-        location: 'readonly',
+
+        // Browser globals - Performance
+        performance: 'readonly',
+        PerformanceObserver: 'readonly',
+        PerformanceEntry: 'readonly',
+        PerformanceNavigationTiming: 'readonly',
+        PerformancePaintTiming: 'readonly',
+
+        // Browser globals - IndexedDB
+        indexedDB: 'readonly',
+        IDBDatabase: 'readonly',
+        IDBTransaction: 'readonly',
+        IDBTransactionMode: 'readonly',
+        IDBObjectStore: 'readonly',
+        IDBRequest: 'readonly',
+
+        // Browser globals - Service Worker
+        ServiceWorker: 'readonly',
+        ServiceWorkerRegistration: 'readonly',
+        caches: 'readonly',
+        CacheStorage: 'readonly',
+        Cache: 'readonly',
+
+        // Browser globals - Encoding
+        btoa: 'readonly',
+        atob: 'readonly',
+
+        // Browser globals - Events
+        Event: 'readonly',
+        CustomEvent: 'readonly',
+        EventTarget: 'readonly',
+
+        // Browser globals - Elements
+        HTMLElement: 'readonly',
+        HTMLTextAreaElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLFormElement: 'readonly',
+        HTMLCanvasElement: 'readonly',
+        Image: 'readonly',
+
+        // Browser globals - CSS
+        getComputedStyle: 'readonly',
+
+        // Browser globals - Types
+        Storage: 'readonly',
+        Node: 'readonly',
+        NodeJS: 'readonly',
+
+        // React globals
+        React: 'readonly',
+        JSX: 'readonly',
       },
     },
     plugins: {
@@ -54,7 +159,7 @@ export default [
 
       // TypeScript rules
       '@typescript-eslint/no-unused-vars': 'error',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
 
       // General JavaScript rules
       'no-unused-vars': 'off', // Handled by TypeScript

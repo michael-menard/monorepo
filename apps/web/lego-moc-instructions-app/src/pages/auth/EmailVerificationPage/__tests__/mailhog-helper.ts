@@ -66,7 +66,6 @@ export class MailHogHelper {
       const response = await fetch(`${this.apiUrl}/api/v2/messages`)
       return response.ok
     } catch (error) {
-      console.log('MailHog is not running. Start it with: mailhog')
       return false
     }
   }
@@ -84,7 +83,6 @@ export class MailHogHelper {
       const data = await response.json()
       return data.items || []
     } catch (error) {
-      console.error('Error fetching emails from MailHog:', error)
       return []
     }
   }
@@ -148,19 +146,14 @@ export class MailHogHelper {
   async getVerificationCode(to: string): Promise<string | null> {
     const email = await this.findVerificationEmail(to)
     if (!email) {
-      console.log(`No verification email found for ${to}`)
-      console.log(`Check MailHog web interface: ${this.baseUrl}`)
       return null
     }
 
     const code = this.extractVerificationCode(email)
     if (!code) {
-      console.log(`Could not extract verification code from email for ${to}`)
-      console.log(`Check MailHog web interface: ${this.baseUrl}`)
       return null
     }
 
-    console.log(`Found verification code ${code} for ${to}`)
     return code
   }
 
@@ -180,8 +173,6 @@ export class MailHogHelper {
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
 
-    console.log(`Timeout waiting for verification email for ${to}`)
-    console.log(`Check MailHog web interface: ${this.baseUrl}`)
     return null
   }
 
@@ -191,9 +182,7 @@ export class MailHogHelper {
   async deleteAllEmails(): Promise<void> {
     try {
       await fetch(`${this.apiUrl}/api/v1/messages`, { method: 'DELETE' })
-      console.log('📧 All MailHog emails deleted')
     } catch (error) {
-      console.error('Error deleting emails:', error)
     }
   }
 
@@ -206,10 +195,8 @@ export class MailHogHelper {
       try {
         await fetch(`${this.apiUrl}/api/v1/messages/${email.ID}`, { method: 'DELETE' })
       } catch (error) {
-        console.error(`Error deleting email ${email.ID}:`, error)
       }
     }
-    console.log(`📧 Emails deleted for ${to}`)
   }
 
   /**
@@ -233,32 +220,12 @@ export class MailHogHelper {
    */
   async printStats(): Promise<void> {
     const stats = await this.getStats()
-    console.log(`📧 MailHog Stats:`)
-    console.log(`   Total Emails: ${stats.totalEmails}`)
-    console.log(`   Unique Recipients: ${stats.recipients.size}`)
-    console.log(`   Web Interface: ${this.baseUrl}`)
   }
 
   /**
    * Print setup instructions
    */
   printSetupInstructions(): void {
-    console.log('\n📧 MailHog Setup Instructions:\n')
-    console.log('1. Install MailHog:')
-    console.log('   brew install mailhog')
-    console.log('')
-    console.log('2. Start MailHog:')
-    console.log('   mailhog')
-    console.log('')
-    console.log('3. Access web interface:')
-    console.log(`   ${this.baseUrl}`)
-    console.log('')
-    console.log('4. Configure your auth service SMTP:')
-    console.log(`   Host: ${this.config.host}`)
-    console.log(`   Port: ${this.config.port}`)
-    console.log('   No authentication required')
-    console.log('')
-    console.log('5. Send emails to any address - they will be captured by MailHog')
   }
 }
 

@@ -143,28 +143,13 @@ export const getStorageUrl = (path: string = '') => {
 
 // Debug configuration in development - ALWAYS LOG FOR DEBUGGING
 if (isDevelopment) {
-  console.group('🔧 Application Configuration DEBUG')
-  console.log('Environment:', config.app.environment)
-  console.log('🚨 API Base URL:', config.api.baseUrl)
-  console.log('🚨 Auth API URL:', config.api.authUrl)
-  console.log('Client URL:', config.app.clientUrl)
-  console.log('🔍 Raw Environment Variables:')
-  console.log('  VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
-  console.log('  VITE_LEGO_API_PORT:', import.meta.env.VITE_LEGO_API_PORT)
-  console.log('  VITE_AUTH_API_URL:', import.meta.env.VITE_AUTH_API_URL)
-  console.log('  VITE_AUTH_API_PORT:', import.meta.env.VITE_AUTH_API_PORT)
-  console.log('Features:', config.features)
-  console.log('Storage Provider:', config.storage.provider)
-  console.groupEnd()
 }
 
 // Validate critical configuration
 if (!config.api.baseUrl) {
-  console.error('❌ VITE_API_BASE_URL is not configured. Please check your environment variables.')
 }
 
 if (config.auth.enabled && !config.api.authUrl) {
-  console.error(
     '❌ VITE_AUTH_API_URL is not configured but auth is enabled. Please check your environment variables.',
   )
 }

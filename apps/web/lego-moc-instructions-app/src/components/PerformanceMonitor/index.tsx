@@ -82,15 +82,7 @@ export const PerformanceMonitor = ({ show = shouldShowMonitor() }: PerformanceMo
 
         {/* Quick Actions */}
         <div className="pt-2 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              console.log('Analytics Data:', analytics)
-              console.log('Performance Summary:', performanceSummary)
-            }}
-            className="w-full text-xs"
-          >
+          <Button variant="outline" size="sm" onClick={() => {}} className="w-full text-xs">
             Log to Console
           </Button>
         </div>

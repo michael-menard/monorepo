@@ -58,9 +58,7 @@ const SimpleForm = () => {
     },
   })
 
-  function onSubmit(values: z.infer<typeof simpleFormSchema>) {
-    console.log(values)
-  }
+  function onSubmit(values: z.infer<typeof simpleFormSchema>) {}
 
   return (
     <Form {...form}>

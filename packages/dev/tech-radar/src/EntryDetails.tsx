@@ -31,8 +31,20 @@ export const EntryDetails: React.FC<EntryDetailsProps> = ({ entry, onClose }) =>
   }
 
   return (
-    <div className="entry-details-overlay" onClick={onClose}>
-      <div className="entry-details-modal" onClick={e => e.stopPropagation()}>
+    <div
+      className="entry-details-overlay"
+      onClick={onClose}
+      onKeyDown={e => e.key === 'Escape' && onClose()}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+    >
+      <div
+        className="entry-details-modal"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+        role="document"
+      >
         <div className="entry-details-header">
           <div className="entry-details-title">
             <h2>{entry.name}</h2>

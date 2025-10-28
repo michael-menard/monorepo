@@ -46,8 +46,6 @@ import {
 // Note: Avoiding setFilter import issues by implementing filtering locally
 
 const MocInstructionsGallery: React.FC = () => {
-  console.log('🎯 MocInstructionsGallery component is rendering!')
-  console.log('🎯 Component mounted at:', new Date().toISOString())
 
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
@@ -97,13 +95,10 @@ const MocInstructionsGallery: React.FC = () => {
 
   // Extract MOCs from API response and transform to expected format
   const allInstructions = useMemo(() => {
-    console.log('🔍 API Response:', apiResponse)
     if (!apiResponse?.mocs) {
-      console.log('⚠️ No mocs found in API response')
       return []
     }
 
-    console.log('📋 Found', apiResponse.mocs.length, 'MOCs')
     // Transform backend MOC data to match gallery expectations
     return apiResponse.mocs.map((moc: any) => ({
       id: moc.id,
@@ -134,7 +129,6 @@ const MocInstructionsGallery: React.FC = () => {
 
   // Local filtering logic to avoid Redux import issues
   const filteredInstructions = useMemo(() => {
-    console.log('🔄 useMemo recalculating with:', { searchQuery, selectedCategory, sortBy })
     if (!allInstructions) return []
 
     let filtered = [...allInstructions]
@@ -158,38 +152,31 @@ const MocInstructionsGallery: React.FC = () => {
 
     // Apply sorting
     filtered.sort((a, b) => {
-      console.log(`🔄 Sorting by: ${sortBy}`)
       switch (sortBy) {
         case 'recent':
           const dateA = new Date(a.createdAt).getTime()
           const dateB = new Date(b.createdAt).getTime()
-          console.log(`📅 Comparing dates: ${a.title} (${dateA}) vs ${b.title} (${dateB})`)
           return dateB - dateA
         case 'popular':
         case 'downloaded': // Handle both popular and downloaded
           const downloadsA = a.downloadCount || 0
           const downloadsB = b.downloadCount || 0
-          console.log(
             `📊 Comparing downloads: ${a.title} (${downloadsA}) vs ${b.title} (${downloadsB})`,
           )
           return downloadsB - downloadsA
         case 'rated':
           const ratingA = a.rating || 0
           const ratingB = b.rating || 0
-          console.log(`⭐ Comparing ratings: ${a.title} (${ratingA}) vs ${b.title} (${ratingB})`)
           return ratingB - ratingA
         case 'pieces':
           const piecesA = a.totalParts || 0
           const piecesB = b.totalParts || 0
-          console.log(
             `🧱 Comparing piece counts: ${a.title} (${piecesA}) vs ${b.title} (${piecesB})`,
           )
           return piecesB - piecesA
         case 'alphabetical':
-          console.log(`🔤 Comparing titles: ${a.title} vs ${b.title}`)
           return a.title.localeCompare(b.title)
         default:
-          console.log(`🔄 Default sorting (recent)`)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
@@ -198,7 +185,6 @@ const MocInstructionsGallery: React.FC = () => {
   }, [allInstructions, searchQuery, selectedCategory, sortBy])
 
   // Debug logging
-  console.log('🔍 MocInstructionsGallery Debug:', {
     allInstructionsLength: allInstructions?.length,
     filteredInstructionsLength: filteredInstructions?.length,
     isLoading,
@@ -211,7 +197,6 @@ const MocInstructionsGallery: React.FC = () => {
 
   // Debug the first few items to see their data
   if (filteredInstructions && filteredInstructions.length > 0) {
-    console.log(
       '📋 First few filtered instructions:',
       filteredInstructions.slice(0, 3).map(inst => ({
         title: inst.title,
@@ -232,39 +217,31 @@ const MocInstructionsGallery: React.FC = () => {
   )
 
   const handleImageLike = useCallback((imageId: string, liked: boolean) => {
-    console.log(`Image ${imageId} ${liked ? 'liked' : 'unliked'}`)
     // TODO: Implement like functionality
   }, [])
 
   const handleImageShare = useCallback((imageId: string) => {
-    console.log(`Sharing image ${imageId}`)
     // TODO: Implement share functionality
   }, [])
 
   const handleImageDownload = useCallback(async (imageId: string) => {
-    console.log(`Downloading image ${imageId}`)
     // TODO: Implement download count increment with real API
     try {
       // For now, just log the download
-      console.log('Download count would be incremented for image:', imageId)
     } catch (error) {
-      console.error('Failed to increment download count:', error)
     }
   }, [])
 
   const handleImageDelete = useCallback((imageId: string) => {
-    console.log(`Deleting image ${imageId}`)
     // TODO: Implement delete functionality
   }, [])
 
   const handleImagesSelected = useCallback((selectedIds: Array<string>) => {
-    console.log('Selected images:', selectedIds)
     // TODO: Implement selection functionality
   }, [])
 
   const handleSearch = useCallback(
     (query: string) => {
-      console.log('🔍 Search query:', query)
       dispatch(setSearchQuery(query))
     },
     [dispatch],
@@ -272,7 +249,6 @@ const MocInstructionsGallery: React.FC = () => {
 
   const handleCategoryChange = useCallback(
     (category: string) => {
-      console.log('🏷️ Category changed:', category)
       // Convert "all" back to empty string for filtering logic
       const actualCategory = category === 'all' ? '' : category
       dispatch(setSelectedCategory(actualCategory))
@@ -282,16 +258,13 @@ const MocInstructionsGallery: React.FC = () => {
 
   const handleSortChange = useCallback(
     (sort: string) => {
-      console.log('📊 Sort changed from', sortBy, 'to', sort)
       dispatch(setSortBy(sort as any))
-      console.log('📊 Sort state updated to:', sort)
     },
     [dispatch, sortBy],
   )
 
   const handleLayoutChange = useCallback(
     (layout: GalleryLayout) => {
-      console.log('🎨 Layout changed to:', layout)
       dispatch(setLayout(layout))
     },
     [dispatch],
@@ -299,10 +272,7 @@ const MocInstructionsGallery: React.FC = () => {
 
   // Modal handlers
   const handleCreateNew = useCallback(() => {
-    console.log('🔘 Create New MOC button clicked')
-    console.log('🔘 Current modal state:', isCreateModalOpen)
     setIsCreateModalOpen(true)
-    console.log('🔘 Modal state should now be true')
   }, [isCreateModalOpen])
 
   const handleCloseModal = useCallback(() => {
@@ -311,7 +281,6 @@ const MocInstructionsGallery: React.FC = () => {
 
   const handleSubmitMoc = useCallback(
     async (mocData: CreateMocData) => {
-      console.log('📝 New MOC submitted:', mocData)
 
       try {
         // Validate required files
@@ -348,27 +317,15 @@ const MocInstructionsGallery: React.FC = () => {
           formData.append('images', image.file)
         })
 
-        console.log('📤 Sending FormData to API via RTK Query...')
-        console.log('📋 Metadata being sent:')
-        console.log('  - Type:', mocData.type)
-        console.log('  - Title:', mocData.title)
-        console.log('  - Description:', mocData.description)
-        console.log('  - Author:', mocData.author)
-        console.log('  - Tags:', mocData.tags)
-        console.log('📁 Files being sent:')
-        console.log('  - Instructions:', mocData.instructionsFile.file.name)
-        console.log(
           '  - Parts Lists:',
           mocData.partsLists.map(p => p.file.name),
         )
-        console.log(
           '  - Images:',
           mocData.images.map(i => i.file.name),
         )
 
         // Use RTK Query mutation (automatically handles cache invalidation)
         const result = await createMocWithFiles(formData).unwrap()
-        console.log('✅ MOC created successfully:', result)
 
         // Show success toast
         showSuccessToast(
@@ -377,10 +334,8 @@ const MocInstructionsGallery: React.FC = () => {
         )
 
         // Manually refetch the gallery data to ensure it updates
-        console.log('🔄 Manually refreshing gallery...')
         refetchInstructions()
       } catch (error: any) {
-        console.error('❌ Error creating MOC:', error)
 
         // Show error toast with user-friendly message
         showErrorToast(error, 'Failed to create MOC')
@@ -390,13 +345,11 @@ const MocInstructionsGallery: React.FC = () => {
   )
 
   const handleFilter = useCallback((filters: any) => {
-    console.log('Filters applied:', filters)
     // TODO: Implement filter functionality with Redux
     // dispatch(setFilters(filters));
   }, [])
 
   const handleSort = useCallback((sortBy: string, sortOrder: 'asc' | 'desc') => {
-    console.log('Sort applied:', { sortBy, sortOrder })
     // TODO: Implement sort functionality with Redux
     // dispatch(setSortOptions({ sortBy, sortOrder }));
   }, [])

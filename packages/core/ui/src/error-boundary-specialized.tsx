@@ -76,7 +76,6 @@ export class ApiErrorBoundary extends Component<ApiErrorBoundaryProps> {
         )}
         onError={(error, errorInfo) => {
           // Log API-specific errors
-          console.error('API Error caught:', { error, errorInfo })
         }}
       >
         {this.props.children}
@@ -143,7 +142,6 @@ export class FormErrorBoundary extends Component<FormErrorBoundaryProps> {
         )}
         onError={(error, errorInfo) => {
           // Log form-specific errors
-          console.error('Form Error caught:', { error, errorInfo })
         }}
       >
         {this.props.children}
@@ -212,7 +210,6 @@ export class DataErrorBoundary extends Component<DataErrorBoundaryProps> {
         )}
         onError={(error, errorInfo) => {
           // Log data-specific errors
-          console.error('Data Error caught:', { error, errorInfo })
         }}
       >
         {this.props.children}
@@ -277,7 +274,6 @@ export class ComponentErrorBoundary extends Component<ComponentErrorBoundaryProp
         )}
         onError={(error, errorInfo) => {
           // Log component-specific errors
-          console.error('Component Error caught:', {
             error,
             errorInfo,
             componentName: this.props.componentName,

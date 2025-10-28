@@ -1,6 +1,11 @@
 import * as React from 'react'
-import {Input, InputProps} from './input'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import { Input, InputProps } from './input'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 // Simple debounce hook (internal to avoid external dependencies)
 function useDebounce<T>(value: T, delay: number): T {
@@ -131,7 +136,6 @@ export const AppInput = React.forwardRef<HTMLInputElement, AppInputProps>(
           const validation = validateSanitizedInput(inputValue, sanitized)
           if (validation.warnings.length > 0) {
             if (showSanitizationWarnings) {
-              console.warn('AppInput sanitization warnings:', validation.warnings)
             }
             onSanitizationWarning?.(validation.warnings)
           }
@@ -234,7 +238,6 @@ export const AppInput = React.forwardRef<HTMLInputElement, AppInputProps>(
         if (sanitized !== value) {
           // If the parent provided an unsanitized value, we should warn
           if (showSanitizationWarnings) {
-            console.warn('AppInput: Initial value was sanitized', { original: value, sanitized })
           }
         }
       }

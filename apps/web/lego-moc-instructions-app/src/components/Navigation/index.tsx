@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
-import { useCognitoAuth } from '../../hooks/useCognitoAuth'
 import { Heart, LogOut, Search, User, Settings, ChevronDown, Lightbulb } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { useCognitoAuth } from '../../hooks/useCognitoAuth'
 
 // Zod schema for navigation props
 const NavigationPropsSchema = z.object({
@@ -35,19 +35,12 @@ function Navigation({ className = '' }: NavigationProps) {
 
   // Debug the Cognito auth state
   useEffect(() => {
-    console.log('🔍 Cognito auth state:', {
-      isAuthenticated,
-      isLoading,
-      user: user ? { name: user.name, email: user.email } : null,
-    })
+    // Authentication state tracking removed for production
   }, [isAuthenticated, user, isLoading])
 
   // Debug authentication state changes (can be removed in production)
   useEffect(() => {
-    console.log('🔍 Navigation auth state:', {
-      isAuthenticated,
-      user: user ? { name: user.name, email: user.email } : null,
-    })
+    // Authentication state tracking removed for production
   }, [isAuthenticated, user])
 
   // Close dropdown when clicking outside
@@ -69,39 +62,27 @@ function Navigation({ className = '' }: NavigationProps) {
 
   const handleLogout = async () => {
     try {
-      console.log('🔄 Starting Cognito logout process...')
-
       // Call Cognito sign out
       const logoutResult = await signOut()
-      console.log('✅ Cognito logout successful:', logoutResult)
 
       // Clear any user-specific localStorage data
       try {
         localStorage.removeItem('user-preferences')
         localStorage.removeItem('user-settings')
         // Add any other user-specific keys that should be cleared
-      } catch (error) {
-        console.warn('Could not clear localStorage:', error)
-      }
+      } catch (error) {}
 
       // Close user menu
       setIsUserMenuOpen(false)
 
       // Navigate to home page
-      console.log('🏠 Navigating to home page')
       navigate({ to: '/' })
-
-      console.log('✅ Logout process completed')
     } catch (error) {
-      console.error('❌ Logout failed:', error)
-
       // Even if logout fails, clear localStorage for security
       try {
         localStorage.removeItem('user-preferences')
         localStorage.removeItem('user-settings')
-      } catch (storageError) {
-        console.warn('Could not clear localStorage:', storageError)
-      }
+      } catch (storageError) {}
 
       // Close user menu and navigate anyway
       setIsUserMenuOpen(false)

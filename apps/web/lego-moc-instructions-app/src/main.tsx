@@ -4,15 +4,9 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
-
+import { createRouter, RouterProvider } from '@tanstack/react-router'
 // Initialize AWS Amplify for Cognito authentication
 import './config/amplify'
-
-// Import test auth utilities for development
-if (import.meta.env.DEV) {
-  import('./utils/testAuth.ts')
-}
 import { rootRoute } from './routes/root'
 import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
 import { homeRoute } from './routes/home.tsx'

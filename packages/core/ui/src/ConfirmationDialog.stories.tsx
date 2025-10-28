@@ -50,8 +50,8 @@ export const Default: Story = {
       confirmText="Delete Account"
       cancelText="Cancel"
       variant="destructive"
-      onConfirm={() => console.log('Confirmed')}
-      onCancel={() => console.log('Cancelled')}
+      onConfirm={() => }
+      onCancel={() => }
     />
   ),
 }
@@ -63,8 +63,8 @@ export const SimpleConfirmation: Story = {
       description="Are you sure you want to proceed with this action?"
       confirmText="Proceed"
       cancelText="Cancel"
-      onConfirm={() => console.log('Proceeded')}
-      onCancel={() => console.log('Cancelled')}
+      onConfirm={() => }
+      onCancel={() => }
     />
   ),
 }
@@ -77,8 +77,8 @@ export const FileDeletion: Story = {
       confirmText="Delete File"
       cancelText="Keep File"
       variant="destructive"
-      onConfirm={() => console.log('File deleted')}
-      onCancel={() => console.log('File kept')}
+      onConfirm={() => }
+      onCancel={() => }
     />
   ),
 }
@@ -90,8 +90,8 @@ export const LogoutConfirmation: Story = {
       description="Are you sure you want to sign out? You will need to sign in again to access your account."
       confirmText="Sign Out"
       cancelText="Stay Signed In"
-      onConfirm={() => console.log('Signed out')}
-      onCancel={() => console.log('Stayed signed in')}
+      onConfirm={() => }
+      onCancel={() => }
     />
   ),
 }
@@ -104,8 +104,8 @@ export const UnsavedChanges: Story = {
       confirmText="Leave Page"
       cancelText="Stay and Save"
       variant="destructive"
-      onConfirm={() => console.log('Left page')}
-      onCancel={() => console.log('Stayed on page')}
+      onConfirm={() => }
+      onCancel={() => }
     />
   ),
 }
@@ -117,8 +117,8 @@ export const CustomStyling: Story = {
       description="This dialog has custom styling applied to demonstrate the flexibility of the component."
       confirmText="Custom Action"
       cancelText="Cancel"
-      onConfirm={() => console.log('Custom action confirmed')}
-      onCancel={() => console.log('Cancelled')}
+      onConfirm={() => }
+      onCancel={() => }
     />
   ),
 }

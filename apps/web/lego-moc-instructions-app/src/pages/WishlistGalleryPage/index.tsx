@@ -491,7 +491,6 @@ const useAutoSave = function <T>(
       setLastSaveTime(new Date())
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Save failed')
-      console.error('Auto-save failed:', error)
     } finally {
       setIsSaving(false)
     }
@@ -526,9 +525,7 @@ const useAutoSave = function <T>(
         // Use synchronous storage for page unload
         try {
           localStorage.setItem('wishlist_autosave_backup', JSON.stringify(data))
-        } catch (error) {
-          console.error('Failed to backup data on page unload:', error)
-        }
+        } catch (error) {}
       }
     }
 
@@ -562,9 +559,7 @@ const useAutoSave = function <T>(
         }
         localStorage.removeItem('wishlist_autosave_backup')
       }
-    } catch (error) {
-      console.error('Failed to restore from backup:', error)
-    }
+    } catch (error) {}
   }, [])
 
   return {
@@ -593,9 +588,7 @@ export const WishlistGalleryPage: React.FC = () => {
       }
       // Store in localStorage as backup
       localStorage.setItem('wishlist_items', JSON.stringify(items))
-      console.log('Wishlist items saved successfully:', items.length, 'items')
     } catch (error) {
-      console.error('Failed to save wishlist items:', error)
       throw error
     }
   }, [])
@@ -619,11 +612,8 @@ export const WishlistGalleryPage: React.FC = () => {
           updatedAt: new Date(item.updatedAt),
         }))
         setWishlistItems(itemsWithDates)
-        console.log('Loaded saved wishlist items:', itemsWithDates.length, 'items')
       }
-    } catch (error) {
-      console.error('Failed to load saved wishlist items:', error)
-    }
+    } catch (error) {}
   }, [])
 
   // Filter state

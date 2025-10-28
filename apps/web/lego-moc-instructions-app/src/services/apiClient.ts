@@ -20,7 +20,6 @@ export class ApiClient {
     this.retryAttempts = config.api.retryAttempts
 
     if (isDevelopment) {
-      console.log('🔧 API Client Configuration:', {
         baseURL: this.baseURL,
         authURL: this.authURL,
         timeout: this.timeout,
@@ -221,7 +220,6 @@ export const requestInterceptor = (config: RequestInit): RequestInit => {
 export const responseInterceptor = (response: Response): Response => {
   // Log responses in development
   if (isDevelopment && config.api.enableLogging) {
-    console.log(`🌐 API Response: ${response.status} ${response.url}`)
   }
 
   return response

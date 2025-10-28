@@ -1,10 +1,10 @@
-import React, {useState} from 'react'
-import {AppAvatar} from './AppAvatar'
+import React, { useState } from 'react'
+import { AppAvatar } from './AppAvatar'
 
 export const AppAvatarExample: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState<string>('https://example.com/avatar.jpg')
-  const [userName, setUserName] = useState<string>('John Doe')
-  const [userEmail, setUserEmail] = useState<string>('john@example.com')
+  const [userName] = useState<string>('John Doe')
+  const [userEmail] = useState<string>('john@example.com')
 
   const handleAvatarUpload = async (file: File) => {
     // Simulate upload delay
@@ -13,17 +13,13 @@ export const AppAvatarExample: React.FC = () => {
     // In a real app, you would upload the file to your server
     const newAvatarUrl = window.URL.createObjectURL(file)
     setAvatarUrl(newAvatarUrl)
-
-    console.log('Avatar uploaded:', file.name)
   }
 
   const handleProfileClick = () => {
-    console.log('Profile clicked - navigate to profile page')
     // In a real app, you would navigate to the profile page
   }
 
   const handleLogout = () => {
-    console.log('Logout confirmed')
     // In a real app, you would clear auth state and redirect to login
   }
 

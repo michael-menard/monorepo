@@ -28,6 +28,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/logger": "workspace:*",
     "zod": "^3.25.76",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

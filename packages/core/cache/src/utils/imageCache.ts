@@ -1,4 +1,7 @@
+import { createLogger } from '@repo/logger'
 import type { ImageCacheEntry } from '../schemas/cache.js'
+
+const logger = createLogger('ImageCache')
 
 /**
  * Image cache utility using Cache API and data URLs
@@ -49,7 +52,7 @@ export class ImageCache {
 
       return url
     } catch (error) {
-      console.warn('Failed to cache image:', error)
+      logger.warn('Failed to cache image', { url, error })
       return url // Fallback to original URL
     }
   }
@@ -78,7 +81,7 @@ export class ImageCache {
         reader.readAsDataURL(blob)
       })
     } catch (error) {
-      console.warn('Failed to get cached image as data URL:', error)
+      logger.warn('Failed to get cached image as data URL', { url, error })
       return null
     }
   }
@@ -124,7 +127,7 @@ export class ImageCache {
 
       return dataUrl
     } catch (error) {
-      console.warn('Failed to cache image as data URL:', error)
+      logger.warn('Failed to cache image as data URL', { url, error })
       return null
     }
   }
@@ -151,7 +154,7 @@ export class ImageCache {
 
       return entry.dataUrl
     } catch (error) {
-      console.warn('Failed to get cached image:', error)
+      logger.warn('Failed to get cached image', { url, error })
       return null
     }
   }
@@ -175,7 +178,7 @@ export class ImageCache {
       try {
         await caches.delete(this.cacheName)
       } catch (error) {
-        console.warn('Failed to clear Cache API:', error)
+        logger.warn('Failed to clear Cache API', { error })
       }
     }
 
@@ -208,7 +211,7 @@ export class ImageCache {
         const keys = await cache.keys()
         cacheApiSize = keys.length
       } catch (error) {
-        console.warn('Failed to get Cache API stats:', error)
+        logger.warn('Failed to get Cache API stats', { error })
       }
     }
 

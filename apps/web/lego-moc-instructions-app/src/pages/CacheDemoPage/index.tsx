@@ -138,11 +138,7 @@ export const CacheDemoPage: React.FC = () => {
 
         <div className="mb-6">
           <h3 className="text-lg font-medium mb-2">Image Gallery (Preloaded)</h3>
-          <ImageGallery
-            images={demoImages}
-            onImageLoad={id => console.log(`Image ${id} loaded`)}
-            onImageError={id => console.log(`Image ${id} failed to load`)}
-          />
+          <ImageGallery images={demoImages} onImageLoad={() => {}} onImageError={() => {}} />
         </div>
 
         <div className="mb-6">

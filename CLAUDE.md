@@ -33,7 +33,6 @@ pnpm dev:web        # Frontend only
 pnpm dev:api        # API services only
 
 # View service logs
-pnpm logs:auth      # Auth service logs
 pnpm logs:lego      # LEGO API logs
 
 # Storybook (Design System)
@@ -123,9 +122,7 @@ pnpm --filter [workspace] remove [package]
 Ports are centrally defined in root `.env` file and **must never be changed**:
 
 - **Frontend**: `3002` (FRONTEND_PORT)
-- **Auth Service**: `9300` (AUTH_SERVICE_PORT)
 - **LEGO Projects API**: `9000` (LEGO_API_PORT)
-- **MongoDB**: `27017` (MONGODB_PORT)
 - **PostgreSQL**: `5432` (POSTGRESQL_PORT)
 - **Redis**: `6379` (REDIS_PORT)
 - **Elasticsearch**: `9200` (ELASTICSEARCH_PORT)
@@ -136,7 +133,7 @@ Ports are centrally defined in root `.env` file and **must never be changed**:
 
 All services load environment variables from the **monorepo root `.env` file** via `shared/config/env-loader.js`. This loader:
 
-- Automatically detects service type (auth-service vs lego-projects-api)
+- Automatically detects service type
 - Assigns correct PORT based on service type
 - Maps centralized env vars to legacy variable names for backward compatibility
 - Validates port configuration on startup
@@ -145,13 +142,13 @@ All services load environment variables from the **monorepo root `.env` file** v
 
 ### Backend Services
 
-**Auth Service** (`apps/api/auth-service`):
+**Authentication** (`apps/api/auth-service-cognito`):
 
-- Express + MongoDB + Mongoose
-- JWT-based authentication, email verification, password reset
-- Session management and RBAC
-- Port: 9300
-- Entry point: `index.ts` (imports env-loader first)
+- **AWS Cognito**: Serverless authentication with User Pools
+- Handles user registration, login, email verification, password reset
+- Frontend uses AWS Amplify/Cognito SDK
+- JWT tokens validated by `lego-projects-api`
+- Infrastructure: CDK (`apps/api/auth-service-cognito/infrastructure/`)
 
 **LEGO Projects API** (`apps/api/lego-projects-api`):
 

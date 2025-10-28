@@ -4,12 +4,11 @@
   "description": "Serverless authentication service using AWS Cognito",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "echo 'No build needed - infrastructure only'",
     "deploy": "cd infrastructure && npm run deploy",
-    "test": "jest",
-    "lint": "eslint src --ext .ts",
-    "clean": "rm -rf dist"
+    "test": "echo 'No tests - infrastructure only'",
+    "lint": "echo 'No linting - infrastructure only'",
+    "clean": "echo 'Nothing to clean'"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.490.0",

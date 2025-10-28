@@ -1,7 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
 import { createCachedBaseQuery, getRTKQueryCacheConfig } from '@repo/cache'
-import { getCSRFHeaders } from '@repo/auth'
 import { apiClient } from './apiClient.js'
 
 // Zod schemas for type safety - Updated to match backend API response
@@ -79,40 +78,13 @@ export interface ApiResponse<T> {
 // Create cache monitor for performance tracking
 // const cacheMonitor = createCacheMonitor()
 
-// Custom base query with CSRF protection and retry logic for mutations
-const baseQueryWithCSRF = async (args: any, api: any, extraOptions: any) => {
-  const { method } = typeof args === 'string' ? { method: 'GET' } : args
-  const isMutation = method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())
-
-  let requestArgs = args
-
-  // Add CSRF headers for mutation requests
-  if (isMutation) {
-    try {
-      const csrfHeaders = await getCSRFHeaders()
-      if (typeof args === 'string') {
-        requestArgs = {
-          url: args,
-          headers: csrfHeaders,
-        }
-      } else {
-        requestArgs = {
-          ...args,
-          headers: {
-            ...csrfHeaders,
-            ...args.headers,
-          },
-        }
-      }
-    } catch (error) {
-      console.error('Failed to add CSRF headers:', error)
-      // Continue with request without CSRF token - let server handle the error
-    }
-  }
+// Custom base query with Cognito JWT authentication (no CSRF needed)
+const baseQueryWithAuth = async (args: any, api: any, extraOptions: any) => {
+  // Cognito JWT tokens are automatically added by apiClient.getFetchConfig()
+  const requestArgs = args
 
   // Use environment-aware base URL from apiClient
   const baseUrl = apiClient.getLegoApiUrl('/api')
-  console.log('🚨 API BASE URL BEING USED IN RTK QUERY:', baseUrl)
   const cachedBaseQuery = fetchBaseQuery(
     createCachedBaseQuery(baseUrl, {
       maxAge: 300, // 5 minutes cache
@@ -120,61 +92,15 @@ const baseQueryWithCSRF = async (args: any, api: any, extraOptions: any) => {
     }),
   )
 
-  // Make the initial request
-  let result = await cachedBaseQuery(requestArgs, api, extraOptions)
-
-  // Handle CSRF failures with retry logic
-  if (
-    result.error &&
-    'status' in result.error &&
-    result.error.status === 403 &&
-    result.error.data &&
-    typeof result.error.data === 'object' &&
-    'code' in result.error.data &&
-    result.error.data.code === 'CSRF_FAILED' &&
-    isMutation &&
-    !extraOptions?.skipCSRFRetry // Prevent infinite retry loops
-  ) {
-    console.log('CSRF token failed, attempting to refresh and retry request')
-
-    try {
-      // Import refreshCSRFToken dynamically to avoid circular dependencies
-      const { refreshCSRFToken } = await import('@repo/auth')
-
-      // Get a fresh CSRF token
-      const newToken = await refreshCSRFToken()
-
-      // Update the request with the new CSRF token
-      const retryHeaders = {
-        ...requestArgs.headers,
-        'X-CSRF-Token': newToken,
-      }
-
-      const retryArgs =
-        typeof args === 'string'
-          ? { url: args, headers: retryHeaders }
-          : { ...args, headers: retryHeaders }
-
-      // Retry the request with skipCSRFRetry flag to prevent infinite loops
-      console.log('Retrying request with fresh CSRF token')
-      result = await cachedBaseQuery(retryArgs, api, { ...extraOptions, skipCSRFRetry: true })
-
-      if (!result.error) {
-        console.log('Request succeeded after CSRF token refresh')
-      }
-    } catch (refreshError) {
-      console.error('Failed to refresh CSRF token for retry:', refreshError)
-      // Return original error if refresh fails
-    }
-  }
-
+  // Make the request - Cognito JWT tokens don't need CSRF retry logic
+  const result = await cachedBaseQuery(requestArgs, api, extraOptions)
   return result
 }
 
 // Create the API service
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery: baseQueryWithCSRF,
+  baseQuery: baseQueryWithAuth,
   tagTypes: ['MOCInstruction'],
   endpoints: builder => ({
     // Get all MOC instructions

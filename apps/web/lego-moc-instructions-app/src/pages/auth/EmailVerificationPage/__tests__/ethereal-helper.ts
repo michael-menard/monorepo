@@ -39,13 +39,9 @@ export class EtherealHelper {
     try {
       // Note: Ethereal doesn't have a public API, so we'll use a mock approach
       // In a real scenario, you'd access the web interface at https://ethereal.email
-      console.log('Ethereal Email: Access your emails at https://ethereal.email')
-      console.log(`Username: ${this.config.user}`)
-      console.log(`Password: ${this.config.pass}`)
 
       return []
     } catch (error) {
-      console.error('Error fetching emails from Ethereal:', error)
       return []
     }
   }
@@ -80,9 +76,6 @@ export class EtherealHelper {
    * Get verification code for a user
    */
   async getVerificationCode(userEmail: string): Promise<string | null> {
-    console.log(`Ethereal Email: Check for verification email for ${userEmail}`)
-    console.log('Access your emails at: https://ethereal.email')
-    console.log(`Login with: ${this.config.user} / ${this.config.pass}`)
 
     // For testing purposes, return a mock code
     // In real usage, you'd check the Ethereal web interface
@@ -96,9 +89,6 @@ export class EtherealHelper {
     userEmail: string,
     timeoutMs: number = 30000,
   ): Promise<string | null> {
-    console.log(`Ethereal Email: Waiting for verification email for ${userEmail}`)
-    console.log('Please check: https://ethereal.email')
-    console.log(`Login: ${this.config.user} / ${this.config.pass}`)
 
     // For testing, return mock code after a short delay
     await new Promise(resolve => setTimeout(resolve, 2000))
@@ -116,18 +106,6 @@ export class EtherealHelper {
    * Print setup instructions
    */
   printSetupInstructions(): void {
-    console.log('\n📧 Ethereal Email Setup Instructions:\n')
-    console.log('1. Go to https://ethereal.email/create')
-    console.log('2. Click "Create Ethereal Account"')
-    console.log('3. Copy the SMTP credentials provided')
-    console.log('4. Update your .env file with the credentials')
-    console.log('5. Access your emails at https://ethereal.email')
-    console.log('\nSMTP Configuration:')
-    console.log(`Host: ${this.config.host}`)
-    console.log(`Port: ${this.config.port}`)
-    console.log(`User: ${this.config.user}`)
-    console.log(`Pass: ${this.config.pass}`)
-    console.log(`Secure: ${this.config.secure}`)
   }
 }
 

@@ -24,7 +24,6 @@ const MultiSelectExample: React.FC = () => {
 
   const handleSelectionChange = (values: string[]) => {
     setSelectedValues(values)
-    console.log('Selected values:', values)
   }
 
   return (

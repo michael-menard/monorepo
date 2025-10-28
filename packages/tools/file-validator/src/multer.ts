@@ -10,7 +10,7 @@ export function createMulterFileFilter(
   const context: ValidationContext = { environment: 'node', ...options }
 
   return (
-    _req: any,
+    _req: Express.Request,
     file: Express.Multer.File,
     cb: (error: Error | null, acceptFile?: boolean) => void,
   ) => {
@@ -31,10 +31,10 @@ export function createMulterFileFilter(
 // Multer storage helpers
 export function createMulterDestination(
   baseDir: string,
-  getSubDir: (req: any, file: Express.Multer.File) => string,
+  getSubDir: (req: Express.Request, file: Express.Multer.File) => string,
 ) {
   return (
-    req: any,
+    req: Express.Request,
     file: Express.Multer.File,
     cb: (error: Error | null, destination: string) => void,
   ) => {
@@ -54,10 +54,10 @@ export function createMulterDestination(
 }
 
 export function createMulterFilename(
-  getBaseName?: (req: any, file: Express.Multer.File) => string,
+  getBaseName?: (req: Express.Request, file: Express.Multer.File) => string,
 ) {
   return (
-    req: any,
+    req: Express.Request,
     file: Express.Multer.File,
     cb: (error: Error | null, filename: string) => void,
   ) => {
@@ -117,7 +117,7 @@ export function createDocumentMulterConfig(uploadDir: string, maxSize = 50 * 102
 
 export function createLegoInstructionMulterConfig(
   uploadDir: string,
-  getUserId: (req: any) => string,
+  getUserId: (req: Express.Request) => string,
 ) {
   const multer = require('multer')
 
@@ -137,7 +137,7 @@ export function createLegoInstructionMulterConfig(
 
 export function createLegoPartsListMulterConfig(
   uploadDir: string,
-  getUserId: (req: any) => string,
+  getUserId: (req: Express.Request) => string,
 ) {
   const multer = require('multer')
 

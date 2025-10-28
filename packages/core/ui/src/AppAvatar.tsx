@@ -1,9 +1,9 @@
-import type {ChangeEvent} from 'react'
-import React, {useRef, useState} from 'react'
-import {Edit, LogOut, Settings, Upload, User} from 'lucide-react'
-import {z} from 'zod'
-import {showErrorToast} from './toast-utils'
-import {ConfirmationDialog} from './ConfirmationDialog'
+import type { ChangeEvent } from 'react'
+import React, { useRef, useState } from 'react'
+import { Edit, LogOut, Settings, Upload, User } from 'lucide-react'
+import { z } from 'zod'
+import { showErrorToast } from './toast-utils'
+import { ConfirmationDialog } from './ConfirmationDialog'
 import {
   Avatar,
   AvatarFallback,
@@ -143,7 +143,6 @@ export const AppAvatar: React.FC<AppAvatarProps> = ({
       setSelectedFile(null)
       setPreviewUrl(null)
     } catch (error) {
-      console.error('Avatar upload failed:', error)
       showErrorToast(error, 'Failed to upload avatar')
     } finally {
       setIsUploading(false)

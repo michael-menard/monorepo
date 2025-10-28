@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, User, Tag, Download, Star, Package } from 'lucide-react'
+import { Calendar, User, Star } from 'lucide-react'
 
 export interface MocData {
   id: string

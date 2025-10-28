@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react'
+import { createLogger } from '@repo/logger'
 import { useImageCache } from '../utils/imageCache.js'
+
+const logger = createLogger('CachedImage')
 
 interface CachedImageProps {
   src: string
@@ -61,7 +64,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
           onLoad?.()
         }
       } catch (error) {
-        console.warn('Failed to load cached image:', error)
+        logger.warn('Failed to load cached image', { src, error })
         if (isMounted) {
           setHasError(true)
           setImageSrc(fallback)
@@ -81,7 +84,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
   // Preload image if requested
   useEffect(() => {
     if (preload) {
-      cacheImage(src).catch(console.warn)
+      cacheImage(src).catch(error => logger.warn('Failed to preload image', { src, error }))
     }
   }, [src, preload, cacheImage])
 
@@ -129,7 +132,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   // Preload all images when component mounts
   useEffect(() => {
     const imageUrls = images.map(img => img.src)
-    preloadImages(imageUrls).catch(console.warn)
+    preloadImages(imageUrls).catch(error =>
+      logger.warn('Failed to preload images', { imageUrls, error }),
+    )
   }, [images, preloadImages])
 
   return (

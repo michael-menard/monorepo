@@ -1,26 +1,15 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  boolean,
-  jsonb,
-  uniqueIndex,
-  index,
-  integer,
-} from 'drizzle-orm/pg-core'
-import { sql, relations } from 'drizzle-orm'
+import {boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid,} from 'drizzle-orm/pg-core'
+import {relations, sql} from 'drizzle-orm'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
-// Note: Users are managed in MongoDB via the auth service, not in PostgreSQL
+// Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
 
 // Gallery Images Table
 export const galleryImages = pgTable(
   'gallery_images',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),
-    // Note: No foreign key constraint - user exists in auth service MongoDB
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
     title: text('title').notNull(),
     description: text('description'),
     tags: jsonb('tags').$type<string[]>(),
@@ -44,8 +33,7 @@ export const galleryAlbums = pgTable(
   'gallery_albums',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),
-    // Note: No foreign key constraint - user exists in auth service MongoDB
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
     title: text('title').notNull(),
     description: text('description'),
     coverImageId: uuid('cover_image_id'), // Will reference galleryImages.id - added in migration
@@ -67,8 +55,7 @@ export const galleryFlags = pgTable(
     imageId: uuid('image_id')
       .notNull()
       .references(() => galleryImages.id, { onDelete: 'cascade' }),
-    userId: text('user_id').notNull(),
-    // Note: No foreign key constraint - user exists in auth service MongoDB
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
     reason: text('reason'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     lastUpdatedAt: timestamp('last_updated_at').notNull().defaultNow(),
@@ -87,8 +74,7 @@ export const mocInstructions = pgTable(
   'moc_instructions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),
-    // Note: No foreign key constraint - user exists in auth service MongoDB
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
     title: text('title').notNull(),
     description: text('description'),
     type: text('type').notNull(), // 'moc' or 'set'
@@ -213,8 +199,7 @@ export const wishlistItems = pgTable(
   'wishlist_items',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),
-    // Note: No foreign key constraint - user exists in auth service MongoDB
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
     title: text('title').notNull(),
     description: text('description'),
     productLink: text('product_link'),
@@ -268,8 +253,6 @@ export const mocPartsLists = pgTable(
 )
 
 // Define relationships for lazy loading
-// Note: User relations removed - users are managed in MongoDB via auth service
-
 export const galleryImagesRelations = relations(galleryImages, ({ one, many }) => ({
   album: one(galleryAlbums, {
     fields: [galleryImages.albumId],
@@ -343,4 +326,4 @@ export const mocPartsListsRelations = relations(mocPartsLists, ({ one }) => ({
   }),
 }))
 
-// Wishlist relations removed - users are managed in MongoDB via auth service
+// Note: No user relations - userId is a Cognito reference, not a FK

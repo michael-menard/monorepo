@@ -15,7 +15,6 @@ const sendToAnalytics = (metric: { id: string; name: string; value: number; rati
 
   // In development, log to console
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[Web Vitals] ${metric.name}:`, {
       value: metric.value,
       rating: metric.rating,
       id: metric.id,

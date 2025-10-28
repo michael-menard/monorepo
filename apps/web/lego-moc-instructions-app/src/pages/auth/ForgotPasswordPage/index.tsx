@@ -6,7 +6,7 @@ import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AppCard, Button, Input, Label } from '@repo/ui'
 import { useState } from 'react'
-import { AuthApiError, authApi } from '../../../services/authApi'
+import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 const ForgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -16,9 +16,10 @@ type ForgotPasswordFormData = z.infer<typeof ForgotPasswordSchema>
 
 function ForgotPasswordPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const { forgotPassword, isLoading: authLoading } = useCognitoAuth()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState<string>('')
 
   const {
     register,
@@ -30,25 +31,21 @@ function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
-      setIsLoading(true)
       setError(null)
 
-      // Call the auth API
-      const response = await authApi.forgotPassword(data.email)
+      // Call Cognito forgot password
+      const result = await forgotPassword(data.email)
 
-      console.log('Forgot password successful:', response)
-
-      setIsSubmitted(true)
-    } catch (err) {
-      if (err instanceof AuthApiError) {
-        setError(err.message)
-        console.error('Forgot password API error:', err)
+      if (result.success) {
+        setSubmittedEmail(data.email)
+        // Store email for reset password page
+        localStorage.setItem('resetPasswordEmail', data.email)
+        setIsSubmitted(true)
       } else {
-        setError('Failed to send reset email. Please try again.')
-        console.error('Forgot password error:', err)
+        setError(result.error || 'Failed to send reset email. Please try again.')
       }
-    } finally {
-      setIsLoading(false)
+    } catch (err) {
+      setError('Failed to send reset email. Please try again.')
     }
   }
 
@@ -124,8 +121,8 @@ function ForgotPasswordPage() {
             ) : null}
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
-                {isSubmitting || isLoading ? (
+              <Button type="submit" className="w-full" disabled={isSubmitting || authLoading}>
+                {isSubmitting || authLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   'Send Reset Link'

@@ -13,7 +13,6 @@ interface RadarEntryProps {
 
 export const RadarEntry: React.FC<RadarEntryProps> = ({
   entry,
-  quadrant,
   ring,
   x,
   y,

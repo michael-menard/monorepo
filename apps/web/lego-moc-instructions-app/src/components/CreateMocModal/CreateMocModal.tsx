@@ -10,24 +10,12 @@ import {
   Input,
   Label,
   Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Badge,
 } from '@repo/ui'
 import { Upload } from '@repo/upload'
-import { X, FileText, Image, List, User, Tag, Hash } from 'lucide-react'
+import { X, FileText, Image, List, Hash } from 'lucide-react'
 import type { UploadFile } from '@repo/upload'
 import type { CreateMocInstruction } from '@repo/moc-instructions'
-
-interface CreateMocModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (mocData: CreateMocData) => void
-  isLoading?: boolean
-}
 
 // MOC data type that extends the Zod schema with file upload fields
 export type CreateMocData = Omit<CreateMocInstruction, 'coverImageFile'> & {
@@ -49,7 +37,6 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
   onSubmit,
   isLoading = false,
 }) => {
-  console.log('🔧 CreateMocModal rendered with isOpen:', isOpen)
   const [formData, setFormData] = useState<CreateMocData>({
     type: 'moc',
     title: '',
@@ -277,14 +264,19 @@ export const CreateMocModal: React.FC<CreateMocModalProps> = ({
     }))
   }, [])
 
-  console.log('🔧 About to render modal with open:', isOpen)
-
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        onKeyDown={e => e.key === 'Escape' && onClose()}
+        role="button"
+        tabIndex={0}
+        aria-label="Close modal"
+      />
 
       {/* Modal Content using shadcn components */}
       <div className="relative bg-background rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto z-10">

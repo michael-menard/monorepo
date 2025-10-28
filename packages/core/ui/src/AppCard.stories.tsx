@@ -1,7 +1,7 @@
-import type {Meta, StoryObj} from '@storybook/react'
-import {AppCard} from './AppCard'
-import {Button} from './button'
-import {Badge} from './badge'
+import type { Meta, StoryObj } from '@storybook/react'
+import { AppCard } from './AppCard'
+import { Button } from './button'
+import { Badge } from './badge'
 
 const meta: Meta<typeof AppCard> = {
   title: 'UI/AppCard',

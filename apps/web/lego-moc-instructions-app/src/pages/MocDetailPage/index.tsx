@@ -100,7 +100,6 @@ const formatDate = (date: Date | string | null | undefined): string => {
       day: 'numeric',
     }).format(dateObj)
   } catch (error) {
-    console.warn('Error formatting date:', date, error)
     return 'Invalid date'
   }
 }
@@ -139,7 +138,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
   const { id } = useParams({ from: '/moc-detail/$id' })
   const navigate = useNavigate()
 
-  console.log('🔍 MocDetailPage rendered with ID:', id)
 
   // Local state for parts list upload
   const [showPartsListUpload, setShowPartsListUpload] = useState(false)
@@ -163,23 +161,15 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
 
   // Handle parts list file upload using RTK Query
   const handlePartsListUpload = async (files: FileList) => {
-    console.log('🚀 handlePartsListUpload called with:', files.length, 'files')
 
     if (!files.length || !id) {
-      console.log('❌ No files or no ID:', { filesLength: files.length, id })
       return
     }
 
     const file = files[0]
-    console.log('📁 File details:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: file.lastModified,
-    })
+    // File processing removed
 
     try {
-      console.log('📤 Uploading parts list file using RTK Query...')
 
       // Use RTK Query mutation
       const result = await uploadPartsList({
@@ -187,7 +177,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
         file: file,
       }).unwrap()
 
-      console.log('✅ Parts list uploaded successfully:', result)
 
       // Show success toast with parsing details
       const parsingInfo = result.data?.parsing
@@ -206,7 +195,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       // RTK Query will automatically invalidate and refetch the MOC data
       setShowPartsListUpload(false)
     } catch (error: any) {
-      console.error('❌ Parts list upload failed:', error)
 
       // Show detailed error message based on error type
       let errorTitle = 'Failed to upload parts list'
@@ -236,15 +224,12 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
 
   // Handle thumbnail upload
   const handleThumbnailUpload = async (files: File[]) => {
-    console.log('🚀 handleThumbnailUpload called with:', files.length, 'files')
 
     if (!files.length || !id) {
-      console.log('❌ No files or no ID:', { filesLength: files.length, id })
       return
     }
 
     const file = files[0]
-    console.log('📁 File details:', {
       name: file.name,
       size: file.size,
       type: file.type,
@@ -252,7 +237,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     })
 
     try {
-      console.log('📤 Uploading thumbnail using RTK Query...')
 
       // Use RTK Query mutation
       const result = await uploadMocThumbnail({
@@ -260,7 +244,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
         file: file,
       }).unwrap()
 
-      console.log('✅ Thumbnail uploaded successfully:', result)
 
       // Show success toast
       showSuccessToast(
@@ -271,7 +254,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       // RTK Query will automatically invalidate and refetch the MOC data
       setShowThumbnailUpload(false)
     } catch (error) {
-      console.error('❌ Thumbnail upload failed:', error)
 
       // Show error toast with user-friendly message
       showErrorToast(error, 'Failed to upload cover image')
@@ -291,14 +273,12 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     if (!fileToDelete || !id) return
 
     try {
-      console.log('🗑️ Deleting file:', fileToDelete)
 
       await deleteMocFile({
         mocId: id,
         fileId: fileToDelete.id,
       }).unwrap()
 
-      console.log('✅ File deleted successfully')
 
       // Show success toast
       showSuccessToast(
@@ -310,7 +290,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       setFileToDelete(null)
       setShowDeleteConfirmation(false)
     } catch (error) {
-      console.error('❌ File deletion failed:', error)
 
       // Show error toast with user-friendly message
       showErrorToast(error, 'Failed to delete file')
@@ -342,7 +321,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     instruction = result.data?.data // Extract data from standard API response
     isLoading = result.isLoading
     error = result.error
-    console.log('📊 RTK Query state:', {
       instruction,
       isLoading,
       error,
@@ -352,7 +330,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       extractedInstruction: result.data?.data,
     })
   } catch (hookError) {
-    console.error('❌ RTK Query hook error:', hookError)
     return (
       <div className="container mx-auto px-4 py-8">
         <h1>RTK Query Hook Error</h1>
@@ -455,7 +432,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                     className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
                     fallback="/placeholder-instruction.svg"
                     onError={() =>
-                      console.warn('Failed to load MOC thumbnail:', instruction.thumbnailUrl)
                     }
                   />
                 ) : (
@@ -580,8 +556,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
             {(() => {
               const partsListFiles =
                 instruction.files?.filter(file => file.fileType === 'parts-list') || []
-              console.log('🔍 All files:', instruction.files)
-              console.log('🔍 Parts list files:', partsListFiles)
 
               // Always show the card for debugging
               return (
@@ -621,12 +595,9 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                               type="file"
                               accept=".csv,.txt"
                               onChange={e => {
-                                console.log('📁 File input changed:', e.target.files)
                                 if (e.target.files && e.target.files.length > 0) {
-                                  console.log('📁 Calling handlePartsListUpload...')
                                   handlePartsListUpload(e.target.files)
                                 } else {
-                                  console.log('❌ No files selected')
                                 }
                               }}
                               disabled={isUploadingPartsList}
