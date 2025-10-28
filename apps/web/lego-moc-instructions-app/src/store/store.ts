@@ -1,5 +1,4 @@
 import { configureStore } from '@reduxjs/toolkit'
-import { authApi, authReducer } from '@repo/auth'
 import { instructionsApi } from '@repo/moc-instructions'
 import { galleryApi } from '@repo/gallery'
 import { wishlistReducer, mocInstructionsReducer, profileReducer } from '@repo/mock-data'
@@ -11,14 +10,12 @@ import galleryReducer from './gallerySlice'
 
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
     gallery: galleryReducer,
     // Centralized RTK reducers (replacing old instructions reducer)
     wishlist: wishlistReducer,
     mocInstructions: mocInstructionsReducer,
     profile: profileReducer,
     // API reducers
-    [authApi.reducerPath]: authApi.reducer,
     [instructionsApi.reducerPath]: instructionsApi.reducer,
     // Temporarily commented out due to import resolution issue
     // [galleryApi.reducerPath]: galleryApi.reducer,
@@ -40,7 +37,6 @@ export const store = configureStore({
         ],
       },
     }).concat(
-      authApi.middleware,
       instructionsApi.middleware,
       // Temporarily commented out due to import resolution issue
       // galleryApi.middleware,

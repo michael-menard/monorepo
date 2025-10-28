@@ -453,9 +453,6 @@ importers:
       '@reduxjs/toolkit':
         specifier: ^2.8.2
         version: 2.9.2(react-redux@9.2.0(@types/react@19.2.2)(react@19.2.0)(redux@5.0.1))(react@19.2.0)
-      '@repo/auth':
-        specifier: workspace:*
-        version: link:../../../packages/core/auth
       '@repo/cache':
         specifier: workspace:*
         version: link:../../../packages/core/cache

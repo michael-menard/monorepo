@@ -141,6 +141,11 @@ export async function indexAlbum(album: any) {
 }
 
 export async function updateAlbum(album: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.update({
       index: ES_INDEX,
@@ -157,6 +162,11 @@ export async function updateAlbum(album: any) {
 }
 
 export async function deleteAlbum(id: string) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.delete({ index: ES_INDEX, id })
   } catch (err: any) {
@@ -194,6 +204,11 @@ export async function indexMoc(moc: any) {
 }
 
 export async function updateMoc(moc: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.update({
       index: MOC_INDEX,
@@ -216,6 +231,11 @@ export async function updateMoc(moc: any) {
 }
 
 export async function deleteMoc(id: string) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.delete({ index: MOC_INDEX, id })
   } catch (err: any) {
@@ -226,6 +246,11 @@ export async function deleteMoc(id: string) {
 
 // --- WISHLIST INDEXING ---
 export async function indexWishlistItem(item: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.index({
       index: WISHLIST_INDEX,
@@ -241,6 +266,11 @@ export async function indexWishlistItem(item: any) {
 }
 
 export async function updateWishlistItem(item: any) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.update({
       index: WISHLIST_INDEX,
@@ -257,6 +287,11 @@ export async function updateWishlistItem(item: any) {
 }
 
 export async function deleteWishlistItem(id: string) {
+  if (!esClient) {
+    console.log('🔍 Search indexing skipped - search service disabled')
+    return
+  }
+
   try {
     await esClient.delete({ index: WISHLIST_INDEX, id })
   } catch (err: any) {
@@ -317,7 +352,7 @@ export async function searchGalleryItems({
     })
   }
   try {
-    const result = await esClient.search({
+    const result = await esClient!.search({
       index: ES_INDEX,
       from,
       size,
@@ -372,7 +407,7 @@ export async function searchMocs({
   }
 
   try {
-    const result = await esClient.search({
+    const result = await esClient!.search({
       index: MOC_INDEX,
       from,
       size,
@@ -442,7 +477,7 @@ export async function searchWishlistItems({
   }
 
   try {
-    const result = await esClient.search({
+    const result = await esClient!.search({
       index: WISHLIST_INDEX,
       from,
       size,
@@ -477,12 +512,17 @@ export async function searchWishlistItems({
 
 // --- INDEX INITIALIZATION ---
 export async function initializeMocIndex() {
+  if (!esClient) {
+    console.log('🔍 Search index initialization skipped - search service disabled')
+    return
+  }
+
   try {
     // Check if index exists
-    const indexExists = await esClient.indices.exists({ index: MOC_INDEX })
+    const indexExists = await esClient!.indices.exists({ index: MOC_INDEX })
 
     if (!indexExists) {
-      await esClient.indices.create({
+      await esClient!.indices.create({
         index: MOC_INDEX,
         mappings: {
           properties: {
@@ -534,12 +574,17 @@ export async function initializeMocIndex() {
 
 // --- INDEX INITIALIZATION ---
 export async function initializeWishlistIndex() {
+  if (!esClient) {
+    console.log('🔍 Search index initialization skipped - search service disabled')
+    return
+  }
+
   try {
     // Check if index exists
-    const indexExists = await esClient.indices.exists({ index: WISHLIST_INDEX })
+    const indexExists = await esClient!.indices.exists({ index: WISHLIST_INDEX })
 
     if (!indexExists) {
-      await esClient.indices.create({
+      await esClient!.indices.create({
         index: WISHLIST_INDEX,
         mappings: {
           properties: {

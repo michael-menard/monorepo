@@ -14,18 +14,22 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/*/package.json ./packages/*/
 COPY apps/api/lego-projects-api/package.json ./apps/api/lego-projects-api/
 
-# Install dependencies
+# Install dependencies (ignore optional dependencies like canvas)
+# Install Python and build tools for native dependencies
+RUN apk add --no-cache python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY packages/ ./packages/
+COPY shared/ ./shared/
 COPY apps/api/lego-projects-api/ ./apps/api/lego-projects-api/
 
-# Build packages first
-RUN pnpm turbo build --filter="./packages/*"
+# Build the LEGO projects API directly (dependencies are already built locally)
+WORKDIR /app/apps/api/lego-projects-api
+RUN npm run build
 
-# Build the LEGO projects API
-RUN pnpm turbo build --filter="lego-projects-api"
+# Reset working directory
+WORKDIR /app
 
 # Production stage
 FROM node:20-alpine AS production
@@ -46,10 +50,11 @@ COPY packages/*/package.json ./packages/*/
 COPY apps/api/lego-projects-api/package.json ./apps/api/lego-projects-api/
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy built application
 COPY --from=base --chown=nodejs:nodejs /app/packages/*/dist ./packages/*/dist
+COPY --from=base --chown=nodejs:nodejs /app/shared ./shared
 COPY --from=base --chown=nodejs:nodejs /app/apps/api/lego-projects-api/dist ./apps/api/lego-projects-api/dist
 
 # Copy database migrations and other runtime files

@@ -37,7 +37,7 @@ describe('useCognitoAuth', () => {
   describe('Initial State', () => {
     it('should initialize with loading state', () => {
       mockGetCurrentUser.mockRejectedValue(new Error('No user'))
-      
+
       const { result } = renderHook(() => useCognitoAuth())
 
       expect(result.current.isLoading).toBe(true)

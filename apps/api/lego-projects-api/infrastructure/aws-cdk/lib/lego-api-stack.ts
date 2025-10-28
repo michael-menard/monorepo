@@ -11,7 +11,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import { Construct } from 'constructs'
 
 export interface LegoApiStackProps extends cdk.StackProps {
-  environment: 'staging' | 'production'
+  environment: 'dev' | 'staging' | 'production'
   vpcId?: string // Optional: use existing VPC (deprecated - use shared infrastructure)
   domainName?: string
   useSharedInfrastructure?: boolean // Use shared VPC, RDS, Redis, and OpenSearch

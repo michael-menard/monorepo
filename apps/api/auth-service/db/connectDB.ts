@@ -17,7 +17,23 @@ const getDatabaseConfig = () => {
 
   if (isAws) {
     // AWS DocumentDB configuration
-    const mongodbUri = process.env.MONGODB_URI
+    let mongodbUri = process.env.MONGODB_URI
+
+    // If MONGODB_URI is not provided, build it from components
+    if (!mongodbUri) {
+      const dbHost = process.env.DB_HOST
+      const dbPort = process.env.DB_PORT || '27017'
+      const dbName = process.env.DB_NAME || 'lego-auth'
+      const dbUsername = process.env.DB_USERNAME
+      const dbPassword = process.env.DB_PASSWORD
+
+      if (!dbHost || !dbUsername || !dbPassword) {
+        throw new Error('Either MONGODB_URI or DB_HOST, DB_USERNAME, and DB_PASSWORD are required when using AWS services')
+      }
+
+      mongodbUri = `mongodb://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?ssl=true&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false`
+    }
+
     if (!mongodbUri) {
       throw new Error('MONGODB_URI is required when using AWS services')
     }

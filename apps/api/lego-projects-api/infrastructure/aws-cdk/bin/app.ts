@@ -5,13 +5,13 @@ import {LegoApiStack} from '../lib/lego-api-stack'
 
 const app = new cdk.App()
 
-const environment = process.env.ENVIRONMENT || 'staging'
+const environment = process.env.ENVIRONMENT || 'dev'
 
 new LegoApiStack(
   app,
   `LegoApiStack${environment.charAt(0).toUpperCase() + environment.slice(1)}`,
   {
-    environment: environment as 'staging' | 'production',
+    environment: environment as 'dev' | 'staging' | 'production',
     useSharedInfrastructure: true, // Use shared VPC, RDS, Redis, and monitoring
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,

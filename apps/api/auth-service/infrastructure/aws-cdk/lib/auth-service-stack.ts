@@ -9,7 +9,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import {Construct} from 'constructs'
 
 export interface AuthServiceStackProps extends cdk.StackProps {
-  environment: 'staging' | 'production'
+  environment: 'dev' | 'staging' | 'production'
   vpcId?: string // Optional: use existing VPC (deprecated - use shared infrastructure)
   domainName?: string
   useSharedInfrastructure?: boolean // Use shared VPC and DocumentDB
@@ -77,7 +77,7 @@ export class AuthServiceStack extends cdk.Stack {
     // DocumentDB Cluster - Keep separate for now (will migrate to PostgreSQL later)
     const dbCredentials = new secretsmanager.Secret(this, 'DbCredentials', {
       generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'admin' }),
+        secretStringTemplate: JSON.stringify({ username: 'dbuser' }),
         generateStringKey: 'password',
         excludeCharacters: '"@/\\',
       },
@@ -85,13 +85,13 @@ export class AuthServiceStack extends cdk.Stack {
 
     this.database = new docdb.DatabaseCluster(this, 'Database', {
       masterUser: {
-        username: 'admin',
+        username: 'dbuser',
         password: dbCredentials.secretValueFromJson('password'),
       },
       instanceType:
         environment === 'production'
-          ? ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MEDIUM)
-          : ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
+          ? ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MEDIUM)
+          : ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MEDIUM),
       instances: environment === 'production' ? 2 : 1,
       vpc,
       vpcSubnets: useSharedInfrastructure
@@ -142,9 +142,13 @@ export class AuthServiceStack extends cdk.Stack {
       environment: {
         NODE_ENV: environment,
         PORT: '3001',
+        DB_HOST: this.database.clusterEndpoint.hostname,
+        DB_PORT: '27017',
+        DB_NAME: 'lego-auth',
       },
       secrets: {
-        MONGODB_URI: ecs.Secret.fromSecretsManager(dbCredentials, 'connectionString'),
+        DB_USERNAME: ecs.Secret.fromSecretsManager(dbCredentials, 'username'),
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(dbCredentials, 'password'),
       },
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'auth-service',

@@ -1,0 +1,33 @@
+version: 1.0
+runtime: nodejs20
+build:
+  commands:
+    build:
+      # Install dependencies for the entire monorepo
+      - npm install -g pnpm@9
+      - pnpm install --frozen-lockfile
+      # Build any required packages
+      - pnpm turbo build --filter="./packages/*"
+      # Build the auth service
+      - cd apps/api/auth-service && npm run build
+run:
+  runtime-version: 20
+  command: cd apps/api/auth-service && npm start
+  network:
+    port: 3000
+    env: PORT
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: PORT
+      value: "3000"
+    - name: MONGODB_URI
+      value: "mongodb://legouser:LegoPass123!@docdb-cluster-dev.cluster-cjyuq5qhkzpx.us-east-1.docdb.amazonaws.com:27017/lego-auth?ssl=true&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
+    - name: JWT_SECRET
+      value: "your-super-secret-jwt-key-change-in-production"
+    - name: JWT_REFRESH_SECRET
+      value: "your-super-secret-refresh-key-change-in-production"
+    - name: EMAIL_FROM
+      value: "noreply@yourdomain.com"
+    - name: CORS_ORIGINS
+      value: "http://localhost:3002,https://yourdomain.com"

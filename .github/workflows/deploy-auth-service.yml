@@ -12,9 +12,10 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 'staging'
+        default: 'dev'
         type: choice
         options:
+          - dev
           - staging
           - production
 
@@ -31,7 +32,7 @@ jobs:
   deploy:
     name: Deploy Auth Service
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ github.event.inputs.environment || 'dev' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,7 +60,7 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: auth-service-${{ github.event.inputs.environment || 'staging' }}
+          ECR_REPOSITORY: auth-service-${{ github.event.inputs.environment || 'dev' }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Build the Docker image
@@ -76,12 +77,12 @@ jobs:
         run: |
           # Get cluster and service names from CDK outputs
           CLUSTER_NAME=$(aws cloudformation describe-stacks \
-            --stack-name AuthServiceStack${{ github.event.inputs.environment || 'staging' }} \
+            --stack-name AuthServiceStack${{ github.event.inputs.environment || 'dev' }} \
             --query 'Stacks[0].Outputs[?OutputKey==`ClusterName`].OutputValue' \
             --output text)
           
           SERVICE_NAME=$(aws cloudformation describe-stacks \
-            --stack-name AuthServiceStack${{ github.event.inputs.environment || 'staging' }} \
+            --stack-name AuthServiceStack${{ github.event.inputs.environment || 'dev' }} \
             --query 'Stacks[0].Outputs[?OutputKey==`ServiceName`].OutputValue' \
             --output text)
           

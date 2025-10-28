@@ -5,6 +5,7 @@ import { SimpleVpcStack } from '../lib/simple-vpc-stack'
 import { SimpleDatabaseStack } from '../lib/simple-database-stack'
 import { SimpleCacheStack } from '../lib/simple-cache-stack'
 import { SimpleMonitoringStack } from '../lib/simple-monitoring-stack'
+// App Runner stacks removed - migrating to serverless Lambda architecture
 // import { SimpleSearchStack } from '../lib/simple-search-stack' // Temporarily disabled
 
 const app = new cdk.App()
@@ -58,6 +59,8 @@ const cacheStack = new SimpleCacheStack(app, `${stackPrefix}-Cache`, {
 //   privateSubnetIds: vpcStack.vpc.privateSubnets.map(subnet => subnet.subnetId),
 // })
 
+// App Runner stacks removed - will be replaced with serverless Lambda stacks
+
 // 5. Monitoring Stack (can reference other resources)
 const monitoringStack = new SimpleMonitoringStack(app, `${stackPrefix}-Monitoring`, {
   ...commonProps,
@@ -82,6 +85,8 @@ console.log(`📋 Database Stack: ${stackPrefix}-Database`)
 console.log(`📋 Cache Stack: ${stackPrefix}-Cache`)
 // eslint-disable-next-line no-console
 console.log(`📋 Monitoring Stack: ${stackPrefix}-Monitoring`)
+// eslint-disable-next-line no-console
+console.log(`🚀 Ready for serverless Lambda deployment!`)
 // console.log(`📋 Search Stack: ${stackPrefix}-Search`) // Temporarily disabled
 // eslint-disable-next-line no-console
 console.log(`🌍 Region: ${process?.env?.CDK_DEFAULT_REGION || 'us-east-1'}`)

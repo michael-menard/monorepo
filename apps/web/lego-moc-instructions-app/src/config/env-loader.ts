@@ -135,8 +135,6 @@ interface RequiredEnvVars {
 
   // API endpoints (for local development)
   VITE_LEGO_API_PORT?: string
-  VITE_AUTH_API_PORT?: string
-  VITE_AUTH_SERVICE_PORT?: string
 
   // AWS Services Configuration
   VITE_USE_AWS_SERVICES?: string
@@ -144,7 +142,6 @@ interface RequiredEnvVars {
 
   // URLs (optional - can be derived from ports or AWS endpoints)
   VITE_API_BASE_URL?: string
-  VITE_AUTH_API_URL?: string
   VITE_FRONTEND_URL?: string
 }
 
@@ -152,11 +149,9 @@ interface ValidatedConfig {
   ports: {
     frontend: number
     api: number
-    auth: number
   }
   urls: {
     api: string
-    auth: string
     frontend: string
   }
   isDevelopment: boolean
@@ -183,44 +178,36 @@ function loadEnvironmentConfig(): ValidatedConfig {
     serviceType: 'LEGO API',
   })
 
-  // Validate and parse Auth port
-  const authPortValue = env.VITE_AUTH_API_PORT || env.VITE_AUTH_SERVICE_PORT
-  const parsedAuthPort = validatePort('VITE_AUTH_API_PORT', authPortValue, {
-    serviceType: 'Auth Service',
-  })
+  // Auth service no longer needed - using AWS Cognito
 
   // Build URLs based on environment and AWS services configuration
   const isDevelopment = import.meta.env.DEV
   const isProduction = import.meta.env.PROD
   const useAwsServices = env.VITE_USE_AWS_SERVICES === 'true' || isProduction
-  const environment =
-    env.VITE_ENVIRONMENT || (isProduction ? 'production' : 'development')
+  const environment = env.VITE_ENVIRONMENT || (isProduction ? 'production' : 'development')
 
   // URL building logic for different environments
   let apiUrl: string
-  let authUrl: string
   let frontendUrl: string
 
   if (useAwsServices) {
     // AWS Services: Use AWS Load Balancer endpoints
-    if (!env.VITE_API_BASE_URL || !env.VITE_AUTH_API_URL) {
+    if (!env.VITE_API_BASE_URL) {
       console.warn(
-        '⚠️ AWS services enabled but VITE_API_BASE_URL or VITE_AUTH_API_URL not configured. Using fallback URLs.'
+        '⚠️ AWS services enabled but VITE_API_BASE_URL not configured. Using fallback URLs.',
       )
     }
 
-    apiUrl = env.VITE_API_BASE_URL || `https://lego-api-${environment}-alb.us-east-1.elb.amazonaws.com`
-    authUrl = env.VITE_AUTH_API_URL || `https://auth-service-${environment}-alb.us-east-1.elb.amazonaws.com/api/auth`
+    apiUrl =
+      env.VITE_API_BASE_URL || `https://lego-api-${environment}-alb.us-east-1.elb.amazonaws.com`
     frontendUrl = env.VITE_FRONTEND_URL || `https://app-${environment}.yourdomain.com`
   } else if (isDevelopment) {
     // Local Development: Use Vite proxy and local services
     apiUrl = env.VITE_API_BASE_URL || '/api' // Vite proxy
-    authUrl = env.VITE_AUTH_API_URL || '/api/auth' // Vite proxy
     frontendUrl = `http://localhost:${parsedFrontendPort}`
   } else {
     // Production without AWS (legacy deployment)
     apiUrl = env.VITE_API_BASE_URL || `https://lego-api-${environment}.yourdomain.com`
-    authUrl = env.VITE_AUTH_API_URL || `https://auth-api-${environment}.yourdomain.com/api/auth`
     frontendUrl = env.VITE_FRONTEND_URL || `https://app-${environment}.yourdomain.com`
   }
 
@@ -228,11 +215,9 @@ function loadEnvironmentConfig(): ValidatedConfig {
     ports: {
       frontend: parsedFrontendPort,
       api: parsedApiPort,
-      auth: parsedAuthPort,
     },
     urls: {
       api: apiUrl,
-      auth: authUrl,
       frontend: frontendUrl,
     },
     isDevelopment,
