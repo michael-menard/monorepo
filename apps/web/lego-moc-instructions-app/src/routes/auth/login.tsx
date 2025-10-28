@@ -1,9 +1,9 @@
 import { createRoute } from '@tanstack/react-router'
 import { rootRoute } from '../root'
-import TanStackLoginPage from '../../pages/auth/TanStackLoginPage'
+import CognitoLoginPage from '../../pages/auth/CognitoLoginPage'
 
 export const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/login',
-  component: TanStackLoginPage,
+  component: CognitoLoginPage,
 })

@@ -7,6 +7,9 @@ import { ThemeProvider } from '@repo/ui'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { initializeCSRF } from '@repo/auth'
 
+// Initialize AWS Amplify for Cognito authentication
+import './config/amplify'
+
 // Import test auth utilities for development
 if (import.meta.env.DEV) {
   import('./utils/testAuth.ts')
