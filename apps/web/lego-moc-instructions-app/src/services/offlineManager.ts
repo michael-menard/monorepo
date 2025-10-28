@@ -221,7 +221,6 @@ class OfflineManager {
     offlineData.lastSync = Date.now()
     await this.setOfflineData(offlineData)
 
-    // eslint-disable-next-line no-console
     console.log(
       `Processed ${processedActions.length} offline actions, ${failedActions.length} failed`,
     )

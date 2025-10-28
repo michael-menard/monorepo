@@ -1,12 +1,37 @@
-import {Request, Response} from 'express'
+import { Request, Response } from 'express'
 import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import {generateTokenAndSetCookie} from '../utils/generateTokenAndSetCookie'
-import {sendPasswordResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail,} from '../email/ethereal.service'
-import {User} from '../models/User'
-import {generateCsrfToken, generateSecureToken, generateSecureVerificationCode, verifyToken,} from '../utils/tokenUtils'
-import {logDatabaseOperation, logEmailEvent, logSecurityEvent, logUserAction, logValidationError,} from '../utils/logger'
-import {AlreadyVerifiedError, AuthenticationError, ConflictError, EmailNotVerifiedError, EmailSendError, NotFoundError, TokenExpiredError, ValidationError,} from '../types/errors'
+import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie'
+import {
+  sendPasswordResetEmail,
+  sendResetSuccessEmail,
+  sendVerificationEmail,
+  sendWelcomeEmail,
+} from '../email/ethereal.service'
+import { User } from '../models/User'
+import {
+  generateCsrfToken,
+  generateSecureToken,
+  generateSecureVerificationCode,
+  verifyToken,
+} from '../utils/tokenUtils'
+import {
+  logDatabaseOperation,
+  logEmailEvent,
+  logSecurityEvent,
+  logUserAction,
+  logValidationError,
+} from '../utils/logger'
+import {
+  AlreadyVerifiedError,
+  AuthenticationError,
+  ConflictError,
+  EmailNotVerifiedError,
+  EmailSendError,
+  NotFoundError,
+  TokenExpiredError,
+  ValidationError,
+} from '../types/errors'
 
 const ORIGIN = process.env.APP_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173'
 

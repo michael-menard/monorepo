@@ -1,5 +1,10 @@
 import * as React from 'react'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput, validateSanitizedInput,} from './lib/sanitization'
+import {
+  SANITIZATION_PROFILES,
+  SanitizationConfig,
+  sanitizeInput,
+  validateSanitizedInput,
+} from './lib/sanitization'
 
 // Ensure JSX namespace is available
 declare global {

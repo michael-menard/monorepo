@@ -1,6 +1,13 @@
 import * as React from 'react'
-import {Select, SelectContent, SelectItem, SelectProps, SelectTrigger, SelectValue,} from './select'
-import {SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput} from './lib/sanitization'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectProps,
+  SelectTrigger,
+  SelectValue,
+} from './select'
+import { SANITIZATION_PROFILES, SanitizationConfig, sanitizeInput } from './lib/sanitization'
 
 export interface AppSelectOption {
   value: string

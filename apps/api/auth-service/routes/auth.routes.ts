@@ -1,10 +1,19 @@
-import express, {Request, Response, Router} from 'express'
-import {z} from 'zod'
+import express, { Request, Response, Router } from 'express'
+import { z } from 'zod'
 import rateLimit from 'express-rate-limit'
-import {checkAuth, forgotPassword, login, logout, resendVerification, resetPassword, signup, verifyEmail,} from '../controllers/auth.controller'
-import {asyncHandler} from '../middleware/errorMiddleware'
-import {generateCsrfToken} from '../utils/tokenUtils'
-import {ValidationError} from '../types/errors'
+import {
+  checkAuth,
+  forgotPassword,
+  login,
+  logout,
+  resendVerification,
+  resetPassword,
+  signup,
+  verifyEmail,
+} from '../controllers/auth.controller'
+import { asyncHandler } from '../middleware/errorMiddleware'
+import { generateCsrfToken } from '../utils/tokenUtils'
+import { ValidationError } from '../types/errors'
 
 const router: Router = express.Router()
 

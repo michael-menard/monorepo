@@ -1,5 +1,5 @@
 import 'dotenv/config' // Ensure .env variables are loaded
-import {NextFunction, Request, Response} from 'express'
+import { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 
 // Extend Express Request interface to include user property

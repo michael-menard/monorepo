@@ -1,5 +1,5 @@
-import {OctagonAlertIcon} from 'lucide-react'
-import {Alert, AlertDescription, AlertTitle} from '../../../ui/alert'
+import { OctagonAlertIcon } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '../../../ui/alert'
 
 export default function AlertWithBackgroundDemo() {
   return (

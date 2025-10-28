@@ -1,6 +1,6 @@
 import * as React from 'react'
-import {InputProps} from './input'
-import {SanitizationConfig} from './lib/sanitization'
+import { InputProps } from './input'
+import { SanitizationConfig } from './lib/sanitization'
 
 export interface AppInputProps extends Omit<InputProps, 'onChange' | 'onBlur'> {
   /** Custom sanitization configuration */

@@ -1,5 +1,5 @@
 import React from 'react'
-import {z} from 'zod'
+import { z } from 'zod'
 
 declare global {
   interface Window {

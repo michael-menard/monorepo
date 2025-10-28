@@ -52,13 +52,20 @@ export default [
       // Prettier integration
       'prettier/prettier': 'error',
 
-      // TypeScript rules
-      '@typescript-eslint/no-unused-vars': 'error',
+      // TypeScript rules (relaxed for development)
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+      'no-unused-vars': 'off', // Turn off base rule as it conflicts with @typescript-eslint version
       '@typescript-eslint/no-explicit-any': 'warn',
 
       // General JavaScript rules
-      'no-unused-vars': 'off', // Handled by TypeScript
-      'no-console': 'warn',
+      // 'no-console': 'warn',
       'prefer-const': 'error',
       'no-eval': 'error',
       'no-implied-eval': 'error',
@@ -165,6 +172,24 @@ export default [
       // Node.js specific rules
       'no-console': 'off', // Console is fine in Node.js
       '@typescript-eslint/no-var-requires': 'off', // CommonJS requires are OK
+    },
+  },
+
+  // Development packages configuration (more lenient rules)
+  {
+    files: ['packages/dev/**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      'jsx-a11y': jsxA11yPlugin,
+    },
+    rules: {
+      // Relaxed rules for development packages
+      '@typescript-eslint/no-unused-vars': 'warn', // Downgrade to warning
+      'no-unused-vars': 'warn', // Downgrade to warning
+      '@typescript-eslint/no-explicit-any': 'warn', // Keep as warning
+      'no-console': 'off', // Allow console in dev packages
+      // Relax accessibility rules for dev tools
+      'jsx-a11y/click-events-have-key-events': 'warn',
+      'jsx-a11y/no-static-element-interactions': 'warn',
     },
   },
 

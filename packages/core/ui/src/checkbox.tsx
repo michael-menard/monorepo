@@ -1,8 +1,8 @@
 import * as React from 'react'
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
-import {CheckIcon} from 'lucide-react'
-import {cn} from './lib/utils'
-import {getAriaAttributes, useUniqueId} from './lib/keyboard-navigation'
+import { CheckIcon } from 'lucide-react'
+import { cn } from './lib/utils'
+import { getAriaAttributes, useUniqueId } from './lib/keyboard-navigation'
 
 export interface CheckboxProps extends React.ComponentProps<typeof CheckboxPrimitive.Root> {
   label?: string

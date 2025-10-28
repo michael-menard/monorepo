@@ -1,14 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { MockInstruction } from '../moc-instructions'
-import {
-  mockMocInstructions,
-  getMocInstructionStats,
-  getMocInstructionCategories,
-  getMocInstructionsByCategory,
-  getMocInstructionsByDifficulty,
-  getMocInstructionsByAuthor,
-  getPublishedMocInstructions,
-} from '../moc-instructions'
+import { mockMocInstructions, getMocInstructionStats } from '../moc-instructions'
 
 export interface MocInstructionsState {
   instructions: MockInstruction[]

@@ -1,8 +1,8 @@
 import * as React from 'react'
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import {ChevronDownIcon} from 'lucide-react'
-import {cn} from './lib/utils'
-import {getAriaAttributes, KEYBOARD_KEYS, useUniqueId} from './lib/keyboard-navigation'
+import { ChevronDownIcon } from 'lucide-react'
+import { cn } from './lib/utils'
+import { getAriaAttributes, KEYBOARD_KEYS, useUniqueId } from './lib/keyboard-navigation'
 
 export interface AccordionProps {
   label?: string

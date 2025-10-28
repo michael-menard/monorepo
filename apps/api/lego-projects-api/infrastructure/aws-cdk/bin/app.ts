@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register'
 import * as cdk from 'aws-cdk-lib'
-import {LegoApiStack} from '../lib/lego-api-stack'
+import { LegoApiStack } from '../lib/lego-api-stack'
 
 const app = new cdk.App()
 
@@ -22,5 +22,11 @@ new LegoApiStack(
       Project: 'lego-moc-instructions',
       Component: 'lego-projects-api',
     },
+
   },
-)
+  tags: {
+    Environment: environment,
+    Project: 'lego-moc-instructions',
+    Component: 'lego-projects-api',
+  },
+})

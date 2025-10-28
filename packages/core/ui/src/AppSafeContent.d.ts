@@ -1,5 +1,5 @@
 import * as React from 'react'
-import {SanitizationConfig} from './lib/sanitization'
+import { SanitizationConfig } from './lib/sanitization'
 
 export interface AppSafeContentProps {
   /** Content to sanitize and display */

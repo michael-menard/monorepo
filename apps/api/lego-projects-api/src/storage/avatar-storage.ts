@@ -1,10 +1,15 @@
 import path from 'path'
 import fs from 'fs'
 import multer from 'multer'
-import {v4 as uuidv4} from 'uuid'
-import {DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client,} from '@aws-sdk/client-s3'
-import {getSignedUrl} from '@aws-sdk/s3-request-presigner'
-import {canProcessImage, processImage, THUMBNAIL_CONFIG} from '../utils/imageProcessor'
+import { v4 as uuidv4 } from 'uuid'
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { canProcessImage, processImage, THUMBNAIL_CONFIG } from '../utils/imageProcessor'
 
 // S3 Configuration
 const BUCKET = process.env.S3_BUCKET!

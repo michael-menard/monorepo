@@ -6,7 +6,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import * as docdb from 'aws-cdk-lib/aws-docdb'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
-import {Construct} from 'constructs'
+import { Construct } from 'constructs'
 
 export interface AuthServiceStackProps extends cdk.StackProps {
   environment: 'dev' | 'staging' | 'production'

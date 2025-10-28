@@ -1,6 +1,6 @@
 import * as React from 'react'
-import {TextareaProps} from './textarea'
-import {SanitizationConfig} from './lib/sanitization'
+import { TextareaProps } from './textarea'
+import { SanitizationConfig } from './lib/sanitization'
 
 export interface AppTextareaProps extends Omit<TextareaProps, 'onChange' | 'onBlur'> {
   /** Custom sanitization configuration */
