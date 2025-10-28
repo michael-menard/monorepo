@@ -14,16 +14,47 @@ const RedisConfigSchema = z.object({
 
 type RedisConfig = z.infer<typeof RedisConfigSchema>
 
-// Default configuration
-const defaultConfig: RedisConfig = {
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-  password: process.env.REDIS_PASSWORD,
-  db: parseInt(process.env.REDIS_DB || '0'),
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: true,
+/**
+ * Get Redis configuration based on environment
+ */
+const getRedisConfig = (): RedisConfig => {
+  const isProd = process.env.NODE_ENV === 'production'
+  const useAwsServices = process.env.USE_AWS_SERVICES === 'true' || isProd
+
+  if (useAwsServices) {
+    // AWS ElastiCache configuration
+    const redisHost = process.env.REDIS_HOST
+    const redisPort = process.env.REDIS_PORT || '6379'
+
+    if (!redisHost) {
+      throw new Error('REDIS_HOST is required when using AWS services')
+    }
+
+    return {
+      url: `redis://${redisHost}:${redisPort}`,
+      password: process.env.REDIS_PASSWORD, // ElastiCache may not require password
+      db: 0, // ElastiCache typically uses db 0
+      retryDelayOnFailover: 100,
+      maxRetriesPerRequest: 3,
+      enableReadyCheck: true,
+      lazyConnect: true,
+    }
+  } else {
+    // Local Redis configuration
+    return {
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      password: process.env.REDIS_PASSWORD,
+      db: parseInt(process.env.REDIS_DB || '0'),
+      retryDelayOnFailover: 100,
+      maxRetriesPerRequest: 3,
+      enableReadyCheck: true,
+      lazyConnect: true,
+    }
+  }
 }
+
+// Get configuration
+const defaultConfig = getRedisConfig()
 
 // Create Redis client
 const createRedisClient = (config: Partial<RedisConfig> = {}) => {
@@ -46,19 +77,23 @@ const createRedisClient = (config: Partial<RedisConfig> = {}) => {
 
   // Error handling
   client.on('error', err => {
-    console.error('Redis Client Error:', err)
+    console.error('🔴 Redis Client Error:', err)
   })
 
   client.on('connect', () => {
-    console.log('Redis Client Connected')
+    console.log('🟢 Redis Client Connected')
   })
 
   client.on('ready', () => {
-    console.log('Redis Client Ready')
+    console.log('🟢 Redis Client Ready')
   })
 
   client.on('end', () => {
-    console.log('Redis Client Disconnected')
+    console.log('🟡 Redis Client Disconnected')
+  })
+
+  client.on('reconnecting', () => {
+    console.log('🟡 Redis Client Reconnecting...')
   })
 
   return client

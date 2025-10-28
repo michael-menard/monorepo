@@ -11,25 +11,44 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import { Construct } from 'constructs'
 
 export interface LegoApiStackProps extends cdk.StackProps {
-  environment: 'staging' | 'production'
-  vpcId?: string // Optional: use existing VPC
+  environment: 'dev' | 'staging' | 'production'
+  vpcId?: string // Optional: use existing VPC (deprecated - use shared infrastructure)
   domainName?: string
+  useSharedInfrastructure?: boolean // Use shared VPC, RDS, Redis, and OpenSearch
 }
 
 export class LegoApiStack extends cdk.Stack {
   public readonly service: ecs.FargateService
   public readonly loadBalancer: elbv2.ApplicationLoadBalancer
-  public readonly database: rds.DatabaseInstance
-  public readonly redis: elasticache.CfnCacheCluster
-  public readonly opensearch: opensearch.Domain
+  public readonly database?: rds.DatabaseInstance // Optional when using shared infrastructure
+  public readonly redis?: elasticache.CfnCacheCluster // Optional when using shared infrastructure
+  public readonly opensearch?: opensearch.Domain // Optional when using shared infrastructure
 
   constructor(scope: Construct, id: string, props: LegoApiStackProps) {
     super(scope, id, props)
 
-    const { environment, vpcId, domainName } = props
+    const { environment, vpcId, useSharedInfrastructure = true } = props
+    // domainName is available in props but not used in this implementation
 
-    // VPC - use existing or create new
-    const vpc = vpcId
+    // VPC - use shared infrastructure or fallback to existing/new VPC
+    const vpc = useSharedInfrastructure
+      ? ec2.Vpc.fromVpcAttributes(this, 'SharedVpc', {
+          vpcId: cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-VpcId`),
+          availabilityZones: ['us-east-1a', 'us-east-1b'],
+          publicSubnetIds: [
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PublicSubnet1Id`),
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PublicSubnet2Id`),
+          ],
+          privateSubnetIds: [
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PrivateSubnet1Id`),
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-PrivateSubnet2Id`),
+          ],
+          isolatedSubnetIds: [
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-IsolatedSubnet1Id`),
+            cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-IsolatedSubnet2Id`),
+          ],
+        })
+      : vpcId
       ? ec2.Vpc.fromLookup(this, 'Vpc', { vpcId })
       : new ec2.Vpc(this, 'LegoApiVpc', {
           maxAzs: 2,
@@ -61,59 +80,78 @@ export class LegoApiStack extends cdk.Stack {
     dbSecurityGroup.addIngressRule(ecsSecurityGroup, ec2.Port.tcp(6379)) // Redis
     dbSecurityGroup.addIngressRule(ecsSecurityGroup, ec2.Port.tcp(9200)) // OpenSearch
 
-    // RDS PostgreSQL
-    this.database = new rds.DatabaseInstance(this, 'Database', {
-      engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_15_4,
-      }),
-      instanceType:
-        environment === 'production'
-          ? ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MEDIUM)
-          : ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      securityGroups: [dbSecurityGroup],
-      databaseName: 'lego_projects',
-      credentials: rds.Credentials.fromGeneratedSecret('postgres'),
-      backupRetention: environment === 'production' ? cdk.Duration.days(7) : cdk.Duration.days(1),
-      deletionProtection: environment === 'production',
-      multiAz: environment === 'production',
-      storageEncrypted: true,
-    })
+    // RDS PostgreSQL - use shared infrastructure or create new
+    if (useSharedInfrastructure) {
+      // Note: We don't create a new database instance, we'll use the shared one
+      // The application will connect using the imported endpoint and secret from CloudFormation exports
+    } else {
+      // Create dedicated RDS instance (legacy mode)
+      this.database = new rds.DatabaseInstance(this, 'Database', {
+        engine: rds.DatabaseInstanceEngine.postgres({
+          version: rds.PostgresEngineVersion.VER_15_4,
+        }),
+        instanceType:
+          environment === 'production'
+            ? ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MEDIUM)
+            : ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+        vpc,
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        securityGroups: [dbSecurityGroup],
+        databaseName: 'lego_projects',
+        credentials: rds.Credentials.fromGeneratedSecret('postgres'),
+        backupRetention: environment === 'production' ? cdk.Duration.days(7) : cdk.Duration.days(1),
+        deletionProtection: environment === 'production',
+        multiAz: environment === 'production',
+        storageEncrypted: true,
+      })
+    }
 
-    // ElastiCache Redis
-    const redisSubnetGroup = new elasticache.CfnSubnetGroup(this, 'RedisSubnetGroup', {
-      description: 'Subnet group for Redis',
-      subnetIds: vpc.privateSubnets.map(subnet => subnet.subnetId),
-    })
+    // ElastiCache Redis - use shared infrastructure or create new
+    if (useSharedInfrastructure) {
+      // Note: We don't create a new Redis cluster, we'll use the shared one
+      // The application will connect using the imported endpoint and port from CloudFormation exports
+    } else {
+      // Create dedicated Redis cluster (legacy mode)
+      const redisSubnetGroup = new elasticache.CfnSubnetGroup(this, 'RedisSubnetGroup', {
+        description: 'Subnet group for Redis',
+        subnetIds: vpc.privateSubnets.map(subnet => subnet.subnetId),
+      })
 
-    this.redis = new elasticache.CfnCacheCluster(this, 'Redis', {
-      cacheNodeType: environment === 'production' ? 'cache.t3.medium' : 'cache.t3.micro',
-      engine: 'redis',
-      numCacheNodes: 1,
-      cacheSubnetGroupName: redisSubnetGroup.ref,
-      vpcSecurityGroupIds: [dbSecurityGroup.securityGroupId],
-      transitEncryptionEnabled: true,
-      // atRestEncryptionEnabled: true, // Property not available in this CDK version
-    })
+      this.redis = new elasticache.CfnCacheCluster(this, 'Redis', {
+        cacheNodeType: environment === 'production' ? 'cache.t3.medium' : 'cache.t3.micro',
+        engine: 'redis',
+        numCacheNodes: 1,
+        cacheSubnetGroupName: redisSubnetGroup.ref,
+        vpcSecurityGroupIds: [dbSecurityGroup.securityGroupId],
+        transitEncryptionEnabled: true,
+        // atRestEncryptionEnabled: true, // Property not available in this CDK version
+      })
+    }
 
-    // OpenSearch Domain
-    this.opensearch = new opensearch.Domain(this, 'OpenSearch', {
-      version: opensearch.ElasticsearchVersion.V7_10,
-      capacity: {
-        dataNodes: environment === 'production' ? 2 : 1,
-        dataNodeInstanceType: environment === 'production' ? 't3.medium.search' : 't3.small.search',
-      },
-      vpc,
-      vpcSubnets: [{ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }],
-      securityGroups: [dbSecurityGroup],
-      ebs: {
-        volumeSize: environment === 'production' ? 20 : 10,
-      },
-      nodeToNodeEncryption: true,
-      encryptionAtRest: { enabled: true },
-      enforceHttps: true,
-    })
+    // OpenSearch Domain - use shared infrastructure or create new
+    if (useSharedInfrastructure) {
+      // Note: OpenSearch is temporarily disabled in shared infrastructure
+      // The application will need to handle search functionality gracefully without OpenSearch
+      // TODO: Add OpenSearch to shared infrastructure or use OpenSearch Serverless
+    } else {
+      // Create dedicated OpenSearch domain (legacy mode)
+      this.opensearch = new opensearch.Domain(this, 'OpenSearch', {
+        version: opensearch.ElasticsearchVersion.V7_10,
+        capacity: {
+          dataNodes: environment === 'production' ? 2 : 1,
+          dataNodeInstanceType: environment === 'production' ? 't3.medium.search' : 't3.small.search',
+        },
+        vpc,
+        vpcSubnets: [{ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }],
+        securityGroups: [dbSecurityGroup],
+        ebs: {
+          volumeSize: environment === 'production' ? 20 : 10,
+        },
+        nodeToNodeEncryption: true,
+        encryptionAtRest: { enabled: true },
+        enforceHttps: true,
+      })
+    }
 
     // ECR Repository
     const repository = new ecr.Repository(this, 'Repository', {
@@ -147,19 +185,42 @@ export class LegoApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
+    // Container environment variables - handle shared vs dedicated infrastructure
+    const containerEnvironment: { [key: string]: string } = {
+      NODE_ENV: environment,
+      PORT: '3000',
+    }
+
+    const containerSecrets: { [key: string]: ecs.Secret } = {}
+
+    if (useSharedInfrastructure) {
+      // Use shared infrastructure endpoints
+      containerEnvironment.REDIS_HOST = cdk.Fn.importValue(`LegoMoc-${environment}-Cache-RedisEndpoint`)
+      containerEnvironment.REDIS_PORT = cdk.Fn.importValue(`LegoMoc-${environment}-Cache-RedisPort`)
+      // Note: OpenSearch temporarily disabled in shared infrastructure
+      containerEnvironment.OPENSEARCH_DISABLED = 'true'
+
+      // Use shared RDS secret
+      const sharedRdsSecret = secretsmanager.Secret.fromSecretCompleteArn(
+        this,
+        'SharedRdsSecret',
+        cdk.Fn.importValue(`LegoMoc-${environment}-Database-RdsSecretArn`)
+      )
+      containerSecrets.DATABASE_URL = ecs.Secret.fromSecretsManager(sharedRdsSecret, 'connectionString')
+    } else {
+      // Use dedicated infrastructure
+      containerEnvironment.REDIS_HOST = this.redis!.attrRedisEndpointAddress
+      containerEnvironment.REDIS_PORT = '6379'
+      containerEnvironment.OPENSEARCH_ENDPOINT = this.opensearch!.domainEndpoint
+
+      containerSecrets.DATABASE_URL = ecs.Secret.fromSecretsManager(this.database!.secret!, 'connectionString')
+    }
+
     // Container
     const container = taskDefinition.addContainer('LegoApiContainer', {
       image: ecs.ContainerImage.fromEcrRepository(repository, 'latest'),
-      environment: {
-        NODE_ENV: environment,
-        PORT: '3000',
-        REDIS_HOST: this.redis.attrRedisEndpointAddress,
-        REDIS_PORT: '6379',
-        OPENSEARCH_ENDPOINT: this.opensearch.domainEndpoint,
-      },
-      secrets: {
-        DATABASE_URL: ecs.Secret.fromSecretsManager(this.database.secret!, 'connectionString'),
-      },
+      environment: containerEnvironment,
+      secrets: containerSecrets,
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'lego-api',
         logGroup,
@@ -243,24 +304,60 @@ export class LegoApiStack extends cdk.Stack {
       description: 'LEGO API Load Balancer DNS',
     })
 
-    new cdk.CfnOutput(this, 'DatabaseEndpoint', {
-      value: this.database.instanceEndpoint.hostname,
-      description: 'PostgreSQL Database Endpoint',
-    })
+    // Database endpoint - shared or dedicated
+    if (useSharedInfrastructure) {
+      new cdk.CfnOutput(this, 'DatabaseEndpoint', {
+        value: cdk.Fn.importValue(`LegoMoc-${environment}-Database-RdsEndpoint`),
+        description: 'Shared PostgreSQL Database Endpoint',
+      })
+    } else {
+      new cdk.CfnOutput(this, 'DatabaseEndpoint', {
+        value: this.database!.instanceEndpoint.hostname,
+        description: 'Dedicated PostgreSQL Database Endpoint',
+      })
+    }
 
-    new cdk.CfnOutput(this, 'RedisEndpoint', {
-      value: this.redis.attrRedisEndpointAddress,
-      description: 'Redis Endpoint',
-    })
+    // Redis endpoint - shared or dedicated
+    if (useSharedInfrastructure) {
+      new cdk.CfnOutput(this, 'RedisEndpoint', {
+        value: cdk.Fn.importValue(`LegoMoc-${environment}-Cache-RedisEndpoint`),
+        description: 'Shared Redis Endpoint',
+      })
+    } else {
+      new cdk.CfnOutput(this, 'RedisEndpoint', {
+        value: this.redis!.attrRedisEndpointAddress,
+        description: 'Dedicated Redis Endpoint',
+      })
+    }
 
-    new cdk.CfnOutput(this, 'OpenSearchEndpoint', {
-      value: this.opensearch.domainEndpoint,
-      description: 'OpenSearch Endpoint',
-    })
+    // OpenSearch endpoint - shared or dedicated
+    if (useSharedInfrastructure) {
+      new cdk.CfnOutput(this, 'OpenSearchStatus', {
+        value: 'disabled',
+        description: 'OpenSearch is temporarily disabled in shared infrastructure',
+      })
+    } else {
+      new cdk.CfnOutput(this, 'OpenSearchEndpoint', {
+        value: this.opensearch!.domainEndpoint,
+        description: 'Dedicated OpenSearch Endpoint',
+      })
+    }
 
     new cdk.CfnOutput(this, 'RepositoryUri', {
       value: repository.repositoryUri,
       description: 'ECR Repository URI',
     })
+
+    new cdk.CfnOutput(this, 'InfrastructureMode', {
+      value: useSharedInfrastructure ? 'shared' : 'dedicated',
+      description: 'Infrastructure mode: shared (uses LegoMoc shared infrastructure) or dedicated (creates own VPC/DB)',
+    })
+
+    if (useSharedInfrastructure) {
+      new cdk.CfnOutput(this, 'SharedVpcId', {
+        value: cdk.Fn.importValue(`LegoMoc-${environment}-Vpc-VpcId`),
+        description: 'Shared VPC ID being used',
+      })
+    }
   }
 }

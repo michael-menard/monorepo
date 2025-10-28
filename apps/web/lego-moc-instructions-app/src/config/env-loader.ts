@@ -129,33 +129,35 @@ function validatePort(
 }
 
 interface RequiredEnvVars {
-  // Port configuration
+  // Port configuration (for local development)
   VITE_FRONTEND_PORT?: string
   VITE_WEB_APP_PORT?: string
 
-  // API endpoints
+  // API endpoints (for local development)
   VITE_LEGO_API_PORT?: string
-  VITE_AUTH_API_PORT?: string
-  VITE_AUTH_SERVICE_PORT?: string
 
-  // URLs (optional - can be derived from ports)
+  // AWS Services Configuration
+  VITE_USE_AWS_SERVICES?: string
+  VITE_ENVIRONMENT?: string
+
+  // URLs (optional - can be derived from ports or AWS endpoints)
   VITE_API_BASE_URL?: string
-  VITE_AUTH_API_URL?: string
+  VITE_FRONTEND_URL?: string
 }
 
 interface ValidatedConfig {
   ports: {
     frontend: number
     api: number
-    auth: number
   }
   urls: {
     api: string
-    auth: string
     frontend: string
   }
   isDevelopment: boolean
   isProduction: boolean
+  useAwsServices: boolean
+  environment: string
 }
 
 /**
@@ -176,35 +178,36 @@ function loadEnvironmentConfig(): ValidatedConfig {
     serviceType: 'LEGO API',
   })
 
-  // Validate and parse Auth port
-  const authPortValue = env.VITE_AUTH_API_PORT || env.VITE_AUTH_SERVICE_PORT
-  const parsedAuthPort = validatePort('VITE_AUTH_API_PORT', authPortValue, {
-    serviceType: 'Auth Service',
-  })
+  // Auth service no longer needed - using AWS Cognito
 
-  // Build URLs based on environment
+  // Build URLs based on environment and AWS services configuration
   const isDevelopment = import.meta.env.DEV
   const isProduction = import.meta.env.PROD
-  const environment =
-    import.meta.env.VITE_ENVIRONMENT || (isProduction ? 'production' : 'development')
+  const useAwsServices = env.VITE_USE_AWS_SERVICES === 'true' || isProduction
+  const environment = env.VITE_ENVIRONMENT || (isProduction ? 'production' : 'development')
 
   // URL building logic for different environments
   let apiUrl: string
-  let authUrl: string
   let frontendUrl: string
 
-  if (isDevelopment) {
-    // Development: Use local docker-compose services
+  if (useAwsServices) {
+    // AWS Services: Use AWS Load Balancer endpoints
+    if (!env.VITE_API_BASE_URL) {
+      console.warn(
+        '⚠️ AWS services enabled but VITE_API_BASE_URL not configured. Using fallback URLs.',
+      )
+    }
+
+    apiUrl =
+      env.VITE_API_BASE_URL || `https://lego-api-${environment}-alb.us-east-1.elb.amazonaws.com`
+    frontendUrl = env.VITE_FRONTEND_URL || `https://app-${environment}.yourdomain.com`
+  } else if (isDevelopment) {
+    // Local Development: Use Vite proxy and local services
     apiUrl = env.VITE_API_BASE_URL || '/api' // Vite proxy
-    authUrl = env.VITE_AUTH_API_URL || `http://localhost:${parsedAuthPort}/api/auth`
     frontendUrl = `http://localhost:${parsedFrontendPort}`
   } else {
-    // Staging/Production: Use AWS infrastructure
-    apiUrl =
-      env.VITE_API_BASE_URL ||
-      env.VITE_LEGO_API_URL ||
-      `https://lego-api-${environment}.yourdomain.com`
-    authUrl = env.VITE_AUTH_API_URL || `https://auth-api-${environment}.yourdomain.com/api/auth`
+    // Production without AWS (legacy deployment)
+    apiUrl = env.VITE_API_BASE_URL || `https://lego-api-${environment}.yourdomain.com`
     frontendUrl = env.VITE_FRONTEND_URL || `https://app-${environment}.yourdomain.com`
   }
 
@@ -212,15 +215,15 @@ function loadEnvironmentConfig(): ValidatedConfig {
     ports: {
       frontend: parsedFrontendPort,
       api: parsedApiPort,
-      auth: parsedAuthPort,
     },
     urls: {
       api: apiUrl,
-      auth: authUrl,
       frontend: frontendUrl,
     },
     isDevelopment,
     isProduction,
+    useAwsServices,
+    environment,
   }
 }
 
@@ -236,7 +239,8 @@ try {
     console.log('✅ Configuration loaded successfully')
     console.log('Ports:', config.ports)
     console.log('URLs:', config.urls)
-    console.log('Environment:', config.isDevelopment ? 'development' : 'production')
+    console.log('Environment:', config.environment)
+    console.log('AWS Services:', config.useAwsServices ? 'enabled' : 'disabled')
     console.groupEnd()
   }
 } catch (error) {
@@ -276,7 +280,7 @@ try {
 export default config
 
 // Export individual parts for convenience
-export const { ports, urls, isDevelopment, isProduction } = config
+export const { ports, urls, isDevelopment, isProduction, useAwsServices, environment } = config
 
 // Export type for use in other modules
 export type { ValidatedConfig }

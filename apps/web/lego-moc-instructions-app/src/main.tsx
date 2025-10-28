@@ -5,7 +5,9 @@ import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { initializeCSRF } from '@repo/auth'
+
+// Initialize AWS Amplify for Cognito authentication
+import './config/amplify'
 
 // Import test auth utilities for development
 if (import.meta.env.DEV) {
@@ -78,8 +80,7 @@ declare module '@tanstack/react-router' {
   }
 }
 
-// Initialize CSRF protection
-initializeCSRF().catch(console.error)
+// CSRF protection no longer needed with Cognito authentication
 
 const rootElement = document.getElementById('app')
 if (rootElement && !rootElement.innerHTML) {

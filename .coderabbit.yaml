@@ -3,13 +3,12 @@
 
 # Language and framework settings
 language: typescript
-framework: react
 
 # Review settings
 reviews:
   # Enable comprehensive reviews
   auto_review: true
-  
+
   # Review focus areas
   focus_areas:
     - security
@@ -18,189 +17,84 @@ reviews:
     - best_practices
     - accessibility
     - testing
-    - turborepo_patterns
-    - monorepo_dependencies
-    - build_optimization
-    
+
   # Monorepo-specific settings
   path_filters:
     # Include all TypeScript/JavaScript files
     include:
-      - "**/*.ts"
-      - "**/*.tsx" 
-      - "**/*.js"
-      - "**/*.jsx"
-      - "**/*.json"
-      - "**/*.md"
-      - "**/*.yaml"
-      - "**/*.yml"
-    
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/*.json'
+      - '**/*.md'
+      - '**/*.yaml'
+      - '**/*.yml'
+
     # Exclude generated files and dependencies
     exclude:
-      - "node_modules/**"
-      - "**/node_modules/**"
-      - "dist/**"
-      - "**/dist/**"
-      - "build/**"
-      - "**/build/**"
-      - ".next/**"
-      - "**/.next/**"
-      - "coverage/**"
-      - "**/coverage/**"
-      - "*.log"
-      - "**/*.log"
-      - ".turbo/**"
-      - "**/.turbo/**"
-      - "pnpm-lock.yaml"
-      - "**/pnpm-lock.yaml"
+      - 'node_modules/**'
+      - '**/node_modules/**'
+      - 'dist/**'
+      - '**/dist/**'
+      - 'build/**'
+      - '**/build/**'
+      - '.next/**'
+      - '**/.next/**'
+      - 'coverage/**'
+      - '**/coverage/**'
+      - '*.log'
+      - '**/*.log'
+      - '.turbo/**'
+      - '**/.turbo/**'
+      - 'pnpm-lock.yaml'
+      - '**/pnpm-lock.yaml'
 
-# Monorepo structure awareness
-monorepo:
-  enabled: true
-  structure:
-    apps:
-      - "apps/api/*"
-      - "apps/web/*"
-    packages:
-      - "packages/*"
-      - "packages/features/*"
-  
-  # Package-specific review rules
-  package_rules:
-    # API services - focus on security and performance
-    "apps/api/**":
-      focus_areas:
-        - security
-        - performance
-        - error_handling
-        - api_design
-    
-    # Web apps - focus on UX and accessibility  
-    "apps/web/**":
-      focus_areas:
-        - accessibility
-        - performance
-        - user_experience
-        - react_best_practices
-    
-    # Shared packages - focus on reusability and testing
-    "packages/**":
-      focus_areas:
-        - maintainability
-        - testing
-        - documentation
-        - api_design
+# Path-based review rules
+path_instructions:
+  # API services - focus on security and performance
+  'apps/api/**':
+    - 'Focus on security vulnerabilities and input validation'
+    - 'Check for proper error handling and logging'
+    - 'Verify API design and performance considerations'
 
-# Integration with existing tools
-integrations:
-  # Work alongside Auggie
-  auggie:
-    enabled: true
-    collaboration_mode: true
+  # Web apps - focus on UX and accessibility
+  'apps/web/**':
+    - 'Ensure accessibility compliance (WCAG guidelines)'
+    - 'Check for React best practices and performance'
+    - 'Verify responsive design and user experience'
 
-  # Turborepo integration
-  turborepo:
-    enabled: true
-    change_detection: true
-    focus_on_affected: true
-    
-  # ESLint integration
-  eslint:
-    enabled: true
-    config_files:
-      - "eslint.config.js"
-      - "eslint.config.security.js"
-  
-  # TypeScript integration
-  typescript:
-    enabled: true
-    config_files:
-      - "tsconfig.json"
-      - "**/tsconfig.json"
-  
-  # Testing integration
-  testing:
-    frameworks:
-      - vitest
-      - playwright
-      - storybook
-    test_patterns:
-      - "**/*.test.ts"
-      - "**/*.test.tsx"
-      - "**/*.spec.ts" 
-      - "**/*.spec.tsx"
-      - "**/tests/**"
-      - "**/__tests__/**"
+  # Shared packages - focus on reusability and testing
+  'packages/**':
+    - 'Ensure proper documentation and API design'
+    - 'Check for comprehensive test coverage'
+    - 'Verify maintainability and reusability patterns'
+
+# Knowledge base
+knowledge_base:
+  - 'This is a TypeScript/React monorepo using Turborepo'
+  - 'Uses Vite for frontend build tooling'
+  - 'Testing with Vitest and Playwright'
+  - 'UI components built with Radix UI and Tailwind CSS'
+  - 'Authentication migrated to AWS Cognito'
+  - 'Focus on accessibility and performance'
 
 # Review instructions
 instructions: |
   This is a TypeScript/React monorepo with the following structure:
-  
-  - `apps/api/*`: Backend services (auth, LEGO projects API)
+
+  - `apps/api/*`: Backend services (LEGO projects API)
   - `apps/web/*`: Frontend applications (React/Vite)
   - `packages/*`: Shared libraries and components
-  
+
   Key considerations:
-  1. This project uses Auggie (Augment AI) for development assistance
-  2. Follow the coding standards in AUGGIE_RULES.md
-  3. Maintain consistency across the monorepo
-  4. Focus on TypeScript best practices
-  5. Ensure accessibility compliance
-  6. Consider performance implications for React components
-  7. Validate security practices, especially in API services
-  8. Check for proper error handling and logging
-  9. Verify test coverage for new features
-  10. Ensure proper documentation for shared packages
-
-# Custom rules for this project
-custom_rules:
-  # Enforce monorepo patterns
-  - name: "monorepo_imports"
-    description: "Prefer workspace imports over relative paths for cross-package dependencies"
-    pattern: "import.*from ['\"]\\.\\./"
-    suggestion: "Use workspace imports (@repo/package-name) for cross-package dependencies"
-
-  # Turborepo-specific rules
-  - name: "turborepo_config"
-    description: "Check turbo.json configuration for new tasks"
-    pattern: "\"scripts\":\\s*{[^}]*\"[^\"]*\":\\s*\"[^\"]*\""
-    suggestion: "Consider adding new scripts to turbo.json for caching and parallelization"
-
-  - name: "package_dependencies"
-    description: "Verify package.json dependencies are properly declared"
-    pattern: "import.*from ['\"]@repo/"
-    suggestion: "Ensure @repo/* dependencies are declared in package.json"
-  
-  # React/TypeScript best practices
-  - name: "react_functional_components"
-    description: "Use functional components with hooks"
-    pattern: "class.*extends.*Component"
-    suggestion: "Convert to functional component with hooks"
-  
-  # Security checks
-  - name: "env_variables"
-    description: "Check for hardcoded secrets"
-    pattern: "(password|secret|key|token)\\s*=\\s*['\"][^'\"]*['\"]"
-    suggestion: "Use environment variables for sensitive data"
-
-# Notification settings
-notifications:
-  # Integrate with existing workflow
-  pr_comments: true
-  review_summaries: true
-  
-  # Custom notification rules
-  mention_on:
-    - security_issues
-    - breaking_changes
-    - test_failures
-    - accessibility_violations
-
-# Performance settings
-performance:
-  # Optimize for monorepo size
-  max_files_per_review: 50
-  timeout_minutes: 10
-  
-  # Parallel processing
-  parallel_reviews: true
+  1. Focus on TypeScript best practices and strict typing
+  2. Ensure accessibility compliance (WCAG guidelines)
+  3. Consider performance implications for React components
+  4. Validate security practices, especially in API services
+  5. Check for proper error handling and logging
+  6. Verify test coverage for new features
+  7. Ensure proper documentation for shared packages
+  8. Use workspace imports (@repo/*) for cross-package dependencies
+  9. Follow React functional component patterns with hooks
+  10. Use environment variables for sensitive configuration

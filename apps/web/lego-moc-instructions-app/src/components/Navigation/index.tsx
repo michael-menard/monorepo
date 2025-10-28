@@ -1,9 +1,7 @@
 import { z } from 'zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
-import { useAuth, authApi } from '@repo/auth'
-// TODO: Import these when TypeScript cache resolves: clearCSRFToken, clearRefreshState, useCheckAuthQuery
-import { useDispatch } from 'react-redux'
+import { useCognitoAuth } from '../../hooks/useCognitoAuth'
 import { Heart, LogOut, Search, User, Settings, ChevronDown, Lightbulb } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
@@ -30,25 +28,19 @@ const getInitials = (name?: string, email?: string): string => {
 }
 
 function Navigation({ className = '' }: NavigationProps) {
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, signOut, isLoading } = useCognitoAuth()
   const navigate = useNavigate()
-  const dispatch = useDispatch()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Debug the raw auth query data
-  // TODO: Re-enable when TypeScript cache resolves
-  // const { data: rawAuthData, isLoading: authLoading, error: authError } = useCheckAuthQuery()
+  // Debug the Cognito auth state
   useEffect(() => {
-    console.log('🔍 Raw auth query data:', {
-      // TODO: Re-enable when TypeScript cache resolves
-      // rawAuthData,
-      // authLoading,
-      // authError,
+    console.log('🔍 Cognito auth state:', {
       isAuthenticated,
+      isLoading,
       user: user ? { name: user.name, email: user.email } : null,
     })
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, isLoading])
 
   // Debug authentication state changes (can be removed in production)
   useEffect(() => {
@@ -77,44 +69,11 @@ function Navigation({ className = '' }: NavigationProps) {
 
   const handleLogout = async () => {
     try {
-      console.log('🔄 Starting logout process...')
+      console.log('🔄 Starting Cognito logout process...')
 
-      // Call the logout mutation (this clears server-side cookies)
-      const logoutResult = await logout()
-      console.log('✅ Logout API call successful:', logoutResult)
-
-      // Wait a moment for server-side cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 200))
-
-      // Clear client-side authentication state
-      // TODO: Re-enable when TypeScript cache resolves
-      // clearCSRFToken()           // Clear CSRF token from memory
-      // clearRefreshState()        // Clear token refresh state
-      console.log('🧹 Client-side tokens cleared')
-
-      // Step 1: Manually update the checkAuth cache to indicate logged out state
-      dispatch(
-        authApi.util.updateQueryData('checkAuth', undefined, _draft => {
-          return null // Set to null to indicate no user
-        }),
-      )
-      console.log('🔄 Auth cache manually cleared')
-
-      // Step 2: Remove the specific checkAuth query from cache
-      dispatch(authApi.util.removeQueryData('checkAuth', undefined))
-      console.log('🗑️ CheckAuth query removed from cache')
-
-      // Step 3: Invalidate specific auth tags
-      dispatch(authApi.util.invalidateTags(['Auth', 'User']))
-      console.log('🏷️ Auth tags invalidated')
-
-      // Step 4: Reset the entire auth API cache to ensure clean state
-      dispatch(authApi.util.resetApiState())
-      console.log('🔄 RTK Query cache reset')
-
-      // Step 5: Force a new auth check with error state
-      dispatch(authApi.endpoints.checkAuth.initiate(undefined, { forceRefetch: true }))
-      console.log('🔄 Forced auth recheck initiated')
+      // Call Cognito sign out
+      const logoutResult = await signOut()
+      console.log('✅ Cognito logout successful:', logoutResult)
 
       // Clear any user-specific localStorage data
       try {
@@ -125,34 +84,18 @@ function Navigation({ className = '' }: NavigationProps) {
         console.warn('Could not clear localStorage:', error)
       }
 
-      // Additional delay to ensure all cleanup completes
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Close user menu
+      setIsUserMenuOpen(false)
 
       // Navigate to home page
       console.log('🏠 Navigating to home page')
       navigate({ to: '/' })
 
-      // Final verification - log auth state after navigation
-      setTimeout(() => {
-        console.log('🔍 Final auth state check after logout')
-      }, 1000)
+      console.log('✅ Logout process completed')
     } catch (error) {
       console.error('❌ Logout failed:', error)
 
-      // Even if logout fails, clear all client-side state for security
-      // TODO: Re-enable when TypeScript cache resolves
-      // clearCSRFToken()
-      // clearRefreshState()
-      dispatch(
-        authApi.util.updateQueryData('checkAuth', undefined, _draft => {
-          return null // Set to null to indicate no user
-        }),
-      )
-      dispatch(authApi.util.removeQueryData('checkAuth', undefined))
-      dispatch(authApi.util.invalidateTags(['Auth', 'User']))
-      dispatch(authApi.util.resetApiState())
-      dispatch(authApi.endpoints.checkAuth.initiate(undefined, { forceRefetch: true }))
-
+      // Even if logout fails, clear localStorage for security
       try {
         localStorage.removeItem('user-preferences')
         localStorage.removeItem('user-settings')
@@ -160,8 +103,8 @@ function Navigation({ className = '' }: NavigationProps) {
         console.warn('Could not clear localStorage:', storageError)
       }
 
-      // Still navigate even if logout failed
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Close user menu and navigate anyway
+      setIsUserMenuOpen(false)
       navigate({ to: '/' })
     }
   }

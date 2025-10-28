@@ -1,5 +1,5 @@
 // Load centralized environment configuration first
-require('../../../shared/config/env-loader')
+require('/app/shared/config/env-loader.js')
 
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET is not set in environment variables!')
@@ -124,6 +124,11 @@ app.use('/', profileRouter)
 
 app.get('/', (req, res) => {
   res.send('Lego Projects API is running')
+})
+
+// Health check endpoint for ECS/ALB
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', service: 'lego-projects-api' })
 })
 
 // Not Found handler
