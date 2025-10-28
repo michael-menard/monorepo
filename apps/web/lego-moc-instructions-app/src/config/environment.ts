@@ -150,8 +150,7 @@ if (!config.api.baseUrl) {
 }
 
 if (config.auth.enabled && !config.api.authUrl) {
-    '❌ VITE_AUTH_API_URL is not configured but auth is enabled. Please check your environment variables.',
-  )
+    // Auth URL validation error removed
 }
 
 // Export individual configurations for convenience

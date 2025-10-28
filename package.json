@@ -32,6 +32,8 @@
     "lint:all": "turbo run lint",
     "lint:changed": "turbo run lint --filter='...[HEAD^1]'",
     "lint:changed:main": "turbo run lint --filter='...[origin/main]'",
+    "lint:files": "bash scripts/lint-changed-files.sh",
+    "lint:files:main": "bash scripts/lint-changed-files.sh origin/main",
     "lint:root": "eslint . --ext .js,.jsx,.ts,.tsx --fix --max-warnings 0",
     "lint:check": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
     "check-types": "turbo run check-types --filter='...[HEAD^1]'",

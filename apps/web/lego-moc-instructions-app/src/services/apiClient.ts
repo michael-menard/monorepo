@@ -20,11 +20,7 @@ export class ApiClient {
     this.retryAttempts = config.api.retryAttempts
 
     if (isDevelopment) {
-        baseURL: this.baseURL,
-        authURL: this.authURL,
-        timeout: this.timeout,
-        retryAttempts: this.retryAttempts,
-      })
+      // API client configuration logging removed
     }
   }
 

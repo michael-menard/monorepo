@@ -230,11 +230,7 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     }
 
     const file = files[0]
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: file.lastModified,
-    })
+    // File processing removed
 
     try {
 
@@ -321,14 +317,7 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     instruction = result.data?.data // Extract data from standard API response
     isLoading = result.isLoading
     error = result.error
-      instruction,
-      isLoading,
-      error,
-      rawData: result.data,
-      dataExists: !!result.data,
-      dataDataExists: !!result.data?.data,
-      extractedInstruction: result.data?.data,
-    })
+    // Debug logging removed for production
   } catch (hookError) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -431,8 +420,9 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
                     alt={instruction.title}
                     className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
                     fallback="/placeholder-instruction.svg"
-                    onError={() =>
-                    }
+                    onError={() => {
+                      // Error handling removed
+                    }}
                   />
                 ) : (
                   <div className="w-full h-64 lg:h-96 bg-gradient-to-br from-orange-100 to-orange-200 rounded-t-lg flex flex-col items-center justify-center text-orange-600 p-8">

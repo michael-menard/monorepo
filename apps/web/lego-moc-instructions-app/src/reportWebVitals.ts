@@ -15,10 +15,7 @@ const sendToAnalytics = (metric: { id: string; name: string; value: number; rati
 
   // In development, log to console
   if (process.env.NODE_ENV === 'development') {
-      value: metric.value,
-      rating: metric.rating,
-      id: metric.id,
-    })
+    // Web vitals logging removed for production
   }
 
   // In production, you can send to external analytics services

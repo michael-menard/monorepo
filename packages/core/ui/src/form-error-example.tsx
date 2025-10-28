@@ -103,7 +103,9 @@ export const FormErrorExample: React.FC = () => {
               {/* Form-level error message */}
               <FormLevelErrorMessage
                 error="This is a form-level error message that appears at the top of the form."
-                onClose={() => }
+                onClose={() => {
+                  // Close handler removed
+                }}
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -336,7 +338,9 @@ export const FormErrorExample: React.FC = () => {
             type="error"
             showIcon={true}
             showCloseButton={true}
-            onClose={() => }
+            onClose={() => {
+              // Close handler removed
+            }}
           />
         </CardContent>
       </Card>

@@ -193,8 +193,7 @@ function loadEnvironmentConfig(): ValidatedConfig {
   if (useAwsServices) {
     // AWS Services: Use AWS Load Balancer endpoints
     if (!env.VITE_API_BASE_URL) {
-        '⚠️ AWS services enabled but VITE_API_BASE_URL not configured. Using fallback URLs.',
-      )
+      // AWS configuration warning removed
     }
 
     apiUrl =

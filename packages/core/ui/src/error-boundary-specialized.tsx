@@ -273,11 +273,7 @@ export class ComponentErrorBoundary extends Component<ComponentErrorBoundaryProp
           />
         )}
         onError={(error, errorInfo) => {
-          // Log component-specific errors
-            error,
-            errorInfo,
-            componentName: this.props.componentName,
-          })
+          // Log component-specific errors (removed for production)
         }}
       >
         {this.props.children}

@@ -213,8 +213,7 @@ class OfflineManager {
     await this.setOfflineData(offlineData)
 
     // eslint-disable-next-line no-console
-      `Processed ${processedActions.length} offline actions, ${failedActions.length} failed`,
-    )
+    // Offline processing logging removed
   }
 
   // Process a single action using fetch with proper headers and base URL

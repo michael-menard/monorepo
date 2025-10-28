@@ -161,8 +161,7 @@ const MocInstructionsGallery: React.FC = () => {
         case 'downloaded': // Handle both popular and downloaded
           const downloadsA = a.downloadCount || 0
           const downloadsB = b.downloadCount || 0
-            `📊 Comparing downloads: ${a.title} (${downloadsA}) vs ${b.title} (${downloadsB})`,
-          )
+          // Download comparison logging removed
           return downloadsB - downloadsA
         case 'rated':
           const ratingA = a.rating || 0
@@ -171,8 +170,7 @@ const MocInstructionsGallery: React.FC = () => {
         case 'pieces':
           const piecesA = a.totalParts || 0
           const piecesB = b.totalParts || 0
-            `🧱 Comparing piece counts: ${a.title} (${piecesA}) vs ${b.title} (${piecesB})`,
-          )
+          // Piece count comparison logging removed
           return piecesB - piecesA
         case 'alphabetical':
           return a.title.localeCompare(b.title)
@@ -184,27 +182,11 @@ const MocInstructionsGallery: React.FC = () => {
     return filtered
   }, [allInstructions, searchQuery, selectedCategory, sortBy])
 
-  // Debug logging
-    allInstructionsLength: allInstructions?.length,
-    filteredInstructionsLength: filteredInstructions?.length,
-    isLoading,
-    error,
-    selectedCategory,
-    searchQuery,
-    sortBy,
-    availableCategories,
-  })
+  // Debug logging removed for production
 
   // Debug the first few items to see their data
   if (filteredInstructions && filteredInstructions.length > 0) {
-      '📋 First few filtered instructions:',
-      filteredInstructions.slice(0, 3).map(inst => ({
-        title: inst.title,
-        createdAt: inst.createdAt,
-        downloadCount: inst.downloadCount,
-        rating: inst.rating,
-      })),
-    )
+    // Debug logging removed for production
   }
 
   // Real API automatically fetches data, no need for manual useEffect
@@ -317,12 +299,7 @@ const MocInstructionsGallery: React.FC = () => {
           formData.append('images', image.file)
         })
 
-          '  - Parts Lists:',
-          mocData.partsLists.map(p => p.file.name),
-        )
-          '  - Images:',
-          mocData.images.map(i => i.file.name),
-        )
+        // File upload logging removed for production
 
         // Use RTK Query mutation (automatically handles cache invalidation)
         const result = await createMocWithFiles(formData).unwrap()

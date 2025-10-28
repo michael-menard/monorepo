@@ -117,10 +117,7 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
     isLoading: uploadsLoading,
     error: uploadsError,
   } = useGetMOCUploadsOverTimeQuery()
-    uploadsOverTimeResponse,
-    uploadsLoading,
-    uploadsError,
-  })
+  // Debug logging removed
 
   // Transform the data for the line chart
   const transformUploadsData = (
