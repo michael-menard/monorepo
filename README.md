@@ -190,22 +190,23 @@ Base UI components built with shadcn/ui and Tailwind CSS.
 import { Button, Input, Card } from '@repo/ui'
 ```
 
-#### `@repo/auth`
+#### Authentication (AWS Cognito)
 
-Authentication package with Redux Toolkit integration.
+Authentication is handled by AWS Cognito with AWS Amplify integration.
 
 **Features:**
 
-- Complete authentication flow
-- Redux state management
-- React hooks for auth
-- Route protection
-- Email verification
+- Complete authentication flow (signup, login, logout, email verification)
+- JWT token-based authentication
+- React hooks for auth state
+- Route protection with Cognito guards
+- Email verification through Cognito
 
 **Usage:**
 
 ```tsx
-import { useAuth, RouteGuard } from '@repo/auth'
+import { useAuth } from './hooks'
+import { createCognitoRouteGuard } from './lib/cognito-route-guard'
 ```
 
 ### Feature Packages

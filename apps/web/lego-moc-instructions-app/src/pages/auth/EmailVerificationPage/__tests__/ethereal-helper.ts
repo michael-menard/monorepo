@@ -103,8 +103,7 @@ export class EtherealHelper {
   /**
    * Print setup instructions
    */
-  printSetupInstructions(): void {
-  }
+  printSetupInstructions(): void {}
 }
 
 // Default configuration (you'll need to update this with real credentials)

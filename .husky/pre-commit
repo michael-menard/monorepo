@@ -1,5 +1,5 @@
-# Turborepo-aware Pre-commit Checks
-echo "🔍 Running Turborepo-aware pre-commit checks..."
+# Efficient Pre-commit Checks (Changed Files Only)
+echo "🔍 Running efficient pre-commit checks on changed files..."
 
 # Get list of changed files
 CHANGED_FILES=$(git diff --cached --name-only)
@@ -25,11 +25,11 @@ if ! pnpm turbo format --filter="...[HEAD]" > /dev/null 2>&1; then
     exit 1
 fi
 
-# Lint affected projects
-echo "🔍 Linting affected projects..."
-if ! pnpm turbo lint --filter="...[HEAD]" > /dev/null 2>&1; then
-    echo "❌ Lint failed in affected projects. Please fix errors and try again."
-    echo "💡 Run: pnpm turbo lint --filter=\"...[HEAD]\" to see detailed errors"
+# Lint only changed files efficiently
+echo "🔍 Linting changed files..."
+if ! pnpm lint:changed > /dev/null 2>&1; then
+    echo "❌ Lint failed on changed files. Please fix errors and try again."
+    echo "💡 Run: pnpm lint:changed to see detailed errors"
     exit 1
 fi
 

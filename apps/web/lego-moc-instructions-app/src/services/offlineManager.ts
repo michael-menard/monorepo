@@ -61,18 +61,15 @@ class OfflineManager {
   }
 
   private handleOnlineEvent(): void {
-    this.processQueuedActions().catch(error => {
-    })
+    this.processQueuedActions().catch(error => {})
   }
 
-  private handleOfflineEvent(): void {
-  }
+  private handleOfflineEvent(): void {}
 
   private handleVisibilityChange(): void {
     // Sync when app becomes visible and we're online
     if (!document.hidden && navigator.onLine) {
-      this.processQueuedActions().catch(error => {
-      })
+      this.processQueuedActions().catch(error => {})
     }
   }
 
@@ -123,8 +120,7 @@ class OfflineManager {
   private setOfflineDataLocal(data: OfflineData): void {
     try {
       localStorage.setItem(this.OFFLINE_DATA_KEY, JSON.stringify(data))
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   /* =========================
@@ -143,8 +139,7 @@ class OfflineManager {
         offlineData.data[key] = { data, timestamp: Date.now() }
         this.setOfflineDataLocal(offlineData)
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   // Retrieve data for offline access
@@ -178,8 +173,7 @@ class OfflineManager {
         actions.push(newAction)
         this.setOfflineActionsLocal(actions)
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   // Process queued actions when online
@@ -212,7 +206,6 @@ class OfflineManager {
     offlineData.lastSync = Date.now()
     await this.setOfflineData(offlineData)
 
-    // eslint-disable-next-line no-console
     // Offline processing logging removed
   }
 
@@ -349,8 +342,7 @@ class OfflineManager {
         localStorage.removeItem(this.OFFLINE_DATA_KEY)
         this.initializeOfflineDataLocal()
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   /* =========================
@@ -387,8 +379,7 @@ class OfflineManager {
   private setOfflineActionsLocal(actions: Array<OfflineAction>): void {
     try {
       localStorage.setItem(this.OFFLINE_ACTIONS_KEY, JSON.stringify(actions))
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   private generateId(): string {

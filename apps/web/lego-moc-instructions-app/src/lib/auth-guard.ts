@@ -1,19 +1,18 @@
-// Import the TanStack route guard from the auth package
+// Cognito-based route guard (replaces @repo/auth)
 import {
-  createTanStackRouteGuard as baseCreateTanStackRouteGuard,
-  type TanStackRouteGuardOptions,
-} from '@repo/auth'
-import { store } from '../store/store'
+  createCognitoRouteGuard,
+  createAuthGuard,
+  createGuestGuard,
+  createVerifiedGuard,
+  type CognitoRouteGuardOptions,
+} from './cognito-route-guard'
 
-// Create a wrapper that automatically provides the Redux store
-export const createTanStackRouteGuard = (
-  options: Omit<TanStackRouteGuardOptions, 'store'> = {},
-  redirectFn?: (options: { to: string; replace?: boolean }) => any,
-) => {
-  return baseCreateTanStackRouteGuard({
-    ...options,
-    store, // Automatically provide the store
-  })
-}
+// Export the Cognito route guard as the main route guard
+export const createTanStackRouteGuard = createCognitoRouteGuard
 
-export type { TanStackRouteGuardOptions }
+// Export convenience functions
+export { createCognitoRouteGuard, createAuthGuard, createGuestGuard, createVerifiedGuard }
+
+// Export types (maintaining compatibility)
+export type TanStackRouteGuardOptions = CognitoRouteGuardOptions
+export type { CognitoRouteGuardOptions }

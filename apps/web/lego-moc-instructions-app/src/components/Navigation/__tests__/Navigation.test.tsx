@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import { clearCSRFToken, clearRefreshState } from '@repo/auth'
+// CSRF functionality removed - using Cognito JWT authentication
 import Navigation from '../index'
 
 // Mock TanStack Router
@@ -93,14 +93,12 @@ const mockAuthHook = {
   logout: vi.fn(),
 }
 
-// Mock auth hook
-vi.mock('@repo/auth', () => ({
+// Mock Cognito auth hook (replaces @repo/auth)
+vi.mock('../../hooks', () => ({
   useAuth: () => mockAuthHook,
-  clearCSRFToken: vi.fn(),
-  clearRefreshState: vi.fn(),
 }))
 
-// Mock the authApi and useCheckAuthQuery hook
+// Mock auth API (legacy - can be removed when Navigation is updated)
 vi.mock('@repo/auth/store/authApi', () => ({
   authApi: {
     reducerPath: 'authApi',
@@ -520,8 +518,7 @@ describe('Navigation Component', () => {
       // Wait for logout to be called and verify cleanup functions
       await waitFor(() => {
         expect(mockAuthHook.logout).toHaveBeenCalled()
-        expect(clearCSRFToken).toHaveBeenCalled()
-        expect(clearRefreshState).toHaveBeenCalled()
+        // CSRF token clearing removed - using Cognito JWT authentication
       })
     })
 

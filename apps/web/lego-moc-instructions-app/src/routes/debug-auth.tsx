@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useAuth } from '@repo/auth'
+import { useAuth } from '../hooks'
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
 
 export const Route = createFileRoute('/debug-auth')({

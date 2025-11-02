@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { Button, FormSection } from '@repo/ui'
 import { AvatarUploader } from '@repo/profile'
-import { useAuth } from '@repo/auth'
+import { useAuth } from '../../hooks'
 import type { Profile, ProfileForm } from '@repo/profile'
 import { LegoProfileContent } from './LegoProfileContent'
 

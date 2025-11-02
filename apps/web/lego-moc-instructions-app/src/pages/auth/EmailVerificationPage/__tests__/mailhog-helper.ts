@@ -182,8 +182,7 @@ export class MailHogHelper {
   async deleteAllEmails(): Promise<void> {
     try {
       await fetch(`${this.apiUrl}/api/v1/messages`, { method: 'DELETE' })
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   /**
@@ -194,8 +193,7 @@ export class MailHogHelper {
     for (const email of emails) {
       try {
         await fetch(`${this.apiUrl}/api/v1/messages/${email.ID}`, { method: 'DELETE' })
-      } catch (error) {
-      }
+      } catch (error) {}
     }
   }
 
@@ -225,8 +223,7 @@ export class MailHogHelper {
   /**
    * Print setup instructions
    */
-  printSetupInstructions(): void {
-  }
+  printSetupInstructions(): void {}
 }
 
 // Default configuration

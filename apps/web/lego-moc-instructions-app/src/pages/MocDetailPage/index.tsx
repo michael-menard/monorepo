@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import {
   Button,
@@ -12,7 +12,7 @@ import {
 } from '@repo/ui'
 import { ArrowLeft, Download, Calendar, User, Package, Plus, Upload, ImageIcon } from 'lucide-react'
 import { FileList, FileActions, createCommonActions, normalizeFileItem } from '@repo/file-list'
-import { downloadFile, downloadMultipleFiles } from '@repo/moc-instructions'
+// Download functions available but not used in current implementation
 import { CachedImage } from '@repo/cache/components/CachedImage'
 import { Upload as UploadComponent } from '@repo/upload'
 import { DoughnutChart } from '@monorepo/charts'
@@ -138,7 +138,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
   const { id } = useParams({ from: '/moc-detail/$id' })
   const navigate = useNavigate()
 
-
   // Local state for parts list upload
   const [showPartsListUpload, setShowPartsListUpload] = useState(false)
 
@@ -161,7 +160,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
 
   // Handle parts list file upload using RTK Query
   const handlePartsListUpload = async (files: FileList) => {
-
     if (!files.length || !id) {
       return
     }
@@ -170,13 +168,11 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     // File processing removed
 
     try {
-
       // Use RTK Query mutation
       const result = await uploadPartsList({
         mocId: id,
         file: file,
       }).unwrap()
-
 
       // Show success toast with parsing details
       const parsingInfo = result.data?.parsing
@@ -195,7 +191,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       // RTK Query will automatically invalidate and refetch the MOC data
       setShowPartsListUpload(false)
     } catch (error: any) {
-
       // Show detailed error message based on error type
       let errorTitle = 'Failed to upload parts list'
       let errorMessage = 'Please try again or contact support if the problem persists.'
@@ -224,7 +219,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
 
   // Handle thumbnail upload
   const handleThumbnailUpload = async (files: File[]) => {
-
     if (!files.length || !id) {
       return
     }
@@ -233,13 +227,11 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     // File processing removed
 
     try {
-
       // Use RTK Query mutation
       const result = await uploadMocThumbnail({
         mocId: id,
         file: file,
       }).unwrap()
-
 
       // Show success toast
       showSuccessToast(
@@ -250,7 +242,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       // RTK Query will automatically invalidate and refetch the MOC data
       setShowThumbnailUpload(false)
     } catch (error) {
-
       // Show error toast with user-friendly message
       showErrorToast(error, 'Failed to upload cover image')
 
@@ -269,12 +260,10 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
     if (!fileToDelete || !id) return
 
     try {
-
       await deleteMocFile({
         mocId: id,
         fileId: fileToDelete.id,
       }).unwrap()
-
 
       // Show success toast
       showSuccessToast(
@@ -286,7 +275,6 @@ export const MocDetailPage: React.FC = (): React.JSX.Element => {
       setFileToDelete(null)
       setShowDeleteConfirmation(false)
     } catch (error) {
-
       // Show error toast with user-friendly message
       showErrorToast(error, 'Failed to delete file')
 

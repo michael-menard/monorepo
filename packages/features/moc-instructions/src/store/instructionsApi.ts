@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { getCSRFHeaders } from '@repo/auth'
+// CSRF headers removed - using Cognito JWT authentication
 import type {
   MockInstruction,
   CreateMockInstruction,
@@ -65,14 +65,8 @@ export const instructionsApi = createApi({
       ].includes(endpoint)
 
       if (isMutation) {
-        try {
-          const csrfHeaders = await getCSRFHeaders()
-          Object.entries(csrfHeaders).forEach(([key, value]) => {
-            headers.set(key, value)
-          })
-        } catch (error) {
-          console.warn('Failed to add CSRF token to instructions API request:', error)
-        }
+        // CSRF headers removed - using Cognito JWT authentication
+        // JWT tokens in Authorization header provide CSRF protection
       }
 
       return headers

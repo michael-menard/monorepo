@@ -127,3 +127,35 @@ See `REMOVED_AUTH_SERVICE_BACKUP.md` for detailed backup information.
 **Migration**: Express + MongoDB → AWS Cognito
 **Build**: ✅ Passing
 **Deployment**: Ready for Cognito deployment
+
+---
+
+## @repo/auth Package Removal - Complete ✅
+
+**Date**: January 28, 2025
+
+### Summary
+The `@repo/auth` shared package has been completely removed from the monorepo as the final step in the Cognito migration.
+
+### ✅ **Completed Removals:**
+- **Package deleted**: `packages/core/auth/` directory removed entirely
+- **Dependencies removed**: All `@repo/auth` references removed from package.json files
+- **Imports replaced**: All imports updated to use local Cognito authentication hooks
+- **CSRF functionality removed**: No longer needed with JWT authentication
+- **Route guards migrated**: Replaced with Cognito-based route protection
+- **TypeScript declarations removed**: No longer needed
+- **Vite aliases removed**: Build configurations updated
+- **Tests updated**: All mocks updated to use local authentication
+
+### 🔄 **Migration Summary:**
+- **useAuth hook**: Replaced with `useCognitoAuth` in `src/hooks/useCognitoAuth.ts`
+- **Route guards**: Replaced with `createCognitoRouteGuard` in `src/lib/cognito-route-guard.ts`
+- **CSRF tokens**: Removed entirely (JWT provides CSRF protection)
+- **Redux auth state**: Replaced with Cognito authentication state
+
+### 📚 **Documentation Updated:**
+- Main README.md updated to reflect Cognito authentication
+- CLAUDE.md development guide updated
+- Package references removed from all documentation
+
+**Final Status**: ✅ COMPLETE - No more @repo/auth dependencies

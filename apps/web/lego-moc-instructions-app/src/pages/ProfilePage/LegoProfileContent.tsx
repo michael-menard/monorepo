@@ -101,8 +101,7 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
   }, [apiResponse])
 
   // Debug component mount
-  useEffect(() => {
-  }, [])
+  useEffect(() => {}, [])
 
   // Fetch real MOC statistics by category
   const {
@@ -156,7 +155,6 @@ export const LegoProfileContent: React.FC<LegoProfileContentProps> = ({
   const { chartData, categories } = uploadsOverTimeResponse?.data
     ? transformUploadsData(uploadsOverTimeResponse.data)
     : { chartData: [], categories: [] }
-
 
   // Mock data for sets purchased by manufacturer over time
   const mockSetsPurchasedData = [

@@ -1,6 +1,6 @@
-import {act, renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
-import {useCognitoAuth} from '../useCognitoAuth'
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useCognitoAuth } from '../useCognitoAuth'
 import * as amplifyAuth from 'aws-amplify/auth'
 
 /**

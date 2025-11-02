@@ -186,13 +186,13 @@ All services load environment variables from the **monorepo root `.env` file** v
 **Discovery workflow before creating new utilities:**
 
 1. Search existing exports: `rg -n "export (function|const|class)" packages/`
-2. Check if similar functionality exists in `@repo/ui`, `@repo/auth`, `@repo/upload`, etc.
+2. Check if similar functionality exists in `@repo/ui`, `@repo/upload`, etc.
 3. If code appears 2+ times, promote to shared package
 
 **Key packages:**
 
 - `@repo/ui` - Radix UI components, 25+ components
-- `@repo/auth` - Authentication flows, Redux state, CSRF protection
+- **Authentication** - AWS Cognito with Amplify integration (no shared package)
 - `@repo/upload` - File/image upload with drag-and-drop, validation, compression
 - `@repo/file-list` - Generic file display component
 - `@repo/moc-instructions` - MOC-specific features and forms
@@ -224,7 +224,7 @@ All services load environment variables from the **monorepo root `.env` file** v
 - **TypeScript-only codebase** - all new files must be `.ts` or `.tsx` (no `.js` or `.jsx`)
 - **Strict mode enabled** - no `any` types
 - Do not use `@ts-ignore` without justification in comment
-- Use path aliases from `tsconfig.json` for imports: `@repo/ui`, `@repo/auth`, etc.
+- Use path aliases from `tsconfig.json` for imports: `@repo/ui`, `@repo/upload`, etc.
 - **Prefer Zod schemas + inferred types** over manual type definitions:
 
   ```typescript

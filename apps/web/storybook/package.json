@@ -32,7 +32,6 @@
   },
   "peerDependencies": {
     "@repo/ui": "workspace:*",
-    "@repo/auth": "workspace:*",
     "@repo/upload": "workspace:*",
     "@repo/gallery": "workspace:*",
     "@repo/moc-instructions": "workspace:*",

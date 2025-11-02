@@ -1,6 +1,6 @@
-import {fireEvent, render, screen, waitFor} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
-import {createMemoryRouter, createRootRoute, RouterProvider} from '@tanstack/react-router'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMemoryRouter, createRootRoute, RouterProvider } from '@tanstack/react-router'
 import CognitoVerifyEmailPage from '../index'
 
 // Mock the Cognito auth hook
@@ -124,7 +124,7 @@ describe('CognitoVerifyEmailPage', () => {
         const errorMessages = screen.getAllByText(/email|code|verification/i)
         expect(errorMessages.length).toBeGreaterThan(0)
       },
-      {timeout: 3000},
+      { timeout: 3000 },
     )
   })
 
@@ -172,9 +172,9 @@ describe('CognitoVerifyEmailPage', () => {
     // Wait for navigation timeout
     await waitFor(
       () => {
-        expect(mockNavigate).toHaveBeenCalledWith({to: '/auth/login'})
+        expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
       },
-      {timeout: 3000},
+      { timeout: 3000 },
     )
   })
 

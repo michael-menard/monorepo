@@ -1,8 +1,10 @@
 export default {
   // JavaScript, TypeScript, JSX, TSX files
   '**/*.{js,jsx,ts,tsx}': [
-    // Format with Prettier (linting handled by Turborepo in pre-commit hook)
+    // Format with Prettier
     'prettier --write',
+    // Lint only changed files efficiently
+    () => 'pnpm lint:changed',
   ],
 
   // JSON files
@@ -24,25 +26,8 @@ export default {
     'bash -c \'if [ -f "scripts/sync-dependencies.js" ]; then node scripts/sync-dependencies.js; fi\'',
   ],
 
-  // Specific configurations for different areas of the monorepo
-
-  // Root level files - format only (linting handled by Turborepo)
-  './*.{js,jsx,ts,tsx}': ['prettier --write'],
-
-  // Apps - format only (linting handled by Turborepo)
-  'apps/**/*.{js,jsx,ts,tsx}': ['prettier --write'],
-
-  // Packages - format only (linting handled by Turborepo)
-  'packages/**/*.{js,jsx,ts,tsx}': ['prettier --write'],
-
-  // Test files - format only (linting handled by Turborepo)
-  '**/*.{test,spec}.{js,jsx,ts,tsx}': ['prettier --write'],
-
-  // Storybook files - format only (linting handled by Turborepo)
-  '**/*.stories.{js,jsx,ts,tsx}': ['prettier --write'],
-
-  // Configuration files - format only (linting handled by Turborepo)
-  '**/*.config.{js,ts}': ['prettier --write'],
+  // Note: All JS/TS files are handled by the main pattern above with pnpm lint:changed
+  // This ensures efficient linting of only changed files across the entire monorepo
 
   // Docker files
   '**/Dockerfile*': [

@@ -83,3 +83,8 @@ coverage/
 
 
 apps/api/lego-projects-api/uploads/**/*.jpg.envrc
+
+# SST (Ion) artifacts
+.sst/
+.build/
+sst-env.d.ts
