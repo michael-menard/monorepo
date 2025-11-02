@@ -28,7 +28,10 @@ export const CreateMocSchema = z.object({
   type: MocTypeSchema,
   difficulty: DifficultySchema.optional(),
   pieceCount: z.number().int().positive().optional(),
-  estimatedCost: z.string().regex(/^\d+(\.\d{2})?$/, 'Invalid cost format').optional(),
+  estimatedCost: z
+    .string()
+    .regex(/^\d+(\.\d{2})?$/, 'Invalid cost format')
+    .optional(),
   timeToComplete: z.number().int().positive().optional(),
   isPublic: z.boolean().default(true),
   tags: z.array(z.string()).max(10, 'Maximum 10 tags allowed').default([]),
@@ -42,7 +45,10 @@ export const UpdateMocSchema = z.object({
   description: z.string().max(2000).optional(),
   difficulty: DifficultySchema.optional(),
   pieceCount: z.number().int().positive().optional(),
-  estimatedCost: z.string().regex(/^\d+(\.\d{2})?$/).optional(),
+  estimatedCost: z
+    .string()
+    .regex(/^\d+(\.\d{2})?$/)
+    .optional(),
   timeToComplete: z.number().int().positive().optional(),
   isPublic: z.boolean().optional(),
   tags: z.array(z.string()).max(10).optional(),

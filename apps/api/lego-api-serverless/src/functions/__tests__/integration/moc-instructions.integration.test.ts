@@ -5,6 +5,7 @@
  * Covers all CRUD operations: List, Get, Create, Update, Delete.
  */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createMockEvent, createUnauthorizedEvent, commonEvents } from '@/__tests__/fixtures/mock-events'
 import { mockMocs, mockCreateMocPayloads, mockUpdateMocPayloads } from '@/__tests__/fixtures/mock-mocs'
@@ -44,7 +45,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
   describe('GET /api/mocs - List MOCs', () => {
     it('should return paginated list of MOCs', async () => {
       // Given: Request for page 1, limit 20
-      const event = commonEvents.listMocs
+      const _event = commonEvents.listMocs
 
       // When: Handler processes request
       // Note: Actual handler import would go here
@@ -72,7 +73,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should return cached results on second request', async () => {
       // Given: Cache contains results from previous request
-      const event = commonEvents.listMocs
+      const _event = commonEvents.listMocs
       const cachedData = JSON.stringify({
         data: [mockMocs.basicMoc],
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
@@ -93,7 +94,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should filter by tag parameter', async () => {
       // Given: Request with tag filter
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'GET',
         path: '/api/mocs',
         queryStringParameters: { tag: 'medieval', page: '1', limit: '20' },
@@ -117,7 +118,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should handle search query parameter', async () => {
       // Given: Request with search query
-      const event = commonEvents.searchMocs('castle')
+      const _event = commonEvents.searchMocs('castle')
 
       // When: Handler performs search
       const mockResponse = {
@@ -136,7 +137,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should validate pagination parameters', async () => {
       // Given: Invalid pagination (page=0)
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'GET',
         path: '/api/mocs',
         queryStringParameters: { page: '0', limit: '20' },
@@ -161,7 +162,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
   describe('GET /api/mocs/:id - Get MOC Detail', () => {
     it('should return MOC with all relations', async () => {
       // Given: Request for existing MOC
-      const event = commonEvents.getMocDetail
+      const _event = commonEvents.getMocDetail
 
       // When: Handler fetches MOC with files/images
       const mockResponse = {
@@ -187,7 +188,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should return 404 for non-existent MOC', async () => {
       // Given: Request for non-existent MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'GET',
         path: '/api/mocs/non-existent-id',
         pathParameters: { id: 'non-existent-id' },
@@ -210,7 +211,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should return 403 for unauthorized access to private MOC', async () => {
       // Given: User tries to access another user's private MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'GET',
         path: '/api/mocs/moc-private-789',
         pathParameters: { id: 'moc-private-789' },
@@ -234,7 +235,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should allow owner to access their private MOC', async () => {
       // Given: Owner accesses their own private MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'GET',
         path: '/api/mocs/moc-private-789',
         pathParameters: { id: 'moc-private-789' },
@@ -258,7 +259,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
   describe('POST /api/mocs - Create MOC', () => {
     it('should create new MOC successfully', async () => {
       // Given: Valid MOC creation request
-      const event = commonEvents.createMoc(mockCreateMocPayloads.validMoc)
+      const _event = commonEvents.createMoc(mockCreateMocPayloads.validMoc)
 
       // When: Handler creates MOC
       const createdMoc = {
@@ -282,7 +283,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should fail with 400 for invalid request body', async () => {
       // Given: Invalid request (missing title)
-      const event = commonEvents.createMoc(mockCreateMocPayloads.missingTitle)
+      const _event = commonEvents.createMoc(mockCreateMocPayloads.missingTitle)
 
       // When: Handler validates request
       const mockResponse = {
@@ -301,7 +302,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should fail with 409 for duplicate title', async () => {
       // Given: Title already exists for this user
-      const event = commonEvents.createMoc({
+      const _event = commonEvents.createMoc({
         title: 'Medieval Castle', // Same as existing MOC
         type: 'moc',
       })
@@ -323,7 +324,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should require authentication', async () => {
       // Given: Unauthenticated request
-      const event = createUnauthorizedEvent({
+      const _event = createUnauthorizedEvent({
         method: 'POST',
         path: '/api/mocs',
         body: mockCreateMocPayloads.validMoc,
@@ -346,7 +347,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
   describe('PATCH /api/mocs/:id - Update MOC', () => {
     it('should update MOC with partial data', async () => {
       // Given: Valid update request (only title)
-      const event = commonEvents.updateMoc('moc-basic-123', mockUpdateMocPayloads.updateTitle)
+      const _event = commonEvents.updateMoc('moc-basic-123', mockUpdateMocPayloads.updateTitle)
 
       // When: Handler applies partial update
       const updatedMoc = {
@@ -367,7 +368,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should update multiple fields', async () => {
       // Given: Update with multiple fields
-      const event = commonEvents.updateMoc('moc-basic-123', mockUpdateMocPayloads.updateMultipleFields)
+      const _event = commonEvents.updateMoc('moc-basic-123', mockUpdateMocPayloads.updateMultipleFields)
 
       // When: Handler applies updates
       const updatedMoc = {
@@ -389,7 +390,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should return 403 for non-owner update attempt', async () => {
       // Given: Non-owner tries to update MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'PATCH',
         path: '/api/mocs/moc-basic-123',
         pathParameters: { id: 'moc-basic-123' },
@@ -412,7 +413,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should invalidate cache on successful update', async () => {
       // Given: MOC update request
-      const event = commonEvents.updateMoc('moc-basic-123', mockUpdateMocPayloads.updateTitle)
+      const _event = commonEvents.updateMoc('moc-basic-123', mockUpdateMocPayloads.updateTitle)
 
       // When: Handler updates and invalidates cache
       // Mock would verify cache.del was called with correct keys
@@ -429,7 +430,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
   describe('DELETE /api/mocs/:id - Delete MOC', () => {
     it('should delete MOC and cascade to files', async () => {
       // Given: Delete request from owner
-      const event = commonEvents.deleteMoc('moc-basic-123')
+      const _event = commonEvents.deleteMoc('moc-basic-123')
 
       // When: Handler deletes MOC
       const mockResponse = {
@@ -444,7 +445,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should delete associated S3 files', async () => {
       // Given: MOC with associated files
-      const event = commonEvents.deleteMoc('moc-basic-123')
+      const _event = commonEvents.deleteMoc('moc-basic-123')
 
       // When: Handler deletes MOC
       const s3KeysDeleted = [
@@ -459,7 +460,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should return 403 for non-owner delete attempt', async () => {
       // Given: Non-owner tries to delete MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'DELETE',
         path: '/api/mocs/moc-basic-123',
         pathParameters: { id: 'moc-basic-123' },
@@ -481,7 +482,7 @@ describe('MOC Instructions Lambda Handler - Integration Tests', () => {
 
     it('should return 404 for non-existent MOC', async () => {
       // Given: Delete request for non-existent MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'DELETE',
         path: '/api/mocs/non-existent-id',
         pathParameters: { id: 'non-existent-id' },

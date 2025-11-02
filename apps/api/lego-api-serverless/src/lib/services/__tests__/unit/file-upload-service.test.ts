@@ -14,8 +14,6 @@ describe('File Upload Service', () => {
       // Given: User ID, MOC ID, and file metadata
       const userId = 'user-123'
       const mocId = 'moc-basic-123'
-      const fileType = 'instruction'
-      const filename = 'castle-instructions.pdf'
       const fileId = 'uuid-123'
 
       // When: Generate S3 key
@@ -32,8 +30,6 @@ describe('File Upload Service', () => {
       // Given: Parts list file metadata
       const userId = 'user-456'
       const mocId = 'moc-set-456'
-      const fileType = 'parts-list'
-      const filename = 'parts.csv'
       const fileId = 'uuid-456'
 
       // When: Generate S3 key
@@ -48,8 +44,6 @@ describe('File Upload Service', () => {
       // Given: Thumbnail image metadata
       const userId = 'user-123'
       const mocId = 'moc-basic-123'
-      const fileType = 'thumbnail'
-      const filename = 'castle-thumb.jpg'
       const fileId = 'uuid-789'
 
       // When: Generate S3 key

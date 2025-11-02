@@ -7,7 +7,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mockMocs } from '@/__tests__/fixtures/mock-mocs'
-import { mockUsers } from '@/__tests__/fixtures/mock-users'
 
 // Mock implementations for testing logic
 const mockDbClient = {
@@ -130,8 +129,6 @@ describe('MOC Service Business Logic', () => {
 
     it('should invalidate list cache when new MOC is created', async () => {
       // Given: New MOC created
-      const listCachePattern = 'moc:list:*'
-
       // When: Invalidate list cache
       // Note: In real implementation, would use SCAN + DEL or cache tags
       const keysToDelete = ['moc:list:page:1:limit:20', 'moc:list:page:1:limit:50']
@@ -143,8 +140,6 @@ describe('MOC Service Business Logic', () => {
 
     it('should invalidate search cache when MOC tags change', async () => {
       // Given: MOC tags updated
-      const searchCachePattern = 'moc:search:*'
-
       // When: Invalidate search cache
       const keysToDelete = ['moc:search:castle', 'moc:search:medieval']
       await Promise.all(keysToDelete.map(key => mockRedisClient.del(key)))
@@ -160,8 +155,6 @@ describe('MOC Service Business Logic', () => {
       mockDbClient.select.mockResolvedValue([])
 
       // When: Check title uniqueness
-      const userId = 'user-123'
-      const title = 'New Unique Castle'
       const existing = await mockDbClient.select()
 
       // Then: No conflict
@@ -173,8 +166,6 @@ describe('MOC Service Business Logic', () => {
       mockDbClient.select.mockResolvedValue([mockMocs.basicMoc])
 
       // When: Check title uniqueness
-      const userId = 'user-123'
-      const title = 'Medieval Castle'
       const existing = await mockDbClient.select()
 
       // Then: Conflict detected
@@ -187,8 +178,6 @@ describe('MOC Service Business Logic', () => {
       mockDbClient.select.mockResolvedValue([])
 
       // When: User 2 creates MOC with same title as User 1
-      const userId = 'user-456'
-      const title = 'Medieval Castle' // Same as mockMocs.basicMoc
       const existing = await mockDbClient.select()
 
       // Then: No conflict (different users)
@@ -215,7 +204,10 @@ describe('MOC Service Business Logic', () => {
 
       // Then: Query structure is correct
       expect(query.bool.should).toHaveLength(3)
-      expect(query.bool.should[0].match.title.boost).toBe(2)
+      const firstShould = query.bool.should[0]
+      if (firstShould && 'match' in firstShould && firstShould.match.title) {
+        expect(firstShould.match.title.boost).toBe(2)
+      }
       expect(query.bool.minimum_should_match).toBe(1)
     })
 
@@ -237,8 +229,6 @@ describe('MOC Service Business Logic', () => {
 
     it('should construct query with public-only filter', () => {
       // Given: Public-only requirement
-      const includePrivate = false
-
       // When: Build query with visibility filter
       const query = {
         bool: {

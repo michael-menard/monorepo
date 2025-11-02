@@ -22,5 +22,5 @@
     }
   },
   "include": ["src/**/*", "sst.config.ts", "sst-env.d.ts"],
-  "exclude": ["node_modules", "dist", ".sst", ".build", "__tests__"]
+  "exclude": ["node_modules", "dist", ".sst", ".build", "**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"]
 }

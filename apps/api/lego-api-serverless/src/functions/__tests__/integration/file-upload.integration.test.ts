@@ -4,9 +4,9 @@
  * Tests file upload flow including multipart parsing, validation, S3 upload.
  */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createMockEvent } from '@/__tests__/fixtures/mock-events'
-import { mockFileUploadMetadata, mockFileBuffers } from '@/__tests__/fixtures/mock-files'
 
 // Mock S3 client
 vi.mock('@aws-sdk/client-s3', () => ({
@@ -34,7 +34,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
   describe('POST /api/mocs/:id/files - Upload File', () => {
     it('should upload PDF instruction file successfully', async () => {
       // Given: Multipart form data with PDF
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'POST',
         path: '/api/mocs/moc-basic-123/files',
         pathParameters: { id: 'moc-basic-123' },
@@ -66,7 +66,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should upload CSV parts list successfully', async () => {
       // Given: Multipart form data with CSV
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'POST',
         path: '/api/mocs/moc-basic-123/files',
         pathParameters: { id: 'moc-basic-123' },
@@ -98,7 +98,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should fail with 400 for oversized file', async () => {
       // Given: File exceeding 10MB limit
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'POST',
         path: '/api/mocs/moc-basic-123/files',
         pathParameters: { id: 'moc-basic-123' },
@@ -124,7 +124,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should fail with 400 for invalid MIME type', async () => {
       // Given: Executable file (not allowed)
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'POST',
         path: '/api/mocs/moc-basic-123/files',
         pathParameters: { id: 'moc-basic-123' },
@@ -150,7 +150,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should fail with 403 for non-owner upload', async () => {
       // Given: Non-owner tries to upload file
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'POST',
         path: '/api/mocs/moc-basic-123/files',
         pathParameters: { id: 'moc-basic-123' },
@@ -175,7 +175,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should fail with 404 for non-existent MOC', async () => {
       // Given: Upload to non-existent MOC
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'POST',
         path: '/api/mocs/non-existent-id/files',
         pathParameters: { id: 'non-existent-id' },
@@ -201,7 +201,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
   describe('DELETE /api/mocs/:id/files/:fileId - Delete File', () => {
     it('should delete file from S3 and database', async () => {
       // Given: Delete request from owner
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'DELETE',
         path: '/api/mocs/moc-basic-123/files/file-pdf-123',
         pathParameters: { id: 'moc-basic-123', fileId: 'file-pdf-123' },
@@ -220,7 +220,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should fail with 403 for non-owner delete', async () => {
       // Given: Non-owner tries to delete file
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'DELETE',
         path: '/api/mocs/moc-basic-123/files/file-pdf-123',
         pathParameters: { id: 'moc-basic-123', fileId: 'file-pdf-123' },
@@ -242,7 +242,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should fail with 404 for non-existent file', async () => {
       // Given: Delete request for non-existent file
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'DELETE',
         path: '/api/mocs/moc-basic-123/files/non-existent-file',
         pathParameters: { id: 'moc-basic-123', fileId: 'non-existent-file' },
@@ -263,7 +263,7 @@ describe('File Upload Lambda Handler - Integration Tests', () => {
 
     it('should handle S3 delete failure gracefully', async () => {
       // Given: S3 delete fails but database succeeds
-      const event = createMockEvent({
+      const _event = createMockEvent({
         method: 'DELETE',
         path: '/api/mocs/moc-basic-123/files/file-pdf-123',
         pathParameters: { id: 'moc-basic-123', fileId: 'file-pdf-123' },
