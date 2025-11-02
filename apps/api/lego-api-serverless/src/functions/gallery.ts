@@ -15,13 +15,17 @@ import {
   UpdateGalleryImageSchema,
   ListGalleryImagesQuerySchema,
   GalleryImageIdSchema,
+  CreateAlbumSchema,
+  UpdateAlbumSchema,
+  ListAlbumsQuerySchema,
+  AlbumIdSchema,
 } from '@/lib/validation/gallery-schemas'
 import { db } from '@/lib/db/client'
 import { getS3Client, uploadToS3 } from '@/lib/storage/s3-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { indexDocument, deleteDocument } from '@/lib/search/opensearch-client'
-import { galleryImages } from '@/db/schema'
-import { eq, and, isNull, desc, count } from 'drizzle-orm'
+import { galleryImages, galleryAlbums } from '@/db/schema'
+import { eq, and, isNull, desc, count, sql } from 'drizzle-orm'
 import { getEnv } from '@/lib/utils/env'
 import { parseMultipartForm, getFile, getField } from '@/lib/utils/multipart-parser'
 import { processImage, generateThumbnail } from '@/lib/services/image-processing'
@@ -62,6 +66,27 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     if (path.startsWith('/api/images/') && method === 'DELETE') {
       return handleDeleteImage(event, userId, pathParams.id!)
+    }
+
+    // Album routes
+    if (path === '/api/albums' && method === 'GET') {
+      return handleListAlbums(event, userId)
+    }
+
+    if (path === '/api/albums' && method === 'POST') {
+      return handleCreateAlbum(event, userId)
+    }
+
+    if (path.startsWith('/api/albums/') && method === 'GET') {
+      return handleGetAlbum(event, userId, pathParams.id!)
+    }
+
+    if (path.startsWith('/api/albums/') && method === 'PATCH') {
+      return handleUpdateAlbum(event, userId, pathParams.id!)
+    }
+
+    if (path.startsWith('/api/albums/') && method === 'DELETE') {
+      return handleDeleteAlbum(event, userId, pathParams.id!)
     }
 
     return createErrorResponse(404, 'NOT_FOUND', 'Route not found')
@@ -556,5 +581,429 @@ async function handleDeleteImage(
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
     return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete image')
+  }
+}
+
+/**
+ * POST /api/albums - Create album
+ */
+async function handleCreateAlbum(
+  event: APIGatewayProxyEventV2,
+  userId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Parse and validate request body
+    const body = JSON.parse(event.body || '{}')
+    const albumData = CreateAlbumSchema.parse(body)
+
+    // Generate unique ID for album
+    const albumId = uuidv4()
+
+    // If coverImageId is provided, verify it exists and belongs to user
+    if (albumData.coverImageId) {
+      const [coverImage] = await db
+        .select()
+        .from(galleryImages)
+        .where(eq(galleryImages.id, albumData.coverImageId))
+
+      if (!coverImage) {
+        return createErrorResponse(400, 'VALIDATION_ERROR', 'Cover image not found')
+      }
+
+      if (coverImage.userId !== userId) {
+        return createErrorResponse(403, 'FORBIDDEN', "Cannot use another user's image as cover")
+      }
+    }
+
+    // Create database record
+    const [newAlbum] = await db
+      .insert(galleryAlbums)
+      .values({
+        id: albumId,
+        userId,
+        title: albumData.title,
+        description: albumData.description || null,
+        coverImageId: albumData.coverImageId || null,
+        createdAt: new Date(),
+        lastUpdatedAt: new Date(),
+      })
+      .returning()
+
+    // Index in OpenSearch
+    try {
+      await indexDocument({
+        index: 'gallery_images',
+        id: albumId,
+        body: {
+          type: 'album',
+          userId,
+          title: albumData.title,
+          description: albumData.description || '',
+          coverImageId: albumData.coverImageId || null,
+          createdAt: newAlbum.createdAt.toISOString(),
+        },
+      })
+    } catch (error) {
+      console.error('OpenSearch indexing failed (non-critical):', error)
+    }
+
+    // Invalidate album list cache
+    try {
+      const redis = await getRedisClient()
+      const pattern = `gallery:albums:user:${userId}:*`
+      const keys = await redis.keys(pattern)
+      if (keys.length > 0) {
+        await redis.del(keys)
+        console.log(`Invalidated ${keys.length} album cache keys for user ${userId}`)
+      }
+    } catch (error) {
+      console.error('Redis cache invalidation failed (non-critical):', error)
+    }
+
+    // Build response with imageCount = 0
+    return createSuccessResponse(
+      {
+        id: newAlbum.id,
+        userId: newAlbum.userId,
+        title: newAlbum.title,
+        description: newAlbum.description,
+        coverImageId: newAlbum.coverImageId,
+        createdAt: newAlbum.createdAt,
+        lastUpdatedAt: newAlbum.lastUpdatedAt,
+        imageCount: 0,
+        coverImageUrl: null,
+      },
+      201,
+    )
+  } catch (error) {
+    console.error('Create album error:', error)
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to create album')
+  }
+}
+
+/**
+ * GET /api/albums - List albums
+ */
+async function handleListAlbums(
+  event: APIGatewayProxyEventV2,
+  userId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Validate query parameters
+    const queryParams = ListAlbumsQuerySchema.parse(event.queryStringParameters || {})
+    const { page, limit, search } = queryParams
+
+    // Generate cache key
+    const cacheKey = `gallery:albums:user:${userId}:page:${page}:limit:${limit}:search:${search || 'none'}`
+
+    // Check Redis cache
+    const redis = await getRedisClient()
+    const cached = await redis.get(cacheKey)
+    if (cached) {
+      return createSuccessResponse(JSON.parse(cached))
+    }
+
+    // Query database with image count
+    const offset = (page - 1) * limit
+
+    // Get albums with image count using left join and group by
+    const albums = await db
+      .select({
+        id: galleryAlbums.id,
+        userId: galleryAlbums.userId,
+        title: galleryAlbums.title,
+        description: galleryAlbums.description,
+        coverImageId: galleryAlbums.coverImageId,
+        createdAt: galleryAlbums.createdAt,
+        lastUpdatedAt: galleryAlbums.lastUpdatedAt,
+        imageCount: sql<number>`CAST(COUNT(${galleryImages.id}) AS INTEGER)`,
+        coverImageUrl: sql<
+          string | null
+        >`MAX(CASE WHEN ${galleryImages.id} = ${galleryAlbums.coverImageId} THEN ${galleryImages.imageUrl} ELSE NULL END)`,
+      })
+      .from(galleryAlbums)
+      .leftJoin(galleryImages, eq(galleryImages.albumId, galleryAlbums.id))
+      .where(eq(galleryAlbums.userId, userId))
+      .groupBy(galleryAlbums.id)
+      .orderBy(desc(galleryAlbums.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    // Count total albums
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.userId, userId))
+
+    const response = {
+      data: albums,
+      pagination: {
+        page,
+        limit,
+        total: Number(total),
+        totalPages: Math.ceil(Number(total) / limit),
+      },
+    }
+
+    // Cache result for 5 minutes
+    await redis.setEx(cacheKey, 300, JSON.stringify(response))
+
+    return createSuccessResponse(response)
+  } catch (error) {
+    console.error('List albums error:', error)
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to list albums')
+  }
+}
+
+/**
+ * GET /api/albums/:id - Get album with all images
+ */
+async function handleGetAlbum(
+  _event: APIGatewayProxyEventV2,
+  userId: string,
+  albumId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Validate album ID
+    AlbumIdSchema.parse({ id: albumId })
+
+    // Check cache
+    const cacheKey = `gallery:album:detail:${albumId}`
+    const redis = await getRedisClient()
+    const cached = await redis.get(cacheKey)
+    if (cached) {
+      const album = JSON.parse(cached)
+      // Verify ownership
+      if (album.userId !== userId) {
+        return createErrorResponse(403, 'FORBIDDEN', 'Access denied to this album')
+      }
+      return createSuccessResponse(album)
+    }
+
+    // Query database for album
+    const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, albumId))
+
+    if (!album) {
+      return createErrorResponse(404, 'NOT_FOUND', 'Album not found')
+    }
+
+    // Verify ownership
+    if (album.userId !== userId) {
+      return createErrorResponse(403, 'FORBIDDEN', 'Access denied to this album')
+    }
+
+    // Get all images in this album
+    const images = await db
+      .select()
+      .from(galleryImages)
+      .where(eq(galleryImages.albumId, albumId))
+      .orderBy(desc(galleryImages.createdAt))
+
+    // Build response with eager-loaded images
+    const response = {
+      ...album,
+      images,
+      imageCount: images.length,
+    }
+
+    // Cache for 10 minutes
+    await redis.setEx(cacheKey, 600, JSON.stringify(response))
+
+    return createSuccessResponse(response)
+  } catch (error) {
+    console.error('Get album error:', error)
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to get album')
+  }
+}
+
+/**
+ * PATCH /api/albums/:id - Update album metadata
+ */
+async function handleUpdateAlbum(
+  event: APIGatewayProxyEventV2,
+  userId: string,
+  albumId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Validate album ID
+    AlbumIdSchema.parse({ id: albumId })
+
+    // Parse and validate request body
+    const body = JSON.parse(event.body || '{}')
+    const updateData = UpdateAlbumSchema.parse(body)
+
+    // Check if album exists and verify ownership
+    const [existingAlbum] = await db
+      .select()
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.id, albumId))
+
+    if (!existingAlbum) {
+      return createErrorResponse(404, 'NOT_FOUND', 'Album not found')
+    }
+
+    if (existingAlbum.userId !== userId) {
+      return createErrorResponse(403, 'FORBIDDEN', 'Access denied to this album')
+    }
+
+    // If coverImageId is being updated, verify it exists and belongs to user
+    if (updateData.coverImageId !== undefined && updateData.coverImageId !== null) {
+      const [coverImage] = await db
+        .select()
+        .from(galleryImages)
+        .where(eq(galleryImages.id, updateData.coverImageId))
+
+      if (!coverImage) {
+        return createErrorResponse(400, 'VALIDATION_ERROR', 'Cover image not found')
+      }
+
+      if (coverImage.userId !== userId) {
+        return createErrorResponse(403, 'FORBIDDEN', "Cannot use another user's image as cover")
+      }
+    }
+
+    // Update album
+    const [updatedAlbum] = await db
+      .update(galleryAlbums)
+      .set({
+        ...updateData,
+        lastUpdatedAt: new Date(),
+      })
+      .where(eq(galleryAlbums.id, albumId))
+      .returning()
+
+    // Update OpenSearch index
+    try {
+      await indexDocument({
+        index: 'gallery_images',
+        id: albumId,
+        body: {
+          type: 'album',
+          userId: updatedAlbum.userId,
+          title: updatedAlbum.title,
+          description: updatedAlbum.description || '',
+          coverImageId: updatedAlbum.coverImageId || null,
+          createdAt: updatedAlbum.createdAt.toISOString(),
+        },
+      })
+    } catch (error) {
+      console.error('OpenSearch update failed (non-critical):', error)
+    }
+
+    // Invalidate caches
+    const redis = await getRedisClient()
+    await redis.del(`gallery:album:detail:${albumId}`)
+
+    // Invalidate list caches for this user
+    try {
+      const pattern = `gallery:albums:user:${userId}:*`
+      const keys = await redis.keys(pattern)
+      if (keys.length > 0) {
+        await redis.del(keys)
+        console.log(`Invalidated ${keys.length} album cache keys for user ${userId}`)
+      }
+    } catch (error) {
+      console.error('Redis list cache invalidation failed (non-critical):', error)
+    }
+
+    return createSuccessResponse(updatedAlbum)
+  } catch (error) {
+    console.error('Update album error:', error)
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update album')
+  }
+}
+
+/**
+ * DELETE /api/albums/:id - Delete album (sets albumId=null for contained images)
+ */
+async function handleDeleteAlbum(
+  _event: APIGatewayProxyEventV2,
+  userId: string,
+  albumId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Validate album ID
+    AlbumIdSchema.parse({ id: albumId })
+
+    // Check if album exists and verify ownership
+    const [existingAlbum] = await db
+      .select()
+      .from(galleryAlbums)
+      .where(eq(galleryAlbums.id, albumId))
+
+    if (!existingAlbum) {
+      return createErrorResponse(404, 'NOT_FOUND', 'Album not found')
+    }
+
+    if (existingAlbum.userId !== userId) {
+      return createErrorResponse(403, 'FORBIDDEN', 'Access denied to this album')
+    }
+
+    // Set albumId=null for all images in this album (do not delete images)
+    await db
+      .update(galleryImages)
+      .set({ albumId: null, lastUpdatedAt: new Date() })
+      .where(eq(galleryImages.albumId, albumId))
+
+    // Delete album from database
+    await db.delete(galleryAlbums).where(eq(galleryAlbums.id, albumId))
+
+    // Delete from OpenSearch
+    try {
+      await deleteDocument({
+        index: 'gallery_images',
+        id: albumId,
+      })
+    } catch (error) {
+      console.error('OpenSearch delete failed (non-critical):', error)
+    }
+
+    // Invalidate caches
+    const redis = await getRedisClient()
+    await redis.del(`gallery:album:detail:${albumId}`)
+
+    // Invalidate list caches for this user
+    try {
+      const pattern = `gallery:albums:user:${userId}:*`
+      const keys = await redis.keys(pattern)
+      if (keys.length > 0) {
+        await redis.del(keys)
+        console.log(`Invalidated ${keys.length} album cache keys for user ${userId}`)
+      }
+    } catch (error) {
+      console.error('Redis list cache invalidation failed (non-critical):', error)
+    }
+
+    // Also invalidate image list caches since images were updated
+    try {
+      const pattern = `gallery:images:user:${userId}:*`
+      const keys = await redis.keys(pattern)
+      if (keys.length > 0) {
+        await redis.del(keys)
+        console.log(`Invalidated ${keys.length} image cache keys for user ${userId}`)
+      }
+    } catch (error) {
+      console.error('Redis image cache invalidation failed (non-critical):', error)
+    }
+
+    return createSuccessResponse({ message: 'Album deleted successfully' }, 204)
+  } catch (error) {
+    console.error('Delete album error:', error)
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete album')
   }
 }
