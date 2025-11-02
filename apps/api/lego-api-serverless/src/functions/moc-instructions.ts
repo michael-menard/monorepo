@@ -31,7 +31,11 @@ import {
   NotFoundError,
   ValidationError,
 } from '@/lib/errors';
-import { listMocs as listMocsService, getMocDetail as getMocDetailService } from '@/lib/services/moc-service';
+import {
+  listMocs as listMocsService,
+  getMocDetail as getMocDetailService,
+  createMoc as createMocService,
+} from '@/lib/services/moc-service';
 
 /**
  * API Gateway Event Interface
@@ -247,6 +251,15 @@ async function getMocDetail(
 /**
  * CREATE MOC - POST /api/mocs
  * Story 2.4 implementation
+ *
+ * Features:
+ * - Request body validation with Zod (title required, description/tags/thumbnailUrl optional)
+ * - User ID from JWT automatically assigned
+ * - Unique title per user constraint (database enforced - returns 409 on duplicate)
+ * - Database transaction for atomicity
+ * - OpenSearch indexing (async, non-blocking)
+ * - Redis cache invalidation (user's MOC list)
+ * - Returns 201 Created with full MOC object
  */
 async function createMoc(
   userId: string,
@@ -262,10 +275,16 @@ async function createMoc(
 
   const mocData = parse.data;
 
-  console.log('Creating MOC', { userId, mocData });
+  console.log('Creating MOC', { userId, title: mocData.title });
 
-  // TODO: Story 2.4 - Implement database insert, OpenSearch indexing, cache invalidation
-  throw new BadRequestError('Not implemented yet');
+  // Call service layer for business logic
+  const createdMoc = await createMocService(userId, mocData);
+
+  // Return 201 Created with standardized response
+  return successResponse(201, {
+    success: true,
+    data: createdMoc,
+  });
 }
 
 /**

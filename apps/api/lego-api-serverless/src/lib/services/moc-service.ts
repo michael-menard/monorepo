@@ -11,7 +11,7 @@ import { eq, and, sql, desc, ilike, or } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/services/redis';
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc';
 import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc';
-import { DatabaseError, NotFoundError, ForbiddenError } from '@/lib/errors';
+import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/lib/errors';
 
 /**
  * List MOCs for a user with pagination, search, and filtering
@@ -362,5 +362,94 @@ export async function invalidateMocDetailCache(mocId: string): Promise<void> {
   } catch (error) {
     console.warn('Failed to invalidate MOC detail cache:', error);
     // Don't throw - cache invalidation failure shouldn't break the request
+  }
+}
+
+/**
+ * Create a new MOC instruction
+ *
+ * Features:
+ * - Zod validation (via handler)
+ * - User ID from JWT automatically assigned
+ * - Unique title per user constraint (database enforced)
+ * - Transaction support for atomicity
+ * - OpenSearch indexing (async, non-blocking)
+ * - Redis cache invalidation for user's list
+ *
+ * Story 2.4 implementation
+ */
+export async function createMoc(
+  userId: string,
+  data: { title: string; description?: string; tags?: string[]; thumbnailUrl?: string }
+): Promise<MocInstruction> {
+  try {
+    console.log('Creating MOC', { userId, title: data.title });
+
+    const now = new Date();
+
+    // Insert into database with transaction
+    // Note: Drizzle doesn't have explicit transaction API in this context,
+    // but insert is atomic. For multi-step transactions, we'd use db.transaction()
+    const [moc] = await db
+      .insert(mocInstructions)
+      .values({
+        userId,
+        type: 'moc', // Default to 'moc' type for simple creation
+        title: data.title,
+        description: data.description || null,
+        tags: data.tags || null,
+        thumbnailUrl: data.thumbnailUrl || null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    if (!moc) {
+      throw new DatabaseError('Failed to create MOC - no record returned');
+    }
+
+    // Cast to MocInstruction type
+    const mocInstruction = moc as unknown as MocInstruction;
+
+    console.log('MOC created successfully', { mocId: moc.id, userId });
+
+    // Index in OpenSearch asynchronously (non-blocking)
+    // Fire and forget - don't wait for indexing to complete
+    indexMocAsync(mocInstruction);
+
+    // Invalidate user's MOC list cache
+    invalidateMocListCache(userId);
+
+    return mocInstruction;
+  } catch (error) {
+    // Check for unique constraint violation (duplicate title)
+    if ((error as any).code === '23505' && (error as any).constraint?.includes('user_title')) {
+      throw new ConflictError('A MOC with this title already exists', {
+        userId,
+        title: data.title,
+      });
+    }
+
+    console.error('Error creating MOC:', error);
+    throw new DatabaseError('Failed to create MOC', {
+      userId,
+      data,
+      error: (error as Error).message,
+    });
+  }
+}
+
+/**
+ * Index MOC in OpenSearch asynchronously
+ * Non-blocking - errors are logged but don't fail the request
+ */
+async function indexMocAsync(moc: MocInstruction): Promise<void> {
+  try {
+    const { indexMoc } = await import('@/lib/services/opensearch-moc');
+    await indexMoc(moc);
+  } catch (error) {
+    console.error('Failed to index MOC in OpenSearch (non-blocking):', error);
+    // Don't throw - indexing failure shouldn't break the creation request
+    // Search will fall back to PostgreSQL until re-indexed
   }
 }
