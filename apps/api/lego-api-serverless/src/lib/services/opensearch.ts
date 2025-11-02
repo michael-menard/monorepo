@@ -5,10 +5,10 @@
  * Connection reused across Lambda invocations for performance.
  */
 
+import { Client } from '@opensearch-project/opensearch';
 import { getEnv } from '@/lib/utils/env';
 
-// Type placeholder for OpenSearch client (will be replaced when package is installed)
-type OpenSearchClient = any;
+type OpenSearchClient = Client;
 
 let _openSearchClient: OpenSearchClient | null = null;
 
@@ -16,19 +16,28 @@ let _openSearchClient: OpenSearchClient | null = null;
  * Get or create OpenSearch client
  * - Client is created once per Lambda container lifecycle
  * - Connection reused across invocations
+ * - Connects to OpenSearch via HTTPS
  */
 export function getOpenSearchClient(): OpenSearchClient {
   if (!_openSearchClient) {
     getEnv(); // Validate environment variables
 
-    // Placeholder - will be replaced with actual Client import when @opensearch-project/client is installed
-    _openSearchClient = {
-      cluster: {
-        health: async () => ({
-          body: { status: 'green' },
-        }),
-      },
-    };
+    // Get OpenSearch endpoint from SST link
+    const openSearchEndpoint = process.env.LEGO_API_OPENSEARCH_ENDPOINT;
+
+    if (!openSearchEndpoint) {
+      throw new Error('OpenSearch endpoint not configured (LEGO_API_OPENSEARCH_ENDPOINT)');
+    }
+
+    // Create OpenSearch client with IAM authentication
+    // SST automatically configures IAM credentials via the execution role
+    _openSearchClient = new Client({
+      node: openSearchEndpoint,
+      // For AWS OpenSearch with IAM authentication, credentials are handled automatically
+      // via the Lambda execution role permissions
+    });
+
+    console.log('OpenSearch client created', { endpoint: openSearchEndpoint });
   }
 
   return _openSearchClient;

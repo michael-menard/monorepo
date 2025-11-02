@@ -379,6 +379,7 @@ export default $config({
         NODE_ENV: stage === "production" ? "production" : "development",
         STAGE: stage,
         LEGO_API_BUCKET_NAME: bucket.name,
+        LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
     });
 
