@@ -20,9 +20,6 @@ import {
   errorResponseFromError,
   type APIGatewayProxyResult,
 } from '@/lib/responses';
-import type {
-  MocInstruction,
-} from '@/types/moc';
 import {
   CreateMocSchema,
   UpdateMocSchema,
@@ -34,6 +31,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '@/lib/errors';
+import { listMocs as listMocsService } from '@/lib/services/moc-service';
 
 /**
  * API Gateway Event Interface
@@ -180,6 +178,13 @@ function getUserIdFromEvent(event: APIGatewayEvent): string {
 /**
  * LIST MOCS - GET /api/mocs
  * Story 2.2 implementation
+ *
+ * Features:
+ * - Pagination with page/limit query params (default: page=1, limit=20)
+ * - Search via OpenSearch (falls back to PostgreSQL ILIKE)
+ * - Tag filtering
+ * - Redis caching with 5-minute TTL
+ * - Cache invalidation on mutations
  */
 async function listMocs(
   userId: string,
@@ -197,14 +202,14 @@ async function listMocs(
 
   console.log('Listing MOCs', { userId, query });
 
-  // TODO: Story 2.2 - Implement pagination, search, and caching
-  // Placeholder response
-  const mockMocs: MocInstruction[] = [];
+  // Call service layer for business logic
+  const { mocs, total } = await listMocsService(userId, query);
 
+  // Return standardized response matching existing API contract
   return successResponse(200, {
     success: true,
-    data: mockMocs,
-    total: 0,
+    data: mocs,
+    total,
     page: query.page,
     limit: query.limit,
   });
