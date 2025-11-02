@@ -6,7 +6,7 @@
  */
 
 import { db } from '@/lib/db/client';
-import { mocInstructions, mocFiles, mocGalleryImages, mocGalleryAlbums, galleryImages, mocPartsLists } from '@/db/schema';
+import { mocInstructions, mocFiles, mocGalleryImages, mocGalleryAlbums, galleryImages, galleryAlbums, mocPartsLists } from '@/db/schema';
 import { eq, and, sql, desc, ilike, or } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/services/redis';
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc';
@@ -605,8 +605,16 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
 
   console.log('Performing cascade deletion for MOC', { mocId });
 
-  // Fetch all file URLs for S3 cleanup before deletion
-  const files = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId));
+  // Fetch MOC-owned files for S3 cleanup (before deletion)
+  // These are files that belong exclusively to this MOC (instructions, parts lists, thumbnails)
+  const mocOwnedFiles = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId));
+
+  // Fetch gallery images linked to this MOC to check for orphans
+  const linkedGalleryImages = await db
+    .select({ id: galleryImages.id, imageUrl: galleryImages.imageUrl })
+    .from(mocGalleryImages)
+    .innerJoin(galleryImages, eq(mocGalleryImages.galleryImageId, galleryImages.id))
+    .where(eq(mocGalleryImages.mocId, mocId));
 
   // Cascade deletion (database handles foreign key constraints)
   // Order matters for foreign key constraints:
@@ -621,11 +629,37 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
   await db.delete(mocFiles).where(eq(mocFiles.mocId, mocId));
   await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId));
 
-  console.log('MOC deleted from database', { mocId, filesCount: files.length });
+  console.log('MOC deleted from database', {
+    mocId,
+    mocOwnedFilesCount: mocOwnedFiles.length,
+    linkedGalleryImagesCount: linkedGalleryImages.length,
+  });
+
+  // Determine which gallery images are now orphaned (not referenced by any other MOC or album)
+  const orphanedGalleryImageUrls: string[] = [];
+  for (const galleryImage of linkedGalleryImages) {
+    const isOrphaned = await checkIfGalleryImageIsOrphaned(galleryImage.id);
+    if (isOrphaned) {
+      orphanedGalleryImageUrls.push(galleryImage.imageUrl);
+      // Delete the orphaned gallery image from database
+      await db.delete(galleryImages).where(eq(galleryImages.id, galleryImage.id));
+    }
+  }
+
+  console.log('Orphaned gallery images identified', {
+    mocId,
+    orphanedCount: orphanedGalleryImageUrls.length,
+  });
 
   // Async S3 cleanup (fire-and-forget)
-  if (files.length > 0) {
-    deleteS3FilesAsync(files.map((f) => f.fileUrl));
+  // Only delete MOC-owned files and orphaned gallery images
+  const filesToDelete = [
+    ...mocOwnedFiles.map((f) => f.fileUrl),
+    ...orphanedGalleryImageUrls,
+  ];
+
+  if (filesToDelete.length > 0) {
+    deleteS3FilesAsync(filesToDelete);
   }
 
   // Async OpenSearch deletion (fire-and-forget)
@@ -636,6 +670,48 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
   invalidateMocListCache(userId);
 
   console.log('MOC deletion complete', { mocId });
+}
+
+/**
+ * Check if a gallery image is orphaned (not referenced by any MOC or album)
+ * Called after deleting moc_gallery_images links to determine if the image should be deleted
+ */
+async function checkIfGalleryImageIsOrphaned(galleryImageId: string): Promise<boolean> {
+  // Check if image is linked to any other MOCs
+  const [mocLink] = await db
+    .select({ id: mocGalleryImages.id })
+    .from(mocGalleryImages)
+    .where(eq(mocGalleryImages.galleryImageId, galleryImageId))
+    .limit(1);
+
+  if (mocLink) {
+    return false; // Still referenced by another MOC
+  }
+
+  // Check if image is the cover image of any album
+  const [albumCoverLink] = await db
+    .select({ id: galleryAlbums.id })
+    .from(galleryAlbums)
+    .where(eq(galleryAlbums.coverImageId, galleryImageId))
+    .limit(1);
+
+  if (albumCoverLink) {
+    return false; // Used as album cover
+  }
+
+  // Check if image belongs to any album (via albumId in gallery_images)
+  const [galleryImage] = await db
+    .select({ albumId: galleryImages.albumId })
+    .from(galleryImages)
+    .where(eq(galleryImages.id, galleryImageId))
+    .limit(1);
+
+  if (galleryImage?.albumId) {
+    return false; // Belongs to an album
+  }
+
+  // Image is orphaned - not referenced by any MOC or album
+  return true;
 }
 
 /**
