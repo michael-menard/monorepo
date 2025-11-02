@@ -358,6 +358,39 @@ export default $config({
 
     api.route("GET /health", healthCheckFunction);
 
+    // ========================================
+    // Story 2.1: MOC Instructions Lambda + API Routes
+    // ========================================
+
+    /**
+     * MOC Instructions Lambda Function
+     * - Multi-method handler for CRUD operations
+     * - JWT authentication via Cognito
+     * - Connected to PostgreSQL, Redis, OpenSearch, S3
+     */
+    const mocInstructionsFunction = new sst.aws.Function("MocInstructionsFunction", {
+      handler: "src/functions/moc-instructions.handler",
+      runtime: "nodejs20.x",
+      timeout: "30 seconds",
+      memory: "512 MB",
+      vpc,
+      link: [postgres, redis, openSearch, bucket],
+      environment: {
+        NODE_ENV: stage === "production" ? "production" : "development",
+        STAGE: stage,
+      },
+    });
+
+    // TODO: Add JWT authorizer for Cognito (Story 2.1 AC 8)
+    // For now, routes are public (will add auth in next commit)
+
+    // MOC Instructions API Routes
+    api.route("GET /api/mocs", mocInstructionsFunction);
+    api.route("GET /api/mocs/{id}", mocInstructionsFunction);
+    api.route("POST /api/mocs", mocInstructionsFunction);
+    api.route("PATCH /api/mocs/{id}", mocInstructionsFunction);
+    api.route("DELETE /api/mocs/{id}", mocInstructionsFunction);
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,
@@ -395,6 +428,8 @@ export default $config({
       // Lambda Functions
       healthCheckFunctionName: healthCheckFunction.name,
       healthCheckFunctionArn: healthCheckFunction.arn,
+      mocInstructionsFunctionName: mocInstructionsFunction.name,
+      mocInstructionsFunctionArn: mocInstructionsFunction.arn,
     };
   },
 });
