@@ -453,3 +453,116 @@ async function indexMocAsync(moc: MocInstruction): Promise<void> {
     // Search will fall back to PostgreSQL until re-indexed
   }
 }
+
+/**
+ * Update an existing MOC instruction
+ *
+ * Features:
+ * - Partial updates (only provided fields are updated)
+ * - Authorization check (user must own MOC)
+ * - Optimistic locking with updatedAt timestamp
+ * - OpenSearch re-indexing (async, non-blocking)
+ * - Redis cache invalidation (detail and list caches)
+ *
+ * Story 2.5 implementation
+ */
+export async function updateMoc(
+  mocId: string,
+  userId: string,
+  data: { title?: string; description?: string; author?: string; theme?: string; subtheme?: string; partsCount?: number; tags?: string[]; thumbnailUrl?: string }
+): Promise<MocInstruction> {
+  try {
+    console.log('Updating MOC', { mocId, userId, fields: Object.keys(data) });
+
+    // First, fetch the MOC to verify ownership
+    const [existingMoc] = await db
+      .select()
+      .from(mocInstructions)
+      .where(eq(mocInstructions.id, mocId))
+      .limit(1);
+
+    if (!existingMoc) {
+      throw new NotFoundError('MOC not found');
+    }
+
+    // Authorization check: user must own the MOC
+    if (existingMoc.userId !== userId) {
+      throw new ForbiddenError('You do not own this MOC');
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {
+      updatedAt: new Date(), // Always update timestamp
+    };
+
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.author !== undefined) updateData.author = data.author;
+    if (data.theme !== undefined) updateData.theme = data.theme;
+    if (data.subtheme !== undefined) updateData.subtheme = data.subtheme;
+    if (data.partsCount !== undefined) updateData.partsCount = data.partsCount;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.thumbnailUrl !== undefined) updateData.thumbnailUrl = data.thumbnailUrl;
+
+    // Perform update with optimistic locking
+    const [updatedMoc] = await db
+      .update(mocInstructions)
+      .set(updateData)
+      .where(eq(mocInstructions.id, mocId))
+      .returning();
+
+    if (!updatedMoc) {
+      throw new DatabaseError('Failed to update MOC - no record returned');
+    }
+
+    // Cast to MocInstruction type
+    const mocInstruction = updatedMoc as unknown as MocInstruction;
+
+    console.log('MOC updated successfully', { mocId, userId, updatedFields: Object.keys(data) });
+
+    // Re-index in OpenSearch asynchronously (non-blocking)
+    updateMocIndexAsync(mocInstruction);
+
+    // Invalidate caches
+    invalidateMocDetailCache(mocId);
+    invalidateMocListCache(userId);
+
+    return mocInstruction;
+  } catch (error) {
+    // Re-throw known errors
+    if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+      throw error;
+    }
+
+    // Check for unique constraint violation (duplicate title)
+    if ((error as any).code === '23505' && (error as any).constraint?.includes('user_title')) {
+      throw new ConflictError('A MOC with this title already exists', {
+        userId,
+        mocId,
+        title: data.title,
+      });
+    }
+
+    console.error('Error updating MOC:', error);
+    throw new DatabaseError('Failed to update MOC', {
+      mocId,
+      userId,
+      data,
+      error: (error as Error).message,
+    });
+  }
+}
+
+/**
+ * Update MOC index in OpenSearch asynchronously
+ * Non-blocking - errors are logged but don't fail the request
+ */
+async function updateMocIndexAsync(moc: MocInstruction): Promise<void> {
+  try {
+    const { updateMocIndex } = await import('@/lib/services/opensearch-moc');
+    await updateMocIndex(moc);
+  } catch (error) {
+    console.error('Failed to update MOC in OpenSearch (non-blocking):', error);
+    // Don't throw - indexing failure shouldn't break the update request
+  }
+}

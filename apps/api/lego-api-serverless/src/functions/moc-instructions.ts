@@ -35,6 +35,7 @@ import {
   listMocs as listMocsService,
   getMocDetail as getMocDetailService,
   createMoc as createMocService,
+  updateMoc as updateMocService,
 } from '@/lib/services/moc-service';
 
 /**
@@ -308,8 +309,14 @@ async function updateMoc(
 
   console.log('Updating MOC', { mocId, userId, updateData });
 
-  // TODO: Story 2.5 - Implement authorization check, update, re-indexing, cache invalidation
-  throw new NotFoundError('MOC not found');
+  // Call service layer for business logic
+  const updatedMoc = await updateMocService(mocId, userId, updateData);
+
+  // Return standardized response
+  return successResponse(200, {
+    success: true,
+    data: updatedMoc,
+  });
 }
 
 /**
