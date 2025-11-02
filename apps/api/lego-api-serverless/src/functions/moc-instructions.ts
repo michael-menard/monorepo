@@ -31,7 +31,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '@/lib/errors';
-import { listMocs as listMocsService } from '@/lib/services/moc-service';
+import { listMocs as listMocsService, getMocDetail as getMocDetailService } from '@/lib/services/moc-service';
 
 /**
  * API Gateway Event Interface
@@ -218,6 +218,15 @@ async function listMocs(
 /**
  * GET MOC DETAIL - GET /api/mocs/:id
  * Story 2.3 implementation
+ *
+ * Features:
+ * - Authorization check (user must own MOC)
+ * - Eager loading of related entities:
+ *   - mocFiles (instructions, parts lists, thumbnails, images)
+ *   - mocGalleryImages (linked from gallery)
+ *   - mocPartsLists (parts list metadata)
+ * - Redis caching with 10-minute TTL
+ * - Cache hit logging
  */
 async function getMocDetail(
   mocId: string,
@@ -225,8 +234,14 @@ async function getMocDetail(
 ): Promise<APIGatewayProxyResult> {
   console.log('Getting MOC detail', { mocId, userId });
 
-  // TODO: Story 2.3 - Implement with eager loading and caching
-  throw new NotFoundError('MOC not found');
+  // Call service layer for business logic
+  const mocDetail = await getMocDetailService(mocId, userId);
+
+  // Return standardized response
+  return successResponse(200, {
+    success: true,
+    data: mocDetail,
+  });
 }
 
 /**

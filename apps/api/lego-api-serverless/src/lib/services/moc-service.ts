@@ -6,12 +6,12 @@
  */
 
 import { db } from '@/lib/db/client';
-import { mocInstructions } from '@/db/schema';
+import { mocInstructions, mocFiles, mocGalleryImages, galleryImages, mocPartsLists } from '@/db/schema';
 import { eq, and, sql, desc, ilike, or } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/services/redis';
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc';
-import type { MocInstruction, MocListQuery } from '@/types/moc';
-import { DatabaseError } from '@/lib/errors';
+import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc';
+import { DatabaseError, NotFoundError, ForbiddenError } from '@/lib/errors';
 
 /**
  * List MOCs for a user with pagination, search, and filtering
@@ -181,6 +181,186 @@ export async function invalidateMocListCache(userId: string): Promise<void> {
     }
   } catch (error) {
     console.warn('Failed to invalidate MOC list cache:', error);
+    // Don't throw - cache invalidation failure shouldn't break the request
+  }
+}
+
+/**
+ * Get MOC detail by ID with eager loading
+ *
+ * Features:
+ * - Authorization check (user must own the MOC)
+ * - Eager loading of related entities:
+ *   - mocFiles (instructions, parts lists, thumbnails, gallery images)
+ *   - mocGalleryImages (linked from gallery_images table)
+ *   - mocPartsLists (parts list metadata)
+ * - Redis caching (10 minute TTL)
+ * - Cache invalidation on update/delete
+ *
+ * Story 2.3 implementation
+ */
+export async function getMocDetail(mocId: string, userId: string): Promise<MocDetailResponse> {
+  const cacheKey = `moc:detail:${mocId}`;
+
+  try {
+    // Check Redis cache first
+    const cached = await getCachedMocDetail(cacheKey);
+    if (cached) {
+      // Verify user owns the cached MOC
+      if (cached.userId !== userId) {
+        throw new ForbiddenError('You do not own this MOC');
+      }
+      console.log('MOC detail cache hit', { mocId, userId });
+      return cached;
+    }
+
+    // Query MOC with basic info first
+    const [moc] = await db
+      .select()
+      .from(mocInstructions)
+      .where(eq(mocInstructions.id, mocId))
+      .limit(1);
+
+    if (!moc) {
+      throw new NotFoundError('MOC not found');
+    }
+
+    // Authorization check: user must own the MOC
+    if (moc.userId !== userId) {
+      throw new ForbiddenError('You do not own this MOC');
+    }
+
+    // Eager load related entities in parallel
+    const [files, galleryImagesData, partsLists] = await Promise.all([
+      // Load MOC files (instructions, parts lists, thumbnails, images)
+      db
+        .select()
+        .from(mocFiles)
+        .where(eq(mocFiles.mocId, mocId)),
+
+      // Load linked gallery images with full image data
+      db
+        .select({
+          id: mocGalleryImages.id,
+          galleryImageId: mocGalleryImages.galleryImageId,
+          url: galleryImages.imageUrl,
+          alt: galleryImages.title,
+          caption: galleryImages.description,
+        })
+        .from(mocGalleryImages)
+        .innerJoin(galleryImages, eq(mocGalleryImages.galleryImageId, galleryImages.id))
+        .where(eq(mocGalleryImages.mocId, mocId)),
+
+      // Load parts lists
+      db
+        .select()
+        .from(mocPartsLists)
+        .where(eq(mocPartsLists.mocId, mocId)),
+    ]);
+
+    // Cast moc to MocInstruction type
+    const mocInstruction = moc as unknown as MocInstruction;
+
+    // Construct response with all related entities
+    const response: MocDetailResponse = {
+      ...mocInstruction,
+      files: files as any, // Cast database results to MocFile type
+      images: galleryImagesData,
+      partsLists: partsLists as any, // Cast to match MocPartsList type
+    };
+
+    // Cache the result (10 minute TTL)
+    await cacheMocDetail(cacheKey, response);
+
+    console.log('MOC detail query completed', {
+      mocId,
+      userId,
+      filesCount: files.length,
+      imagesCount: galleryImagesData.length,
+      partsListsCount: partsLists.length,
+    });
+
+    return response;
+  } catch (error) {
+    // Re-throw known errors
+    if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+      throw error;
+    }
+
+    console.error('Error retrieving MOC detail:', error);
+    throw new DatabaseError('Failed to retrieve MOC detail', {
+      mocId,
+      userId,
+      error: (error as Error).message,
+    });
+  }
+}
+
+/**
+ * Get cached MOC detail from Redis
+ */
+async function getCachedMocDetail(cacheKey: string): Promise<MocDetailResponse | null> {
+  try {
+    const redis = await getRedisClient();
+    const cached = await redis.get(cacheKey);
+
+    if (!cached) {
+      return null;
+    }
+
+    const parsed = JSON.parse(cached);
+
+    // Convert date strings back to Date objects
+    return {
+      ...parsed,
+      createdAt: new Date(parsed.createdAt),
+      updatedAt: new Date(parsed.updatedAt),
+      uploadedDate: parsed.uploadedDate ? new Date(parsed.uploadedDate) : null,
+      files: parsed.files.map((file: any) => ({
+        ...file,
+        createdAt: new Date(file.createdAt),
+        updatedAt: new Date(file.updatedAt),
+      })),
+      partsLists: parsed.partsLists.map((list: any) => ({
+        ...list,
+        createdAt: new Date(list.createdAt),
+        updatedAt: new Date(list.updatedAt),
+      })),
+    };
+  } catch (error) {
+    console.warn('Redis cache read failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Cache MOC detail in Redis with 10 minute TTL
+ */
+async function cacheMocDetail(cacheKey: string, data: MocDetailResponse): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+    const TTL = 600; // 10 minutes
+
+    await redis.setEx(cacheKey, TTL, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Redis cache write failed:', error);
+    // Don't throw - caching failure shouldn't break the request
+  }
+}
+
+/**
+ * Invalidate MOC detail cache
+ * Called after update/delete operations
+ */
+export async function invalidateMocDetailCache(mocId: string): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+    const cacheKey = `moc:detail:${mocId}`;
+
+    await redis.del(cacheKey);
+    console.log('Invalidated MOC detail cache', { mocId });
+  } catch (error) {
+    console.warn('Failed to invalidate MOC detail cache:', error);
     // Don't throw - cache invalidation failure shouldn't break the request
   }
 }

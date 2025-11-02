@@ -128,6 +128,7 @@ export type MocListQuery = z.infer<typeof MocListQuerySchema>;
 
 /**
  * MOC File Entity
+ * Matches moc_files table schema
  */
 export const MocFileSchema = z.object({
   id: z.string().uuid(),
@@ -136,9 +137,7 @@ export const MocFileSchema = z.object({
   fileUrl: z.string(),
   originalFilename: z.string().nullable(),
   mimeType: z.string().nullable(),
-  fileSize: z.number().int().nullable(),
   createdAt: z.date(),
-  updatedAt: z.date(),
 });
 
 export type MocFile = z.infer<typeof MocFileSchema>;
