@@ -392,6 +392,35 @@ export default $config({
     api.route("PATCH /api/mocs/{id}", mocInstructionsFunction);
     api.route("DELETE /api/mocs/{id}", mocInstructionsFunction);
 
+    // ========================================
+    // Story 2.7: MOC File Upload Lambda
+    // ========================================
+
+    /**
+     * MOC File Upload Lambda Function
+     * - Handles multipart/form-data file uploads
+     * - JWT authentication via Cognito
+     * - Validates file type, size, and MIME type
+     * - Uploads to S3 with metadata
+     * - Creates database records
+     */
+    const mocFileUploadFunction = new sst.aws.Function("MocFileUploadFunction", {
+      handler: "src/functions/moc-file-upload.handler",
+      runtime: "nodejs20.x",
+      timeout: "60 seconds", // Longer timeout for file uploads
+      memory: "1024 MB", // More memory for file processing
+      vpc,
+      link: [postgres, bucket],
+      environment: {
+        NODE_ENV: stage === "production" ? "production" : "development",
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+      },
+    });
+
+    // MOC File Upload Route
+    api.route("POST /api/mocs/{id}/files", mocFileUploadFunction);
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,
