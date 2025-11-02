@@ -1,0 +1,47 @@
+/**
+ * Redis Client for Caching
+ *
+ * Provides configured Redis client for caching API responses.
+ */
+
+import { createClient } from 'redis'
+import { getEnv } from '@/lib/utils/env'
+
+let _redisClient: ReturnType<typeof createClient> | null = null
+
+/**
+ * Get or create Redis client instance
+ * - Client is reused across Lambda invocations
+ * - Automatically connects on first use
+ */
+export async function getRedisClient(): Promise<ReturnType<typeof createClient>> {
+  if (!_redisClient) {
+    const env = getEnv()
+
+    _redisClient = createClient({
+      url: `redis://${env.REDIS_HOST}:${env.REDIS_PORT || 6379}`,
+      socket: {
+        // Serverless optimizations
+        connectTimeout: 5000,
+        keepAlive: true,
+      },
+    })
+
+    _redisClient.on('error', err => console.error('Redis Client Error:', err))
+
+    await _redisClient.connect()
+  }
+
+  return _redisClient
+}
+
+/**
+ * Close Redis connection
+ * - Should be called during Lambda shutdown (if implementing graceful shutdown)
+ */
+export async function closeRedisClient(): Promise<void> {
+  if (_redisClient) {
+    await _redisClient.quit()
+    _redisClient = null
+  }
+}

@@ -4,7 +4,7 @@
  * Tests file upload flow including multipart parsing, validation, S3 upload.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createMockEvent } from '@/__tests__/fixtures/mock-events'
 

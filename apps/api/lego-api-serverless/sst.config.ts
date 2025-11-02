@@ -453,6 +453,46 @@ export default $config({
     // MOC File Download Route
     api.route('GET /api/mocs/{mocId}/files/{fileId}/download', mocFileDownloadFunction)
 
+    // ========================================
+    // Story 3.1 & 3.2: Gallery Images Lambda
+    // ========================================
+
+    /**
+     * Gallery Images Lambda Function
+     * - Multi-method handler for gallery CRUD and image uploads
+     * - JWT authentication via Cognito
+     * - Sharp image processing for uploads (requires 2048 MB memory)
+     * - Connected to PostgreSQL, Redis, OpenSearch, S3
+     */
+    const galleryFunction = new sst.aws.Function('GalleryFunction', {
+      handler: 'src/functions/gallery.handler',
+      runtime: 'nodejs20.x',
+      timeout: '60 seconds', // Story 3.2 AC #9: Longer timeout for Sharp processing
+      memory: '2048 MB', // Story 3.2 AC #9: Required for Sharp image processing
+      vpc,
+      link: [postgres, redis, openSearch, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+        LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
+      },
+    })
+
+    // Gallery API Routes
+    api.route('GET /api/images', galleryFunction)
+    api.route('GET /api/images/{id}', galleryFunction)
+    api.route('POST /api/images', galleryFunction) // Story 3.2: Upload with Sharp processing
+    api.route('PATCH /api/images/{id}', galleryFunction)
+    api.route('DELETE /api/images/{id}', galleryFunction)
+
+    // Album API Routes (Story 3.4)
+    api.route('GET /api/albums', galleryFunction)
+    api.route('GET /api/albums/{id}', galleryFunction)
+    api.route('POST /api/albums', galleryFunction)
+    api.route('PATCH /api/albums/{id}', galleryFunction)
+    api.route('DELETE /api/albums/{id}', galleryFunction)
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,
@@ -488,6 +528,12 @@ export default $config({
       healthCheckFunctionArn: healthCheckFunction.arn,
       mocInstructionsFunctionName: mocInstructionsFunction.name,
       mocInstructionsFunctionArn: mocInstructionsFunction.arn,
+      mocFileUploadFunctionName: mocFileUploadFunction.name,
+      mocFileUploadFunctionArn: mocFileUploadFunction.arn,
+      mocFileDownloadFunctionName: mocFileDownloadFunction.name,
+      mocFileDownloadFunctionArn: mocFileDownloadFunction.arn,
+      galleryFunctionName: galleryFunction.name,
+      galleryFunctionArn: galleryFunction.arn,
     }
   },
 })

@@ -24,6 +24,7 @@ export const galleryImages = pgTable(
     description: text('description'),
     tags: jsonb('tags').$type<string[]>(),
     imageUrl: text('image_url').notNull(),
+    thumbnailUrl: text('thumbnail_url'), // Thumbnail image URL
     albumId: uuid('album_id'), // Will reference galleryAlbums.id - added in migration
     flagged: boolean('flagged').default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),

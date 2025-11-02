@@ -5,7 +5,7 @@
  * Covers all CRUD operations: List, Get, Create, Update, Delete.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createMockEvent, createUnauthorizedEvent, commonEvents } from '@/__tests__/fixtures/mock-events'
 import { mockMocs, mockCreateMocPayloads, mockUpdateMocPayloads } from '@/__tests__/fixtures/mock-mocs'

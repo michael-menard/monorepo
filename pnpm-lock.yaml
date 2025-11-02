@@ -209,6 +209,9 @@ importers:
       '@monorepo/file-validator':
         specifier: workspace:*
         version: link:../../../packages/tools/file-validator
+      '@types/aws-lambda':
+        specifier: ^8.10.131
+        version: 8.10.156
       '@types/busboy':
         specifier: ^1.5.4
         version: 1.5.4
