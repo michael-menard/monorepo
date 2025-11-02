@@ -421,6 +421,35 @@ export default $config({
     // MOC File Upload Route
     api.route("POST /api/mocs/{id}/files", mocFileUploadFunction);
 
+    // ========================================
+    // Story 2.7.1: MOC File Download Lambda
+    // ========================================
+
+    /**
+     * MOC File Download Lambda Function
+     * - Generates pre-signed S3 URLs for secure file downloads
+     * - JWT authentication via Cognito
+     * - Authorization check (user must own MOC)
+     * - Supports redirect or JSON response
+     * - URLs valid for 1 hour
+     */
+    const mocFileDownloadFunction = new sst.aws.Function("MocFileDownloadFunction", {
+      handler: "src/functions/moc-file-download.handler",
+      runtime: "nodejs20.x",
+      timeout: "10 seconds",
+      memory: "256 MB",
+      vpc,
+      link: [postgres, bucket],
+      environment: {
+        NODE_ENV: stage === "production" ? "production" : "development",
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+      },
+    });
+
+    // MOC File Download Route
+    api.route("GET /api/mocs/{mocId}/files/{fileId}/download", mocFileDownloadFunction);
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,

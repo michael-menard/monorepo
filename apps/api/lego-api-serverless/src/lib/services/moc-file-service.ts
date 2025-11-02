@@ -10,7 +10,7 @@
 
 import { db } from '@/lib/db/client';
 import { mocInstructions, mocFiles } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { MocFile } from '@/types/moc';
 import {
   NotFoundError,
@@ -18,7 +18,8 @@ import {
   BadRequestError,
   DatabaseError,
 } from '@/lib/errors';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { PutObjectCommand, S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { invalidateMocDetailCache } from './moc-service';
 
 /**
@@ -155,6 +156,108 @@ export async function uploadMocFile(
   invalidateMocDetailCache(mocId);
 
   return fileRecord as unknown as MocFile;
+}
+
+/**
+ * Generate pre-signed URL for file download
+ *
+ * @param mocId - MOC ID that owns the file
+ * @param fileId - File ID to download
+ * @param userId - User ID from JWT claims
+ * @returns Pre-signed URL and file metadata
+ */
+export async function generateFileDownloadUrl(
+  mocId: string,
+  fileId: string,
+  userId: string
+): Promise<{
+  downloadUrl: string;
+  filename: string;
+  mimeType: string;
+  expiresIn: number;
+}> {
+  console.log('Generating download URL for file', { mocId, fileId, userId });
+
+  // Verify MOC exists and user owns it
+  const [moc] = await db
+    .select()
+    .from(mocInstructions)
+    .where(eq(mocInstructions.id, mocId))
+    .limit(1);
+
+  if (!moc) {
+    throw new NotFoundError('MOC not found');
+  }
+
+  if (moc.userId !== userId) {
+    throw new ForbiddenError('You do not own this MOC');
+  }
+
+  // Fetch file record
+  const [file] = await db
+    .select()
+    .from(mocFiles)
+    .where(and(eq(mocFiles.id, fileId), eq(mocFiles.mocId, mocId)))
+    .limit(1);
+
+  if (!file) {
+    throw new NotFoundError('File not found');
+  }
+
+  console.log('File record found', {
+    fileId: file.id,
+    fileType: file.fileType,
+    originalFilename: file.originalFilename,
+  });
+
+  // Extract S3 key from file URL
+  const s3Key = extractS3KeyFromUrl(file.fileUrl);
+
+  // Get bucket name
+  const bucketName = process.env.LEGO_API_BUCKET_NAME;
+  if (!bucketName) {
+    throw new DatabaseError('S3 bucket not configured');
+  }
+
+  // Generate pre-signed URL (valid for 1 hour)
+  const s3Client = new S3Client({});
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: s3Key,
+    ResponseContentDisposition: `attachment; filename="${file.originalFilename || 'download'}"`,
+    ResponseContentType: file.mimeType || 'application/octet-stream',
+  });
+
+  const expiresIn = 3600; // 1 hour in seconds
+  const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn });
+
+  console.log('Pre-signed URL generated', {
+    fileId,
+    expiresIn,
+    filename: file.originalFilename,
+  });
+
+  return {
+    downloadUrl,
+    filename: file.originalFilename || 'download',
+    mimeType: file.mimeType || 'application/octet-stream',
+    expiresIn,
+  };
+}
+
+/**
+ * Extract S3 key from full S3 URL
+ * Example: https://bucket-name.s3.region.amazonaws.com/mocs/123/instruction/file.pdf
+ * Returns: mocs/123/instruction/file.pdf
+ */
+function extractS3KeyFromUrl(fileUrl: string): string {
+  try {
+    const url = new URL(fileUrl);
+    // Remove leading slash from pathname
+    return url.pathname.substring(1);
+  } catch (error) {
+    throw new BadRequestError(`Invalid S3 URL: ${fileUrl}`);
+  }
 }
 
 /**
