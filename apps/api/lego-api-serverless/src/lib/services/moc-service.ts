@@ -6,7 +6,7 @@
  */
 
 import { db } from '@/lib/db/client';
-import { mocInstructions, mocFiles, mocGalleryImages, galleryImages, mocPartsLists } from '@/db/schema';
+import { mocInstructions, mocFiles, mocGalleryImages, mocGalleryAlbums, galleryImages, mocPartsLists } from '@/db/schema';
 import { eq, and, sql, desc, ilike, or } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/services/redis';
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc';
@@ -605,16 +605,18 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
 
   console.log('Performing cascade deletion for MOC', { mocId });
 
-  // Fetch all file URLs for S3 cleanup
+  // Fetch all file URLs for S3 cleanup before deletion
   const files = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId));
 
   // Cascade deletion (database handles foreign key constraints)
   // Order matters for foreign key constraints:
-  // 1. Delete moc_parts_lists (references moc_instructions)
-  // 2. Delete moc_gallery_images (references moc_instructions)
-  // 3. Delete moc_files (references moc_instructions)
-  // 4. Delete moc_instructions
+  // 1. Delete moc_parts_lists (references moc_instructions and moc_files)
+  // 2. Delete moc_gallery_albums (references moc_instructions)
+  // 3. Delete moc_gallery_images (references moc_instructions)
+  // 4. Delete moc_files (references moc_instructions)
+  // 5. Delete moc_instructions
   await db.delete(mocPartsLists).where(eq(mocPartsLists.mocId, mocId));
+  await db.delete(mocGalleryAlbums).where(eq(mocGalleryAlbums.mocId, mocId));
   await db.delete(mocGalleryImages).where(eq(mocGalleryImages.mocId, mocId));
   await db.delete(mocFiles).where(eq(mocFiles.mocId, mocId));
   await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId));
