@@ -378,6 +378,7 @@ export default $config({
       environment: {
         NODE_ENV: stage === "production" ? "production" : "development",
         STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
       },
     });
 

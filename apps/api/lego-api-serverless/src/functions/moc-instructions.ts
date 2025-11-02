@@ -28,7 +28,6 @@ import {
 import {
   BadRequestError,
   UnauthorizedError,
-  NotFoundError,
   ValidationError,
 } from '@/lib/errors';
 import {
@@ -36,6 +35,7 @@ import {
   getMocDetail as getMocDetailService,
   createMoc as createMocService,
   updateMoc as updateMocService,
+  deleteMoc as deleteMocService,
 } from '@/lib/services/moc-service';
 
 /**
@@ -329,6 +329,12 @@ async function deleteMoc(
 ): Promise<APIGatewayProxyResult> {
   console.log('Deleting MOC', { mocId, userId });
 
-  // TODO: Story 2.6 - Implement authorization check, cascade delete, S3 cleanup, cache invalidation
-  throw new NotFoundError('MOC not found');
+  // Call service layer for business logic
+  await deleteMocService(mocId, userId);
+
+  // Return 204 No Content (successful deletion)
+  return successResponse(204, {
+    success: true,
+    message: 'MOC deleted successfully',
+  });
 }

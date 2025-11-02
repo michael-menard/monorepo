@@ -566,3 +566,149 @@ async function updateMocIndexAsync(moc: MocInstruction): Promise<void> {
     // Don't throw - indexing failure shouldn't break the update request
   }
 }
+
+/**
+ * DELETE MOC - Story 2.6
+ *
+ * Deletes a MOC and all related entities.
+ * Performs cascade deletion and cleans up S3 files.
+ *
+ * Features:
+ * - Authorization check (user must own MOC)
+ * - Cascade deletion: MOC files, gallery images, parts lists
+ * - S3 file cleanup (async, non-blocking)
+ * - OpenSearch document deletion
+ * - Redis cache invalidation (detail + list)
+ *
+ * @param mocId - MOC ID to delete
+ * @param userId - User ID from JWT claims
+ * @throws NotFoundError if MOC doesn't exist
+ * @throws ForbiddenError if user doesn't own MOC
+ */
+export async function deleteMoc(mocId: string, userId: string): Promise<void> {
+  console.log('Deleting MOC', { mocId, userId });
+
+  // Fetch existing MOC to verify ownership
+  const [existingMoc] = await db
+    .select()
+    .from(mocInstructions)
+    .where(eq(mocInstructions.id, mocId))
+    .limit(1);
+
+  if (!existingMoc) {
+    throw new NotFoundError('MOC not found');
+  }
+
+  if (existingMoc.userId !== userId) {
+    throw new ForbiddenError('You do not own this MOC');
+  }
+
+  console.log('Performing cascade deletion for MOC', { mocId });
+
+  // Fetch all file URLs for S3 cleanup
+  const files = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId));
+
+  // Cascade deletion (database handles foreign key constraints)
+  // Order matters for foreign key constraints:
+  // 1. Delete moc_parts_lists (references moc_instructions)
+  // 2. Delete moc_gallery_images (references moc_instructions)
+  // 3. Delete moc_files (references moc_instructions)
+  // 4. Delete moc_instructions
+  await db.delete(mocPartsLists).where(eq(mocPartsLists.mocId, mocId));
+  await db.delete(mocGalleryImages).where(eq(mocGalleryImages.mocId, mocId));
+  await db.delete(mocFiles).where(eq(mocFiles.mocId, mocId));
+  await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId));
+
+  console.log('MOC deleted from database', { mocId, filesCount: files.length });
+
+  // Async S3 cleanup (fire-and-forget)
+  if (files.length > 0) {
+    deleteS3FilesAsync(files.map((f) => f.fileUrl));
+  }
+
+  // Async OpenSearch deletion (fire-and-forget)
+  deleteMocIndexAsync(mocId);
+
+  // Invalidate caches
+  invalidateMocDetailCache(mocId);
+  invalidateMocListCache(userId);
+
+  console.log('MOC deletion complete', { mocId });
+}
+
+/**
+ * Async S3 file deletion (fire-and-forget)
+ * Extracts S3 keys from URLs and deletes objects.
+ */
+async function deleteS3FilesAsync(fileUrls: string[]): Promise<void> {
+  try {
+    const { DeleteObjectsCommand, S3Client } = await import('@aws-sdk/client-s3');
+
+    const s3Client = new S3Client({});
+
+    // Get bucket name from environment variable (set by SST link)
+    const bucketName = process.env.LEGO_API_BUCKET_NAME;
+
+    if (!bucketName) {
+      console.error('S3 bucket name not configured - skipping file deletion');
+      return;
+    }
+
+    // Extract S3 keys from URLs
+    // Expected format: https://bucket-name.s3.region.amazonaws.com/key
+    const keys = fileUrls
+      .map((url) => {
+        try {
+          const urlObj = new URL(url);
+          // Extract key from pathname (remove leading slash)
+          return urlObj.pathname.substring(1);
+        } catch (error) {
+          console.error('Invalid S3 URL:', url, error);
+          return null;
+        }
+      })
+      .filter((key): key is string => key !== null);
+
+    if (keys.length === 0) {
+      console.log('No valid S3 keys to delete');
+      return;
+    }
+
+    console.log('Deleting S3 objects', { bucketName, keysCount: keys.length });
+
+    // Delete objects in batches of 1000 (S3 limit)
+    const batchSize = 1000;
+    for (let i = 0; i < keys.length; i += batchSize) {
+      const batch = keys.slice(i, i + batchSize);
+
+      const command = new DeleteObjectsCommand({
+        Bucket: bucketName,
+        Delete: {
+          Objects: batch.map((key) => ({ Key: key })),
+          Quiet: true,
+        },
+      });
+
+      await s3Client.send(command);
+      console.log('S3 batch deletion complete', { batchSize: batch.length });
+    }
+
+    console.log('All S3 objects deleted', { totalKeys: keys.length });
+  } catch (error) {
+    console.error('Failed to delete S3 files (non-blocking):', error);
+    // Don't throw - S3 cleanup failure shouldn't break the delete request
+  }
+}
+
+/**
+ * Async OpenSearch document deletion (fire-and-forget)
+ */
+async function deleteMocIndexAsync(mocId: string): Promise<void> {
+  try {
+    const { deleteMocIndex } = await import('@/lib/services/opensearch-moc');
+    await deleteMocIndex(mocId);
+  } catch (error) {
+    console.error('Failed to delete MOC from OpenSearch (non-blocking):', error);
+    // Don't throw - indexing failure shouldn't break the delete request
+  }
+}
