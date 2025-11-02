@@ -1,5 +1,15 @@
-import {boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid,} from 'drizzle-orm/pg-core'
-import {relations, sql} from 'drizzle-orm'
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
 // Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL

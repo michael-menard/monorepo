@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/triple-slash-reference */
 /// <reference path="./.sst/platform/config.d.ts" />
-/* eslint-enable @typescript-eslint/triple-slash-reference */
 
 /**
  * SST v3 (Ion) Configuration for LEGO Projects API Serverless Migration

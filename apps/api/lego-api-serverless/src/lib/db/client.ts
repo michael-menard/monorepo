@@ -1,7 +1,7 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import * as schema from '@/db/schema';
-import { getEnv } from '@/lib/utils/env';
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { Pool } from 'pg'
+import * as schema from '@/db/schema'
+import { getEnv } from '@/lib/utils/env'
 
 /**
  * Database Client Configuration for Lambda Functions
@@ -27,7 +27,7 @@ import { getEnv } from '@/lib/utils/env';
  */
 
 // Initialize connection pool outside handler for reuse across invocations
-let _pool: Pool | null = null;
+let _pool: Pool | null = null
 
 /**
  * Get or create PostgreSQL connection pool
@@ -37,7 +37,7 @@ let _pool: Pool | null = null;
  */
 function getPool(): Pool {
   if (!_pool) {
-    const env = getEnv();
+    const env = getEnv()
 
     _pool = new Pool({
       host: env.POSTGRES_HOST,
@@ -50,15 +50,15 @@ function getPool(): Pool {
       idleTimeoutMillis: 30000, // Close idle connections after 30s
       connectionTimeoutMillis: 5000, // Fail fast on connection issues
       ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    });
+    })
 
     // Handle pool errors gracefully
-    _pool.on('error', (err) => {
-      console.error('Unexpected database pool error:', err);
-    });
+    _pool.on('error', err => {
+      console.error('Unexpected database pool error:', err)
+    })
   }
 
-  return _pool;
+  return _pool
 }
 
 /**
@@ -67,7 +67,7 @@ function getPool(): Pool {
  * - Lazy-loaded relationships
  * - Transaction support
  */
-export const db = drizzle(getPool(), { schema, logger: false });
+export const db = drizzle(getPool(), { schema, logger: false })
 
 /**
  * Gracefully close database connection pool
@@ -76,8 +76,8 @@ export const db = drizzle(getPool(), { schema, logger: false });
  */
 export async function closePool(): Promise<void> {
   if (_pool) {
-    await _pool.end();
-    _pool = null;
+    await _pool.end()
+    _pool = null
   }
 }
 
@@ -88,11 +88,11 @@ export async function closePool(): Promise<void> {
  */
 export async function testConnection(): Promise<boolean> {
   try {
-    const pool = getPool();
-    const result = await pool.query('SELECT 1 as health_check');
-    return result.rows[0]?.health_check === 1;
+    const pool = getPool()
+    const result = await pool.query('SELECT 1 as health_check')
+    return result.rows[0]?.health_check === 1
   } catch (error) {
-    console.error('Database connection test failed:', error);
-    return false;
+    console.error('Database connection test failed:', error)
+    return false
   }
 }

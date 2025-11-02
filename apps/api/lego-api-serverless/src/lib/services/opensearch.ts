@@ -5,12 +5,12 @@
  * Connection reused across Lambda invocations for performance.
  */
 
-import { Client } from '@opensearch-project/opensearch';
-import { getEnv } from '@/lib/utils/env';
+import { Client } from '@opensearch-project/opensearch'
+import { getEnv } from '@/lib/utils/env'
 
-type OpenSearchClient = Client;
+type OpenSearchClient = Client
 
-let _openSearchClient: OpenSearchClient | null = null;
+let _openSearchClient: OpenSearchClient | null = null
 
 /**
  * Get or create OpenSearch client
@@ -20,13 +20,13 @@ let _openSearchClient: OpenSearchClient | null = null;
  */
 export function getOpenSearchClient(): OpenSearchClient {
   if (!_openSearchClient) {
-    getEnv(); // Validate environment variables
+    getEnv() // Validate environment variables
 
     // Get OpenSearch endpoint from SST link
-    const openSearchEndpoint = process.env.LEGO_API_OPENSEARCH_ENDPOINT;
+    const openSearchEndpoint = process.env.LEGO_API_OPENSEARCH_ENDPOINT
 
     if (!openSearchEndpoint) {
-      throw new Error('OpenSearch endpoint not configured (LEGO_API_OPENSEARCH_ENDPOINT)');
+      throw new Error('OpenSearch endpoint not configured (LEGO_API_OPENSEARCH_ENDPOINT)')
     }
 
     // Create OpenSearch client with IAM authentication
@@ -35,12 +35,12 @@ export function getOpenSearchClient(): OpenSearchClient {
       node: openSearchEndpoint,
       // For AWS OpenSearch with IAM authentication, credentials are handled automatically
       // via the Lambda execution role permissions
-    });
+    })
 
-    console.log('OpenSearch client created', { endpoint: openSearchEndpoint });
+    console.log('OpenSearch client created', { endpoint: openSearchEndpoint })
   }
 
-  return _openSearchClient;
+  return _openSearchClient
 }
 
 /**
@@ -50,12 +50,12 @@ export function getOpenSearchClient(): OpenSearchClient {
  */
 export async function testOpenSearchConnection(): Promise<boolean> {
   try {
-    const client = getOpenSearchClient();
-    const health = await client.cluster.health();
-    return health.body.status === 'green' || health.body.status === 'yellow';
+    const client = getOpenSearchClient()
+    const health = await client.cluster.health()
+    return health.body.status === 'green' || health.body.status === 'yellow'
   } catch (error) {
-    console.error('OpenSearch connection test failed:', error);
-    return false;
+    console.error('OpenSearch connection test failed:', error)
+    return false
   }
 }
 
@@ -64,11 +64,11 @@ export async function testOpenSearchConnection(): Promise<boolean> {
  */
 export async function getOpenSearchHealth(): Promise<'green' | 'yellow' | 'red' | 'unknown'> {
   try {
-    const client = getOpenSearchClient();
-    const health = await client.cluster.health();
-    return health.body.status as 'green' | 'yellow' | 'red';
+    const client = getOpenSearchClient()
+    const health = await client.cluster.health()
+    return health.body.status as 'green' | 'yellow' | 'red'
   } catch (error) {
-    console.error('Failed to get OpenSearch health:', error);
-    return 'unknown';
+    console.error('Failed to get OpenSearch health:', error)
+    return 'unknown'
   }
 }

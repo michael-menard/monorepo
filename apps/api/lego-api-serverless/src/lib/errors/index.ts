@@ -16,21 +16,21 @@
  * ```
  */
 
-import type { ApiErrorType } from '@/lib/responses/types';
+import type { ApiErrorType } from '@/lib/responses/types'
 
 /**
  * Base API Error - All custom errors extend this class
  */
 export abstract class ApiError extends Error {
-  abstract readonly statusCode: number;
-  abstract readonly errorType: ApiErrorType;
-  readonly details?: Record<string, unknown>;
+  abstract readonly statusCode: number
+  abstract readonly errorType: ApiErrorType
+  readonly details?: Record<string, unknown>
 
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message);
-    this.name = this.constructor.name;
-    this.details = details;
-    Error.captureStackTrace(this, this.constructor);
+    super(message)
+    this.name = this.constructor.name
+    this.details = details
+    Error.captureStackTrace(this, this.constructor)
   }
 
   toJSON() {
@@ -40,7 +40,7 @@ export abstract class ApiError extends Error {
       message: this.message,
       statusCode: this.statusCode,
       details: this.details,
-    };
+    }
   }
 }
 
@@ -49,11 +49,11 @@ export abstract class ApiError extends Error {
  * Use when request parameters, body, or query strings are malformed
  */
 export class BadRequestError extends ApiError {
-  readonly statusCode = 400;
-  readonly errorType: ApiErrorType = 'BAD_REQUEST';
+  readonly statusCode = 400
+  readonly errorType: ApiErrorType = 'BAD_REQUEST'
 
   constructor(message = 'Bad request', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -62,11 +62,11 @@ export class BadRequestError extends ApiError {
  * Use when JWT token is missing, invalid, or expired
  */
 export class UnauthorizedError extends ApiError {
-  readonly statusCode = 401;
-  readonly errorType: ApiErrorType = 'UNAUTHORIZED';
+  readonly statusCode = 401
+  readonly errorType: ApiErrorType = 'UNAUTHORIZED'
 
   constructor(message = 'Authentication required', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -75,11 +75,11 @@ export class UnauthorizedError extends ApiError {
  * Use when user is authenticated but not authorized for the resource
  */
 export class ForbiddenError extends ApiError {
-  readonly statusCode = 403;
-  readonly errorType: ApiErrorType = 'FORBIDDEN';
+  readonly statusCode = 403
+  readonly errorType: ApiErrorType = 'FORBIDDEN'
 
   constructor(message = 'Access forbidden', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -88,11 +88,11 @@ export class ForbiddenError extends ApiError {
  * Use when requested resource (MOC, image, file) cannot be found
  */
 export class NotFoundError extends ApiError {
-  readonly statusCode = 404;
-  readonly errorType: ApiErrorType = 'NOT_FOUND';
+  readonly statusCode = 404
+  readonly errorType: ApiErrorType = 'NOT_FOUND'
 
   constructor(message = 'Resource not found', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -101,11 +101,11 @@ export class NotFoundError extends ApiError {
  * Use when attempting to create duplicate resources or conflicting operations
  */
 export class ConflictError extends ApiError {
-  readonly statusCode = 409;
-  readonly errorType: ApiErrorType = 'CONFLICT';
+  readonly statusCode = 409
+  readonly errorType: ApiErrorType = 'CONFLICT'
 
   constructor(message = 'Resource conflict', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -114,11 +114,11 @@ export class ConflictError extends ApiError {
  * Use when request is well-formed but semantically invalid (Zod validation failures)
  */
 export class ValidationError extends ApiError {
-  readonly statusCode = 422;
-  readonly errorType: ApiErrorType = 'VALIDATION_ERROR';
+  readonly statusCode = 422
+  readonly errorType: ApiErrorType = 'VALIDATION_ERROR'
 
   constructor(message = 'Validation failed', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -127,11 +127,11 @@ export class ValidationError extends ApiError {
  * Use when client exceeds API rate limits
  */
 export class RateLimitError extends ApiError {
-  readonly statusCode = 429;
-  readonly errorType: ApiErrorType = 'TOO_MANY_REQUESTS';
+  readonly statusCode = 429
+  readonly errorType: ApiErrorType = 'TOO_MANY_REQUESTS'
 
   constructor(message = 'Rate limit exceeded', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -140,11 +140,11 @@ export class RateLimitError extends ApiError {
  * Use for database errors, external service failures, unexpected exceptions
  */
 export class InternalServerError extends ApiError {
-  readonly statusCode = 500;
-  readonly errorType: ApiErrorType = 'INTERNAL_ERROR';
+  readonly statusCode = 500
+  readonly errorType: ApiErrorType = 'INTERNAL_ERROR'
 
   constructor(message = 'Internal server error', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -153,11 +153,11 @@ export class InternalServerError extends ApiError {
  * Use when Redis, OpenSearch, or other dependencies are unavailable
  */
 export class ServiceUnavailableError extends ApiError {
-  readonly statusCode = 503;
-  readonly errorType: ApiErrorType = 'SERVICE_UNAVAILABLE';
+  readonly statusCode = 503
+  readonly errorType: ApiErrorType = 'SERVICE_UNAVAILABLE'
 
   constructor(message = 'Service temporarily unavailable', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -166,11 +166,11 @@ export class ServiceUnavailableError extends ApiError {
  * Use for file size, type, or processing errors
  */
 export class FileError extends ApiError {
-  readonly statusCode = 400;
-  readonly errorType: ApiErrorType = 'FILE_ERROR';
+  readonly statusCode = 400
+  readonly errorType: ApiErrorType = 'FILE_ERROR'
 
   constructor(message = 'File operation failed', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -179,11 +179,11 @@ export class FileError extends ApiError {
  * Use when search indexing or queries fail
  */
 export class SearchError extends ApiError {
-  readonly statusCode = 500;
-  readonly errorType: ApiErrorType = 'SEARCH_ERROR';
+  readonly statusCode = 500
+  readonly errorType: ApiErrorType = 'SEARCH_ERROR'
 
   constructor(message = 'Search operation failed', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -192,11 +192,11 @@ export class SearchError extends ApiError {
  * Use when database queries or transactions fail
  */
 export class DatabaseError extends ApiError {
-  readonly statusCode = 500;
-  readonly errorType: ApiErrorType = 'DATABASE_ERROR';
+  readonly statusCode = 500
+  readonly errorType: ApiErrorType = 'DATABASE_ERROR'
 
   constructor(message = 'Database operation failed', details?: Record<string, unknown>) {
-    super(message, details);
+    super(message, details)
   }
 }
 
@@ -204,7 +204,7 @@ export class DatabaseError extends ApiError {
  * Check if error is an instance of ApiError
  */
 export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
+  return error instanceof ApiError
 }
 
 /**
@@ -214,17 +214,17 @@ export function isApiError(error: unknown): error is ApiError {
  */
 export function toApiError(error: unknown): ApiError {
   if (isApiError(error)) {
-    return error;
+    return error
   }
 
   if (error instanceof Error) {
     return new InternalServerError(error.message, {
       originalError: error.name,
       stack: error.stack,
-    });
+    })
   }
 
   return new InternalServerError('An unexpected error occurred', {
     error: String(error),
-  });
+  })
 }

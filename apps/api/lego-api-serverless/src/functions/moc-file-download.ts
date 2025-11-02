@@ -17,12 +17,9 @@ import {
   successResponse,
   errorResponseFromError,
   type APIGatewayProxyResult,
-} from '@/lib/responses';
-import {
-  UnauthorizedError,
-  BadRequestError,
-} from '@/lib/errors';
-import { generateFileDownloadUrl } from '@/lib/services/moc-file-service';
+} from '@/lib/responses'
+import { UnauthorizedError, BadRequestError } from '@/lib/errors'
+import { generateFileDownloadUrl } from '@/lib/services/moc-file-service'
 
 /**
  * API Gateway Event Interface
@@ -30,21 +27,21 @@ import { generateFileDownloadUrl } from '@/lib/services/moc-file-service';
 interface APIGatewayEvent {
   requestContext: {
     http: {
-      method: string;
-      path: string;
-    };
+      method: string
+      path: string
+    }
     authorizer?: {
       jwt?: {
         claims: {
-          sub: string; // User ID from Cognito
-          email?: string;
-        };
-      };
-    };
-    requestId: string;
-  };
-  pathParameters?: Record<string, string>;
-  queryStringParameters?: Record<string, string>;
+          sub: string // User ID from Cognito
+          email?: string
+        }
+      }
+    }
+    requestId: string
+  }
+  pathParameters?: Record<string, string>
+  queryStringParameters?: Record<string, string>
 }
 
 /**
@@ -56,39 +53,39 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       requestId: event.requestContext.requestId,
       method: event.requestContext.http.method,
       path: event.requestContext.http.path,
-    });
+    })
 
     // Verify authentication
-    const userId = getUserIdFromEvent(event);
+    const userId = getUserIdFromEvent(event)
 
     // Get MOC ID and File ID from path
-    const mocId = event.pathParameters?.mocId;
-    const fileId = event.pathParameters?.fileId;
+    const mocId = event.pathParameters?.mocId
+    const fileId = event.pathParameters?.fileId
 
     if (!mocId) {
-      throw new BadRequestError('MOC ID is required');
+      throw new BadRequestError('MOC ID is required')
     }
 
     if (!fileId) {
-      throw new BadRequestError('File ID is required');
+      throw new BadRequestError('File ID is required')
     }
 
     // Check if client wants redirect or JSON response
-    const format = event.queryStringParameters?.format || 'redirect';
+    const format = event.queryStringParameters?.format || 'redirect'
 
     // Generate pre-signed URL
     const { downloadUrl, filename, mimeType, expiresIn } = await generateFileDownloadUrl(
       mocId,
       fileId,
-      userId
-    );
+      userId,
+    )
 
     console.log('Pre-signed URL generated', {
       mocId,
       fileId,
       filename,
       expiresIn,
-    });
+    })
 
     // Return redirect or JSON based on format parameter
     if (format === 'json') {
@@ -101,7 +98,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
           expiresIn,
           expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
         },
-      });
+      })
     }
 
     // Default: redirect to pre-signed URL
@@ -112,10 +109,10 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
       body: '',
-    };
+    }
   } catch (error) {
-    console.error('MOC File Download Lambda error:', error);
-    return errorResponseFromError(error);
+    console.error('MOC File Download Lambda error:', error)
+    return errorResponseFromError(error)
   }
 }
 
@@ -123,11 +120,11 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
  * Extract user ID from JWT claims
  */
 function getUserIdFromEvent(event: APIGatewayEvent): string {
-  const userId = event.requestContext.authorizer?.jwt?.claims.sub;
+  const userId = event.requestContext.authorizer?.jwt?.claims.sub
 
   if (!userId) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError('Authentication required')
   }
 
-  return userId;
+  return userId
 }

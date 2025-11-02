@@ -4,7 +4,7 @@
  * Shared types for API responses used across all Lambda functions.
  */
 
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Standard API Error Types
@@ -24,9 +24,9 @@ export const ApiErrorTypeSchema = z.enum([
   'FILE_ERROR',
   'SEARCH_ERROR',
   'DATABASE_ERROR',
-]);
+])
 
-export type ApiErrorType = z.infer<typeof ApiErrorTypeSchema>;
+export type ApiErrorType = z.infer<typeof ApiErrorTypeSchema>
 
 /**
  * Generic API Response Schema (Success)
@@ -39,14 +39,14 @@ export const ApiSuccessResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) 
     data: dataSchema,
     message: z.string().optional(),
     timestamp: z.string().datetime(),
-  });
+  })
 
 export type ApiSuccessResponse<T> = {
-  success: true;
-  data: T;
-  message?: string;
-  timestamp: string;
-};
+  success: true
+  data: T
+  message?: string
+  timestamp: string
+}
 
 /**
  * API Error Response Schema
@@ -61,17 +61,14 @@ export const ApiErrorResponseSchema = z.object({
     details: z.record(z.string(), z.unknown()).optional(),
   }),
   timestamp: z.string().datetime(),
-});
+})
 
-export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
+export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>
 
 /**
  * Union of success and error responses
  */
 export const ApiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
-  z.discriminatedUnion('success', [
-    ApiSuccessResponseSchema(dataSchema),
-    ApiErrorResponseSchema,
-  ]);
+  z.discriminatedUnion('success', [ApiSuccessResponseSchema(dataSchema), ApiErrorResponseSchema])
 
-export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse

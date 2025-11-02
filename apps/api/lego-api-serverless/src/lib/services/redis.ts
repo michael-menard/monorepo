@@ -5,10 +5,10 @@
  * Optimized for serverless with connection reuse across Lambda invocations.
  */
 
-import { createClient, RedisClientType } from 'redis';
-import { getEnv } from '@/lib/utils/env';
+import { createClient, RedisClientType } from 'redis'
+import { getEnv } from '@/lib/utils/env'
 
-let _redisClient: RedisClientType | null = null;
+let _redisClient: RedisClientType | null = null
 
 /**
  * Get or create Redis client
@@ -17,31 +17,31 @@ let _redisClient: RedisClientType | null = null;
  */
 export async function getRedisClient(): Promise<RedisClientType> {
   if (!_redisClient) {
-    const env = getEnv();
+    const env = getEnv()
 
     _redisClient = createClient({
       socket: {
         host: env.REDIS_HOST,
         port: parseInt(env.REDIS_PORT || '6379'),
         connectTimeout: 5000,
-        reconnectStrategy: (retries) => {
+        reconnectStrategy: retries => {
           // Fail fast in Lambda - don't retry indefinitely
           if (retries > 3) {
-            return new Error('Max Redis reconnection attempts reached');
+            return new Error('Max Redis reconnection attempts reached')
           }
-          return Math.min(retries * 100, 3000);
+          return Math.min(retries * 100, 3000)
         },
       },
-    });
+    })
 
-    _redisClient.on('error', (err) => {
-      console.error('Redis client error:', err);
-    });
+    _redisClient.on('error', err => {
+      console.error('Redis client error:', err)
+    })
 
-    await _redisClient.connect();
+    await _redisClient.connect()
   }
 
-  return _redisClient;
+  return _redisClient
 }
 
 /**
@@ -51,12 +51,12 @@ export async function getRedisClient(): Promise<RedisClientType> {
  */
 export async function testRedisConnection(): Promise<boolean> {
   try {
-    const client = await getRedisClient();
-    const result = await client.ping();
-    return result === 'PONG';
+    const client = await getRedisClient()
+    const result = await client.ping()
+    return result === 'PONG'
   } catch (error) {
-    console.error('Redis connection test failed:', error);
-    return false;
+    console.error('Redis connection test failed:', error)
+    return false
   }
 }
 
@@ -67,7 +67,7 @@ export async function testRedisConnection(): Promise<boolean> {
  */
 export async function closeRedisConnection(): Promise<void> {
   if (_redisClient) {
-    await _redisClient.quit();
-    _redisClient = null;
+    await _redisClient.quit()
+    _redisClient = null
   }
 }

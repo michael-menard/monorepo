@@ -17,16 +17,16 @@
  * ```
  */
 
-import type { ApiSuccessResponse, ApiErrorResponse, ApiErrorType } from './types';
-import { toApiError } from '@/lib/errors';
+import type { ApiSuccessResponse, ApiErrorResponse, ApiErrorType } from './types'
+import { toApiError } from '@/lib/errors'
 
 /**
  * API Gateway Response Type
  */
 export interface APIGatewayProxyResult {
-  statusCode: number;
-  headers: Record<string, string | boolean>;
-  body: string;
+  statusCode: number
+  headers: Record<string, string | boolean>
+  body: string
 }
 
 /**
@@ -38,14 +38,14 @@ export interface APIGatewayProxyResult {
 export function successResponse<T>(
   statusCode: number,
   data: T,
-  message?: string
+  message?: string,
 ): APIGatewayProxyResult {
   const response: ApiSuccessResponse<T> = {
     success: true,
     data,
     message,
     timestamp: new Date().toISOString(),
-  };
+  }
 
   return {
     statusCode,
@@ -55,7 +55,7 @@ export function successResponse<T>(
       'Access-Control-Allow-Credentials': true,
     },
     body: JSON.stringify(response),
-  };
+  }
 }
 
 /**
@@ -68,9 +68,9 @@ export function errorResponse(
   statusCode: number,
   errorType: ApiErrorType,
   message: string,
-  details?: Record<string, unknown>
+  details?: Record<string, unknown>,
 ): APIGatewayProxyResult {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production'
 
   const response: ApiErrorResponse = {
     success: false,
@@ -81,7 +81,7 @@ export function errorResponse(
       details: isProduction ? undefined : details,
     },
     timestamp: new Date().toISOString(),
-  };
+  }
 
   return {
     statusCode,
@@ -91,7 +91,7 @@ export function errorResponse(
       'Access-Control-Allow-Credentials': true,
     },
     body: JSON.stringify(response),
-  };
+  }
 }
 
 /**
@@ -101,14 +101,9 @@ export function errorResponse(
  * - Falls back to 500 for unknown errors
  */
 export function errorResponseFromError(error: unknown): APIGatewayProxyResult {
-  const apiError = toApiError(error);
+  const apiError = toApiError(error)
 
-  return errorResponse(
-    apiError.statusCode,
-    apiError.errorType,
-    apiError.message,
-    apiError.details
-  );
+  return errorResponse(apiError.statusCode, apiError.errorType, apiError.message, apiError.details)
 }
 
 /**
@@ -117,20 +112,20 @@ export function errorResponseFromError(error: unknown): APIGatewayProxyResult {
  * - Includes status for each service dependency
  */
 export interface HealthCheckData {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: 'healthy' | 'degraded' | 'unhealthy'
   services: {
-    postgres: 'connected' | 'disconnected' | 'error';
-    redis: 'connected' | 'disconnected' | 'error';
-    opensearch: 'connected' | 'disconnected' | 'error';
-  };
-  timestamp: string;
-  version?: string;
+    postgres: 'connected' | 'disconnected' | 'error'
+    redis: 'connected' | 'disconnected' | 'error'
+    opensearch: 'connected' | 'disconnected' | 'error'
+  }
+  timestamp: string
+  version?: string
 }
 
 export function healthCheckResponse(data: HealthCheckData): APIGatewayProxyResult {
-  const statusCode = data.status === 'healthy' ? 200 : data.status === 'degraded' ? 200 : 503;
+  const statusCode = data.status === 'healthy' ? 200 : data.status === 'degraded' ? 200 : 503
 
-  return successResponse(statusCode, data, `System status: ${data.status}`);
+  return successResponse(statusCode, data, `System status: ${data.status}`)
 }
 
 /**
@@ -146,7 +141,7 @@ export function noContentResponse(): APIGatewayProxyResult {
       'Access-Control-Allow-Credentials': true,
     },
     body: '',
-  };
+  }
 }
 
 /**
@@ -162,7 +157,7 @@ export function redirectResponse(location: string): APIGatewayProxyResult {
       'Access-Control-Allow-Credentials': true,
     },
     body: '',
-  };
+  }
 }
 
 /**
@@ -180,5 +175,5 @@ export function corsResponse(): APIGatewayProxyResult {
       'Access-Control-Max-Age': '86400', // 24 hours
     },
     body: '',
-  };
+  }
 }

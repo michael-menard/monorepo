@@ -19,24 +19,16 @@ import {
   successResponse,
   errorResponseFromError,
   type APIGatewayProxyResult,
-} from '@/lib/responses';
-import {
-  CreateMocSchema,
-  UpdateMocSchema,
-  MocListQuerySchema,
-} from '@/types/moc';
-import {
-  BadRequestError,
-  UnauthorizedError,
-  ValidationError,
-} from '@/lib/errors';
+} from '@/lib/responses'
+import { CreateMocSchema, UpdateMocSchema, MocListQuerySchema } from '@/types/moc'
+import { BadRequestError, UnauthorizedError, ValidationError } from '@/lib/errors'
 import {
   listMocs as listMocsService,
   getMocDetail as getMocDetailService,
   createMoc as createMocService,
   updateMoc as updateMocService,
   deleteMoc as deleteMocService,
-} from '@/lib/services/moc-service';
+} from '@/lib/services/moc-service'
 
 /**
  * API Gateway Event Interface
@@ -45,22 +37,22 @@ import {
 interface APIGatewayEvent {
   requestContext: {
     http: {
-      method: string;
-      path: string;
-    };
+      method: string
+      path: string
+    }
     authorizer?: {
       jwt?: {
         claims: {
-          sub: string; // User ID from Cognito
-          email?: string;
-        };
-      };
-    };
-    requestId: string;
-  };
-  pathParameters?: Record<string, string>;
-  queryStringParameters?: Record<string, string>;
-  body?: string | null;
+          sub: string // User ID from Cognito
+          email?: string
+        }
+      }
+    }
+    requestId: string
+  }
+  pathParameters?: Record<string, string>
+  queryStringParameters?: Record<string, string>
+  body?: string | null
 }
 
 /**
@@ -73,26 +65,26 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       requestId: event.requestContext.requestId,
       method: event.requestContext.http.method,
       path: event.requestContext.http.path,
-    });
+    })
 
-    const method = event.requestContext.http.method;
+    const method = event.requestContext.http.method
 
     // Route to appropriate handler
     switch (method) {
       case 'GET':
-        return await handleGet(event);
+        return await handleGet(event)
       case 'POST':
-        return await handlePost(event);
+        return await handlePost(event)
       case 'PATCH':
-        return await handlePatch(event);
+        return await handlePatch(event)
       case 'DELETE':
-        return await handleDelete(event);
+        return await handleDelete(event)
       default:
-        throw new BadRequestError(`Method ${method} not supported`);
+        throw new BadRequestError(`Method ${method} not supported`)
     }
   } catch (error) {
-    console.error('MOC Instructions Lambda error:', error);
-    return errorResponseFromError(error);
+    console.error('MOC Instructions Lambda error:', error)
+    return errorResponseFromError(error)
   }
 }
 
@@ -103,16 +95,16 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
  * - GET /api/mocs/:id -> Get MOC detail
  */
 async function handleGet(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
-  const userId = getUserIdFromEvent(event);
-  const mocId = event.pathParameters?.id;
+  const userId = getUserIdFromEvent(event)
+  const mocId = event.pathParameters?.id
 
   if (mocId) {
     // GET /api/mocs/:id - Retrieve MOC detail
-    return await getMocDetail(mocId, userId);
+    return await getMocDetail(mocId, userId)
   } else {
     // GET /api/mocs - List all MOCs
-    const query = event.queryStringParameters || {};
-    return await listMocs(userId, query);
+    const query = event.queryStringParameters || {}
+    return await listMocs(userId, query)
   }
 }
 
@@ -121,14 +113,14 @@ async function handleGet(event: APIGatewayEvent): Promise<APIGatewayProxyResult>
  * Route: POST /api/mocs - Create new MOC
  */
 async function handlePost(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
-  const userId = getUserIdFromEvent(event);
+  const userId = getUserIdFromEvent(event)
 
   if (!event.body) {
-    throw new BadRequestError('Request body is required');
+    throw new BadRequestError('Request body is required')
   }
 
-  const body = JSON.parse(event.body);
-  return await createMoc(userId, body);
+  const body = JSON.parse(event.body)
+  return await createMoc(userId, body)
 }
 
 /**
@@ -136,19 +128,19 @@ async function handlePost(event: APIGatewayEvent): Promise<APIGatewayProxyResult
  * Route: PATCH /api/mocs/:id - Update MOC
  */
 async function handlePatch(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
-  const userId = getUserIdFromEvent(event);
-  const mocId = event.pathParameters?.id;
+  const userId = getUserIdFromEvent(event)
+  const mocId = event.pathParameters?.id
 
   if (!mocId) {
-    throw new BadRequestError('MOC ID is required');
+    throw new BadRequestError('MOC ID is required')
   }
 
   if (!event.body) {
-    throw new BadRequestError('Request body is required');
+    throw new BadRequestError('Request body is required')
   }
 
-  const body = JSON.parse(event.body);
-  return await updateMoc(mocId, userId, body);
+  const body = JSON.parse(event.body)
+  return await updateMoc(mocId, userId, body)
 }
 
 /**
@@ -156,14 +148,14 @@ async function handlePatch(event: APIGatewayEvent): Promise<APIGatewayProxyResul
  * Route: DELETE /api/mocs/:id - Delete MOC
  */
 async function handleDelete(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
-  const userId = getUserIdFromEvent(event);
-  const mocId = event.pathParameters?.id;
+  const userId = getUserIdFromEvent(event)
+  const mocId = event.pathParameters?.id
 
   if (!mocId) {
-    throw new BadRequestError('MOC ID is required');
+    throw new BadRequestError('MOC ID is required')
   }
 
-  return await deleteMoc(mocId, userId);
+  return await deleteMoc(mocId, userId)
 }
 
 /**
@@ -171,13 +163,13 @@ async function handleDelete(event: APIGatewayEvent): Promise<APIGatewayProxyResu
  * Throws UnauthorizedError if not present
  */
 function getUserIdFromEvent(event: APIGatewayEvent): string {
-  const userId = event.requestContext.authorizer?.jwt?.claims.sub;
+  const userId = event.requestContext.authorizer?.jwt?.claims.sub
 
   if (!userId) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError('Authentication required')
   }
 
-  return userId;
+  return userId
 }
 
 /**
@@ -193,22 +185,22 @@ function getUserIdFromEvent(event: APIGatewayEvent): string {
  */
 async function listMocs(
   userId: string,
-  queryParams: Record<string, string>
+  queryParams: Record<string, string>,
 ): Promise<APIGatewayProxyResult> {
   // Validate query parameters
-  const parse = MocListQuerySchema.safeParse(queryParams);
+  const parse = MocListQuerySchema.safeParse(queryParams)
   if (!parse.success) {
     throw new ValidationError('Invalid query parameters', {
       errors: parse.error.flatten(),
-    });
+    })
   }
 
-  const query = parse.data;
+  const query = parse.data
 
-  console.log('Listing MOCs', { userId, query });
+  console.log('Listing MOCs', { userId, query })
 
   // Call service layer for business logic
-  const { mocs, total } = await listMocsService(userId, query);
+  const { mocs, total } = await listMocsService(userId, query)
 
   // Return standardized response matching existing API contract
   return successResponse(200, {
@@ -217,7 +209,7 @@ async function listMocs(
     total,
     page: query.page,
     limit: query.limit,
-  });
+  })
 }
 
 /**
@@ -233,20 +225,17 @@ async function listMocs(
  * - Redis caching with 10-minute TTL
  * - Cache hit logging
  */
-async function getMocDetail(
-  mocId: string,
-  userId: string
-): Promise<APIGatewayProxyResult> {
-  console.log('Getting MOC detail', { mocId, userId });
+async function getMocDetail(mocId: string, userId: string): Promise<APIGatewayProxyResult> {
+  console.log('Getting MOC detail', { mocId, userId })
 
   // Call service layer for business logic
-  const mocDetail = await getMocDetailService(mocId, userId);
+  const mocDetail = await getMocDetailService(mocId, userId)
 
   // Return standardized response
   return successResponse(200, {
     success: true,
     data: mocDetail,
-  });
+  })
 }
 
 /**
@@ -262,30 +251,27 @@ async function getMocDetail(
  * - Redis cache invalidation (user's MOC list)
  * - Returns 201 Created with full MOC object
  */
-async function createMoc(
-  userId: string,
-  body: unknown
-): Promise<APIGatewayProxyResult> {
+async function createMoc(userId: string, body: unknown): Promise<APIGatewayProxyResult> {
   // Validate input
-  const parse = CreateMocSchema.safeParse(body);
+  const parse = CreateMocSchema.safeParse(body)
   if (!parse.success) {
     throw new ValidationError('Invalid MOC data', {
       errors: parse.error.flatten(),
-    });
+    })
   }
 
-  const mocData = parse.data;
+  const mocData = parse.data
 
-  console.log('Creating MOC', { userId, title: mocData.title });
+  console.log('Creating MOC', { userId, title: mocData.title })
 
   // Call service layer for business logic
-  const createdMoc = await createMocService(userId, mocData);
+  const createdMoc = await createMocService(userId, mocData)
 
   // Return 201 Created with standardized response
   return successResponse(201, {
     success: true,
     data: createdMoc,
-  });
+  })
 }
 
 /**
@@ -295,46 +281,43 @@ async function createMoc(
 async function updateMoc(
   mocId: string,
   userId: string,
-  body: unknown
+  body: unknown,
 ): Promise<APIGatewayProxyResult> {
   // Validate input
-  const parse = UpdateMocSchema.safeParse(body);
+  const parse = UpdateMocSchema.safeParse(body)
   if (!parse.success) {
     throw new ValidationError('Invalid update data', {
       errors: parse.error.flatten(),
-    });
+    })
   }
 
-  const updateData = parse.data;
+  const updateData = parse.data
 
-  console.log('Updating MOC', { mocId, userId, updateData });
+  console.log('Updating MOC', { mocId, userId, updateData })
 
   // Call service layer for business logic
-  const updatedMoc = await updateMocService(mocId, userId, updateData);
+  const updatedMoc = await updateMocService(mocId, userId, updateData)
 
   // Return standardized response
   return successResponse(200, {
     success: true,
     data: updatedMoc,
-  });
+  })
 }
 
 /**
  * DELETE MOC - DELETE /api/mocs/:id
  * Story 2.6 implementation
  */
-async function deleteMoc(
-  mocId: string,
-  userId: string
-): Promise<APIGatewayProxyResult> {
-  console.log('Deleting MOC', { mocId, userId });
+async function deleteMoc(mocId: string, userId: string): Promise<APIGatewayProxyResult> {
+  console.log('Deleting MOC', { mocId, userId })
 
   // Call service layer for business logic
-  await deleteMocService(mocId, userId);
+  await deleteMocService(mocId, userId)
 
   // Return 204 No Content (successful deletion)
   return successResponse(204, {
     success: true,
     message: 'MOC deleted successfully',
-  });
+  })
 }

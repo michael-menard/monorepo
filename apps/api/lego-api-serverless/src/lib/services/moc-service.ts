@@ -5,13 +5,21 @@
  * Handles database queries, caching, and search integration.
  */
 
-import { db } from '@/lib/db/client';
-import { mocInstructions, mocFiles, mocGalleryImages, mocGalleryAlbums, galleryImages, galleryAlbums, mocPartsLists } from '@/db/schema';
-import { eq, and, sql, desc, ilike, or } from 'drizzle-orm';
-import { getRedisClient } from '@/lib/services/redis';
-import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc';
-import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc';
-import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/lib/errors';
+import { eq, and, sql, desc, ilike, or } from 'drizzle-orm'
+import { db } from '@/lib/db/client'
+import {
+  mocInstructions,
+  mocFiles,
+  mocGalleryImages,
+  mocGalleryAlbums,
+  galleryImages,
+  galleryAlbums,
+  mocPartsLists,
+} from '@/db/schema'
+import { getRedisClient } from '@/lib/services/redis'
+import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc'
+import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc'
+import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/lib/errors'
 
 /**
  * List MOCs for a user with pagination, search, and filtering
@@ -25,56 +33,54 @@ import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/l
  */
 export async function listMocs(
   userId: string,
-  query: MocListQuery
+  query: MocListQuery,
 ): Promise<{ mocs: MocInstruction[]; total: number }> {
-  const { page, limit, search, tag } = query;
-  const offset = (page - 1) * limit;
+  const { page, limit, search, tag } = query
+  const offset = (page - 1) * limit
 
   // Generate cache key
-  const cacheKey = `moc:user:${userId}:list:${page}:${limit}:${search || ''}:${tag || ''}`;
+  const cacheKey = `moc:user:${userId}:list:${page}:${limit}:${search || ''}:${tag || ''}`
 
   try {
     // Check Redis cache first
-    const cached = await getCachedMocList(cacheKey);
+    const cached = await getCachedMocList(cacheKey)
     if (cached) {
-      console.log('MOC list cache hit', { userId, cacheKey });
-      return cached;
+      console.log('MOC list cache hit', { userId, cacheKey })
+      return cached
     }
 
     // If search query provided, try OpenSearch first
     if (search && search.trim()) {
       try {
-        const searchResults = await searchMocsOpenSearch(userId, search, offset, limit, tag);
+        const searchResults = await searchMocsOpenSearch(userId, search, offset, limit, tag)
 
         // Cache the results
-        await cacheMocList(cacheKey, searchResults);
+        await cacheMocList(cacheKey, searchResults)
 
-        return searchResults;
+        return searchResults
       } catch (error) {
-        console.warn('OpenSearch query failed, falling back to PostgreSQL', error);
+        console.warn('OpenSearch query failed, falling back to PostgreSQL', error)
         // Fall through to PostgreSQL search below
       }
     }
 
     // Build PostgreSQL query
-    let whereConditions = [eq(mocInstructions.userId, userId)];
+    const whereConditions = [eq(mocInstructions.userId, userId)]
 
     // Add tag filter if provided
     if (tag && tag.trim()) {
-      whereConditions.push(
-        sql`${mocInstructions.tags} @> ${JSON.stringify([tag])}`
-      );
+      whereConditions.push(sql`${mocInstructions.tags} @> ${JSON.stringify([tag])}`)
     }
 
     // Add search filter if provided (PostgreSQL ILIKE fallback)
     if (search && search.trim()) {
-      const searchPattern = `%${search}%`;
+      const searchPattern = `%${search}%`
       whereConditions.push(
         or(
           ilike(mocInstructions.title, searchPattern),
-          ilike(mocInstructions.description, searchPattern)
-        )!
-      );
+          ilike(mocInstructions.description, searchPattern),
+        )!,
+      )
     }
 
     // Execute query with pagination
@@ -92,18 +98,18 @@ export async function listMocs(
         .select({ count: sql<number>`count(*)` })
         .from(mocInstructions)
         .where(and(...whereConditions)),
-    ]);
+    ])
 
     // Cast database results to MocInstruction type
     // Database returns 'type' as string, but our type expects "moc" | "set"
-    const mocs = mocsRaw as unknown as MocInstruction[];
+    const mocs = mocsRaw as unknown as MocInstruction[]
 
-    const total = Number(countResult[0]?.count || 0);
+    const total = Number(countResult[0]?.count || 0)
 
-    const result = { mocs, total };
+    const result = { mocs, total }
 
     // Cache the results (5 minute TTL)
-    await cacheMocList(cacheKey, result);
+    await cacheMocList(cacheKey, result)
 
     console.log('MOC list query completed', {
       userId,
@@ -111,16 +117,16 @@ export async function listMocs(
       total,
       page,
       limit,
-    });
+    })
 
-    return result;
+    return result
   } catch (error) {
-    console.error('Error listing MOCs:', error);
+    console.error('Error listing MOCs:', error)
     throw new DatabaseError('Failed to retrieve MOC list', {
       userId,
       query,
       error: (error as Error).message,
-    });
+    })
   }
 }
 
@@ -128,20 +134,20 @@ export async function listMocs(
  * Get cached MOC list from Redis
  */
 async function getCachedMocList(
-  cacheKey: string
+  cacheKey: string,
 ): Promise<{ mocs: MocInstruction[]; total: number } | null> {
   try {
-    const redis = await getRedisClient();
-    const cached = await redis.get(cacheKey);
+    const redis = await getRedisClient()
+    const cached = await redis.get(cacheKey)
 
     if (!cached) {
-      return null;
+      return null
     }
 
-    return JSON.parse(cached);
+    return JSON.parse(cached)
   } catch (error) {
-    console.warn('Redis cache read failed:', error);
-    return null;
+    console.warn('Redis cache read failed:', error)
+    return null
   }
 }
 
@@ -150,15 +156,15 @@ async function getCachedMocList(
  */
 async function cacheMocList(
   cacheKey: string,
-  data: { mocs: MocInstruction[]; total: number }
+  data: { mocs: MocInstruction[]; total: number },
 ): Promise<void> {
   try {
-    const redis = await getRedisClient();
-    const TTL = 300; // 5 minutes
+    const redis = await getRedisClient()
+    const TTL = 300 // 5 minutes
 
-    await redis.setEx(cacheKey, TTL, JSON.stringify(data));
+    await redis.setEx(cacheKey, TTL, JSON.stringify(data))
   } catch (error) {
-    console.warn('Redis cache write failed:', error);
+    console.warn('Redis cache write failed:', error)
     // Don't throw - caching failure shouldn't break the request
   }
 }
@@ -169,18 +175,18 @@ async function cacheMocList(
  */
 export async function invalidateMocListCache(userId: string): Promise<void> {
   try {
-    const redis = await getRedisClient();
+    const redis = await getRedisClient()
 
     // Find all keys matching the pattern
-    const pattern = `moc:user:${userId}:list:*`;
-    const keys = await redis.keys(pattern);
+    const pattern = `moc:user:${userId}:list:*`
+    const keys = await redis.keys(pattern)
 
     if (keys.length > 0) {
-      await redis.del(keys);
-      console.log('Invalidated MOC list cache', { userId, keysDeleted: keys.length });
+      await redis.del(keys)
+      console.log('Invalidated MOC list cache', { userId, keysDeleted: keys.length })
     }
   } catch (error) {
-    console.warn('Failed to invalidate MOC list cache:', error);
+    console.warn('Failed to invalidate MOC list cache:', error)
     // Don't throw - cache invalidation failure shouldn't break the request
   }
 }
@@ -200,18 +206,18 @@ export async function invalidateMocListCache(userId: string): Promise<void> {
  * Story 2.3 implementation
  */
 export async function getMocDetail(mocId: string, userId: string): Promise<MocDetailResponse> {
-  const cacheKey = `moc:detail:${mocId}`;
+  const cacheKey = `moc:detail:${mocId}`
 
   try {
     // Check Redis cache first
-    const cached = await getCachedMocDetail(cacheKey);
+    const cached = await getCachedMocDetail(cacheKey)
     if (cached) {
       // Verify user owns the cached MOC
       if (cached.userId !== userId) {
-        throw new ForbiddenError('You do not own this MOC');
+        throw new ForbiddenError('You do not own this MOC')
       }
-      console.log('MOC detail cache hit', { mocId, userId });
-      return cached;
+      console.log('MOC detail cache hit', { mocId, userId })
+      return cached
     }
 
     // Query MOC with basic info first
@@ -219,24 +225,21 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
       .select()
       .from(mocInstructions)
       .where(eq(mocInstructions.id, mocId))
-      .limit(1);
+      .limit(1)
 
     if (!moc) {
-      throw new NotFoundError('MOC not found');
+      throw new NotFoundError('MOC not found')
     }
 
     // Authorization check: user must own the MOC
     if (moc.userId !== userId) {
-      throw new ForbiddenError('You do not own this MOC');
+      throw new ForbiddenError('You do not own this MOC')
     }
 
     // Eager load related entities in parallel
     const [files, galleryImagesData, partsLists] = await Promise.all([
       // Load MOC files (instructions, parts lists, thumbnails, images)
-      db
-        .select()
-        .from(mocFiles)
-        .where(eq(mocFiles.mocId, mocId)),
+      db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId)),
 
       // Load linked gallery images with full image data
       db
@@ -252,14 +255,11 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
         .where(eq(mocGalleryImages.mocId, mocId)),
 
       // Load parts lists
-      db
-        .select()
-        .from(mocPartsLists)
-        .where(eq(mocPartsLists.mocId, mocId)),
-    ]);
+      db.select().from(mocPartsLists).where(eq(mocPartsLists.mocId, mocId)),
+    ])
 
     // Cast moc to MocInstruction type
-    const mocInstruction = moc as unknown as MocInstruction;
+    const mocInstruction = moc as unknown as MocInstruction
 
     // Construct response with all related entities
     const response: MocDetailResponse = {
@@ -267,10 +267,10 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
       files: files as any, // Cast database results to MocFile type
       images: galleryImagesData,
       partsLists: partsLists as any, // Cast to match MocPartsList type
-    };
+    }
 
     // Cache the result (10 minute TTL)
-    await cacheMocDetail(cacheKey, response);
+    await cacheMocDetail(cacheKey, response)
 
     console.log('MOC detail query completed', {
       mocId,
@@ -278,21 +278,21 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
       filesCount: files.length,
       imagesCount: galleryImagesData.length,
       partsListsCount: partsLists.length,
-    });
+    })
 
-    return response;
+    return response
   } catch (error) {
     // Re-throw known errors
     if (error instanceof NotFoundError || error instanceof ForbiddenError) {
-      throw error;
+      throw error
     }
 
-    console.error('Error retrieving MOC detail:', error);
+    console.error('Error retrieving MOC detail:', error)
     throw new DatabaseError('Failed to retrieve MOC detail', {
       mocId,
       userId,
       error: (error as Error).message,
-    });
+    })
   }
 }
 
@@ -301,14 +301,14 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
  */
 async function getCachedMocDetail(cacheKey: string): Promise<MocDetailResponse | null> {
   try {
-    const redis = await getRedisClient();
-    const cached = await redis.get(cacheKey);
+    const redis = await getRedisClient()
+    const cached = await redis.get(cacheKey)
 
     if (!cached) {
-      return null;
+      return null
     }
 
-    const parsed = JSON.parse(cached);
+    const parsed = JSON.parse(cached)
 
     // Convert date strings back to Date objects
     return {
@@ -326,10 +326,10 @@ async function getCachedMocDetail(cacheKey: string): Promise<MocDetailResponse |
         createdAt: new Date(list.createdAt),
         updatedAt: new Date(list.updatedAt),
       })),
-    };
+    }
   } catch (error) {
-    console.warn('Redis cache read failed:', error);
-    return null;
+    console.warn('Redis cache read failed:', error)
+    return null
   }
 }
 
@@ -338,12 +338,12 @@ async function getCachedMocDetail(cacheKey: string): Promise<MocDetailResponse |
  */
 async function cacheMocDetail(cacheKey: string, data: MocDetailResponse): Promise<void> {
   try {
-    const redis = await getRedisClient();
-    const TTL = 600; // 10 minutes
+    const redis = await getRedisClient()
+    const TTL = 600 // 10 minutes
 
-    await redis.setEx(cacheKey, TTL, JSON.stringify(data));
+    await redis.setEx(cacheKey, TTL, JSON.stringify(data))
   } catch (error) {
-    console.warn('Redis cache write failed:', error);
+    console.warn('Redis cache write failed:', error)
     // Don't throw - caching failure shouldn't break the request
   }
 }
@@ -354,13 +354,13 @@ async function cacheMocDetail(cacheKey: string, data: MocDetailResponse): Promis
  */
 export async function invalidateMocDetailCache(mocId: string): Promise<void> {
   try {
-    const redis = await getRedisClient();
-    const cacheKey = `moc:detail:${mocId}`;
+    const redis = await getRedisClient()
+    const cacheKey = `moc:detail:${mocId}`
 
-    await redis.del(cacheKey);
-    console.log('Invalidated MOC detail cache', { mocId });
+    await redis.del(cacheKey)
+    console.log('Invalidated MOC detail cache', { mocId })
   } catch (error) {
-    console.warn('Failed to invalidate MOC detail cache:', error);
+    console.warn('Failed to invalidate MOC detail cache:', error)
     // Don't throw - cache invalidation failure shouldn't break the request
   }
 }
@@ -380,12 +380,12 @@ export async function invalidateMocDetailCache(mocId: string): Promise<void> {
  */
 export async function createMoc(
   userId: string,
-  data: { title: string; description?: string; tags?: string[]; thumbnailUrl?: string }
+  data: { title: string; description?: string; tags?: string[]; thumbnailUrl?: string },
 ): Promise<MocInstruction> {
   try {
-    console.log('Creating MOC', { userId, title: data.title });
+    console.log('Creating MOC', { userId, title: data.title })
 
-    const now = new Date();
+    const now = new Date()
 
     // Insert into database with transaction
     // Note: Drizzle doesn't have explicit transaction API in this context,
@@ -402,40 +402,40 @@ export async function createMoc(
         createdAt: now,
         updatedAt: now,
       })
-      .returning();
+      .returning()
 
     if (!moc) {
-      throw new DatabaseError('Failed to create MOC - no record returned');
+      throw new DatabaseError('Failed to create MOC - no record returned')
     }
 
     // Cast to MocInstruction type
-    const mocInstruction = moc as unknown as MocInstruction;
+    const mocInstruction = moc as unknown as MocInstruction
 
-    console.log('MOC created successfully', { mocId: moc.id, userId });
+    console.log('MOC created successfully', { mocId: moc.id, userId })
 
     // Index in OpenSearch asynchronously (non-blocking)
     // Fire and forget - don't wait for indexing to complete
-    indexMocAsync(mocInstruction);
+    indexMocAsync(mocInstruction)
 
     // Invalidate user's MOC list cache
-    invalidateMocListCache(userId);
+    invalidateMocListCache(userId)
 
-    return mocInstruction;
+    return mocInstruction
   } catch (error) {
     // Check for unique constraint violation (duplicate title)
     if ((error as any).code === '23505' && (error as any).constraint?.includes('user_title')) {
       throw new ConflictError('A MOC with this title already exists', {
         userId,
         title: data.title,
-      });
+      })
     }
 
-    console.error('Error creating MOC:', error);
+    console.error('Error creating MOC:', error)
     throw new DatabaseError('Failed to create MOC', {
       userId,
       data,
       error: (error as Error).message,
-    });
+    })
   }
 }
 
@@ -445,10 +445,10 @@ export async function createMoc(
  */
 async function indexMocAsync(moc: MocInstruction): Promise<void> {
   try {
-    const { indexMoc } = await import('@/lib/services/opensearch-moc');
-    await indexMoc(moc);
+    const { indexMoc } = await import('@/lib/services/opensearch-moc')
+    await indexMoc(moc)
   } catch (error) {
-    console.error('Failed to index MOC in OpenSearch (non-blocking):', error);
+    console.error('Failed to index MOC in OpenSearch (non-blocking):', error)
     // Don't throw - indexing failure shouldn't break the creation request
     // Search will fall back to PostgreSQL until re-indexed
   }
@@ -469,69 +469,78 @@ async function indexMocAsync(moc: MocInstruction): Promise<void> {
 export async function updateMoc(
   mocId: string,
   userId: string,
-  data: { title?: string; description?: string; author?: string; theme?: string; subtheme?: string; partsCount?: number; tags?: string[]; thumbnailUrl?: string }
+  data: {
+    title?: string
+    description?: string
+    author?: string
+    theme?: string
+    subtheme?: string
+    partsCount?: number
+    tags?: string[]
+    thumbnailUrl?: string
+  },
 ): Promise<MocInstruction> {
   try {
-    console.log('Updating MOC', { mocId, userId, fields: Object.keys(data) });
+    console.log('Updating MOC', { mocId, userId, fields: Object.keys(data) })
 
     // First, fetch the MOC to verify ownership
     const [existingMoc] = await db
       .select()
       .from(mocInstructions)
       .where(eq(mocInstructions.id, mocId))
-      .limit(1);
+      .limit(1)
 
     if (!existingMoc) {
-      throw new NotFoundError('MOC not found');
+      throw new NotFoundError('MOC not found')
     }
 
     // Authorization check: user must own the MOC
     if (existingMoc.userId !== userId) {
-      throw new ForbiddenError('You do not own this MOC');
+      throw new ForbiddenError('You do not own this MOC')
     }
 
     // Build update object with only provided fields
     const updateData: any = {
       updatedAt: new Date(), // Always update timestamp
-    };
+    }
 
-    if (data.title !== undefined) updateData.title = data.title;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.author !== undefined) updateData.author = data.author;
-    if (data.theme !== undefined) updateData.theme = data.theme;
-    if (data.subtheme !== undefined) updateData.subtheme = data.subtheme;
-    if (data.partsCount !== undefined) updateData.partsCount = data.partsCount;
-    if (data.tags !== undefined) updateData.tags = data.tags;
-    if (data.thumbnailUrl !== undefined) updateData.thumbnailUrl = data.thumbnailUrl;
+    if (data.title !== undefined) updateData.title = data.title
+    if (data.description !== undefined) updateData.description = data.description
+    if (data.author !== undefined) updateData.author = data.author
+    if (data.theme !== undefined) updateData.theme = data.theme
+    if (data.subtheme !== undefined) updateData.subtheme = data.subtheme
+    if (data.partsCount !== undefined) updateData.partsCount = data.partsCount
+    if (data.tags !== undefined) updateData.tags = data.tags
+    if (data.thumbnailUrl !== undefined) updateData.thumbnailUrl = data.thumbnailUrl
 
     // Perform update with optimistic locking
     const [updatedMoc] = await db
       .update(mocInstructions)
       .set(updateData)
       .where(eq(mocInstructions.id, mocId))
-      .returning();
+      .returning()
 
     if (!updatedMoc) {
-      throw new DatabaseError('Failed to update MOC - no record returned');
+      throw new DatabaseError('Failed to update MOC - no record returned')
     }
 
     // Cast to MocInstruction type
-    const mocInstruction = updatedMoc as unknown as MocInstruction;
+    const mocInstruction = updatedMoc as unknown as MocInstruction
 
-    console.log('MOC updated successfully', { mocId, userId, updatedFields: Object.keys(data) });
+    console.log('MOC updated successfully', { mocId, userId, updatedFields: Object.keys(data) })
 
     // Re-index in OpenSearch asynchronously (non-blocking)
-    updateMocIndexAsync(mocInstruction);
+    updateMocIndexAsync(mocInstruction)
 
     // Invalidate caches
-    invalidateMocDetailCache(mocId);
-    invalidateMocListCache(userId);
+    invalidateMocDetailCache(mocId)
+    invalidateMocListCache(userId)
 
-    return mocInstruction;
+    return mocInstruction
   } catch (error) {
     // Re-throw known errors
     if (error instanceof NotFoundError || error instanceof ForbiddenError) {
-      throw error;
+      throw error
     }
 
     // Check for unique constraint violation (duplicate title)
@@ -540,16 +549,16 @@ export async function updateMoc(
         userId,
         mocId,
         title: data.title,
-      });
+      })
     }
 
-    console.error('Error updating MOC:', error);
+    console.error('Error updating MOC:', error)
     throw new DatabaseError('Failed to update MOC', {
       mocId,
       userId,
       data,
       error: (error as Error).message,
-    });
+    })
   }
 }
 
@@ -559,10 +568,10 @@ export async function updateMoc(
  */
 async function updateMocIndexAsync(moc: MocInstruction): Promise<void> {
   try {
-    const { updateMocIndex } = await import('@/lib/services/opensearch-moc');
-    await updateMocIndex(moc);
+    const { updateMocIndex } = await import('@/lib/services/opensearch-moc')
+    await updateMocIndex(moc)
   } catch (error) {
-    console.error('Failed to update MOC in OpenSearch (non-blocking):', error);
+    console.error('Failed to update MOC in OpenSearch (non-blocking):', error)
     // Don't throw - indexing failure shouldn't break the update request
   }
 }
@@ -586,35 +595,35 @@ async function updateMocIndexAsync(moc: MocInstruction): Promise<void> {
  * @throws ForbiddenError if user doesn't own MOC
  */
 export async function deleteMoc(mocId: string, userId: string): Promise<void> {
-  console.log('Deleting MOC', { mocId, userId });
+  console.log('Deleting MOC', { mocId, userId })
 
   // Fetch existing MOC to verify ownership
   const [existingMoc] = await db
     .select()
     .from(mocInstructions)
     .where(eq(mocInstructions.id, mocId))
-    .limit(1);
+    .limit(1)
 
   if (!existingMoc) {
-    throw new NotFoundError('MOC not found');
+    throw new NotFoundError('MOC not found')
   }
 
   if (existingMoc.userId !== userId) {
-    throw new ForbiddenError('You do not own this MOC');
+    throw new ForbiddenError('You do not own this MOC')
   }
 
-  console.log('Performing cascade deletion for MOC', { mocId });
+  console.log('Performing cascade deletion for MOC', { mocId })
 
   // Fetch MOC-owned files for S3 cleanup (before deletion)
   // These are files that belong exclusively to this MOC (instructions, parts lists, thumbnails)
-  const mocOwnedFiles = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId));
+  const mocOwnedFiles = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId))
 
   // Fetch gallery images linked to this MOC to check for orphans
   const linkedGalleryImages = await db
     .select({ id: galleryImages.id, imageUrl: galleryImages.imageUrl })
     .from(mocGalleryImages)
     .innerJoin(galleryImages, eq(mocGalleryImages.galleryImageId, galleryImages.id))
-    .where(eq(mocGalleryImages.mocId, mocId));
+    .where(eq(mocGalleryImages.mocId, mocId))
 
   // Cascade deletion (database handles foreign key constraints)
   // Order matters for foreign key constraints:
@@ -623,53 +632,50 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
   // 3. Delete moc_gallery_images (references moc_instructions)
   // 4. Delete moc_files (references moc_instructions)
   // 5. Delete moc_instructions
-  await db.delete(mocPartsLists).where(eq(mocPartsLists.mocId, mocId));
-  await db.delete(mocGalleryAlbums).where(eq(mocGalleryAlbums.mocId, mocId));
-  await db.delete(mocGalleryImages).where(eq(mocGalleryImages.mocId, mocId));
-  await db.delete(mocFiles).where(eq(mocFiles.mocId, mocId));
-  await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId));
+  await db.delete(mocPartsLists).where(eq(mocPartsLists.mocId, mocId))
+  await db.delete(mocGalleryAlbums).where(eq(mocGalleryAlbums.mocId, mocId))
+  await db.delete(mocGalleryImages).where(eq(mocGalleryImages.mocId, mocId))
+  await db.delete(mocFiles).where(eq(mocFiles.mocId, mocId))
+  await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId))
 
   console.log('MOC deleted from database', {
     mocId,
     mocOwnedFilesCount: mocOwnedFiles.length,
     linkedGalleryImagesCount: linkedGalleryImages.length,
-  });
+  })
 
   // Determine which gallery images are now orphaned (not referenced by any other MOC or album)
-  const orphanedGalleryImageUrls: string[] = [];
+  const orphanedGalleryImageUrls: string[] = []
   for (const galleryImage of linkedGalleryImages) {
-    const isOrphaned = await checkIfGalleryImageIsOrphaned(galleryImage.id);
+    const isOrphaned = await checkIfGalleryImageIsOrphaned(galleryImage.id)
     if (isOrphaned) {
-      orphanedGalleryImageUrls.push(galleryImage.imageUrl);
+      orphanedGalleryImageUrls.push(galleryImage.imageUrl)
       // Delete the orphaned gallery image from database
-      await db.delete(galleryImages).where(eq(galleryImages.id, galleryImage.id));
+      await db.delete(galleryImages).where(eq(galleryImages.id, galleryImage.id))
     }
   }
 
   console.log('Orphaned gallery images identified', {
     mocId,
     orphanedCount: orphanedGalleryImageUrls.length,
-  });
+  })
 
   // Async S3 cleanup (fire-and-forget)
   // Only delete MOC-owned files and orphaned gallery images
-  const filesToDelete = [
-    ...mocOwnedFiles.map((f) => f.fileUrl),
-    ...orphanedGalleryImageUrls,
-  ];
+  const filesToDelete = [...mocOwnedFiles.map(f => f.fileUrl), ...orphanedGalleryImageUrls]
 
   if (filesToDelete.length > 0) {
-    deleteS3FilesAsync(filesToDelete);
+    deleteS3FilesAsync(filesToDelete)
   }
 
   // Async OpenSearch deletion (fire-and-forget)
-  deleteMocIndexAsync(mocId);
+  deleteMocIndexAsync(mocId)
 
   // Invalidate caches
-  invalidateMocDetailCache(mocId);
-  invalidateMocListCache(userId);
+  invalidateMocDetailCache(mocId)
+  invalidateMocListCache(userId)
 
-  console.log('MOC deletion complete', { mocId });
+  console.log('MOC deletion complete', { mocId })
 }
 
 /**
@@ -682,10 +688,10 @@ async function checkIfGalleryImageIsOrphaned(galleryImageId: string): Promise<bo
     .select({ id: mocGalleryImages.id })
     .from(mocGalleryImages)
     .where(eq(mocGalleryImages.galleryImageId, galleryImageId))
-    .limit(1);
+    .limit(1)
 
   if (mocLink) {
-    return false; // Still referenced by another MOC
+    return false // Still referenced by another MOC
   }
 
   // Check if image is the cover image of any album
@@ -693,10 +699,10 @@ async function checkIfGalleryImageIsOrphaned(galleryImageId: string): Promise<bo
     .select({ id: galleryAlbums.id })
     .from(galleryAlbums)
     .where(eq(galleryAlbums.coverImageId, galleryImageId))
-    .limit(1);
+    .limit(1)
 
   if (albumCoverLink) {
-    return false; // Used as album cover
+    return false // Used as album cover
   }
 
   // Check if image belongs to any album (via albumId in gallery_images)
@@ -704,14 +710,14 @@ async function checkIfGalleryImageIsOrphaned(galleryImageId: string): Promise<bo
     .select({ albumId: galleryImages.albumId })
     .from(galleryImages)
     .where(eq(galleryImages.id, galleryImageId))
-    .limit(1);
+    .limit(1)
 
   if (galleryImage?.albumId) {
-    return false; // Belongs to an album
+    return false // Belongs to an album
   }
 
   // Image is orphaned - not referenced by any MOC or album
-  return true;
+  return true
 }
 
 /**
@@ -720,60 +726,60 @@ async function checkIfGalleryImageIsOrphaned(galleryImageId: string): Promise<bo
  */
 async function deleteS3FilesAsync(fileUrls: string[]): Promise<void> {
   try {
-    const { DeleteObjectsCommand, S3Client } = await import('@aws-sdk/client-s3');
+    const { DeleteObjectsCommand, S3Client } = await import('@aws-sdk/client-s3')
 
-    const s3Client = new S3Client({});
+    const s3Client = new S3Client({})
 
     // Get bucket name from environment variable (set by SST link)
-    const bucketName = process.env.LEGO_API_BUCKET_NAME;
+    const bucketName = process.env.LEGO_API_BUCKET_NAME
 
     if (!bucketName) {
-      console.error('S3 bucket name not configured - skipping file deletion');
-      return;
+      console.error('S3 bucket name not configured - skipping file deletion')
+      return
     }
 
     // Extract S3 keys from URLs
     // Expected format: https://bucket-name.s3.region.amazonaws.com/key
     const keys = fileUrls
-      .map((url) => {
+      .map(url => {
         try {
-          const urlObj = new URL(url);
+          const urlObj = new URL(url)
           // Extract key from pathname (remove leading slash)
-          return urlObj.pathname.substring(1);
+          return urlObj.pathname.substring(1)
         } catch (error) {
-          console.error('Invalid S3 URL:', url, error);
-          return null;
+          console.error('Invalid S3 URL:', url, error)
+          return null
         }
       })
-      .filter((key): key is string => key !== null);
+      .filter((key): key is string => key !== null)
 
     if (keys.length === 0) {
-      console.log('No valid S3 keys to delete');
-      return;
+      console.log('No valid S3 keys to delete')
+      return
     }
 
-    console.log('Deleting S3 objects', { bucketName, keysCount: keys.length });
+    console.log('Deleting S3 objects', { bucketName, keysCount: keys.length })
 
     // Delete objects in batches of 1000 (S3 limit)
-    const batchSize = 1000;
+    const batchSize = 1000
     for (let i = 0; i < keys.length; i += batchSize) {
-      const batch = keys.slice(i, i + batchSize);
+      const batch = keys.slice(i, i + batchSize)
 
       const command = new DeleteObjectsCommand({
         Bucket: bucketName,
         Delete: {
-          Objects: batch.map((key) => ({ Key: key })),
+          Objects: batch.map(key => ({ Key: key })),
           Quiet: true,
         },
-      });
+      })
 
-      await s3Client.send(command);
-      console.log('S3 batch deletion complete', { batchSize: batch.length });
+      await s3Client.send(command)
+      console.log('S3 batch deletion complete', { batchSize: batch.length })
     }
 
-    console.log('All S3 objects deleted', { totalKeys: keys.length });
+    console.log('All S3 objects deleted', { totalKeys: keys.length })
   } catch (error) {
-    console.error('Failed to delete S3 files (non-blocking):', error);
+    console.error('Failed to delete S3 files (non-blocking):', error)
     // Don't throw - S3 cleanup failure shouldn't break the delete request
   }
 }
@@ -783,10 +789,10 @@ async function deleteS3FilesAsync(fileUrls: string[]): Promise<void> {
  */
 async function deleteMocIndexAsync(mocId: string): Promise<void> {
   try {
-    const { deleteMocIndex } = await import('@/lib/services/opensearch-moc');
-    await deleteMocIndex(mocId);
+    const { deleteMocIndex } = await import('@/lib/services/opensearch-moc')
+    await deleteMocIndex(mocId)
   } catch (error) {
-    console.error('Failed to delete MOC from OpenSearch (non-blocking):', error);
+    console.error('Failed to delete MOC from OpenSearch (non-blocking):', error)
     // Don't throw - indexing failure shouldn't break the delete request
   }
 }

@@ -1,4 +1,4 @@
-import type { Config } from 'drizzle-kit';
+import type { Config } from 'drizzle-kit'
 
 /**
  * Drizzle Kit Configuration for SST Serverless Migration
@@ -29,4 +29,4 @@ export default {
   },
   verbose: true,
   strict: true,
-} satisfies Config;
+} satisfies Config

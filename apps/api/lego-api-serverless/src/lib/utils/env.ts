@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Environment Variable Schema
@@ -7,7 +7,7 @@ import { z } from 'zod';
  * Uses Zod for runtime validation and TypeScript inference.
  */
 
-const StageSchema = z.enum(['dev', 'staging', 'production']);
+const StageSchema = z.enum(['dev', 'staging', 'production'])
 
 export const EnvSchema = z.object({
   // Deployment stage
@@ -47,34 +47,34 @@ export const EnvSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-});
+})
 
-export type Env = z.infer<typeof EnvSchema>;
+export type Env = z.infer<typeof EnvSchema>
 
 /**
  * Validates and returns typed environment variables
  */
 export function validateEnv(): Env {
   try {
-    return EnvSchema.parse(process.env);
+    return EnvSchema.parse(process.env)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('❌ Invalid environment variables:');
-      console.error(JSON.stringify(error.issues, null, 2));
-      throw new Error('Environment validation failed');
+      console.error('❌ Invalid environment variables:')
+      console.error(JSON.stringify(error.issues, null, 2))
+      throw new Error('Environment validation failed')
     }
-    throw error;
+    throw error
   }
 }
 
 /**
  * Get validated environment variables (memoized)
  */
-let _env: Env | null = null;
+let _env: Env | null = null
 
 export function getEnv(): Env {
   if (!_env) {
-    _env = validateEnv();
+    _env = validateEnv()
   }
-  return _env;
+  return _env
 }

@@ -14,12 +14,16 @@
  * API Gateway Endpoint: GET /health
  */
 
-import { healthCheckResponse, errorResponseFromError, type APIGatewayProxyResult } from '@/lib/responses';
-import type { HealthCheckData } from '@/lib/responses';
-import { testConnection } from '@/lib/db/client';
-import { testRedisConnection } from '@/lib/services/redis';
-import { testOpenSearchConnection } from '@/lib/services/opensearch';
-import { ServiceUnavailableError } from '@/lib/errors';
+import {
+  healthCheckResponse,
+  errorResponseFromError,
+  type APIGatewayProxyResult,
+  HealthCheckData,
+} from '@/lib/responses'
+import { testConnection } from '@/lib/db/client'
+import { testRedisConnection } from '@/lib/services/redis'
+import { testOpenSearchConnection } from '@/lib/services/opensearch'
+import { ServiceUnavailableError } from '@/lib/errors'
 
 /**
  * Health Check Handler
@@ -31,17 +35,17 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
     console.log('Health check initiated', {
       requestId: event.requestContext.requestId,
       stage: process.env.STAGE,
-    });
+    })
 
     // Test all services in parallel for faster response
     const [postgresHealthy, redisHealthy, openSearchHealthy] = await Promise.all([
       testConnection(),
       testRedisConnection(),
       testOpenSearchConnection(),
-    ]);
+    ])
 
     // Determine overall health status
-    const status = determineHealthStatus(postgresHealthy, redisHealthy, openSearchHealthy);
+    const status = determineHealthStatus(postgresHealthy, redisHealthy, openSearchHealthy)
 
     const healthData: HealthCheckData = {
       status,
@@ -52,22 +56,22 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
       },
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
-    };
+    }
 
-    console.log('Health check completed', healthData);
+    console.log('Health check completed', healthData)
 
     // If PostgreSQL is down, return 503 (critical service)
     if (!postgresHealthy) {
       throw new ServiceUnavailableError('Database connection failed', {
         services: healthData.services,
         timestamp: healthData.timestamp,
-      });
+      })
     }
 
-    return healthCheckResponse(healthData);
+    return healthCheckResponse(healthData)
   } catch (error) {
-    console.error('Health check failed:', error);
-    return errorResponseFromError(error);
+    console.error('Health check failed:', error)
+    return errorResponseFromError(error)
   }
 }
 
@@ -80,18 +84,18 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
 function determineHealthStatus(
   postgres: boolean,
   redis: boolean,
-  opensearch: boolean
+  opensearch: boolean,
 ): 'healthy' | 'degraded' | 'unhealthy' {
   // PostgreSQL is critical - if down, system is unhealthy
   if (!postgres) {
-    return 'unhealthy';
+    return 'unhealthy'
   }
 
   // If all services up, system is healthy
   if (redis && opensearch) {
-    return 'healthy';
+    return 'healthy'
   }
 
   // If PostgreSQL up but Redis/OpenSearch down, system is degraded
-  return 'degraded';
+  return 'degraded'
 }

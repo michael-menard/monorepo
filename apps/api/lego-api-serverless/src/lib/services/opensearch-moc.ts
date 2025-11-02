@@ -8,11 +8,11 @@
  * Full implementation will be completed in Story 2.8.
  */
 
-import { getOpenSearchClient } from '@/lib/services/opensearch';
-import type { MocInstruction } from '@/types/moc';
-import { SearchError } from '@/lib/errors';
+import { getOpenSearchClient } from '@/lib/services/opensearch'
+import type { MocInstruction } from '@/types/moc'
+import { SearchError } from '@/lib/errors'
 
-const MOC_INDEX = 'moc_instructions';
+const MOC_INDEX = 'moc_instructions'
 
 /**
  * Search MOCs using OpenSearch multi-match query
@@ -35,12 +35,12 @@ export async function searchMocs(
   query: string,
   from: number = 0,
   size: number = 20,
-  tag?: string
+  tag?: string,
 ): Promise<{ mocs: MocInstruction[]; total: number }> {
   try {
-    console.log('OpenSearch MOC search initiated', { userId, query, from, size, tag });
+    console.log('OpenSearch MOC search initiated', { userId, query, from, size, tag })
 
-    const client = getOpenSearchClient();
+    const client = getOpenSearchClient()
 
     // Build OpenSearch query
     const must: any[] = [
@@ -57,7 +57,7 @@ export async function searchMocs(
           type: 'best_fields',
         },
       },
-    ];
+    ]
 
     // Add tag filter if provided
     if (tag && tag.trim()) {
@@ -65,7 +65,7 @@ export async function searchMocs(
         term: {
           'tags.keyword': tag, // Exact match on tag
         },
-      });
+      })
     }
 
     const searchBody = {
@@ -80,41 +80,41 @@ export async function searchMocs(
       ],
       from,
       size,
-    };
+    }
 
     // Execute search
     const response = await client.search({
       index: MOC_INDEX,
       body: searchBody,
-    });
+    })
 
     // Map results to MOC entities
-    const hits = response.body.hits.hits;
+    const hits = response.body.hits.hits
     const mocs: MocInstruction[] = hits.map((hit: any) => ({
       ...hit._source,
       // Convert date strings back to Date objects
       createdAt: new Date(hit._source.createdAt),
       updatedAt: new Date(hit._source.updatedAt),
       uploadedDate: hit._source.uploadedDate ? new Date(hit._source.uploadedDate) : null,
-    }));
+    }))
 
-    const total = response.body.hits.total.value;
+    const total = response.body.hits.total.value
 
     console.log('OpenSearch query completed', {
       userId,
       query,
       mocsReturned: mocs.length,
       total,
-    });
+    })
 
-    return { mocs, total };
+    return { mocs, total }
   } catch (error) {
-    console.error('OpenSearch search failed:', error);
+    console.error('OpenSearch search failed:', error)
     throw new SearchError('MOC search failed', {
       userId,
       query,
       error: (error as Error).message,
-    });
+    })
   }
 }
 
@@ -124,7 +124,7 @@ export async function searchMocs(
  */
 export async function indexMoc(moc: MocInstruction): Promise<void> {
   try {
-    const client = getOpenSearchClient();
+    const client = getOpenSearchClient()
 
     await client.index({
       index: MOC_INDEX,
@@ -136,11 +136,11 @@ export async function indexMoc(moc: MocInstruction): Promise<void> {
         updatedAt: moc.updatedAt.toISOString(),
         uploadedDate: moc.uploadedDate ? moc.uploadedDate.toISOString() : null,
       },
-    });
+    })
 
-    console.log('MOC indexed in OpenSearch', { mocId: moc.id, userId: moc.userId });
+    console.log('MOC indexed in OpenSearch', { mocId: moc.id, userId: moc.userId })
   } catch (error) {
-    console.error('Failed to index MOC in OpenSearch:', error);
+    console.error('Failed to index MOC in OpenSearch:', error)
     // Don't throw - indexing failure shouldn't break the creation request
     // Search will fall back to PostgreSQL until re-indexed
   }
@@ -152,7 +152,7 @@ export async function indexMoc(moc: MocInstruction): Promise<void> {
  */
 export async function updateMocIndex(moc: MocInstruction): Promise<void> {
   try {
-    const client = getOpenSearchClient();
+    const client = getOpenSearchClient()
 
     await client.update({
       index: MOC_INDEX,
@@ -165,11 +165,11 @@ export async function updateMocIndex(moc: MocInstruction): Promise<void> {
           uploadedDate: moc.uploadedDate ? moc.uploadedDate.toISOString() : null,
         },
       },
-    });
+    })
 
-    console.log('MOC updated in OpenSearch', { mocId: moc.id });
+    console.log('MOC updated in OpenSearch', { mocId: moc.id })
   } catch (error) {
-    console.error('Failed to update MOC in OpenSearch:', error);
+    console.error('Failed to update MOC in OpenSearch:', error)
     // Don't throw - indexing failure shouldn't break the update request
   }
 }
@@ -180,16 +180,16 @@ export async function updateMocIndex(moc: MocInstruction): Promise<void> {
  */
 export async function deleteMocIndex(mocId: string): Promise<void> {
   try {
-    const client = getOpenSearchClient();
+    const client = getOpenSearchClient()
 
     await client.delete({
       index: MOC_INDEX,
       id: mocId,
-    });
+    })
 
-    console.log('MOC deleted from OpenSearch', { mocId });
+    console.log('MOC deleted from OpenSearch', { mocId })
   } catch (error) {
-    console.error('Failed to delete MOC from OpenSearch:', error);
+    console.error('Failed to delete MOC from OpenSearch:', error)
     // Don't throw - indexing failure shouldn't break the delete request
   }
 }
@@ -200,10 +200,10 @@ export async function deleteMocIndex(mocId: string): Promise<void> {
  */
 export async function initializeMocIndex(): Promise<void> {
   try {
-    const client = getOpenSearchClient();
+    const client = getOpenSearchClient()
 
     // Check if index exists
-    const exists = await client.indices.exists({ index: MOC_INDEX });
+    const exists = await client.indices.exists({ index: MOC_INDEX })
 
     if (!exists.body) {
       // Create index with mappings
@@ -236,14 +236,14 @@ export async function initializeMocIndex(): Promise<void> {
             },
           },
         },
-      });
+      })
 
-      console.log('MOC index created in OpenSearch');
+      console.log('MOC index created in OpenSearch')
     } else {
-      console.log('MOC index already exists in OpenSearch');
+      console.log('MOC index already exists in OpenSearch')
     }
   } catch (error) {
-    console.error('Failed to initialize MOC index:', error);
+    console.error('Failed to initialize MOC index:', error)
     // Don't throw - application should continue even if OpenSearch is unavailable
   }
 }

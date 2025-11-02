@@ -5,7 +5,7 @@
  * Maintains backward compatibility with existing Express API contracts.
  */
 
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * MOC Instruction Entity Schema
@@ -30,9 +30,9 @@ export const MocInstructionSchema = z.object({
   uploadedDate: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
-});
+})
 
-export type MocInstruction = z.infer<typeof MocInstructionSchema>;
+export type MocInstruction = z.infer<typeof MocInstructionSchema>
 
 /**
  * Create MOC Schema (Simple - metadata only)
@@ -43,9 +43,9 @@ export const CreateMocSchema = z.object({
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
   thumbnailUrl: z.string().url().optional(),
-});
+})
 
-export type CreateMoc = z.infer<typeof CreateMocSchema>;
+export type CreateMoc = z.infer<typeof CreateMocSchema>
 
 /**
  * Base schema for MOC creation with files
@@ -54,7 +54,7 @@ const BaseCreateWithFilesSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
-});
+})
 
 /**
  * MOC-specific creation schema
@@ -67,7 +67,7 @@ const CreateMocWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
   theme: z.string().min(1, 'Theme is required'),
   subtheme: z.string().optional(),
   uploadedDate: z.string().datetime().optional(), // ISO string
-});
+})
 
 /**
  * Set-specific creation schema
@@ -84,7 +84,7 @@ const CreateSetWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
     .max(new Date().getFullYear() + 2)
     .optional(),
   retired: z.boolean().default(false),
-});
+})
 
 /**
  * Discriminated union for MOC/Set creation with files
@@ -92,9 +92,9 @@ const CreateSetWithFilesSchemaBase = BaseCreateWithFilesSchema.extend({
 export const CreateMocWithFilesSchema = z.discriminatedUnion('type', [
   CreateMocWithFilesSchemaBase,
   CreateSetWithFilesSchemaBase,
-]);
+])
 
-export type CreateMocWithFiles = z.infer<typeof CreateMocWithFilesSchema>;
+export type CreateMocWithFiles = z.infer<typeof CreateMocWithFilesSchema>
 
 /**
  * Update MOC Schema (Partial updates)
@@ -109,9 +109,9 @@ export const UpdateMocSchema = z.object({
   partsCount: z.number().int().min(1).optional(),
   tags: z.array(z.string()).optional(),
   thumbnailUrl: z.string().url().optional(),
-});
+})
 
-export type UpdateMoc = z.infer<typeof UpdateMocSchema>;
+export type UpdateMoc = z.infer<typeof UpdateMocSchema>
 
 /**
  * MOC List Query Parameters
@@ -122,9 +122,9 @@ export const MocListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
   tag: z.string().optional(),
-});
+})
 
-export type MocListQuery = z.infer<typeof MocListQuerySchema>;
+export type MocListQuery = z.infer<typeof MocListQuerySchema>
 
 /**
  * MOC File Entity
@@ -138,9 +138,9 @@ export const MocFileSchema = z.object({
   originalFilename: z.string().nullable(),
   mimeType: z.string().nullable(),
   createdAt: z.date(),
-});
+})
 
-export type MocFile = z.infer<typeof MocFileSchema>;
+export type MocFile = z.infer<typeof MocFileSchema>
 
 /**
  * MOC Gallery Image (linked from gallery_images table)
@@ -151,9 +151,9 @@ export const MocGalleryImageSchema = z.object({
   url: z.string().url(),
   alt: z.string().nullable(),
   caption: z.string().nullable(),
-});
+})
 
-export type MocGalleryImage = z.infer<typeof MocGalleryImageSchema>;
+export type MocGalleryImage = z.infer<typeof MocGalleryImageSchema>
 
 /**
  * MOC Parts List
@@ -174,17 +174,17 @@ export const MocPartsListSchema = z.object({
   notes: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
-});
+})
 
-export type MocPartsList = z.infer<typeof MocPartsListSchema>;
+export type MocPartsList = z.infer<typeof MocPartsListSchema>
 
 /**
  * MOC Detail Response (includes related entities)
  */
 export interface MocDetailResponse extends MocInstruction {
-  files: MocFile[];
-  images: MocGalleryImage[];
-  partsLists: MocPartsList[];
+  files: MocFile[]
+  images: MocGalleryImage[]
+  partsLists: MocPartsList[]
 }
 
 /**
@@ -192,11 +192,11 @@ export interface MocDetailResponse extends MocInstruction {
  * Maintains backward compatibility with existing API
  */
 export interface MocListResponse {
-  success: true;
-  data: MocInstruction[];
-  total: number;
-  page: number;
-  limit: number;
+  success: true
+  data: MocInstruction[]
+  total: number
+  page: number
+  limit: number
 }
 
 /**
@@ -204,6 +204,6 @@ export interface MocListResponse {
  */
 export const FileUploadSchema = z.object({
   fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
-});
+})
 
-export type FileUpload = z.infer<typeof FileUploadSchema>;
+export type FileUpload = z.infer<typeof FileUploadSchema>
