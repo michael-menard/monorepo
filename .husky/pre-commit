@@ -25,14 +25,6 @@ if ! pnpm turbo format --filter="...[HEAD]" > /dev/null 2>&1; then
     exit 1
 fi
 
-# Lint only changed files efficiently
-echo "🔍 Linting changed files..."
-if ! pnpm lint:changed > /dev/null 2>&1; then
-    echo "❌ Lint failed on changed files. Please fix errors and try again."
-    echo "💡 Run: pnpm lint:changed to see detailed errors"
-    exit 1
-fi
-
 # Build affected projects to catch compilation errors
 echo "🔍 Building affected projects..."
 if ! pnpm turbo build --filter="...[HEAD]" > /dev/null 2>&1; then

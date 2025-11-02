@@ -555,12 +555,16 @@ describe('Gallery Lambda Integration', () => {
         userId: 'user-123',
         title: 'Old Title',
         imageUrl: 'https://example.com/castle.jpg',
+        tags: ['old'],
+        albumId: null,
+        createdAt: new Date('2024-01-01'),
       }
 
       const updatedImage = {
         ...existingImage,
         title: 'New Title',
         description: 'New description',
+        tags: ['new'],
         lastUpdatedAt: new Date(),
       }
 
@@ -568,6 +572,13 @@ describe('Gallery Lambda Integration', () => {
       mockDb.db.returning.mockResolvedValue([updatedImage])
 
       const redisClient = await mockRedis.getRedisClient()
+      vi.mocked(redisClient.keys).mockResolvedValue([
+        'gallery:images:user:user-123:page:1:limit:20:search:none:album:none',
+      ])
+
+      // Mock OpenSearch indexDocument
+      const mockOpenSearch = await import('@/lib/search/opensearch-client')
+      vi.mocked(mockOpenSearch.indexDocument).mockResolvedValue(undefined)
 
       // When: PATCH /api/images/image-123 is called
       const { handler } = await import('../../gallery')
@@ -591,6 +602,7 @@ describe('Gallery Lambda Integration', () => {
         body: JSON.stringify({
           title: 'New Title',
           description: 'New description',
+          tags: ['new'],
         }),
       }
 
@@ -604,8 +616,26 @@ describe('Gallery Lambda Integration', () => {
       expect(body.data.title).toBe('New Title')
       expect(body.data.description).toBe('New description')
 
-      // And: Cache is invalidated
+      // And: OpenSearch index is updated
+      expect(mockOpenSearch.indexDocument).toHaveBeenCalledWith({
+        index: 'gallery_images',
+        id: '550e8400-e29b-41d4-a716-446655440123',
+        body: expect.objectContaining({
+          userId: 'user-123',
+          title: 'New Title',
+          description: 'New description',
+          tags: ['new'],
+        }),
+      })
+
+      // And: Detail cache is invalidated
       expect(redisClient.del).toHaveBeenCalledWith('gallery:image:detail:550e8400-e29b-41d4-a716-446655440123')
+
+      // And: List caches are invalidated
+      expect(redisClient.keys).toHaveBeenCalledWith('gallery:images:user:user-123:*')
+      expect(redisClient.del).toHaveBeenCalledWith([
+        'gallery:images:user:user-123:page:1:limit:20:search:none:album:none',
+      ])
     })
 
     it('should return 404 when updating nonexistent image', async () => {
@@ -705,6 +735,13 @@ describe('Gallery Lambda Integration', () => {
 
       const s3Client = await mockS3.getS3Client()
       const redisClient = await mockRedis.getRedisClient()
+      vi.mocked(redisClient.keys).mockResolvedValue([
+        'gallery:images:user:user-123:page:1:limit:20:search:none:album:none',
+      ])
+
+      // Mock OpenSearch deleteDocument
+      const mockOpenSearch = await import('@/lib/search/opensearch-client')
+      vi.mocked(mockOpenSearch.deleteDocument).mockResolvedValue(undefined)
 
       // When: DELETE /api/images/image-123 is called
       const { handler } = await import('../../gallery')
@@ -738,8 +775,20 @@ describe('Gallery Lambda Integration', () => {
       // And: Database record is deleted
       expect(mockDb.db.delete).toHaveBeenCalled()
 
-      // And: Cache is invalidated
+      // And: OpenSearch document is deleted
+      expect(mockOpenSearch.deleteDocument).toHaveBeenCalledWith({
+        index: 'gallery_images',
+        id: '550e8400-e29b-41d4-a716-446655440123',
+      })
+
+      // And: Detail cache is invalidated
       expect(redisClient.del).toHaveBeenCalledWith('gallery:image:detail:550e8400-e29b-41d4-a716-446655440123')
+
+      // And: List caches are invalidated
+      expect(redisClient.keys).toHaveBeenCalledWith('gallery:images:user:user-123:*')
+      expect(redisClient.del).toHaveBeenCalledWith([
+        'gallery:images:user:user-123:page:1:limit:20:search:none:album:none',
+      ])
     })
 
     it('should return 404 when deleting nonexistent image', async () => {

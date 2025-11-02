@@ -92,5 +92,5 @@ export async function searchDocuments(params: {
     },
   })
 
-  return result.body
+  return result.body as { hits: { hits: Array<{ _source: Record<string, unknown> }> } }
 }

@@ -19,7 +19,7 @@ import {
 import { db } from '@/lib/db/client'
 import { getS3Client, uploadToS3 } from '@/lib/storage/s3-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
-import { indexDocument } from '@/lib/search/opensearch-client'
+import { indexDocument, deleteDocument } from '@/lib/search/opensearch-client'
 import { galleryImages } from '@/db/schema'
 import { eq, and, isNull, desc, count } from 'drizzle-orm'
 import { getEnv } from '@/lib/utils/env'
@@ -163,10 +163,12 @@ async function handleUploadImage(
     // Validate file using @monorepo/file-validator
     const validationResult = validateFile(
       {
+        fieldname: 'file',
+        originalname: file.filename,
+        encoding: file.encoding || '7bit',
         mimetype: file.mimetype,
         size: file.buffer.length,
-        originalname: file.filename,
-      } as { mimetype: string; size: number; originalname: string },
+      },
       createImageValidationConfig(10 * 1024 * 1024), // 10MB
     )
 
@@ -380,7 +382,6 @@ async function handleUpdateImage(
     const body = JSON.parse(event.body || '{}')
     const updateData = UpdateGalleryImageSchema.parse(body)
 
-
     // Check if image exists and verify ownership
     const [existingImage] = await db
       .select()
@@ -405,11 +406,40 @@ async function handleUpdateImage(
       .where(eq(galleryImages.id, imageId))
       .returning()
 
+    // Update OpenSearch index
+    try {
+      await indexDocument({
+        index: 'gallery_images',
+        id: imageId,
+        body: {
+          userId: updatedImage.userId,
+          title: updatedImage.title,
+          description: updatedImage.description || '',
+          tags: updatedImage.tags || [],
+          albumId: updatedImage.albumId || null,
+          createdAt: updatedImage.createdAt.toISOString(),
+        },
+      })
+    } catch (error) {
+      console.error('OpenSearch update failed (non-critical):', error)
+      // Don't fail the request if indexing fails
+    }
+
     // Invalidate caches
     const redis = await getRedisClient()
     await redis.del(`gallery:image:detail:${imageId}`)
-    // Note: In production, implement proper cache invalidation with tags or patterns
-    // For now, just invalidate the specific image cache (list caches would require SCAN)
+
+    // Invalidate list caches for this user
+    try {
+      const pattern = `gallery:images:user:${userId}:*`
+      const keys = await redis.keys(pattern)
+      if (keys.length > 0) {
+        await redis.del(keys)
+        console.log(`Invalidated ${keys.length} list cache keys for user ${userId}`)
+      }
+    } catch (error) {
+      console.error('Redis list cache invalidation failed (non-critical):', error)
+    }
 
     return createSuccessResponse(updatedImage)
   } catch (error) {
@@ -432,7 +462,6 @@ async function handleDeleteImage(
   try {
     // Validate image ID
     GalleryImageIdSchema.parse({ id: imageId })
-
 
     // Check if image exists and verify ownership
     const [existingImage] = await db
@@ -464,10 +493,12 @@ async function handleDeleteImage(
     }
 
     // Delete main image
-    await s3.send(new DeleteObjectCommand({
-      Bucket: env.S3_BUCKET!,
-      Key: imageKey,
-    }))
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: env.S3_BUCKET!,
+        Key: imageKey,
+      }),
+    )
 
     // Delete thumbnail if exists (reconstruct thumbnail key from image key)
     if (existingImage.thumbnailUrl) {
@@ -477,10 +508,12 @@ async function handleDeleteImage(
           ? thumbnailUrl.pathname.substring(1)
           : thumbnailUrl.pathname
 
-        await s3.send(new DeleteObjectCommand({
-          Bucket: env.S3_BUCKET!,
-          Key: thumbnailKey,
-        }))
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: env.S3_BUCKET!,
+            Key: thumbnailKey,
+          }),
+        )
       } catch (err) {
         console.warn('Thumbnail deletion failed (may not exist):', err)
       }
@@ -489,9 +522,32 @@ async function handleDeleteImage(
     // Delete from database
     await db.delete(galleryImages).where(eq(galleryImages.id, imageId))
 
+    // Delete from OpenSearch
+    try {
+      await deleteDocument({
+        index: 'gallery_images',
+        id: imageId,
+      })
+    } catch (error) {
+      console.error('OpenSearch delete failed (non-critical):', error)
+      // Don't fail the request if deletion fails
+    }
+
     // Invalidate caches
     const redis = await getRedisClient()
     await redis.del(`gallery:image:detail:${imageId}`)
+
+    // Invalidate list caches for this user
+    try {
+      const pattern = `gallery:images:user:${userId}:*`
+      const keys = await redis.keys(pattern)
+      if (keys.length > 0) {
+        await redis.del(keys)
+        console.log(`Invalidated ${keys.length} list cache keys for user ${userId}`)
+      }
+    } catch (error) {
+      console.error('Redis list cache invalidation failed (non-critical):', error)
+    }
 
     return createSuccessResponse({ message: 'Image deleted successfully' }, 204)
   } catch (error) {

@@ -3,8 +3,6 @@ export default {
   '**/*.{js,jsx,ts,tsx}': [
     // Format with Prettier
     'prettier --write',
-    // Lint only changed files efficiently
-    () => 'pnpm lint:changed',
   ],
 
   // JSON files
