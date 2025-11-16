@@ -13,9 +13,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { APIGatewayProxyEventV2 } from 'aws-lambda'
 
-// Mock external dependencies
-vi.mock('@/lib/auth/jwt-utils')
-
 describe('Profile Lambda Handlers Integration - Story 4.1', () => {
   beforeEach(() => {
     process.env.STAGE = 'dev'
@@ -29,7 +26,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
   })
 
   /**
-   * Helper to create mock API Gateway event
+   * Helper to create mock API Gateway event with JWT claims structure
    */
   function createMockEvent(
     method: string,
@@ -41,16 +38,24 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
       requestContext: {
         http: { method, path },
         requestId: 'test-request-id',
+        authorizer: userId
+          ? {
+              jwt: {
+                claims: {
+                  sub: userId,
+                  iss: 'https://cognito-idp.us-east-1.amazonaws.com/test-pool',
+                  exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+                },
+              },
+            }
+          : undefined,
       },
       pathParameters: pathParams,
-    } as APIGatewayProxyEventV2
+    } as any
   }
 
   describe('GET /api/users/{id} - Profile Get Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue(null)
-
       const { handler } = await import('../../profile-get')
       const event = createMockEvent('GET', '/api/users/user-123', null, { id: 'user-123' })
       const result = await handler(event)
@@ -61,9 +66,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-get')
       const event = createMockEvent('GET', '/api/users/user-456', 'user-123', { id: 'user-456' })
       const result = await handler(event)
@@ -74,9 +76,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.2)', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-get')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
@@ -89,9 +88,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('PATCH /api/users/{id} - Profile Update Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue(null)
-
       const { handler } = await import('../../profile-update')
       const event = createMockEvent('PATCH', '/api/users/user-123', null, { id: 'user-123' })
       const result = await handler(event)
@@ -102,9 +98,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-update')
       const event = createMockEvent('PATCH', '/api/users/user-456', 'user-123', { id: 'user-456' })
       const result = await handler(event)
@@ -115,9 +108,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.3)', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-update')
       const event = createMockEvent('PATCH', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
@@ -130,9 +120,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('POST /api/users/{id}/avatar - Avatar Upload Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue(null)
-
       const { handler } = await import('../../profile-avatar-upload')
       const event = createMockEvent('POST', '/api/users/user-123/avatar', null, {
         id: 'user-123',
@@ -145,9 +132,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-avatar-upload')
       const event = createMockEvent('POST', '/api/users/user-456/avatar', 'user-123', {
         id: 'user-456',
@@ -160,9 +144,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.4)', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-avatar-upload')
       const event = createMockEvent('POST', '/api/users/user-123/avatar', 'user-123', {
         id: 'user-123',
@@ -177,9 +158,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('DELETE /api/users/{id}/avatar - Avatar Delete Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue(null)
-
       const { handler } = await import('../../profile-avatar-delete')
       const event = createMockEvent('DELETE', '/api/users/user-123/avatar', null, {
         id: 'user-123',
@@ -192,9 +170,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-avatar-delete')
       const event = createMockEvent('DELETE', '/api/users/user-456/avatar', 'user-123', {
         id: 'user-456',
@@ -207,9 +182,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.5)', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-avatar-delete')
       const event = createMockEvent('DELETE', '/api/users/user-123/avatar', 'user-123', {
         id: 'user-123',
@@ -224,9 +196,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('Response Format', () => {
     it('should include CORS headers in all responses', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-get')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
@@ -237,9 +206,6 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return valid JSON in all responses', async () => {
-      const jwtUtils = await import('@/lib/auth/jwt-utils')
-      vi.mocked(jwtUtils.getUserIdFromEvent).mockReturnValue('user-123')
-
       const { handler } = await import('../../profile-get')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)

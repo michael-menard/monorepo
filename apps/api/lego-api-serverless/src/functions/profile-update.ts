@@ -15,7 +15,7 @@
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { validateUserResourceAccess } from '@monorepo/lambda-auth'
 import { createErrorResponse } from '@/lib/utils/response-utils'
 import { logger } from '@/lib/utils/logger'
 
@@ -25,31 +25,21 @@ import { logger } from '@/lib/utils/logger'
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const pathParams = event.pathParameters || {}
-
     logger.info('PATCH /api/users/{id} - Profile update handler invoked', { pathParams })
 
-    // Get authenticated user ID from JWT
-    const userId = getUserIdFromEvent(event)
-    if (!userId) {
-      logger.warn('Unauthorized access attempt - no user ID in JWT')
-      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required')
+    // Validate authentication and authorization (userId must match profile ID)
+    const authResult = validateUserResourceAccess(event, 'id', 'profile')
+
+    if (!authResult.authenticated || !authResult.authorized) {
+      logger.warn('Auth failed', { error: authResult.error })
+      return createErrorResponse(
+        authResult.error!.statusCode,
+        authResult.error!.code as any,
+        authResult.error!.message,
+      )
     }
 
-    // Extract profile ID from path parameter
-    const profileId = pathParams.id
-    if (!profileId) {
-      logger.warn('Missing profile ID in path parameters')
-      return createErrorResponse(400, 'VALIDATION_ERROR', 'Profile ID is required')
-    }
-
-    // Authorization check: user can only update their own profile
-    if (userId !== profileId) {
-      logger.warn('Authorization failed - user attempting to update another profile', {
-        userId,
-        profileId,
-      })
-      return createErrorResponse(403, 'FORBIDDEN', "Cannot update another user's profile")
-    }
+    const userId = authResult.userId!
 
     // Placeholder implementation for Story 4.1 (infrastructure setup)
     // Story 4.3 will implement the full profile update logic
