@@ -1,7 +1,10 @@
 import { Request, Response } from 'express'
 import { eq, and, sql } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
+import { createLogger } from '../utils/logger'
 import { db } from '../db/client'
+
+const logger = createLogger('moc-handler')
 import {
   mocInstructions,
   mocFiles,
@@ -73,7 +76,7 @@ export const createMoc = async (req: Request, res: Response) => {
       moc,
     })
   } catch (error) {
-    console.error('createMoc error:', error)
+    logger.error('createMoc error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to create MOC', details: (error as Error).message })
@@ -94,7 +97,7 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
       try {
         parsedBody.tags = JSON.parse(req.body.tags)
       } catch (error) {
-        console.warn('Failed to parse tags JSON:', error)
+        logger.warn('Failed to parse tags JSON:', error)
         parsedBody.tags = []
       }
     }
@@ -104,7 +107,7 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
       try {
         parsedBody.uploadedDate = new Date(req.body.uploadedDate)
       } catch (error) {
-        console.warn('Failed to parse uploadedDate:', error)
+        logger.warn('Failed to parse uploadedDate:', error)
         parsedBody.uploadedDate = new Date() // Default to now
       }
     }
@@ -127,8 +130,8 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
     // Get uploaded files from multer
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
 
-    console.log('📁 Received files:', files)
-    console.log('📝 Received data:', mocData)
+    logger.info('📁 Received files:', files)
+    logger.info('📝 Received data:', mocData)
 
     // Validate required files
     if (!files?.instructionsFile || files.instructionsFile.length === 0) {
@@ -210,7 +213,7 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
         ? instructionsFile.path.replace(/^uploads\//, '/uploads/')
         : `/uploads/moc-files/${userId}/instructions/${filename}`
 
-      console.log('🔍 Processing instruction file:', {
+      logger.info('🔍 Processing instruction file:', {
         originalname: instructionsFile.originalname,
         filename: instructionsFile.filename,
         generatedFilename: filename,
@@ -351,7 +354,7 @@ export const createMocWithFiles = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('createMocWithFiles error:', error)
+    logger.error('createMocWithFiles error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to create MOC with files', details: (error as Error).message })
@@ -405,7 +408,7 @@ export const updateMoc = async (req: Request, res: Response) => {
       moc: updatedMoc,
     })
   } catch (error) {
-    console.error('updateMoc error:', error)
+    logger.error('updateMoc error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to update MOC', details: (error as Error).message })
@@ -523,7 +526,7 @@ export const uploadMocFile = async (req: Request, res: Response) => {
       moc: updatedMoc,
     })
   } catch (error) {
-    console.error('uploadMocFile error:', error)
+    logger.error('uploadMocFile error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to upload file', details: (error as Error).message })
@@ -583,7 +586,7 @@ export const deleteMocFile = async (req: Request, res: Response) => {
       moc: updatedMoc,
     })
   } catch (error) {
-    console.error('deleteMocFile error:', error)
+    logger.error('deleteMocFile error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to delete file', details: (error as Error).message })
@@ -614,7 +617,7 @@ export const searchMocs = async (req: Request, res: Response) => {
     }
 
     // Fallback to database search
-    console.log('Elasticsearch unavailable, falling back to database search')
+    logger.info('Elasticsearch unavailable, falling back to database search')
 
     // For public access, show all MOCs; for authenticated users, show their MOCs
     const whereClause = userId ? eq(mocInstructions.userId, userId) : undefined
@@ -637,7 +640,7 @@ export const searchMocs = async (req: Request, res: Response) => {
       source: 'database',
     })
   } catch (error) {
-    console.error('searchMocs error:', error)
+    logger.error('searchMocs error:', error)
     // For now, return empty results instead of error to allow frontend testing
     return res.json({
       mocs: [],
@@ -680,7 +683,7 @@ export const getMoc = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('getMoc error:', error)
+    logger.error('getMoc error:', error)
     return res.status(500).json({ error: 'Failed to get MOC', details: (error as Error).message })
   }
 }
@@ -723,7 +726,7 @@ export const deleteMoc = async (req: Request, res: Response) => {
       moc: deletedMoc,
     })
   } catch (error) {
-    console.error('deleteMoc error:', error)
+    logger.error('deleteMoc error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to delete MOC', details: (error as Error).message })
@@ -789,7 +792,7 @@ export const linkGalleryImageToMoc = async (req: Request, res: Response) => {
       link,
     })
   } catch (error) {
-    console.error('linkGalleryImageToMoc error:', error)
+    logger.error('linkGalleryImageToMoc error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to link gallery image', details: (error as Error).message })
@@ -840,7 +843,7 @@ export const unlinkGalleryImageFromMoc = async (req: Request, res: Response) => 
       message: 'Gallery image unlinked successfully',
     })
   } catch (error) {
-    console.error('unlinkGalleryImageFromMoc error:', error)
+    logger.error('unlinkGalleryImageFromMoc error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to unlink gallery image', details: (error as Error).message })
@@ -890,7 +893,7 @@ export const getMocGalleryImages = async (req: Request, res: Response) => {
       images: linkedImages,
     })
   } catch (error) {
-    console.error('getMocGalleryImages error:', error)
+    logger.error('getMocGalleryImages error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to get linked gallery images', details: (error as Error).message })
@@ -900,24 +903,24 @@ export const getMocGalleryImages = async (req: Request, res: Response) => {
 // POST /api/mocs/upload-parts-list - Upload parts list file with parsing and piece count calculation
 export const uploadPartsList = async (req: Request, res: Response) => {
   try {
-    console.log('🚀 uploadPartsList handler called')
-    console.log('📋 Request headers:', req.headers)
-    console.log('📋 Request body:', req.body)
-    console.log('📋 Request file:', req.file)
-    console.log('📋 User:', req.user)
+    logger.info('🚀 uploadPartsList handler called')
+    logger.info('📋 Request headers:', req.headers)
+    logger.info('📋 Request body:', req.body)
+    logger.info('📋 Request file:', req.file)
+    logger.info('📋 User:', req.user)
 
     const { mocId, fileType } = req.body
     const partsListFile = req.file
 
     if (!mocId || !partsListFile) {
-      console.log('❌ Missing required fields:', { mocId: !!mocId, partsListFile: !!partsListFile })
+      logger.info('❌ Missing required fields:', { mocId: !!mocId, partsListFile: !!partsListFile })
       return res.status(400).json({
         error: 'Missing required fields: mocId and partsListFile',
         code: 'MISSING_FIELDS',
       })
     }
 
-    console.log('📤 Processing parts list file:', {
+    logger.info('📤 Processing parts list file:', {
       mocId,
       fileName: partsListFile.originalname,
       fileSize: partsListFile.size,
@@ -938,12 +941,12 @@ export const uploadPartsList = async (req: Request, res: Response) => {
     }
 
     // Parse the parts list file
-    console.log('🔍 Parsing parts list file...')
+    logger.info('🔍 Parsing parts list file...')
     const { parsePartsListFile } = await import('../utils/parts-list-parser')
     const parseResult = await parsePartsListFile(partsListFile)
 
     if (!parseResult.success) {
-      console.log('❌ Parts list parsing failed:', parseResult.errors)
+      logger.info('❌ Parts list parsing failed:', parseResult.errors)
       return res.status(400).json({
         error: 'Failed to parse parts list file',
         code: 'PARSING_FAILED',
@@ -952,7 +955,7 @@ export const uploadPartsList = async (req: Request, res: Response) => {
     }
 
     const { totalPieceCount, parts, format } = parseResult.data!
-    console.log(
+    logger.info(
       `✅ Parts list parsed successfully: ${totalPieceCount} pieces, ${parts.length} unique parts`,
     )
 
@@ -972,7 +975,7 @@ export const uploadPartsList = async (req: Request, res: Response) => {
       .returning()
 
     // Update MOC with total piece count
-    console.log('📊 Updating MOC with piece count...')
+    logger.info('📊 Updating MOC with piece count...')
     const [updatedMoc] = await db
       .update(mocInstructions)
       .set({
@@ -994,7 +997,7 @@ export const uploadPartsList = async (req: Request, res: Response) => {
       })
       .returning()
 
-    console.log('✅ Parts list processed successfully:', {
+    logger.info('✅ Parts list processed successfully:', {
       fileId: fileRecord.id,
       partsListId: partsListRecord.id,
       totalPieceCount,
@@ -1019,7 +1022,7 @@ export const uploadPartsList = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('❌ Parts list upload error:', error)
+    logger.error('❌ Parts list upload error:', error)
     return res.status(500).json({
       error: 'Failed to upload and process parts list',
       code: 'INTERNAL_ERROR',
@@ -1033,13 +1036,13 @@ export const getMocStatsByCategory = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id
 
-    console.log('📊 MOC stats endpoint called, userId:', userId)
+    logger.info('📊 MOC stats endpoint called, userId:', userId)
 
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' })
     }
 
-    console.log('📊 Getting MOC stats by category for user:', userId)
+    logger.info('📊 Getting MOC stats by category for user:', userId)
 
     // Since we don't have a category field yet, we'll use theme field for now
     // and also count by tags for additional categorization
@@ -1108,7 +1111,7 @@ export const getMocStatsByCategory = async (req: Request, res: Response) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10) // Top 10 categories
 
-    console.log('📊 MOC stats by category:', sortedStats)
+    logger.info('📊 MOC stats by category:', sortedStats)
 
     return res.json({
       success: true,
@@ -1116,7 +1119,7 @@ export const getMocStatsByCategory = async (req: Request, res: Response) => {
       total: sortedStats.reduce((sum, stat) => sum + stat.count, 0),
     })
   } catch (error) {
-    console.error('❌ Get MOC stats by category error:', error)
+    logger.error('❌ Get MOC stats by category error:', error)
     return res.status(500).json({
       error: 'Failed to get MOC statistics',
       code: 'INTERNAL_ERROR',
@@ -1130,13 +1133,13 @@ export const getMocUploadsOverTime = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id
 
-    console.log('📈 MOC uploads over time endpoint called, userId:', userId)
+    logger.info('📈 MOC uploads over time endpoint called, userId:', userId)
 
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' })
     }
 
-    console.log('📈 Getting MOC uploads over time for user:', userId)
+    logger.info('📈 Getting MOC uploads over time for user:', userId)
 
     // First, let's see what MOCs exist for this user
     const allUserMocs = await db
@@ -1149,7 +1152,7 @@ export const getMocUploadsOverTime = async (req: Request, res: Response) => {
       .from(mocInstructions)
       .where(eq(mocInstructions.userId, userId))
 
-    console.log('📈 All MOCs for user:', allUserMocs)
+    logger.info('📈 All MOCs for user:', allUserMocs)
 
     // Get MOCs grouped by month and category - only return actual data
     const uploadsData = await db
@@ -1168,7 +1171,7 @@ export const getMocUploadsOverTime = async (req: Request, res: Response) => {
       .groupBy(sql`DATE_TRUNC('month', ${mocInstructions.createdAt})`, mocInstructions.theme)
       .orderBy(sql`DATE_TRUNC('month', ${mocInstructions.createdAt})`)
 
-    console.log('📈 Raw uploads data from DB:', uploadsData)
+    logger.info('📈 Raw uploads data from DB:', uploadsData)
 
     // Transform to the format expected by frontend: array of {date, category, count}
     const timeSeriesData = uploadsData
@@ -1179,14 +1182,14 @@ export const getMocUploadsOverTime = async (req: Request, res: Response) => {
       }))
       .filter(item => item.date && item.count > 0)
 
-    console.log('📈 Transformed time series data:', timeSeriesData)
+    logger.info('📈 Transformed time series data:', timeSeriesData)
 
     return res.json({
       success: true,
       data: timeSeriesData,
     })
   } catch (error) {
-    console.error('❌ Get MOC uploads over time error:', error)
+    logger.error('❌ Get MOC uploads over time error:', error)
     return res.status(500).json({
       error: 'Failed to get MOC upload statistics',
       code: 'INTERNAL_ERROR',

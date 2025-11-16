@@ -4,6 +4,8 @@ import { Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { eq, and, inArray, isNull, desc } from 'drizzle-orm'
 import { z } from 'zod'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('gallery-handler')
 import { processImage, HIGH_QUALITY_CONFIG } from '../utils/imageProcessor'
 import { galleryImages, galleryAlbums, galleryFlags } from '../db/schema'
 import { db } from '../db/client'
@@ -71,7 +73,7 @@ export const uploadGalleryImage = async (req: Request, res: Response) => {
       image,
     })
   } catch (error) {
-    console.error('uploadGalleryImage error:', error)
+    logger.error('uploadGalleryImage error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to upload image', details: (error as Error).message })
@@ -139,7 +141,7 @@ export const updateGalleryImage = async (req: Request, res: Response) => {
       image: updatedImage,
     })
   } catch (error) {
-    console.error('updateGalleryImage error:', error)
+    logger.error('updateGalleryImage error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to update image', details: (error as Error).message })
@@ -185,7 +187,7 @@ export const deleteGalleryImage = async (req: Request, res: Response) => {
       image: deletedImage,
     })
   } catch (error) {
-    console.error('deleteGalleryImage error:', error)
+    logger.error('deleteGalleryImage error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to delete image', details: (error as Error).message })
@@ -233,7 +235,7 @@ export const flagImage = async (req: Request, res: Response) => {
       flag,
     })
   } catch (error) {
-    console.error('flagImage error:', error)
+    logger.error('flagImage error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to flag image', details: (error as Error).message })
@@ -267,7 +269,7 @@ export const getAlbum = async (req: Request, res: Response) => {
       images,
     })
   } catch (error) {
-    console.error('getAlbum error:', error)
+    logger.error('getAlbum error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to fetch album', details: (error as Error).message })
@@ -308,7 +310,7 @@ export const getAllAlbums = async (req: Request, res: Response) => {
     }
     return res.json({ albums })
   } catch (error) {
-    console.error('getAllAlbums error:', error)
+    logger.error('getAllAlbums error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to fetch albums', details: (error as Error).message })
@@ -352,7 +354,7 @@ export const getAllImages = async (req: Request, res: Response) => {
     }
     return res.json({ images })
   } catch (error) {
-    console.error('getAllImages error:', error)
+    logger.error('getAllImages error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to fetch images', details: (error as Error).message })
@@ -563,7 +565,7 @@ export const getGallery = async (req: Request, res: Response) => {
 
     return res.json({ items: paged, nextCursor, hasMore })
   } catch (error) {
-    console.error('getGallery error:', error)
+    logger.error('getGallery error:', error)
     return res
       .status(500)
       .json({ error: 'Failed to fetch gallery', details: (error as Error).message })

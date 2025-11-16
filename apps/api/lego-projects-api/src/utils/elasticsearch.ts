@@ -1,4 +1,7 @@
 import { Client } from '@elastic/elasticsearch'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('elasticsearch')
 
 export const ES_INDEX = 'gallery_images'
 export const MOC_INDEX = 'moc_instructions'
@@ -13,7 +16,7 @@ const getSearchConfig = () => {
   const searchDisabled = process.env.OPENSEARCH_DISABLED === 'true'
 
   if (searchDisabled) {
-    console.log('🔍 Search functionality is disabled')
+    logger.info('🔍 Search functionality is disabled')
     return null
   }
 
@@ -21,7 +24,7 @@ const getSearchConfig = () => {
     // AWS OpenSearch configuration
     const opensearchEndpoint = process.env.OPENSEARCH_ENDPOINT
     if (!opensearchEndpoint) {
-      console.warn('🔍 OPENSEARCH_ENDPOINT not configured, search functionality disabled')
+      logger.warn('🔍 OPENSEARCH_ENDPOINT not configured, search functionality disabled')
       return null
     }
 
@@ -47,13 +50,13 @@ if (esClient) {
   ;(async () => {
     try {
       const health = await esClient.cluster.health()
-      console.log('🔍 Search cluster health:', health.status)
+      logger.info({ status: health.status }, '🔍 Search cluster health')
     } catch (err: any) {
-      console.warn('🔍 Search service not available:', err.message)
+      logger.warn({ err: err.message }, '🔍 Search service not available')
     }
   })()
 } else {
-  console.log('🔍 Search functionality is disabled')
+  logger.info('🔍 Search functionality is disabled')
 }
 
 /**
@@ -66,7 +69,7 @@ export const isSearchAvailable = (): boolean => {
 // --- IMAGE INDEXING ---
 export async function indexImage(image: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -80,13 +83,13 @@ export async function indexImage(image: any) {
       },
     })
   } catch (err: any) {
-    console.warn('Failed to index image in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to index image in ES')
   }
 }
 
 export async function updateImage(image: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -101,13 +104,13 @@ export async function updateImage(image: any) {
       doc_as_upsert: true,
     })
   } catch (err: any) {
-    console.warn('Failed to update image in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to update image in ES')
   }
 }
 
 export async function deleteImage(id: string) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -115,14 +118,14 @@ export async function deleteImage(id: string) {
     await esClient.delete({ index: ES_INDEX, id })
   } catch (err: any) {
     if (err.meta && err.meta.statusCode === 404) return // Already gone
-    console.warn('Failed to delete image from ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to delete image from ES')
   }
 }
 
 // --- ALBUM INDEXING ---
 export async function indexAlbum(album: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -136,13 +139,13 @@ export async function indexAlbum(album: any) {
       },
     })
   } catch (err: any) {
-    console.warn('Failed to index album in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to index album in ES')
   }
 }
 
 export async function updateAlbum(album: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -157,13 +160,13 @@ export async function updateAlbum(album: any) {
       doc_as_upsert: true,
     })
   } catch (err: any) {
-    console.warn('Failed to update album in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to update album in ES')
   }
 }
 
 export async function deleteAlbum(id: string) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -171,14 +174,14 @@ export async function deleteAlbum(id: string) {
     await esClient.delete({ index: ES_INDEX, id })
   } catch (err: any) {
     if (err.meta && err.meta.statusCode === 404) return
-    console.warn('Failed to delete album from ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to delete album from ES')
   }
 }
 
 // --- MOC INSTRUCTIONS INDEXING ---
 export async function indexMoc(moc: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -199,13 +202,13 @@ export async function indexMoc(moc: any) {
       },
     })
   } catch (err: any) {
-    console.warn('Failed to index MOC in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to index MOC in ES')
   }
 }
 
 export async function updateMoc(moc: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -226,13 +229,13 @@ export async function updateMoc(moc: any) {
       doc_as_upsert: true,
     })
   } catch (err: any) {
-    console.warn('Failed to update MOC in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to update MOC in ES')
   }
 }
 
 export async function deleteMoc(id: string) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -240,14 +243,14 @@ export async function deleteMoc(id: string) {
     await esClient.delete({ index: MOC_INDEX, id })
   } catch (err: any) {
     if (err.meta && err.meta.statusCode === 404) return // Already gone
-    console.warn('Failed to delete MOC from ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to delete MOC from ES')
   }
 }
 
 // --- WISHLIST INDEXING ---
 export async function indexWishlistItem(item: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -261,13 +264,13 @@ export async function indexWishlistItem(item: any) {
       },
     })
   } catch (err: any) {
-    console.warn('Failed to index wishlist item in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to index wishlist item in ES')
   }
 }
 
 export async function updateWishlistItem(item: any) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -282,13 +285,13 @@ export async function updateWishlistItem(item: any) {
       doc_as_upsert: true,
     })
   } catch (err: any) {
-    console.warn('Failed to update wishlist item in ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to update wishlist item in ES')
   }
 }
 
 export async function deleteWishlistItem(id: string) {
   if (!esClient) {
-    console.log('🔍 Search indexing skipped - search service disabled')
+    logger.info('🔍 Search indexing skipped - search service disabled')
     return
   }
 
@@ -296,7 +299,7 @@ export async function deleteWishlistItem(id: string) {
     await esClient.delete({ index: WISHLIST_INDEX, id })
   } catch (err: any) {
     if (err.meta && err.meta.statusCode === 404) return // Already gone
-    console.warn('Failed to delete wishlist item from ES:', err.message)
+    logger.warn({ err: err.message }, 'Failed to delete wishlist item from ES')
   }
 }
 
@@ -321,7 +324,7 @@ export async function searchGalleryItems({
   size?: number
 }) {
   if (!esClient) {
-    console.log('🔍 Search service disabled, falling back to database')
+    logger.info('🔍 Search service disabled, falling back to database')
     return null
   }
   const must: any[] = [{ term: { userId } }]
@@ -361,7 +364,7 @@ export async function searchGalleryItems({
     })
     return result.hits.hits.map((hit: any) => hit._source)
   } catch (err: any) {
-    console.warn('ES search failed, falling back to Postgres:', err.message)
+    logger.warn({ err: err.message }, 'ES search failed, falling back to Postgres')
     return null
   }
 }
@@ -381,7 +384,7 @@ export async function searchMocs({
   size?: number
 }) {
   if (!esClient) {
-    console.log('🔍 Search service disabled, falling back to database')
+    logger.info('🔍 Search service disabled, falling back to database')
     return null
   }
   const must: any[] = []
@@ -436,7 +439,7 @@ export async function searchMocs({
         : 0,
     }
   } catch (err: any) {
-    console.warn('MOC ES search failed, falling back to Postgres:', err.message)
+    logger.warn({ err: err.message }, 'MOC ES search failed, falling back to Postgres')
     return null
   }
 }
@@ -456,7 +459,7 @@ export async function searchWishlistItems({
   size?: number
 }) {
   if (!esClient) {
-    console.log('🔍 Search service disabled, falling back to database')
+    logger.info('🔍 Search service disabled, falling back to database')
     return null
   }
   const must: any[] = [{ term: { userId } }]
@@ -505,7 +508,7 @@ export async function searchWishlistItems({
         : 0,
     }
   } catch (err: any) {
-    console.warn('Wishlist ES search failed, falling back to Postgres:', err.message)
+    logger.warn({ err: err.message }, 'Wishlist ES search failed, falling back to Postgres')
     return null
   }
 }
@@ -513,7 +516,7 @@ export async function searchWishlistItems({
 // --- INDEX INITIALIZATION ---
 export async function initializeMocIndex() {
   if (!esClient) {
-    console.log('🔍 Search index initialization skipped - search service disabled')
+    logger.info('🔍 Search index initialization skipped - search service disabled')
     return
   }
 
@@ -565,17 +568,17 @@ export async function initializeMocIndex() {
           },
         },
       })
-      console.log(`Created Elasticsearch index: ${MOC_INDEX}`)
+      logger.info({ index: MOC_INDEX }, 'Created Elasticsearch index')
     }
   } catch (err: any) {
-    console.warn('Failed to initialize MOC index:', err.message)
+    logger.warn({ err: err.message }, 'Failed to initialize MOC index')
   }
 }
 
 // --- INDEX INITIALIZATION ---
 export async function initializeWishlistIndex() {
   if (!esClient) {
-    console.log('🔍 Search index initialization skipped - search service disabled')
+    logger.info('🔍 Search index initialization skipped - search service disabled')
     return
   }
 
@@ -626,9 +629,9 @@ export async function initializeWishlistIndex() {
           },
         },
       })
-      console.log(`Created Elasticsearch index: ${WISHLIST_INDEX}`)
+      logger.info({ index: WISHLIST_INDEX }, 'Created Elasticsearch index')
     }
   } catch (err: any) {
-    console.warn('Failed to initialize Wishlist index:', err.message)
+    logger.warn({ err: err.message }, 'Failed to initialize Wishlist index')
   }
 }

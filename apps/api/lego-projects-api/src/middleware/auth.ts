@@ -1,6 +1,9 @@
 import 'dotenv/config' // Ensure .env variables are loaded
 import {NextFunction, Request, Response} from 'express'
 import jwt from 'jsonwebtoken'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('auth-middleware')
 
 // Extend Express Request interface to include user property
 declare global {
@@ -47,7 +50,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       }
 
       req.user = { ...decoded, id: uid }
-      console.log('🔓 Simplified auth - User authenticated:', uid)
+      logger.info({ userId: uid }, '🔓 Simplified auth - User authenticated')
       return next()
     } catch (jwtError) {
       const message = jwtError instanceof Error ? jwtError.message : String(jwtError)

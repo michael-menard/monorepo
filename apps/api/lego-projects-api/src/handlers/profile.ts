@@ -3,6 +3,9 @@ import {count, desc, eq} from 'drizzle-orm'
 import {db} from '../db/client'
 import {galleryAlbums, galleryImages, mocInstructions, wishlistItems,} from '../db/schema'
 import {uploadAvatar as uploadAvatarFile,} from '../storage/avatar-storage'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('profile-handler')
 
 // Profile aggregates user's LEGO-related data from various tables
 // User authentication data is managed in the auth service
@@ -77,7 +80,7 @@ export const getProfile = async (req: Request, res: Response) => {
 
     res.json(profile)
   } catch (error) {
-    console.error('Error fetching profile:', error)
+    logger.error({ err: error }, 'Error fetching profile')
     res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -110,7 +113,7 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       avatarUrl,
     })
   } catch (error) {
-    console.error('uploadAvatar error:', error)
+    logger.error({ err: error }, 'uploadAvatar error')
     res.status(500).json({
       error: 'Upload failed',
       details: (error as Error).message,

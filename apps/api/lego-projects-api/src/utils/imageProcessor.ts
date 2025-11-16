@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('image-processor')
 
 // TEMPORARILY DISABLED - Upload package needs to be fixed
 // import {
@@ -77,7 +79,7 @@ export async function processImage(
     // return processedBuffer;
     return buffer // Return original buffer as stub
   } catch (error) {
-    console.error('Image processing error:', error)
+    logger.error('Image processing error:', error)
     throw new Error('Failed to process image')
   }
 }
@@ -122,7 +124,7 @@ export async function createImageVariants(
 
     return result
   } catch (error) {
-    console.error('Error creating image variants:', error)
+    logger.error('Error creating image variants:', error)
     // Return original if processing fails
     return { original: buffer }
   }
@@ -166,7 +168,7 @@ export function imageProcessingMiddleware(config?: Partial<ImageProcessingConfig
 
       next()
     } catch (error) {
-      console.error('Image processing middleware error:', error)
+      logger.error('Image processing middleware error:', error)
       return res.status(500).json({
         error: 'Failed to process uploaded image',
       })
@@ -192,7 +194,7 @@ export async function getImageDimensions(
     // return { width: metadata.width, height: metadata.height };
     return { width: 800, height: 600 } // Stub return
   } catch (error) {
-    console.error('Error getting image dimensions:', error)
+    logger.error('Error getting image dimensions:', error)
     return null
   }
 }

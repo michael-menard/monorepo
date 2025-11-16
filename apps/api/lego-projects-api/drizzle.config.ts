@@ -1,5 +1,7 @@
 import { defineConfig } from 'drizzle-kit'
 import dotenv from 'dotenv'
+import { createLogger } from './src/utils/logger'
+const logger = createLogger('drizzle-config')
 
 // Load environment variables
 dotenv.config()
@@ -13,7 +15,7 @@ const getDatabaseUrl = () => {
 
   if (useAwsServices && process.env.DATABASE_URL) {
     // AWS RDS connection
-    console.log('🔗 Using AWS RDS for Drizzle migrations')
+    logger.info('🔗 Using AWS RDS for Drizzle migrations')
     return process.env.DATABASE_URL
   } else {
     // Local PostgreSQL connection

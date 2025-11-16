@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
 import { eq, and, asc, desc } from 'drizzle-orm'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('moc-parts-lists-handler')
 import { db } from '../db/client'
 import { mocPartsLists, mocInstructions } from '../db/schema'
 import { apiResponse, apiErrorResponse } from '../utils/response'
@@ -36,7 +38,7 @@ export const getMocPartsLists = async (req: Request, res: Response) => {
 
     return res.status(200).json(apiResponse(200, 'Parts lists retrieved successfully', partsLists))
   } catch (error) {
-    console.error('Error getting MOC parts lists:', error)
+    logger.error('Error getting MOC parts lists:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to retrieve parts lists'))
@@ -93,7 +95,7 @@ export const createMocPartsList = async (req: Request, res: Response) => {
 
     return res.status(201).json(apiResponse(201, 'Parts list created successfully', newPartsList))
   } catch (error) {
-    console.error('Error creating MOC parts list:', error)
+    logger.error('Error creating MOC parts list:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to create parts list'))
@@ -163,7 +165,7 @@ export const updateMocPartsList = async (req: Request, res: Response) => {
       .status(200)
       .json(apiResponse(200, 'Parts list updated successfully', updatedPartsList))
   } catch (error) {
-    console.error('Error updating MOC parts list:', error)
+    logger.error('Error updating MOC parts list:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update parts list'))
@@ -224,7 +226,7 @@ export const updatePartsListStatus = async (req: Request, res: Response) => {
       .status(200)
       .json(apiResponse(200, 'Parts list status updated successfully', updatedPartsList))
   } catch (error) {
-    console.error('Error updating parts list status:', error)
+    logger.error('Error updating parts list status:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update parts list status'))
@@ -268,7 +270,7 @@ export const deleteMocPartsList = async (req: Request, res: Response) => {
 
     return res.status(200).json(apiResponse(200, 'Parts list deleted successfully', null))
   } catch (error) {
-    console.error('Error deleting MOC parts list:', error)
+    logger.error('Error deleting MOC parts list:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete parts list'))
@@ -320,7 +322,7 @@ export const getUserPartsListSummary = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error getting user parts list summary:', error)
+    logger.error('Error getting user parts list summary:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to retrieve parts list summary'))

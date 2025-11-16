@@ -12,8 +12,7 @@ import express from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import pino from 'pino'
-import pinoHttp from 'pino-http'
+import { logger, pinoHttpMiddleware } from './src/utils/logger'
 import { csrfProtection, issueCsrfToken } from './src/middleware/csrf'
 import profileRouter from './src/routes/index'
 import {
@@ -25,8 +24,7 @@ import {
 import { connectRedis } from './src/utils/redis'
 
 const app = express()
-const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
-app.use(pinoHttp({ logger }))
+app.use(pinoHttpMiddleware)
 
 // Security middleware (order matters!)
 app.use(securityHeaders)
@@ -68,17 +66,16 @@ app.use(
     origin:
       process.env.NODE_ENV === 'production'
         ? (origin, callback) => {
-            console.log('🌐 CORS request from origin:', origin)
-            console.log('🌐 Allowed origins:', origins)
+            logger.info({ origin, allowedOrigins: origins }, '🌐 CORS request')
 
             // Allow requests with no origin (like mobile apps or curl requests)
             if (!origin) return callback(null, true)
 
             if (origins.includes(origin)) {
-              console.log('✅ Origin allowed:', origin)
+              logger.info({ origin }, '✅ Origin allowed')
               return callback(null, true)
             } else {
-              console.log('❌ Origin blocked:', origin)
+              logger.warn({ origin }, '❌ Origin blocked')
               return callback(new Error('Not allowed by CORS'), false)
             }
           }
@@ -100,7 +97,7 @@ app.options('*', cors())
 
 // Explicit OPTIONS handler for upload endpoint
 app.options('/api/mocs/upload-parts-list', (req, res) => {
-  console.log('🔄 OPTIONS request for upload-parts-list')
+  logger.info('🔄 OPTIONS request for upload-parts-list')
   res.header('Access-Control-Allow-Origin', req.headers.origin)
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.header(
@@ -144,7 +141,7 @@ app.use((req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const statusCode = err?.statusCode || 500
   if (process.env.NODE_ENV === 'development' && err?.stack) {
-    console.error(err.stack)
+    logger.error({ err, stack: err.stack }, 'Error occurred')
   }
   res.status(statusCode).json({
     success: false,
@@ -160,15 +157,15 @@ if (require.main === module) {
   connectRedis()
     .then(() => {
       app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`)
-        console.log('Redis cache initialized')
+        logger.info({ port: PORT }, 'Server running')
+        logger.info('Redis cache initialized')
       })
     })
     .catch(error => {
-      console.error('Failed to connect to Redis:', error)
+      logger.error({ error }, 'Failed to connect to Redis')
       // Still start the server even if Redis fails
       app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT} (without Redis cache)`)
+        logger.info({ port: PORT }, 'Server running (without Redis cache)')
       })
     })
 }

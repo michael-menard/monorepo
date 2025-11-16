@@ -1,6 +1,9 @@
 import { Request, Response } from 'express'
 import { eq, and, asc, inArray, sql } from 'drizzle-orm'
+import { createLogger } from '../utils/logger'
 import { db } from '../db/client'
+
+const logger = createLogger('wishlist-handler')
 import { wishlistItems } from '../db/schema'
 import { apiResponse, apiErrorResponse } from '../utils/response'
 import { saveWishlistImage, deleteWishlistImage, getFileInfo } from '../storage/wishlist-storage'
@@ -55,7 +58,7 @@ export const getWishlist = async (req: Request, res: Response) => {
 
     return res.status(200).json(apiResponse(200, 'Wishlist retrieved successfully', { items }))
   } catch (error) {
-    console.error('Error fetching wishlist:', error)
+    logger.error('Error fetching wishlist:', error)
     return res.status(500).json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to fetch wishlist'))
   }
 }
@@ -101,7 +104,7 @@ export const createWishlistItem = async (req: Request, res: Response) => {
       .status(201)
       .json(apiResponse(201, 'Wishlist item created successfully', { item: newItem }))
   } catch (error) {
-    console.error('Error creating wishlist item:', error)
+    logger.error('Error creating wishlist item:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to create wishlist item'))
@@ -160,11 +163,11 @@ export const updateWishlistItem = async (req: Request, res: Response) => {
       if (existingItem[0].imageUrl && existingItem[0].imageUrl !== imageUrl) {
         try {
           await deleteWishlistImage(existingItem[0].imageUrl)
-          console.log('Successfully deleted old image during update:', existingItem[0].imageUrl)
+          logger.info('Successfully deleted old image during update:', existingItem[0].imageUrl)
         } catch (error) {
           // Log error but don't fail the update
-          console.error('Warning: Failed to delete old image during update:', error)
-          console.error('Old image URL was:', existingItem[0].imageUrl)
+          logger.error('Warning: Failed to delete old image during update:', error)
+          logger.error('Old image URL was:', existingItem[0].imageUrl)
         }
       }
       updateData.imageUrl = imageUrl
@@ -184,7 +187,7 @@ export const updateWishlistItem = async (req: Request, res: Response) => {
       .status(200)
       .json(apiResponse(200, 'Wishlist item updated successfully', { item: updatedItem }))
   } catch (error) {
-    console.error('Error updating wishlist item:', error)
+    logger.error('Error updating wishlist item:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update wishlist item'))
@@ -226,11 +229,11 @@ export const deleteWishlistItem = async (req: Request, res: Response) => {
     if (item.imageUrl) {
       try {
         await deleteWishlistImage(item.imageUrl)
-        console.log('Successfully deleted associated image:', item.imageUrl)
+        logger.info('Successfully deleted associated image:', item.imageUrl)
       } catch (error) {
         // Log error but don't fail the deletion - database cleanup is more important
-        console.error('Warning: Failed to delete associated image:', error)
-        console.error('Image URL was:', item.imageUrl)
+        logger.error('Warning: Failed to delete associated image:', error)
+        logger.error('Image URL was:', item.imageUrl)
       }
     }
 
@@ -244,7 +247,7 @@ export const deleteWishlistItem = async (req: Request, res: Response) => {
 
     return res.status(200).json(apiResponse(200, 'Wishlist item deleted successfully'))
   } catch (error) {
-    console.error('Error deleting wishlist item:', error)
+    logger.error('Error deleting wishlist item:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete wishlist item'))
@@ -354,7 +357,7 @@ export const reorderWishlist = async (req: Request, res: Response) => {
     // Update Elasticsearch for all changed items in parallel
     const esUpdatePromises = updatedItems.map(item =>
       updateWishlistItemES(item).catch(error => {
-        console.warn(`Failed to update item ${item.id} in Elasticsearch:`, error.message)
+        logger.warn(`Failed to update item ${item.id} in Elasticsearch:`, error.message)
         // Don't fail the whole operation for ES errors
       }),
     )
@@ -377,7 +380,7 @@ export const reorderWishlist = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error reordering wishlist:', error)
+    logger.error('Error reordering wishlist:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to reorder wishlist'))
@@ -447,7 +450,7 @@ export const reorderWishlistDebounced = async (req: Request, res: Response) => {
         // Clean up
         pendingReorders.delete(userId)
       } catch (error) {
-        console.error(`Debounced reorder failed for user ${userId}:`, error)
+        logger.error(`Debounced reorder failed for user ${userId}:`, error)
         pendingReorders.delete(userId)
       }
     }, REORDER_DEBOUNCE_DELAY)
@@ -469,7 +472,7 @@ export const reorderWishlistDebounced = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error in debounced reorder:', error)
+    logger.error('Error in debounced reorder:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to queue reorder request'))
@@ -500,7 +503,7 @@ async function executeReorderOperation(
     )
 
     if (!hasChanges) {
-      console.log(
+      logger.info(
         `No changes needed for debounced reorder (user: ${userId}, requestId: ${requestId})`,
       )
       return
@@ -525,17 +528,17 @@ async function executeReorderOperation(
     // Update Elasticsearch for all changed items
     const esUpdatePromises = updatedItems.map(item =>
       updateWishlistItemES(item).catch(error => {
-        console.warn(`Failed to update item ${item.id} in Elasticsearch:`, error.message)
+        logger.warn(`Failed to update item ${item.id} in Elasticsearch:`, error.message)
       }),
     )
 
     await Promise.allSettled(esUpdatePromises)
 
-    console.log(
+    logger.info(
       `Successfully processed debounced reorder for user ${userId} (${updatedItems.length} items updated)`,
     )
   } catch (error) {
-    console.error(`Failed to execute debounced reorder for user ${userId}:`, error)
+    logger.error(`Failed to execute debounced reorder for user ${userId}:`, error)
     throw error
   }
 }
@@ -574,7 +577,7 @@ export const getReorderStatus = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error checking reorder status:', error)
+    logger.error('Error checking reorder status:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to check reorder status'))
@@ -609,7 +612,7 @@ export const cancelPendingReorder = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error cancelling pending reorder:', error)
+    logger.error('Error cancelling pending reorder:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to cancel pending reorder'))
@@ -633,7 +636,7 @@ export const uploadWishlistImage = async (req: Request, res: Response) => {
 
     // Log file info for debugging
     const fileInfo = getFileInfo(req.file)
-    console.log('Uploading wishlist image:', fileInfo)
+    logger.info('Uploading wishlist image:', fileInfo)
 
     // Save the image (handles both S3 and local storage)
     const imageUrl = await saveWishlistImage(userId, req.file)
@@ -649,7 +652,7 @@ export const uploadWishlistImage = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error uploading wishlist image:', error)
+    logger.error('Error uploading wishlist image:', error)
     return res.status(500).json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to upload image'))
   }
 }
@@ -684,7 +687,7 @@ export const deleteWishlistImageHandler = async (req: Request, res: Response) =>
 
     return res.status(200).json(apiResponse(200, 'Image deleted successfully'))
   } catch (error) {
-    console.error('Error deleting wishlist image:', error)
+    logger.error('Error deleting wishlist image:', error)
     return res.status(500).json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete image'))
   }
 }
@@ -720,7 +723,7 @@ export const searchWishlist = async (req: Request, res: Response) => {
     }
 
     // Fallback to database search with category filtering
-    console.log('Elasticsearch unavailable, falling back to database search')
+    logger.info('Elasticsearch unavailable, falling back to database search')
 
     const conditions = [eq(wishlistItems.userId, userId)]
     if (category) {
@@ -754,7 +757,7 @@ export const searchWishlist = async (req: Request, res: Response) => {
       }),
     )
   } catch (error) {
-    console.error('Error searching wishlist:', error)
+    logger.error('Error searching wishlist:', error)
     return res
       .status(500)
       .json(apiErrorResponse(500, 'INTERNAL_ERROR', 'Failed to search wishlist'))

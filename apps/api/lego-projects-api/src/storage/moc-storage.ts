@@ -1,4 +1,6 @@
 import path from 'path'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('moc-storage')
 import fs from 'fs'
 import multer from 'multer'
 import { v4 as uuidv4 } from 'uuid'
@@ -187,7 +189,7 @@ export const mocModalUpload = multer({
     files: 25, // Max 25 files total (10 instructions + 10 parts lists + 3 images + buffer)
   },
   fileFilter: (req, file, cb) => {
-    console.log('🔍 File filter - fieldname:', file.fieldname, 'mimetype:', file.mimetype)
+    logger.info('🔍 File filter - fieldname:', file.fieldname, 'mimetype:', file.mimetype)
 
     // Validate based on field name
     if (file.fieldname === 'instructionsFile') {
@@ -250,7 +252,7 @@ export async function uploadMocFileToS3(
         contentType = 'image/jpeg'
         finalExt = '.jpg'
       } catch (error) {
-        console.error('Image processing failed, using original:', error)
+        logger.error('Image processing failed, using original:', error)
       }
     }
   }
@@ -381,7 +383,7 @@ export function streamLocalMocFile(
       mimeType,
     }
   } catch (error) {
-    console.error('Error streaming local file:', error)
+    logger.error('Error streaming local file:', error)
     return null
   }
 }
