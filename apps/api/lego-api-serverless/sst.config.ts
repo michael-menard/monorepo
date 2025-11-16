@@ -363,9 +363,9 @@ export default $config({
 
     /**
      * API Gateway HTTP API
-     * - Single public endpoint: GET /health
      * - CORS enabled for all origins
-     * - No authentication/authorization
+     * - JWT authentication via Cognito for protected routes
+     * - Public health check endpoint
      */
     const api = new sst.aws.ApiGatewayV2('LegoApi', {
       cors: {
@@ -379,6 +379,32 @@ export default $config({
       },
     })
 
+    /**
+     * Cognito JWT Authorizer
+     * - Validates JWT signature, issuer, audience, and expiration
+     * - Extracts userId (sub claim) and makes it available to Lambda
+     * - Rejects requests before Lambda execution (saves costs)
+     *
+     * Note: Environment variables COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID
+     * must be set for this to work. These will be configured when Cognito
+     * User Pool is created.
+     */
+    const cognitoUserPoolId = process.env.COGNITO_USER_POOL_ID || 'PLACEHOLDER'
+    const cognitoClientId = process.env.COGNITO_CLIENT_ID || 'PLACEHOLDER'
+    const region = aws.getRegionOutput().name
+
+    const cognitoAuthorizer = new aws.apigatewayv2.Authorizer('CognitoJwtAuthorizer', {
+      apiId: api.id,
+      authorizerType: 'JWT',
+      identitySources: ['$request.header.Authorization'],
+      name: `cognito-jwt-authorizer-${stage}`,
+      jwtConfiguration: {
+        audiences: [cognitoClientId],
+        issuer: $interpolate`https://cognito-idp.${region}.amazonaws.com/${cognitoUserPoolId}`,
+      },
+    })
+
+    // Health check - PUBLIC (no auth required)
     api.route('GET /health', healthCheckFunction)
 
     // ========================================
@@ -549,6 +575,111 @@ export default $config({
     api.route('POST /api/wishlist/reorder', wishlistFunction) // Story 3.6 AC #6
     api.route('POST /api/wishlist/{id}/image', wishlistFunction) // Story 3.7 AC #1
 
+    // ========================================
+    // Story 4.1: User Profile Lambda Handlers
+    // ========================================
+
+    /**
+     * Get User Profile Lambda Function
+     * - Retrieves user profile from Cognito User Pool
+     * - Aggregates statistics from PostgreSQL
+     * - Redis caching with 10-minute TTL
+     * - Read-only operation
+     */
+    const profileGetFunction = new sst.aws.Function('ProfileGetFunction', {
+      handler: 'src/functions/profile-get.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [postgres, redis],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
+      },
+    })
+
+    /**
+     * Update User Profile Lambda Function
+     * - Updates user attributes in Cognito User Pool
+     * - Invalidates Redis cache
+     * - Lightweight write operation
+     */
+    const profileUpdateFunction = new sst.aws.Function('ProfileUpdateFunction', {
+      handler: 'src/functions/profile-update.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [redis],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
+      },
+    })
+
+    /**
+     * Upload Avatar Lambda Function
+     * - Handles multipart file upload
+     * - Sharp image processing (resize, optimize)
+     * - Uploads to S3: avatars/{userId}/avatar.webp
+     * - Updates Cognito picture attribute
+     * - Requires higher memory for Sharp
+     */
+    const profileAvatarUploadFunction = new sst.aws.Function('ProfileAvatarUploadFunction', {
+      handler: 'src/functions/profile-avatar-upload.handler',
+      runtime: 'nodejs20.x',
+      timeout: '60 seconds', // Longer timeout for image processing
+      memory: '2048 MB', // High memory required for Sharp image processing
+      vpc,
+      link: [redis, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
+      },
+    })
+
+    /**
+     * Delete Avatar Lambda Function
+     * - Deletes avatar from S3
+     * - Updates Cognito picture attribute
+     * - Invalidates Redis cache
+     * - Lightweight operation
+     */
+    const profileAvatarDeleteFunction = new sst.aws.Function('ProfileAvatarDeleteFunction', {
+      handler: 'src/functions/profile-avatar-delete.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [redis, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
+      },
+    })
+
+    // Profile API Routes (Story 4.1 AC #2)
+    // All profile routes require JWT authentication via Cognito
+    api.route('GET /api/users/{id}', profileGetFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('PATCH /api/users/{id}', profileUpdateFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('POST /api/users/{id}/avatar', profileAvatarUploadFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('DELETE /api/users/{id}/avatar', profileAvatarDeleteFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,
@@ -592,6 +723,14 @@ export default $config({
       galleryFunctionArn: galleryFunction.arn,
       wishlistFunctionName: wishlistFunction.name,
       wishlistFunctionArn: wishlistFunction.arn,
+      profileGetFunctionName: profileGetFunction.name,
+      profileGetFunctionArn: profileGetFunction.arn,
+      profileUpdateFunctionName: profileUpdateFunction.name,
+      profileUpdateFunctionArn: profileUpdateFunction.arn,
+      profileAvatarUploadFunctionName: profileAvatarUploadFunction.name,
+      profileAvatarUploadFunctionArn: profileAvatarUploadFunction.arn,
+      profileAvatarDeleteFunctionName: profileAvatarDeleteFunction.name,
+      profileAvatarDeleteFunctionArn: profileAvatarDeleteFunction.arn,
     }
   },
 })
