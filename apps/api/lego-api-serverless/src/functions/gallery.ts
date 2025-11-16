@@ -8,13 +8,16 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { v4 as uuidv4 } from 'uuid'
+import { eq, and, isNull, desc, count, sql } from 'drizzle-orm'
+import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
+import { logger } from '../lib/utils/logger'
 import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
-import { logger } from '../lib/utils/logger'
 import {
   CreateGalleryImageSchema,
   UpdateGalleryImageSchema,
   ListGalleryImagesQuerySchema,
+  SearchGalleryImagesQuerySchema,
   GalleryImageIdSchema,
   CreateAlbumSchema,
   UpdateAlbumSchema,
@@ -25,12 +28,11 @@ import { db } from '@/lib/db/client'
 import { getS3Client, uploadToS3 } from '@/lib/storage/s3-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { indexDocument, deleteDocument } from '@/lib/search/opensearch-client'
+import { searchGalleryImages, hashQuery } from '@/lib/search/search-utils'
 import { galleryImages, galleryAlbums } from '@/db/schema'
-import { eq, and, isNull, desc, count, sql } from 'drizzle-orm'
 import { getEnv } from '@/lib/utils/env'
 import { parseMultipartForm, getFile, getField } from '@/lib/utils/multipart-parser'
 import { processImage, generateThumbnail } from '@/lib/services/image-processing'
-import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
 
 /**
  * Main Gallery Lambda Handler
@@ -49,6 +51,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     }
 
     // Route to appropriate handler
+    // Search route must be checked before list route
+    if (path === '/api/images/search' && method === 'GET') {
+      return handleSearchImages(event, userId)
+    }
+
     if (path === '/api/images' && method === 'GET') {
       return handleListImages(event, userId)
     }
@@ -166,6 +173,86 @@ async function handleListImages(
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
     return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to list images')
+  }
+}
+
+/**
+ * GET /api/images/search - Search gallery images
+ * Story 3.8 AC #1: Search via OpenSearch multi-match on title, description, tags
+ * Story 3.8 AC #3: User ID filter enforced
+ * Story 3.8 AC #4: PostgreSQL fallback if OpenSearch unavailable
+ * Story 3.8 AC #5: Pagination with page and limit
+ * Story 3.8 AC #6: Fuzzy matching enabled
+ * Story 3.8 AC #7: Sorted by relevance score
+ * Story 3.8 AC #8: Response includes total hits
+ * Story 3.8 AC #10: Redis caching with 2-minute TTL
+ */
+async function handleSearchImages(
+  event: APIGatewayProxyEventV2,
+  userId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Validate query parameters
+    const queryParams = SearchGalleryImagesQuerySchema.parse(event.queryStringParameters || {})
+    const { search, page, limit } = queryParams
+
+    // Generate cache key with MD5 hash of query
+    const queryHash = hashQuery(search)
+    const cacheKey = `gallery:search:${userId}:query:${queryHash}:page:${page}:limit:${limit}`
+
+    // Check Redis cache
+    const redis = await getRedisClient()
+    const cached = await redis.get(cacheKey)
+    if (cached) {
+      logger.info('Gallery search cache hit', { userId, query: search, page, limit })
+      return createSuccessResponse(JSON.parse(cached))
+    }
+
+    // Execute search with OpenSearch (or PostgreSQL fallback)
+    const searchResult = await searchGalleryImages({
+      query: search,
+      userId,
+      page,
+      limit,
+    })
+
+    // Build response
+    const response = {
+      success: true,
+      data: searchResult.data,
+      total: searchResult.total,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(searchResult.total / limit),
+      },
+      timestamp: new Date().toISOString(),
+    }
+
+    // Cache result for 2 minutes (120 seconds)
+    await redis.setEx(cacheKey, 120, JSON.stringify(response))
+
+    logger.info('Gallery search completed', {
+      userId,
+      query: search,
+      page,
+      limit,
+      resultCount: searchResult.data.length,
+      total: searchResult.total,
+      source: searchResult.source,
+      duration: searchResult.duration,
+    })
+
+    return createSuccessResponse(response)
+  } catch (error) {
+    logger.error('Search images error:', error)
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    if (error instanceof Error && error.message.includes('Search service unavailable')) {
+      return createErrorResponse(500, 'SEARCH_ERROR', 'Search service is currently unavailable')
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to search images')
   }
 }
 

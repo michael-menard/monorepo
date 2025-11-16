@@ -49,6 +49,29 @@ export const ListGalleryImagesQuerySchema = z.object({
 export type ListGalleryImagesQuery = z.infer<typeof ListGalleryImagesQuerySchema>
 
 /**
+ * Search Gallery Images Query Parameters Schema
+ * Story 3.8: Search with pagination support
+ */
+export const SearchGalleryImagesQuerySchema = z.object({
+  search: z
+    .string()
+    .min(1, 'Search query is required')
+    .max(200, 'Search query must be less than 200 characters'),
+  page: z
+    .string()
+    .optional()
+    .transform(val => (val ? parseInt(val, 10) : 1))
+    .pipe(z.number().int().min(1, 'Page must be >= 1')),
+  limit: z
+    .string()
+    .optional()
+    .transform(val => (val ? parseInt(val, 10) : 20))
+    .pipe(z.number().int().min(1).max(100, 'Limit must be between 1 and 100')),
+})
+
+export type SearchGalleryImagesQuery = z.infer<typeof SearchGalleryImagesQuerySchema>
+
+/**
  * Create Album Request Schema
  */
 export const CreateAlbumSchema = z.object({

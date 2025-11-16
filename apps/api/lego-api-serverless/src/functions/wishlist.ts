@@ -8,22 +8,24 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { ZodError } from 'zod'
+import { eq, and, asc, inArray } from 'drizzle-orm'
+import { logger } from '../lib/utils/logger'
 import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
-import { logger } from '../lib/utils/logger'
 import {
   CreateWishlistItemSchema,
   UpdateWishlistItemSchema,
   ReorderWishlistSchema,
   ListWishlistQuerySchema,
+  SearchWishlistQuerySchema,
   WishlistItemIdSchema,
 } from '@/lib/validation/wishlist-schemas'
 import { db } from '@/lib/db/client'
 import { getS3Client } from '@/lib/storage/s3-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { indexDocument, deleteDocument } from '@/lib/search/opensearch-client'
+import { searchWishlistItems, hashQuery } from '@/lib/search/search-utils'
 import { wishlistItems } from '@/db/schema'
-import { eq, and, asc, inArray } from 'drizzle-orm'
 import { parseMultipartForm, getFile } from '@/lib/utils/multipart-parser'
 import { uploadImage, ImageUploadOptionsSchema } from '@/lib/services/image-upload-service'
 
@@ -44,6 +46,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     }
 
     // Route to appropriate handler
+    // Search route must be checked before list route
+    if (path === '/api/wishlist/search' && method === 'GET') {
+      return handleSearchWishlist(event, userId)
+    }
+
     if (path === '/api/wishlist' && method === 'GET') {
       return handleListWishlist(event, userId)
     }
@@ -133,6 +140,89 @@ async function handleListWishlist(
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
     return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to list wishlist items')
+  }
+}
+
+/**
+ * GET /api/wishlist/search - Search wishlist items
+ * Story 3.8 AC #2: Search via OpenSearch multi-match on title, description, category
+ * Story 3.8 AC #3: User ID filter enforced
+ * Story 3.8 AC #4: PostgreSQL fallback if OpenSearch unavailable
+ * Story 3.8 AC #5: Pagination with page and limit
+ * Story 3.8 AC #6: Fuzzy matching enabled
+ * Story 3.8 AC #7: Sorted by relevance score
+ * Story 3.8 AC #8: Response includes total hits
+ * Story 3.8 AC #10: Redis caching with 2-minute TTL
+ */
+async function handleSearchWishlist(
+  event: APIGatewayProxyEventV2,
+  userId: string,
+): Promise<APIGatewayProxyResultV2> {
+  try {
+    // Validate query parameters
+    const queryParams = SearchWishlistQuerySchema.parse(event.queryStringParameters || {})
+    const { search, page, limit } = queryParams
+
+    // Generate cache key with MD5 hash of query
+    const queryHash = hashQuery(search)
+    const cacheKey = `wishlist:search:${userId}:query:${queryHash}:page:${page}:limit:${limit}`
+
+    // Check Redis cache
+    const redis = await getRedisClient()
+    const cached = await redis.get(cacheKey)
+    if (cached) {
+      logger.info('Wishlist search cache hit', { userId, query: search, page, limit })
+      return createSuccessResponse(JSON.parse(cached))
+    }
+
+    // Execute search with OpenSearch (or PostgreSQL fallback)
+    const searchResult = await searchWishlistItems({
+      query: search,
+      userId,
+      page,
+      limit,
+    })
+
+    // Build response
+    const response = {
+      success: true,
+      data: searchResult.data,
+      total: searchResult.total,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(searchResult.total / limit),
+      },
+      timestamp: new Date().toISOString(),
+    }
+
+    // Cache result for 2 minutes (120 seconds)
+    await redis.setEx(cacheKey, 120, JSON.stringify(response))
+
+    logger.info('Wishlist search completed', {
+      userId,
+      query: search,
+      page,
+      limit,
+      resultCount: searchResult.data.length,
+      total: searchResult.total,
+      source: searchResult.source,
+      duration: searchResult.duration,
+    })
+
+    return createSuccessResponse(response)
+  } catch (error) {
+    logger.error('Search wishlist error:', error)
+    if (error instanceof ZodError) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    if (error instanceof Error && error.message.includes('Validation')) {
+      return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
+    }
+    if (error instanceof Error && error.message.includes('Search service unavailable')) {
+      return createErrorResponse(500, 'SEARCH_ERROR', 'Search service is currently unavailable')
+    }
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to search wishlist')
   }
 }
 
