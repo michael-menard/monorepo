@@ -13,12 +13,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { APIGatewayProxyEventV2 } from 'aws-lambda'
 
+// Mock all external dependencies before importing
+vi.mock('@/lib/services/profile-service', () => ({
+  getUserProfile: vi.fn(),
+}))
+
+vi.mock('@/lib/middleware/rate-limiter', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({
+    allowed: true,
+    remaining: 59,
+    resetAt: new Date(),
+  }),
+  RATE_LIMIT_CONFIGS: {
+    profile: {
+      maxRequests: 60,
+      windowSeconds: 60,
+      keyPrefix: 'ratelimit:profile',
+    },
+  },
+}))
+
 describe('Profile Lambda Handlers Integration - Story 4.1', () => {
   beforeEach(() => {
+    process.env.NODE_ENV = 'development'
     process.env.STAGE = 'dev'
     process.env.AWS_REGION = 'us-east-1'
     vi.clearAllMocks()
-    vi.resetModules()
   })
 
   afterEach(() => {
@@ -75,14 +95,53 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
       expect(body.error.type).toBe('FORBIDDEN')
     })
 
-    it('should return 501 when userId matches (placeholder for Story 4.2)', async () => {
+    it('should successfully retrieve profile when userId matches (Story 4.2)', async () => {
+      const { getUserProfile } = await import('@/lib/services/profile-service')
+
+      // Mock successful profile retrieval
+      vi.mocked(getUserProfile).mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        avatarUrl: 'https://example.com/avatar.jpg',
+        stats: {
+          mocs: 5,
+          images: 10,
+          wishlistItems: 3,
+        },
+      })
+
       const { handler } = await import('../../profile-get')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
 
-      expect(result.statusCode).toBe(501)
+      expect(result.statusCode).toBe(200)
       const body = JSON.parse(result.body)
-      expect(body.error.message).toContain('Story 4.2')
+      expect(body.success).toBe(true)
+      expect(body.data).toBeDefined()
+      expect(body.data.id).toBe('user-123')
+      expect(body.data.email).toBe('test@example.com')
+      expect(body.data.stats).toEqual({
+        mocs: 5,
+        images: 10,
+        wishlistItems: 3,
+      })
+    })
+
+    it('should return 404 when user not found in Cognito (Story 4.2)', async () => {
+      const { getUserProfile } = await import('@/lib/services/profile-service')
+
+      // Mock user not found error
+      vi.mocked(getUserProfile).mockRejectedValue(new Error('User not found in Cognito'))
+
+      const { handler } = await import('../../profile-get')
+      const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
+      const result = await handler(event)
+
+      expect(result.statusCode).toBe(404)
+      const body = JSON.parse(result.body)
+      expect(body.error.type).toBe('NOT_FOUND')
+      expect(body.error.message).toBe('User not found')
     })
   })
 
