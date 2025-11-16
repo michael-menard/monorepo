@@ -4,7 +4,15 @@
  * Provides configured S3 client for image and file uploads.
  */
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
+} from '@aws-sdk/client-s3'
 import { getEnv } from '@/lib/utils/env'
 
 let _s3Client: S3Client | null = null
@@ -67,4 +75,99 @@ export async function deleteFromS3(params: { key: string; bucket?: string }): Pr
       Key: params.key,
     }),
   )
+}
+
+/**
+ * Upload large file to S3 using multipart upload
+ * Recommended for files >5MB for better reliability and performance
+ */
+export async function uploadToS3Multipart(params: {
+  key: string
+  body: Buffer
+  contentType: string
+  bucket?: string
+  partSize?: number
+}): Promise<string> {
+  const s3 = await getS3Client()
+  const env = getEnv()
+  const bucket = params.bucket || env.S3_BUCKET
+  const partSize = params.partSize || 5 * 1024 * 1024 // 5MB default part size
+
+  let uploadId: string | undefined
+
+  try {
+    // Initiate multipart upload
+    const createResponse = await s3.send(
+      new CreateMultipartUploadCommand({
+        Bucket: bucket,
+        Key: params.key,
+        ContentType: params.contentType,
+        ServerSideEncryption: 'AES256',
+      }),
+    )
+
+    uploadId = createResponse.UploadId
+
+    if (!uploadId) {
+      throw new Error('Failed to initiate multipart upload')
+    }
+
+    // Split buffer into parts
+    const parts: { PartNumber: number; ETag: string }[] = []
+    const totalParts = Math.ceil(params.body.length / partSize)
+
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const start = (partNumber - 1) * partSize
+      const end = Math.min(start + partSize, params.body.length)
+      const partBody = params.body.subarray(start, end)
+
+      const uploadPartResponse = await s3.send(
+        new UploadPartCommand({
+          Bucket: bucket,
+          Key: params.key,
+          UploadId: uploadId,
+          PartNumber: partNumber,
+          Body: partBody,
+        }),
+      )
+
+      if (uploadPartResponse.ETag) {
+        parts.push({
+          PartNumber: partNumber,
+          ETag: uploadPartResponse.ETag,
+        })
+      }
+    }
+
+    // Complete multipart upload
+    await s3.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: bucket,
+        Key: params.key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: parts,
+        },
+      }),
+    )
+
+    // Return public URL
+    return `https://${bucket}.s3.amazonaws.com/${params.key}`
+  } catch (error) {
+    // Abort multipart upload on error
+    if (uploadId) {
+      try {
+        await s3.send(
+          new AbortMultipartUploadCommand({
+            Bucket: bucket,
+            Key: params.key,
+            UploadId: uploadId,
+          }),
+        )
+      } catch (abortError) {
+        console.error('Failed to abort multipart upload:', abortError)
+      }
+    }
+    throw error
+  }
 }

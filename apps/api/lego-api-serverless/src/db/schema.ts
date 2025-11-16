@@ -215,6 +215,8 @@ export const wishlistItems = pgTable(
     description: text('description'),
     productLink: text('product_link'),
     imageUrl: text('image_url'),
+    imageWidth: integer('image_width'), // Image width in pixels for frontend optimization
+    imageHeight: integer('image_height'), // Image height in pixels for frontend optimization
     category: text('category'), // LEGO categories like 'Speed Champions', 'Modular', 'Star Wars', etc.
     sortOrder: text('sort_order').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),

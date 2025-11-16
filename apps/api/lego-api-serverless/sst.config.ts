@@ -314,6 +314,27 @@ export default $config({
       },
     })
 
+    /**
+     * CloudFront CDN for S3 Bucket (Manual Setup Required)
+     * Story 3.7 Enhancement: CDN integration for image delivery
+     *
+     * To set up CloudFront for production:
+     * 1. Create CloudFront distribution via AWS Console
+     * 2. Set origin to S3 bucket created above
+     * 3. Enable Origin Access Identity (OAI) for secure S3 access
+     * 4. Configure cache behaviors:
+     *    - TTL: 1 day default, 1 year max
+     *    - Compression: Enabled
+     *    - Allowed methods: GET, HEAD, OPTIONS
+     * 5. Enable HTTP/2 and HTTP/3 for performance
+     * 6. Update application to use CloudFront URL instead of S3 direct URLs
+     *
+     * Benefits:
+     * - Faster image delivery via edge locations
+     * - Reduced S3 costs (fewer direct S3 requests)
+     * - Better user experience globally
+     */
+
     // Story 1.7: Database migrations
     // Story 1.8: Health check Lambda + API Gateway
 
@@ -493,6 +514,41 @@ export default $config({
     api.route('PATCH /api/albums/{id}', galleryFunction)
     api.route('DELETE /api/albums/{id}', galleryFunction)
 
+    // ========================================
+    // Story 3.5: Wishlist Lambda Handler
+    // ========================================
+
+    /**
+     * Wishlist Lambda Function
+     * - Multi-method handler for wishlist CRUD and image uploads
+     * - JWT authentication via Cognito
+     * - Sharp image processing for uploads (requires 1024 MB memory per Story 3.7)
+     * - Connected to PostgreSQL, Redis, OpenSearch, S3
+     */
+    const wishlistFunction = new sst.aws.Function('WishlistFunction', {
+      handler: 'src/functions/wishlist.handler',
+      runtime: 'nodejs20.x',
+      timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
+      memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
+      vpc,
+      link: [postgres, redis, openSearch, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+        LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
+      },
+    })
+
+    // Wishlist API Routes (Story 3.5 AC #2)
+    api.route('GET /api/wishlist', wishlistFunction)
+    api.route('GET /api/wishlist/{id}', wishlistFunction)
+    api.route('POST /api/wishlist', wishlistFunction)
+    api.route('PATCH /api/wishlist/{id}', wishlistFunction)
+    api.route('DELETE /api/wishlist/{id}', wishlistFunction)
+    api.route('POST /api/wishlist/reorder', wishlistFunction) // Story 3.6 AC #6
+    api.route('POST /api/wishlist/{id}/image', wishlistFunction) // Story 3.7 AC #1
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,
@@ -534,6 +590,8 @@ export default $config({
       mocFileDownloadFunctionArn: mocFileDownloadFunction.arn,
       galleryFunctionName: galleryFunction.name,
       galleryFunctionArn: galleryFunction.arn,
+      wishlistFunctionName: wishlistFunction.name,
+      wishlistFunctionArn: wishlistFunction.arn,
     }
   },
 })
