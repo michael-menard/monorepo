@@ -806,10 +806,10 @@ export const handler: APIGatewayProxyHandlerV2 = async event => {
 
 ## Next Steps
 
-1. Review [08-cost-analysis.md](./08-cost-analysis.md) - Cost breakdown
-2. Review [09-monitoring.md](./09-monitoring.md) - Observability setup
+1. Review [08-cost-analysis.md](08-cost-analysis.md) - Cost breakdown
+2. Review [09-monitoring.md](09-monitoring.md) - Observability setup
 3. Complete security checklist before production launch
 
 ---
 
-[← Back to Performance Optimization](./06-performance-optimization.md) | [Next: Cost Analysis →](./08-cost-analysis.md)
+[← Back to Performance Optimization](06-performance-optimization.md) | [Next: Cost Analysis →](08-cost-analysis.md)

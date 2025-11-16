@@ -840,10 +840,10 @@ new Alarm(stack, 'CloudFront5xxAlarm', {
 
 ## Next Steps
 
-1. Review [05-migration-strategy.md](./05-migration-strategy.md) - Phased migration plan
-2. Review [09-monitoring.md](./09-monitoring.md) - Observability setup
-3. Review [10-implementation-phases.md](./10-implementation-phases.md) - Detailed tasks
+1. Review [05-migration-strategy.md](05-migration-strategy.md) - Phased migration plan
+2. Review [09-monitoring.md](09-monitoring.md) - Observability setup
+3. Review [10-implementation-phases.md](10-implementation-phases.md) - Detailed tasks
 
 ---
 
-[← Back to API Specification](./03-api-specification.md) | [Next: Migration Strategy →](./05-migration-strategy.md)
+[← Back to API Specification](03-api-specification.md) | [Next: Migration Strategy →](05-migration-strategy.md)

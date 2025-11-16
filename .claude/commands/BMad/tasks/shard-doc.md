@@ -46,7 +46,7 @@ Then proceed with the manual method below ONLY if markdownExploder is false.]]
 
    ```bash
    # For PRD
-   md-tree explode docs/prd.md docs/prd
+   md-tree explode docs/user-dashboard-prd.md docs/prd
 
    # For Architecture
    md-tree explode docs/architecture.md docs/architecture

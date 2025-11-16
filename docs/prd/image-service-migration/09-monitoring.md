@@ -883,10 +883,10 @@ async function checkS3(): Promise<{ status: string }> {
 
 ## Next Steps
 
-1. Review [10-implementation-phases.md](./10-implementation-phases.md) - Detailed task breakdown
+1. Review [10-implementation-phases.md](10-implementation-phases.md) - Detailed task breakdown
 2. Set up monitoring infrastructure before Phase 1 deployment
 3. Create runbooks for common alarm scenarios
 
 ---
 
-[← Back to Cost Analysis](./08-cost-analysis.md) | [Next: Implementation Phases →](./10-implementation-phases.md)
+[← Back to Cost Analysis](08-cost-analysis.md) | [Next: Implementation Phases →](10-implementation-phases.md)

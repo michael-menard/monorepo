@@ -1220,4 +1220,4 @@ See `06-performance-optimization.md` for full details
 
 ---
 
-[← Back to Monitoring](./09-monitoring.md) | [Return to Overview](./00-overview.md)
+[← Back to Monitoring](09-monitoring.md) | [Return to Overview](00-overview.md)

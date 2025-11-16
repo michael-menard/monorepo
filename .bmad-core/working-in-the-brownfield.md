@@ -223,7 +223,7 @@ The PO ensures:
 
    ```bash
    @po
-   shard docs/prd.md
+   shard docs/user-dashboard-prd.md
    ```
 
    ```bash

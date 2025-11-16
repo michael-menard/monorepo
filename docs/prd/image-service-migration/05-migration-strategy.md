@@ -814,10 +814,10 @@ async function verifyDataConsistency() {
 
 ## Next Steps
 
-1. Review [06-performance-optimization.md](./06-performance-optimization.md) - Optimization opportunities
-2. Review [09-monitoring.md](./09-monitoring.md) - Observability setup
-3. Review [10-implementation-phases.md](./10-implementation-phases.md) - Detailed task breakdown
+1. Review [06-performance-optimization.md](06-performance-optimization.md) - Optimization opportunities
+2. Review [09-monitoring.md](09-monitoring.md) - Observability setup
+3. Review [10-implementation-phases.md](10-implementation-phases.md) - Detailed task breakdown
 
 ---
 
-[← Back to Infrastructure](./04-infrastructure.md) | [Next: Performance Optimization →](./06-performance-optimization.md)
+[← Back to Infrastructure](04-infrastructure.md) | [Next: Performance Optimization →](06-performance-optimization.md)

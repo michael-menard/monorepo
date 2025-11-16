@@ -727,10 +727,10 @@ Host: images.lego-api.com
 
 ## Next Steps
 
-1. Review [04-infrastructure.md](./04-infrastructure.md) - SST configuration
-2. Review [05-migration-strategy.md](./05-migration-strategy.md) - API migration plan
-3. Review [07-security.md](./07-security.md) - Security requirements
+1. Review [04-infrastructure.md](04-infrastructure.md) - SST configuration
+2. Review [05-migration-strategy.md](05-migration-strategy.md) - API migration plan
+3. Review [07-security.md](07-security.md) - Security requirements
 
 ---
 
-[← Back to Data Model](./02-data-model.md) | [Next: Infrastructure →](./04-infrastructure.md)
+[← Back to Data Model](02-data-model.md) | [Next: Infrastructure →](04-infrastructure.md)

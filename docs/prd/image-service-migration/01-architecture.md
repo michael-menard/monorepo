@@ -170,7 +170,7 @@ graph TB
 3. List album images (AlbumIndex GSI)
 4. Query by upload date (UserIndex with sort key)
 
-_See [02-data-model.md](./02-data-model.md) for detailed schema_
+_See [02-data-model.md](02-data-model.md) for detailed schema_
 
 ---
 
@@ -493,7 +493,7 @@ image-service/
     └── integration/
 ```
 
-_See [04-infrastructure.md](./04-infrastructure.md) for SST configuration_
+_See [04-infrastructure.md](04-infrastructure.md) for SST configuration_
 
 ---
 
@@ -539,7 +539,7 @@ _See [04-infrastructure.md](./04-infrastructure.md) for SST configuration_
 - Acceptable P95 latency (<1s)
 - UI can display thumbnails immediately
 
-**Future:** Move to async if P95 >1s (See [06-performance-optimization.md](./06-performance-optimization.md))
+**Future:** Move to async if P95 >1s (See [06-performance-optimization.md](06-performance-optimization.md))
 
 ---
 
@@ -585,10 +585,10 @@ _See [04-infrastructure.md](./04-infrastructure.md) for SST configuration_
 
 ## Next Steps
 
-1. Review [02-data-model.md](./02-data-model.md) - DynamoDB schema design
-2. Review [03-api-specification.md](./03-api-specification.md) - REST API contracts
-3. Review [04-infrastructure.md](./04-infrastructure.md) - SST configuration
+1. Review [02-data-model.md](02-data-model.md) - DynamoDB schema design
+2. Review [03-api-specification.md](03-api-specification.md) - REST API contracts
+3. Review [04-infrastructure.md](04-infrastructure.md) - SST configuration
 
 ---
 
-[← Back to Overview](./00-overview.md) | [Next: Data Model →](./02-data-model.md)
+[← Back to Overview](00-overview.md) | [Next: Data Model →](02-data-model.md)

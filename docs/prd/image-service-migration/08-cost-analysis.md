@@ -441,10 +441,10 @@ new Alarm(stack, 'MonthlyCostAlarm', {
 
 ## Next Steps
 
-1. Review [09-monitoring.md](./09-monitoring.md) - Observability setup
-2. Review [10-implementation-phases.md](./10-implementation-phases.md) - Detailed tasks
+1. Review [09-monitoring.md](09-monitoring.md) - Observability setup
+2. Review [10-implementation-phases.md](10-implementation-phases.md) - Detailed tasks
 3. Set up cost alarms before production launch
 
 ---
 
-[← Back to Security](./07-security.md) | [Next: Monitoring →](./09-monitoring.md)
+[← Back to Security](07-security.md) | [Next: Monitoring →](09-monitoring.md)

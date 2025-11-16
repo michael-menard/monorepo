@@ -668,10 +668,10 @@ logger.info({ imageId, imageUrl, thumbnailUrl }, 'Parallel S3 uploads completed'
 
 ## Next Steps
 
-1. Review [07-security.md](./07-security.md) - Security requirements
-2. Review [09-monitoring.md](./09-monitoring.md) - Observability setup
+1. Review [07-security.md](07-security.md) - Security requirements
+2. Review [09-monitoring.md](09-monitoring.md) - Observability setup
 3. Implement optimizations based on performance metrics
 
 ---
 
-[← Back to Migration Strategy](./05-migration-strategy.md) | [Next: Security →](./07-security.md)
+[← Back to Migration Strategy](05-migration-strategy.md) | [Next: Security →](07-security.md)

@@ -124,10 +124,10 @@ This PRD has been sharded into focused documents:
 
 ## Quick Links
 
-- **Architecture Diagram:** [01-architecture.md](./01-architecture.md)
-- **API Specification:** [03-api-specification.md](./03-api-specification.md)
-- **Migration Plan:** [05-migration-strategy.md](./05-migration-strategy.md)
-- **Implementation Tasks:** [10-implementation-phases.md](./10-implementation-phases.md)
+- **Architecture Diagram:** [01-architecture.md](01-architecture.md)
+- **API Specification:** [03-api-specification.md](03-api-specification.md)
+- **Migration Plan:** [05-migration-strategy.md](05-migration-strategy.md)
+- **Implementation Tasks:** [10-implementation-phases.md](10-implementation-phases.md)
 
 ---
 
@@ -170,7 +170,7 @@ This PRD has been sharded into focused documents:
 1. **Review** all sharded documents
 2. **Approve** architecture and migration strategy
 3. **Kick off** Phase 1 (Infrastructure Setup)
-4. **Track progress** in [10-implementation-phases.md](./10-implementation-phases.md)
+4. **Track progress** in [10-implementation-phases.md](10-implementation-phases.md)
 
 ---
 

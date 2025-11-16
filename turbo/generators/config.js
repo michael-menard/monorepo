@@ -8,7 +8,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'What is the name of the package?',
-        validate: (input) => {
+        validate: input => {
           if (input.includes('.')) {
             return 'Package name cannot include an extension'
           }
@@ -95,7 +95,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'Component name:',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Component name is required'
           }
@@ -167,7 +167,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'API service name:',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'API service name is required'
           }
@@ -178,14 +178,14 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'packageName',
         message: 'Package name (e.g., @repo/api-service-name):',
-        default: (answers) => `@repo/api-${answers.name}`,
+        default: answers => `@repo/api-${answers.name}`,
       },
       {
         type: 'input',
         name: 'port',
         message: 'Port number:',
         default: '4000',
-        validate: (input) => {
+        validate: input => {
           const port = parseInt(input)
           if (isNaN(port) || port < 1000 || port > 65535) {
             return 'Port must be a number between 1000 and 65535'
@@ -324,13 +324,347 @@ module.exports = function generator(plop) {
         type: 'add',
         path: 'apps/api/{{kebabCase name}}/docker-compose.yml',
         templateFile: 'templates/docker-compose.hbs',
-        skip: data => (!data.includeDocker || data.database === 'none' ? 'Skipping docker-compose' : false),
+        skip: data =>
+          !data.includeDocker || data.database === 'none' ? 'Skipping docker-compose' : false,
       },
       {
         type: 'add',
         path: 'apps/api/{{kebabCase name}}/docker-compose.db.yml',
         templateFile: 'templates/docker-compose.db.hbs',
-        skip: data => (!data.includeDocker || data.database === 'none' ? 'Skipping database docker-compose' : false),
+        skip: data =>
+          !data.includeDocker || data.database === 'none'
+            ? 'Skipping database docker-compose'
+            : false,
+      },
+    ],
+  })
+
+  // Lambda handler generator
+  plop.setGenerator('lambda', {
+    description: 'Generate a new Lambda handler with JWT validation',
+    prompts: [
+      {
+        type: 'input',
+        name: 'name',
+        message: 'Lambda handler name:',
+        validate: input => {
+          if (!input) {
+            return 'Lambda handler name is required'
+          }
+          if (input.includes(' ')) {
+            return 'Lambda handler name cannot include spaces'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'description',
+        message: 'Handler description:',
+        default: answers => `Lambda handler for ${answers.name}`,
+      },
+      {
+        type: 'list',
+        name: 'authType',
+        message: 'Authentication type:',
+        choices: [
+          { name: 'Basic JWT validation (API Gateway only)', value: 'basic' },
+          { name: 'Enhanced JWT validation (with Cognito verification)', value: 'enhanced' },
+          {
+            name: 'Resource ownership validation (user can only access own resources)',
+            value: 'ownership',
+          },
+          { name: 'No authentication', value: 'none' },
+        ],
+        default: 'enhanced',
+      },
+      {
+        type: 'input',
+        name: 'cognitoUserPoolId',
+        message: 'Cognito User Pool ID (e.g., us-east-1_ABC123):',
+        when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
+        validate: input => {
+          if (!input) {
+            return 'User Pool ID is required for enhanced authentication'
+          }
+          if (!/^[a-z0-9-]+_[A-Za-z0-9]+$/.test(input)) {
+            return 'Invalid User Pool ID format (should be like us-east-1_ABC123)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'cognitoClientId',
+        message: 'Cognito Client ID:',
+        when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
+        validate: input => {
+          if (!input) {
+            return 'Client ID is required for enhanced authentication'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'awsRegion',
+        message: 'AWS Region:',
+        default: 'us-east-1',
+        when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
+      },
+      {
+        type: 'confirm',
+        name: 'includeTests',
+        message: 'Include test files?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'includeSchemas',
+        message: 'Include example schemas?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'addToSst',
+        message: 'Add Lambda to SST configuration (apps/api/lego-api-serverless/sst.config.ts)?',
+        default: false,
+      },
+      {
+        type: 'list',
+        name: 'apiGatewayChoice',
+        message: 'API Gateway configuration:',
+        choices: [
+          { name: 'Add to existing API Gateway (LegoApi)', value: 'existing' },
+          { name: 'Create new API Gateway', value: 'new' },
+          { name: 'No API Gateway (Lambda only)', value: 'none' },
+        ],
+        default: 'existing',
+        when: answers => answers.addToSst,
+      },
+      {
+        type: 'input',
+        name: 'newApiGatewayName',
+        message: 'New API Gateway name (PascalCase):',
+        default: answers => `${answers.name.replace(/[^a-zA-Z0-9]/g, '')}Api`,
+        when: answers => answers.addToSst && answers.apiGatewayChoice === 'new',
+        validate: input => {
+          if (!input) {
+            return 'API Gateway name is required'
+          }
+          if (!/^[A-Z][a-zA-Z0-9]*$/.test(input)) {
+            return 'API Gateway name must be PascalCase (e.g., MyApi)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'existingApiGatewayName',
+        message: 'Existing API Gateway variable name:',
+        default: 'api',
+        when: answers => answers.addToSst && answers.apiGatewayChoice === 'existing',
+        validate: input => {
+          if (!input) {
+            return 'API Gateway variable name is required'
+          }
+          if (!/^[a-z][a-zA-Z0-9]*$/.test(input)) {
+            return 'Variable name must be camelCase (e.g., api, myApi)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'apiRoute',
+        message: 'API route path (e.g., /api/my-endpoint):',
+        default: answers => `/api/${answers.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        when: answers => answers.addToSst && answers.apiGatewayChoice !== 'none',
+        validate: input => {
+          if (!input.startsWith('/')) {
+            return 'Route must start with /'
+          }
+          if (input.includes(' ')) {
+            return 'Route cannot contain spaces'
+          }
+          return true
+        },
+      },
+      {
+        type: 'checkbox',
+        name: 'httpMethods',
+        message: 'HTTP methods to support:',
+        choices: [
+          { name: 'GET', value: 'GET', checked: true },
+          { name: 'POST', value: 'POST', checked: true },
+          { name: 'PUT', value: 'PUT', checked: false },
+          { name: 'PATCH', value: 'PATCH', checked: false },
+          { name: 'DELETE', value: 'DELETE', checked: false },
+        ],
+        when: answers => answers.addToSst && answers.apiGatewayChoice !== 'none',
+        validate: input => {
+          if (input.length === 0) {
+            return 'At least one HTTP method must be selected'
+          }
+          return true
+        },
+      },
+    ],
+    actions: [
+      // Core files
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/package.json',
+        templateFile: 'templates/lambda-package.json.hbs',
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/tsconfig.json',
+        templateFile: 'templates/lambda-tsconfig.json.hbs',
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/README.md',
+        templateFile: 'templates/lambda-README.md.hbs',
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/.env.example',
+        templateFile: 'templates/lambda-env.example.hbs',
+      },
+      // Main handler
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/index.ts',
+        templateFile: 'templates/lambda-index.ts.hbs',
+      },
+      // Schemas directory
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/schemas/request.ts',
+        templateFile: 'templates/lambda-schemas-request.ts.hbs',
+        skip: data => (!data.includeSchemas ? 'Skipping schemas' : false),
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/schemas/response.ts',
+        templateFile: 'templates/lambda-schemas-response.ts.hbs',
+        skip: data => (!data.includeSchemas ? 'Skipping schemas' : false),
+      },
+      // Utils directory
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/utils/response.ts',
+        templateFile: 'templates/lambda-utils-response.ts.hbs',
+      },
+      // Test files
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/__tests__/index.test.ts',
+        templateFile: 'templates/lambda-index.test.ts.hbs',
+        skip: data => (!data.includeTests ? 'Skipping tests' : false),
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/vitest.config.ts',
+        templateFile: 'templates/lambda-vitest.config.ts.hbs',
+        skip: data => (!data.includeTests ? 'Skipping test config' : false),
+      },
+      // SST Configuration Update
+      {
+        type: 'modify',
+        path: 'apps/api/lego-api-serverless/sst.config.ts',
+        pattern:
+          /(\/\/ ========================================\s*\/\/ Story 2\.7\.1: MOC File Download Lambda[\s\S]*?\/\/ MOC File Download Route[\s\S]*?api\.route\([^)]+\))/,
+        template: function (template, data) {
+          const lambdaFunction = `
+    // ========================================
+    // ${data.name.replace(/[^a-zA-Z0-9]/g, '')} Lambda Function${data.apiGatewayChoice === 'new' ? ' + API Gateway' : data.apiGatewayChoice === 'none' ? ' (Standalone)' : ''}
+    // ========================================
+
+    /**
+     * ${data.name.replace(/[^a-zA-Z0-9]/g, '')} Lambda Function
+     * ${data.description}
+     ${data.authType !== 'none' ? '     * - JWT authentication via Cognito' : ''}
+     * - Connected to PostgreSQL${data.authType === 'enhanced' || data.authType === 'ownership' ? ', Redis, OpenSearch' : ''}, S3
+     ${data.apiGatewayChoice === 'none' ? '     * - Standalone Lambda (no API Gateway integration)' : ''}
+     */
+    const ${data.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}Function = new sst.aws.Function('${data.name.replace(/[^a-zA-Z0-9]/g, '')}Function', {
+      handler: '../lambda-${data.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}/dist/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [postgres${data.authType === 'enhanced' || data.authType === 'ownership' ? ', redis, openSearch' : ''}, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        ${
+          data.authType === 'enhanced' || data.authType === 'ownership'
+            ? `COGNITO_USER_POOL_ID: cognitoUserPoolId,
+        COGNITO_CLIENT_ID: cognitoClientId,
+        AWS_REGION: region,`
+            : ''
+        }
+      },
+    })`
+
+          let apiGatewaySection = ''
+
+          if (data.apiGatewayChoice === 'new') {
+            apiGatewaySection = `
+
+    /**
+     * ${data.newApiGatewayName} API Gateway
+     * - CORS enabled for web clients
+     ${data.authType !== 'none' ? '     * - JWT authentication via Cognito for protected routes' : ''}
+     */
+    const ${data.newApiGatewayName.toLowerCase()} = new sst.aws.ApiGatewayV2('${data.newApiGatewayName}', {
+      cors: {
+        allowOrigins:
+          stage === 'production'
+            ? ['https://lego-moc-instructions.com']
+            : ['http://localhost:3002', 'http://localhost:5173'],
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        allowCredentials: true,
+      },
+    })`
+          }
+
+          let routesSection = ''
+          if (data.apiGatewayChoice !== 'none') {
+            const apiVar =
+              data.apiGatewayChoice === 'existing'
+                ? data.existingApiGatewayName
+                : data.newApiGatewayName.toLowerCase()
+            const functionVar = data.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() + 'Function'
+
+            routesSection = `
+
+    // ${data.name.replace(/[^a-zA-Z0-9]/g, '')} API Routes`
+
+            data.httpMethods.forEach(method => {
+              if (data.authType !== 'none') {
+                routesSection += `
+    ${apiVar}.route('${method} ${data.apiRoute}', ${functionVar}, {
+      auth: { jwt: { authorizer: cognitoAuthorizer.id } }
+    })`
+              } else {
+                routesSection += `
+    ${apiVar}.route('${method} ${data.apiRoute}', ${functionVar})`
+              }
+            })
+          } else {
+            routesSection = `
+
+    // Note: ${data.name.replace(/[^a-zA-Z0-9]/g, '')}Function can be invoked directly or integrated with other AWS services
+    // To invoke directly: aws lambda invoke --function-name ${data.name.replace(/[^a-zA-Z0-9]/g, '')}Function-\${stage} response.json`
+          }
+
+          return template.replace(/\$1/, '$1' + lambdaFunction + apiGatewaySection + routesSection)
+        },
+        skip: data => (!data.addToSst ? 'Skipping SST configuration update' : false),
       },
     ],
   })
@@ -343,7 +677,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'PRD name (will be kebab-cased):',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'PRD name is required'
           }
@@ -388,7 +722,7 @@ module.exports = function generator(plop) {
       {
         type: 'add',
         path: '{{package}}/docs/prds/{{date}}-{{kebabCase name}}.md',
-        templateFile: 'templates/prd.md.hbs',
+        templateFile: 'templates/user-dashboard-prd.md.hbs',
         transform: (template, data) => {
           const now = new Date()
           const date = now.toISOString().split('T')[0] // YYYY-MM-DD

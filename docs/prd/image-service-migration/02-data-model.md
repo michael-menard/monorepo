@@ -654,10 +654,10 @@ migrateGalleryImages().catch(console.error)
 
 ## Next Steps
 
-1. Review [03-api-specification.md](./03-api-specification.md) - REST API contracts
-2. Review [04-infrastructure.md](./04-infrastructure.md) - SST configuration for DynamoDB
-3. Review [05-migration-strategy.md](./05-migration-strategy.md) - Dual-write implementation
+1. Review [03-api-specification.md](03-api-specification.md) - REST API contracts
+2. Review [04-infrastructure.md](04-infrastructure.md) - SST configuration for DynamoDB
+3. Review [05-migration-strategy.md](05-migration-strategy.md) - Dual-write implementation
 
 ---
 
-[← Back to Architecture](./01-architecture.md) | [Next: API Specification →](./03-api-specification.md)
+[← Back to Architecture](01-architecture.md) | [Next: API Specification →](03-api-specification.md)
