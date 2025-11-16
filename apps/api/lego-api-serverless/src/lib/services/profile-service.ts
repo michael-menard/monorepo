@@ -10,9 +10,14 @@
 import { count, eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { mocInstructions, galleryImages, wishlistItems } from '@/db/schema'
-import { getCognitoUser, getCognitoAttribute } from '@/lib/cognito/cognito-client'
+import {
+  getCognitoUser,
+  getCognitoAttribute,
+  updateCognitoUserAttributes,
+} from '@/lib/cognito/cognito-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { createLogger } from '@/lib/utils/logger'
+import type { UpdateProfileRequest } from '@/lib/validation/profile-schemas'
 
 const logger = createLogger('profile-service')
 
@@ -155,6 +160,59 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     return profile
   } catch (error) {
     logger.error('Failed to get user profile', { userId, error })
+    throw error
+  }
+}
+
+/**
+ * Update user profile in Cognito and invalidate cache
+ *
+ * This function:
+ * 1. Validates the update data (via Zod schema in handler)
+ * 2. Updates user attributes in Cognito User Pool
+ * 3. Invalidates the Redis cache for this user
+ * 4. Fetches and returns the updated profile
+ *
+ * @param userId - Cognito user ID (sub claim from JWT)
+ * @param updateData - Profile fields to update
+ * @returns Updated user profile
+ * @throws Error if Cognito update fails
+ */
+export async function updateUserProfile(
+  userId: string,
+  updateData: UpdateProfileRequest,
+): Promise<UserProfile> {
+  const cacheKey = `profile:user:${userId}`
+
+  try {
+    logger.info('Updating user profile', { userId, updateData })
+
+    // Update Cognito user attributes
+    const attributes = [
+      {
+        Name: 'name',
+        Value: updateData.name,
+      },
+    ]
+
+    const success = await updateCognitoUserAttributes(userId, attributes)
+
+    if (!success) {
+      throw new Error('Failed to update Cognito user attributes')
+    }
+
+    // Invalidate cache
+    const redis = await getRedisClient()
+    await redis.del(cacheKey)
+    logger.info('Profile cache invalidated', { userId })
+
+    // Fetch and return updated profile (this will re-cache)
+    const updatedProfile = await getUserProfile(userId)
+    logger.info('Profile updated successfully', { userId })
+
+    return updatedProfile
+  } catch (error) {
+    logger.error('Failed to update user profile', { userId, error })
     throw error
   }
 }

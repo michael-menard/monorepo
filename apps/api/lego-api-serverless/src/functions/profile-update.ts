@@ -3,9 +3,9 @@
  *
  * PATCH /api/users/{id} - Update user profile
  *
- * Story 4.3 will implement:
+ * Implementation (Story 4.3):
  * - Validate request body (name field)
- * - Update Cognito User Pool attributes
+ * - Update Cognito User Pool attributes via AdminUpdateUserAttributesCommand
  * - Invalidate Redis cache
  * - Return updated profile
  *
@@ -15,9 +15,14 @@
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
+import { ZodError } from 'zod'
 import { validateUserResourceAccess } from '@monorepo/lambda-auth'
-import { createErrorResponse } from '@/lib/utils/response-utils'
-import { logger } from '@/lib/utils/logger'
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils/response-utils'
+import { createLogger } from '@/lib/utils/logger'
+import { UpdateProfileSchema } from '@/lib/validation/profile-schemas'
+import { updateUserProfile } from '@/lib/services/profile-service'
+
+const logger = createLogger('profile-update-handler')
 
 /**
  * PATCH /api/users/{id} Handler
@@ -34,24 +39,54 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       logger.warn('Auth failed', { error: authResult.error })
       return createErrorResponse(
         authResult.error!.statusCode,
-        authResult.error!.code as any,
+        authResult.error!.code as 'UNAUTHORIZED' | 'FORBIDDEN',
         authResult.error!.message,
       )
     }
 
     const userId = authResult.userId!
 
-    // Placeholder implementation for Story 4.1 (infrastructure setup)
-    // Story 4.3 will implement the full profile update logic
-    logger.info('PATCH /api/users/{id} - Not yet implemented (Story 4.3)', { userId })
+    // Parse and validate request body
+    let updateData
+    try {
+      const body = event.body ? JSON.parse(event.body) : {}
+      updateData = UpdateProfileSchema.parse(body)
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errorMessages = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        logger.warn('Validation failed', { userId, errors: error.issues })
+        return createErrorResponse(400, 'VALIDATION_ERROR', errorMessages)
+      }
 
-    return createErrorResponse(
-      501,
-      'INTERNAL_ERROR',
-      'Profile update will be implemented in Story 4.3',
-    )
+      if (error instanceof SyntaxError) {
+        logger.warn('Invalid JSON in request body', { userId })
+        return createErrorResponse(400, 'VALIDATION_ERROR', 'Invalid JSON in request body')
+      }
+
+      throw error
+    }
+
+    // Update profile in Cognito and invalidate cache
+    const updatedProfile = await updateUserProfile(userId, updateData)
+
+    logger.info('Profile updated successfully', { userId })
+    return createSuccessResponse(updatedProfile)
   } catch (error) {
     logger.error('Profile update handler error:', error)
+
+    // Handle specific error cases
+    if (error instanceof Error) {
+      // User not found in Cognito
+      if (error.message === 'User not found in Cognito') {
+        return createErrorResponse(404, 'NOT_FOUND', 'User not found')
+      }
+
+      // Cognito update failure
+      if (error.message.includes('Failed to update Cognito')) {
+        return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update user profile')
+      }
+    }
+
     return createErrorResponse(500, 'INTERNAL_ERROR', 'An unexpected error occurred')
   }
 }

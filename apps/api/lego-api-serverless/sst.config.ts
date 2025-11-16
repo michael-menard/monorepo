@@ -604,7 +604,7 @@ export default $config({
      * Update User Profile Lambda Function
      * - Updates user attributes in Cognito User Pool
      * - Invalidates Redis cache
-     * - Lightweight write operation
+     * - Fetches updated profile (requires PostgreSQL for stats)
      */
     const profileUpdateFunction = new sst.aws.Function('ProfileUpdateFunction', {
       handler: 'src/functions/profile-update.handler',
@@ -612,7 +612,7 @@ export default $config({
       timeout: '10 seconds',
       memory: '512 MB',
       vpc,
-      link: [redis],
+      link: [postgres, redis],
       environment: {
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
