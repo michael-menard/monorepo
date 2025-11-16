@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { createLogger } from './logger'
+
+const logger = createLogger('env')
 
 /**
  * Environment Variable Schema
@@ -59,8 +62,8 @@ export function validateEnv(): Env {
     return EnvSchema.parse(process.env)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('❌ Invalid environment variables:')
-      console.error(JSON.stringify(error.issues, null, 2))
+      logger.error('❌ Invalid environment variables:')
+      logger.error(JSON.stringify(error.issues, null, 2))
       throw new Error('Environment validation failed')
     }
     throw error

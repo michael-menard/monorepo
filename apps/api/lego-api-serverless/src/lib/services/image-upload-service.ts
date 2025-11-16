@@ -22,6 +22,7 @@ import { validateFile, createImageValidationConfig } from '@monorepo/file-valida
 import { processImage, generateThumbnail } from './image-processing'
 import { getS3Client, uploadToS3, uploadToS3Multipart } from '@/lib/storage/s3-client'
 import { getEnv } from '@/lib/utils/env'
+import { createLogger } from '../utils/logger'
 import {
   recordUploadSuccess,
   recordUploadFailure,
@@ -29,6 +30,8 @@ import {
   recordImageDimensions,
   measureProcessingTime,
 } from '@/lib/utils/cloudwatch-metrics'
+
+const logger = createLogger('image-upload-service')
 
 /**
  * Zod schema for uploaded file from multipart form data
@@ -248,11 +251,11 @@ async function deletePreviousImage(imageUrl: string, hasThumbnail: boolean): Pro
           }),
         )
       } catch (error) {
-        console.warn('Thumbnail deletion failed (may not exist):', error)
+        logger.warn('Thumbnail deletion failed (may not exist):', error)
       }
     }
   } catch (error) {
-    console.error('Failed to delete previous image (non-fatal):', error)
+    logger.error('Failed to delete previous image (non-fatal):', error)
     // Don't throw - continue with upload even if deletion fails
   }
 }

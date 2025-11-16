@@ -24,6 +24,7 @@ import { testConnection } from '@/lib/db/client'
 import { testRedisConnection } from '@/lib/services/redis'
 import { testOpenSearchConnection } from '@/lib/services/opensearch'
 import { ServiceUnavailableError } from '@/lib/errors'
+import { logger } from '../lib/utils/logger'
 
 /**
  * Health Check Handler
@@ -32,7 +33,7 @@ import { ServiceUnavailableError } from '@/lib/errors'
  */
 export async function handler(event: any): Promise<APIGatewayProxyResult> {
   try {
-    console.log('Health check initiated', {
+    logger.info('Health check initiated', {
       requestId: event.requestContext.requestId,
       stage: process.env.STAGE,
     })
@@ -58,7 +59,7 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
       version: process.env.npm_package_version || '1.0.0',
     }
 
-    console.log('Health check completed', healthData)
+    logger.info('Health check completed', healthData)
 
     // If PostgreSQL is down, return 503 (critical service)
     if (!postgresHealthy) {
@@ -70,7 +71,7 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
 
     return healthCheckResponse(healthData)
   } catch (error) {
-    console.error('Health check failed:', error)
+    logger.error('Health check failed:', error)
     return errorResponseFromError(error)
   }
 }

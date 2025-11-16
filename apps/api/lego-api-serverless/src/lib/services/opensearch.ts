@@ -7,7 +7,9 @@
 
 import { Client } from '@opensearch-project/opensearch'
 import { getEnv } from '@/lib/utils/env'
+import { createLogger } from '../utils/logger'
 
+const logger = createLogger('opensearch')
 type OpenSearchClient = Client
 
 let _openSearchClient: OpenSearchClient | null = null
@@ -37,7 +39,7 @@ export function getOpenSearchClient(): OpenSearchClient {
       // via the Lambda execution role permissions
     })
 
-    console.log('OpenSearch client created', { endpoint: openSearchEndpoint })
+    logger.info('OpenSearch client created', { endpoint: openSearchEndpoint })
   }
 
   return _openSearchClient
@@ -54,7 +56,7 @@ export async function testOpenSearchConnection(): Promise<boolean> {
     const health = await client.cluster.health()
     return health.body.status === 'green' || health.body.status === 'yellow'
   } catch (error) {
-    console.error('OpenSearch connection test failed:', error)
+    logger.error('OpenSearch connection test failed:', error)
     return false
   }
 }
@@ -68,7 +70,7 @@ export async function getOpenSearchHealth(): Promise<'green' | 'yellow' | 'red' 
     const health = await client.cluster.health()
     return health.body.status as 'green' | 'yellow' | 'red'
   } catch (error) {
-    console.error('Failed to get OpenSearch health:', error)
+    logger.error('Failed to get OpenSearch health:', error)
     return 'unknown'
   }
 }

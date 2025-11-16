@@ -14,7 +14,9 @@ import {
   AbortMultipartUploadCommand,
 } from '@aws-sdk/client-s3'
 import { getEnv } from '@/lib/utils/env'
+import { createLogger } from '../utils/logger'
 
+const logger = createLogger('s3-client')
 let _s3Client: S3Client | null = null
 
 /**
@@ -165,7 +167,7 @@ export async function uploadToS3Multipart(params: {
           }),
         )
       } catch (abortError) {
-        console.error('Failed to abort multipart upload:', abortError)
+        logger.error('Failed to abort multipart upload:', abortError)
       }
     }
     throw error

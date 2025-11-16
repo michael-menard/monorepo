@@ -10,6 +10,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { v4 as uuidv4 } from 'uuid'
 import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
+import { logger } from '../lib/utils/logger'
 import {
   CreateGalleryImageSchema,
   UpdateGalleryImageSchema,
@@ -91,7 +92,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     return createErrorResponse(404, 'NOT_FOUND', 'Route not found')
   } catch (error) {
-    console.error('Gallery handler error:', error)
+    logger.error('Gallery handler error:', error)
     return createErrorResponse(500, 'INTERNAL_ERROR', 'An unexpected error occurred')
   }
 }
@@ -160,7 +161,7 @@ async function handleListImages(
 
     return createSuccessResponse(response)
   } catch (error) {
-    console.error('List images error:', error)
+    logger.error('List images error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -285,7 +286,7 @@ async function handleUploadImage(
         },
       })
     } catch (error) {
-      console.error('OpenSearch indexing failed (non-critical):', error)
+      logger.error('OpenSearch indexing failed (non-critical):', error)
       // Don't fail the request if indexing fails
     }
 
@@ -299,10 +300,10 @@ async function handleUploadImage(
       // Delete all matching keys
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis cache invalidation failed (non-critical):', error)
+      logger.error('Redis cache invalidation failed (non-critical):', error)
       // Don't fail the request if cache invalidation fails
     }
 
@@ -323,7 +324,7 @@ async function handleUploadImage(
       201,
     )
   } catch (error) {
-    console.error('Upload image error:', error)
+    logger.error('Upload image error:', error)
 
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
@@ -383,7 +384,7 @@ async function handleGetImage(
 
     return createSuccessResponse(image)
   } catch (error) {
-    console.error('Get image error:', error)
+    logger.error('Get image error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -446,7 +447,7 @@ async function handleUpdateImage(
         },
       })
     } catch (error) {
-      console.error('OpenSearch update failed (non-critical):', error)
+      logger.error('OpenSearch update failed (non-critical):', error)
       // Don't fail the request if indexing fails
     }
 
@@ -460,15 +461,15 @@ async function handleUpdateImage(
       const keys = await redis.keys(pattern)
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} list cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} list cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis list cache invalidation failed (non-critical):', error)
+      logger.error('Redis list cache invalidation failed (non-critical):', error)
     }
 
     return createSuccessResponse(updatedImage)
   } catch (error) {
-    console.error('Update image error:', error)
+    logger.error('Update image error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -513,7 +514,7 @@ async function handleDeleteImage(
       const url = new URL(imageUrl)
       imageKey = url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname
     } catch (error) {
-      console.error('Failed to parse image URL:', error)
+      logger.error('Failed to parse image URL:', error)
       return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to delete image from S3')
     }
 
@@ -540,7 +541,7 @@ async function handleDeleteImage(
           }),
         )
       } catch (err) {
-        console.warn('Thumbnail deletion failed (may not exist):', err)
+        logger.warn('Thumbnail deletion failed (may not exist):', err)
       }
     }
 
@@ -554,7 +555,7 @@ async function handleDeleteImage(
         id: imageId,
       })
     } catch (error) {
-      console.error('OpenSearch delete failed (non-critical):', error)
+      logger.error('OpenSearch delete failed (non-critical):', error)
       // Don't fail the request if deletion fails
     }
 
@@ -568,15 +569,15 @@ async function handleDeleteImage(
       const keys = await redis.keys(pattern)
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} list cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} list cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis list cache invalidation failed (non-critical):', error)
+      logger.error('Redis list cache invalidation failed (non-critical):', error)
     }
 
     return createSuccessResponse({ message: 'Image deleted successfully' }, 204)
   } catch (error) {
-    console.error('Delete image error:', error)
+    logger.error('Delete image error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -644,7 +645,7 @@ async function handleCreateAlbum(
         },
       })
     } catch (error) {
-      console.error('OpenSearch indexing failed (non-critical):', error)
+      logger.error('OpenSearch indexing failed (non-critical):', error)
     }
 
     // Invalidate album list cache
@@ -654,10 +655,10 @@ async function handleCreateAlbum(
       const keys = await redis.keys(pattern)
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} album cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} album cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis cache invalidation failed (non-critical):', error)
+      logger.error('Redis cache invalidation failed (non-critical):', error)
     }
 
     // Build response with imageCount = 0
@@ -676,7 +677,7 @@ async function handleCreateAlbum(
       201,
     )
   } catch (error) {
-    console.error('Create album error:', error)
+    logger.error('Create album error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -753,7 +754,7 @@ async function handleListAlbums(
 
     return createSuccessResponse(response)
   } catch (error) {
-    console.error('List albums error:', error)
+    logger.error('List albums error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -817,7 +818,7 @@ async function handleGetAlbum(
 
     return createSuccessResponse(response)
   } catch (error) {
-    console.error('Get album error:', error)
+    logger.error('Get album error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -896,7 +897,7 @@ async function handleUpdateAlbum(
         },
       })
     } catch (error) {
-      console.error('OpenSearch update failed (non-critical):', error)
+      logger.error('OpenSearch update failed (non-critical):', error)
     }
 
     // Invalidate caches
@@ -909,15 +910,15 @@ async function handleUpdateAlbum(
       const keys = await redis.keys(pattern)
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} album cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} album cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis list cache invalidation failed (non-critical):', error)
+      logger.error('Redis list cache invalidation failed (non-critical):', error)
     }
 
     return createSuccessResponse(updatedAlbum)
   } catch (error) {
-    console.error('Update album error:', error)
+    logger.error('Update album error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -967,7 +968,7 @@ async function handleDeleteAlbum(
         id: albumId,
       })
     } catch (error) {
-      console.error('OpenSearch delete failed (non-critical):', error)
+      logger.error('OpenSearch delete failed (non-critical):', error)
     }
 
     // Invalidate caches
@@ -980,10 +981,10 @@ async function handleDeleteAlbum(
       const keys = await redis.keys(pattern)
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} album cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} album cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis list cache invalidation failed (non-critical):', error)
+      logger.error('Redis list cache invalidation failed (non-critical):', error)
     }
 
     // Also invalidate image list caches since images were updated
@@ -992,15 +993,15 @@ async function handleDeleteAlbum(
       const keys = await redis.keys(pattern)
       if (keys.length > 0) {
         await redis.del(keys)
-        console.log(`Invalidated ${keys.length} image cache keys for user ${userId}`)
+        logger.info(`Invalidated ${keys.length} image cache keys for user ${userId}`)
       }
     } catch (error) {
-      console.error('Redis image cache invalidation failed (non-critical):', error)
+      logger.error('Redis image cache invalidation failed (non-critical):', error)
     }
 
     return createSuccessResponse({ message: 'Album deleted successfully' }, 204)
   } catch (error) {
-    console.error('Delete album error:', error)
+    logger.error('Delete album error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }

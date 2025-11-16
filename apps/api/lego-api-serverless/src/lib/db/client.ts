@@ -2,6 +2,9 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import * as schema from '@/db/schema'
 import { getEnv } from '@/lib/utils/env'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('db-client')
 
 /**
  * Database Client Configuration for Lambda Functions
@@ -54,7 +57,7 @@ function getPool(): Pool {
 
     // Handle pool errors gracefully
     _pool.on('error', err => {
-      console.error('Unexpected database pool error:', err)
+      logger.error('Unexpected database pool error:', err)
     })
   }
 
@@ -92,7 +95,7 @@ export async function testConnection(): Promise<boolean> {
     const result = await pool.query('SELECT 1 as health_check')
     return result.rows[0]?.health_check === 1
   } catch (error) {
-    console.error('Database connection test failed:', error)
+    logger.error('Database connection test failed:', error)
     return false
   }
 }

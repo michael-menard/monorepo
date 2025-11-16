@@ -7,7 +7,9 @@
 
 import { createClient, RedisClientType } from 'redis'
 import { getEnv } from '@/lib/utils/env'
+import { createLogger } from '../utils/logger'
 
+const logger = createLogger('redis')
 let _redisClient: RedisClientType | null = null
 
 /**
@@ -35,7 +37,7 @@ export async function getRedisClient(): Promise<RedisClientType> {
     })
 
     _redisClient.on('error', err => {
-      console.error('Redis client error:', err)
+      logger.error('Redis client error:', err)
     })
 
     await _redisClient.connect()
@@ -55,7 +57,7 @@ export async function testRedisConnection(): Promise<boolean> {
     const result = await client.ping()
     return result === 'PONG'
   } catch (error) {
-    console.error('Redis connection test failed:', error)
+    logger.error('Redis connection test failed:', error)
     return false
   }
 }

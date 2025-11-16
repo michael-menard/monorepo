@@ -11,7 +11,9 @@
 import { getOpenSearchClient } from '@/lib/services/opensearch'
 import type { MocInstruction } from '@/types/moc'
 import { SearchError } from '@/lib/errors'
+import { createLogger } from '../utils/logger'
 
+const logger = createLogger('opensearch-moc')
 const MOC_INDEX = 'moc_instructions'
 
 /**
@@ -38,7 +40,7 @@ export async function searchMocs(
   tag?: string,
 ): Promise<{ mocs: MocInstruction[]; total: number }> {
   try {
-    console.log('OpenSearch MOC search initiated', { userId, query, from, size, tag })
+    logger.info('OpenSearch MOC search initiated', { userId, query, from, size, tag })
 
     const client = getOpenSearchClient()
 
@@ -100,7 +102,7 @@ export async function searchMocs(
 
     const total = response.body.hits.total.value
 
-    console.log('OpenSearch query completed', {
+    logger.info('OpenSearch query completed', {
       userId,
       query,
       mocsReturned: mocs.length,
@@ -109,7 +111,7 @@ export async function searchMocs(
 
     return { mocs, total }
   } catch (error) {
-    console.error('OpenSearch search failed:', error)
+    logger.error('OpenSearch search failed:', error)
     throw new SearchError('MOC search failed', {
       userId,
       query,
@@ -138,9 +140,9 @@ export async function indexMoc(moc: MocInstruction): Promise<void> {
       },
     })
 
-    console.log('MOC indexed in OpenSearch', { mocId: moc.id, userId: moc.userId })
+    logger.info('MOC indexed in OpenSearch', { mocId: moc.id, userId: moc.userId })
   } catch (error) {
-    console.error('Failed to index MOC in OpenSearch:', error)
+    logger.error('Failed to index MOC in OpenSearch:', error)
     // Don't throw - indexing failure shouldn't break the creation request
     // Search will fall back to PostgreSQL until re-indexed
   }
@@ -167,9 +169,9 @@ export async function updateMocIndex(moc: MocInstruction): Promise<void> {
       },
     })
 
-    console.log('MOC updated in OpenSearch', { mocId: moc.id })
+    logger.info('MOC updated in OpenSearch', { mocId: moc.id })
   } catch (error) {
-    console.error('Failed to update MOC in OpenSearch:', error)
+    logger.error('Failed to update MOC in OpenSearch:', error)
     // Don't throw - indexing failure shouldn't break the update request
   }
 }
@@ -187,9 +189,9 @@ export async function deleteMocIndex(mocId: string): Promise<void> {
       id: mocId,
     })
 
-    console.log('MOC deleted from OpenSearch', { mocId })
+    logger.info('MOC deleted from OpenSearch', { mocId })
   } catch (error) {
-    console.error('Failed to delete MOC from OpenSearch:', error)
+    logger.error('Failed to delete MOC from OpenSearch:', error)
     // Don't throw - indexing failure shouldn't break the delete request
   }
 }
@@ -238,12 +240,12 @@ export async function initializeMocIndex(): Promise<void> {
         },
       })
 
-      console.log('MOC index created in OpenSearch')
+      logger.info('MOC index created in OpenSearch')
     } else {
-      console.log('MOC index already exists in OpenSearch')
+      logger.info('MOC index already exists in OpenSearch')
     }
   } catch (error) {
-    console.error('Failed to initialize MOC index:', error)
+    logger.error('Failed to initialize MOC index:', error)
     // Don't throw - application should continue even if OpenSearch is unavailable
   }
 }

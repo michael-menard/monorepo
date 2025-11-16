@@ -16,6 +16,9 @@ import { db } from '@/lib/db/client'
 import { mocInstructions, mocFiles } from '@/db/schema'
 import type { MocFile } from '@/types/moc'
 import { NotFoundError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('moc-file-service')
 
 /**
  * File size limits (in bytes)
@@ -62,7 +65,7 @@ export async function uploadMocFile(
     fileType: 'instruction' | 'parts-list' | 'thumbnail' | 'gallery-image'
   },
 ): Promise<MocFile> {
-  console.log('Uploading file for MOC', { mocId, userId, fileType: metadata.fileType })
+  logger.info('Uploading file for MOC', { mocId, userId, fileType: metadata.fileType })
 
   // Verify MOC exists and user owns it
   const [moc] = await db
@@ -126,7 +129,7 @@ export async function uploadMocFile(
   const region = process.env.AWS_REGION || 'us-east-1'
   const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${s3Key}`
 
-  console.log('File uploaded to S3', { s3Key, fileUrl })
+  logger.info('File uploaded to S3', { s3Key, fileUrl })
 
   // Create database record
   const [fileRecord] = await db
@@ -145,7 +148,7 @@ export async function uploadMocFile(
     throw new DatabaseError('Failed to create file record')
   }
 
-  console.log('File record created', { fileId: fileRecord.id })
+  logger.info('File record created', { fileId: fileRecord.id })
 
   // Invalidate MOC detail cache
   invalidateMocDetailCache(mocId)
@@ -171,7 +174,7 @@ export async function generateFileDownloadUrl(
   mimeType: string
   expiresIn: number
 }> {
-  console.log('Generating download URL for file', { mocId, fileId, userId })
+  logger.info('Generating download URL for file', { mocId, fileId, userId })
 
   // Verify MOC exists and user owns it
   const [moc] = await db
@@ -199,7 +202,7 @@ export async function generateFileDownloadUrl(
     throw new NotFoundError('File not found')
   }
 
-  console.log('File record found', {
+  logger.info('File record found', {
     fileId: file.id,
     fileType: file.fileType,
     originalFilename: file.originalFilename,
@@ -226,7 +229,7 @@ export async function generateFileDownloadUrl(
   const expiresIn = 3600 // 1 hour in seconds
   const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn })
 
-  console.log('Pre-signed URL generated', {
+  logger.info('Pre-signed URL generated', {
     fileId,
     expiresIn,
     filename: file.originalFilename,

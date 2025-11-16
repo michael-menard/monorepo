@@ -20,6 +20,9 @@ import { getRedisClient } from '@/lib/services/redis'
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc'
 import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc'
 import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/lib/errors'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('moc-service')
 
 /**
  * List MOCs for a user with pagination, search, and filtering
@@ -45,7 +48,7 @@ export async function listMocs(
     // Check Redis cache first
     const cached = await getCachedMocList(cacheKey)
     if (cached) {
-      console.log('MOC list cache hit', { userId, cacheKey })
+      logger.info('MOC list cache hit', { userId, cacheKey })
       return cached
     }
 
@@ -59,7 +62,7 @@ export async function listMocs(
 
         return searchResults
       } catch (error) {
-        console.warn('OpenSearch query failed, falling back to PostgreSQL', error)
+        logger.warn('OpenSearch query failed, falling back to PostgreSQL', error)
         // Fall through to PostgreSQL search below
       }
     }
@@ -111,7 +114,7 @@ export async function listMocs(
     // Cache the results (5 minute TTL)
     await cacheMocList(cacheKey, result)
 
-    console.log('MOC list query completed', {
+    logger.info('MOC list query completed', {
       userId,
       mocsReturned: mocs.length,
       total,
@@ -121,7 +124,7 @@ export async function listMocs(
 
     return result
   } catch (error) {
-    console.error('Error listing MOCs:', error)
+    logger.error('Error listing MOCs:', error)
     throw new DatabaseError('Failed to retrieve MOC list', {
       userId,
       query,
@@ -146,7 +149,7 @@ async function getCachedMocList(
 
     return JSON.parse(cached)
   } catch (error) {
-    console.warn('Redis cache read failed:', error)
+    logger.warn('Redis cache read failed:', error)
     return null
   }
 }
@@ -164,7 +167,7 @@ async function cacheMocList(
 
     await redis.setEx(cacheKey, TTL, JSON.stringify(data))
   } catch (error) {
-    console.warn('Redis cache write failed:', error)
+    logger.warn('Redis cache write failed:', error)
     // Don't throw - caching failure shouldn't break the request
   }
 }
@@ -183,10 +186,10 @@ export async function invalidateMocListCache(userId: string): Promise<void> {
 
     if (keys.length > 0) {
       await redis.del(keys)
-      console.log('Invalidated MOC list cache', { userId, keysDeleted: keys.length })
+      logger.info('Invalidated MOC list cache', { userId, keysDeleted: keys.length })
     }
   } catch (error) {
-    console.warn('Failed to invalidate MOC list cache:', error)
+    logger.warn('Failed to invalidate MOC list cache:', error)
     // Don't throw - cache invalidation failure shouldn't break the request
   }
 }
@@ -216,7 +219,7 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
       if (cached.userId !== userId) {
         throw new ForbiddenError('You do not own this MOC')
       }
-      console.log('MOC detail cache hit', { mocId, userId })
+      logger.info('MOC detail cache hit', { mocId, userId })
       return cached
     }
 
@@ -272,7 +275,7 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
     // Cache the result (10 minute TTL)
     await cacheMocDetail(cacheKey, response)
 
-    console.log('MOC detail query completed', {
+    logger.info('MOC detail query completed', {
       mocId,
       userId,
       filesCount: files.length,
@@ -287,7 +290,7 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
       throw error
     }
 
-    console.error('Error retrieving MOC detail:', error)
+    logger.error('Error retrieving MOC detail:', error)
     throw new DatabaseError('Failed to retrieve MOC detail', {
       mocId,
       userId,
@@ -328,7 +331,7 @@ async function getCachedMocDetail(cacheKey: string): Promise<MocDetailResponse |
       })),
     }
   } catch (error) {
-    console.warn('Redis cache read failed:', error)
+    logger.warn('Redis cache read failed:', error)
     return null
   }
 }
@@ -343,7 +346,7 @@ async function cacheMocDetail(cacheKey: string, data: MocDetailResponse): Promis
 
     await redis.setEx(cacheKey, TTL, JSON.stringify(data))
   } catch (error) {
-    console.warn('Redis cache write failed:', error)
+    logger.warn('Redis cache write failed:', error)
     // Don't throw - caching failure shouldn't break the request
   }
 }
@@ -358,9 +361,9 @@ export async function invalidateMocDetailCache(mocId: string): Promise<void> {
     const cacheKey = `moc:detail:${mocId}`
 
     await redis.del(cacheKey)
-    console.log('Invalidated MOC detail cache', { mocId })
+    logger.info('Invalidated MOC detail cache', { mocId })
   } catch (error) {
-    console.warn('Failed to invalidate MOC detail cache:', error)
+    logger.warn('Failed to invalidate MOC detail cache:', error)
     // Don't throw - cache invalidation failure shouldn't break the request
   }
 }
@@ -383,7 +386,7 @@ export async function createMoc(
   data: { title: string; description?: string; tags?: string[]; thumbnailUrl?: string },
 ): Promise<MocInstruction> {
   try {
-    console.log('Creating MOC', { userId, title: data.title })
+    logger.info('Creating MOC', { userId, title: data.title })
 
     const now = new Date()
 
@@ -411,7 +414,7 @@ export async function createMoc(
     // Cast to MocInstruction type
     const mocInstruction = moc as unknown as MocInstruction
 
-    console.log('MOC created successfully', { mocId: moc.id, userId })
+    logger.info('MOC created successfully', { mocId: moc.id, userId })
 
     // Index in OpenSearch asynchronously (non-blocking)
     // Fire and forget - don't wait for indexing to complete
@@ -430,7 +433,7 @@ export async function createMoc(
       })
     }
 
-    console.error('Error creating MOC:', error)
+    logger.error('Error creating MOC:', error)
     throw new DatabaseError('Failed to create MOC', {
       userId,
       data,
@@ -448,7 +451,7 @@ async function indexMocAsync(moc: MocInstruction): Promise<void> {
     const { indexMoc } = await import('@/lib/services/opensearch-moc')
     await indexMoc(moc)
   } catch (error) {
-    console.error('Failed to index MOC in OpenSearch (non-blocking):', error)
+    logger.error('Failed to index MOC in OpenSearch (non-blocking):', error)
     // Don't throw - indexing failure shouldn't break the creation request
     // Search will fall back to PostgreSQL until re-indexed
   }
@@ -481,7 +484,7 @@ export async function updateMoc(
   },
 ): Promise<MocInstruction> {
   try {
-    console.log('Updating MOC', { mocId, userId, fields: Object.keys(data) })
+    logger.info('Updating MOC', { mocId, userId, fields: Object.keys(data) })
 
     // First, fetch the MOC to verify ownership
     const [existingMoc] = await db
@@ -527,7 +530,7 @@ export async function updateMoc(
     // Cast to MocInstruction type
     const mocInstruction = updatedMoc as unknown as MocInstruction
 
-    console.log('MOC updated successfully', { mocId, userId, updatedFields: Object.keys(data) })
+    logger.info('MOC updated successfully', { mocId, userId, updatedFields: Object.keys(data) })
 
     // Re-index in OpenSearch asynchronously (non-blocking)
     updateMocIndexAsync(mocInstruction)
@@ -552,7 +555,7 @@ export async function updateMoc(
       })
     }
 
-    console.error('Error updating MOC:', error)
+    logger.error('Error updating MOC:', error)
     throw new DatabaseError('Failed to update MOC', {
       mocId,
       userId,
@@ -571,7 +574,7 @@ async function updateMocIndexAsync(moc: MocInstruction): Promise<void> {
     const { updateMocIndex } = await import('@/lib/services/opensearch-moc')
     await updateMocIndex(moc)
   } catch (error) {
-    console.error('Failed to update MOC in OpenSearch (non-blocking):', error)
+    logger.error('Failed to update MOC in OpenSearch (non-blocking):', error)
     // Don't throw - indexing failure shouldn't break the update request
   }
 }
@@ -595,7 +598,7 @@ async function updateMocIndexAsync(moc: MocInstruction): Promise<void> {
  * @throws ForbiddenError if user doesn't own MOC
  */
 export async function deleteMoc(mocId: string, userId: string): Promise<void> {
-  console.log('Deleting MOC', { mocId, userId })
+  logger.info('Deleting MOC', { mocId, userId })
 
   // Fetch existing MOC to verify ownership
   const [existingMoc] = await db
@@ -612,7 +615,7 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
     throw new ForbiddenError('You do not own this MOC')
   }
 
-  console.log('Performing cascade deletion for MOC', { mocId })
+  logger.info('Performing cascade deletion for MOC', { mocId })
 
   // Fetch MOC-owned files for S3 cleanup (before deletion)
   // These are files that belong exclusively to this MOC (instructions, parts lists, thumbnails)
@@ -638,7 +641,7 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
   await db.delete(mocFiles).where(eq(mocFiles.mocId, mocId))
   await db.delete(mocInstructions).where(eq(mocInstructions.id, mocId))
 
-  console.log('MOC deleted from database', {
+  logger.info('MOC deleted from database', {
     mocId,
     mocOwnedFilesCount: mocOwnedFiles.length,
     linkedGalleryImagesCount: linkedGalleryImages.length,
@@ -655,7 +658,7 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
     }
   }
 
-  console.log('Orphaned gallery images identified', {
+  logger.info('Orphaned gallery images identified', {
     mocId,
     orphanedCount: orphanedGalleryImageUrls.length,
   })
@@ -675,7 +678,7 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
   invalidateMocDetailCache(mocId)
   invalidateMocListCache(userId)
 
-  console.log('MOC deletion complete', { mocId })
+  logger.info('MOC deletion complete', { mocId })
 }
 
 /**
@@ -734,7 +737,7 @@ async function deleteS3FilesAsync(fileUrls: string[]): Promise<void> {
     const bucketName = process.env.LEGO_API_BUCKET_NAME
 
     if (!bucketName) {
-      console.error('S3 bucket name not configured - skipping file deletion')
+      logger.error('S3 bucket name not configured - skipping file deletion')
       return
     }
 
@@ -747,18 +750,18 @@ async function deleteS3FilesAsync(fileUrls: string[]): Promise<void> {
           // Extract key from pathname (remove leading slash)
           return urlObj.pathname.substring(1)
         } catch (error) {
-          console.error('Invalid S3 URL:', url, error)
+          logger.error('Invalid S3 URL:', url, error)
           return null
         }
       })
       .filter((key): key is string => key !== null)
 
     if (keys.length === 0) {
-      console.log('No valid S3 keys to delete')
+      logger.info('No valid S3 keys to delete')
       return
     }
 
-    console.log('Deleting S3 objects', { bucketName, keysCount: keys.length })
+    logger.info('Deleting S3 objects', { bucketName, keysCount: keys.length })
 
     // Delete objects in batches of 1000 (S3 limit)
     const batchSize = 1000
@@ -774,12 +777,12 @@ async function deleteS3FilesAsync(fileUrls: string[]): Promise<void> {
       })
 
       await s3Client.send(command)
-      console.log('S3 batch deletion complete', { batchSize: batch.length })
+      logger.info('S3 batch deletion complete', { batchSize: batch.length })
     }
 
-    console.log('All S3 objects deleted', { totalKeys: keys.length })
+    logger.info('All S3 objects deleted', { totalKeys: keys.length })
   } catch (error) {
-    console.error('Failed to delete S3 files (non-blocking):', error)
+    logger.error('Failed to delete S3 files (non-blocking):', error)
     // Don't throw - S3 cleanup failure shouldn't break the delete request
   }
 }
@@ -792,7 +795,7 @@ async function deleteMocIndexAsync(mocId: string): Promise<void> {
     const { deleteMocIndex } = await import('@/lib/services/opensearch-moc')
     await deleteMocIndex(mocId)
   } catch (error) {
-    console.error('Failed to delete MOC from OpenSearch (non-blocking):', error)
+    logger.error('Failed to delete MOC from OpenSearch (non-blocking):', error)
     // Don't throw - indexing failure shouldn't break the delete request
   }
 }

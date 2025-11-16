@@ -263,9 +263,10 @@ Use specific imports: `import { Button } from '@repo/ui'` not barrel exports.
 
 ### Logging
 
-- **Use Winston** for all logging in backend services
+- **Use Pino** for all logging in backend services (via `@repo/logger` package or direct Pino usage)
 - **Never use `console.log`** in production code
 - Use appropriate log levels (debug, info, warn, error)
+- For new projects, prefer `@repo/logger` for centralized logging configuration
 
 ### File Naming
 
@@ -433,7 +434,7 @@ pnpm logs:lego
 - **Shared packages first**: Always search before creating new utilities
 - **Strict TypeScript**: No `any`, no `@ts-ignore` without justification
 - **Custom errors only**: Never `throw new Error()` - use typed error classes
-- **Winston logging**: Never `console.log` in production code
+- **Pino logging**: Use Pino for backend logging (never `console.log` in production code)
 - **Gherkin for E2E tests**: All Playwright tests must use `.feature` files with Gherkin syntax
 - **Discuss before modifying shared code**: Shared packages affect multiple consumers
 

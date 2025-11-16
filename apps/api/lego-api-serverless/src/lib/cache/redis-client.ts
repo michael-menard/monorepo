@@ -6,7 +6,9 @@
 
 import { createClient } from 'redis'
 import { getEnv } from '@/lib/utils/env'
+import { createLogger } from '../utils/logger'
 
+const logger = createLogger('redis-client')
 let _redisClient: ReturnType<typeof createClient> | null = null
 
 /**
@@ -27,7 +29,7 @@ export async function getRedisClient(): Promise<ReturnType<typeof createClient>>
       },
     })
 
-    _redisClient.on('error', err => console.error('Redis Client Error:', err))
+    _redisClient.on('error', err => logger.error('Redis Client Error:', err))
 
     await _redisClient.connect()
   }

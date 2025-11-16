@@ -29,6 +29,7 @@ import {
   updateMoc as updateMocService,
   deleteMoc as deleteMocService,
 } from '@/lib/services/moc-service'
+import { logger } from '../lib/utils/logger'
 
 /**
  * API Gateway Event Interface
@@ -61,7 +62,7 @@ interface APIGatewayEvent {
  */
 export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
   try {
-    console.log('MOC Instructions Lambda invoked', {
+    logger.info('MOC Instructions Lambda invoked', {
       requestId: event.requestContext.requestId,
       method: event.requestContext.http.method,
       path: event.requestContext.http.path,
@@ -83,7 +84,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
         throw new BadRequestError(`Method ${method} not supported`)
     }
   } catch (error) {
-    console.error('MOC Instructions Lambda error:', error)
+    logger.error('MOC Instructions Lambda error:', error)
     return errorResponseFromError(error)
   }
 }
@@ -197,7 +198,7 @@ async function listMocs(
 
   const query = parse.data
 
-  console.log('Listing MOCs', { userId, query })
+  logger.info('Listing MOCs', { userId, query })
 
   // Call service layer for business logic
   const { mocs, total } = await listMocsService(userId, query)
@@ -226,7 +227,7 @@ async function listMocs(
  * - Cache hit logging
  */
 async function getMocDetail(mocId: string, userId: string): Promise<APIGatewayProxyResult> {
-  console.log('Getting MOC detail', { mocId, userId })
+  logger.info('Getting MOC detail', { mocId, userId })
 
   // Call service layer for business logic
   const mocDetail = await getMocDetailService(mocId, userId)
@@ -262,7 +263,7 @@ async function createMoc(userId: string, body: unknown): Promise<APIGatewayProxy
 
   const mocData = parse.data
 
-  console.log('Creating MOC', { userId, title: mocData.title })
+  logger.info('Creating MOC', { userId, title: mocData.title })
 
   // Call service layer for business logic
   const createdMoc = await createMocService(userId, mocData)
@@ -293,7 +294,7 @@ async function updateMoc(
 
   const updateData = parse.data
 
-  console.log('Updating MOC', { mocId, userId, updateData })
+  logger.info('Updating MOC', { mocId, userId, updateData })
 
   // Call service layer for business logic
   const updatedMoc = await updateMocService(mocId, userId, updateData)
@@ -310,7 +311,7 @@ async function updateMoc(
  * Story 2.6 implementation
  */
 async function deleteMoc(mocId: string, userId: string): Promise<APIGatewayProxyResult> {
-  console.log('Deleting MOC', { mocId, userId })
+  logger.info('Deleting MOC', { mocId, userId })
 
   // Call service layer for business logic
   await deleteMocService(mocId, userId)

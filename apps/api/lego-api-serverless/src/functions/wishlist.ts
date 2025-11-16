@@ -10,6 +10,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { ZodError } from 'zod'
 import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
+import { logger } from '../lib/utils/logger'
 import {
   CreateWishlistItemSchema,
   UpdateWishlistItemSchema,
@@ -73,7 +74,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     return createErrorResponse(404, 'NOT_FOUND', 'Route not found')
   } catch (error) {
-    console.error('Wishlist handler error:', error)
+    logger.error('Wishlist handler error:', error)
     return createErrorResponse(500, 'INTERNAL_ERROR', 'An unexpected error occurred')
   }
 }
@@ -127,7 +128,7 @@ async function handleListWishlist(
 
     return createSuccessResponse(response)
   } catch (error) {
-    console.error('List wishlist error:', error)
+    logger.error('List wishlist error:', error)
     if (error instanceof Error && error.message.includes('Validation')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -182,7 +183,7 @@ async function handleCreateWishlistItem(
 
     return createSuccessResponse(newItem, 201, 'Wishlist item created successfully')
   } catch (error) {
-    console.error('Create wishlist item error:', error)
+    logger.error('Create wishlist item error:', error)
     if (error instanceof ZodError) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -216,7 +217,11 @@ async function handleGetWishlistItem(
       const item = JSON.parse(cached)
       // Verify ownership
       if (item.userId !== userId) {
-        return createErrorResponse(403, 'FORBIDDEN', 'You do not have permission to access this item')
+        return createErrorResponse(
+          403,
+          'FORBIDDEN',
+          'You do not have permission to access this item',
+        )
       }
       return createSuccessResponse(item)
     }
@@ -238,7 +243,7 @@ async function handleGetWishlistItem(
 
     return createSuccessResponse(item)
   } catch (error) {
-    console.error('Get wishlist item error:', error)
+    logger.error('Get wishlist item error:', error)
     if (error instanceof Error && error.message.includes('Invalid item ID')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', 'Invalid item ID format')
     }
@@ -279,10 +284,18 @@ async function handleUpdateWishlistItem(
       .update(wishlistItems)
       .set({
         title: validatedData.title ?? existingItem.title,
-        description: validatedData.description !== undefined ? validatedData.description : existingItem.description,
-        productLink: validatedData.productLink !== undefined ? validatedData.productLink : existingItem.productLink,
-        imageUrl: validatedData.imageUrl !== undefined ? validatedData.imageUrl : existingItem.imageUrl,
-        category: validatedData.category !== undefined ? validatedData.category : existingItem.category,
+        description:
+          validatedData.description !== undefined
+            ? validatedData.description
+            : existingItem.description,
+        productLink:
+          validatedData.productLink !== undefined
+            ? validatedData.productLink
+            : existingItem.productLink,
+        imageUrl:
+          validatedData.imageUrl !== undefined ? validatedData.imageUrl : existingItem.imageUrl,
+        category:
+          validatedData.category !== undefined ? validatedData.category : existingItem.category,
         sortOrder: validatedData.sortOrder ?? existingItem.sortOrder,
         updatedAt: new Date(),
       })
@@ -313,8 +326,11 @@ async function handleUpdateWishlistItem(
 
     return createSuccessResponse(updatedItem, 200, 'Wishlist item updated successfully')
   } catch (error) {
-    console.error('Update wishlist item error:', error)
-    if (error instanceof Error && (error.message.includes('Validation') || error.message.includes('Invalid item ID'))) {
+    logger.error('Update wishlist item error:', error)
+    if (
+      error instanceof Error &&
+      (error.message.includes('Validation') || error.message.includes('Invalid item ID'))
+    ) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
     return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to update wishlist item')
@@ -364,7 +380,7 @@ async function handleDeleteWishlistItem(
           )
         }
       } catch (s3Error) {
-        console.error('S3 delete error (non-fatal):', s3Error)
+        logger.error('S3 delete error (non-fatal):', s3Error)
         // Continue with deletion even if S3 fails
       }
     }
@@ -387,7 +403,7 @@ async function handleDeleteWishlistItem(
 
     return createSuccessResponse({ id: itemId }, 200, 'Wishlist item deleted successfully')
   } catch (error) {
-    console.error('Delete wishlist item error:', error)
+    logger.error('Delete wishlist item error:', error)
     if (error instanceof Error && error.message.includes('Invalid item ID')) {
       return createErrorResponse(400, 'VALIDATION_ERROR', 'Invalid item ID format')
     }
@@ -409,18 +425,22 @@ async function handleReorderWishlist(
     const validatedData = ReorderWishlistSchema.parse(body)
 
     // Verify all items belong to user before updating
-    const itemIds = validatedData.items.map((item) => item.id)
+    const itemIds = validatedData.items.map(item => item.id)
     const existingItems = await db
       .select()
       .from(wishlistItems)
       .where(and(eq(wishlistItems.userId, userId), inArray(wishlistItems.id, itemIds)))
 
     if (existingItems.length !== itemIds.length) {
-      return createErrorResponse(400, 'VALIDATION_ERROR', 'One or more items not found or not owned by user')
+      return createErrorResponse(
+        400,
+        'VALIDATION_ERROR',
+        'One or more items not found or not owned by user',
+      )
     }
 
     // Update items in transaction
-    await db.transaction(async (tx) => {
+    await db.transaction(async tx => {
       for (const item of validatedData.items) {
         await tx
           .update(wishlistItems)
@@ -437,7 +457,7 @@ async function handleReorderWishlist(
 
     // Invalidate individual item caches
     const redis = await getRedisClient()
-    await Promise.all(itemIds.map((id) => redis.del(`wishlist:item:${id}`)))
+    await Promise.all(itemIds.map(id => redis.del(`wishlist:item:${id}`)))
 
     return createSuccessResponse(
       { updated: itemIds.length },
@@ -445,7 +465,7 @@ async function handleReorderWishlist(
       'Wishlist items reordered successfully',
     )
   } catch (error) {
-    console.error('Reorder wishlist error:', error)
+    logger.error('Reorder wishlist error:', error)
     if (error instanceof ZodError) {
       return createErrorResponse(400, 'VALIDATION_ERROR', error.message)
     }
@@ -485,7 +505,11 @@ async function handleUploadWishlistImage(
     }
 
     if (existingItem.userId !== userId) {
-      return createErrorResponse(403, 'FORBIDDEN', 'You do not have permission to upload images for this item')
+      return createErrorResponse(
+        403,
+        'FORBIDDEN',
+        'You do not have permission to upload images for this item',
+      )
     }
 
     // Parse multipart form data
@@ -548,7 +572,7 @@ async function handleUploadWishlistImage(
       'Wishlist image uploaded successfully',
     )
   } catch (error) {
-    console.error('Upload wishlist image error:', error)
+    logger.error('Upload wishlist image error:', error)
 
     if (error instanceof Error) {
       // File validation errors
@@ -590,10 +614,10 @@ async function invalidateWishlistCaches(userId: string): Promise<void> {
 
     if (keys.length > 0) {
       // Delete keys in batch
-      await Promise.all(keys.map((key) => redis.del(key)))
+      await Promise.all(keys.map(key => redis.del(key)))
     }
   } catch (error) {
-    console.error('Cache invalidation error (non-fatal):', error)
+    logger.error('Cache invalidation error (non-fatal):', error)
     // Non-fatal error - don't throw
   }
 }

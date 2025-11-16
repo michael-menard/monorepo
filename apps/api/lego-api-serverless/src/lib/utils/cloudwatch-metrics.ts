@@ -10,7 +10,9 @@
 
 import { CloudWatchClient, PutMetricDataCommand, StandardUnit } from '@aws-sdk/client-cloudwatch'
 import { getEnv } from './env'
+import { createLogger } from './logger'
 
+const logger = createLogger('cloudwatch-metrics')
 let _cloudWatchClient: CloudWatchClient | null = null
 
 /**
@@ -99,7 +101,7 @@ export async function publishMetric(
     )
   } catch (error) {
     // Don't throw - metrics failures should not break uploads
-    console.error('Failed to publish CloudWatch metric:', error)
+    logger.error('Failed to publish CloudWatch metric:', error)
   }
 }
 
@@ -113,7 +115,10 @@ export async function recordUploadSuccess(uploadType: ImageUploadType): Promise<
 /**
  * Record failed image upload
  */
-export async function recordUploadFailure(uploadType: ImageUploadType, errorType: string): Promise<void> {
+export async function recordUploadFailure(
+  uploadType: ImageUploadType,
+  errorType: string,
+): Promise<void> {
   await publishMetric(MetricName.UploadFailure, 1, StandardUnit.Count, uploadType)
 
   // Also record specific error type
@@ -142,7 +147,10 @@ export async function recordProcessingTime(
 /**
  * Record image file size
  */
-export async function recordFileSize(sizeBytes: number, uploadType: ImageUploadType): Promise<void> {
+export async function recordFileSize(
+  sizeBytes: number,
+  uploadType: ImageUploadType,
+): Promise<void> {
   await publishMetric(MetricName.FileSize, sizeBytes, StandardUnit.Bytes, uploadType)
 }
 

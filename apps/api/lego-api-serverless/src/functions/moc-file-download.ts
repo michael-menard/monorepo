@@ -20,6 +20,7 @@ import {
 } from '@/lib/responses'
 import { UnauthorizedError, BadRequestError } from '@/lib/errors'
 import { generateFileDownloadUrl } from '@/lib/services/moc-file-service'
+import { logger } from '../lib/utils/logger'
 
 /**
  * API Gateway Event Interface
@@ -49,7 +50,7 @@ interface APIGatewayEvent {
  */
 export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
   try {
-    console.log('MOC File Download Lambda invoked', {
+    logger.info('MOC File Download Lambda invoked', {
       requestId: event.requestContext.requestId,
       method: event.requestContext.http.method,
       path: event.requestContext.http.path,
@@ -80,7 +81,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       userId,
     )
 
-    console.log('Pre-signed URL generated', {
+    logger.info('Pre-signed URL generated', {
       mocId,
       fileId,
       filename,
@@ -111,7 +112,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       body: '',
     }
   } catch (error) {
-    console.error('MOC File Download Lambda error:', error)
+    logger.error('MOC File Download Lambda error:', error)
     return errorResponseFromError(error)
   }
 }

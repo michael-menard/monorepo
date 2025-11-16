@@ -1,5 +1,9 @@
 #!/usr/bin/env tsx
 
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('db-migrate')
+
 /**
  * Database Migration Runner
  *
@@ -24,7 +28,7 @@ import { Pool } from 'pg'
 import { getEnv } from '@/lib/utils/env'
 
 async function runMigrations() {
-  console.log('🔄 Starting database migrations...')
+  logger.info('🔄 Starting database migrations...')
 
   const env = getEnv()
 
@@ -44,9 +48,9 @@ async function runMigrations() {
     // Run migrations
     await migrate(db, { migrationsFolder: './src/db/migrations' })
 
-    console.log('✅ Database migrations completed successfully')
+    logger.info('✅ Database migrations completed successfully')
   } catch (error) {
-    console.error('❌ Migration failed:', error)
+    logger.error('❌ Migration failed:', error)
     process.exit(1)
   } finally {
     await pool.end()

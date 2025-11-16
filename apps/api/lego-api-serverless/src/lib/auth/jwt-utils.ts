@@ -6,6 +6,9 @@
  */
 
 import { APIGatewayProxyEventV2 } from 'aws-lambda'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('jwt-utils')
 
 /**
  * Type for API Gateway v2 request context with JWT authorizer
@@ -37,7 +40,7 @@ export function getUserIdFromEvent(event: APIGatewayProxyEventV2): string | null
     const userId = claims.sub as string
     return userId || null
   } catch (error) {
-    console.error('Error extracting user ID from JWT:', error)
+    logger.error('Error extracting user ID from JWT:', error)
     return null
   }
 }
@@ -58,7 +61,7 @@ export function getEmailFromEvent(event: APIGatewayProxyEventV2): string | null 
 
     return (claims.email as string) || null
   } catch (error) {
-    console.error('Error extracting email from JWT:', error)
+    logger.error('Error extracting email from JWT:', error)
     return null
   }
 }
@@ -79,7 +82,7 @@ export function getUsernameFromEvent(event: APIGatewayProxyEventV2): string | nu
 
     return (claims['cognito:username'] as string) || null
   } catch (error) {
-    console.error('Error extracting username from JWT:', error)
+    logger.error('Error extracting username from JWT:', error)
     return null
   }
 }
@@ -96,7 +99,7 @@ export function getJwtClaims(event: APIGatewayProxyEventV2): Record<string, unkn
     const claims = authorizer?.jwt?.claims
     return claims || null
   } catch (error) {
-    console.error('Error extracting JWT claims:', error)
+    logger.error('Error extracting JWT claims:', error)
     return null
   }
 }

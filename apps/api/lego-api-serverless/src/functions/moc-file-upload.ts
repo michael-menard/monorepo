@@ -23,6 +23,7 @@ import {
 import { FileUploadSchema } from '@/types/moc'
 import { BadRequestError, UnauthorizedError, ValidationError } from '@/lib/errors'
 import { uploadMocFile } from '@/lib/services/moc-file-service'
+import { logger } from '../lib/utils/logger'
 
 /**
  * API Gateway Event Interface for File Upload
@@ -54,7 +55,7 @@ interface APIGatewayEvent {
  */
 export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
   try {
-    console.log('MOC File Upload Lambda invoked', {
+    logger.info('MOC File Upload Lambda invoked', {
       requestId: event.requestContext.requestId,
       method: event.requestContext.http.method,
       path: event.requestContext.http.path,
@@ -98,7 +99,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       data: uploadedFile,
     })
   } catch (error) {
-    console.error('MOC File Upload Lambda error:', error)
+    logger.error('MOC File Upload Lambda error:', error)
     return errorResponseFromError(error)
   }
 }
