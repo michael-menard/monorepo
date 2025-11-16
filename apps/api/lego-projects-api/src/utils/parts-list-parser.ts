@@ -2,6 +2,9 @@ import { Readable } from 'stream'
 import { z } from 'zod'
 import csv from 'csv-parser'
 import { DOMParser } from 'xmldom'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('parts-list-parser')
 
 // Types for parts list parsing
 export interface PartEntry {
@@ -59,10 +62,10 @@ export function validatePartsListFile(file: Express.Multer.File): ParsingError[]
 
   // Check file extension
   const extension = file.originalname.toLowerCase().split('.').pop()
-  console.log('🔍 File extension:', extension)
+  logger.info({ extension }, 'File extension detected')
 
   if (!['csv', 'txt'].includes(extension || '')) {
-    console.log('❌ Invalid file type:', extension)
+    logger.warn({ extension }, 'Invalid file type')
     errors.push({
       code: 'INVALID_FILE_TYPE',
       message: 'File must be CSV or TXT format',
@@ -80,15 +83,13 @@ export function validatePartsListFile(file: Express.Multer.File): ParsingError[]
     'application/octet-stream',
   ]
 
-  console.log(
-    '🔍 MIME type check:',
-    file.mimetype,
-    'Valid:',
-    validMimeTypes.includes(file.mimetype),
+  logger.info(
+    { mimetype: file.mimetype, valid: validMimeTypes.includes(file.mimetype) },
+    'MIME type check',
   )
 
   if (!validMimeTypes.includes(file.mimetype)) {
-    console.log('❌ Invalid MIME type:', file.mimetype)
+    logger.warn({ mimetype: file.mimetype }, 'Invalid MIME type')
     errors.push({
       code: 'INVALID_MIME_TYPE',
       message: `Invalid MIME type: ${file.mimetype}. Expected: ${validMimeTypes.join(', ')}`,
@@ -100,7 +101,7 @@ export function validatePartsListFile(file: Express.Multer.File): ParsingError[]
 
 // CSV Parser with header detection - simplified approach
 export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResult> {
-  console.log('📊 Starting CSV parsing, buffer size:', fileBuffer.length)
+  logger.info({ bufferSize: fileBuffer.length }, 'Starting CSV parsing')
 
   return new Promise(resolve => {
     const parts: PartEntry[] = []
@@ -110,7 +111,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
     let headerMapping: { [key: string]: string } = {}
 
     const csvContent = fileBuffer.toString()
-    console.log('📄 CSV content preview:', csvContent.substring(0, 200) + '...')
+    logger.debug({ preview: csvContent.substring(0, 200) }, 'CSV content preview')
 
     // Split into lines to detect header
     const lines = csvContent.split('\n').filter(line => line.trim())
@@ -129,7 +130,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
 
     // Parse first line to determine if it's a header
     const firstLine = lines[0].split(',').map(cell => cell.trim())
-    console.log('🔍 First line cells:', firstLine)
+    logger.debug({ firstLine }, 'First line cells')
 
     // Check if first line looks like headers
     const headerKeywords = [
@@ -146,13 +147,13 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
       headerKeywords.some(keyword => cell.toLowerCase().includes(keyword)),
     )
 
-    console.log('🔍 Header detected:', hasHeader)
+    logger.info({ hasHeader }, 'Header detected')
 
     // Create header mapping if headers are detected
     if (hasHeader) {
       firstLine.forEach((header, index) => {
         const normalized = header.toLowerCase().trim()
-        console.log(`🔄 Processing header[${index}]: "${header}" -> normalized: "${normalized}"`)
+        logger.debug({ index, header, normalized }, 'Processing header')
 
         if (
           ['part', 'part_number', 'partno', 'part_no', 'element_id', 'elementid'].includes(
@@ -160,21 +161,21 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
           )
         ) {
           headerMapping[index] = 'partNumber'
-          console.log(`✅ Mapped column ${index} ("${header}") -> partNumber`)
+          logger.debug({ index, header, field: 'partNumber' }, 'Mapped column')
         } else if (['qty', 'quantity', 'count', 'amount'].includes(normalized)) {
           headerMapping[index] = 'quantity'
-          console.log(`✅ Mapped column ${index} ("${header}") -> quantity`)
+          logger.debug({ index, header, field: 'quantity' }, 'Mapped column')
         } else if (['color', 'colour', 'part_color'].includes(normalized)) {
           headerMapping[index] = 'color'
-          console.log(`✅ Mapped column ${index} ("${header}") -> color`)
+          logger.debug({ index, header, field: 'color' }, 'Mapped column')
         } else if (['description', 'desc', 'part_description', 'name'].includes(normalized)) {
           headerMapping[index] = 'description'
-          console.log(`✅ Mapped column ${index} ("${header}") -> description`)
+          logger.debug({ index, header, field: 'description' }, 'Mapped column')
         } else if (['category', 'cat', 'type', 'part_category'].includes(normalized)) {
           headerMapping[index] = 'category'
-          console.log(`✅ Mapped column ${index} ("${header}") -> category`)
+          logger.debug({ index, header, field: 'category' }, 'Mapped column')
         } else {
-          console.log(`⚠️ No mapping for column ${index} ("${header}")`)
+          logger.warn({ index, header }, 'No mapping for column')
         }
       })
     } else {
@@ -185,7 +186,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
         2: 'color',
         3: 'description',
       }
-      console.log('📋 No headers detected, using default mapping:', headerMapping)
+      logger.info({ headerMapping }, 'No headers detected, using default mapping')
     }
 
     const stream = Readable.from(csvContent)
@@ -201,18 +202,18 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
 
         // Skip header row if it exists
         if (isFirstRow && hasHeader) {
-          console.log(`📋 Skipping header row: ${Object.values(row).join(',')}`)
+          logger.debug({ row: Object.values(row).join(',') }, 'Skipping header row')
           isFirstRow = false
           return
         }
         isFirstRow = false
 
-        console.log(`📊 Processing CSV row ${lineNumber}:`, row)
+        logger.debug({ lineNumber, row }, 'Processing CSV row')
 
         try {
           // Convert row object to array of values
           const values = Object.values(row) as string[]
-          console.log(`📋 Row values:`, values)
+          logger.debug({ values }, 'Row values')
 
           // Map values to part data using our header mapping
           const partData: any = {}
@@ -221,28 +222,28 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
             const fieldName = headerMapping[columnIndex]
             const value = values[parseInt(columnIndex)] || ''
             partData[fieldName] = value
-            console.log(`🔄 Column ${columnIndex} ("${value}") -> ${fieldName}`)
+            logger.debug({ columnIndex, value, fieldName }, 'Column mapping')
           })
 
-          console.log(`📋 Mapped part data:`, partData)
+          logger.debug({ partData }, 'Mapped part data')
 
           // Convert quantity to number
           if (partData.quantity) {
             const originalQty = partData.quantity
             partData.quantity = parseInt(partData.quantity.toString(), 10)
-            console.log(`🔢 Converted quantity: "${originalQty}" -> ${partData.quantity}`)
+            logger.debug({ originalQty, converted: partData.quantity }, 'Converted quantity')
           }
 
-          console.log(`🔍 Validating row ${lineNumber}:`, partData)
+          logger.debug({ lineNumber, partData }, 'Validating row')
 
           // Validate the row
           const validation = PartEntrySchema.safeParse(partData)
 
           if (validation.success) {
-            console.log(`✅ Row ${lineNumber} valid:`, validation.data)
+            logger.debug({ lineNumber, data: validation.data }, 'Row valid')
             parts.push(validation.data)
           } else {
-            console.log(`❌ Row ${lineNumber} validation failed:`, validation.error.issues)
+            logger.warn({ lineNumber, issues: validation.error.issues }, 'Row validation failed')
             validation.error.issues.forEach(issue => {
               errors.push({
                 code: 'VALIDATION_ERROR',
@@ -252,7 +253,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
             })
           }
         } catch (error) {
-          console.error(`❌ Row ${lineNumber} parsing error:`, error)
+          logger.error({ err: error, lineNumber }, 'Row parsing error')
           errors.push({
             code: 'PARSING_ERROR',
             message: `Line ${lineNumber}: Failed to parse row - ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -261,11 +262,11 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
         }
       })
       .on('end', () => {
-        console.log('📊 CSV parsing completed')
-        console.log(`📈 Results: ${parts.length} parts, ${errors.length} errors`)
+        logger.info('CSV parsing completed')
+        logger.info({ partsCount: parts.length, errorsCount: errors.length }, 'Results')
 
         if (parts.length === 0 && errors.length === 0) {
-          console.log('❌ Empty file detected')
+          logger.warn('Empty file detected')
           errors.push({
             code: 'EMPTY_FILE',
             message: 'No valid parts found in CSV file',
@@ -273,7 +274,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
         }
 
         const totalPieceCount = parts.reduce((sum, part) => sum + part.quantity, 0)
-        console.log(`🔢 Total piece count: ${totalPieceCount}`)
+        logger.info({ totalPieceCount }, 'Total piece count')
 
         const result = {
           success: errors.length === 0,
@@ -297,7 +298,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
           errors,
         }
 
-        console.log('📊 Final CSV parsing result:', result)
+        logger.debug({ result }, 'Final CSV parsing result')
         resolve(result)
       })
       .on('error', error => {
@@ -486,12 +487,12 @@ export async function parseXMLPartsList(fileBuffer: Buffer): Promise<ParsingResu
 
 // Main parsing function
 export async function parsePartsListFile(file: Express.Multer.File): Promise<ParsingResult> {
-  console.log('🚀 Starting parsePartsListFile for:', file.originalname)
+  logger.info({ filename: file.originalname }, 'Starting parsePartsListFile')
 
   // Validate file first
   const validationErrors = validatePartsListFile(file)
   if (validationErrors.length > 0) {
-    console.log('❌ File validation failed:', validationErrors)
+    logger.warn({ errors: validationErrors }, 'File validation failed')
     return {
       success: false,
       errors: validationErrors,
@@ -499,14 +500,14 @@ export async function parsePartsListFile(file: Express.Multer.File): Promise<Par
   }
 
   const extension = file.originalname.toLowerCase().split('.').pop()
-  console.log('📄 File extension detected:', extension)
+  logger.info({ extension }, 'File extension detected')
 
   try {
     if (extension === 'csv' || extension === 'txt') {
-      console.log('📊 Parsing as CSV...')
+      logger.info('Parsing as CSV')
       return await parseCSVPartsList(file.buffer)
     } else {
-      console.log('❌ Unsupported format:', extension)
+      logger.warn({ extension }, 'Unsupported format')
       return {
         success: false,
         errors: [
@@ -518,7 +519,7 @@ export async function parsePartsListFile(file: Express.Multer.File): Promise<Par
       }
     }
   } catch (error) {
-    console.error('❌ Parsing exception:', error)
+    logger.error({ err: error }, 'Parsing exception')
     return {
       success: false,
       errors: [

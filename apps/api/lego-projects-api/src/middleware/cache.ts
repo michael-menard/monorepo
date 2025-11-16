@@ -1,5 +1,8 @@
 import {NextFunction, Request, Response} from 'express'
 import {CACHE_TTL, cacheUtils} from '../utils/redis'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('cache-middleware')
 
 // Cache middleware options
 interface CacheOptions {
@@ -24,7 +27,7 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     // Skip caching entirely in development mode
     if (process.env.NODE_ENV === 'development') {
-      console.log('🚫 Cache disabled in development mode for:', req.originalUrl)
+      logger.info({ url: req.originalUrl }, 'Cache disabled in development mode')
       return next()
     }
 
@@ -57,7 +60,7 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
       res.json = function (data: any) {
         // Cache the response
         cacheUtils.set(cacheKey, data, finalOptions.ttl).catch(err => {
-          console.error('Failed to cache response:', err)
+          logger.error({ err }, 'Failed to cache response')
         })
 
         // Call original send method
@@ -66,7 +69,7 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
 
       next()
     } catch (error) {
-      console.error('Cache middleware error:', error)
+      logger.error({ err: error }, 'Cache middleware error')
       next()
     }
   }
@@ -87,7 +90,7 @@ export const createCacheInvalidationMiddleware = (pattern: string) => {
     res.json = function (data: any) {
       // Invalidate cache after successful operation
       cacheUtils.invalidatePattern(pattern).catch(err => {
-        console.error('Failed to invalidate cache:', err)
+        logger.error({ err }, 'Failed to invalidate cache')
       })
 
       // Call original send method
@@ -150,9 +153,9 @@ export const profileCacheInvalidation = createCacheInvalidationMiddleware('profi
 export const invalidateCache = async (pattern: string) => {
   try {
     await cacheUtils.invalidatePattern(pattern)
-    console.log(`Cache invalidated for pattern: ${pattern}`)
+    logger.info({ pattern }, 'Cache invalidated for pattern')
   } catch (error) {
-    console.error(`Failed to invalidate cache for pattern ${pattern}:`, error)
+    logger.error({ err: error, pattern }, 'Failed to invalidate cache for pattern')
   }
 }
 
@@ -160,9 +163,9 @@ export const invalidateCache = async (pattern: string) => {
 export const setCache = async (key: string, value: any, ttl: number = CACHE_TTL.MEDIUM) => {
   try {
     await cacheUtils.set(key, value, ttl)
-    console.log(`Cache set for key: ${key}`)
+    logger.info({ key }, 'Cache set for key')
   } catch (error) {
-    console.error(`Failed to set cache for key ${key}:`, error)
+    logger.error({ err: error, key }, 'Failed to set cache for key')
   }
 }
 
@@ -171,7 +174,7 @@ export const getCache = async <T = any>(key: string): Promise<T | null> => {
   try {
     return await cacheUtils.get<T>(key)
   } catch (error) {
-    console.error(`Failed to get cache for key ${key}:`, error)
+    logger.error({ err: error, key }, 'Failed to get cache for key')
     return null
   }
 }

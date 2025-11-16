@@ -1,4 +1,6 @@
 import fs from 'fs'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('security-middleware')
 import { Request, Response, NextFunction } from 'express'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
@@ -136,7 +138,7 @@ export const validateFileContent = (req: Request, res: Response, next: NextFunct
 
     next()
   } catch (error) {
-    console.error('File validation error:', error)
+    logger.error('File validation error:', error)
     return res.status(500).json({ error: 'File validation failed' })
   }
 }
@@ -259,12 +261,12 @@ export const securityLogger = (req: Request, res: Response, next: NextFunction) 
 
     // Log security-relevant events
     if (statusCode >= 400) {
-      console.warn(`[SECURITY] ${method} ${url} from ${ip} - ${statusCode} (${duration}ms)`)
+      logger.warn(`[SECURITY] ${method} ${url} from ${ip} - ${statusCode} (${duration}ms)`)
     }
 
     // Log suspicious activities
     if (statusCode === 403 || statusCode === 429) {
-      console.error(
+      logger.error(
         `[SECURITY ALERT] Suspicious activity detected: ${method} ${url} from ${ip} - ${statusCode}`,
       )
     }
@@ -318,7 +320,7 @@ export const virusScanFile = async (req: Request, res: Response, next: NextFunct
 
     next()
   } catch (error) {
-    console.error('Virus scan error:', error)
+    logger.error('Virus scan error:', error)
     return res.status(500).json({
       error: 'Security scan failed. Please try again.',
     })
@@ -418,7 +420,7 @@ export const processUploadedImage = (config?: any) => {
       // Apply image processing middleware
       await imageProcessingMiddleware(processingConfig)(req, res, next)
     } catch (error) {
-      console.error('Image processing error:', error)
+      logger.error('Image processing error:', error)
       return res.status(500).json({ error: 'Failed to process uploaded image' })
     }
   }

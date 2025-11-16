@@ -21,7 +21,7 @@ import { RouterProvider, createRouter, redirect } from '@tanstack/react-router'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { ThemeProvider } from '@repo/ui'
-import { authSlice } from '@repo/auth'
+// Auth slice removed - using Cognito authentication
 import { rootRoute } from '../main'
 import { homeRoute } from '../routes/home'
 import { mocGalleryRoute } from '../routes/moc-gallery'
@@ -34,9 +34,13 @@ import { notFoundRoute } from '../routes/not-found'
 // Mock Vite PWA virtual import to avoid resolution errors in tests
 vi.mock('virtual:pwa-register', () => ({ registerSW: () => ({}) }))
 
-// Mock the auth package
-vi.mock('@repo/auth', () => ({
+// Mock the Cognito auth hooks (replaces @repo/auth)
+vi.mock('../hooks', () => ({
   useAuth: () => ({ isAuthenticated: false, user: null, isLoading: false }),
+}))
+
+// Mock the auth guard (legacy - can be removed when routes are updated)
+vi.mock('../lib/auth-guard', () => ({
   createTanStackRouteGuard: (options: any, redirectFn: any) => {
     return async () => {
       if (options?.requireAuth && !options?.isAuthenticated) {
@@ -55,10 +59,7 @@ vi.mock('@repo/auth', () => ({
   },
   authReducer: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
     state,
-  authSlice: {
-    reducer: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
-      state,
-  },
+  // authSlice removed - using Cognito authentication
 }))
 
 // Mock the redirect function
@@ -127,7 +128,8 @@ describe('Routing Configuration', () => {
   beforeEach(() => {
     store = configureStore({
       reducer: {
-        auth: authSlice.reducer,
+        auth: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
+          state,
       },
       preloadedState: {
         auth: {
@@ -223,7 +225,8 @@ describe('Routing Configuration', () => {
       // Set up authenticated state
       store = configureStore({
         reducer: {
-          auth: authSlice.reducer,
+          auth: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
+            state,
         },
         preloadedState: {
           auth: {
@@ -248,7 +251,8 @@ describe('Routing Configuration', () => {
       // Set up authenticated state
       store = configureStore({
         reducer: {
-          auth: authSlice.reducer,
+          auth: (state = { isAuthenticated: false, user: null, isLoading: false }, action: any) =>
+            state,
         },
         preloadedState: {
           auth: {

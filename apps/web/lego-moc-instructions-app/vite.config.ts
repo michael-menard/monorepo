@@ -221,7 +221,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
-        '@repo/auth': resolve(__dirname, '../../../packages/core/auth/src'),
         '@repo/ui': resolve(__dirname, '../../../packages/core/ui/src'),
         '@repo/gallery': resolve(__dirname, '../../../packages/features/gallery/src'),
         '@repo/moc-instructions': resolve(

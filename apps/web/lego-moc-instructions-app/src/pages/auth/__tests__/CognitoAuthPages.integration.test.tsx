@@ -1,5 +1,5 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest'
-import {useCognitoAuth} from '../../../hooks/useCognitoAuth'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useCognitoAuth } from '../../../hooks/useCognitoAuth'
 
 /**
  * Integration tests for Cognito Authentication Pages

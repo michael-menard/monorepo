@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('wishlist-upload-middleware')
 import {
   WishlistUploadError,
   validateFileSize,
@@ -14,7 +16,7 @@ export const handleWishlistUploadError = (
   res: Response,
   next: NextFunction,
 ) => {
-  console.error('Wishlist upload error:', error)
+  logger.error('Wishlist upload error:', error)
 
   if (error instanceof WishlistUploadError) {
     return res
@@ -94,7 +96,7 @@ export const validateWishlistFile = (req: Request, res: Response, next: NextFunc
 
     // Log file info for debugging
     const fileInfo = getFileInfo(req.file)
-    console.log('Wishlist file upload info:', fileInfo)
+    logger.info('Wishlist file upload info:', fileInfo)
 
     // Validate file size (additional check beyond multer)
     validateFileSize(req.file.size)
@@ -133,10 +135,10 @@ export const cleanupWishlistFileOnError = (
       const fs = require('fs')
       if (req.file.path && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path)
-        console.log('Cleaned up uploaded file after error:', req.file.path)
+        logger.info('Cleaned up uploaded file after error:', req.file.path)
       }
     } catch (cleanupError) {
-      console.error('Error cleaning up uploaded file:', cleanupError)
+      logger.error('Error cleaning up uploaded file:', cleanupError)
     }
   }
 

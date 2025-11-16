@@ -1,5 +1,7 @@
 // Refactored MOC storage using the new file-validator package
 import path from 'path'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('moc-storage-refactored')
 import fs from 'fs'
 import multer from 'multer'
 import { v4 as uuidv4 } from 'uuid'
@@ -73,7 +75,7 @@ export const mocModalUpload = multer({
     files: 25, // Max 25 files total
   },
   fileFilter: (req, file, cb) => {
-    console.log('🔍 File filter - fieldname:', file.fieldname, 'mimetype:', file.mimetype)
+    logger.info('🔍 File filter - fieldname:', file.fieldname, 'mimetype:', file.mimetype)
 
     // Create appropriate file filter based on field name
     let fileFilter: (req: any, file: Express.Multer.File, cb: any) => void

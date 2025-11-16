@@ -62,7 +62,6 @@ const config: StorybookConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@repo/ui': resolve(__dirname, '../../../../packages/core/ui/src'),
-      '@repo/auth': resolve(__dirname, '../../../../packages/core/auth/src'),
       '@repo/upload': resolve(__dirname, '../../../../packages/tools/upload/src'),
       '@repo/gallery': resolve(__dirname, '../../../../packages/features/gallery/src'),
       '@repo/moc-instructions': resolve(__dirname, '../../../../packages/features/moc-instructions/src'),

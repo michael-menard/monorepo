@@ -5,6 +5,9 @@ import {v4 as uuidv4} from 'uuid'
 import {DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client,} from '@aws-sdk/client-s3'
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner'
 import {canProcessImage, processImage, THUMBNAIL_CONFIG} from '../utils/imageProcessor'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('avatar-storage')
 
 // S3 Configuration
 const BUCKET = process.env.S3_BUCKET!
@@ -82,7 +85,7 @@ export async function uploadAvatarToS3(userId: string, file: Express.Multer.File
       contentType = 'image/jpeg'
       finalExt = '.jpg'
     } catch (error) {
-      console.error('Image processing failed, using original:', error)
+      logger.error({ err: error }, 'Image processing failed, using original')
     }
   }
 
@@ -206,7 +209,7 @@ export function streamLocalAvatar(
       mimeType,
     }
   } catch (error) {
-    console.error('Error streaming local avatar:', error)
+    logger.error({ err: error }, 'Error streaming local avatar')
     return null
   }
 }

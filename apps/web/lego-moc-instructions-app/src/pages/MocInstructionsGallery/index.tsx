@@ -46,7 +46,6 @@ import {
 // Note: Avoiding setFilter import issues by implementing filtering locally
 
 const MocInstructionsGallery: React.FC = () => {
-
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
 
@@ -210,8 +209,7 @@ const MocInstructionsGallery: React.FC = () => {
     // TODO: Implement download count increment with real API
     try {
       // For now, just log the download
-    } catch (error) {
-    }
+    } catch (error) {}
   }, [])
 
   const handleImageDelete = useCallback((imageId: string) => {
@@ -263,7 +261,6 @@ const MocInstructionsGallery: React.FC = () => {
 
   const handleSubmitMoc = useCallback(
     async (mocData: CreateMocData) => {
-
       try {
         // Validate required files
         if (!mocData.instructionsFile) {
@@ -313,7 +310,6 @@ const MocInstructionsGallery: React.FC = () => {
         // Manually refetch the gallery data to ensure it updates
         refetchInstructions()
       } catch (error: any) {
-
         // Show error toast with user-friendly message
         showErrorToast(error, 'Failed to create MOC')
       }

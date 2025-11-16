@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { eq, and, sql } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import jwt from 'jsonwebtoken'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('moc-instructions-route')
 import { requireAuth } from '../middleware/auth'
 import { db } from '../db/client'
 import { mocInstructions, mocFiles } from '../db/schema'
@@ -120,7 +122,7 @@ router.post('/test-auth', async (req, res) => {
       token, // Also return in response for manual testing
     })
   } catch (error) {
-    console.error('Test auth error:', error)
+    logger.error('Test auth error:', error)
     return res.status(500).json({ error: 'Failed to generate test token' })
   }
 })
@@ -152,8 +154,8 @@ router.post(
 
 // Test CORS endpoint
 router.post('/test-cors', (req, res) => {
-  console.log('🧪 CORS test endpoint hit')
-  console.log('📋 Headers:', req.headers)
+  logger.info('🧪 CORS test endpoint hit')
+  logger.info('📋 Headers:', req.headers)
   res.json({ message: 'CORS test successful', timestamp: new Date().toISOString() })
 })
 
@@ -183,12 +185,12 @@ router.get('/search', async (req, res) => {
   try {
     const { q: query, from = '0', size = '20' } = req.query
 
-    console.log('🔍 Gallery search - querying database for MOCs')
+    logger.info('🔍 Gallery search - querying database for MOCs')
 
     // Query database for MOCs with their image files
     const dbMocs = await db.select().from(mocInstructions).orderBy(mocInstructions.createdAt)
 
-    console.log('🔍 Database MOCs found:', dbMocs.length)
+    logger.info('🔍 Database MOCs found:', dbMocs.length)
 
     // Convert to proper format for frontend
     const allMocs = await Promise.all(
@@ -243,7 +245,7 @@ router.get('/search', async (req, res) => {
       message: `Found ${filteredMocs.length} MOCs in database`,
     })
   } catch (error) {
-    console.error('Search error:', error)
+    logger.error('Search error:', error)
     return res.json({
       mocs: [],
       total: 0,
@@ -320,7 +322,7 @@ router.get('/:id/gallery-images', requireAuth, mocCache, getMocGalleryImages)
 //       downloadInfo,
 //     });
 //   } catch (err: any) {
-//     console.error('Get download info error:', err);
+//     logger.error('Get download info error:', err);
 //     res.status(500).json({ error: 'Internal server error', details: err.message });
 //   }
 // });
@@ -384,7 +386,7 @@ router.get('/:id/gallery-images', requireAuth, mocCache, getMocGalleryImages)
 //     // Pipe the stream to response
 //     fileStream.stream.pipe(res);
 //   } catch (err: any) {
-//     console.error('File download error:', err);
+//     logger.error('File download error:', err);
 //     res.status(500).json({ error: 'Internal server error', details: err.message });
 //   }
 // });

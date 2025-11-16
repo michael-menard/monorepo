@@ -1,5 +1,5 @@
-import {fireEvent, render, screen, waitFor} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CognitoLoginPage from '../index'
 
 // Mock the Cognito auth hook
@@ -91,7 +91,7 @@ describe('CognitoLoginPage', () => {
         const errorMessages = screen.getAllByText(/email|password/i)
         expect(errorMessages.length).toBeGreaterThan(0)
       },
-      {timeout: 3000},
+      { timeout: 3000 },
     )
   })
 

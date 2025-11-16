@@ -1,4 +1,6 @@
 import path from 'path'
+import { createLogger } from '../utils/logger'
+const logger = createLogger('wishlist-storage')
 import fs from 'fs'
 import multer from 'multer'
 import { v4 as uuidv4 } from 'uuid'
@@ -131,7 +133,7 @@ export function deleteLocalWishlistImage(imageUrl: string): void {
       fs.unlinkSync(filePath)
     }
   } catch (error) {
-    console.error('Error deleting local wishlist image:', error)
+    logger.error('Error deleting local wishlist image:', error)
     // Don't throw error for cleanup operations
   }
 }

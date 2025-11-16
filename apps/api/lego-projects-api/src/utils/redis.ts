@@ -1,5 +1,8 @@
 import { createClient } from 'redis'
 import { z } from 'zod'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('redis')
 
 // Redis configuration schema
 const RedisConfigSchema = z.object({
@@ -67,7 +70,7 @@ const createRedisClient = (config: Partial<RedisConfig> = {}) => {
     socket: {
       reconnectStrategy: retries => {
         if (retries > 10) {
-          console.error('Redis connection failed after 10 retries')
+          logger.error({ retries }, 'Redis connection failed after 10 retries')
           return false
         }
         return Math.min(retries * 100, 3000)
@@ -77,23 +80,23 @@ const createRedisClient = (config: Partial<RedisConfig> = {}) => {
 
   // Error handling
   client.on('error', err => {
-    console.error('🔴 Redis Client Error:', err)
+    logger.error({ err }, 'Redis Client Error')
   })
 
   client.on('connect', () => {
-    console.log('🟢 Redis Client Connected')
+    logger.info('Redis Client Connected')
   })
 
   client.on('ready', () => {
-    console.log('🟢 Redis Client Ready')
+    logger.info('Redis Client Ready')
   })
 
   client.on('end', () => {
-    console.log('🟡 Redis Client Disconnected')
+    logger.info('Redis Client Disconnected')
   })
 
   client.on('reconnecting', () => {
-    console.log('🟡 Redis Client Reconnecting...')
+    logger.info('Redis Client Reconnecting')
   })
 
   return client
@@ -117,7 +120,7 @@ export const connectRedis = async () => {
     try {
       await client.connect()
     } catch (error) {
-      console.error('Failed to connect to Redis:', error)
+      logger.error({ err: error }, 'Failed to connect to Redis')
       throw error
     }
   }

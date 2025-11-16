@@ -143,14 +143,16 @@ export const getStorageUrl = (path: string = '') => {
 
 // Debug configuration in development - ALWAYS LOG FOR DEBUGGING
 if (isDevelopment) {
+  console.debug('Environment configuration loaded:', { config })
 }
 
 // Validate critical configuration
 if (!config.api.baseUrl) {
+  console.warn('API base URL not configured')
 }
 
 if (config.auth.enabled && !config.api.authUrl) {
-    // Auth URL validation error removed
+  // Auth URL validation error removed
 }
 
 // Export individual configurations for convenience

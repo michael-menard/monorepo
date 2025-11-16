@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', '@repo/auth', '@repo/ui', '@repo/shared', '@repo/upload'],
+        external: ['react', 'react-dom', '@repo/ui', '@repo/shared', '@repo/upload'],
         output: {
           globals: {
             react: 'React',

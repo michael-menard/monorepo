@@ -1,5 +1,4 @@
 import React from 'react'
-import { createTanStackRouteGuard } from '@repo/auth'
 import { ProfilePage } from '../ProfilePage'
 import type { ProfilePageProps } from '../../types'
 
@@ -10,25 +9,25 @@ export interface ProtectedProfilePageProps extends ProfilePageProps {
   unauthorizedTo?: string
 }
 
+/**
+ * ProtectedProfilePage component
+ *
+ * Note: Route protection should now be handled at the route level using
+ * Cognito route guards in the consuming application, not at the component level.
+ *
+ * This component is kept for backward compatibility but route protection
+ * should be implemented using createCognitoRouteGuard in the route definition.
+ */
 export const ProtectedProfilePage: React.FC<ProtectedProfilePageProps> = ({
-  requiredRole,
-  requireVerified = true, // Profile pages typically require verification
-  redirectTo = '/login',
-  unauthorizedTo = '/unauthorized',
+  requiredRole, // Deprecated - use route-level guards
+  requireVerified, // Deprecated - use route-level guards
+  redirectTo, // Deprecated - use route-level guards
+  unauthorizedTo, // Deprecated - use route-level guards
   ...profilePageProps
 }) => {
-  const RouteGuard = createTanStackRouteGuard({
-    requiredRole,
-    requireVerified,
-    redirectTo,
-    unauthorizedTo,
-  })
-
-  return (
-    <RouteGuard>
-      <ProfilePage {...profilePageProps} />
-    </RouteGuard>
-  )
+  // Route protection is now handled at the route level with Cognito guards
+  // This component just renders the ProfilePage directly
+  return <ProfilePage {...profilePageProps} />
 }
 
 export default ProtectedProfilePage

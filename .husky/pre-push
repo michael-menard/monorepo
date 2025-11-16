@@ -71,13 +71,13 @@ else
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 fi
 
-# Linting checks
-echo "🔍 Running ESLint analysis..."
-if pnpm turbo lint --filter="...[HEAD]" > /dev/null 2>&1; then
+# Linting checks (changed files only)
+echo "🔍 Running ESLint analysis on changed files..."
+if pnpm lint:changed > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Linting checks passed${NC}"
 else
-    echo -e "${YELLOW}⚠️  Linting issues found${NC}"
-    echo "💡 Run 'pnpm turbo lint --filter=\"...[HEAD]\"' for details"
+    echo -e "${YELLOW}⚠️  Linting issues found in changed files${NC}"
+    echo "💡 Run 'pnpm lint:changed' for details"
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 fi
 
@@ -157,7 +157,7 @@ else
     echo -e "${YELLOW}💡 Recommendations:${NC}"
     echo "1. Fix the issues listed above"
     echo "2. Run the suggested commands for detailed information"
-    echo "3. Consider running 'pnpm turbo lint --fix' to auto-fix some issues"
+    echo "3. Consider running 'pnpm lint:changed --fix' to auto-fix some issues"
     echo ""
     echo -e "${BLUE}🤖 This analysis mimics CodeRabbit's review process${NC}"
     echo "Push anyway? (y/N)"

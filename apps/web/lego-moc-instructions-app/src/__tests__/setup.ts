@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom'
-import {afterAll, afterEach, beforeAll, vi} from 'vitest'
+import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import React from 'react'
-import {server} from './mocks/server'
+import { server } from './mocks/server'
 
 // Suppress native canvas/sharp warnings in JSDOM on macOS by mocking heavy native modules
 vi.mock('canvas', () => ({

@@ -24,7 +24,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 // Mock the useAuth hook
-vi.mock('@repo/auth', () => ({
+vi.mock('../../../hooks', () => ({
   useAuth: () => ({
     user: {
       _id: 'test-user-id',
