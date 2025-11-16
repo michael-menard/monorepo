@@ -1,0 +1,239 @@
+/**
+ * {{description}}
+ *
+ * Generated Lambda handler with JWT validation pre-configured.
+ * 
+ * Features:
+ {{#unless (eq authType "none")}}
+ * - JWT authentication using @monorepo/lambda-auth
+ {{#if (eq authType "enhanced")}}
+ * - Enhanced JWT validation (issuer, expiration, audience)
+ {{/if}}
+ {{#if (eq authType "ownership")}}
+ * - Resource ownership validation (user can only access own resources)
+ {{/if}}
+ {{/unless}}
+ * - Zod schema validation for requests and responses
+ * - Structured logging with Winston
+ * - Proper error handling with typed errors
+ * - TypeScript strict mode
+ */
+
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda'
+{{#unless (eq authType "none")}}
+import {
+  {{#if (eq authType "basic")}}
+  validateAuthentication,
+  {{/if}}
+  {{#if (eq authType "enhanced")}}
+  validateAuthentication,
+  createDefaultJwtConfig,
+  {{/if}}
+  {{#if (eq authType "ownership")}}
+  validateUserResourceAccess,
+  createDefaultJwtConfig,
+  {{/if}}
+  type AuthError,
+} from '@monorepo/lambda-auth'
+{{/unless}}
+{{#if includeSchemas}}
+import { RequestSchema } from './schemas/request'
+import { ResponseSchema } from './schemas/response'
+{{/if}}
+import { createSuccessResponse, createErrorResponse } from './utils/response'
+import { logger } from '@repo/logger'
+
+{{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+// JWT Configuration
+const JWT_CONFIG = createDefaultJwtConfig(
+  '{{cognitoUserPoolId}}',
+  '{{awsRegion}}',
+  '{{cognitoClientId}}'
+)
+{{/if}}
+
+/**
+ * Main Lambda handler
+ *
+ * {{#if addToSst}}
+ * {{#if (eq apiGatewayChoice "existing")}}
+ * Deployed via SST to existing API Gateway ({{existingApiGatewayName}})
+ * Routes: {{#each httpMethods}}{{this}} {{../apiRoute}}{{#unless @last}}, {{/unless}}{{/each}}
+ * {{/if}}
+ * {{#if (eq apiGatewayChoice "new")}}
+ * Deployed via SST with new API Gateway ({{newApiGatewayName}})
+ * Routes: {{#each httpMethods}}{{this}} {{../apiRoute}}{{#unless @last}}, {{/unless}}{{/each}}
+ * {{/if}}
+ * {{#if (eq apiGatewayChoice "none")}}
+ * Deployed via SST as standalone Lambda (no API Gateway)
+ * Invoke directly: aws lambda invoke --function-name {{pascalCase name}}Function-${stage}
+ * {{/if}}
+ * {{#unless (eq authType "none")}}
+ * Authentication: JWT via Cognito
+ * {{/unless}}
+ * {{/if}}
+ */
+export const handler = async (
+  event: APIGatewayProxyEventV2,
+  context: Context
+): Promise<APIGatewayProxyResultV2> => {
+  // Set up request logging
+  const requestId = context.awsRequestId
+  logger.info('Lambda invocation started', {
+    requestId,
+    httpMethod: event.requestContext.http.method,
+    path: event.requestContext.http.path,
+  })
+
+  try {
+    {{#unless (eq authType "none")}}
+    // Step 1: Authentication{{#if (eq authType "ownership")}} and Authorization{{/if}}
+    {{#if (eq authType "basic")}}
+    const authResult = validateAuthentication(event)
+    {{/if}}
+    {{#if (eq authType "enhanced")}}
+    const authResult = validateAuthentication(event, JWT_CONFIG)
+    {{/if}}
+    {{#if (eq authType "ownership")}}
+    const authResult = validateUserResourceAccess(
+      event,
+      'id', // Path parameter name (adjust as needed)
+      '{{kebabCase name}}', // Resource name for error messages
+      JWT_CONFIG
+    )
+    {{/if}}
+
+    if (!authResult.authenticated{{#if (eq authType "ownership")}} || !authResult.authorized{{/if}}) {
+      logger.warn('Authentication{{#if (eq authType "ownership")}}/authorization{{/if}} failed', {
+        requestId,
+        error: authResult.error?.code,
+        message: authResult.error?.message,
+      })
+
+      return createErrorResponse(
+        authResult.error?.statusCode || 401,
+        authResult.error?.code || 'UNAUTHORIZED',
+        authResult.error?.message || 'Authentication required'
+      )
+    }
+
+    const userId = authResult.userId!
+    {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+    const userClaims = authResult.claims
+    {{/if}}
+
+    logger.info('User authenticated successfully', {
+      requestId,
+      userId,
+      {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+      email: userClaims?.email,
+      {{/if}}
+    })
+
+    {{/unless}}
+    {{#if includeSchemas}}
+    // Step {{#if (eq authType "none")}}1{{else}}2{{/if}}: Validate request body (if present)
+    let requestData
+    if (event.body) {
+      try {
+        const parsedBody = JSON.parse(event.body)
+        const validation = RequestSchema.safeParse(parsedBody)
+        
+        if (!validation.success) {
+          logger.warn('Request validation failed', {
+            requestId,
+            errors: validation.error.issues,
+          })
+
+          return createErrorResponse(
+            400,
+            'VALIDATION_ERROR',
+            `Invalid request: ${validation.error.issues.map(i => i.message).join(', ')}`
+          )
+        }
+
+        requestData = validation.data
+      } catch (error) {
+        logger.warn('Invalid JSON in request body', { requestId, error })
+        return createErrorResponse(400, 'INVALID_JSON', 'Request body must be valid JSON')
+      }
+    }
+
+    {{/if}}
+    // Step {{#if includeSchemas}}{{#if (eq authType "none")}}2{{else}}3{{/if}}{{else}}{{#if (eq authType "none")}}1{{else}}2{{/if}}{{/if}}: Business logic
+    {{#unless (eq authType "none")}}
+    // TODO: Implement your business logic here
+    // You have access to:
+    // - userId: string (authenticated user ID)
+    {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+    // - userClaims: CognitoJwtClaims (full JWT claims)
+    {{/if}}
+    {{#if includeSchemas}}
+    // - requestData: validated request data (if body was provided)
+    {{/if}}
+    // - event: full API Gateway event
+    // - context: Lambda context
+    {{else}}
+    // TODO: Implement your business logic here
+    // You have access to:
+    {{#if includeSchemas}}
+    // - requestData: validated request data (if body was provided)
+    {{/if}}
+    // - event: full API Gateway event
+    // - context: Lambda context
+    {{/unless}}
+
+    const result = {
+      message: 'Hello from {{pascalCase name}} Lambda!',
+      {{#unless (eq authType "none")}}
+      userId,
+      {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+      userEmail: userClaims?.email,
+      {{/if}}
+      {{/unless}}
+      {{#if includeSchemas}}
+      requestData,
+      {{/if}}
+      timestamp: new Date().toISOString(),
+    }
+
+    {{#if includeSchemas}}
+    // Step {{#if includeSchemas}}{{#if (eq authType "none")}}3{{else}}4{{/if}}{{else}}{{#if (eq authType "none")}}2{{else}}3{{/if}}{{/if}}: Validate response
+    const responseValidation = ResponseSchema.safeParse(result)
+    if (!responseValidation.success) {
+      logger.error('Response validation failed', {
+        requestId,
+        errors: responseValidation.error.issues,
+      })
+
+      return createErrorResponse(
+        500,
+        'INTERNAL_ERROR',
+        'Failed to generate valid response'
+      )
+    }
+
+    {{/if}}
+    logger.info('Lambda execution completed successfully', {
+      requestId,
+      {{#unless (eq authType "none")}}
+      userId,
+      {{/unless}}
+    })
+
+    return createSuccessResponse(result)
+
+  } catch (error) {
+    logger.error('Unhandled error in Lambda execution', {
+      requestId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+
+    return createErrorResponse(
+      500,
+      'INTERNAL_ERROR',
+      'An unexpected error occurred'
+    )
+  }
+}

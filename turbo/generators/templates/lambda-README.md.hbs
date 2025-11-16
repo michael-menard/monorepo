@@ -1,0 +1,283 @@
+# {{pascalCase name}} Lambda Handler
+
+{{description}}
+
+## Features
+
+{{#unless (eq authType "none")}}
+- ✅ **JWT Authentication** using @monorepo/lambda-auth
+{{#if (eq authType "enhanced")}}
+- ✅ **Enhanced JWT Validation** (issuer, expiration, audience verification)
+{{/if}}
+{{#if (eq authType "ownership")}}
+- ✅ **Resource Ownership Validation** (users can only access their own resources)
+{{/if}}
+{{/unless}}
+{{#if includeSchemas}}
+- ✅ **Zod Schema Validation** for requests and responses
+{{/if}}
+- ✅ **Structured Logging** with @repo/logger
+- ✅ **Proper Error Handling** with typed errors
+- ✅ **TypeScript Strict Mode** with comprehensive type safety
+{{#if includeTests}}
+- ✅ **Comprehensive Test Coverage** with Vitest
+{{/if}}
+- ✅ **CORS Headers** for web client integration
+
+## Configuration
+
+{{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+### JWT Configuration
+
+The Lambda is pre-configured with the following Cognito settings:
+
+- **User Pool ID**: `{{cognitoUserPoolId}}`
+- **Region**: `{{awsRegion}}`
+- **Client ID**: `{{cognitoClientId}}`
+
+Update these values in `index.ts` if your Cognito configuration changes.
+
+{{/if}}
+### Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Required environment variables:
+- `NODE_ENV` - Environment (development/production)
+- `LOG_LEVEL` - Logging level (debug/info/warn/error)
+{{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+- `COGNITO_USER_POOL_ID` - Cognito User Pool ID
+- `COGNITO_CLIENT_ID` - Cognito Client ID
+- `AWS_REGION` - AWS Region
+{{/if}}
+
+## Development
+
+### Install Dependencies
+
+```bash
+pnpm install
+```
+
+### Build
+
+```bash
+pnpm build
+```
+
+### Type Checking
+
+```bash
+pnpm type-check
+```
+
+{{#if includeTests}}
+### Testing
+
+```bash
+# Run tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests with coverage
+pnpm test:coverage
+```
+
+{{/if}}
+### Local Development
+
+```bash
+# Watch mode for development
+pnpm dev
+```
+
+## Deployment
+
+### Package for Deployment
+
+```bash
+# Create deployment package
+pnpm package
+```
+
+This creates a `lambda-{{kebabCase name}}.zip` file ready for AWS Lambda deployment.
+
+### AWS Lambda Configuration
+
+**Runtime**: Node.js 20.x
+**Handler**: `dist/index.handler`
+**Memory**: 512 MB
+**Timeout**: 30 seconds
+
+{{#if addToSst}}
+**Note**: This Lambda has been automatically added to the SST configuration at `apps/api/lego-api-serverless/sst.config.ts`.
+
+{{#if (eq apiGatewayChoice "existing")}}
+**API Gateway**: Added to existing API Gateway (`{{existingApiGatewayName}}`)
+
+**Routes**:
+{{#each httpMethods}}
+- `{{this}} {{../apiRoute}}`{{#unless (eq ../authType "none")}} (JWT authenticated){{/unless}}
+{{/each}}
+{{/if}}
+
+{{#if (eq apiGatewayChoice "new")}}
+**API Gateway**: Created new API Gateway (`{{newApiGatewayName}}`)
+
+**Routes**:
+{{#each httpMethods}}
+- `{{this}} {{../apiRoute}}`{{#unless (eq ../authType "none")}} (JWT authenticated){{/unless}}
+{{/each}}
+
+The new API Gateway URL will be available after deployment and exported as `{{camelCase newApiGatewayName}}Url`.
+{{/if}}
+
+{{#if (eq apiGatewayChoice "none")}}
+**Deployment**: Standalone Lambda function (no API Gateway)
+
+**Invocation**: Can be invoked directly via AWS Lambda or integrated with other AWS services:
+```bash
+aws lambda invoke --function-name {{pascalCase name}}Function-dev response.json
+```
+{{/if}}
+
+**Deploy**: `cd apps/api/lego-api-serverless && pnpm sst deploy`
+{{/if}}
+
+{{#unless (eq authType "none")}}
+### API Gateway Configuration
+
+This Lambda expects to be deployed behind API Gateway with a **JWT Authorizer** configured for Cognito:
+
+1. **Authorizer Type**: JWT
+2. **Identity Source**: `$request.header.Authorization`
+3. **Issuer URL**: `https://cognito-idp.{{awsRegion}}.amazonaws.com/{{cognitoUserPoolId}}`
+4. **Audience**: `{{cognitoClientId}}`
+
+{{/if}}
+## API Reference
+
+### Request Format
+
+{{#if includeSchemas}}
+The Lambda expects JSON requests matching the `RequestSchema`:
+
+```json
+{
+  "name": "string (required, 1-100 chars)",
+  "description": "string (optional)",
+  "tags": ["string"] (optional),
+  "metadata": { "key": "value" } (optional)
+}
+```
+
+{{/if}}
+### Response Format
+
+**Success Response (200)**:
+```json
+{
+  "message": "Hello from {{pascalCase name}} Lambda!",
+  {{#unless (eq authType "none")}}
+  "userId": "user-123",
+  {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+  "userEmail": "user@example.com",
+  {{/if}}
+  {{/unless}}
+  {{#if includeSchemas}}
+  "requestData": { ... },
+  {{/if}}
+  "timestamp": "2023-01-01T00:00:00.000Z"
+}
+```
+
+**Error Response**:
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable error message",
+    "details": { ... } // Optional additional details
+  },
+  "timestamp": "2023-01-01T00:00:00.000Z"
+}
+```
+
+### Error Codes
+
+{{#unless (eq authType "none")}}
+- `UNAUTHORIZED` (401) - Authentication required or invalid
+- `INVALID_TOKEN` (401) - JWT token is malformed or invalid
+- `TOKEN_EXPIRED` (401) - JWT token has expired
+- `INVALID_ISSUER` (401) - JWT token is not from expected Cognito issuer
+{{#if (eq authType "ownership")}}
+- `FORBIDDEN` (403) - User cannot access the requested resource
+{{/if}}
+{{/unless}}
+{{#if includeSchemas}}
+- `VALIDATION_ERROR` (400) - Request validation failed
+- `INVALID_JSON` (400) - Request body is not valid JSON
+{{/if}}
+- `INTERNAL_ERROR` (500) - Unexpected server error
+
+## Architecture
+
+```
+{{#unless (eq authType "none")}}
+API Gateway (JWT Authorizer) → 
+{{/unless}}
+Lambda Handler →
+{{#if includeSchemas}}
+Request Validation →
+{{/if}}
+{{#unless (eq authType "none")}}
+Authentication{{#if (eq authType "ownership")}}/Authorization{{/if}} →
+{{/unless}}
+Business Logic →
+{{#if includeSchemas}}
+Response Validation →
+{{/if}}
+Response
+```
+
+## File Structure
+
+```
+lambda-{{kebabCase name}}/
+├── index.ts                 # Main Lambda handler
+{{#if includeSchemas}}
+├── schemas/
+│   ├── request.ts          # Request validation schemas
+│   └── response.ts         # Response validation schemas
+{{/if}}
+├── utils/
+│   └── response.ts         # Response helpers
+{{#if includeTests}}
+├── __tests__/
+│   └── index.test.ts       # Comprehensive unit tests
+├── vitest.config.ts        # Test configuration
+{{/if}}
+├── package.json            # Dependencies and scripts
+├── tsconfig.json           # TypeScript configuration
+├── .env.example            # Environment variables template
+└── README.md               # This file
+```
+
+## Contributing
+
+1. Follow the existing code patterns and TypeScript strict mode
+2. Add tests for new functionality
+3. Use structured logging with @repo/logger (never console.log)
+4. Follow Zod schema validation patterns
+5. Use custom error types (never throw new Error())
+6. Maintain comprehensive JSDoc comments
+
+## License
+
+MIT

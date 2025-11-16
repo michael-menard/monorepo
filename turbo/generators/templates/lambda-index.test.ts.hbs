@@ -1,0 +1,461 @@
+/**
+ * Unit tests for {{pascalCase name}} Lambda handler
+ *
+ * Following testing standards: Comprehensive unit tests with mocked dependencies.
+ * Tests authentication, validation, business logic, and error handling.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { APIGatewayProxyEventV2, Context } from 'aws-lambda'
+import { handler } from '../index'
+
+// Mock the logger to avoid console output during tests
+vi.mock('@repo/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
+{{#unless (eq authType "none")}}
+// Mock the lambda-auth package
+vi.mock('@monorepo/lambda-auth', () => ({
+  {{#if (eq authType "basic")}}
+  validateAuthentication: vi.fn(),
+  {{/if}}
+  {{#if (eq authType "enhanced")}}
+  validateAuthentication: vi.fn(),
+  createDefaultJwtConfig: vi.fn(),
+  {{/if}}
+  {{#if (eq authType "ownership")}}
+  validateUserResourceAccess: vi.fn(),
+  createDefaultJwtConfig: vi.fn(),
+  {{/if}}
+}))
+{{/unless}}
+
+// Test data
+const mockContext: Context = {
+  callbackWaitsForEmptyEventLoop: false,
+  functionName: 'lambda-{{kebabCase name}}',
+  functionVersion: '$LATEST',
+  invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:lambda-{{kebabCase name}}',
+  memoryLimitInMB: '128',
+  awsRequestId: 'test-request-id-123',
+  logGroupName: '/aws/lambda/lambda-{{kebabCase name}}',
+  logStreamName: '2023/01/01/[$LATEST]test-stream',
+  getRemainingTimeInMillis: () => 30000,
+  done: vi.fn(),
+  fail: vi.fn(),
+  succeed: vi.fn(),
+}
+
+const createMockEvent = (overrides: Partial<APIGatewayProxyEventV2> = {}): APIGatewayProxyEventV2 => ({
+  version: '2.0',
+  routeKey: 'POST /{{kebabCase name}}',
+  rawPath: '/{{kebabCase name}}',
+  rawQueryString: '',
+  headers: {
+    'content-type': 'application/json',
+  },
+  requestContext: {
+    accountId: '123456789012',
+    apiId: 'api123',
+    domainName: 'api.example.com',
+    domainPrefix: 'api',
+    http: {
+      method: 'POST',
+      path: '/{{kebabCase name}}',
+      protocol: 'HTTP/1.1',
+      sourceIp: '127.0.0.1',
+      userAgent: 'test-agent',
+    },
+    requestId: 'test-request-123',
+    routeKey: 'POST /{{kebabCase name}}',
+    stage: 'test',
+    time: '01/Jan/2023:00:00:00 +0000',
+    timeEpoch: 1672531200000,
+    {{#unless (eq authType "none")}}
+    authorizer: {
+      jwt: {
+        claims: {
+          sub: 'user-123',
+          iss: 'https://cognito-idp.{{awsRegion}}.amazonaws.com/{{cognitoUserPoolId}}',
+          aud: '{{cognitoClientId}}',
+          exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+          iat: Math.floor(Date.now() / 1000),
+          email: 'test@example.com',
+          'cognito:username': 'testuser',
+        },
+      },
+    },
+    {{/unless}}
+  },
+  isBase64Encoded: false,
+  ...overrides,
+})
+
+describe('{{pascalCase name}} Lambda Handler', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  {{#unless (eq authType "none")}}
+  describe('Authentication', () => {
+    it('should authenticate valid user successfully', async () => {
+      // Given: Valid authentication
+      const mockEvent = createMockEvent({
+        body: JSON.stringify({ name: 'Test Item', description: 'Test description' }),
+      })
+
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: true,
+        authorized: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return success
+      expect(result.statusCode).toBe(200)
+      const body = JSON.parse(result.body!)
+      expect(body.userId).toBe('user-123')
+      expect(body.message).toContain('Hello from {{pascalCase name}} Lambda!')
+    })
+
+    it('should reject unauthenticated requests', async () => {
+      // Given: Invalid authentication
+      const mockEvent = createMockEvent()
+
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: false,
+        userId: null,
+        error: {
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+        },
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: false,
+        userId: null,
+        error: {
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+        },
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: false,
+        authorized: false,
+        userId: null,
+        error: {
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+        },
+      })
+      {{/if}}
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return 401
+      expect(result.statusCode).toBe(401)
+      const body = JSON.parse(result.body!)
+      expect(body.error.code).toBe('UNAUTHORIZED')
+    })
+
+    {{#if (eq authType "ownership")}}
+    it('should reject unauthorized resource access', async () => {
+      // Given: Authenticated but not authorized
+      const mockEvent = createMockEvent()
+
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: true,
+        authorized: false,
+        userId: 'user-123',
+        error: {
+          statusCode: 403,
+          code: 'FORBIDDEN',
+          message: 'Cannot access another user\'s {{kebabCase name}}',
+        },
+      })
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return 403
+      expect(result.statusCode).toBe(403)
+      const body = JSON.parse(result.body!)
+      expect(body.error.code).toBe('FORBIDDEN')
+    })
+    {{/if}}
+  })
+
+  {{/unless}}
+  {{#if includeSchemas}}
+  describe('Request Validation', () => {
+    it('should validate request body successfully', async () => {
+      // Given: Valid request body
+      const mockEvent = createMockEvent({
+        body: JSON.stringify({
+          name: 'Test Item',
+          description: 'Test description',
+          tags: ['tag1', 'tag2'],
+        }),
+      })
+
+      {{#unless (eq authType "none")}}
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: true,
+        authorized: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{/unless}}
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return success with validated data
+      expect(result.statusCode).toBe(200)
+      const body = JSON.parse(result.body!)
+      expect(body.requestData.name).toBe('Test Item')
+      expect(body.requestData.tags).toEqual(['tag1', 'tag2'])
+    })
+
+    it('should reject invalid request body', async () => {
+      // Given: Invalid request body (missing required field)
+      const mockEvent = createMockEvent({
+        body: JSON.stringify({
+          description: 'Test description',
+          // Missing required 'name' field
+        }),
+      })
+
+      {{#unless (eq authType "none")}}
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: true,
+        authorized: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{/unless}}
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return validation error
+      expect(result.statusCode).toBe(400)
+      const body = JSON.parse(result.body!)
+      expect(body.error.code).toBe('VALIDATION_ERROR')
+      expect(body.error.message).toContain('Name is required')
+    })
+
+    it('should reject malformed JSON', async () => {
+      // Given: Malformed JSON in request body
+      const mockEvent = createMockEvent({
+        body: '{ invalid json }',
+      })
+
+      {{#unless (eq authType "none")}}
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: true,
+        authorized: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{/unless}}
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return JSON parsing error
+      expect(result.statusCode).toBe(400)
+      const body = JSON.parse(result.body!)
+      expect(body.error.code).toBe('INVALID_JSON')
+    })
+  })
+
+  {{/if}}
+  describe('Error Handling', () => {
+    it('should handle unexpected errors gracefully', async () => {
+      // Given: Mock that throws an error
+      {{#unless (eq authType "none")}}
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockImplementation(() => {
+        throw new Error('Unexpected error')
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockImplementation(() => {
+        throw new Error('Unexpected error')
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockImplementation(() => {
+        throw new Error('Unexpected error')
+      })
+      {{/if}}
+      {{/unless}}
+
+      const mockEvent = createMockEvent()
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should return 500 error
+      expect(result.statusCode).toBe(500)
+      const body = JSON.parse(result.body!)
+      expect(body.error.code).toBe('INTERNAL_ERROR')
+      expect(body.error.message).toBe('An unexpected error occurred')
+    })
+  })
+
+  describe('Response Format', () => {
+    it('should return properly formatted response', async () => {
+      // Given: Valid request
+      const mockEvent = createMockEvent({{#if includeSchemas}}{
+        body: JSON.stringify({ name: 'Test Item' }),
+      }{{/if}})
+
+      {{#unless (eq authType "none")}}
+      {{#if (eq authType "basic")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "enhanced")}}
+      const { validateAuthentication } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateAuthentication).mockReturnValue({
+        authenticated: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{#if (eq authType "ownership")}}
+      const { validateUserResourceAccess } = await import('@monorepo/lambda-auth')
+      vi.mocked(validateUserResourceAccess).mockReturnValue({
+        authenticated: true,
+        authorized: true,
+        userId: 'user-123',
+        claims: mockEvent.requestContext.authorizer?.jwt?.claims,
+      })
+      {{/if}}
+      {{/unless}}
+
+      // When: Calling the handler
+      const result = await handler(mockEvent, mockContext)
+
+      // Then: Should have proper response format
+      expect(result.statusCode).toBe(200)
+      expect(result.headers).toMatchObject({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      })
+      
+      const body = JSON.parse(result.body!)
+      expect(body).toHaveProperty('message')
+      expect(body).toHaveProperty('timestamp')
+      {{#unless (eq authType "none")}}
+      expect(body).toHaveProperty('userId')
+      {{/unless}}
+    })
+  })
+})

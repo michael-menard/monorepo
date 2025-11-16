@@ -1,0 +1,44 @@
+{
+  "name": "lambda-{{kebabCase name}}",
+  "version": "1.0.0",
+  "description": "{{description}}",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    {{#if includeTests}}
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    {{/if}}
+    "deploy": "npm run build && zip -r lambda-{{kebabCase name}}.zip dist/ node_modules/",
+    "package": "npm run build && npm prune --production && zip -r lambda-{{kebabCase name}}.zip dist/ node_modules/ && npm install"
+  },
+  "dependencies": {
+    "aws-lambda": "^1.0.7",
+    {{#unless (eq authType "none")}}
+    "@monorepo/lambda-auth": "workspace:*",
+    {{/unless}}
+    "@repo/logger": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "typescript": "^5.8.0"{{#if includeTests}},
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"{{/if}}
+  },
+  "keywords": [
+    "lambda",
+    "aws",
+    "serverless",
+    {{#unless (eq authType "none")}}
+    "authentication",
+    "jwt",
+    {{/unless}}
+    "{{kebabCase name}}"
+  ]
+}
