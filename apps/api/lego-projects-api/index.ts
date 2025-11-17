@@ -112,10 +112,6 @@ app.options('/api/mocs/upload-parts-list', (req, res) => {
 app.get('/api/csrf', issueCsrfToken)
 app.use(csrfProtection)
 
-// Apply specific rate limiting to upload routes
-app.use('/api/users/:id/avatar', rateLimiters.upload)
-app.use('/api/users', rateLimiters.auth) // Apply auth rate limiting to user routes
-
 // Mount router at root level since routes already have /api prefix
 app.use('/', profileRouter)
 

@@ -20,13 +20,10 @@ import {
   mocCacheInvalidation,
   wishlistCache,
   wishlistCacheInvalidation,
-  profileCache,
-  profileCacheInvalidation,
 } from '../middleware/cache'
 import { validateFileContent, virusScanFile } from '../middleware/security'
 import mocInstructionsRouter from './moc-instructions'
 import wishlistRouter from './wishlist'
-import profileRouter from './profile-routes'
 
 const router = Router()
 
@@ -112,9 +109,6 @@ router.post('/api/flag', requireAuth, validate(flagSchema), galleryCacheInvalida
 
 // Register MOC Instructions router
 router.use('/api/mocs', mocInstructionsRouter)
-
-// Register Profile router
-router.use('/api/users', profileRouter)
 
 // Register Wishlist router
 router.use('/api/wishlist', wishlistRouter)

@@ -667,111 +667,6 @@ export default $config({
     api.route('POST /api/wishlist/{id}/image', wishlistFunction) // Story 3.7 AC #1
 
     // ========================================
-    // Story 4.1: User Profile Lambda Handlers
-    // ========================================
-
-    /**
-     * Get User Profile Lambda Function
-     * - Retrieves user profile from Cognito User Pool
-     * - Aggregates statistics from PostgreSQL
-     * - Redis caching with 10-minute TTL
-     * - Read-only operation
-     */
-    const profileGetFunction = new sst.aws.Function('ProfileGetFunction', {
-      handler: 'profile/getProfile/index.handler',
-      runtime: 'nodejs20.x',
-      timeout: '10 seconds',
-      memory: '512 MB',
-      vpc,
-      link: [postgres, redis],
-      environment: {
-        NODE_ENV: stage === 'production' ? 'production' : 'development',
-        STAGE: stage,
-        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
-      },
-    })
-
-    /**
-     * Update User Profile Lambda Function
-     * - Updates user attributes in Cognito User Pool
-     * - Invalidates Redis cache
-     * - Fetches updated profile (requires PostgreSQL for stats)
-     */
-    const profileUpdateFunction = new sst.aws.Function('ProfileUpdateFunction', {
-      handler: 'profile/updateProfile/index.handler',
-      runtime: 'nodejs20.x',
-      timeout: '10 seconds',
-      memory: '512 MB',
-      vpc,
-      link: [postgres, redis],
-      environment: {
-        NODE_ENV: stage === 'production' ? 'production' : 'development',
-        STAGE: stage,
-        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
-      },
-    })
-
-    /**
-     * Upload Avatar Lambda Function
-     * - Handles multipart file upload
-     * - Sharp image processing (resize, optimize)
-     * - Uploads to S3: avatars/{userId}/avatar.webp
-     * - Updates Cognito picture attribute
-     * - Requires higher memory for Sharp
-     */
-    const profileAvatarUploadFunction = new sst.aws.Function('ProfileAvatarUploadFunction', {
-      handler: 'profile/avatarUpload/index.handler',
-      runtime: 'nodejs20.x',
-      timeout: '60 seconds', // Longer timeout for image processing
-      memory: '2048 MB', // High memory required for Sharp image processing
-      vpc,
-      link: [redis, bucket],
-      environment: {
-        NODE_ENV: stage === 'production' ? 'production' : 'development',
-        STAGE: stage,
-        LEGO_API_BUCKET_NAME: bucket.name,
-        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
-      },
-    })
-
-    /**
-     * Delete Avatar Lambda Function
-     * - Deletes avatar from S3
-     * - Updates Cognito picture attribute
-     * - Invalidates Redis cache
-     * - Lightweight operation
-     */
-    const profileAvatarDeleteFunction = new sst.aws.Function('ProfileAvatarDeleteFunction', {
-      handler: 'profile/avatarDelete/index.handler',
-      runtime: 'nodejs20.x',
-      timeout: '10 seconds',
-      memory: '256 MB',
-      vpc,
-      link: [redis, bucket],
-      environment: {
-        NODE_ENV: stage === 'production' ? 'production' : 'development',
-        STAGE: stage,
-        LEGO_API_BUCKET_NAME: bucket.name,
-        // COGNITO_USER_POOL_ID will be set when Cognito integration is configured
-      },
-    })
-
-    // Profile API Routes (Story 4.1 AC #2)
-    // All profile routes require JWT authentication via Cognito
-    api.route('GET /api/users/{id}', profileGetFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
-    api.route('PATCH /api/users/{id}', profileUpdateFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
-    api.route('POST /api/users/{id}/avatar', profileAvatarUploadFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
-    api.route('DELETE /api/users/{id}/avatar', profileAvatarDeleteFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
-
-    // ========================================
     // MOC Parts Lists Lambda Handlers
     // ========================================
 
@@ -955,14 +850,6 @@ export default $config({
       deleteAlbumFunctionArn: deleteAlbumFunction.arn,
       wishlistFunctionName: wishlistFunction.name,
       wishlistFunctionArn: wishlistFunction.arn,
-      profileGetFunctionName: profileGetFunction.name,
-      profileGetFunctionArn: profileGetFunction.arn,
-      profileUpdateFunctionName: profileUpdateFunction.name,
-      profileUpdateFunctionArn: profileUpdateFunction.arn,
-      profileAvatarUploadFunctionName: profileAvatarUploadFunction.name,
-      profileAvatarUploadFunctionArn: profileAvatarUploadFunction.arn,
-      profileAvatarDeleteFunctionName: profileAvatarDeleteFunction.name,
-      profileAvatarDeleteFunctionArn: profileAvatarDeleteFunction.arn,
       // MOC Parts Lists Functions (6 handlers)
       getPartsListsFunctionName: getPartsListsFunction.name,
       getPartsListsFunctionArn: getPartsListsFunction.arn,

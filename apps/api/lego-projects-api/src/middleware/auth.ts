@@ -82,18 +82,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
   }
 }
 
-// Middleware to check if user can modify their own profile
-export const canModifyProfile = (req: Request, res: Response, next: NextFunction) => {
-  const { id } = req.params
-  const userId = req.user?.sub
-
-  if (!userId || userId !== id) {
-    return res.status(403).json({ error: 'You can only modify your own profile' })
-  }
-
-  next()
-}
-
 // Middleware to ensure users can only access their own wishlist items
 export const wishlistOwnershipAuth = (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user?.sub

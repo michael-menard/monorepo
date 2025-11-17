@@ -138,17 +138,6 @@ export const wishlistCache = createCacheMiddleware({
 
 export const wishlistCacheInvalidation = createCacheInvalidationMiddleware('wishlist:*')
 
-export const profileCache = createCacheMiddleware({
-  ttl: CACHE_TTL.LONG,
-  key: (req: Request) => {
-    const userId = req.user?.id || 'public'
-    return `profile:${userId}`
-  },
-  condition: (req: Request) => req.method === 'GET',
-})
-
-export const profileCacheInvalidation = createCacheInvalidationMiddleware('profile:*')
-
 // Utility function to manually invalidate cache
 export const invalidateCache = async (pattern: string) => {
   try {
