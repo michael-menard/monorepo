@@ -501,6 +501,224 @@ export default $config({
     api.route('GET /api/mocs/{mocId}/files/{fileId}/download', mocFileDownloadFunction)
 
     // ========================================
+    // MOC File Delete Lambda
+    // ========================================
+
+    /**
+     * MOC File Delete Lambda Function
+     * - Deletes file attachments from MOC instructions
+     * - JWT authentication via Cognito
+     * - Verifies MOC ownership and file association
+     * - Updates MOC updatedAt timestamp
+     */
+    const mocFileDeleteFunction = new sst.aws.Function('MocFileDeleteFunction', {
+      handler: 'mocInstructions/delete-moc-file/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    // MOC File Delete Route
+    api.route('DELETE /api/mocs/{id}/files/{fileId}', mocFileDeleteFunction)
+
+    // ========================================
+    // MOC Parts List Upload Lambda
+    // ========================================
+
+    /**
+     * MOC Parts List Upload Lambda Function
+     * - Uploads and parses parts list files (CSV/XML)
+     * - Extracts part numbers, quantities, total piece count
+     * - Creates mocFiles and mocPartsLists records
+     * - Updates MOC totalPieceCount
+     * - JWT authentication via Cognito
+     */
+    const uploadPartsListFunction = new sst.aws.Function('UploadPartsListFunction', {
+      handler: 'mocInstructions/upload-parts-list/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds', // Longer timeout for file parsing
+      memory: '512 MB', // More memory for CSV/XML processing
+      vpc,
+      link: [postgres, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+      },
+    })
+
+    // MOC Parts List Upload Route
+    api.route('POST /api/mocs/{id}/upload-parts-list', uploadPartsListFunction)
+
+    // ========================================
+    // MOC with Files (Two-Phase Upload Pattern)
+    // ========================================
+
+    /**
+     * Initialize MOC with Files Lambda Function
+     * - Phase 1: Creates MOC record and generates presigned S3 URLs
+     * - Accepts MOC metadata + file list (no actual files)
+     * - Returns MOC ID + presigned URLs for direct S3 upload
+     * - Client uploads files directly to S3 (bypassing API Gateway 10MB limit)
+     * - JWT authentication via Cognito
+     */
+    const initializeMocWithFilesFunction = new sst.aws.Function('InitializeMocWithFilesFunction', {
+      handler: 'mocInstructions/initialize-moc-with-files/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [postgres, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+      },
+    })
+
+    /**
+     * Finalize MOC with Files Lambda Function
+     * - Phase 2: Verifies file uploads and finalizes MOC
+     * - Confirms files exist in S3
+     * - Sets first image as thumbnail
+     * - Indexes MOC in Elasticsearch
+     * - Returns complete MOC data with all files
+     * - JWT authentication via Cognito
+     */
+    const finalizeMocWithFilesFunction = new sst.aws.Function('FinalizeMocWithFilesFunction', {
+      handler: 'mocInstructions/finalize-moc-with-files/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [postgres, openSearch, bucket],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+        LEGO_API_BUCKET_NAME: bucket.name,
+        LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
+      },
+    })
+
+    // MOC with Files Routes
+    api.route('POST /api/mocs/with-files/initialize', initializeMocWithFilesFunction)
+    api.route('POST /api/mocs/{mocId}/finalize', finalizeMocWithFilesFunction)
+
+    // ========================================
+    // MOC Gallery Image Linking Lambdas
+    // ========================================
+
+    /**
+     * Link Gallery Image to MOC Lambda
+     * - Creates association between gallery image and MOC
+     * - Validates ownership and existence
+     * - Prevents duplicate links
+     */
+    const linkGalleryImageFunction = new sst.aws.Function('LinkGalleryImageFunction', {
+      handler: 'mocInstructions/link-gallery-image/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    /**
+     * Unlink Gallery Image from MOC Lambda
+     * - Removes association between gallery image and MOC
+     * - Verifies ownership
+     */
+    const unlinkGalleryImageFunction = new sst.aws.Function('UnlinkGalleryImageFunction', {
+      handler: 'mocInstructions/unlink-gallery-image/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    /**
+     * Get MOC Gallery Images Lambda
+     * - Retrieves all gallery images linked to a MOC
+     * - Returns full image data with metadata
+     */
+    const getMocGalleryImagesFunction = new sst.aws.Function('GetMocGalleryImagesFunction', {
+      handler: 'mocInstructions/get-moc-gallery-images/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '10 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    // MOC Gallery Image Routes
+    api.route('POST /api/mocs/{id}/gallery-images', linkGalleryImageFunction)
+    api.route('DELETE /api/mocs/{id}/gallery-images/{galleryImageId}', unlinkGalleryImageFunction)
+    api.route('GET /api/mocs/{id}/gallery-images', getMocGalleryImagesFunction)
+
+    // ========================================
+    // MOC Analytics Lambdas
+    // ========================================
+
+    /**
+     * Get MOC Stats by Category Lambda
+     * - Returns statistics grouped by category/theme/tags
+     * - Top 10 categories with counts
+     */
+    const getMocStatsByCategoryFunction = new sst.aws.Function('GetMocStatsByCategoryFunction', {
+      handler: 'mocInstructions/get-moc-stats/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '15 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    /**
+     * Get MOC Uploads Over Time Lambda
+     * - Returns time-series data of uploads (last 12 months)
+     * - Grouped by month and category
+     */
+    const getMocUploadsOverTimeFunction = new sst.aws.Function('GetMocUploadsOverTimeFunction', {
+      handler: 'mocInstructions/get-moc-uploads-over-time/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '15 seconds',
+      memory: '512 MB',
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    // MOC Analytics Routes
+    api.route('GET /api/mocs/stats/by-category', getMocStatsByCategoryFunction)
+    api.route('GET /api/mocs/stats/uploads-over-time', getMocUploadsOverTimeFunction)
+
+    // ========================================
     // Story 3.1 & 3.2: Gallery Images Lambdas (Separate Handlers)
     // ========================================
 
@@ -632,21 +850,16 @@ export default $config({
     api.route('DELETE /api/albums/{id}', deleteAlbumFunction)
 
     // ========================================
-    // Story 3.5: Wishlist Lambda Handler
+    // Story 3.5: Wishlist Modular Lambda Handlers
     // ========================================
 
     /**
-     * Wishlist Lambda Function
-     * - Multi-method handler for wishlist CRUD and image uploads
+     * Shared configuration for wishlist handlers
+     * - All handlers connect to PostgreSQL, Redis, OpenSearch, S3
      * - JWT authentication via Cognito
-     * - Sharp image processing for uploads (requires 1024 MB memory per Story 3.7)
-     * - Connected to PostgreSQL, Redis, OpenSearch, S3
      */
-    const wishlistFunction = new sst.aws.Function('WishlistFunction', {
-      handler: 'wishlist/index.handler',
-      runtime: 'nodejs20.x',
-      timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
-      memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
+    const wishlistLambdaConfig = {
+      runtime: 'nodejs20.x' as const,
       vpc,
       link: [postgres, redis, openSearch, bucket],
       environment: {
@@ -655,16 +868,81 @@ export default $config({
         LEGO_API_BUCKET_NAME: bucket.name,
         LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
+    }
+
+    // List Wishlist Items Handler
+    const listWishlistFunction = new sst.aws.Function('ListWishlistFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/list-wishlist/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    // Get Wishlist Item Handler
+    const getWishlistItemFunction = new sst.aws.Function('GetWishlistItemFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/get-wishlist-item/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    // Create Wishlist Item Handler
+    const createWishlistItemFunction = new sst.aws.Function('CreateWishlistItemFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/create-wishlist-item/index.handler',
+      timeout: '15 seconds',
+      memory: '512 MB',
+    })
+
+    // Update Wishlist Item Handler
+    const updateWishlistItemFunction = new sst.aws.Function('UpdateWishlistItemFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/update-wishlist-item/index.handler',
+      timeout: '15 seconds',
+      memory: '512 MB',
+    })
+
+    // Delete Wishlist Item Handler
+    const deleteWishlistItemFunction = new sst.aws.Function('DeleteWishlistItemFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/delete-wishlist-item/index.handler',
+      timeout: '15 seconds',
+      memory: '512 MB',
+    })
+
+    // Reorder Wishlist Handler
+    const reorderWishlistFunction = new sst.aws.Function('ReorderWishlistFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/reorder-wishlist/index.handler',
+      timeout: '20 seconds',
+      memory: '512 MB',
+    })
+
+    // Upload Wishlist Image Handler - Requires high memory for Sharp image processing
+    const uploadWishlistImageFunction = new sst.aws.Function('UploadWishlistImageFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/upload-wishlist-image/index.handler',
+      timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
+      memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
+    })
+
+    // Search Wishlist Handler
+    const searchWishlistFunction = new sst.aws.Function('SearchWishlistFunction', {
+      ...wishlistLambdaConfig,
+      handler: 'wishlist/search-wishlist/index.handler',
+      timeout: '15 seconds',
+      memory: '512 MB',
     })
 
     // Wishlist API Routes (Story 3.5 AC #2)
-    api.route('GET /api/wishlist', wishlistFunction)
-    api.route('GET /api/wishlist/{id}', wishlistFunction)
-    api.route('POST /api/wishlist', wishlistFunction)
-    api.route('PATCH /api/wishlist/{id}', wishlistFunction)
-    api.route('DELETE /api/wishlist/{id}', wishlistFunction)
-    api.route('POST /api/wishlist/reorder', wishlistFunction) // Story 3.6 AC #6
-    api.route('POST /api/wishlist/{id}/image', wishlistFunction) // Story 3.7 AC #1
+    api.route('GET /api/wishlist', listWishlistFunction)
+    api.route('GET /api/wishlist/search', searchWishlistFunction)
+    api.route('GET /api/wishlist/{id}', getWishlistItemFunction)
+    api.route('POST /api/wishlist', createWishlistItemFunction)
+    api.route('PATCH /api/wishlist/{id}', updateWishlistItemFunction)
+    api.route('DELETE /api/wishlist/{id}', deleteWishlistItemFunction)
+    api.route('POST /api/wishlist/reorder', reorderWishlistFunction)
+    api.route('POST /api/wishlist/{id}/image', uploadWishlistImageFunction)
 
     // ========================================
     // MOC Parts Lists Lambda Handlers
@@ -823,6 +1101,24 @@ export default $config({
       mocFileUploadFunctionArn: mocFileUploadFunction.arn,
       mocFileDownloadFunctionName: mocFileDownloadFunction.name,
       mocFileDownloadFunctionArn: mocFileDownloadFunction.arn,
+      mocFileDeleteFunctionName: mocFileDeleteFunction.name,
+      mocFileDeleteFunctionArn: mocFileDeleteFunction.arn,
+      uploadPartsListFunctionName: uploadPartsListFunction.name,
+      uploadPartsListFunctionArn: uploadPartsListFunction.arn,
+      initializeMocWithFilesFunctionName: initializeMocWithFilesFunction.name,
+      initializeMocWithFilesFunctionArn: initializeMocWithFilesFunction.arn,
+      finalizeMocWithFilesFunctionName: finalizeMocWithFilesFunction.name,
+      finalizeMocWithFilesFunctionArn: finalizeMocWithFilesFunction.arn,
+      linkGalleryImageFunctionName: linkGalleryImageFunction.name,
+      linkGalleryImageFunctionArn: linkGalleryImageFunction.arn,
+      unlinkGalleryImageFunctionName: unlinkGalleryImageFunction.name,
+      unlinkGalleryImageFunctionArn: unlinkGalleryImageFunction.arn,
+      getMocGalleryImagesFunctionName: getMocGalleryImagesFunction.name,
+      getMocGalleryImagesFunctionArn: getMocGalleryImagesFunction.arn,
+      getMocStatsByCategoryFunctionName: getMocStatsByCategoryFunction.name,
+      getMocStatsByCategoryFunctionArn: getMocStatsByCategoryFunction.arn,
+      getMocUploadsOverTimeFunctionName: getMocUploadsOverTimeFunction.name,
+      getMocUploadsOverTimeFunctionArn: getMocUploadsOverTimeFunction.arn,
       // Gallery Functions (13 separate handlers)
       uploadImageFunctionName: uploadImageFunction.name,
       uploadImageFunctionArn: uploadImageFunction.arn,
@@ -848,8 +1144,23 @@ export default $config({
       updateAlbumFunctionArn: updateAlbumFunction.arn,
       deleteAlbumFunctionName: deleteAlbumFunction.name,
       deleteAlbumFunctionArn: deleteAlbumFunction.arn,
-      wishlistFunctionName: wishlistFunction.name,
-      wishlistFunctionArn: wishlistFunction.arn,
+      // Wishlist Functions (8 modular handlers)
+      listWishlistFunctionName: listWishlistFunction.name,
+      listWishlistFunctionArn: listWishlistFunction.arn,
+      getWishlistItemFunctionName: getWishlistItemFunction.name,
+      getWishlistItemFunctionArn: getWishlistItemFunction.arn,
+      createWishlistItemFunctionName: createWishlistItemFunction.name,
+      createWishlistItemFunctionArn: createWishlistItemFunction.arn,
+      updateWishlistItemFunctionName: updateWishlistItemFunction.name,
+      updateWishlistItemFunctionArn: updateWishlistItemFunction.arn,
+      deleteWishlistItemFunctionName: deleteWishlistItemFunction.name,
+      deleteWishlistItemFunctionArn: deleteWishlistItemFunction.arn,
+      reorderWishlistFunctionName: reorderWishlistFunction.name,
+      reorderWishlistFunctionArn: reorderWishlistFunction.arn,
+      uploadWishlistImageFunctionName: uploadWishlistImageFunction.name,
+      uploadWishlistImageFunctionArn: uploadWishlistImageFunction.arn,
+      searchWishlistFunctionName: searchWishlistFunction.name,
+      searchWishlistFunctionArn: searchWishlistFunction.arn,
       // MOC Parts Lists Functions (6 handlers)
       getPartsListsFunctionName: getPartsListsFunction.name,
       getPartsListsFunctionArn: getPartsListsFunction.arn,

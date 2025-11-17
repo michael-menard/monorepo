@@ -340,9 +340,31 @@ module.exports = function generator(plop) {
     description: 'Generate a new Lambda handler with JWT validation',
     prompts: [
       {
+        type: 'list',
+        name: 'structure',
+        message: 'Lambda structure:',
+        choices: [
+          { name: 'Modular (lego-api-serverless/{domain}/{function}/) - Recommended', value: 'modular' },
+          { name: 'Standalone (apps/api/lambda-{name}/) - Legacy', value: 'standalone' },
+        ],
+        default: 'modular',
+      },
+      {
+        type: 'input',
+        name: 'domain',
+        message: 'Domain/category (e.g., mocInstructions, gallery, wishlist):',
+        when: answers => answers.structure === 'modular',
+        validate: (input) => {
+          if (!input) {
+            return 'Domain is required for modular structure'
+          }
+          return true
+        },
+      },
+      {
         type: 'input',
         name: 'name',
-        message: 'Lambda handler name:',
+        message: 'Lambda handler name (kebab-case):',
         validate: (input) => {
           if (!input) {
             return 'Lambda handler name is required'
@@ -358,6 +380,13 @@ module.exports = function generator(plop) {
         name: 'description',
         message: 'Handler description:',
         default: (answers) => `Lambda handler for ${answers.name}`,
+      },
+      {
+        type: 'confirm',
+        name: 'needsDatabase',
+        message: 'Does this function need database access (@monorepo/db)?',
+        default: true,
+        when: answers => answers.structure === 'modular',
       },
       {
         type: 'list',
@@ -503,67 +532,95 @@ module.exports = function generator(plop) {
         },
       },
     ],
-    actions: [
-      // Core files
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/package.json',
-        templateFile: 'templates/lambda-package.json.hbs',
-      },
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/tsconfig.json',
-        templateFile: 'templates/lambda-tsconfig.json.hbs',
-      },
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/README.md',
-        templateFile: 'templates/lambda-README.md.hbs',
-      },
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/.env.example',
-        templateFile: 'templates/lambda-env.example.hbs',
-      },
-      // Main handler
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/index.ts',
-        templateFile: 'templates/lambda-index.ts.hbs',
-      },
-      // Schemas directory
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/schemas/request.ts',
-        templateFile: 'templates/lambda-schemas-request.ts.hbs',
-        skip: data => (!data.includeSchemas ? 'Skipping schemas' : false),
-      },
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/schemas/response.ts',
-        templateFile: 'templates/lambda-schemas-response.ts.hbs',
-        skip: data => (!data.includeSchemas ? 'Skipping schemas' : false),
-      },
-      // Utils directory
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/utils/response.ts',
-        templateFile: 'templates/lambda-utils-response.ts.hbs',
-      },
-      // Test files
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/__tests__/index.test.ts',
-        templateFile: 'templates/lambda-index.test.ts.hbs',
-        skip: data => (!data.includeTests ? 'Skipping tests' : false),
-      },
-      {
-        type: 'add',
-        path: 'apps/api/lambda-{{kebabCase name}}/vitest.config.ts',
-        templateFile: 'templates/lambda-vitest.config.ts.hbs',
-        skip: data => (!data.includeTests ? 'Skipping test config' : false),
-      },
-    ],
+    actions: (data) => {
+      const isModular = data.structure === 'modular'
+      const basePath = isModular
+        ? `apps/api/lego-api-serverless/{{domain}}/{{kebabCase name}}`
+        : `apps/api/lambda-{{kebabCase name}}`
+
+      const actions = []
+
+      // Modular structure (simplified - just index, package.json, README)
+      if (isModular) {
+        actions.push(
+          {
+            type: 'add',
+            path: `${basePath}/index.ts`,
+            templateFile: 'templates/lambda-modular-index.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/package.json`,
+            templateFile: 'templates/lambda-modular-package.json.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/README.md`,
+            templateFile: 'templates/lambda-modular-README.md.hbs',
+          }
+        )
+      } else {
+        // Standalone structure (legacy - full structure)
+        actions.push(
+          {
+            type: 'add',
+            path: `${basePath}/package.json`,
+            templateFile: 'templates/lambda-package.json.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/tsconfig.json`,
+            templateFile: 'templates/lambda-tsconfig.json.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/README.md`,
+            templateFile: 'templates/lambda-README.md.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/.env.example`,
+            templateFile: 'templates/lambda-env.example.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/index.ts`,
+            templateFile: 'templates/lambda-index.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/schemas/request.ts`,
+            templateFile: 'templates/lambda-schemas-request.ts.hbs',
+            skip: () => (!data.includeSchemas ? 'Skipping schemas' : false),
+          },
+          {
+            type: 'add',
+            path: `${basePath}/schemas/response.ts`,
+            templateFile: 'templates/lambda-schemas-response.ts.hbs',
+            skip: () => (!data.includeSchemas ? 'Skipping schemas' : false),
+          },
+          {
+            type: 'add',
+            path: `${basePath}/utils/response.ts`,
+            templateFile: 'templates/lambda-utils-response.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/__tests__/index.test.ts`,
+            templateFile: 'templates/lambda-index.test.ts.hbs',
+            skip: () => (!data.includeTests ? 'Skipping tests' : false),
+          },
+          {
+            type: 'add',
+            path: `${basePath}/vitest.config.ts`,
+            templateFile: 'templates/lambda-vitest.config.ts.hbs',
+            skip: () => (!data.includeTests ? 'Skipping test config' : false),
+          }
+        )
+      }
+
+      return actions
+    },
   })
 
   // PRD generator

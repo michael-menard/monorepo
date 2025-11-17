@@ -1,8 +1,20 @@
+/**
+ * Parts List Parser Utility
+ *
+ * Parses parts list files (CSV, XML) for LEGO MOC instructions.
+ * Extracts part numbers, quantities, colors, and calculates total piece count.
+ *
+ * Supports:
+ * - CSV files with automatic header detection
+ * - XML files with flexible element naming
+ * - Validation using Zod schemas
+ */
+
 import { Readable } from 'stream'
 import { z } from 'zod'
 import csv from 'csv-parser'
 import { DOMParser } from 'xmldom'
-import { createLogger } from '../utils/logger'
+import { createLogger } from './logger'
 
 const logger = createLogger('parts-list-parser')
 
@@ -48,12 +60,16 @@ const PartEntrySchema = z.object({
   category: z.string().optional(),
 })
 
-// File validation
-export function validatePartsListFile(file: Express.Multer.File): ParsingError[] {
+// File validation for Lambda (Buffer-based)
+export function validatePartsListFile(
+  filename: string,
+  mimeType: string,
+  size: number,
+): ParsingError[] {
   const errors: ParsingError[] = []
 
   // Check file size (max 10MB)
-  if (file.size > 10 * 1024 * 1024) {
+  if (size > 10 * 1024 * 1024) {
     errors.push({
       code: 'FILE_TOO_LARGE',
       message: 'File size exceeds 10MB limit',
@@ -61,18 +77,18 @@ export function validatePartsListFile(file: Express.Multer.File): ParsingError[]
   }
 
   // Check file extension
-  const extension = file.originalname.toLowerCase().split('.').pop()
-  logger.info({ extension }, 'File extension detected')
+  const extension = filename.toLowerCase().split('.').pop()
+  logger.info('File extension detected', { extension })
 
-  if (!['csv', 'txt'].includes(extension || '')) {
-    logger.warn({ extension }, 'Invalid file type')
+  if (!['csv', 'txt', 'xml'].includes(extension || '')) {
+    logger.warn('Invalid file type', { extension })
     errors.push({
       code: 'INVALID_FILE_TYPE',
-      message: 'File must be CSV or TXT format',
+      message: 'File must be CSV, TXT, or XML format',
     })
   }
 
-  // Check MIME type - align with multer configuration
+  // Check MIME type - align with Lambda multipart parsing
   const validMimeTypes = [
     'text/csv',
     'application/csv',
@@ -84,15 +100,15 @@ export function validatePartsListFile(file: Express.Multer.File): ParsingError[]
   ]
 
   logger.info(
-    { mimetype: file.mimetype, valid: validMimeTypes.includes(file.mimetype) },
     'MIME type check',
+    { mimetype: mimeType, valid: validMimeTypes.includes(mimeType) },
   )
 
-  if (!validMimeTypes.includes(file.mimetype)) {
-    logger.warn({ mimetype: file.mimetype }, 'Invalid MIME type')
+  if (!validMimeTypes.includes(mimeType)) {
+    logger.warn('Invalid MIME type', { mimetype: mimeType })
     errors.push({
       code: 'INVALID_MIME_TYPE',
-      message: `Invalid MIME type: ${file.mimetype}. Expected: ${validMimeTypes.join(', ')}`,
+      message: `Invalid MIME type: ${mimeType}. Expected: ${validMimeTypes.join(', ')}`,
     })
   }
 
@@ -101,7 +117,7 @@ export function validatePartsListFile(file: Express.Multer.File): ParsingError[]
 
 // CSV Parser with header detection - simplified approach
 export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResult> {
-  logger.info({ bufferSize: fileBuffer.length }, 'Starting CSV parsing')
+  logger.info('Starting CSV parsing', { bufferSize: fileBuffer.length })
 
   return new Promise(resolve => {
     const parts: PartEntry[] = []
@@ -111,7 +127,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
     let headerMapping: { [key: string]: string } = {}
 
     const csvContent = fileBuffer.toString()
-    logger.debug({ preview: csvContent.substring(0, 200) }, 'CSV content preview')
+    logger.debug('CSV content preview', { preview: csvContent.substring(0, 200) })
 
     // Split into lines to detect header
     const lines = csvContent.split('\n').filter(line => line.trim())
@@ -130,7 +146,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
 
     // Parse first line to determine if it's a header
     const firstLine = lines[0].split(',').map(cell => cell.trim())
-    logger.debug({ firstLine }, 'First line cells')
+    logger.debug('First line cells', { firstLine })
 
     // Check if first line looks like headers
     const headerKeywords = [
@@ -147,13 +163,13 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
       headerKeywords.some(keyword => cell.toLowerCase().includes(keyword)),
     )
 
-    logger.info({ hasHeader }, 'Header detected')
+    logger.info('Header detected', { hasHeader })
 
     // Create header mapping if headers are detected
     if (hasHeader) {
       firstLine.forEach((header, index) => {
         const normalized = header.toLowerCase().trim()
-        logger.debug({ index, header, normalized }, 'Processing header')
+        logger.debug('Processing header', { index, header, normalized })
 
         if (
           ['part', 'part_number', 'partno', 'part_no', 'element_id', 'elementid'].includes(
@@ -161,21 +177,21 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
           )
         ) {
           headerMapping[index] = 'partNumber'
-          logger.debug({ index, header, field: 'partNumber' }, 'Mapped column')
+          logger.debug('Mapped column', { index, header, field: 'partNumber' })
         } else if (['qty', 'quantity', 'count', 'amount'].includes(normalized)) {
           headerMapping[index] = 'quantity'
-          logger.debug({ index, header, field: 'quantity' }, 'Mapped column')
+          logger.debug('Mapped column', { index, header, field: 'quantity' })
         } else if (['color', 'colour', 'part_color'].includes(normalized)) {
           headerMapping[index] = 'color'
-          logger.debug({ index, header, field: 'color' }, 'Mapped column')
+          logger.debug('Mapped column', { index, header, field: 'color' })
         } else if (['description', 'desc', 'part_description', 'name'].includes(normalized)) {
           headerMapping[index] = 'description'
-          logger.debug({ index, header, field: 'description' }, 'Mapped column')
+          logger.debug('Mapped column', { index, header, field: 'description' })
         } else if (['category', 'cat', 'type', 'part_category'].includes(normalized)) {
           headerMapping[index] = 'category'
-          logger.debug({ index, header, field: 'category' }, 'Mapped column')
+          logger.debug('Mapped column', { index, header, field: 'category' })
         } else {
-          logger.warn({ index, header }, 'No mapping for column')
+          logger.warn('No mapping for column', { index, header })
         }
       })
     } else {
@@ -186,7 +202,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
         2: 'color',
         3: 'description',
       }
-      logger.info({ headerMapping }, 'No headers detected, using default mapping')
+      logger.info('No headers detected, using default mapping', { headerMapping })
     }
 
     const stream = Readable.from(csvContent)
@@ -202,18 +218,18 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
 
         // Skip header row if it exists
         if (isFirstRow && hasHeader) {
-          logger.debug({ row: Object.values(row).join(',') }, 'Skipping header row')
+          logger.debug('Skipping header row', { row: Object.values(row).join(',') })
           isFirstRow = false
           return
         }
         isFirstRow = false
 
-        logger.debug({ lineNumber, row }, 'Processing CSV row')
+        logger.debug('Processing CSV row', { lineNumber, row })
 
         try {
           // Convert row object to array of values
           const values = Object.values(row) as string[]
-          logger.debug({ values }, 'Row values')
+          logger.debug('Row values', { values })
 
           // Map values to part data using our header mapping
           const partData: any = {}
@@ -222,28 +238,28 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
             const fieldName = headerMapping[columnIndex]
             const value = values[parseInt(columnIndex)] || ''
             partData[fieldName] = value
-            logger.debug({ columnIndex, value, fieldName }, 'Column mapping')
+            logger.debug('Column mapping', { columnIndex, value, fieldName })
           })
 
-          logger.debug({ partData }, 'Mapped part data')
+          logger.debug('Mapped part data', { partData })
 
           // Convert quantity to number
           if (partData.quantity) {
             const originalQty = partData.quantity
             partData.quantity = parseInt(partData.quantity.toString(), 10)
-            logger.debug({ originalQty, converted: partData.quantity }, 'Converted quantity')
+            logger.debug('Converted quantity', { originalQty, converted: partData.quantity })
           }
 
-          logger.debug({ lineNumber, partData }, 'Validating row')
+          logger.debug('Validating row', { lineNumber, partData })
 
           // Validate the row
           const validation = PartEntrySchema.safeParse(partData)
 
           if (validation.success) {
-            logger.debug({ lineNumber, data: validation.data }, 'Row valid')
+            logger.debug('Row valid', { lineNumber, data: validation.data })
             parts.push(validation.data)
           } else {
-            logger.warn({ lineNumber, issues: validation.error.issues }, 'Row validation failed')
+            logger.warn('Row validation failed', { lineNumber, issues: validation.error.issues })
             validation.error.issues.forEach(issue => {
               errors.push({
                 code: 'VALIDATION_ERROR',
@@ -253,7 +269,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
             })
           }
         } catch (error) {
-          logger.error({ err: error, lineNumber }, 'Row parsing error')
+          logger.error('Row parsing error', { err: error, lineNumber })
           errors.push({
             code: 'PARSING_ERROR',
             message: `Line ${lineNumber}: Failed to parse row - ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -263,7 +279,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
       })
       .on('end', () => {
         logger.info('CSV parsing completed')
-        logger.info({ partsCount: parts.length, errorsCount: errors.length }, 'Results')
+        logger.info('Results', { partsCount: parts.length, errorsCount: errors.length })
 
         if (parts.length === 0 && errors.length === 0) {
           logger.warn('Empty file detected')
@@ -274,7 +290,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
         }
 
         const totalPieceCount = parts.reduce((sum, part) => sum + part.quantity, 0)
-        logger.info({ totalPieceCount }, 'Total piece count')
+        logger.info('Total piece count', { totalPieceCount })
 
         const result = {
           success: errors.length === 0,
@@ -298,7 +314,7 @@ export async function parseCSVPartsList(fileBuffer: Buffer): Promise<ParsingResu
           errors,
         }
 
-        logger.debug({ result }, 'Final CSV parsing result')
+        logger.debug('Final CSV parsing result', { result })
         resolve(result)
       })
       .on('error', error => {
@@ -340,7 +356,7 @@ export async function parseXMLPartsList(fileBuffer: Buffer): Promise<ParsingResu
     }
 
     // Try different XML structures
-    let partElements: Element[] = []
+    let partElements: any[] = []
 
     // Common XML structures for LEGO parts lists
     const possibleSelectors = [
@@ -485,41 +501,48 @@ export async function parseXMLPartsList(fileBuffer: Buffer): Promise<ParsingResu
   }
 }
 
-// Main parsing function
-export async function parsePartsListFile(file: Express.Multer.File): Promise<ParsingResult> {
-  logger.info({ filename: file.originalname }, 'Starting parsePartsListFile')
+// Main parsing function (Buffer-based for Lambda)
+export async function parsePartsListFile(
+  filename: string,
+  mimeType: string,
+  fileBuffer: Buffer,
+): Promise<ParsingResult> {
+  logger.info('Starting parsePartsListFile', { filename, mimeType, size: fileBuffer.length })
 
   // Validate file first
-  const validationErrors = validatePartsListFile(file)
+  const validationErrors = validatePartsListFile(filename, mimeType, fileBuffer.length)
   if (validationErrors.length > 0) {
-    logger.warn({ errors: validationErrors }, 'File validation failed')
+    logger.warn('File validation failed', { errors: validationErrors })
     return {
       success: false,
       errors: validationErrors,
     }
   }
 
-  const extension = file.originalname.toLowerCase().split('.').pop()
-  logger.info({ extension }, 'File extension detected')
+  const extension = filename.toLowerCase().split('.').pop()
+  logger.info('File extension detected', { extension })
 
   try {
     if (extension === 'csv' || extension === 'txt') {
       logger.info('Parsing as CSV')
-      return await parseCSVPartsList(file.buffer)
+      return await parseCSVPartsList(fileBuffer)
+    } else if (extension === 'xml') {
+      logger.info('Parsing as XML')
+      return await parseXMLPartsList(fileBuffer)
     } else {
-      logger.warn({ extension }, 'Unsupported format')
+      logger.warn('Unsupported format', { extension })
       return {
         success: false,
         errors: [
           {
             code: 'UNSUPPORTED_FORMAT',
-            message: `Unsupported file format: ${extension}. Currently only CSV and TXT files are supported.`,
+            message: `Unsupported file format: ${extension}. Supported formats: CSV, TXT, XML`,
           },
         ],
       }
     }
   } catch (error) {
-    logger.error({ err: error }, 'Parsing exception')
+    logger.error('Parsing exception', { err: error })
     return {
       success: false,
       errors: [
