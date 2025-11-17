@@ -1,0 +1,90 @@
+/**
+ * Response utilities for {{pascalCase name}} Lambda
+ *
+ * Standardized response helpers following API Gateway v2 format.
+ * Following coding standards: Never use `throw new Error()` - use typed responses.
+ */
+
+import { APIGatewayProxyResultV2 } from 'aws-lambda'
+
+/**
+ * Create a successful response
+ */
+export function createSuccessResponse(
+  data: any,
+  statusCode: number = 200
+): APIGatewayProxyResultV2 {
+  return {
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    },
+    body: JSON.stringify(data),
+  }
+}
+
+/**
+ * Create an error response
+ */
+export function createErrorResponse(
+  statusCode: number,
+  errorCode: string,
+  message: string,
+  details?: any
+): APIGatewayProxyResultV2 {
+  return {
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    },
+    body: JSON.stringify({
+      error: {
+        code: errorCode,
+        message,
+        ...(details && { details }),
+      },
+      timestamp: new Date().toISOString(),
+    }),
+  }
+}
+
+/**
+ * Create a paginated response
+ */
+export function createPaginatedResponse(
+  data: any[],
+  total: number,
+  limit: number,
+  offset: number,
+  statusCode: number = 200
+): APIGatewayProxyResultV2 {
+  return createSuccessResponse({
+    data,
+    pagination: {
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total,
+    },
+  }, statusCode)
+}
+
+/**
+ * Create a no content response (204)
+ */
+export function createNoContentResponse(): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    },
+  }
+}

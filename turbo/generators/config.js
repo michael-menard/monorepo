@@ -335,6 +335,237 @@ module.exports = function generator(plop) {
     ],
   })
 
+  // Lambda handler generator
+  plop.setGenerator('lambda', {
+    description: 'Generate a new Lambda handler with JWT validation',
+    prompts: [
+      {
+        type: 'input',
+        name: 'name',
+        message: 'Lambda handler name:',
+        validate: (input) => {
+          if (!input) {
+            return 'Lambda handler name is required'
+          }
+          if (input.includes(' ')) {
+            return 'Lambda handler name cannot include spaces'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'description',
+        message: 'Handler description:',
+        default: (answers) => `Lambda handler for ${answers.name}`,
+      },
+      {
+        type: 'list',
+        name: 'authType',
+        message: 'Authentication type:',
+        choices: [
+          { name: 'Basic JWT validation (API Gateway only)', value: 'basic' },
+          { name: 'Enhanced JWT validation (with Cognito verification)', value: 'enhanced' },
+          { name: 'Resource ownership validation (user can only access own resources)', value: 'ownership' },
+          { name: 'No authentication', value: 'none' },
+        ],
+        default: 'enhanced',
+      },
+      {
+        type: 'input',
+        name: 'cognitoUserPoolId',
+        message: 'Cognito User Pool ID (e.g., us-east-1_ABC123):',
+        when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
+        validate: (input) => {
+          if (!input) {
+            return 'User Pool ID is required for enhanced authentication'
+          }
+          if (!/^[a-z0-9-]+_[A-Za-z0-9]+$/.test(input)) {
+            return 'Invalid User Pool ID format (should be like us-east-1_ABC123)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'cognitoClientId',
+        message: 'Cognito Client ID:',
+        when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
+        validate: (input) => {
+          if (!input) {
+            return 'Client ID is required for enhanced authentication'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'awsRegion',
+        message: 'AWS Region:',
+        default: 'us-east-1',
+        when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
+      },
+      {
+        type: 'confirm',
+        name: 'includeTests',
+        message: 'Include test files?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'includeSchemas',
+        message: 'Include example schemas?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'addToSst',
+        message: 'Add Lambda to SST configuration (apps/api/lego-api-serverless/sst.config.ts)?',
+        default: false,
+      },
+      {
+        type: 'list',
+        name: 'apiGatewayChoice',
+        message: 'API Gateway configuration:',
+        choices: [
+          { name: 'Add to existing API Gateway (LegoApi)', value: 'existing' },
+          { name: 'Create new API Gateway', value: 'new' },
+          { name: 'No API Gateway (Lambda only)', value: 'none' },
+        ],
+        default: 'existing',
+        when: answers => answers.addToSst,
+      },
+      {
+        type: 'input',
+        name: 'newApiGatewayName',
+        message: 'New API Gateway name (PascalCase):',
+        default: answers => `${answers.name.replace(/[^a-zA-Z0-9]/g, '')}Api`,
+        when: answers => answers.addToSst && answers.apiGatewayChoice === 'new',
+        validate: (input) => {
+          if (!input) {
+            return 'API Gateway name is required'
+          }
+          if (!/^[A-Z][a-zA-Z0-9]*$/.test(input)) {
+            return 'API Gateway name must be PascalCase (e.g., MyApi)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'existingApiGatewayName',
+        message: 'Existing API Gateway variable name:',
+        default: 'api',
+        when: answers => answers.addToSst && answers.apiGatewayChoice === 'existing',
+        validate: (input) => {
+          if (!input) {
+            return 'API Gateway variable name is required'
+          }
+          if (!/^[a-z][a-zA-Z0-9]*$/.test(input)) {
+            return 'Variable name must be camelCase (e.g., api, myApi)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'apiRoute',
+        message: 'API route path (e.g., /api/my-endpoint):',
+        default: answers => `/api/${answers.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        when: answers => answers.addToSst && answers.apiGatewayChoice !== 'none',
+        validate: (input) => {
+          if (!input.startsWith('/')) {
+            return 'Route must start with /'
+          }
+          if (input.includes(' ')) {
+            return 'Route cannot contain spaces'
+          }
+          return true
+        },
+      },
+      {
+        type: 'checkbox',
+        name: 'httpMethods',
+        message: 'HTTP methods to support:',
+        choices: [
+          { name: 'GET', value: 'GET', checked: true },
+          { name: 'POST', value: 'POST', checked: true },
+          { name: 'PUT', value: 'PUT', checked: false },
+          { name: 'PATCH', value: 'PATCH', checked: false },
+          { name: 'DELETE', value: 'DELETE', checked: false },
+        ],
+        when: answers => answers.addToSst && answers.apiGatewayChoice !== 'none',
+        validate: (input) => {
+          if (input.length === 0) {
+            return 'At least one HTTP method must be selected'
+          }
+          return true
+        },
+      },
+    ],
+    actions: [
+      // Core files
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/package.json',
+        templateFile: 'templates/lambda-package.json.hbs',
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/tsconfig.json',
+        templateFile: 'templates/lambda-tsconfig.json.hbs',
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/README.md',
+        templateFile: 'templates/lambda-README.md.hbs',
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/.env.example',
+        templateFile: 'templates/lambda-env.example.hbs',
+      },
+      // Main handler
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/index.ts',
+        templateFile: 'templates/lambda-index.ts.hbs',
+      },
+      // Schemas directory
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/schemas/request.ts',
+        templateFile: 'templates/lambda-schemas-request.ts.hbs',
+        skip: data => (!data.includeSchemas ? 'Skipping schemas' : false),
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/schemas/response.ts',
+        templateFile: 'templates/lambda-schemas-response.ts.hbs',
+        skip: data => (!data.includeSchemas ? 'Skipping schemas' : false),
+      },
+      // Utils directory
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/utils/response.ts',
+        templateFile: 'templates/lambda-utils-response.ts.hbs',
+      },
+      // Test files
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/__tests__/index.test.ts',
+        templateFile: 'templates/lambda-index.test.ts.hbs',
+        skip: data => (!data.includeTests ? 'Skipping tests' : false),
+      },
+      {
+        type: 'add',
+        path: 'apps/api/lambda-{{kebabCase name}}/vitest.config.ts',
+        templateFile: 'templates/lambda-vitest.config.ts.hbs',
+        skip: data => (!data.includeTests ? 'Skipping test config' : false),
+      },
+    ],
+  })
+
   // PRD generator
   plop.setGenerator('prd', {
     description: 'Generate a Product Requirements Document',

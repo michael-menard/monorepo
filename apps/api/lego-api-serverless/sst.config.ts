@@ -349,7 +349,7 @@ export default $config({
      * - No authentication required (public endpoint)
      */
     const healthCheckFunction = new sst.aws.Function('HealthCheckFunction', {
-      handler: 'src/functions/health.handler',
+      handler: 'health/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds',
       memory: '256 MB',
@@ -418,7 +418,7 @@ export default $config({
      * - Connected to PostgreSQL, Redis, OpenSearch, S3
      */
     const mocInstructionsFunction = new sst.aws.Function('MocInstructionsFunction', {
-      handler: 'src/functions/moc-instructions.handler',
+      handler: 'mocInstructions/instructions/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds',
       memory: '512 MB',
@@ -455,7 +455,7 @@ export default $config({
      * - Creates database records
      */
     const mocFileUploadFunction = new sst.aws.Function('MocFileUploadFunction', {
-      handler: 'src/functions/moc-file-upload.handler',
+      handler: 'mocInstructions/fileUpload/index.handler',
       runtime: 'nodejs20.x',
       timeout: '60 seconds', // Longer timeout for file uploads
       memory: '1024 MB', // More memory for file processing
@@ -484,7 +484,7 @@ export default $config({
      * - URLs valid for 1 hour
      */
     const mocFileDownloadFunction = new sst.aws.Function('MocFileDownloadFunction', {
-      handler: 'src/functions/moc-file-download.handler',
+      handler: 'mocInstructions/fileDownload/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -501,21 +501,14 @@ export default $config({
     api.route('GET /api/mocs/{mocId}/files/{fileId}/download', mocFileDownloadFunction)
 
     // ========================================
-    // Story 3.1 & 3.2: Gallery Images Lambda
+    // Story 3.1 & 3.2: Gallery Images Lambdas (Separate Handlers)
     // ========================================
 
     /**
-     * Gallery Images Lambda Function
-     * - Multi-method handler for gallery CRUD and image uploads
-     * - JWT authentication via Cognito
-     * - Sharp image processing for uploads (requires 2048 MB memory)
-     * - Connected to PostgreSQL, Redis, OpenSearch, S3
+     * Shared Lambda configuration for gallery handlers
      */
-    const galleryFunction = new sst.aws.Function('GalleryFunction', {
-      handler: 'src/functions/gallery.handler',
-      runtime: 'nodejs20.x',
-      timeout: '60 seconds', // Story 3.2 AC #9: Longer timeout for Sharp processing
-      memory: '2048 MB', // Story 3.2 AC #9: Required for Sharp image processing
+    const galleryLambdaConfig = {
+      runtime: 'nodejs20.x' as const,
       vpc,
       link: [postgres, redis, openSearch, bucket],
       environment: {
@@ -524,21 +517,119 @@ export default $config({
         LEGO_API_BUCKET_NAME: bucket.name,
         LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
+    }
+
+    // Image Upload Handler - Requires high memory for Sharp image processing
+    const uploadImageFunction = new sst.aws.Function('UploadImageFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/upload-image/index.handler',
+      timeout: '60 seconds', // Story 3.2 AC #9: Longer timeout for Sharp processing
+      memory: '2048 MB', // Story 3.2 AC #9: Required for Sharp image processing
     })
 
-    // Gallery API Routes
-    api.route('GET /api/images', galleryFunction)
-    api.route('GET /api/images/{id}', galleryFunction)
-    api.route('POST /api/images', galleryFunction) // Story 3.2: Upload with Sharp processing
-    api.route('PATCH /api/images/{id}', galleryFunction)
-    api.route('DELETE /api/images/{id}', galleryFunction)
+    // Image List Handler
+    const listImagesFunction = new sst.aws.Function('ListImagesFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/list-images/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Image Search Handler - Story 3.8: Gallery and Wishlist Search
+    const searchImagesFunction = new sst.aws.Function('SearchImagesFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/search-images/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Get Single Image Handler
+    const getImageFunction = new sst.aws.Function('GetImageFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/get-image/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    // Update Image Handler
+    const updateImageFunction = new sst.aws.Function('UpdateImageFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/update-image/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Delete Image Handler
+    const deleteImageFunction = new sst.aws.Function('DeleteImageFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/delete-image/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Flag Image Handler
+    const flagImageFunction = new sst.aws.Function('FlagImageFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/flag-image/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    // Create Album Handler
+    const createAlbumFunction = new sst.aws.Function('CreateAlbumFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/create-album/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // List Albums Handler
+    const listAlbumsFunction = new sst.aws.Function('ListAlbumsFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/list-albums/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Get Album Handler
+    const getAlbumFunction = new sst.aws.Function('GetAlbumFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/get-album/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Update Album Handler
+    const updateAlbumFunction = new sst.aws.Function('UpdateAlbumFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/update-album/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Delete Album Handler
+    const deleteAlbumFunction = new sst.aws.Function('DeleteAlbumFunction', {
+      ...galleryLambdaConfig,
+      handler: 'gallery/delete-album/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    // Gallery Image API Routes
+    api.route('POST /api/images', uploadImageFunction) // Story 3.2: Upload with Sharp processing
+    api.route('GET /api/images', listImagesFunction)
+    api.route('GET /api/images/search', searchImagesFunction) // Story 3.8: Search endpoint
+    api.route('GET /api/images/{id}', getImageFunction)
+    api.route('PATCH /api/images/{id}', updateImageFunction)
+    api.route('DELETE /api/images/{id}', deleteImageFunction)
+    api.route('POST /api/flag', flagImageFunction)
 
     // Album API Routes (Story 3.4)
-    api.route('GET /api/albums', galleryFunction)
-    api.route('GET /api/albums/{id}', galleryFunction)
-    api.route('POST /api/albums', galleryFunction)
-    api.route('PATCH /api/albums/{id}', galleryFunction)
-    api.route('DELETE /api/albums/{id}', galleryFunction)
+    api.route('POST /api/albums', createAlbumFunction)
+    api.route('GET /api/albums', listAlbumsFunction)
+    api.route('GET /api/albums/{id}', getAlbumFunction)
+    api.route('PATCH /api/albums/{id}', updateAlbumFunction)
+    api.route('DELETE /api/albums/{id}', deleteAlbumFunction)
 
     // ========================================
     // Story 3.5: Wishlist Lambda Handler
@@ -552,7 +643,7 @@ export default $config({
      * - Connected to PostgreSQL, Redis, OpenSearch, S3
      */
     const wishlistFunction = new sst.aws.Function('WishlistFunction', {
-      handler: 'src/functions/wishlist.handler',
+      handler: 'wishlist/index.handler',
       runtime: 'nodejs20.x',
       timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
       memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
@@ -587,7 +678,7 @@ export default $config({
      * - Read-only operation
      */
     const profileGetFunction = new sst.aws.Function('ProfileGetFunction', {
-      handler: 'src/functions/profile-get.handler',
+      handler: 'profile/getProfile/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '512 MB',
@@ -607,7 +698,7 @@ export default $config({
      * - Fetches updated profile (requires PostgreSQL for stats)
      */
     const profileUpdateFunction = new sst.aws.Function('ProfileUpdateFunction', {
-      handler: 'src/functions/profile-update.handler',
+      handler: 'profile/updateProfile/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '512 MB',
@@ -629,7 +720,7 @@ export default $config({
      * - Requires higher memory for Sharp
      */
     const profileAvatarUploadFunction = new sst.aws.Function('ProfileAvatarUploadFunction', {
-      handler: 'src/functions/profile-avatar-upload.handler',
+      handler: 'profile/avatarUpload/index.handler',
       runtime: 'nodejs20.x',
       timeout: '60 seconds', // Longer timeout for image processing
       memory: '2048 MB', // High memory required for Sharp image processing
@@ -651,7 +742,7 @@ export default $config({
      * - Lightweight operation
      */
     const profileAvatarDeleteFunction = new sst.aws.Function('ProfileAvatarDeleteFunction', {
-      handler: 'src/functions/profile-avatar-delete.handler',
+      handler: 'profile/avatarDelete/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -677,6 +768,124 @@ export default $config({
       auth: { jwt: { authorizer: cognitoAuthorizer } },
     })
     api.route('DELETE /api/users/{id}/avatar', profileAvatarDeleteFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+
+    // ========================================
+    // MOC Parts Lists Lambda Handlers
+    // ========================================
+
+    /**
+     * Shared configuration for MOC parts list handlers
+     * - All connect to PostgreSQL for parts list management
+     * - JWT authentication via Cognito
+     * - No image processing, S3, or search needed
+     */
+    const mocPartsListsLambdaConfig = {
+      runtime: 'nodejs20.x' as const,
+      vpc,
+      link: [postgres],
+      environment: {
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    }
+
+    /**
+     * Get Parts Lists for MOC
+     * - Retrieves all parts lists for a specific MOC
+     * - Verifies MOC ownership
+     * - Returns ordered by creation date
+     */
+    const getPartsListsFunction = new sst.aws.Function('GetPartsListsFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'moc-parts-lists/get-parts-lists/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    /**
+     * Create Parts List
+     * - Creates new parts list for a MOC
+     * - Optionally creates parts list items
+     * - Verifies MOC ownership
+     */
+    const createPartsListFunction = new sst.aws.Function('CreatePartsListFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'moc-parts-lists/create-parts-list/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    /**
+     * Update Parts List (Full Replacement)
+     * - Updates parts list metadata and/or parts
+     * - Replaces all parts if parts array provided
+     * - Automatically updates counts
+     */
+    const updatePartsListFunction = new sst.aws.Function('UpdatePartsListFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'moc-parts-lists/update-parts-list/index.handler',
+      timeout: '30 seconds',
+      memory: '512 MB',
+    })
+
+    /**
+     * Update Parts List Status (Partial Update)
+     * - Updates only the status field
+     * - Lightweight operation for status transitions
+     */
+    const updatePartsListStatusFunction = new sst.aws.Function('UpdatePartsListStatusFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'moc-parts-lists/update-parts-list-status/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    /**
+     * Delete Parts List
+     * - Deletes parts list and all associated items
+     * - Cascade delete for parts list items
+     * - Verifies MOC ownership
+     */
+    const deletePartsListFunction = new sst.aws.Function('DeletePartsListFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'moc-parts-lists/delete-parts-list/index.handler',
+      timeout: '10 seconds',
+      memory: '256 MB',
+    })
+
+    /**
+     * Get User Parts Lists Summary
+     * - Aggregates statistics across all user's MOCs
+     * - Provides dashboard overview
+     * - Groups by status with totals
+     */
+    const getUserPartsListsSummaryFunction = new sst.aws.Function('GetUserPartsListsSummaryFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'moc-parts-lists/get-user-summary/index.handler',
+      timeout: '20 seconds',
+      memory: '512 MB',
+    })
+
+    // MOC Parts Lists API Routes
+    // All routes require JWT authentication via Cognito
+    api.route('GET /api/moc-instructions/{mocId}/parts-lists', getPartsListsFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('POST /api/moc-instructions/{mocId}/parts-lists', createPartsListFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('PUT /api/moc-instructions/{mocId}/parts-lists/{partsListId}', updatePartsListFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('PATCH /api/moc-instructions/{mocId}/parts-lists/{partsListId}/status', updatePartsListStatusFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('DELETE /api/moc-instructions/{mocId}/parts-lists/{partsListId}', deletePartsListFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
+    api.route('GET /api/user/parts-lists/summary', getUserPartsListsSummaryFunction, {
       auth: { jwt: { authorizer: cognitoAuthorizer } },
     })
 
@@ -719,8 +928,31 @@ export default $config({
       mocFileUploadFunctionArn: mocFileUploadFunction.arn,
       mocFileDownloadFunctionName: mocFileDownloadFunction.name,
       mocFileDownloadFunctionArn: mocFileDownloadFunction.arn,
-      galleryFunctionName: galleryFunction.name,
-      galleryFunctionArn: galleryFunction.arn,
+      // Gallery Functions (13 separate handlers)
+      uploadImageFunctionName: uploadImageFunction.name,
+      uploadImageFunctionArn: uploadImageFunction.arn,
+      listImagesFunctionName: listImagesFunction.name,
+      listImagesFunctionArn: listImagesFunction.arn,
+      searchImagesFunctionName: searchImagesFunction.name,
+      searchImagesFunctionArn: searchImagesFunction.arn,
+      getImageFunctionName: getImageFunction.name,
+      getImageFunctionArn: getImageFunction.arn,
+      updateImageFunctionName: updateImageFunction.name,
+      updateImageFunctionArn: updateImageFunction.arn,
+      deleteImageFunctionName: deleteImageFunction.name,
+      deleteImageFunctionArn: deleteImageFunction.arn,
+      flagImageFunctionName: flagImageFunction.name,
+      flagImageFunctionArn: flagImageFunction.arn,
+      createAlbumFunctionName: createAlbumFunction.name,
+      createAlbumFunctionArn: createAlbumFunction.arn,
+      listAlbumsFunctionName: listAlbumsFunction.name,
+      listAlbumsFunctionArn: listAlbumsFunction.arn,
+      getAlbumFunctionName: getAlbumFunction.name,
+      getAlbumFunctionArn: getAlbumFunction.arn,
+      updateAlbumFunctionName: updateAlbumFunction.name,
+      updateAlbumFunctionArn: updateAlbumFunction.arn,
+      deleteAlbumFunctionName: deleteAlbumFunction.name,
+      deleteAlbumFunctionArn: deleteAlbumFunction.arn,
       wishlistFunctionName: wishlistFunction.name,
       wishlistFunctionArn: wishlistFunction.arn,
       profileGetFunctionName: profileGetFunction.name,
@@ -731,6 +963,19 @@ export default $config({
       profileAvatarUploadFunctionArn: profileAvatarUploadFunction.arn,
       profileAvatarDeleteFunctionName: profileAvatarDeleteFunction.name,
       profileAvatarDeleteFunctionArn: profileAvatarDeleteFunction.arn,
+      // MOC Parts Lists Functions (6 handlers)
+      getPartsListsFunctionName: getPartsListsFunction.name,
+      getPartsListsFunctionArn: getPartsListsFunction.arn,
+      createPartsListFunctionName: createPartsListFunction.name,
+      createPartsListFunctionArn: createPartsListFunction.arn,
+      updatePartsListFunctionName: updatePartsListFunction.name,
+      updatePartsListFunctionArn: updatePartsListFunction.arn,
+      updatePartsListStatusFunctionName: updatePartsListStatusFunction.name,
+      updatePartsListStatusFunctionArn: updatePartsListStatusFunction.arn,
+      deletePartsListFunctionName: deletePartsListFunction.name,
+      deletePartsListFunctionArn: deletePartsListFunction.arn,
+      getUserPartsListsSummaryFunctionName: getUserPartsListsSummaryFunction.name,
+      getUserPartsListsSummaryFunctionArn: getUserPartsListsSummaryFunction.arn,
     }
   },
 })

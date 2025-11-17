@@ -76,7 +76,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('GET /api/users/{id} - Profile Get Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const { handler } = await import('../../profile-get')
+      const { handler } = await import('../../../../profile/getProfile/index')
       const event = createMockEvent('GET', '/api/users/user-123', null, { id: 'user-123' })
       const result = await handler(event)
 
@@ -86,7 +86,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const { handler } = await import('../../profile-get')
+      const { handler } = await import('../../../../profile/getProfile/index')
       const event = createMockEvent('GET', '/api/users/user-456', 'user-123', { id: 'user-456' })
       const result = await handler(event)
 
@@ -111,7 +111,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
         },
       })
 
-      const { handler } = await import('../../profile-get')
+      const { handler } = await import('../../../../profile/getProfile/index')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
 
@@ -134,7 +134,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
       // Mock user not found error
       vi.mocked(getUserProfile).mockRejectedValue(new Error('User not found in Cognito'))
 
-      const { handler } = await import('../../profile-get')
+      const { handler } = await import('../../../../profile/getProfile/index')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
 
@@ -147,7 +147,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('PATCH /api/users/{id} - Profile Update Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const { handler } = await import('../../profile-update')
+      const { handler } = await import('../../../../profile/updateProfile/index')
       const event = createMockEvent('PATCH', '/api/users/user-123', null, { id: 'user-123' })
       const result = await handler(event)
 
@@ -157,7 +157,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const { handler } = await import('../../profile-update')
+      const { handler } = await import('../../../../profile/updateProfile/index')
       const event = createMockEvent('PATCH', '/api/users/user-456', 'user-123', { id: 'user-456' })
       const result = await handler(event)
 
@@ -167,7 +167,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.3)', async () => {
-      const { handler } = await import('../../profile-update')
+      const { handler } = await import('../../../../profile/updateProfile/index')
       const event = createMockEvent('PATCH', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
 
@@ -179,7 +179,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('POST /api/users/{id}/avatar - Avatar Upload Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const { handler } = await import('../../profile-avatar-upload')
+      const { handler } = await import('../../../../profile/avatarUpload/index')
       const event = createMockEvent('POST', '/api/users/user-123/avatar', null, {
         id: 'user-123',
       })
@@ -191,7 +191,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const { handler } = await import('../../profile-avatar-upload')
+      const { handler } = await import('../../../../profile/avatarUpload/index')
       const event = createMockEvent('POST', '/api/users/user-456/avatar', 'user-123', {
         id: 'user-456',
       })
@@ -203,7 +203,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.4)', async () => {
-      const { handler } = await import('../../profile-avatar-upload')
+      const { handler } = await import('../../../../profile/avatarUpload/index')
       const event = createMockEvent('POST', '/api/users/user-123/avatar', 'user-123', {
         id: 'user-123',
       })
@@ -217,7 +217,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('DELETE /api/users/{id}/avatar - Avatar Delete Handler', () => {
     it('should return 401 when no userId in JWT', async () => {
-      const { handler } = await import('../../profile-avatar-delete')
+      const { handler } = await import('../../../../profile/avatarDelete/index')
       const event = createMockEvent('DELETE', '/api/users/user-123/avatar', null, {
         id: 'user-123',
       })
@@ -229,7 +229,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 403 when userId does not match profile ID', async () => {
-      const { handler } = await import('../../profile-avatar-delete')
+      const { handler } = await import('../../../../profile/avatarDelete/index')
       const event = createMockEvent('DELETE', '/api/users/user-456/avatar', 'user-123', {
         id: 'user-456',
       })
@@ -241,7 +241,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return 501 when userId matches (placeholder for Story 4.5)', async () => {
-      const { handler } = await import('../../profile-avatar-delete')
+      const { handler } = await import('../../../../profile/avatarDelete/index')
       const event = createMockEvent('DELETE', '/api/users/user-123/avatar', 'user-123', {
         id: 'user-123',
       })
@@ -255,7 +255,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
 
   describe('Response Format', () => {
     it('should include CORS headers in all responses', async () => {
-      const { handler } = await import('../../profile-get')
+      const { handler } = await import('../../../../profile/getProfile/index')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
 
@@ -265,7 +265,7 @@ describe('Profile Lambda Handlers Integration - Story 4.1', () => {
     })
 
     it('should return valid JSON in all responses', async () => {
-      const { handler } = await import('../../profile-get')
+      const { handler } = await import('../../../../profile/getProfile/index')
       const event = createMockEvent('GET', '/api/users/user-123', 'user-123', { id: 'user-123' })
       const result = await handler(event)
 

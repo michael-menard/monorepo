@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { APIGatewayProxyEventV2 } from 'aws-lambda'
-import { handler } from '../profile-get'
+import { handler } from '../index'
 import * as profileService from '@/lib/services/profile-service'
 import * as lambdaAuth from '@monorepo/lambda-auth'
 

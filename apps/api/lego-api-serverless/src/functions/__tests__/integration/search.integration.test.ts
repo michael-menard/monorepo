@@ -49,8 +49,8 @@ vi.mock('@/lib/utils/logger', () => ({
 }))
 
 // Import handlers AFTER mocks are set up
-import { handler as galleryHandler } from '../../gallery'
-import { handler as wishlistHandler } from '../../wishlist'
+import { handler as galleryHandler } from '../../../../gallery/index'
+import { handler as wishlistHandler } from '../../../../wishlist/index'
 import * as searchUtils from '@/lib/search/search-utils'
 import * as redisClient from '@/lib/cache/redis-client'
 

@@ -3,8 +3,8 @@ import { toast } from 'sonner'
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
 import { cn } from './lib/utils'
 
-// Error types that can be returned from API calls
-export interface ApiError {
+// Error types that can be returned from API calls for toast display
+export interface ToastApiError {
   status?: number
   statusText?: string
   message?: string
@@ -141,7 +141,7 @@ const CustomToast: React.FC<CustomToastProps> = ({
 export const getErrorMessage = (error: unknown): string => {
   // Handle RTK Query errors
   if (error && typeof error === 'object' && 'status' in error) {
-    const apiError = error as ApiError
+    const apiError = error as ToastApiError
 
     // Check for specific error codes
     if (apiError.data?.code) {

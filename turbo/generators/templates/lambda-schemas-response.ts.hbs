@@ -1,0 +1,57 @@
+/**
+ * Response schemas for {{pascalCase name}} Lambda
+ *
+ * Define and validate all outgoing response data using Zod schemas.
+ * Following coding standards: Use Zod schemas + inferred types over manual type definitions.
+ */
+
+import { z } from 'zod'
+
+/**
+ * Schema for successful response body
+ * 
+ * TODO: Customize this schema based on your Lambda's expected output
+ */
+export const ResponseSchema = z.object({
+  message: z.string(),
+  {{#unless (eq authType "none")}}
+  userId: z.string(),
+  {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+  userEmail: z.string().email().optional(),
+  {{/if}}
+  {{/unless}}
+  requestData: z.any().optional(), // Customize based on your request schema
+  timestamp: z.string().datetime(),
+})
+
+export type ResponseData = z.infer<typeof ResponseSchema>
+
+/**
+ * Schema for error response body
+ */
+export const ErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.any().optional(),
+  }),
+  timestamp: z.string().datetime(),
+  requestId: z.string().optional(),
+})
+
+export type ErrorResponseData = z.infer<typeof ErrorResponseSchema>
+
+/**
+ * Schema for paginated response (if needed)
+ */
+export const PaginatedResponseSchema = z.object({
+  data: z.array(z.any()), // Replace z.any() with your data item schema
+  pagination: z.object({
+    total: z.number().int().nonnegative(),
+    limit: z.number().int().positive(),
+    offset: z.number().int().nonnegative(),
+    hasMore: z.boolean(),
+  }),
+})
+
+export type PaginatedResponseData = z.infer<typeof PaginatedResponseSchema>

@@ -10,7 +10,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { v4 as uuidv4 } from 'uuid'
 import { eq, and, isNull, desc, count, sql } from 'drizzle-orm'
 import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
-import { logger } from '../lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import {
@@ -24,12 +24,12 @@ import {
   ListAlbumsQuerySchema,
   AlbumIdSchema,
 } from '@/lib/validation/gallery-schemas'
-import { db } from '@/lib/db/client'
+import { db } from '@monorepo/db/client'
 import { getS3Client, uploadToS3 } from '@/lib/storage/s3-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { indexDocument, deleteDocument } from '@/lib/search/opensearch-client'
 import { searchGalleryImages, hashQuery } from '@/lib/search/search-utils'
-import { galleryImages, galleryAlbums } from '@/db/schema'
+import { galleryImages, galleryAlbums } from '@monorepo/db/schema'
 import { getEnv } from '@/lib/utils/env'
 import { parseMultipartForm, getFile, getField } from '@/lib/utils/multipart-parser'
 import { processImage, generateThumbnail } from '@/lib/services/image-processing'
