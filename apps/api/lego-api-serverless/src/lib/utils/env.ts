@@ -28,10 +28,6 @@ export const EnvSchema = z.object({
   POSTGRES_USERNAME: z.string().optional(),
   POSTGRES_PASSWORD: z.string().optional(),
 
-  // Redis (populated via SST Resource linking)
-  REDIS_HOST: z.string().optional(),
-  REDIS_PORT: z.string().optional(),
-
   // OpenSearch (populated via SST Resource linking)
   OPENSEARCH_ENDPOINT: z.string().optional(),
   OPENSEARCH_DISABLED: z.string().optional(),

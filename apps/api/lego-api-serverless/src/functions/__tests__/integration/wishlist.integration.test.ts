@@ -27,7 +27,6 @@ vi.mock('@/lib/db/client', () => {
   }
 })
 vi.mock('@/lib/storage/s3-client')
-vi.mock('@/lib/cache/redis-client')
 vi.mock('@/lib/search/opensearch-client')
 vi.mock('@/lib/utils/env')
 vi.mock('@aws-sdk/client-s3')
@@ -72,12 +71,6 @@ describe('Wishlist Lambda Integration', () => {
     resetChainableDbMock(mockDb.db)
 
     // Setup mock Redis client
-    mockRedis = await import('@/lib/cache/redis-client')
-    vi.mocked(mockRedis.getRedisClient).mockResolvedValue({
-      get: vi.fn().mockResolvedValue(null),
-      setEx: vi.fn().mockResolvedValue('OK'),
-      del: vi.fn().mockResolvedValue(1),
-      keys: vi.fn().mockResolvedValue([]),
     } as any)
 
     // Setup mock S3 client

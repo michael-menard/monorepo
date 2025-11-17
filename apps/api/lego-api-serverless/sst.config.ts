@@ -6,7 +6,6 @@
  * This configuration defines the complete serverless infrastructure including:
  * - VPC networking with public/private subnets
  * - RDS PostgreSQL with RDS Proxy
- * - ElastiCache Redis
  * - OpenSearch domain
  * - S3 buckets for file storage
  * - Lambda functions with API Gateway
@@ -85,28 +84,6 @@ export default $config({
       },
     })
 
-    /**
-     * Security Group for ElastiCache Redis
-     * - Allows inbound traffic from Lambda security group only on port 6379
-     */
-    const redisSecurityGroup = new aws.ec2.SecurityGroup('RedisSecurityGroup', {
-      vpcId: vpc.id,
-      description: 'Security group for ElastiCache Redis',
-      ingress: [
-        {
-          protocol: 'tcp',
-          fromPort: 6379,
-          toPort: 6379,
-          securityGroups: [lambdaSecurityGroup.id],
-          description: 'Allow Redis access from Lambda',
-        },
-      ],
-      tags: {
-        Name: `lego-api-redis-sg-${stage}`,
-        Environment: stage,
-        Project: 'lego-api-serverless',
-      },
-    })
 
     /**
      * Security Group for OpenSearch
@@ -179,29 +156,6 @@ export default $config({
       },
     })
 
-    // ========================================
-    // Story 1.4: ElastiCache Redis Cluster
-    // ========================================
-
-    /**
-     * ElastiCache Redis for caching frequently accessed data
-     * - Redis 7.x
-     * - Single node for dev, multi-node with failover for production
-     * - Deployed in private subnets
-     */
-    const redis = new sst.aws.Redis('LegoApiRedis', {
-      vpc,
-      version: '7.1',
-      instance: stage === 'production' ? 'cache.r7g.large' : 'cache.t4g.micro',
-      transform: {
-        replicationGroup: args => {
-          args.securityGroupIds = [redisSecurityGroup.id]
-          args.automaticFailoverEnabled = stage === 'production'
-          args.multiAzEnabled = stage === 'production'
-          args.numCacheClusters = stage === 'production' ? 2 : 1
-        },
-      },
-    })
 
     // ========================================
     // Story 1.5: OpenSearch Domain
@@ -572,7 +526,7 @@ export default $config({
 
     /**
      * Health Check Lambda Function
-     * - Validates connectivity to PostgreSQL, Redis, OpenSearch
+     * - Validates connectivity to PostgreSQL, OpenSearch
      * - Returns 200 (healthy/degraded) or 503 (unhealthy)
      * - No authentication required (public endpoint)
      */
@@ -582,7 +536,7 @@ export default $config({
       timeout: '30 seconds',
       memory: '256 MB',
       vpc,
-      link: [postgres, redis, openSearch, bucket],
+      link: [postgres, openSearch, bucket],
       environment: {
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
@@ -638,7 +592,7 @@ export default $config({
      * MOC Instructions Lambda Function
      * - Multi-method handler for CRUD operations
      * - JWT authentication via Cognito
-     * - Connected to PostgreSQL, Redis, OpenSearch, S3
+     * - Connected to PostgreSQL, OpenSearch, S3
      */
     const mocInstructionsFunction = new sst.aws.Function('MocInstructionsFunction', {
       handler: 'functions/moc-instructions/instructions/index.handler',
@@ -646,7 +600,7 @@ export default $config({
       timeout: '30 seconds',
       memory: '512 MB',
       vpc,
-      link: [postgres, redis, openSearch, bucket],
+      link: [postgres, openSearch, bucket],
       environment: {
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
@@ -951,7 +905,7 @@ export default $config({
     const galleryLambdaConfig = {
       runtime: 'nodejs20.x' as const,
       vpc,
-      link: [postgres, redis, openSearch, bucket],
+      link: [postgres, openSearch, bucket],
       environment: {
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
@@ -1078,13 +1032,13 @@ export default $config({
 
     /**
      * Shared configuration for wishlist handlers
-     * - All handlers connect to PostgreSQL, Redis, OpenSearch, S3
+     * - All handlers connect to PostgreSQL, OpenSearch, S3
      * - JWT authentication via Cognito
      */
     const wishlistLambdaConfig = {
       runtime: 'nodejs20.x' as const,
       vpc,
-      link: [postgres, redis, openSearch, bucket],
+      link: [postgres, openSearch, bucket],
       environment: {
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
@@ -1417,7 +1371,6 @@ export default $config({
       // Security Groups
       lambdaSecurityGroup: lambdaSecurityGroup.id,
       rdsSecurityGroup: rdsSecurityGroup.id,
-      redisSecurityGroup: redisSecurityGroup.id,
       openSearchSecurityGroup: openSearchSecurityGroup.id,
 
       // Database
@@ -1426,9 +1379,7 @@ export default $config({
       postgresDatabase: postgres.database,
       postgresUsername: postgres.username,
 
-      // Cache & Search
-      redisHost: redis.host,
-      redisPort: redis.port,
+      // Search
       openSearchEndpoint: openSearch.endpoint,
 
       // Storage

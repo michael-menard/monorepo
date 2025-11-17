@@ -3,12 +3,11 @@
  *
  * Validates connectivity to all infrastructure dependencies:
  * - PostgreSQL (RDS with Proxy)
- * - Redis (ElastiCache)
  * - OpenSearch
  *
  * Returns:
  * - 200: All services healthy
- * - 200: Some services degraded (Redis/OpenSearch optional)
+ * - 200: Some services degraded (OpenSearch optional)
  * - 503: Critical services unavailable (PostgreSQL required)
  *
  * API Gateway Endpoint: GET /health
@@ -21,7 +20,6 @@ import {
   HealthCheckData,
 } from '@monorepo/lambda-responses'
 import { testConnection } from '@/lib/db/client'
-import { testRedisConnection } from '@/lib/cache/redis-client'
 import { testOpenSearchConnection } from '@/lib/search/opensearch-client'
 import { ServiceUnavailableError } from '@monorepo/lambda-responses'
 import { logger } from '../lib/utils/logger'
@@ -39,20 +37,18 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
     })
 
     // Test all services in parallel for faster response
-    const [postgresHealthy, redisHealthy, openSearchHealthy] = await Promise.all([
+    const [postgresHealthy, openSearchHealthy] = await Promise.all([
       testConnection(),
-      testRedisConnection(),
       testOpenSearchConnection(),
     ])
 
     // Determine overall health status
-    const status = determineHealthStatus(postgresHealthy, redisHealthy, openSearchHealthy)
+    const status = determineHealthStatus(postgresHealthy, openSearchHealthy)
 
     const healthData: HealthCheckData = {
       status,
       services: {
         postgres: postgresHealthy ? 'connected' : 'disconnected',
-        redis: redisHealthy ? 'connected' : 'disconnected',
         opensearch: openSearchHealthy ? 'connected' : 'disconnected',
       },
       timestamp: new Date().toISOString(),
@@ -79,12 +75,11 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
 /**
  * Determine overall health status based on service availability
  * - healthy: All services connected
- * - degraded: Optional services (Redis/OpenSearch) down
+ * - degraded: Optional services (OpenSearch) down
  * - unhealthy: Critical service (PostgreSQL) down
  */
 function determineHealthStatus(
   postgres: boolean,
-  redis: boolean,
   opensearch: boolean,
 ): 'healthy' | 'degraded' | 'unhealthy' {
   // PostgreSQL is critical - if down, system is unhealthy
@@ -93,10 +88,10 @@ function determineHealthStatus(
   }
 
   // If all services up, system is healthy
-  if (redis && opensearch) {
+  if (opensearch) {
     return 'healthy'
   }
 
-  // If PostgreSQL up but Redis/OpenSearch down, system is degraded
+  // If PostgreSQL up but OpenSearch down, system is degraded
   return 'degraded'
 }
