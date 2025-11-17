@@ -19,7 +19,6 @@ vi.mock('@/lib/db/client', () => ({
   },
 }))
 
-vi.mock('@/lib/cache/redis-client', () => ({
   getRedisClient: vi.fn(),
 }))
 
@@ -62,12 +61,7 @@ describe('Gallery Search Integration', () => {
 
     // Setup mock Redis client
     mockRedis = {
-      get: vi.fn().mockResolvedValue(null), // Cache miss by default
-      setEx: vi.fn().mockResolvedValue('OK'),
-      del: vi.fn().mockResolvedValue(1),
-      keys: vi.fn().mockResolvedValue([]),
     }
-    vi.mocked(redisClient.getRedisClient).mockResolvedValue(mockRedis as any)
   })
 
   afterEach(() => {
@@ -411,12 +405,7 @@ describe('Wishlist Search Integration', () => {
 
     // Setup mock Redis client
     mockRedis = {
-      get: vi.fn().mockResolvedValue(null),
-      setEx: vi.fn().mockResolvedValue('OK'),
-      del: vi.fn().mockResolvedValue(1),
-      keys: vi.fn().mockResolvedValue([]),
     }
-    vi.mocked(redisClient.getRedisClient).mockResolvedValue(mockRedis as any)
   })
 
   afterEach(() => {

@@ -21,7 +21,6 @@ vi.mock('@/lib/db/client', () => ({
   },
 }))
 
-vi.mock('@/lib/cache/redis-client', () => ({
   default: {
     get: vi.fn(),
     setEx: vi.fn(),

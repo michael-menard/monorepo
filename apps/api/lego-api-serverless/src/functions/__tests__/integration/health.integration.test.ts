@@ -3,14 +3,15 @@
  *
  * Tests the health check Lambda handler with mocked dependencies.
  * Verifies proper integration between handler, service tests, and response builders.
+ *
+ * NOTE: Redis has been removed to reduce costs. Tests updated to reflect PostgreSQL + OpenSearch only.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock all external dependencies
 vi.mock('@/lib/db/client')
-vi.mock('@/lib/services/redis')
-vi.mock('@/lib/services/opensearch')
+vi.mock('@/lib/search/opensearch-client')
 
 describe('Health Check Lambda Integration', () => {
   beforeEach(() => {
@@ -28,11 +29,9 @@ describe('Health Check Lambda Integration', () => {
     it('should return 200 when all services are healthy', async () => {
       // Given: All services are connected
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
@@ -49,7 +48,6 @@ describe('Health Check Lambda Integration', () => {
       expect(body.data.status).toBe('healthy')
       expect(body.data.services).toEqual({
         postgres: 'connected',
-        redis: 'connected',
         opensearch: 'connected',
       })
       expect(body.data.timestamp).toBeDefined()
@@ -60,11 +58,9 @@ describe('Health Check Lambda Integration', () => {
     it('should call all service tests in parallel', async () => {
       // Given: All services are connected
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
@@ -73,21 +69,18 @@ describe('Health Check Lambda Integration', () => {
 
       // Then: All service tests are called
       expect(dbClient.testConnection).toHaveBeenCalled()
-      expect(redis.testRedisConnection).toHaveBeenCalled()
       expect(opensearch.testOpenSearchConnection).toHaveBeenCalled()
     })
   })
 
   describe('Degraded System', () => {
-    it('should return 200 with degraded status when Redis is down', async () => {
-      // Given: Redis is down, other services up
+    it('should return 200 with degraded status when OpenSearch is down', async () => {
+      // Given: OpenSearch is down, PostgreSQL is up
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(false)
-      vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
+      vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
 
       // When: Health check is invoked
       const { handler } = await import('../../../../health/index')
@@ -100,62 +93,9 @@ describe('Health Check Lambda Integration', () => {
       expect(body.data.status).toBe('degraded')
       expect(body.data.services).toEqual({
         postgres: 'connected',
-        redis: 'disconnected',
-        opensearch: 'connected',
+        opensearch: 'disconnected',
       })
       expect(body.message).toBe('System status: degraded')
-    })
-
-    it('should return 200 with degraded status when OpenSearch is down', async () => {
-      // Given: OpenSearch is down, other services up
-      const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
-
-      vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
-      vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
-
-      // When: Health check is invoked
-      const { handler } = await import('../../../../health/index')
-      const result = await handler({ requestContext: { requestId: 'test-123' } })
-
-      // Then: Returns 200 with degraded status
-      expect(result.statusCode).toBe(200)
-
-      const body = JSON.parse(result.body)
-      expect(body.data.status).toBe('degraded')
-      expect(body.data.services).toEqual({
-        postgres: 'connected',
-        redis: 'connected',
-        opensearch: 'disconnected',
-      })
-    })
-
-    it('should return 200 with degraded when both Redis and OpenSearch are down', async () => {
-      // Given: Redis and OpenSearch are down, Postgres up
-      const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
-
-      vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(false)
-      vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
-
-      // When: Health check is invoked
-      const { handler } = await import('../../../../health/index')
-      const result = await handler({ requestContext: { requestId: 'test-123' } })
-
-      // Then: Returns 200 with degraded status
-      expect(result.statusCode).toBe(200)
-
-      const body = JSON.parse(result.body)
-      expect(body.data.status).toBe('degraded')
-      expect(body.data.services).toEqual({
-        postgres: 'connected',
-        redis: 'disconnected',
-        opensearch: 'disconnected',
-      })
     })
   })
 
@@ -163,11 +103,9 @@ describe('Health Check Lambda Integration', () => {
     it('should return 503 when PostgreSQL is down', async () => {
       // Given: PostgreSQL is down (critical service)
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(false)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
@@ -186,11 +124,9 @@ describe('Health Check Lambda Integration', () => {
     it('should return 503 when all services are down', async () => {
       // Given: All services are down
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(false)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(false)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
 
       // When: Health check is invoked
@@ -210,11 +146,9 @@ describe('Health Check Lambda Integration', () => {
     it('should handle service test exceptions', async () => {
       // Given: Service test throws exception
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockRejectedValue(new Error('Connection timeout'))
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // Suppress console.error for this test
@@ -261,11 +195,9 @@ describe('Health Check Lambda Integration', () => {
     it('should include CORS headers', async () => {
       // Given: Healthy system
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
@@ -280,11 +212,9 @@ describe('Health Check Lambda Integration', () => {
     it('should include timestamp in response', async () => {
       // Given: Healthy system
       const dbClient = await import('@/lib/db/client')
-      const redis = await import('@/lib/services/redis')
-      const opensearch = await import('@/lib/services/opensearch')
+      const opensearch = await import('@/lib/search/opensearch-client')
 
       vi.mocked(dbClient.testConnection).mockResolvedValue(true)
-      vi.mocked(redis.testRedisConnection).mockResolvedValue(true)
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked

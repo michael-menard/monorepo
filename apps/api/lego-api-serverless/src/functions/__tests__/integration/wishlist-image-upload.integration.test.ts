@@ -42,7 +42,6 @@ vi.mock('@/lib/db/client', () => {
   }
 })
 vi.mock('@/lib/storage/s3-client')
-vi.mock('@/lib/cache/redis-client')
 vi.mock('@/lib/search/opensearch-client')
 vi.mock('@/lib/services/image-upload-service', async () => {
   const actual = await vi.importActual<typeof import('@/lib/services/image-upload-service')>(
@@ -82,12 +81,7 @@ describe('POST /api/wishlist/:id/image - Upload Wishlist Image Integration', () 
 
     // Mock Redis client
     mockRedis = {
-      get: vi.fn().mockResolvedValue(null),
-      setEx: vi.fn().mockResolvedValue('OK'),
-      del: vi.fn().mockResolvedValue(1),
-      keys: vi.fn().mockResolvedValue([]),
     }
-    vi.mocked(redisClient.getRedisClient).mockResolvedValue(mockRedis)
   })
 
   afterEach(() => {
