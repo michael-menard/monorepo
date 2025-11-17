@@ -31,7 +31,6 @@ These files can be used with REST clients like:
 ### Infrastructure Health Checks
 
 - `elasticsearch.http` - Test Elasticsearch cluster health and basic operations
-- `mongo-express.http` - Test MongoDB web interface (admin)
 - `pgadmin.http` - Test PostgreSQL web interface (admin)
 
 ## Authentication
@@ -47,7 +46,7 @@ These files can be used with REST clients like:
 
 - **Method**: Session cookies
 - **Header**: `Cookie: token=<token>`
-- **Token Source**: Auth Service (MongoDB)
+- **Token Source**: Custom auth service (deprecated)
 
 ## Key Differences: Express vs Serverless
 
@@ -55,7 +54,7 @@ These files can be used with REST clients like:
 | -------------------- | ----------------- | -------------------- |
 | **Architecture**     | Monolith on ECS   | Lambda + API Gateway |
 | **Authentication**   | Session cookies   | JWT Bearer tokens    |
-| **Auth Provider**    | Custom (MongoDB)  | AWS Cognito          |
+| **Auth Provider**    | Custom service    | AWS Cognito          |
 | **File Storage**     | Local + S3        | S3 only              |
 | **Image Processing** | Sharp (on server) | Sharp (Lambda layer) |
 | **Deployment**       | Docker + CDK      | SST v3 (Pulumi)      |
