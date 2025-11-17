@@ -19,9 +19,9 @@ import {
   successResponse,
   errorResponseFromError,
   type APIGatewayProxyResult,
-} from '@/lib/responses'
+} from '@monorepo/lambda-responses'
 import { CreateMocSchema, UpdateMocSchema, MocListQuerySchema } from '@/types/moc'
-import { BadRequestError, UnauthorizedError, ValidationError } from '@/lib/errors'
+import { BadRequestError, UnauthorizedError, ValidationError } from '@monorepo/lambda-responses'
 import {
   listMocs as listMocsService,
   getMocDetail as getMocDetailService,

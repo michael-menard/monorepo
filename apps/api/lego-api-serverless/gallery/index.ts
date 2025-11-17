@@ -31,8 +31,8 @@ import { indexDocument, deleteDocument } from '@/lib/search/opensearch-client'
 import { searchGalleryImages, hashQuery } from '@/lib/search/search-utils'
 import { galleryImages, galleryAlbums } from '@monorepo/db/schema'
 import { getEnv } from '@/lib/utils/env'
-import { parseMultipartForm, getFile, getField } from '@/lib/utils/multipart-parser'
-import { processImage, generateThumbnail } from '@/lib/services/image-processing'
+import { parseMultipartForm, getFile, getField } from '@monorepo/lambda-utils'
+import { processImage, generateThumbnail } from '@monorepo/image-processing'
 
 /**
  * Main Gallery Lambda Handler

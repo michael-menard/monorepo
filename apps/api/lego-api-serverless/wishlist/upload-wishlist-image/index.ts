@@ -23,7 +23,7 @@ import { WishlistItemIdSchema } from '@/lib/validation/wishlist-schemas'
 import { db } from '@/lib/db/client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { wishlistItems } from '@/db/schema'
-import { parseMultipartForm, getFile } from '@/lib/utils/multipart-parser'
+import { parseMultipartForm, getFile } from '@monorepo/lambda-utils'
 import { uploadImage, ImageUploadOptionsSchema } from '@/lib/services/image-upload-service'
 
 /**

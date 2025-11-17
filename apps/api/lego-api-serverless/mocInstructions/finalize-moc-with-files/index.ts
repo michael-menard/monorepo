@@ -28,8 +28,8 @@ import {
   successResponse,
   errorResponseFromError,
   type APIGatewayProxyResult,
-} from '@/lib/responses'
-import { BadRequestError, UnauthorizedError, NotFoundError, ValidationError } from '@/lib/errors'
+} from '@monorepo/lambda-responses'
+import { BadRequestError, UnauthorizedError, NotFoundError, ValidationError } from '@monorepo/lambda-responses'
 import { logger } from '@/lib/utils/logger'
 import { db } from '@/lib/db/client'
 import { mocInstructions, mocFiles } from '@/db/schema'

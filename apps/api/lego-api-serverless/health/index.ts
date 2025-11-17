@@ -19,11 +19,11 @@ import {
   errorResponseFromError,
   type APIGatewayProxyResult,
   HealthCheckData,
-} from '@/lib/responses'
+} from '@monorepo/lambda-responses'
 import { testConnection } from '@/lib/db/client'
 import { testRedisConnection } from '@/lib/cache/redis-client'
 import { testOpenSearchConnection } from '@/lib/search/opensearch-client'
-import { ServiceUnavailableError } from '@/lib/errors'
+import { ServiceUnavailableError } from '@monorepo/lambda-responses'
 import { logger } from '../lib/utils/logger'
 
 /**

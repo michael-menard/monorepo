@@ -17,8 +17,8 @@ import { uploadToS3 } from '@/lib/storage/s3-client'
 import { getRedisClient } from '@/lib/cache/redis-client'
 import { indexDocument } from '@/lib/search/opensearch-client'
 import { galleryImages } from '@monorepo/db/schema'
-import { parseMultipartForm, getFile, getField } from '@/lib/utils/multipart-parser'
-import { processImage, generateThumbnail } from '@/lib/services/image-processing'
+import { parseMultipartForm, getFile, getField } from '@monorepo/lambda-utils'
+import { processImage, generateThumbnail } from '@monorepo/image-processing'
 
 /**
  * Upload Gallery Image Handler

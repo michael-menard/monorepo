@@ -17,8 +17,8 @@ import {
   successResponse,
   errorResponseFromError,
   type APIGatewayProxyResult,
-} from '@/lib/responses'
-import { UnauthorizedError, BadRequestError } from '@/lib/errors'
+} from '@monorepo/lambda-responses'
+import { UnauthorizedError, BadRequestError } from '@monorepo/lambda-responses'
 import { generateFileDownloadUrl } from '@/lib/services/moc-file-service'
 import { logger } from '../lib/utils/logger'
 

@@ -3,8 +3,8 @@
  * Wraps the core response builders from @/lib/responses
  */
 
-import { successResponse, errorResponse, noContentResponse, type APIGatewayProxyResult } from '@/lib/responses'
-import type { ApiErrorType } from '@/lib/responses/types'
+import { successResponse, errorResponse, noContentResponse, type APIGatewayProxyResult } from '@monorepo/lambda-responses'
+import type { ApiErrorType } from '@monorepo/lambda-responses'
 
 /**
  * Create success response with data

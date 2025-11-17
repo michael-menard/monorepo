@@ -1,0 +1,48 @@
+{
+  "name": "@monorepo/lambda-utils",
+  "version": "1.0.0",
+  "description": "Lambda utility functions for multipart parsing and CloudWatch metrics",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./multipart-parser": {
+      "types": "./dist/multipart-parser.d.ts",
+      "default": "./dist/multipart-parser.js"
+    },
+    "./cloudwatch-metrics": {
+      "types": "./dist/cloudwatch-metrics.d.ts",
+      "default": "./dist/cloudwatch-metrics.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "@aws-sdk/client-cloudwatch": "3.932.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/busboy": "^1.5.4",
+    "@types/aws-lambda": "^8.10.145",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "lambda",
+    "multipart",
+    "cloudwatch",
+    "metrics",
+    "aws"
+  ]
+}

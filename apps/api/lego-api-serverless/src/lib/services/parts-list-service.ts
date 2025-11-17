@@ -5,7 +5,7 @@
  */
 
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import { DatabaseError } from '@/lib/errors'
+import { DatabaseError } from '@monorepo/lambda-responses'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('parts-list-service')

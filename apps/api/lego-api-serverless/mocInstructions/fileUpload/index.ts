@@ -19,9 +19,9 @@ import {
   successResponse,
   errorResponseFromError,
   type APIGatewayProxyResult,
-} from '@/lib/responses'
+} from '@monorepo/lambda-responses'
 import { FileUploadSchema } from '@/types/moc'
-import { BadRequestError, UnauthorizedError, ValidationError } from '@/lib/errors'
+import { BadRequestError, UnauthorizedError, ValidationError } from '@monorepo/lambda-responses'
 import { uploadMocFile } from '@/lib/services/moc-file-service'
 import { logger } from '../lib/utils/logger'
 

@@ -10,7 +10,7 @@
 
 import { getOpenSearchClient } from '@/lib/search/opensearch-client'
 import type { MocInstruction } from '@/types/moc'
-import { SearchError } from '@/lib/errors'
+import { SearchError } from '@monorepo/lambda-responses'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('opensearch-moc')

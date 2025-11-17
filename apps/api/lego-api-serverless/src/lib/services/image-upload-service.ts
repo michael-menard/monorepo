@@ -19,7 +19,7 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { z } from 'zod'
 import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
-import { processImage, generateThumbnail } from './image-processing'
+import { processImage, generateThumbnail } from '@monorepo/image-processing'
 import { getS3Client, uploadToS3, uploadToS3Multipart } from '@/lib/storage/s3-client'
 import { getEnv } from '@/lib/utils/env'
 import { createLogger } from '../utils/logger'
@@ -29,7 +29,7 @@ import {
   recordFileSize,
   recordImageDimensions,
   measureProcessingTime,
-} from '@/lib/utils/cloudwatch-metrics'
+} from '@monorepo/lambda-utils'
 
 const logger = createLogger('image-upload-service')
 
