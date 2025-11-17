@@ -8,7 +8,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, and, sql } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { db } from '@monorepo/db/client'
 import { mocInstructions } from '@monorepo/db/schema'
@@ -32,8 +32,8 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       .where(
         and(
           eq(mocInstructions.userId, userId),
-          sql`${mocInstructions.theme} IS NOT NULL AND ${mocInstructions.theme} != ''`
-        )
+          sql`${mocInstructions.theme} IS NOT NULL AND ${mocInstructions.theme} != ''`,
+        ),
       )
       .groupBy(mocInstructions.theme)
 
@@ -47,15 +47,15 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
         and(
           eq(mocInstructions.userId, userId),
           eq(mocInstructions.type, 'moc'),
-          sql`${mocInstructions.tags} IS NOT NULL`
-        )
+          sql`${mocInstructions.tags} IS NOT NULL`,
+        ),
       )
 
     // Process tags to extract categories
     const tagCounts: Record<string, number> = {}
-    mocsWithTags.forEach((moc) => {
+    mocsWithTags.forEach(moc => {
       if (moc.tags && Array.isArray(moc.tags)) {
-        moc.tags.forEach((tag) => {
+        moc.tags.forEach(tag => {
           const category = String(tag).toLowerCase()
           tagCounts[category] = (tagCounts[category] || 0) + 1
         })
@@ -70,9 +70,9 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     // Combine theme stats and tag stats, avoiding duplicates
     const allStats = [...themeStats]
-    tagStats.forEach((tagStat) => {
+    tagStats.forEach(tagStat => {
       const existingTheme = allStats.find(
-        (stat) => stat.category?.toLowerCase() === tagStat.category.toLowerCase()
+        stat => stat.category?.toLowerCase() === tagStat.category.toLowerCase(),
       )
       if (!existingTheme) {
         allStats.push(tagStat)
@@ -81,7 +81,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     // Sort by count descending and take top categories
     const sortedStats = allStats
-      .filter((stat) => stat.category && stat.count > 0)
+      .filter(stat => stat.category && stat.count > 0)
       .sort((a, b) => b.count - a.count)
       .slice(0, 10) // Top 10 categories
 

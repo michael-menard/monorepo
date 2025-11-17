@@ -8,7 +8,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, and } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { db } from '@monorepo/db/client'
 import { mocInstructions, galleryImages, mocGalleryImages } from '@monorepo/db/schema'
@@ -29,7 +29,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const { galleryImageId } = body
 
     if (!mocId || !galleryImageId) {
-      return createErrorResponse(400, 'VALIDATION_ERROR', 'MOC ID and Gallery Image ID are required')
+      return createErrorResponse(
+        400,
+        'VALIDATION_ERROR',
+        'MOC ID and Gallery Image ID are required',
+      )
     }
 
     // Verify MOC exists and user owns it
@@ -59,7 +63,9 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const [existingLink] = await db
       .select()
       .from(mocGalleryImages)
-      .where(and(eq(mocGalleryImages.mocId, mocId), eq(mocGalleryImages.galleryImageId, galleryImageId)))
+      .where(
+        and(eq(mocGalleryImages.mocId, mocId), eq(mocGalleryImages.galleryImageId, galleryImageId)),
+      )
       .limit(1)
 
     if (existingLink) {
@@ -75,7 +81,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       })
       .returning()
 
-    logger.info(`Gallery image linked to MOC: ${galleryImageId} -> ${mocId}`, { userId, mocId, galleryImageId })
+    logger.info(`Gallery image linked to MOC: ${galleryImageId} -> ${mocId}`, {
+      userId,
+      mocId,
+      galleryImageId,
+    })
 
     return createSuccessResponse(201, {
       message: 'Gallery image linked successfully',

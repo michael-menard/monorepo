@@ -8,7 +8,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, and } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { db } from '@monorepo/db/client'
 import { mocInstructions, galleryImages, mocGalleryImages } from '@monorepo/db/schema'
@@ -53,7 +53,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       .where(eq(mocGalleryImages.mocId, mocId))
       .orderBy(galleryImages.createdAt)
 
-    logger.info(`Retrieved ${linkedImages.length} gallery images for MOC ${mocId}`, { userId, mocId, count: linkedImages.length })
+    logger.info(`Retrieved ${linkedImages.length} gallery images for MOC ${mocId}`, {
+      userId,
+      mocId,
+      count: linkedImages.length,
+    })
 
     return createSuccessResponse(200, {
       images: linkedImages,

@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { db } from '@monorepo/db/client'
 import { mocPartsList, mocInstructions, mocPartsListItems } from '@monorepo/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { logger } from '@/lib/utils/logger'
 import { nanoid } from 'nanoid'
@@ -20,9 +20,7 @@ interface CreatePartsListRequest {
   }>
 }
 
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {
@@ -79,7 +77,7 @@ export const handler = async (
 
     // Create parts list items if provided
     if (requestData.parts && requestData.parts.length > 0) {
-      const partsListItemsData = requestData.parts.map((part) => ({
+      const partsListItemsData = requestData.parts.map(part => ({
         id: nanoid(),
         partsListId,
         partNumber: part.partNumber,

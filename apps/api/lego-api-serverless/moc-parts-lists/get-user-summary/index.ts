@@ -2,13 +2,11 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { db } from '@monorepo/db/client'
 import { mocPartsList, mocInstructions } from '@monorepo/db/schema'
 import { eq, sql } from 'drizzle-orm'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { logger } from '@/lib/utils/logger'
 
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {
@@ -22,7 +20,7 @@ export const handler = async (
       .from(mocInstructions)
       .where(eq(mocInstructions.userId, userId))
 
-    const mocIds = userMocs.map((moc) => moc.id)
+    const mocIds = userMocs.map(moc => moc.id)
 
     if (mocIds.length === 0) {
       // User has no MOCs, return empty summary

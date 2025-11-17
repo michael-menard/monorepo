@@ -5,7 +5,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, desc, count, sql } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { ListAlbumsQuerySchema } from '@/lib/validation/gallery-schemas'
 import { db } from '@monorepo/db/client'

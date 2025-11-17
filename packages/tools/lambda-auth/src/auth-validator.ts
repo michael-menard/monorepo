@@ -13,6 +13,7 @@
  *
  * This validator handles:
  * - Extracting userId from validated JWT
+ * - Extracting other JWT claims (email, username, etc.)
  * - Business logic authorization (e.g., userId must match resource ID)
  */
 
@@ -195,5 +196,82 @@ export function validateUserResourceAccess(
     authenticated: true,
     authorized: true,
     userId: authResult.userId,
+  }
+}
+
+/**
+ * Extract user ID (sub claim) from JWT in API Gateway event
+ *
+ * @param event - API Gateway HTTP API event
+ * @returns User ID (Cognito sub) or null if not authenticated
+ */
+export function getUserIdFromEvent(event: APIGatewayProxyEventV2): string | null {
+  try {
+    const authorizer = (event.requestContext as RequestContextWithAuthorizer).authorizer
+    const claims = authorizer?.jwt?.claims
+    if (!claims) {
+      return null
+    }
+
+    const userId = claims.sub as string
+    return userId || null
+  } catch (error) {
+    return null
+  }
+}
+
+/**
+ * Extract email from JWT claims
+ *
+ * @param event - API Gateway HTTP API event
+ * @returns User email or null if not available
+ */
+export function getEmailFromEvent(event: APIGatewayProxyEventV2): string | null {
+  try {
+    const authorizer = (event.requestContext as RequestContextWithAuthorizer).authorizer
+    const claims = authorizer?.jwt?.claims
+    if (!claims) {
+      return null
+    }
+
+    return (claims.email as string) || null
+  } catch (error) {
+    return null
+  }
+}
+
+/**
+ * Extract username from JWT claims
+ *
+ * @param event - API Gateway HTTP API event
+ * @returns Username or null if not available
+ */
+export function getUsernameFromEvent(event: APIGatewayProxyEventV2): string | null {
+  try {
+    const authorizer = (event.requestContext as RequestContextWithAuthorizer).authorizer
+    const claims = authorizer?.jwt?.claims
+    if (!claims) {
+      return null
+    }
+
+    return (claims['cognito:username'] as string) || null
+  } catch (error) {
+    return null
+  }
+}
+
+/**
+ * Get all JWT claims from event
+ *
+ * @param event - API Gateway HTTP API event
+ * @returns JWT claims object or null if not authenticated
+ */
+export function getJwtClaims(event: APIGatewayProxyEventV2): Record<string, unknown> | null {
+  try {
+    const authorizer = (event.requestContext as RequestContextWithAuthorizer).authorizer
+    const claims = authorizer?.jwt?.claims
+    return claims || null
+  } catch (error) {
+    return null
   }
 }

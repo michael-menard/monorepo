@@ -5,7 +5,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, desc } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { AlbumIdSchema } from '@/lib/validation/gallery-schemas'
 import { db } from '@monorepo/db/client'
@@ -36,7 +36,8 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, albumId))
 
     if (!album) return createErrorResponse(404, 'NOT_FOUND', 'Album not found')
-    if (album.userId !== userId) return createErrorResponse(403, 'FORBIDDEN', 'Access denied to this album')
+    if (album.userId !== userId)
+      return createErrorResponse(403, 'FORBIDDEN', 'Access denied to this album')
 
     const images = await db
       .select()

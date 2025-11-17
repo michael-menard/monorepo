@@ -8,7 +8,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, and, sql } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { db } from '@monorepo/db/client'
 import { mocInstructions } from '@monorepo/db/schema'
@@ -33,24 +33,24 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       .where(
         and(
           eq(mocInstructions.userId, userId),
-          sql`${mocInstructions.createdAt} >= NOW() - INTERVAL '12 months'`
-        )
+          sql`${mocInstructions.createdAt} >= NOW() - INTERVAL '12 months'`,
+        ),
       )
       .groupBy(sql`DATE_TRUNC('month', ${mocInstructions.createdAt})`, mocInstructions.theme)
       .orderBy(sql`DATE_TRUNC('month', ${mocInstructions.createdAt})`)
 
     // Transform to format expected by frontend: {date, category, count}
     const timeSeriesData = uploadsData
-      .map((row) => ({
+      .map(row => ({
         date: row.month ? row.month.substring(0, 7) : '', // YYYY-MM format
         category: row.category || 'Unknown',
         count: row.count,
       }))
-      .filter((item) => item.date && item.count > 0)
+      .filter(item => item.date && item.count > 0)
 
     logger.info('MOC uploads over time retrieved', {
       userId,
-      months: new Set(timeSeriesData.map(d => d.date)).size
+      months: new Set(timeSeriesData.map(d => d.date)).size,
     })
 
     return createSuccessResponse(200, {

@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { db } from '@monorepo/db/client'
 import { mocPartsList, mocInstructions, mocPartsListItems } from '@monorepo/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { logger } from '@/lib/utils/logger'
 import { nanoid } from 'nanoid'
@@ -23,9 +23,7 @@ interface UpdatePartsListRequest {
   }>
 }
 
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {
@@ -67,9 +65,7 @@ export const handler = async (
     const [existingPartsList] = await db
       .select()
       .from(mocPartsList)
-      .where(
-        and(eq(mocPartsList.id, partsListId), eq(mocPartsList.mocInstructionId, mocId))
-      )
+      .where(and(eq(mocPartsList.id, partsListId), eq(mocPartsList.mocInstructionId, mocId)))
       .limit(1)
 
     if (!existingPartsList) {
@@ -102,7 +98,7 @@ export const handler = async (
       await db.delete(mocPartsListItems).where(eq(mocPartsListItems.partsListId, partsListId))
 
       if (requestData.parts.length > 0) {
-        const partsListItemsData = requestData.parts.map((part) => ({
+        const partsListItemsData = requestData.parts.map(part => ({
           id: part.id || nanoid(),
           partsListId,
           partNumber: part.partNumber,
@@ -119,7 +115,7 @@ export const handler = async (
       }
 
       // Update total and completed parts count
-      const acquiredCount = requestData.parts.filter((p) => p.acquired).length
+      const acquiredCount = requestData.parts.filter(p => p.acquired).length
       ;[updatedPartsList] = await db
         .update(mocPartsList)
         .set({

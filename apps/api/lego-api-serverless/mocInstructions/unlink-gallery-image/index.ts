@@ -8,7 +8,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, and } from 'drizzle-orm'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import { db } from '@monorepo/db/client'
 import { mocInstructions, mocGalleryImages } from '@monorepo/db/schema'
@@ -24,7 +24,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const galleryImageId = event.pathParameters?.galleryImageId
 
     if (!mocId || !galleryImageId) {
-      return createErrorResponse(400, 'VALIDATION_ERROR', 'MOC ID and Gallery Image ID are required')
+      return createErrorResponse(
+        400,
+        'VALIDATION_ERROR',
+        'MOC ID and Gallery Image ID are required',
+      )
     }
 
     // Verify MOC ownership
@@ -42,7 +46,9 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const [link] = await db
       .select()
       .from(mocGalleryImages)
-      .where(and(eq(mocGalleryImages.mocId, mocId), eq(mocGalleryImages.galleryImageId, galleryImageId)))
+      .where(
+        and(eq(mocGalleryImages.mocId, mocId), eq(mocGalleryImages.galleryImageId, galleryImageId)),
+      )
       .limit(1)
 
     if (!link) {
@@ -52,9 +58,15 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     // Delete the link
     await db
       .delete(mocGalleryImages)
-      .where(and(eq(mocGalleryImages.mocId, mocId), eq(mocGalleryImages.galleryImageId, galleryImageId)))
+      .where(
+        and(eq(mocGalleryImages.mocId, mocId), eq(mocGalleryImages.galleryImageId, galleryImageId)),
+      )
 
-    logger.info(`Gallery image unlinked from MOC: ${galleryImageId} -> ${mocId}`, { userId, mocId, galleryImageId })
+    logger.info(`Gallery image unlinked from MOC: ${galleryImageId} -> ${mocId}`, {
+      userId,
+      mocId,
+      galleryImageId,
+    })
 
     return createSuccessResponse(200, {
       message: 'Gallery image unlinked successfully',

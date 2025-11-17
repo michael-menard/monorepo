@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { eq, and, isNull, desc, count, sql } from 'drizzle-orm'
 import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
 import { logger } from '@/lib/utils/logger'
-import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { getUserIdFromEvent } from '@monorepo/lambda-auth'
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
 import {
   CreateGalleryImageSchema,
