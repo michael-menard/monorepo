@@ -1,0 +1,54 @@
+Unauthorized:
+  description: Unauthorized
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/Error'
+      examples:
+        unauthorized:
+          value:
+            error: "Authentication required"
+
+Forbidden:
+  description: Forbidden
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/Error'
+      examples:
+        forbidden:
+          value:
+            error: "You do not have permission to perform this action"
+
+NotFound:
+  description: Resource not found
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/Error'
+      examples:
+        notFound:
+          value:
+            error: "Resource not found"
+
+RateLimit:
+  description: Rate limit exceeded
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/Error'
+      examples:
+        rateLimit:
+          value:
+            error: "Too many requests. Please try again later."
+
+InternalError:
+  description: Internal server error
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/Error'
+      examples:
+        internal:
+          value:
+            error: "Internal server error" 

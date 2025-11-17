@@ -1,0 +1,1035 @@
+/api/mocs:
+  post:
+    summary: Create a new MOC instruction (metadata only)
+    description: Create a new MOC instruction with metadata only (title, description, tags, thumbnailUrl). For file uploads, use the /with-files endpoint.
+    tags:
+      - MOC Instructions
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - title
+            properties:
+              title:
+                type: string
+                minLength: 1
+                maxLength: 255
+                description: Title of the MOC instruction
+              description:
+                type: string
+                nullable: true
+                description: Optional description of the MOC
+              tags:
+                type: array
+                items:
+                  type: string
+                nullable: true
+                description: Optional array of tags for categorization
+              thumbnailUrl:
+                type: string
+                nullable: true
+                description: Optional URL to thumbnail image
+    responses:
+      '201':
+        description: MOC created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 201
+                  message: "MOC created successfully"
+                  data:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    userId: "user-uuid"
+                    title: "My MOC"
+                    description: "A cool MOC"
+                    tags:
+                      - "star wars"
+                      - "spaceship"
+                    thumbnailUrl: "https://example.com/thumb.jpg"
+                    createdAt: "2024-06-10T12:00:00Z"
+                    updatedAt: "2024-06-10T12:00:00Z"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              validationError:
+                value:
+                  status: 400
+                  message: "Invalid input"
+                  error: "VALIDATION_ERROR"
+                  details: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+                  details: null
+
+/api/mocs/with-files:
+  post:
+    summary: Create a new MOC instruction with files
+    description: |
+      Create a new MOC instruction with metadata and file uploads.
+
+      **Required Files:**
+      - instructionsFile: 1 or more PDF or .io files (up to 10)
+
+      **Optional Files:**
+      - partsLists: 0-10 files (CSV, XML, JSON, PDF, TXT)
+      - images: 0-3 images (JPEG, PNG, WebP)
+
+      **File Size Limits:**
+      - Instructions: 50MB per file
+      - Parts Lists: 10MB per file
+      - Images: 10MB per file
+
+      **Storage:**
+      - Development: Local storage in uploads/moc-files/
+      - Production: S3 bucket storage
+    tags:
+      - MOC Instructions
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - title
+              - instructionsFile
+            properties:
+              title:
+                type: string
+                minLength: 1
+                maxLength: 255
+                description: Title of the MOC instruction
+              description:
+                type: string
+                description: Optional description of the MOC
+              tags:
+                type: string
+                description: JSON array of tags as string (e.g., '["castle", "medieval"]')
+              category:
+                type: string
+                description: Optional category for the MOC
+              difficulty:
+                type: string
+                enum: [beginner, intermediate, advanced, expert]
+                description: Optional difficulty level
+              instructionsFile:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                minItems: 1
+                maxItems: 10
+                description: 1 or more instruction files (PDF or .io format, 50MB max each)
+              partsLists:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                maxItems: 10
+                description: Optional parts list files (CSV, XML, JSON, PDF, TXT, 10MB max each)
+              images:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                maxItems: 3
+                description: Optional images (JPEG, PNG, WebP, 10MB max each)
+          encoding:
+            instructionsFile:
+              contentType: application/pdf, application/octet-stream
+            partsLists:
+              contentType: text/csv, application/xml, application/json, application/pdf, text/plain
+            images:
+              contentType: image/jpeg, image/png, image/webp
+    responses:
+      '201':
+        description: MOC created successfully with files
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "MOC created successfully with files"
+                moc:
+                  allOf:
+                    - $ref: '../components/schemas.yaml#/MocInstruction'
+                    - type: object
+                      properties:
+                        files:
+                          type: array
+                          items:
+                            $ref: '../components/schemas.yaml#/MocFile'
+            examples:
+              success:
+                value:
+                  message: "MOC created successfully with files"
+                  moc:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    userId: "user-uuid"
+                    title: "Medieval Castle"
+                    description: "A detailed medieval castle with working drawbridge"
+                    tags: ["castle", "medieval", "architecture"]
+                    thumbnailUrl: "/uploads/moc-files/user/images/castle-front.jpg"
+                    createdAt: "2025-01-06T10:00:00Z"
+                    updatedAt: "2025-01-06T10:00:00Z"
+                    files:
+                      - id: "file-uuid-1"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "instruction"
+                        fileUrl: "/uploads/moc-files/user/instructions/castle-part1.pdf"
+                        originalFilename: "castle-part1.pdf"
+                        mimeType: "application/pdf"
+                        createdAt: "2025-01-06T10:00:00Z"
+                      - id: "file-uuid-2"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "instruction"
+                        fileUrl: "/uploads/moc-files/user/instructions/castle-part2.pdf"
+                        originalFilename: "castle-part2.pdf"
+                        mimeType: "application/pdf"
+                        createdAt: "2025-01-06T10:00:00Z"
+                      - id: "file-uuid-3"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "parts-list"
+                        fileUrl: "/uploads/moc-files/user/parts-lists/parts.csv"
+                        originalFilename: "parts.csv"
+                        mimeType: "text/csv"
+                        createdAt: "2025-01-06T10:00:00Z"
+                      - id: "file-uuid-4"
+                        mocId: "123e4567-e89b-12d3-a456-426614174000"
+                        fileType: "thumbnail"
+                        fileUrl: "/uploads/moc-files/user/images/castle-front.jpg"
+                        originalFilename: "castle-front.jpg"
+                        mimeType: "image/jpeg"
+                        createdAt: "2025-01-06T10:00:00Z"
+      '400':
+        description: Bad request - validation error or missing required files
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              missing_instructions:
+                value:
+                  status: 400
+                  message: "At least one instructions file is required (PDF or .io format)"
+                  error: "VALIDATION_ERROR"
+              invalid_file_type:
+                value:
+                  status: 400
+                  message: "Instructions file must be PDF or .io format"
+                  error: "FILE_TYPE_ERROR"
+              file_too_large:
+                value:
+                  status: 400
+                  message: "File size must be less than 50MB"
+                  error: "FILE_SIZE_ERROR"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+
+/api/mocs/test-auth:
+  post:
+    summary: Generate test authentication token
+    description: |
+      Generate a test JWT token for API testing purposes.
+
+      **Development Only:** This endpoint is only available in development mode.
+
+      Returns a JWT token that can be used for testing other endpoints.
+      The token is also set as an HTTP-only cookie.
+    tags:
+      - MOC Instructions
+      - Testing
+    responses:
+      '200':
+        description: Test token generated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Test auth token generated"
+                userId:
+                  type: string
+                  format: uuid
+                  description: Generated test user ID
+                token:
+                  type: string
+                  description: JWT token for API authentication
+            examples:
+              success:
+                value:
+                  message: "Test auth token generated"
+                  userId: "123e4567-e89b-12d3-a456-426614174000"
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        headers:
+          Set-Cookie:
+            description: HTTP-only cookie with JWT token
+            schema:
+              type: string
+              example: "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; SameSite=Lax; Max-Age=3600"
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              error:
+                value:
+                  status: 500
+                  message: "Failed to generate test token"
+                  error: "INTERNAL_ERROR"
+
+/api/mocs/{id}:
+  patch:
+    summary: Update MOC instruction metadata
+    description: Update the metadata for an existing MOC instruction (title, description, tags, thumbnailUrl)
+    tags:
+      - MOC Instructions
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+                nullable: true
+              tags:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              thumbnailUrl:
+                type: string
+                nullable: true
+    responses:
+      '200':
+        description: MOC updated successfully or not found (returns empty object if not found)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              updated:
+                value:
+                  status: 200
+                  message: "MOC updated successfully"
+                  data:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    userId: "user-uuid"
+                    title: "Updated MOC"
+                    description: "Updated description"
+                    tags:
+                      - "star wars"
+                      - "spaceship"
+                    thumbnailUrl: "https://example.com/thumb.jpg"
+                    createdAt: "2024-06-10T12:00:00Z"
+                    updatedAt: "2024-06-10T13:00:00Z"
+              notFound:
+                value:
+                  status: 200
+                  message: "MOC not found"
+                  data: {}
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              validationError:
+                value:
+                  status: 400
+                  message: "Invalid input"
+                  error: "VALIDATION_ERROR"
+                  details: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+                  details: null
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              forbidden:
+                value:
+                  status: 403
+                  message: "Forbidden: You can only access your own MOCs"
+                  error: "FORBIDDEN"
+                  details: null
+  get:
+    summary: Get MOC instruction details
+    description: Get the details of a MOC instruction by ID
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: MOC found or not found (returns empty object if not found)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              found:
+                value:
+                  status: 200
+                  message: "MOC found"
+                  data:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    userId: "user-uuid"
+                    title: "My MOC"
+                    description: "A cool MOC"
+                    tags:
+                      - "star wars"
+                      - "spaceship"
+                    thumbnailUrl: "https://example.com/thumb.jpg"
+                    createdAt: "2024-06-10T12:00:00Z"
+                    updatedAt: "2024-06-10T12:00:00Z"
+              notFound:
+                value:
+                  status: 200
+                  message: "MOC not found"
+                  data: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+                  details: null
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              forbidden:
+                value:
+                  status: 403
+                  message: "Forbidden: You can only access your own MOCs"
+                  error: "FORBIDDEN"
+                  details: null
+
+/api/mocs/search:
+  get:
+    summary: Search MOC instructions
+    description: Full-text search for MOC instructions using Elasticsearch
+    tags:
+      - MOC Instructions
+      - Search
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: query
+        name: q
+        required: false
+        schema:
+          type: string
+        description: Search query
+      - in: query
+        name: tags
+        required: false
+        schema:
+          type: string
+        description: Filter by tags (comma-separated)
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results to return
+      - in: query
+        name: offset
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Number of results to skip
+    responses:
+      '200':
+        description: Search results retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                results:
+                  type: array
+                  items:
+                    $ref: '../components/schemas.yaml#/MocInstruction'
+                total:
+                  type: integer
+                  description: Total number of results
+                limit:
+                  type: integer
+                  description: Number of results returned
+                offset:
+                  type: integer
+                  description: Number of results skipped
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/files:
+  post:
+    summary: Upload file to MOC instruction
+    description: Upload a file (instruction or parts list) to an existing MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary
+                description: File to upload (PDF, CSV, or other supported formats)
+    responses:
+      '201':
+        description: File uploaded successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 201
+                  message: "File uploaded successfully"
+                  data:
+                    id: "file-uuid"
+                    mocId: "moc-uuid"
+                    originalFilename: "instruction.pdf"
+                    fileType: "instruction"
+                    fileUrl: "https://example.com/file.pdf"
+                    mimeType: "application/pdf"
+                    fileSize: 1024000
+                    createdAt: "2024-06-10T12:00:00Z"
+      '400':
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '413':
+        description: File too large
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/files/{fileId}:
+  delete:
+    summary: Delete file from MOC instruction
+    description: Delete a file from an existing MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+      - in: path
+        name: fileId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: File ID
+    responses:
+      '200':
+        description: File deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "File deleted successfully"
+                  data: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: File not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/files/{fileId}/download-info:
+  get:
+    summary: Get file download information
+    description: Get download information for a specific file (signed URL for S3, local path for development)
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+      - in: path
+        name: fileId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: File ID
+    responses:
+      '200':
+        description: Download information retrieved successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              s3File:
+                value:
+                  status: 200
+                  message: "Download information retrieved successfully"
+                  data:
+                    url: "https://s3.amazonaws.com/bucket/signed-url?expires=1234567890"
+                    filename: "instruction.pdf"
+                    mimeType: "application/pdf"
+                    expiresAt: "2024-06-10T13:00:00Z"
+              localFile:
+                value:
+                  status: 200
+                  message: "Download information retrieved successfully"
+                  data:
+                    url: "/uploads/moc-files/user123/moc456/instruction/file.pdf"
+                    filename: "file.pdf"
+                    mimeType: "application/pdf"
+              fileNotFound:
+                value:
+                  status: 200
+                  message: "File not found"
+                  data: {}
+              fileMissing:
+                value:
+                  status: 200
+                  message: "File not found in storage"
+                  data:
+                    fileId: "file-uuid"
+                    originalFilename: "instruction.pdf"
+                    fileType: "instruction"
+                    missing: true
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+                  details: null
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              forbidden:
+                value:
+                  status: 403
+                  message: "Forbidden: You can only access files from your own MOCs"
+                  error: "FORBIDDEN"
+                  details: null
+
+/api/mocs/{id}/files/{fileId}/download:
+  get:
+    summary: Download file directly
+    description: Download a file directly (streams local files, redirects to S3 for production)
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+      - in: path
+        name: fileId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: File ID
+    responses:
+      '200':
+        description: File download (local development) or redirect (production)
+        content:
+          application/pdf:
+            schema:
+              type: string
+              format: binary
+            description: File content (local development only)
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+            description: File content (local development only)
+          text/csv:
+            schema:
+              type: string
+              format: binary
+            description: File content (local development only)
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              fileNotFound:
+                value:
+                  status: 200
+                  message: "File not found"
+                  data: {}
+              fileMissing:
+                value:
+                  status: 200
+                  message: "File not found in storage"
+                  data:
+                    fileId: "file-uuid"
+                    originalFilename: "instruction.pdf"
+                    fileType: "instruction"
+                    missing: true
+      '302':
+        description: Redirect to S3 signed URL (production only)
+        headers:
+          Location:
+            description: S3 signed URL
+            schema:
+              type: string
+              example: "https://s3.amazonaws.com/bucket/signed-url?expires=1234567890"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              unauthorized:
+                value:
+                  status: 401
+                  message: "Unauthorized"
+                  error: "UNAUTHORIZED"
+                  details: null
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              forbidden:
+                value:
+                  status: 403
+                  message: "Forbidden: You can only download files from your own MOCs"
+                  error: "FORBIDDEN"
+                  details: null 
+
+/api/mocs/{id}/gallery-images:
+  post:
+    summary: Link gallery image to MOC
+    description: Link an existing gallery image to a MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - galleryImageId
+            properties:
+              galleryImageId:
+                type: string
+                format: uuid
+                description: ID of the gallery image to link
+    responses:
+      '200':
+        description: Gallery image linked successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Gallery image linked successfully"
+                  data:
+                    id: "link-uuid"
+                    mocId: "moc-uuid"
+                    galleryImageId: "gallery-image-uuid"
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC or gallery image)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: MOC or gallery image not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+  get:
+    summary: Get linked gallery images for MOC
+    description: Retrieve all gallery images linked to a MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+    responses:
+      '200':
+        description: Gallery images retrieved successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Gallery images retrieved successfully"
+                  data:
+                    - id: "gallery-image-uuid"
+                      userId: "user-uuid"
+                      title: "MOC Build Photo"
+                      description: "Front view of the completed MOC"
+                      imageUrl: "https://example.com/image.jpg"
+                      tags: ["front-view", "completed"]
+                      createdAt: "2024-06-10T12:00:00Z"
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: MOC not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+
+/api/mocs/{id}/gallery-images/{galleryImageId}:
+  delete:
+    summary: Unlink gallery image from MOC
+    description: Remove the link between a gallery image and MOC instruction
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: MOC ID
+      - in: path
+        name: galleryImageId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Gallery Image ID
+    responses:
+      '200':
+        description: Gallery image unlinked successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+            examples:
+              success:
+                value:
+                  status: 200
+                  message: "Gallery image unlinked successfully"
+                  data: {}
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '403':
+        description: Forbidden (user does not own MOC or gallery image)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse'
+      '404':
+        description: MOC, gallery image, or link not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/ApiResponse' 

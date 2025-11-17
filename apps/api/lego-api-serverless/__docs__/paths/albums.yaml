@@ -1,0 +1,104 @@
+/api/albums:
+  get:
+    summary: List all albums for the authenticated user
+    description: >
+      Returns all albums for the authenticated user. Optionally include images for each album with `?withImages=true`.
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: query
+        name: withImages
+        required: false
+        schema:
+          type: boolean
+        description: If true, include images for each album
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of items to return (max 100)
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination cursor (offset)
+    responses:
+      '200':
+        description: Albums retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                albums:
+                  type: array
+                  items:
+                    $ref: '../components/schemas.yaml#/GalleryAlbum'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+
+/api/albums/{id}:
+  get:
+    summary: Get album data and images
+    description: Retrieve album metadata and all images in the album. Requires authentication.
+    security:
+      - cookieAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Album ID
+    responses:
+      '200':
+        description: Album data and images retrieved successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/GalleryAlbumResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '403':
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '404':
+        description: Album not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
