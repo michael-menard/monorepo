@@ -27,7 +27,7 @@ export default defineConfig({
         statements: 80,
       },
     },
-    include: ['src/**/__tests__/**/*.test.ts'],
+    include: ['src/**/__tests__/**/*.test.ts', 'websocket/**/__tests__/**/*.test.ts'],
     exclude: ['node_modules', 'dist', '.sst'],
   },
   resolve: {
