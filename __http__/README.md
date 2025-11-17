@@ -1,6 +1,6 @@
-# Infrastructure Connectivity Tests
+# API & Infrastructure Test Files
 
-This directory contains HTTP test files to verify that Docker infrastructure services are running correctly.
+This directory contains HTTP test files for the LEGO MOC Instructions API and infrastructure services.
 
 ## Usage
 
@@ -15,20 +15,51 @@ These files can be used with REST clients like:
 
 ### API Services
 
-- `auth-service.http` - Test Auth Service API endpoints (localhost:5000)
-- `lego-projects-api.http` - Test LEGO Projects API endpoints (localhost:3000)
+#### Active (Serverless)
 
-### Database Health Checks
+- **`lego-projects-api-serverless.http`** - Serverless API endpoints (AWS Lambda + API Gateway)
+  - Production: `https://api.lego-moc-instructions.com`
+  - Staging: `https://staging-api.lego-moc-instructions.com`
+  - Dev: `https://dev-api.lego-moc-instructions.com`
+  - Local (sst dev): `http://localhost:3000`
 
-- `mongodb.http` - Test MongoDB connection and basic queries
-- `postgresql.http` - Test PostgreSQL connection (via pgAdmin API)
-- `redis.http` - Test Redis connection (via REST proxy if available)
+#### Deprecated (Express Monolith - REMOVED)
+
+- ~~`lego-projects-api.http`~~ - Express API (localhost:9000) - **Deprecated, monolith removed**
+- ~~`auth-service.http`~~ - Auth Service API (localhost:5000) - **Deprecated, now using AWS Cognito**
+
+### Infrastructure Health Checks
+
 - `elasticsearch.http` - Test Elasticsearch cluster health and basic operations
+- `mongo-express.http` - Test MongoDB web interface (admin)
+- `pgadmin.http` - Test PostgreSQL web interface (admin)
 
-### Admin Interface Tests
+## Authentication
 
-- `mongo-express.http` - Test MongoDB web interface
-- `pgadmin.http` - Test PostgreSQL web interface
+### Serverless API (Current)
+
+- **Method**: JWT tokens via AWS Cognito
+- **Header**: `Authorization: Bearer <token>`
+- **Token Source**: AWS Cognito User Pool
+- **Validation**: API Gateway JWT Authorizer
+
+### Express API (Deprecated)
+
+- **Method**: Session cookies
+- **Header**: `Cookie: token=<token>`
+- **Token Source**: Auth Service (MongoDB)
+
+## Key Differences: Express vs Serverless
+
+| Feature              | Express (Old)     | Serverless (New)     |
+| -------------------- | ----------------- | -------------------- |
+| **Architecture**     | Monolith on ECS   | Lambda + API Gateway |
+| **Authentication**   | Session cookies   | JWT Bearer tokens    |
+| **Auth Provider**    | Custom (MongoDB)  | AWS Cognito          |
+| **File Storage**     | Local + S3        | S3 only              |
+| **Image Processing** | Sharp (on server) | Sharp (Lambda layer) |
+| **Deployment**       | Docker + CDK      | SST v3 (Pulumi)      |
+| **Base URL**         | `localhost:9000`  | API Gateway URL      |
 
 ## Running Tests
 
