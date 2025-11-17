@@ -15,7 +15,7 @@ import { invalidateMocDetailCache } from './moc-service'
 import { db } from '@/lib/db/client'
 import { mocInstructions, mocFiles } from '@/db/schema'
 import type { MocFile } from '@/types/moc'
-import { NotFoundError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors'
+import { NotFoundError, ForbiddenError, BadRequestError, DatabaseError } from '@monorepo/lambda-responses'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('moc-file-service')

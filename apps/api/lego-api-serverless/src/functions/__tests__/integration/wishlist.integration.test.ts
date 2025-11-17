@@ -116,7 +116,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(JSON.stringify(cachedResponse))
 
       // When: GET /api/wishlist is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -182,7 +182,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/wishlist is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -242,7 +242,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/wishlist?category=Star Wars is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -310,7 +310,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue(['wishlist:user:user-123:all'])
 
       // When: POST /api/wishlist is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -360,7 +360,7 @@ describe('Wishlist Lambda Integration', () => {
       }
 
       // When: POST /api/wishlist is called with invalid data
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -404,7 +404,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(JSON.stringify(cachedItem))
 
       // When: GET /api/wishlist/{id} is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -460,7 +460,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/wishlist/{id} is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -507,7 +507,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/wishlist/{id} is called for non-existent item
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -559,7 +559,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: User tries to access another user's item
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -624,7 +624,7 @@ describe('Wishlist Lambda Integration', () => {
       ])
 
       // When: PATCH /api/wishlist/{id} is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -691,7 +691,7 @@ describe('Wishlist Lambda Integration', () => {
       queryMock.where.mockResolvedValueOnce([existingItem])
 
       // When: User tries to update another user's item
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -752,7 +752,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue(['wishlist:user:user-123:all'])
 
       // When: DELETE /api/wishlist/{id} is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -814,7 +814,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue(['wishlist:user:user-123:all'])
 
       // When: DELETE /api/wishlist/{id} is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -869,7 +869,7 @@ describe('Wishlist Lambda Integration', () => {
       queryMock.where.mockResolvedValueOnce([existingItem])
 
       // When: User tries to delete another user's item
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -949,7 +949,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue(['wishlist:user:user-123:all'])
 
       // When: POST /api/wishlist/reorder is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -999,7 +999,7 @@ describe('Wishlist Lambda Integration', () => {
       queryMock.where.mockResolvedValueOnce(existingItems)
 
       // When: POST /api/wishlist/reorder is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1035,7 +1035,7 @@ describe('Wishlist Lambda Integration', () => {
   describe('Error Handling', () => {
     it('should return 401 when user is not authenticated', async () => {
       // Given: No JWT token in request
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1065,7 +1065,7 @@ describe('Wishlist Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/wishlist is called
-      const { handler } = await import('../../wishlist')
+      const { handler } = await import('../../../../wishlist/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {

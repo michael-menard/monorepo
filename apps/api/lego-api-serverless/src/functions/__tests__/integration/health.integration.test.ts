@@ -36,7 +36,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({
         requestContext: { requestId: 'test-123' },
       })
@@ -68,7 +68,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: All service tests are called
@@ -90,7 +90,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 200 with degraded status
@@ -117,7 +117,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 200 with degraded status
@@ -143,7 +143,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 200 with degraded status
@@ -171,7 +171,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 503 Service Unavailable
@@ -194,7 +194,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(false)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 503 Service Unavailable
@@ -221,7 +221,7 @@ describe('Health Check Lambda Integration', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 500 Internal Server Error
@@ -245,7 +245,7 @@ describe('Health Check Lambda Integration', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: Returns 500 with wrapped error
@@ -269,7 +269,7 @@ describe('Health Check Lambda Integration', () => {
       vi.mocked(opensearch.testOpenSearchConnection).mockResolvedValue(true)
 
       // When: Health check is invoked
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
 
       // Then: CORS headers are present
@@ -289,7 +289,7 @@ describe('Health Check Lambda Integration', () => {
 
       // When: Health check is invoked
       const beforeTime = Date.now()
-      const { handler } = await import('../../health')
+      const { handler } = await import('../../../../health/index')
       const result = await handler({ requestContext: { requestId: 'test-123' } })
       const afterTime = Date.now()
 

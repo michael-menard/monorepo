@@ -1,0 +1,23 @@
+# Environment Configuration for {{pascalCase name}} Lambda
+
+# Node.js Environment
+NODE_ENV=development
+
+# Logging Configuration
+LOG_LEVEL=info
+
+{{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
+# Cognito Configuration
+COGNITO_USER_POOL_ID={{cognitoUserPoolId}}
+COGNITO_CLIENT_ID={{cognitoClientId}}
+AWS_REGION={{awsRegion}}
+
+{{/if}}
+# AWS Configuration (if running locally)
+# AWS_ACCESS_KEY_ID=your-access-key
+# AWS_SECRET_ACCESS_KEY=your-secret-key
+# AWS_REGION={{awsRegion}}
+
+# Custom Configuration (add your own environment variables here)
+# DATABASE_URL=your-database-url
+# API_KEY=your-api-key

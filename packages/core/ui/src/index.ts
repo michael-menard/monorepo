@@ -238,7 +238,7 @@ export {
   showInfoToast,
   getErrorMessage,
 } from './toast-utils'
-export type { ApiError, ToastType } from './toast-utils'
+export type { ToastApiError, ToastType } from './toast-utils'
 
 // Toggle components
 export { Toggle, toggleVariants } from './toggle'

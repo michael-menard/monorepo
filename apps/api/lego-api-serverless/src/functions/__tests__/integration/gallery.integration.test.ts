@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { APIGatewayProxyEventV2 } from 'aws-lambda'
 
 // Mock all external dependencies
-vi.mock('@/lib/db/client', () => {
+vi.mock('@monorepo/db/client', () => {
   // Create chainable mock as a singleton
   const mockDbInstance: any = {}
   const chainMethods = ['select', 'insert', 'from', 'where', 'orderBy', 'limit', 'offset', 'update', 'set', 'returning', 'delete', 'values']
@@ -24,6 +24,15 @@ vi.mock('@/lib/db/client', () => {
     __mockDbInstance: mockDbInstance, // Export for test access
   }
 })
+
+vi.mock('@monorepo/db/schema', () => ({
+  galleryImages: {},
+  galleryAlbums: {},
+  galleryFlags: {},
+  wishlistImages: {},
+  mocInstructions: {},
+  mocInstructionFiles: {},
+}))
 vi.mock('@/lib/storage/s3-client')
 vi.mock('@/lib/cache/redis-client')
 vi.mock('@/lib/search/opensearch-client')
@@ -69,7 +78,7 @@ describe('Gallery Lambda Integration', () => {
     } as any)
 
     // Setup mock database - reset chainable implementations after clearAllMocks
-    mockDb = await import('@/lib/db/client')
+    mockDb = await import('@monorepo/db/client')
     resetChainableDbMock(mockDb.db)
 
     // Setup mock Redis client
@@ -133,7 +142,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/images is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -192,7 +201,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(JSON.stringify(cachedResponse))
 
       // When: GET /api/images is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -246,7 +255,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/images?albumId=album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -297,7 +306,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/images?page=2&limit=5 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -334,7 +343,7 @@ describe('Gallery Lambda Integration', () => {
 
     it('should return 401 when not authenticated', async () => {
       // Given: No JWT authorizer in event
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -379,7 +388,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/images/image-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -430,7 +439,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(JSON.stringify(cachedImage))
 
       // When: GET /api/images/image-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -470,7 +479,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/images/nonexistent is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const nonExistentId = '550e8400-e29b-41d4-a716-000000000000'
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
@@ -516,7 +525,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/images/image-123 is called by different user
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -581,7 +590,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(mockOpenSearch.indexDocument).mockResolvedValue(undefined)
 
       // When: PATCH /api/images/image-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -643,7 +652,7 @@ describe('Gallery Lambda Integration', () => {
       mockDb.db.where.mockResolvedValue([])
 
       // When: PATCH /api/images/nonexistent is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const nonExistentId = '550e8400-e29b-41d4-a716-000000000000'
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
@@ -687,7 +696,7 @@ describe('Gallery Lambda Integration', () => {
       mockDb.db.where.mockResolvedValue([existingImage])
 
       // When: PATCH /api/images/image-123 is called by different user
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -744,7 +753,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(mockOpenSearch.deleteDocument).mockResolvedValue(undefined)
 
       // When: DELETE /api/images/image-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -796,7 +805,7 @@ describe('Gallery Lambda Integration', () => {
       mockDb.db.where.mockResolvedValue([])
 
       // When: DELETE /api/images/nonexistent is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const nonExistentId = '550e8400-e29b-41d4-a716-000000000000'
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
@@ -838,7 +847,7 @@ describe('Gallery Lambda Integration', () => {
       mockDb.db.where.mockResolvedValue([existingImage])
 
       // When: DELETE /api/images/image-123 is called by different user
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -940,7 +949,7 @@ describe('Gallery Lambda Integration', () => {
 
     it('should upload image with all metadata', async () => {
       // Given: Valid image upload request
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -992,7 +1001,7 @@ describe('Gallery Lambda Integration', () => {
         errors: ['File size exceeds maximum allowed size of 10MB'],
       })
 
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1033,7 +1042,7 @@ describe('Gallery Lambda Integration', () => {
         errors: ['File type application/pdf is not allowed'],
       })
 
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1089,7 +1098,7 @@ describe('Gallery Lambda Integration', () => {
         return badFormData.fields[field as keyof typeof badFormData.fields]
       })
 
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1136,7 +1145,7 @@ describe('Gallery Lambda Integration', () => {
         return noFileFormData.fields[field as keyof typeof noFileFormData.fields]
       })
 
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1176,7 +1185,7 @@ describe('Gallery Lambda Integration', () => {
         'gallery:images:user:user-123:page:2:limit:20:search:none:album:none',
       ])
 
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1212,7 +1221,7 @@ describe('Gallery Lambda Integration', () => {
   describe('Route Not Found', () => {
     it('should return 404 for unknown routes', async () => {
       // Given: Unknown route
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1244,7 +1253,7 @@ describe('Gallery Lambda Integration', () => {
   describe('CORS Headers', () => {
     it('should include CORS headers in all responses', async () => {
       // Given: Any valid request
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1290,7 +1299,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue([])
 
       // When: POST /api/albums is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1334,7 +1343,7 @@ describe('Gallery Lambda Integration', () => {
       ])
 
       // When: POST /api/albums with another user's image
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1391,7 +1400,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/albums is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1437,7 +1446,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(JSON.stringify(cachedResponse))
 
       // When: GET /api/albums is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1512,7 +1521,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/albums/album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1557,7 +1566,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/albums/album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1594,7 +1603,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.get).mockResolvedValue(null)
 
       // When: GET /api/albums/nonexistent is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const nonExistentId = '770e8400-e29b-41d4-a716-000000000000'
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
@@ -1649,7 +1658,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue([])
 
       // When: PATCH /api/albums/album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1694,7 +1703,7 @@ describe('Gallery Lambda Integration', () => {
       ])
 
       // When: PATCH /api/albums/album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1742,7 +1751,7 @@ describe('Gallery Lambda Integration', () => {
       vi.mocked(redisClient.keys).mockResolvedValue([])
 
       // When: DELETE /api/albums/album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1785,7 +1794,7 @@ describe('Gallery Lambda Integration', () => {
       ])
 
       // When: DELETE /api/albums/album-123 is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {
           http: {
@@ -1819,7 +1828,7 @@ describe('Gallery Lambda Integration', () => {
       mockDb.db.where.mockResolvedValue([])
 
       // When: DELETE /api/albums/nonexistent is called
-      const { handler } = await import('../../gallery')
+      const { handler } = await import('../../../../gallery/index')
       const nonExistentId = '770e8400-e29b-41d4-a716-000000000000'
       const event: Partial<APIGatewayProxyEventV2> = {
         requestContext: {

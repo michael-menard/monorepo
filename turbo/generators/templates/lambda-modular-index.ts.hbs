@@ -1,0 +1,42 @@
+/**
+ * {{pascalCase name}} Lambda Handler
+ *
+ * {{description}}
+ */
+
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
+import { logger } from '@/lib/utils/logger'
+import { getUserIdFromEvent } from '@/lib/auth/jwt-utils'
+import { createSuccessResponse, createErrorResponse } from '@/lib/utils/response-utils'
+{{#if needsDatabase}}
+import { db } from '@monorepo/db/client'
+{{/if}}
+
+/**
+ * {{pascalCase name}} Handler
+ */
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
+  try {
+    {{#if (ne authType 'none')}}
+    // Get authenticated user ID from JWT
+    const userId = getUserIdFromEvent(event)
+    if (!userId) {
+      return createErrorResponse(401, 'UNAUTHORIZED', 'Authentication required')
+    }
+    {{/if}}
+
+    // Parse request body if needed
+    const body = event.body ? JSON.parse(event.body) : {}
+
+    // TODO: Implement your handler logic here
+    logger.info('{{pascalCase name}} handler called', { {{#if (ne authType 'none')}}userId, {{/if}}body })
+
+    return createSuccessResponse(200, {
+      message: '{{pascalCase name}} executed successfully',
+      // TODO: Add your response data
+    })
+  } catch (error) {
+    logger.error('Error in {{pascalCase name}} handler:', error)
+    return createErrorResponse(500, 'INTERNAL_ERROR', 'Failed to execute {{name}}')
+  }
+}

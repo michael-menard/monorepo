@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { handler } from '../../wishlist'
+import { handler } from '../../../../wishlist/index'
 import { db } from '@/lib/db/client'
 import * as redisClient from '@/lib/cache/redis-client'
 import * as imageUploadService from '@/lib/services/image-upload-service'

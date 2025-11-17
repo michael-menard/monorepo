@@ -9,6 +9,10 @@ export {
   validateAuthentication,
   validateResourceOwnership,
   validateUserResourceAccess,
+  getUserIdFromEvent,
+  getEmailFromEvent,
+  getUsernameFromEvent,
+  getJwtClaims,
   type AuthResult,
   type AuthzResult,
 } from './auth-validator'

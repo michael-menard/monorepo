@@ -1,0 +1,16 @@
+{
+  "name": "@monorepo/gallery-list-albums",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "aws-lambda": "^1.0.7",
+    "@monorepo/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  }
+}
