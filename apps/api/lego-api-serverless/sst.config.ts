@@ -339,6 +339,234 @@ export default $config({
     // Story 1.8: Health check Lambda + API Gateway
 
     // ========================================
+    // Cognito User Pool for Authentication
+    // ========================================
+
+    /**
+     * Cognito User Pool
+     * - Email-based sign-in with auto-verification
+     * - Password policy: 8+ chars, lowercase, uppercase, digits
+     * - Custom attributes: avatar_url, preferences
+     * - Deletion protection enabled for production
+     */
+    const userPool = new aws.cognito.UserPool('LegoMocUserPool', {
+      name: `lego-moc-users-${stage}`,
+
+      // Sign-in configuration
+      usernameAttributes: ['email'],
+      autoVerifiedAttributes: ['email'],
+
+      // Password policy
+      passwordPolicy: {
+        minimumLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireNumbers: true,
+        requireSymbols: false,
+        temporaryPasswordValidityDays: 7,
+      },
+
+      // Account recovery
+      accountRecoverySetting: {
+        recoveryMechanisms: [
+          {
+            name: 'verified_email',
+            priority: 1,
+          },
+        ],
+      },
+
+      // Email configuration (using Cognito's built-in email)
+      // TODO: Switch to SES for production
+      emailConfiguration: {
+        emailSendingAccount: 'COGNITO_DEFAULT',
+      },
+
+      // User verification templates
+      verificationMessageTemplate: {
+        defaultEmailOption: 'CONFIRM_WITH_LINK',
+        emailSubject: 'Verify your LEGO MOC account',
+        emailMessage:
+          'Hello! Please verify your email address by clicking this link: {##Verify Email##}',
+        emailSubjectByLink: 'Verify your LEGO MOC account',
+        emailMessageByLink:
+          'Hello! Please verify your email address by clicking this link: {##Verify Email##}',
+      },
+
+      // Admin user creation templates
+      adminCreateUserConfig: {
+        allowAdminCreateUserOnly: false,
+        inviteMessageTemplate: {
+          emailSubject: 'Welcome to LEGO MOC Instructions!',
+          emailMessage: 'Hello {username}! Your temporary password is {####}',
+        },
+      },
+
+      // Standard attributes
+      schemas: [
+        {
+          attributeDataType: 'String',
+          name: 'email',
+          required: true,
+          mutable: true,
+        },
+        {
+          attributeDataType: 'String',
+          name: 'given_name',
+          required: true,
+          mutable: true,
+        },
+        {
+          attributeDataType: 'String',
+          name: 'family_name',
+          required: false,
+          mutable: true,
+        },
+        // Custom attributes
+        {
+          attributeDataType: 'String',
+          name: 'avatar_url',
+          mutable: true,
+          stringAttributeConstraints: {
+            maxLength: '2048',
+            minLength: '0',
+          },
+        },
+        {
+          attributeDataType: 'String',
+          name: 'preferences',
+          mutable: true,
+          stringAttributeConstraints: {
+            maxLength: '2048',
+            minLength: '0',
+          },
+        },
+      ],
+
+      // Deletion protection
+      deletionProtection: stage === 'production' ? 'ACTIVE' : 'INACTIVE',
+
+      tags: {
+        Environment: stage,
+        Service: 'lego-api-serverless',
+      },
+    })
+
+    /**
+     * Cognito User Pool Client
+     * - OAuth 2.0 authorization code flow
+     * - JWT token validity: 1 hour (access/id), 30 days (refresh)
+     * - Callback URLs for local development and production
+     */
+    const userPoolClient = new aws.cognito.UserPoolClient('LegoMocWebClient', {
+      userPoolId: userPool.id,
+      name: `lego-moc-web-client-${stage}`,
+
+      // OAuth configuration
+      allowedOauthFlows: ['code'],
+      allowedOauthFlowsUserPoolClient: true,
+      allowedOauthScopes: ['email', 'openid', 'profile'],
+      callbackUrls: [
+        'http://localhost:3002/auth/callback',
+        'http://localhost:5173/auth/callback', // Vite dev server
+        'https://lego-moc-instructions.com/auth/callback',
+      ],
+      logoutUrls: [
+        'http://localhost:3002/auth/logout',
+        'http://localhost:5173/auth/logout',
+        'https://lego-moc-instructions.com/auth/logout',
+      ],
+
+      // Security settings
+      generateSecret: false, // Public client (SPA)
+      preventUserExistenceErrors: 'ENABLED',
+
+      // Token validity
+      accessTokenValidity: 1,
+      idTokenValidity: 1,
+      refreshTokenValidity: 30,
+      tokenValidityUnits: {
+        accessToken: 'hours',
+        idToken: 'hours',
+        refreshToken: 'days',
+      },
+
+      // Supported identity providers
+      supportedIdentityProviders: ['COGNITO'],
+
+      // Read/write attributes
+      readAttributes: [
+        'email',
+        'email_verified',
+        'given_name',
+        'family_name',
+        'custom:avatar_url',
+        'custom:preferences',
+      ],
+      writeAttributes: [
+        'email',
+        'given_name',
+        'family_name',
+        'custom:avatar_url',
+        'custom:preferences',
+      ],
+    })
+
+    /**
+     * Cognito Identity Pool
+     * - Provides temporary AWS credentials for authenticated users
+     * - Used for direct S3 access (if needed)
+     */
+    const identityPool = new aws.cognito.IdentityPool('LegoMocIdentityPool', {
+      identityPoolName: `lego_moc_identity_${stage}`,
+      allowUnauthenticatedIdentities: false,
+      cognitoIdentityProviders: [
+        {
+          clientId: userPoolClient.id,
+          providerName: userPool.endpoint,
+        },
+      ],
+    })
+
+    /**
+     * IAM Role for authenticated Cognito users
+     * - Allows S3 read access for user-specific files
+     */
+    const authenticatedRole = new aws.iam.Role('CognitoAuthenticatedRole', {
+      assumeRolePolicy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              Federated: 'cognito-identity.amazonaws.com',
+            },
+            Action: 'sts:AssumeRoleWithWebIdentity',
+            Condition: {
+              StringEquals: {
+                'cognito-identity.amazonaws.com:aud': identityPool.id,
+              },
+              'ForAnyValue:StringLike': {
+                'cognito-identity.amazonaws.com:amr': 'authenticated',
+              },
+            },
+          },
+        ],
+      }),
+      managedPolicyArns: ['arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'],
+    })
+
+    /**
+     * Attach IAM role to Identity Pool
+     */
+    new aws.cognito.IdentityPoolRoleAttachment('IdentityPoolRoleAttachment', {
+      identityPoolId: identityPool.id,
+      roles: {
+        authenticated: authenticatedRole.arn,
+      },
+    })
+
+    // ========================================
     // Story 1.8: Health Check Lambda + API Gateway
     // ========================================
 
@@ -384,13 +612,8 @@ export default $config({
      * - Validates JWT signature, issuer, audience, and expiration
      * - Extracts userId (sub claim) and makes it available to Lambda
      * - Rejects requests before Lambda execution (saves costs)
-     *
-     * Note: Environment variables COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID
-     * must be set for this to work. These will be configured when Cognito
-     * User Pool is created.
+     * - Uses SST-managed Cognito User Pool and Client
      */
-    const cognitoUserPoolId = process.env.COGNITO_USER_POOL_ID || 'PLACEHOLDER'
-    const cognitoClientId = process.env.COGNITO_CLIENT_ID || 'PLACEHOLDER'
     const region = aws.getRegionOutput().name
 
     const cognitoAuthorizer = new aws.apigatewayv2.Authorizer('CognitoJwtAuthorizer', {
@@ -399,8 +622,8 @@ export default $config({
       identitySources: ['$request.header.Authorization'],
       name: `cognito-jwt-authorizer-${stage}`,
       jwtConfiguration: {
-        audiences: [cognitoClientId],
-        issuer: $interpolate`https://cognito-idp.${region}.amazonaws.com/${cognitoUserPoolId}`,
+        audiences: [userPoolClient.id],
+        issuer: $interpolate`https://cognito-idp.${region}.amazonaws.com/${userPool.id}`,
       },
     })
 
@@ -1034,12 +1257,15 @@ export default $config({
      * - Provides dashboard overview
      * - Groups by status with totals
      */
-    const getUserPartsListsSummaryFunction = new sst.aws.Function('GetUserPartsListsSummaryFunction', {
-      ...mocPartsListsLambdaConfig,
-      handler: 'moc-parts-lists/get-user-summary/index.handler',
-      timeout: '20 seconds',
-      memory: '512 MB',
-    })
+    const getUserPartsListsSummaryFunction = new sst.aws.Function(
+      'GetUserPartsListsSummaryFunction',
+      {
+        ...mocPartsListsLambdaConfig,
+        handler: 'moc-parts-lists/get-user-summary/index.handler',
+        timeout: '20 seconds',
+        memory: '512 MB',
+      },
+    )
 
     // MOC Parts Lists API Routes
     // All routes require JWT authentication via Cognito
@@ -1049,15 +1275,27 @@ export default $config({
     api.route('POST /api/moc-instructions/{mocId}/parts-lists', createPartsListFunction, {
       auth: { jwt: { authorizer: cognitoAuthorizer } },
     })
-    api.route('PUT /api/moc-instructions/{mocId}/parts-lists/{partsListId}', updatePartsListFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
-    api.route('PATCH /api/moc-instructions/{mocId}/parts-lists/{partsListId}/status', updatePartsListStatusFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
-    api.route('DELETE /api/moc-instructions/{mocId}/parts-lists/{partsListId}', deletePartsListFunction, {
-      auth: { jwt: { authorizer: cognitoAuthorizer } },
-    })
+    api.route(
+      'PUT /api/moc-instructions/{mocId}/parts-lists/{partsListId}',
+      updatePartsListFunction,
+      {
+        auth: { jwt: { authorizer: cognitoAuthorizer } },
+      },
+    )
+    api.route(
+      'PATCH /api/moc-instructions/{mocId}/parts-lists/{partsListId}/status',
+      updatePartsListStatusFunction,
+      {
+        auth: { jwt: { authorizer: cognitoAuthorizer } },
+      },
+    )
+    api.route(
+      'DELETE /api/moc-instructions/{mocId}/parts-lists/{partsListId}',
+      deletePartsListFunction,
+      {
+        auth: { jwt: { authorizer: cognitoAuthorizer } },
+      },
+    )
     api.route('GET /api/user/parts-lists/summary', getUserPartsListsSummaryFunction, {
       auth: { jwt: { authorizer: cognitoAuthorizer } },
     })
@@ -1087,6 +1325,13 @@ export default $config({
 
       // Storage
       bucketName: bucket.name,
+
+      // Cognito Authentication
+      userPoolId: userPool.id,
+      userPoolArn: userPool.arn,
+      userPoolClientId: userPoolClient.id,
+      userPoolEndpoint: userPool.endpoint,
+      identityPoolId: identityPool.id,
 
       // API Gateway
       apiUrl: api.url,
