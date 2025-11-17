@@ -16,7 +16,6 @@ import {
   galleryAlbums,
   mocPartsLists,
 } from '@/db/schema'
-import { getRedisClient } from '@/lib/cache/redis-client'
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc'
 import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc'
 import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@monorepo/lambda-responses'
@@ -31,8 +30,6 @@ const logger = createLogger('moc-service')
  * - Pagination (page/limit)
  * - Full-text search (OpenSearch with PostgreSQL fallback)
  * - Tag filtering
- * - Redis caching (5 minute TTL)
- * - Cache invalidation on mutations
  */
 export async function listMocs(
   userId: string,
@@ -41,25 +38,11 @@ export async function listMocs(
   const { page, limit, search, tag } = query
   const offset = (page - 1) * limit
 
-  // Generate cache key
-  const cacheKey = `moc:user:${userId}:list:${page}:${limit}:${search || ''}:${tag || ''}`
-
   try {
-    // Check Redis cache first
-    const cached = await getCachedMocList(cacheKey)
-    if (cached) {
-      logger.info('MOC list cache hit', { userId, cacheKey })
-      return cached
-    }
-
     // If search query provided, try OpenSearch first
     if (search && search.trim()) {
       try {
         const searchResults = await searchMocsOpenSearch(userId, search, offset, limit, tag)
-
-        // Cache the results
-        await cacheMocList(cacheKey, searchResults)
-
         return searchResults
       } catch (error) {
         logger.warn('OpenSearch query failed, falling back to PostgreSQL', error)
@@ -111,9 +94,6 @@ export async function listMocs(
 
     const result = { mocs, total }
 
-    // Cache the results (5 minute TTL)
-    await cacheMocList(cacheKey, result)
-
     logger.info('MOC list query completed', {
       userId,
       mocsReturned: mocs.length,
@@ -133,66 +113,6 @@ export async function listMocs(
   }
 }
 
-/**
- * Get cached MOC list from Redis
- */
-async function getCachedMocList(
-  cacheKey: string,
-): Promise<{ mocs: MocInstruction[]; total: number } | null> {
-  try {
-    const redis = await getRedisClient()
-    const cached = await redis.get(cacheKey)
-
-    if (!cached) {
-      return null
-    }
-
-    return JSON.parse(cached)
-  } catch (error) {
-    logger.warn('Redis cache read failed:', error)
-    return null
-  }
-}
-
-/**
- * Cache MOC list in Redis with 5 minute TTL
- */
-async function cacheMocList(
-  cacheKey: string,
-  data: { mocs: MocInstruction[]; total: number },
-): Promise<void> {
-  try {
-    const redis = await getRedisClient()
-    const TTL = 300 // 5 minutes
-
-    await redis.setEx(cacheKey, TTL, JSON.stringify(data))
-  } catch (error) {
-    logger.warn('Redis cache write failed:', error)
-    // Don't throw - caching failure shouldn't break the request
-  }
-}
-
-/**
- * Invalidate all MOC list caches for a user
- * Called after create/update/delete operations
- */
-export async function invalidateMocListCache(userId: string): Promise<void> {
-  try {
-    const redis = await getRedisClient()
-
-    // Find all keys matching the pattern
-    const pattern = `moc:user:${userId}:list:*`
-    const keys = await redis.keys(pattern)
-
-    if (keys.length > 0) {
-      await redis.del(keys)
-      logger.info('Invalidated MOC list cache', { userId, keysDeleted: keys.length })
-    }
-  } catch (error) {
-    logger.warn('Failed to invalidate MOC list cache:', error)
-    // Don't throw - cache invalidation failure shouldn't break the request
-  }
-}
 
 /**
  * Get MOC detail by ID with eager loading
@@ -203,26 +123,11 @@ export async function invalidateMocListCache(userId: string): Promise<void> {
  *   - mocFiles (instructions, parts lists, thumbnails, gallery images)
  *   - mocGalleryImages (linked from gallery_images table)
  *   - mocPartsLists (parts list metadata)
- * - Redis caching (10 minute TTL)
- * - Cache invalidation on update/delete
  *
  * Story 2.3 implementation
  */
 export async function getMocDetail(mocId: string, userId: string): Promise<MocDetailResponse> {
-  const cacheKey = `moc:detail:${mocId}`
-
   try {
-    // Check Redis cache first
-    const cached = await getCachedMocDetail(cacheKey)
-    if (cached) {
-      // Verify user owns the cached MOC
-      if (cached.userId !== userId) {
-        throw new ForbiddenError('You do not own this MOC')
-      }
-      logger.info('MOC detail cache hit', { mocId, userId })
-      return cached
-    }
-
     // Query MOC with basic info first
     const [moc] = await db
       .select()
@@ -272,9 +177,6 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
       partsLists: partsLists as any, // Cast to match MocPartsList type
     }
 
-    // Cache the result (10 minute TTL)
-    await cacheMocDetail(cacheKey, response)
-
     logger.info('MOC detail query completed', {
       mocId,
       userId,
@@ -299,74 +201,6 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
   }
 }
 
-/**
- * Get cached MOC detail from Redis
- */
-async function getCachedMocDetail(cacheKey: string): Promise<MocDetailResponse | null> {
-  try {
-    const redis = await getRedisClient()
-    const cached = await redis.get(cacheKey)
-
-    if (!cached) {
-      return null
-    }
-
-    const parsed = JSON.parse(cached)
-
-    // Convert date strings back to Date objects
-    return {
-      ...parsed,
-      createdAt: new Date(parsed.createdAt),
-      updatedAt: new Date(parsed.updatedAt),
-      uploadedDate: parsed.uploadedDate ? new Date(parsed.uploadedDate) : null,
-      files: parsed.files.map((file: any) => ({
-        ...file,
-        createdAt: new Date(file.createdAt),
-        updatedAt: new Date(file.updatedAt),
-      })),
-      partsLists: parsed.partsLists.map((list: any) => ({
-        ...list,
-        createdAt: new Date(list.createdAt),
-        updatedAt: new Date(list.updatedAt),
-      })),
-    }
-  } catch (error) {
-    logger.warn('Redis cache read failed:', error)
-    return null
-  }
-}
-
-/**
- * Cache MOC detail in Redis with 10 minute TTL
- */
-async function cacheMocDetail(cacheKey: string, data: MocDetailResponse): Promise<void> {
-  try {
-    const redis = await getRedisClient()
-    const TTL = 600 // 10 minutes
-
-    await redis.setEx(cacheKey, TTL, JSON.stringify(data))
-  } catch (error) {
-    logger.warn('Redis cache write failed:', error)
-    // Don't throw - caching failure shouldn't break the request
-  }
-}
-
-/**
- * Invalidate MOC detail cache
- * Called after update/delete operations
- */
-export async function invalidateMocDetailCache(mocId: string): Promise<void> {
-  try {
-    const redis = await getRedisClient()
-    const cacheKey = `moc:detail:${mocId}`
-
-    await redis.del(cacheKey)
-    logger.info('Invalidated MOC detail cache', { mocId })
-  } catch (error) {
-    logger.warn('Failed to invalidate MOC detail cache:', error)
-    // Don't throw - cache invalidation failure shouldn't break the request
-  }
-}
 
 /**
  * Create a new MOC instruction
@@ -419,9 +253,6 @@ export async function createMoc(
     // Index in OpenSearch asynchronously (non-blocking)
     // Fire and forget - don't wait for indexing to complete
     indexMocAsync(mocInstruction)
-
-    // Invalidate user's MOC list cache
-    invalidateMocListCache(userId)
 
     return mocInstruction
   } catch (error) {
@@ -534,10 +365,6 @@ export async function updateMoc(
 
     // Re-index in OpenSearch asynchronously (non-blocking)
     updateMocIndexAsync(mocInstruction)
-
-    // Invalidate caches
-    invalidateMocDetailCache(mocId)
-    invalidateMocListCache(userId)
 
     return mocInstruction
   } catch (error) {
@@ -673,10 +500,6 @@ export async function deleteMoc(mocId: string, userId: string): Promise<void> {
 
   // Async OpenSearch deletion (fire-and-forget)
   deleteMocIndexAsync(mocId)
-
-  // Invalidate caches
-  invalidateMocDetailCache(mocId)
-  invalidateMocListCache(userId)
 
   logger.info('MOC deletion complete', { mocId })
 }

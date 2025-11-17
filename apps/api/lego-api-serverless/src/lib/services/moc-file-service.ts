@@ -11,7 +11,6 @@
 import { eq, and } from 'drizzle-orm'
 import { PutObjectCommand, S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { invalidateMocDetailCache } from './moc-service'
 import { db } from '@/lib/db/client'
 import { mocInstructions, mocFiles } from '@/db/schema'
 import type { MocFile } from '@/types/moc'
@@ -150,9 +149,6 @@ export async function uploadMocFile(
 
   logger.info('File record created', { fileId: fileRecord.id })
 
-  // Invalidate MOC detail cache
-  invalidateMocDetailCache(mocId)
-
   return fileRecord as unknown as MocFile
 }
 
@@ -269,7 +265,3 @@ function sanitizeFilename(filename: string): string {
     .toLowerCase()
 }
 
-/**
- * Export invalidation function for use by other services
- */
-export { invalidateMocDetailCache }

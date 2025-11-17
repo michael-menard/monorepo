@@ -1,10 +1,19 @@
 /**
- * Redis Client for Caching
+ * Redis Client for Caching - DEPRECATED
  *
- * Provides configured Redis client for caching API responses.
- * Optimized for serverless with connection reuse across Lambda invocations.
+ * Redis infrastructure has been removed to save costs (~$292/month).
+ * All caching logic now uses direct PostgreSQL queries.
+ * This file is kept for reference but is no longer used.
  */
 
+// NOTE: This file has been disabled as Redis infrastructure was removed.
+// If you need to re-enable Redis in the future:
+// 1. Uncomment the code below
+// 2. Add REDIS_HOST and REDIS_PORT back to env.ts
+// 3. Add Redis resource back to sst.config.ts
+// 4. Re-link Redis to Lambda functions
+
+/*
 import { createClient } from 'redis'
 import { getEnv } from '@/lib/utils/env'
 import { createLogger } from '../utils/logger'
@@ -12,11 +21,6 @@ import { createLogger } from '../utils/logger'
 const logger = createLogger('redis-client')
 let _redisClient: ReturnType<typeof createClient> | null = null
 
-/**
- * Get or create Redis client instance
- * - Client is reused across Lambda invocations
- * - Automatically connects on first use
- */
 export async function getRedisClient(): Promise<ReturnType<typeof createClient>> {
   if (!_redisClient) {
     const env = getEnv()
@@ -24,11 +28,9 @@ export async function getRedisClient(): Promise<ReturnType<typeof createClient>>
     _redisClient = createClient({
       url: `redis://${env.REDIS_HOST}:${env.REDIS_PORT || 6379}`,
       socket: {
-        // Serverless optimizations
         connectTimeout: 5000,
         keepAlive: true,
         reconnectStrategy: retries => {
-          // Fail fast in Lambda - don't retry indefinitely
           if (retries > 3) {
             return new Error('Max Redis reconnection attempts reached')
           }
@@ -38,18 +40,12 @@ export async function getRedisClient(): Promise<ReturnType<typeof createClient>>
     })
 
     _redisClient.on('error', err => logger.error('Redis Client Error:', err))
-
     await _redisClient.connect()
   }
 
   return _redisClient
 }
 
-/**
- * Test Redis connectivity
- * - Used by health check Lambda
- * - Returns true if PING succeeds
- */
 export async function testRedisConnection(): Promise<boolean> {
   try {
     const client = await getRedisClient()
@@ -61,13 +57,23 @@ export async function testRedisConnection(): Promise<boolean> {
   }
 }
 
-/**
- * Close Redis connection
- * - Should be called during Lambda shutdown (if implementing graceful shutdown)
- */
 export async function closeRedisClient(): Promise<void> {
   if (_redisClient) {
     await _redisClient.quit()
     _redisClient = null
   }
+}
+*/
+
+// Stub functions to prevent import errors in tests
+export async function getRedisClient(): Promise<any> {
+  throw new Error('Redis has been disabled. Please use PostgreSQL directly.')
+}
+
+export async function testRedisConnection(): Promise<boolean> {
+  return false
+}
+
+export async function closeRedisClient(): Promise<void> {
+  // No-op
 }
