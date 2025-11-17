@@ -577,7 +577,7 @@ export default $config({
      * - No authentication required (public endpoint)
      */
     const healthCheckFunction = new sst.aws.Function('HealthCheckFunction', {
-      handler: 'health/index.handler',
+      handler: 'functions/health/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds',
       memory: '256 MB',
@@ -641,7 +641,7 @@ export default $config({
      * - Connected to PostgreSQL, Redis, OpenSearch, S3
      */
     const mocInstructionsFunction = new sst.aws.Function('MocInstructionsFunction', {
-      handler: 'mocInstructions/instructions/index.handler',
+      handler: 'functions/moc-instructions/instructions/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds',
       memory: '512 MB',
@@ -678,7 +678,7 @@ export default $config({
      * - Creates database records
      */
     const mocFileUploadFunction = new sst.aws.Function('MocFileUploadFunction', {
-      handler: 'mocInstructions/fileUpload/index.handler',
+      handler: 'functions/moc-instructions/fileUpload/index.handler',
       runtime: 'nodejs20.x',
       timeout: '60 seconds', // Longer timeout for file uploads
       memory: '1024 MB', // More memory for file processing
@@ -707,7 +707,7 @@ export default $config({
      * - URLs valid for 1 hour
      */
     const mocFileDownloadFunction = new sst.aws.Function('MocFileDownloadFunction', {
-      handler: 'mocInstructions/fileDownload/index.handler',
+      handler: 'functions/moc-instructions/fileDownload/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -735,7 +735,7 @@ export default $config({
      * - Updates MOC updatedAt timestamp
      */
     const mocFileDeleteFunction = new sst.aws.Function('MocFileDeleteFunction', {
-      handler: 'mocInstructions/delete-moc-file/index.handler',
+      handler: 'functions/moc-instructions/delete-moc-file/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -763,7 +763,7 @@ export default $config({
      * - JWT authentication via Cognito
      */
     const uploadPartsListFunction = new sst.aws.Function('UploadPartsListFunction', {
-      handler: 'mocInstructions/upload-parts-list/index.handler',
+      handler: 'functions/moc-instructions/upload-parts-list/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds', // Longer timeout for file parsing
       memory: '512 MB', // More memory for CSV/XML processing
@@ -792,7 +792,7 @@ export default $config({
      * - JWT authentication via Cognito
      */
     const initializeMocWithFilesFunction = new sst.aws.Function('InitializeMocWithFilesFunction', {
-      handler: 'mocInstructions/initialize-moc-with-files/index.handler',
+      handler: 'functions/moc-instructions/initialize-moc-with-files/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds',
       memory: '512 MB',
@@ -815,7 +815,7 @@ export default $config({
      * - JWT authentication via Cognito
      */
     const finalizeMocWithFilesFunction = new sst.aws.Function('FinalizeMocWithFilesFunction', {
-      handler: 'mocInstructions/finalize-moc-with-files/index.handler',
+      handler: 'functions/moc-instructions/finalize-moc-with-files/index.handler',
       runtime: 'nodejs20.x',
       timeout: '30 seconds',
       memory: '512 MB',
@@ -844,7 +844,7 @@ export default $config({
      * - Prevents duplicate links
      */
     const linkGalleryImageFunction = new sst.aws.Function('LinkGalleryImageFunction', {
-      handler: 'mocInstructions/link-gallery-image/index.handler',
+      handler: 'functions/moc-instructions/link-gallery-image/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -862,7 +862,7 @@ export default $config({
      * - Verifies ownership
      */
     const unlinkGalleryImageFunction = new sst.aws.Function('UnlinkGalleryImageFunction', {
-      handler: 'mocInstructions/unlink-gallery-image/index.handler',
+      handler: 'functions/moc-instructions/unlink-gallery-image/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -880,7 +880,7 @@ export default $config({
      * - Returns full image data with metadata
      */
     const getMocGalleryImagesFunction = new sst.aws.Function('GetMocGalleryImagesFunction', {
-      handler: 'mocInstructions/get-moc-gallery-images/index.handler',
+      handler: 'functions/moc-instructions/get-moc-gallery-images/index.handler',
       runtime: 'nodejs20.x',
       timeout: '10 seconds',
       memory: '256 MB',
@@ -907,7 +907,7 @@ export default $config({
      * - Top 10 categories with counts
      */
     const getMocStatsByCategoryFunction = new sst.aws.Function('GetMocStatsByCategoryFunction', {
-      handler: 'mocInstructions/get-moc-stats/index.handler',
+      handler: 'functions/moc-instructions/get-moc-stats/index.handler',
       runtime: 'nodejs20.x',
       timeout: '15 seconds',
       memory: '512 MB',
@@ -925,7 +925,7 @@ export default $config({
      * - Grouped by month and category
      */
     const getMocUploadsOverTimeFunction = new sst.aws.Function('GetMocUploadsOverTimeFunction', {
-      handler: 'mocInstructions/get-moc-uploads-over-time/index.handler',
+      handler: 'functions/moc-instructions/get-moc-uploads-over-time/index.handler',
       runtime: 'nodejs20.x',
       timeout: '15 seconds',
       memory: '512 MB',
@@ -963,7 +963,7 @@ export default $config({
     // Image Upload Handler - Requires high memory for Sharp image processing
     const uploadImageFunction = new sst.aws.Function('UploadImageFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/upload-image/index.handler',
+      handler: 'functions/gallery/upload-image/index.handler',
       timeout: '60 seconds', // Story 3.2 AC #9: Longer timeout for Sharp processing
       memory: '2048 MB', // Story 3.2 AC #9: Required for Sharp image processing
     })
@@ -971,7 +971,7 @@ export default $config({
     // Image List Handler
     const listImagesFunction = new sst.aws.Function('ListImagesFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/list-images/index.handler',
+      handler: 'functions/gallery/list-images/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -979,7 +979,7 @@ export default $config({
     // Image Search Handler - Story 3.8: Gallery and Wishlist Search
     const searchImagesFunction = new sst.aws.Function('SearchImagesFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/search-images/index.handler',
+      handler: 'functions/gallery/search-images/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -987,7 +987,7 @@ export default $config({
     // Get Single Image Handler
     const getImageFunction = new sst.aws.Function('GetImageFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/get-image/index.handler',
+      handler: 'functions/gallery/get-image/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -995,7 +995,7 @@ export default $config({
     // Update Image Handler
     const updateImageFunction = new sst.aws.Function('UpdateImageFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/update-image/index.handler',
+      handler: 'functions/gallery/update-image/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1003,7 +1003,7 @@ export default $config({
     // Delete Image Handler
     const deleteImageFunction = new sst.aws.Function('DeleteImageFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/delete-image/index.handler',
+      handler: 'functions/gallery/delete-image/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1011,7 +1011,7 @@ export default $config({
     // Flag Image Handler
     const flagImageFunction = new sst.aws.Function('FlagImageFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/flag-image/index.handler',
+      handler: 'functions/gallery/flag-image/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -1019,7 +1019,7 @@ export default $config({
     // Create Album Handler
     const createAlbumFunction = new sst.aws.Function('CreateAlbumFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/create-album/index.handler',
+      handler: 'functions/gallery/create-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1027,7 +1027,7 @@ export default $config({
     // List Albums Handler
     const listAlbumsFunction = new sst.aws.Function('ListAlbumsFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/list-albums/index.handler',
+      handler: 'functions/gallery/list-albums/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1035,7 +1035,7 @@ export default $config({
     // Get Album Handler
     const getAlbumFunction = new sst.aws.Function('GetAlbumFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/get-album/index.handler',
+      handler: 'functions/gallery/get-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1043,7 +1043,7 @@ export default $config({
     // Update Album Handler
     const updateAlbumFunction = new sst.aws.Function('UpdateAlbumFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/update-album/index.handler',
+      handler: 'functions/gallery/update-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1051,7 +1051,7 @@ export default $config({
     // Delete Album Handler
     const deleteAlbumFunction = new sst.aws.Function('DeleteAlbumFunction', {
       ...galleryLambdaConfig,
-      handler: 'gallery/delete-album/index.handler',
+      handler: 'functions/gallery/delete-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1096,7 +1096,7 @@ export default $config({
     // List Wishlist Items Handler
     const listWishlistFunction = new sst.aws.Function('ListWishlistFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/list-wishlist/index.handler',
+      handler: 'functions/wishlist/list-wishlist/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -1104,7 +1104,7 @@ export default $config({
     // Get Wishlist Item Handler
     const getWishlistItemFunction = new sst.aws.Function('GetWishlistItemFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/get-wishlist-item/index.handler',
+      handler: 'functions/wishlist/get-wishlist-item/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -1112,7 +1112,7 @@ export default $config({
     // Create Wishlist Item Handler
     const createWishlistItemFunction = new sst.aws.Function('CreateWishlistItemFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/create-wishlist-item/index.handler',
+      handler: 'functions/wishlist/create-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
     })
@@ -1120,7 +1120,7 @@ export default $config({
     // Update Wishlist Item Handler
     const updateWishlistItemFunction = new sst.aws.Function('UpdateWishlistItemFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/update-wishlist-item/index.handler',
+      handler: 'functions/wishlist/update-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
     })
@@ -1128,7 +1128,7 @@ export default $config({
     // Delete Wishlist Item Handler
     const deleteWishlistItemFunction = new sst.aws.Function('DeleteWishlistItemFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/delete-wishlist-item/index.handler',
+      handler: 'functions/wishlist/delete-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
     })
@@ -1136,7 +1136,7 @@ export default $config({
     // Reorder Wishlist Handler
     const reorderWishlistFunction = new sst.aws.Function('ReorderWishlistFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/reorder-wishlist/index.handler',
+      handler: 'functions/wishlist/reorder-wishlist/index.handler',
       timeout: '20 seconds',
       memory: '512 MB',
     })
@@ -1144,7 +1144,7 @@ export default $config({
     // Upload Wishlist Image Handler - Requires high memory for Sharp image processing
     const uploadWishlistImageFunction = new sst.aws.Function('UploadWishlistImageFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/upload-wishlist-image/index.handler',
+      handler: 'functions/wishlist/upload-wishlist-image/index.handler',
       timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
       memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
     })
@@ -1152,7 +1152,7 @@ export default $config({
     // Search Wishlist Handler
     const searchWishlistFunction = new sst.aws.Function('SearchWishlistFunction', {
       ...wishlistLambdaConfig,
-      handler: 'wishlist/search-wishlist/index.handler',
+      handler: 'functions/wishlist/search-wishlist/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
     })
@@ -1195,7 +1195,7 @@ export default $config({
      */
     const getPartsListsFunction = new sst.aws.Function('GetPartsListsFunction', {
       ...mocPartsListsLambdaConfig,
-      handler: 'moc-parts-lists/get-parts-lists/index.handler',
+      handler: 'functions/moc-parts-lists/get-parts-lists/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -1208,7 +1208,7 @@ export default $config({
      */
     const createPartsListFunction = new sst.aws.Function('CreatePartsListFunction', {
       ...mocPartsListsLambdaConfig,
-      handler: 'moc-parts-lists/create-parts-list/index.handler',
+      handler: 'functions/moc-parts-lists/create-parts-list/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1221,7 +1221,7 @@ export default $config({
      */
     const updatePartsListFunction = new sst.aws.Function('UpdatePartsListFunction', {
       ...mocPartsListsLambdaConfig,
-      handler: 'moc-parts-lists/update-parts-list/index.handler',
+      handler: 'functions/moc-parts-lists/update-parts-list/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
     })
@@ -1233,7 +1233,7 @@ export default $config({
      */
     const updatePartsListStatusFunction = new sst.aws.Function('UpdatePartsListStatusFunction', {
       ...mocPartsListsLambdaConfig,
-      handler: 'moc-parts-lists/update-parts-list-status/index.handler',
+      handler: 'functions/moc-parts-lists/update-parts-list-status/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -1246,7 +1246,7 @@ export default $config({
      */
     const deletePartsListFunction = new sst.aws.Function('DeletePartsListFunction', {
       ...mocPartsListsLambdaConfig,
-      handler: 'moc-parts-lists/delete-parts-list/index.handler',
+      handler: 'functions/moc-parts-lists/delete-parts-list/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
     })
@@ -1261,7 +1261,7 @@ export default $config({
       'GetUserPartsListsSummaryFunction',
       {
         ...mocPartsListsLambdaConfig,
-        handler: 'moc-parts-lists/get-user-summary/index.handler',
+        handler: 'functions/moc-parts-lists/get-user-summary/index.handler',
         timeout: '20 seconds',
         memory: '512 MB',
       },
@@ -1300,6 +1300,114 @@ export default $config({
       auth: { jwt: { authorizer: cognitoAuthorizer } },
     })
 
+    // ========================================
+    // Story 4.5.5: WebSocket Server for Real-Time Updates
+    // ========================================
+
+    /**
+     * DynamoDB Table for WebSocket Connection Tracking
+     * - Stores active WebSocket connections with user mapping
+     * - TTL for automatic cleanup of stale connections (2 hours)
+     * - Global secondary index on userId for efficient user lookups
+     */
+    const websocketConnectionsTable = new sst.aws.Dynamo('WebSocketConnections', {
+      fields: {
+        connectionId: 'string',
+        userId: 'string',
+      },
+      primaryIndex: { hashKey: 'connectionId' },
+      globalIndexes: {
+        userIdIndex: { hashKey: 'userId', projection: 'all' },
+      },
+      ttl: 'expiresAt', // Auto-cleanup stale connections after 2 hours
+      transform: {
+        table: args => {
+          args.tags = {
+            Environment: stage,
+            Service: 'lego-api-serverless',
+            Feature: 'websocket',
+          }
+        },
+      },
+    })
+
+    /**
+     * WebSocket API Gateway
+     * - Provides real-time bidirectional communication
+     * - Used for upload progress, notifications, and real-time updates
+     * - JWT authentication on connection
+     */
+    const websocketApi = new sst.aws.ApiGatewayWebSocket('WebSocketApi')
+
+    /**
+     * WebSocket $connect Handler
+     * - Authenticates user via JWT token (from query parameter)
+     * - Stores connection in DynamoDB
+     * - Rejects invalid/expired tokens
+     */
+    const websocketConnectFunction = new sst.aws.Function('WebSocketConnectFunction', {
+      handler: 'websocket/connect/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [websocketConnectionsTable, websocketApi],
+      environment: {
+        CONNECTIONS_TABLE_NAME: websocketConnectionsTable.name,
+        COGNITO_USER_POOL_ID: userPool.id,
+        COGNITO_REGION: aws.getRegionOutput().name,
+        WEBSOCKET_API_ENDPOINT: $interpolate`${websocketApi.managementEndpoint}`,
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    /**
+     * WebSocket $disconnect Handler
+     * - Removes connection from DynamoDB on disconnect
+     * - Ensures cleanup of stale connections
+     */
+    const websocketDisconnectFunction = new sst.aws.Function('WebSocketDisconnectFunction', {
+      handler: 'websocket/disconnect/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [websocketConnectionsTable, websocketApi],
+      environment: {
+        CONNECTIONS_TABLE_NAME: websocketConnectionsTable.name,
+        WEBSOCKET_API_ENDPOINT: $interpolate`${websocketApi.managementEndpoint}`,
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    /**
+     * WebSocket $default Handler
+     * - Handles any messages sent from client
+     * - For now, just acknowledges receipt
+     * - Can be extended for client-initiated actions
+     */
+    const websocketDefaultFunction = new sst.aws.Function('WebSocketDefaultFunction', {
+      handler: 'websocket/default/index.handler',
+      runtime: 'nodejs20.x',
+      timeout: '30 seconds',
+      memory: '256 MB',
+      vpc,
+      link: [websocketConnectionsTable, websocketApi],
+      environment: {
+        CONNECTIONS_TABLE_NAME: websocketConnectionsTable.name,
+        WEBSOCKET_API_ENDPOINT: $interpolate`${websocketApi.managementEndpoint}`,
+        NODE_ENV: stage === 'production' ? 'production' : 'development',
+        STAGE: stage,
+      },
+    })
+
+    // WebSocket Routes
+    websocketApi.route('$connect', websocketConnectFunction)
+    websocketApi.route('$disconnect', websocketDisconnectFunction)
+    websocketApi.route('$default', websocketDefaultFunction)
+
     return {
       // VPC Infrastructure
       vpc: vpc.id,
@@ -1336,6 +1444,12 @@ export default $config({
       // API Gateway
       apiUrl: api.url,
       apiId: api.id,
+
+      // WebSocket API (Story 4.5.5)
+      websocketUrl: websocketApi.url,
+      websocketApiId: websocketApi.id,
+      websocketConnectionsTableName: websocketConnectionsTable.name,
+      websocketConnectionsTableArn: websocketConnectionsTable.arn,
 
       // Lambda Functions
       healthCheckFunctionName: healthCheckFunction.name,
