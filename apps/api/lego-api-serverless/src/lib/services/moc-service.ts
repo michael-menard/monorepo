@@ -16,7 +16,7 @@ import {
   galleryAlbums,
   mocPartsLists,
 } from '@/db/schema'
-import { getRedisClient } from '@/lib/services/redis'
+import { getRedisClient } from '@/lib/cache/redis-client'
 import { searchMocs as searchMocsOpenSearch } from '@/lib/services/opensearch-moc'
 import type { MocInstruction, MocListQuery, MocDetailResponse } from '@/types/moc'
 import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/lib/errors'

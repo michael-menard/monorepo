@@ -21,8 +21,8 @@ import {
   HealthCheckData,
 } from '@/lib/responses'
 import { testConnection } from '@/lib/db/client'
-import { testRedisConnection } from '@/lib/services/redis'
-import { testOpenSearchConnection } from '@/lib/services/opensearch'
+import { testRedisConnection } from '@/lib/cache/redis-client'
+import { testOpenSearchConnection } from '@/lib/search/opensearch-client'
 import { ServiceUnavailableError } from '@/lib/errors'
 import { logger } from '../lib/utils/logger'
 
