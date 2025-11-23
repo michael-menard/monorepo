@@ -19,6 +19,7 @@ vi.mock('@/lib/db/client', () => ({
   },
 }))
 
+vi.mock('@/lib/cache/redis-client', () => ({
   getRedisClient: vi.fn(),
 }))
 

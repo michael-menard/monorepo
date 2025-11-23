@@ -24,7 +24,12 @@ import { invalidateMocDetailCache } from './moc-service'
 import { db } from '@/lib/db/client'
 import { mocInstructions, mocFiles } from '@/db/schema'
 import type { MocFile } from '@/types/moc'
-import { NotFoundError, ForbiddenError, BadRequestError, DatabaseError } from '@monorepo/lambda-responses'
+import {
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError,
+  DatabaseError,
+} from '@monorepo/lambda-responses'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('moc-file-service')
@@ -62,7 +67,7 @@ const ALLOWED_MIME_TYPES = {
  */
 const magicBytesValidator: FileValidator = {
   name: 'magic-bytes-validator',
-  validate: (file) => {
+  validate: file => {
     // Only validate if buffer is available
     if (!('buffer' in file) || !file.buffer) {
       return null // Skip validation if no buffer
@@ -347,8 +352,6 @@ function sanitizeFilename(filename: string): string {
     .toLowerCase()
 }
 
-<<<<<<< Updated upstream
-=======
 /**
  * File upload result for individual file in parallel upload
  */
@@ -598,4 +601,3 @@ function getMimeTypeFromFilename(filename: string): string {
  * Export invalidation function for use by other services
  */
 export { invalidateMocDetailCache }
->>>>>>> Stashed changes

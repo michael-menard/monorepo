@@ -81,6 +81,12 @@ describe('Gallery Lambda Integration', () => {
     resetChainableDbMock(mockDb.db)
 
     // Setup mock Redis client
+    mockRedis = await import('@/lib/cache/redis-client')
+    vi.mocked(mockRedis.getRedisClient).mockResolvedValue({
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
+      quit: vi.fn().mockResolvedValue('OK'),
     } as any)
 
     // Setup mock S3 client
