@@ -32,6 +32,7 @@ export default defineConfig({
       'websocket/**/__tests__/**/*.test.ts',
       'moc-parts-lists/**/__tests__/**/*.test.ts',
       'scripts/**/__tests__/**/*.test.ts',
+      'sst/**/__tests__/**/*.test.ts',
     ],
     exclude: ['node_modules', 'dist', '.sst'],
   },

@@ -8,18 +8,18 @@ BMAD uses specialized AI agents with distinct personas to handle different phase
 
 ## Quick Reference Table: All BMAD Agents
 
-| Agent | Persona Name | Primary Phase | Main Responsibility | When to Use |
-|-------|--------------|---------------|---------------------|-------------|
-| **Analyst** | Mary | Discovery | Business research, problem analysis, project briefs | Starting new projects, market research, understanding user needs |
-| **PM** | John | Planning | Product requirements, PRD creation, feature prioritization | Translating business needs into technical requirements |
-| **UX Expert** | - | Design | UI/UX specifications, design goals, user flows | Front-end projects requiring detailed design specs |
-| **Architect** | - | Design | System architecture, technical design, standards | Defining technical approach, patterns, and infrastructure |
-| **PO** | Sarah | Validation | Quality control, document validation, sharding | Reviewing artifacts, splitting large docs, coordinating phases |
-| **SM** | - | Development | Story creation, sprint planning, backlog management | Creating detailed developer stories from epics |
-| **Dev** | - | Development | Code implementation, testing, story completion | Writing code, implementing features, running tests |
-| **QA** | Quinn | Quality Assurance | Test strategy, quality gates, risk assessment | Reviewing code quality, ensuring test coverage, risk analysis |
-| **BMad-Master** | - | Any | Can perform any task except dev implementation | When you need flexibility or unsure which agent to use |
-| **BMad-Orchestrator** | - | Coordination | Morphs into other agents, coordinates workflow | Web UI only, manages multi-agent workflows |
+| Agent                 | Persona Name | Primary Phase     | Main Responsibility                                        | When to Use                                                      |
+| --------------------- | ------------ | ----------------- | ---------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Analyst**           | Mary         | Discovery         | Business research, problem analysis, project briefs        | Starting new projects, market research, understanding user needs |
+| **PM**                | John         | Planning          | Product requirements, PRD creation, feature prioritization | Translating business needs into technical requirements           |
+| **UX Expert**         | -            | Design            | UI/UX specifications, design goals, user flows             | Front-end projects requiring detailed design specs               |
+| **Architect**         | -            | Design            | System architecture, technical design, standards           | Defining technical approach, patterns, and infrastructure        |
+| **PO**                | Sarah        | Validation        | Quality control, document validation, sharding             | Reviewing artifacts, splitting large docs, coordinating phases   |
+| **SM**                | -            | Development       | Story creation, sprint planning, backlog management        | Creating detailed developer stories from epics                   |
+| **Dev**               | -            | Development       | Code implementation, testing, story completion             | Writing code, implementing features, running tests               |
+| **QA**                | Quinn        | Quality Assurance | Test strategy, quality gates, risk assessment              | Reviewing code quality, ensuring test coverage, risk analysis    |
+| **BMad-Master**       | -            | Any               | Can perform any task except dev implementation             | When you need flexibility or unsure which agent to use           |
+| **BMad-Orchestrator** | -            | Coordination      | Morphs into other agents, coordinates workflow             | Web UI only, manages multi-agent workflows                       |
 
 ---
 
@@ -29,19 +29,19 @@ These three roles are often confused because they all work with requirements and
 
 ### Comparison Table
 
-| Aspect | PM (Product Manager) | PO (Product Owner) | SM (Scrum Master) |
-|--------|---------------------|-------------------|-------------------|
-| **Persona** | John | Sarah | (unnamed) |
-| **Phase** | Planning | Validation & Coordination | Development |
-| **Input** | Project Brief | PRD, Architecture | Epic Requirements |
-| **Output** | PRD with Epics & Stories | Validated & Sharded Docs | Detailed Developer Stories |
-| **Abstraction Level** | **High** - Business requirements | **Medium** - Quality & Structure | **Low** - Implementation details |
-| **Focus** | **What** to build and **why** | **Quality** and **readiness** | **How** to build (tasks) |
-| **Typical Questions** | "What features solve the business problem?" | "Are all docs complete and consistent?" | "What specific tasks implement this epic?" |
-| **Decision Authority** | Feature scope, priorities | Go/no-go on artifacts | Story sizing, task breakdown |
-| **Stakeholders** | Business, users, execs | Development team, PM, Architect | Developers, QA |
-| **Artifact Ownership** | PRD (entire document) | Validation reports, sharded docs | Individual story files |
-| **Timeline** | Early (after brief) | Mid (before dev starts) | Ongoing (per epic/sprint) |
+| Aspect                 | PM (Product Manager)                        | PO (Product Owner)                      | SM (Scrum Master)                          |
+| ---------------------- | ------------------------------------------- | --------------------------------------- | ------------------------------------------ |
+| **Persona**            | John                                        | Sarah                                   | (unnamed)                                  |
+| **Phase**              | Planning                                    | Validation & Coordination               | Development                                |
+| **Input**              | Project Brief                               | PRD, Architecture                       | Epic Requirements                          |
+| **Output**             | PRD with Epics & Stories                    | Validated & Sharded Docs                | Detailed Developer Stories                 |
+| **Abstraction Level**  | **High** - Business requirements            | **Medium** - Quality & Structure        | **Low** - Implementation details           |
+| **Focus**              | **What** to build and **why**               | **Quality** and **readiness**           | **How** to build (tasks)                   |
+| **Typical Questions**  | "What features solve the business problem?" | "Are all docs complete and consistent?" | "What specific tasks implement this epic?" |
+| **Decision Authority** | Feature scope, priorities                   | Go/no-go on artifacts                   | Story sizing, task breakdown               |
+| **Stakeholders**       | Business, users, execs                      | Development team, PM, Architect         | Developers, QA                             |
+| **Artifact Ownership** | PRD (entire document)                       | Validation reports, sharded docs        | Individual story files                     |
+| **Timeline**           | Early (after brief)                         | Mid (before dev starts)                 | Ongoing (per epic/sprint)                  |
 
 ### Workflow Sequence
 
@@ -68,12 +68,14 @@ Project Brief
 **Role**: Strategic product planner who translates business needs into technical requirements.
 
 **When to Use**:
+
 - After completing the project brief
 - When defining what features the product needs
 - When prioritizing features for MVP vs post-MVP
 - When writing functional and non-functional requirements
 
 **Responsibilities**:
+
 1. Read and understand the project brief
 2. Create comprehensive PRD with:
    - Functional requirements (FR1, FR2, ...)
@@ -86,10 +88,12 @@ Project Brief
 5. Estimate epic-level effort (hours/points)
 
 **Output Example** (from PRD):
+
 ```markdown
 ## Epic 2: Lambda Implementation (24 hours)
 
 ### Stories:
+
 - **Story 2.1**: Create base Lambda handler structure (4 hours)
   - Set up handler boilerplate
   - Configure event parsing
@@ -110,12 +114,14 @@ Project Brief
 **Role**: Quality gatekeeper who ensures all artifacts are complete, consistent, and ready for development.
 
 **When to Use**:
+
 - After PM creates PRD and Architect creates architecture
 - Before starting development
 - When you need to split large documents for easier consumption
 - When coordinating between different phases
 
 **Responsibilities**:
+
 1. **Validate artifacts**:
    - PRD is complete and consistent
    - Architecture aligns with PRD requirements
@@ -133,21 +139,25 @@ Project Brief
    - Ensure stories trace back to epics
 
 **Output Example** (validation checklist):
+
 ```markdown
 ## Artifact Validation Report
 
 ### PRD Status: ✅ APPROVED
+
 - All 6 epics defined with clear scope
 - Functional requirements complete (FR1-FR12)
 - Non-functional requirements documented (NFR1-NFR5)
 - Success metrics defined
 
 ### Architecture Status: ✅ APPROVED
+
 - Tech stack aligns with NFR requirements
 - All epic dependencies addressed
 - Security considerations documented
 
 ### Readiness for Development: ✅ GO
+
 - Documents sharded to docs/prd/ and docs/architecture/
 - Ready for SM to create Story 1.1
 ```
@@ -161,12 +171,14 @@ Project Brief
 **Role**: Story specialist who creates detailed, implementation-ready developer stories.
 
 **When to Use**:
+
 - After PO validates and shards documents
 - When starting a new epic
 - When developers need the next story to implement
 - Iteratively throughout development (story by story)
 
 **Responsibilities**:
+
 1. **Read epic requirements** from sharded PRD
 2. **Read architecture context** for technical guidance
 3. **Create detailed story files** with:
@@ -181,18 +193,22 @@ Project Brief
 5. **Ensure stories are self-contained** (dev shouldn't need to read PRD)
 
 **Output Example** (Story 2.1):
+
 ```markdown
 # Story 2.1: Create Base Lambda Handler Structure
 
 ## Status
+
 Draft
 
 ## Story
+
 As a developer,
 I want a standardized Lambda handler structure,
 so that I can consistently process S3 events for image uploads.
 
 ## Acceptance Criteria
+
 1. Lambda handler accepts S3 PutObject events
 2. Event parsing extracts bucket name and object key
 3. Handler validates event structure before processing
@@ -200,6 +216,7 @@ so that I can consistently process S3 events for image uploads.
 5. Handler is typed with TypeScript interfaces
 
 ## Tasks / Subtasks
+
 - [ ] Create handler file structure (AC: 1, 2)
   - [ ] Set up `src/functions/image-upload/handler.ts`
   - [ ] Define S3Event TypeScript interface
@@ -220,23 +237,28 @@ so that I can consistently process S3 events for image uploads.
 ## Dev Notes
 
 ### Architecture Context
+
 From `docs/architecture/lambda-patterns.md`:
+
 - Use SST `ApiHandler` wrapper for consistent responses
 - Follow error handling pattern: try/catch with structured logging
 - All handlers must include CloudWatch metrics
 
 ### Technology Stack
+
 - SST v2 for Lambda definitions
 - TypeScript 5.0+
 - Zod for runtime validation
 - AWS SDK v3 for S3 operations
 
 ### Testing Requirements
+
 - Unit tests for event parsing (happy path + error cases)
 - Mock S3Event fixtures
 - Minimum 80% code coverage
 
 ## Testing
+
 - Test file: `src/functions/image-upload/handler.test.ts`
 - Use Vitest for unit tests
 - Mock AWS SDK S3 client operations
@@ -293,12 +315,14 @@ graph TD
 **Phase**: Discovery
 
 **Commands/Tasks**:
+
 - `facilitate-brainstorming-session.md`
 - `create-doc.md` (with project-brief-tmpl.yaml)
 
 **Input**: Business idea, stakeholder interviews, market research
 
 **Output**: Project Brief with:
+
 - Executive summary
 - Problem statement
 - Proposed solution
@@ -307,12 +331,14 @@ graph TD
 - MVP scope
 
 **When to Use**:
+
 - Starting a new project from scratch
 - Need to understand market/user needs
 - Conducting brainstorming sessions
 - Defining business objectives
 
 **Example Scenario**:
+
 > "We want to build a LEGO MOC management app. We've identified some pain points but need to formalize the business case."
 >
 > → Use **Analyst** to facilitate brainstorming and create a comprehensive project brief.
@@ -326,12 +352,14 @@ graph TD
 **Phase**: Planning
 
 **Commands/Tasks**:
+
 - `create-doc.md` (with prd-tmpl.yaml)
 - Can use brownfield templates for enhancements
 
 **Input**: Project Brief
 
 **Output**: PRD with:
+
 - Functional requirements (FR1-FRN)
 - Non-functional requirements (NFR1-NFRN)
 - UI design goals
@@ -340,12 +368,14 @@ graph TD
 - Technical assumptions
 
 **When to Use**:
+
 - After project brief is complete
 - Defining product features and requirements
 - Breaking work into epics
 - Prioritizing MVP vs post-MVP features
 
 **Example Scenario**:
+
 > "We have a brief for our LEGO app. Now we need to define exactly what features we're building."
 >
 > → Use **PM** to create PRD with epics like "User Authentication," "MOC Gallery," "Image Upload," etc.
@@ -359,11 +389,13 @@ graph TD
 **Phase**: Design (optional, front-end projects)
 
 **Commands/Tasks**:
+
 - `create-doc.md` (with front-end-spec-tmpl.yaml)
 
 **Input**: Project Brief, PRD
 
 **Output**: Front-End Specification with:
+
 - UX vision
 - Interaction paradigms
 - Core screens and layouts
@@ -371,12 +403,14 @@ graph TD
 - Branding and style guide
 
 **When to Use**:
+
 - Projects with significant UI/UX requirements
 - When design system needs documentation
 - Complex user flows requiring detailed specs
 - Design-first projects
 
 **Example Scenario**:
+
 > "Our LEGO app needs a polished, user-friendly interface. We need detailed design specs."
 >
 > → Use **UX Expert** to define screen layouts, interaction patterns, and design system.
@@ -390,11 +424,13 @@ graph TD
 **Phase**: Design
 
 **Commands/Tasks**:
+
 - `create-doc.md` (with architecture-tmpl.yaml)
 
 **Input**: PRD, technical requirements
 
 **Output**: Architecture Document with:
+
 - System architecture overview
 - Tech stack decisions
 - Data models and schemas
@@ -405,6 +441,7 @@ graph TD
 - Testing strategy
 
 **When to Use**:
+
 - After PRD is complete
 - Defining technical approach
 - Making technology stack decisions
@@ -412,6 +449,7 @@ graph TD
 - Establishing coding standards
 
 **Example Scenario**:
+
 > "We have our PRD. Now we need to decide: serverless vs containers? PostgreSQL or DynamoDB? REST or GraphQL?"
 >
 > → Use **Architect** to design system architecture and make tech stack decisions.
@@ -425,17 +463,20 @@ graph TD
 **Phase**: Validation & Coordination
 
 **Commands/Tasks**:
+
 - `validate-artifacts.md` (custom task)
 - `shard-doc.md`
 
 **Input**: PRD, Architecture, any completed artifacts
 
 **Output**:
+
 - Validation reports
 - Sharded documents in `docs/prd/` and `docs/architecture/`
 - Go/no-go decisions
 
 **When to Use**:
+
 - After PM completes PRD
 - After Architect completes architecture
 - Before starting story creation
@@ -443,6 +484,7 @@ graph TD
 - When coordinating between phases
 
 **Example Scenario**:
+
 > "We have our PRD and Architecture docs. Are they complete? Do they align? Are we ready to start development?"
 >
 > → Use **PO** to validate all artifacts and shard them for easier consumption.
@@ -456,15 +498,18 @@ graph TD
 **Phase**: Development Planning
 
 **Commands/Tasks**:
+
 - `create-next-story.md`
 - `brownfield-create-story.md`
 
 **Input**:
+
 - Sharded PRD (epic requirements)
 - Architecture docs
 - Previous stories (for context)
 
 **Output**: Detailed story files in `docs/stories/` with:
+
 - User story
 - Acceptance criteria
 - Task breakdown
@@ -474,12 +519,14 @@ graph TD
 - Dev notes
 
 **When to Use**:
+
 - Starting each new epic
 - After completing previous story
 - When developers need next work item
 - Iteratively throughout development
 
 **Example Scenario**:
+
 > "We're ready to start Epic 1: Infrastructure Setup. We need Story 1.1 with all the details developers need."
 >
 > → Use **SM** to create detailed Story 1.1 from Epic 1 requirements.
@@ -497,17 +544,20 @@ graph TD
 **Input**: Story file from SM
 
 **Output**:
+
 - Code implementation
 - Unit/integration tests
 - Updated story with Dev Agent Record
 
 **When to Use**:
+
 - After SM creates story
 - Implementing features
 - Writing tests
 - Fixing bugs
 
 **Example Scenario**:
+
 > "Story 1.1 is ready. Time to write the code."
 >
 > → Use **Dev** to implement the story, write tests, and complete acceptance criteria.
@@ -521,6 +571,7 @@ graph TD
 **Phase**: Quality Assurance
 
 **Commands/Tasks**:
+
 - `*risk {story}` - Risk assessment
 - `*design {story}` - Test strategy design
 - `*trace {story}` - Requirements tracing
@@ -531,6 +582,7 @@ graph TD
 **Input**: Completed story, code, tests
 
 **Output**: Quality Gate YAML file with:
+
 - Gate decision (PASS/CONCERNS/FAIL/WAIVED)
 - Risk summary
 - Top issues with severity
@@ -538,12 +590,14 @@ graph TD
 - Recommendations
 
 **When to Use**:
+
 - Before starting story (risk assessment)
 - During development (trace coverage)
 - After story completion (full review)
 - Before merging code
 
 **Example Scenario**:
+
 > "Story 1.1 is implemented. Is the code quality good? Are tests sufficient? Any risks?"
 >
 > → Use **QA** to review story, assess quality, and create quality gate.
@@ -559,12 +613,14 @@ graph TD
 **Capabilities**: Can perform any task except writing code for stories
 
 **When to Use**:
+
 - Unsure which agent to use
 - Need to combine multiple agent tasks
 - Custom workflows
 - Exploratory work
 
 **Example Scenario**:
+
 > "I need to understand the current state of Epic 2 and what's left to do."
 >
 > → Use **BMad-Master** to analyze epics, stories, and provide comprehensive status.
@@ -580,11 +636,13 @@ graph TD
 **Environment**: Web UI only (not available in IDE)
 
 **Capabilities**:
+
 - Automatically selects appropriate agent for task
 - Coordinates multi-agent workflows
 - Manages agent transitions
 
 **When to Use**:
+
 - In web UI when you want automatic agent selection
 - Complex workflows requiring multiple agents
 - When you prefer BMAD to decide which agent to use
@@ -634,6 +692,7 @@ graph TD
 ### Scenario 1: Starting a Brand New Project
 
 **Workflow**:
+
 1. **Analyst** → Create project brief
 2. **PM** → Create PRD from brief
 3. **Architect** → Design system architecture
@@ -648,6 +707,7 @@ graph TD
 ### Scenario 2: Adding a New Feature to Existing Project (Brownfield)
 
 **Workflow**:
+
 1. **PM** → Create brownfield epic/PRD for new feature
 2. **Architect** → Update architecture if needed (or skip if following existing patterns)
 3. **PO** → Validate new epic aligns with existing architecture
@@ -659,14 +719,14 @@ graph TD
 
 ### Scenario 3: Mid-Development Questions
 
-| Question | Agent to Use | Why |
-|----------|--------------|-----|
-| "Is this story ready to implement?" | **QA** (*risk) | Assess risks before coding |
-| "What should Story 3.4 contain?" | **SM** | SM creates stories |
-| "Do we need to add a new NFR?" | **PM** | PM owns requirements |
-| "Should this be one story or two?" | **SM** | SM sizes stories |
-| "Is our test coverage sufficient?" | **QA** (*trace) | QA traces requirements |
-| "Can we skip the architecture doc?" | **PO** | PO validates readiness |
+| Question                            | Agent to Use     | Why                        |
+| ----------------------------------- | ---------------- | -------------------------- |
+| "Is this story ready to implement?" | **QA** (\*risk)  | Assess risks before coding |
+| "What should Story 3.4 contain?"    | **SM**           | SM creates stories         |
+| "Do we need to add a new NFR?"      | **PM**           | PM owns requirements       |
+| "Should this be one story or two?"  | **SM**           | SM sizes stories           |
+| "Is our test coverage sufficient?"  | **QA** (\*trace) | QA traces requirements     |
+| "Can we skip the architecture doc?" | **PO**           | PO validates readiness     |
 
 ---
 
@@ -675,6 +735,7 @@ graph TD
 **Situation**: QA finds issues after dev completes story
 
 **Workflow**:
+
 1. **QA** → Creates quality gate with CONCERNS or FAIL
 2. **QA** → Creates GitHub issues for each finding
 3. **Dev** → Fixes issues
@@ -709,18 +770,18 @@ LOW LEVEL (Implementation)
 
 ### When to Use Which
 
-| Situation | Use PM | Use PO | Use SM |
-|-----------|--------|--------|--------|
-| Defining what features to build | ✅ | ❌ | ❌ |
-| Writing functional requirements | ✅ | ❌ | ❌ |
-| Checking if PRD is complete | ❌ | ✅ | ❌ |
-| Splitting large docs into files | ❌ | ✅ | ❌ |
-| Creating detailed developer stories | ❌ | ❌ | ✅ |
-| Breaking stories into tasks | ❌ | ❌ | ✅ |
-| Deciding epic priorities | ✅ | ❌ | ❌ |
-| Validating architecture alignment | ❌ | ✅ | ❌ |
-| Defining acceptance criteria (epic-level) | ✅ | ❌ | ❌ |
-| Defining acceptance criteria (story-level) | ❌ | ❌ | ✅ |
+| Situation                                  | Use PM | Use PO | Use SM |
+| ------------------------------------------ | ------ | ------ | ------ |
+| Defining what features to build            | ✅     | ❌     | ❌     |
+| Writing functional requirements            | ✅     | ❌     | ❌     |
+| Checking if PRD is complete                | ❌     | ✅     | ❌     |
+| Splitting large docs into files            | ❌     | ✅     | ❌     |
+| Creating detailed developer stories        | ❌     | ❌     | ✅     |
+| Breaking stories into tasks                | ❌     | ❌     | ✅     |
+| Deciding epic priorities                   | ✅     | ❌     | ❌     |
+| Validating architecture alignment          | ❌     | ✅     | ❌     |
+| Defining acceptance criteria (epic-level)  | ✅     | ❌     | ❌     |
+| Defining acceptance criteria (story-level) | ❌     | ❌     | ✅     |
 
 ### Remember
 
@@ -729,6 +790,7 @@ LOW LEVEL (Implementation)
 - **SM = Implementation Planning** → How to build it (detailed tasks)
 
 They work **sequentially**, not in parallel:
+
 1. PM creates the plan
 2. PO validates the plan
 3. SM breaks the plan into executable steps
@@ -738,6 +800,7 @@ They work **sequentially**, not in parallel:
 ## File Location Reference
 
 ### Agent Templates
+
 ```
 .bmad-core/templates/
 ├── project-brief-tmpl.yaml      # Analyst
@@ -750,6 +813,7 @@ They work **sequentially**, not in parallel:
 ```
 
 ### Agent Tasks
+
 ```
 .bmad-core/tasks/
 ├── facilitate-brainstorming-session.md  # Analyst
@@ -781,3 +845,169 @@ The BMAD agent system is designed to **mirror real-world software development ro
 By understanding **when to use each agent** and the **critical differences between PM, PO, and SM**, you can orchestrate efficient, high-quality software development workflows.
 
 **Golden Rule**: When in doubt, follow the workflow sequence shown in the mermaid diagrams. Each agent builds on the previous agent's work, creating a traceable chain from business idea to shipped code.
+
+---
+
+## Complete BMAD Workflow: File Structure & Commands
+
+This table shows the complete BMAD flow from project inception to completion, including file organization, specific commands, and the recommended file structure approach.
+
+### File Structure Strategy
+
+**BMAD Recommendation**: Use a **single active project** approach with proper backlog organization:
+
+```
+docs/
+├── prd.md                    # Active project PRD
+├── architecture.md           # Active project architecture
+├── prd/                     # Sharded epics (flat structure)
+│   ├── epic-1-auth.md
+│   ├── epic-2-dashboard.md
+│   └── epic-3-api.md
+├── architecture/            # Sharded architecture
+│   ├── coding-standards.md
+│   ├── tech-stack.md
+│   └── source-tree.md
+├── stories/                 # Implementation stories
+├── qa/                      # Quality assessments
+├── backlog/                 # Future projects
+│   ├── project-a/
+│   ├── project-b/
+│   └── project-c/
+└── completed/               # Finished projects
+    ├── old-project-1/
+    └── old-project-2/
+```
+
+### Complete Workflow Table
+
+| Phase                  | Agent         | Input Files                                    | Commands/Actions                                                                                                               | Output Files                  | File Locations                                      | Notes                                       |
+| ---------------------- | ------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | --------------------------------------------------- | ------------------------------------------- |
+| **Discovery**          | **Analyst**   | Business idea, stakeholder input               | `facilitate-brainstorming-session.md`<br>`create-doc.md` with `project-brief-tmpl.yaml`                                        | `project-brief.md`            | `docs/backlog/{project-name}/project-brief.md`      | Store in backlog until ready to activate    |
+| **Planning**           | **PM**        | `project-brief.md`                             | `create-doc.md` with `prd-tmpl.yaml`                                                                                           | `prd.md` with epics & stories | `docs/backlog/{project-name}/prd-draft.md`          | Keep in backlog during planning             |
+| **Design (Optional)**  | **UX Expert** | `project-brief.md`, `prd.md`                   | `create-doc.md` with `front-end-spec-tmpl.yaml`                                                                                | `front-end-spec.md`           | `docs/backlog/{project-name}/front-end-spec.md`     | Only for UI-heavy projects                  |
+| **Architecture**       | **Architect** | `prd.md`, requirements                         | `create-doc.md` with `architecture-tmpl.yaml`                                                                                  | `architecture.md`             | `docs/backlog/{project-name}/architecture-draft.md` | Technical design & standards                |
+| **Activation**         | **Manual**    | Backlog files                                  | `cp docs/backlog/{project}/prd-draft.md docs/prd.md`<br>`cp docs/backlog/{project}/architecture-draft.md docs/architecture.md` | Active project files          | `docs/prd.md`<br>`docs/architecture.md`             | Move from backlog to active                 |
+| **Validation**         | **PO**        | `docs/prd.md`, `docs/architecture.md`          | Review artifacts for completeness and alignment                                                                                | Validation report             | Console output or notes                             | Ensure quality before sharding              |
+| **Sharding**           | **PO**        | `docs/prd.md`, `docs/architecture.md`          | `shard-doc.md` on PRD<br>`shard-doc.md` on architecture                                                                        | Sharded files                 | `docs/prd/epic-*.md`<br>`docs/architecture/*.md`    | **CRITICAL**: Must shard for agents to work |
+| **Story Creation**     | **SM**        | `docs/prd/epic-*.md`, `docs/architecture/*.md` | `create-next-story.md`                                                                                                         | `{epic}.{story}.md`           | `docs/stories/1.1.feature-name.md`                  | One story at a time, sequential             |
+| **Implementation**     | **Dev**       | `docs/stories/{story}.md`                      | Code implementation, testing                                                                                                   | Code + updated story          | Source code + story file                            | Add Dev Agent Record to story               |
+| **Quality Review**     | **QA**        | Completed story, code                          | `*risk {story}` (before)<br>`*review {story}` (after)<br>`*gate {story}` (final)                                               | Quality gate YAML             | `docs/qa/gates/{epic}.{story}-{slug}.yml`           | PASS/CONCERNS/FAIL/WAIVED                   |
+| **Next Story**         | **SM**        | Previous story completion                      | `create-next-story.md`                                                                                                         | Next story file               | `docs/stories/1.2.next-feature.md`                  | Continue until epic complete                |
+| **Epic Completion**    | **SM**        | All epic stories done                          | `create-next-story.md` for next epic                                                                                           | First story of next epic      | `docs/stories/2.1.next-epic-start.md`               | Move to next epic                           |
+| **Project Completion** | **Manual**    | All epics complete                             | Archive active project                                                                                                         | Archived files                | `docs/completed/{project-name}/`                    | Move active files to completed              |
+| **Next Project**       | **Manual**    | Next backlog project                           | Activate next project from backlog                                                                                             | New active files              | `docs/prd.md`, `docs/architecture.md`               | Repeat cycle                                |
+
+### Critical Commands Reference
+
+#### Project Activation Commands
+
+```bash
+# Activate a project from backlog
+cp docs/backlog/frontend-serverless/prd-draft.md docs/prd.md
+cp docs/backlog/frontend-serverless/architecture-draft.md docs/architecture.md
+
+# Verify files are in place
+ls -la docs/prd.md docs/architecture.md
+```
+
+#### Sharding Commands (PO Agent)
+
+```
+# In chat with PO agent:
+"Please shard the PRD document using the shard-doc task"
+"Please shard the architecture document using the shard-doc task"
+
+# Verify sharding worked:
+ls docs/prd/epic-*.md
+ls docs/architecture/*.md
+```
+
+#### Story Creation Commands (SM Agent)
+
+```
+# In chat with SM agent:
+"Please create the first story using create-next-story task"
+"Please create the next story using create-next-story task"
+
+# Verify story created:
+ls docs/stories/
+```
+
+#### QA Commands (QA Agent)
+
+```
+# Risk assessment before starting story:
+"*risk 1.1"
+
+# Full review after story completion:
+"*review 1.1"
+
+# Update quality gate:
+"*gate 1.1"
+```
+
+#### Project Completion Commands
+
+```bash
+# Archive completed project
+mkdir -p docs/completed/frontend-serverless
+mv docs/prd/ docs/completed/frontend-serverless/
+mv docs/prd.md docs/completed/frontend-serverless/
+mv docs/architecture.md docs/completed/frontend-serverless/
+mv docs/architecture/ docs/completed/frontend-serverless/
+
+# Activate next project
+cp docs/backlog/image-service-migration/prd-draft.md docs/prd.md
+cp docs/backlog/image-service-migration/architecture-draft.md docs/architecture.md
+```
+
+### File Structure Validation
+
+#### Before Starting Development (Must Have):
+
+- ✅ `docs/prd.md` (main PRD file)
+- ✅ `docs/architecture.md` (main architecture file)
+- ✅ `docs/prd/epic-*.md` (sharded epic files)
+- ✅ `docs/architecture/*.md` (sharded architecture files)
+
+#### During Development:
+
+- ✅ `docs/stories/{epic}.{story}.md` (current story)
+- ✅ `docs/qa/gates/{epic}.{story}-*.yml` (quality gates)
+
+#### Common Issues & Fixes:
+
+| Issue                          | Symptom                        | Fix                                                       |
+| ------------------------------ | ------------------------------ | --------------------------------------------------------- |
+| Agents can't find epics        | "No epic files found"          | Ensure `docs/prd/epic-*.md` files exist (flat structure)  |
+| SM can't create stories        | "Missing epic context"         | Run PO sharding: `shard-doc.md` on `docs/prd.md`          |
+| Dev can't find architecture    | "Missing tech context"         | Run PO sharding: `shard-doc.md` on `docs/architecture.md` |
+| Multiple PRDs confusing agents | Agents reference wrong project | Use backlog structure, only one active project            |
+
+### Workflow Checkpoints
+
+#### ✅ Ready for Development Checklist:
+
+1. Active PRD exists: `docs/prd.md`
+2. Active architecture exists: `docs/architecture.md`
+3. PRD is sharded: `docs/prd/epic-*.md` files exist
+4. Architecture is sharded: `docs/architecture/*.md` files exist
+5. Core config points to correct locations: `.bmad-core/core-config.yaml`
+
+#### ✅ Story Ready Checklist:
+
+1. Epic file exists in `docs/prd/`
+2. Architecture context available in `docs/architecture/`
+3. Previous story completed (if not first story)
+4. SM agent has access to sharded documents
+
+#### ✅ Quality Gate Checklist:
+
+1. Story implementation complete
+2. Tests written and passing
+3. QA review completed: `*review {story}`
+4. Quality gate created: `docs/qa/gates/{epic}.{story}-*.yml`
+5. Gate status is PASS or WAIVED
+
+This workflow ensures BMAD agents can find all necessary files and maintains clear organization between active development and project backlog.

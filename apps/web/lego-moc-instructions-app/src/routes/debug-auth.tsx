@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useAuth } from '../hooks'
+import { useCognitoAuth } from '../hooks'
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
 
 export const Route = createFileRoute('/debug-auth')({
@@ -7,7 +7,7 @@ export const Route = createFileRoute('/debug-auth')({
 })
 
 function DebugAuth() {
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout } = useCognitoAuth()
 
   const handleLogout = async () => {
     try {

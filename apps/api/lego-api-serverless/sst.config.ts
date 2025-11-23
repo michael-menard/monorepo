@@ -1,5 +1,15 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
+// AWS CDK imports for S3 bucket policies, tagging, budget, and SNS
+import { Tags } from 'aws-cdk-lib'
+import { PolicyStatement, Effect, ArnPrincipal, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
+import { CfnBudget } from 'aws-cdk-lib/aws-budgets'
+import { Topic } from 'aws-cdk-lib/aws-sns'
+import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
+import { Dashboard, Metric, GraphWidget, SingleValueWidget } from 'aws-cdk-lib/aws-cloudwatch'
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
+
 /**
  * SST v3 (Ion) Configuration for LEGO Projects API Serverless Migration
  *
@@ -11,8 +21,6 @@
  * - Lambda functions with API Gateway
  * - CloudWatch monitoring and alarms
  */
-
-import { createAlarms } from './src/infrastructure/monitoring/alarms'
 
 export default $config({
   app(input) {
@@ -35,18 +43,66 @@ export default $config({
   async run() {
     const stage = $app.stage
 
+    // Dynamic import for observability tags (SST v3 requirement)
+    const { requiredTags, componentTags, createResourceTags } = await import(
+      './sst/observability/tags'
+    )
+
     // ========================================
     // Story 1.2: VPC Networking Infrastructure
     // ========================================
 
     /**
      * VPC with public/private subnets across 2 Availability Zones
-     * - Public subnets: Internet Gateway routing for NAT Gateway and Bastion
-     * - Private subnets: NAT Gateway routing for Lambda, RDS, Redis, OpenSearch
+     * Story 1.1: Enhanced for observability infrastructure requirements
+     * - /24 CIDR block (10.0.0.0/24) for 256 IP addresses
+     * - Public subnets: /27 (32 IPs each) for NAT Gateway and ALB
+     * - Private subnets: /26 (64 IPs each) for ECS, Lambda, RDS, OpenSearch
+     * - Single NAT Gateway for cost optimization ($32/month vs $64/month)
      */
     const vpc = new sst.aws.Vpc('LegoApiVpc', {
-      nat: 'managed', // Managed NAT Gateway for Lambda internet access
+      cidr: '10.0.0.0/24', // /24 CIDR block as required by Story 1.1
       az: 2, // Two Availability Zones for high availability
+      nat: 1, // Single NAT Gateway for cost optimization
+      transform: {
+        vpc: args => {
+          // Apply UserMetrics observability tags
+          args.tags = {
+            ...createResourceTags(stage, 'networking', 'engineering@example.com'),
+            Name: `user-metrics-vpc-${stage}`,
+          }
+        },
+        publicSubnet: (args, info) => {
+          args.cidrBlock = info.index === 0 ? '10.0.0.0/27' : '10.0.0.32/27' // /27 subnets (32 IPs each)
+          args.tags = {
+            ...createResourceTags(stage, 'networking', 'engineering@example.com'),
+            Name: `user-metrics-public-subnet-${info.index + 1}-${stage}`,
+            SubnetType: 'PublicSubnet',
+          }
+        },
+        privateSubnet: (args, info) => {
+          args.cidrBlock = info.index === 0 ? '10.0.0.64/26' : '10.0.0.128/26' // /26 subnets (64 IPs each)
+          args.tags = {
+            ...createResourceTags(stage, 'networking', 'engineering@example.com'),
+            Name: `user-metrics-private-subnet-${info.index + 1}-${stage}`,
+            SubnetType: 'PrivateSubnet',
+          }
+        },
+        natGateway: (args, info) => {
+          args.tags = {
+            ...createResourceTags(stage, 'networking', 'engineering@example.com'),
+            Name: `user-metrics-nat-gateway-${stage}`,
+            Purpose: 'InternetAccess',
+          }
+        },
+        internetGateway: args => {
+          args.tags = {
+            ...createResourceTags(stage, 'networking', 'engineering@example.com'),
+            Name: `user-metrics-internet-gateway-${stage}`,
+            Purpose: 'InternetAccess',
+          }
+        },
+      },
     })
 
     /**
@@ -95,7 +151,6 @@ export default $config({
       },
     })
 
-
     /**
      * Security Group for OpenSearch
      * - Allows inbound traffic from Lambda security group only on port 443 (HTTPS)
@@ -117,6 +172,131 @@ export default $config({
         Environment: stage,
         Project: 'lego-api-serverless',
       },
+    })
+
+    // ========================================
+    // Story 1.1: Observability Security Groups
+    // ========================================
+
+    /**
+     * Security Group for OpenReplay ECS Tasks
+     * - HTTP/HTTPS ingress from ALB for web UI access
+     * - Egress for S3 (session storage) and Aurora (metadata)
+     */
+    const openReplaySecurityGroup = new aws.ec2.SecurityGroup('OpenReplaySecurityGroup', {
+      vpcId: vpc.id,
+      description: 'Security group for OpenReplay ECS tasks',
+      egress: [
+        {
+          protocol: '-1', // All protocols
+          fromPort: 0,
+          toPort: 0,
+          cidrBlocks: ['0.0.0.0/0'],
+          description: 'Allow all outbound traffic for S3, Aurora, and internet access',
+        },
+      ],
+      tags: {
+        ...createResourceTags(stage, 'security', 'engineering@example.com'),
+        Name: `user-metrics-openreplay-sg-${stage}`,
+        Service: 'OpenReplay',
+        Purpose: 'ECSAccess',
+      },
+    })
+
+    /**
+     * Security Group for Umami ECS Tasks
+     * - HTTP/HTTPS ingress from ALB for web UI access
+     * - Egress for Aurora database access
+     */
+    const umamiSecurityGroup = new aws.ec2.SecurityGroup('UmamiSecurityGroup', {
+      vpcId: vpc.id,
+      description: 'Security group for Umami ECS tasks',
+      egress: [
+        {
+          protocol: '-1', // All protocols
+          fromPort: 0,
+          toPort: 0,
+          cidrBlocks: ['0.0.0.0/0'],
+          description: 'Allow all outbound traffic for Aurora and internet access',
+        },
+      ],
+      tags: {
+        ...createResourceTags(stage, 'security', 'engineering@example.com'),
+        Name: `user-metrics-umami-sg-${stage}`,
+        Service: 'Umami',
+        Purpose: 'ECSAccess',
+      },
+    })
+
+    /**
+     * Security Group for Observability ALB
+     * - HTTP/HTTPS ingress from internet (0.0.0.0/0)
+     * - Egress to ECS tasks (OpenReplay, Umami)
+     */
+    const observabilityAlbSecurityGroup = new aws.ec2.SecurityGroup(
+      'ObservabilityAlbSecurityGroup',
+      {
+        vpcId: vpc.id,
+        description: 'Security group for observability ALB',
+        ingress: [
+          {
+            protocol: 'tcp',
+            fromPort: 80,
+            toPort: 80,
+            cidrBlocks: ['0.0.0.0/0'],
+            description: 'Allow HTTP access from internet',
+          },
+          {
+            protocol: 'tcp',
+            fromPort: 443,
+            toPort: 443,
+            cidrBlocks: ['0.0.0.0/0'],
+            description: 'Allow HTTPS access from internet',
+          },
+        ],
+        egress: [
+          {
+            protocol: 'tcp',
+            fromPort: 80,
+            toPort: 80,
+            securityGroups: [openReplaySecurityGroup.id, umamiSecurityGroup.id],
+            description: 'Allow HTTP to ECS tasks',
+          },
+          {
+            protocol: 'tcp',
+            fromPort: 443,
+            toPort: 443,
+            securityGroups: [openReplaySecurityGroup.id, umamiSecurityGroup.id],
+            description: 'Allow HTTPS to ECS tasks',
+          },
+        ],
+        tags: {
+          ...createResourceTags(stage, 'alb', 'engineering@example.com'),
+          Name: `user-metrics-alb-sg-${stage}`,
+          Purpose: 'LoadBalancing',
+        },
+      },
+    )
+
+    // Add ingress rules to ECS security groups to allow traffic from ALB
+    new aws.ec2.SecurityGroupRule('OpenReplayAlbIngress', {
+      type: 'ingress',
+      fromPort: 80,
+      toPort: 80,
+      protocol: 'tcp',
+      sourceSecurityGroupId: observabilityAlbSecurityGroup.id,
+      securityGroupId: openReplaySecurityGroup.id,
+      description: 'Allow HTTP from ALB',
+    })
+
+    new aws.ec2.SecurityGroupRule('UmamiAlbIngress', {
+      type: 'ingress',
+      fromPort: 80,
+      toPort: 80,
+      protocol: 'tcp',
+      sourceSecurityGroupId: observabilityAlbSecurityGroup.id,
+      securityGroupId: umamiSecurityGroup.id,
+      description: 'Allow HTTP from ALB',
     })
 
     /**
@@ -166,7 +346,6 @@ export default $config({
         },
       },
     })
-
 
     // ========================================
     // Story 1.5: OpenSearch Domain
@@ -299,6 +478,587 @@ export default $config({
      * - Reduced S3 costs (fewer direct S3 requests)
      * - Better user experience globally
      */
+
+    // ========================================
+    // Story 1.3: S3 Buckets for OpenReplay Session Storage
+    // ========================================
+
+    /**
+     * S3 Bucket for OpenReplay Session Recordings
+     * - 30-day lifecycle policy for automatic deletion
+     * - S3 Intelligent-Tiering for cost optimization
+     * - Server-side encryption (SSE-S3)
+     * - ECS task role access only
+     * - CloudWatch metrics enabled
+     */
+    const openReplaySessionsBucket = new sst.aws.Bucket('OpenReplaySessionsBucket', {
+      transform: {
+        bucket: args => {
+          // Bucket naming convention: user-metrics-openreplay-sessions-[stage]-[region]
+          args.bucketName = `user-metrics-openreplay-sessions-${stage}-${aws.getRegionOutput().name}`
+
+          // Server-side encryption with SSE-S3 (AES-256)
+          args.serverSideEncryptionConfiguration = {
+            rule: {
+              applyServerSideEncryptionByDefault: {
+                sseAlgorithm: 'AES256',
+              },
+            },
+          }
+
+          // Disable versioning for cost optimization
+          args.versioning = {
+            enabled: false,
+          }
+
+          // Block all public access
+          args.publicAccessBlock = {
+            blockPublicAcls: true,
+            blockPublicPolicy: true,
+            ignorePublicAcls: true,
+            restrictPublicBuckets: true,
+          }
+
+          // 30-day lifecycle policy for automatic deletion
+          args.lifecycleRules = [
+            {
+              id: 'DeleteOldSessionRecordings',
+              enabled: true,
+              expiration: {
+                days: 30,
+              },
+              filter: {}, // Apply to all objects
+            },
+          ]
+
+          // S3 Intelligent-Tiering configuration
+          args.intelligentTieringConfigurations = [
+            {
+              id: 'IntelligentTiering',
+              status: 'Enabled',
+              filter: {}, // Apply to all objects
+              tierings: [
+                {
+                  days: 90,
+                  accessTier: 'ARCHIVE_ACCESS',
+                },
+                {
+                  days: 180,
+                  accessTier: 'DEEP_ARCHIVE_ACCESS',
+                },
+              ],
+            },
+          ]
+
+          // CloudWatch metrics configuration
+          args.metricsConfigurations = [
+            {
+              id: 'OpenReplaySessionMetrics',
+              // No filter means all objects
+            },
+          ]
+        },
+      },
+    })
+
+    // Apply resource tags to OpenReplay sessions bucket
+    const openReplaySessionsBucketTags = createResourceTags(
+      stage,
+      'storage',
+      'engineering@example.com',
+      {
+        Service: 'OpenReplay',
+        DataType: 'Sessions',
+        RetentionPeriod: '30days',
+        EncryptionEnabled: 'true',
+      },
+    )
+
+    // Apply tags using CDK Tags API
+    Tags.of(openReplaySessionsBucket).add('Project', openReplaySessionsBucketTags.Project)
+    Tags.of(openReplaySessionsBucket).add('Environment', openReplaySessionsBucketTags.Environment)
+    Tags.of(openReplaySessionsBucket).add('ManagedBy', openReplaySessionsBucketTags.ManagedBy)
+    Tags.of(openReplaySessionsBucket).add('CostCenter', openReplaySessionsBucketTags.CostCenter)
+    Tags.of(openReplaySessionsBucket).add('Owner', openReplaySessionsBucketTags.Owner)
+    Tags.of(openReplaySessionsBucket).add('Component', openReplaySessionsBucketTags.Component)
+    Tags.of(openReplaySessionsBucket).add('Function', openReplaySessionsBucketTags.Function)
+    Tags.of(openReplaySessionsBucket).add('Service', openReplaySessionsBucketTags.Service)
+    Tags.of(openReplaySessionsBucket).add('DataType', openReplaySessionsBucketTags.DataType)
+    Tags.of(openReplaySessionsBucket).add(
+      'RetentionPeriod',
+      openReplaySessionsBucketTags.RetentionPeriod,
+    )
+    Tags.of(openReplaySessionsBucket).add(
+      'EncryptionEnabled',
+      openReplaySessionsBucketTags.EncryptionEnabled,
+    )
+
+    // Bucket policy for ECS task role access
+
+    openReplaySessionsBucket.cdk.bucket.addToResourcePolicy(
+      new PolicyStatement({
+        sid: 'AllowOpenReplayECSTaskAccess',
+        effect: Effect.ALLOW,
+        principals: [new ArnPrincipal(openReplayTaskRole.arn)],
+        actions: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject', 's3:ListBucket'],
+        resources: [openReplaySessionsBucket.arn, `${openReplaySessionsBucket.arn}/*`],
+      }),
+    )
+
+    /**
+     * S3 Bucket for CloudWatch Logs Export (Optional)
+     * - 1-year lifecycle policy with Glacier transition
+     * - Server-side encryption (SSE-S3)
+     * - CloudWatch Logs service access
+     */
+    const cloudWatchLogsBucket = new sst.aws.Bucket('CloudWatchLogsBucket', {
+      transform: {
+        bucket: args => {
+          // Bucket naming convention: user-metrics-cloudwatch-logs-[stage]-[region]
+          args.bucketName = `user-metrics-cloudwatch-logs-${stage}-${aws.getRegionOutput().name}`
+
+          // Server-side encryption with SSE-S3 (AES-256)
+          args.serverSideEncryptionConfiguration = {
+            rule: {
+              applyServerSideEncryptionByDefault: {
+                sseAlgorithm: 'AES256',
+              },
+            },
+          }
+
+          // Block all public access
+          args.publicAccessBlock = {
+            blockPublicAcls: true,
+            blockPublicPolicy: true,
+            ignorePublicAcls: true,
+            restrictPublicBuckets: true,
+          }
+
+          // Lifecycle policy: Glacier after 90 days, expire after 1 year
+          args.lifecycleRules = [
+            {
+              id: 'TransitionToGlacier',
+              enabled: true,
+              transitions: [
+                {
+                  days: 90,
+                  storageClass: 'GLACIER',
+                },
+              ],
+              expiration: {
+                days: 365,
+              },
+              filter: {}, // Apply to all objects
+            },
+          ]
+        },
+      },
+    })
+
+    // Apply resource tags to CloudWatch Logs bucket
+    const cloudWatchLogsBucketTags = createResourceTags(
+      stage,
+      'storage',
+      'engineering@example.com',
+      {
+        Service: 'CloudWatch',
+        DataType: 'Logs',
+        RetentionPeriod: '365days',
+        EncryptionEnabled: 'true',
+      },
+    )
+
+    // Apply tags to CloudWatch Logs bucket
+    Tags.of(cloudWatchLogsBucket).add('Project', cloudWatchLogsBucketTags.Project)
+    Tags.of(cloudWatchLogsBucket).add('Environment', cloudWatchLogsBucketTags.Environment)
+    Tags.of(cloudWatchLogsBucket).add('ManagedBy', cloudWatchLogsBucketTags.ManagedBy)
+    Tags.of(cloudWatchLogsBucket).add('CostCenter', cloudWatchLogsBucketTags.CostCenter)
+    Tags.of(cloudWatchLogsBucket).add('Owner', cloudWatchLogsBucketTags.Owner)
+    Tags.of(cloudWatchLogsBucket).add('Component', cloudWatchLogsBucketTags.Component)
+    Tags.of(cloudWatchLogsBucket).add('Function', cloudWatchLogsBucketTags.Function)
+    Tags.of(cloudWatchLogsBucket).add('Service', cloudWatchLogsBucketTags.Service)
+    Tags.of(cloudWatchLogsBucket).add('DataType', cloudWatchLogsBucketTags.DataType)
+    Tags.of(cloudWatchLogsBucket).add('RetentionPeriod', cloudWatchLogsBucketTags.RetentionPeriod)
+    Tags.of(cloudWatchLogsBucket).add(
+      'EncryptionEnabled',
+      cloudWatchLogsBucketTags.EncryptionEnabled,
+    )
+
+    // Bucket policy for CloudWatch Logs service access
+
+    cloudWatchLogsBucket.cdk.bucket.addToResourcePolicy(
+      new PolicyStatement({
+        sid: 'AllowCloudWatchLogsAccess',
+        effect: Effect.ALLOW,
+        principals: [new ServicePrincipal('logs.amazonaws.com')],
+        actions: ['s3:PutObject', 's3:GetBucketAcl'],
+        resources: [cloudWatchLogsBucket.arn, `${cloudWatchLogsBucket.arn}/*`],
+        conditions: {
+          StringEquals: {
+            's3:x-amz-acl': 'bucket-owner-full-control',
+          },
+        },
+      }),
+    )
+
+    // ========================================
+    // Story 1.4: Cost Monitoring and Budget Alerts
+    // ========================================
+
+    /**
+     * SNS Topic for Budget Alert Notifications
+     * - Email notifications for budget threshold breaches
+     * - Integrated with AWS Budget service
+     * - Proper tagging for cost allocation
+     */
+    const budgetAlertTopic = new Topic(this, 'BudgetAlertTopic', {
+      topicName: `user-metrics-budget-alerts-${stage}`,
+      displayName: 'User Metrics Budget Alerts',
+    })
+
+    // Subscribe email to SNS topic for budget alerts
+    budgetAlertTopic.addSubscription(new EmailSubscription('engineering@example.com'))
+
+    // Apply resource tags to SNS topic
+    const budgetAlertTopicTags = createResourceTags(
+      stage,
+      'observability',
+      'engineering@example.com',
+      {
+        Service: 'SNS',
+        Function: 'Alerting',
+        Component: 'Infrastructure',
+        Purpose: 'BudgetAlerts',
+      },
+    )
+
+    // Apply tags to SNS topic
+    Tags.of(budgetAlertTopic).add('Project', budgetAlertTopicTags.Project)
+    Tags.of(budgetAlertTopic).add('Environment', budgetAlertTopicTags.Environment)
+    Tags.of(budgetAlertTopic).add('ManagedBy', budgetAlertTopicTags.ManagedBy)
+    Tags.of(budgetAlertTopic).add('CostCenter', budgetAlertTopicTags.CostCenter)
+    Tags.of(budgetAlertTopic).add('Owner', budgetAlertTopicTags.Owner)
+    Tags.of(budgetAlertTopic).add('Component', budgetAlertTopicTags.Component)
+    Tags.of(budgetAlertTopic).add('Function', budgetAlertTopicTags.Function)
+    Tags.of(budgetAlertTopic).add('Service', budgetAlertTopicTags.Service)
+    Tags.of(budgetAlertTopic).add('Purpose', budgetAlertTopicTags.Purpose)
+
+    /**
+     * AWS Budget for User Metrics Observability Infrastructure
+     * - $150/month limit with alerts at 80% ($120) and 100% ($150)
+     * - Filtered to Project=UserMetrics tagged resources only
+     * - Multi-threshold alerts via SNS topic
+     * - Monthly budget period with cost tracking
+     */
+    const userMetricsBudget = new CfnBudget(this, 'UserMetricsBudget', {
+      budget: {
+        budgetName: `user-metrics-budget-${stage}`,
+        budgetLimit: {
+          amount: 150,
+          unit: 'USD',
+        },
+        timeUnit: 'MONTHLY',
+        budgetType: 'COST',
+        costFilters: {
+          TagKey: ['Project'],
+          MatchOptions: ['EQUALS'],
+          Values: ['UserMetrics'],
+        },
+      },
+      notificationsWithSubscribers: [
+        {
+          notification: {
+            notificationType: 'ACTUAL',
+            comparisonOperator: 'GREATER_THAN',
+            threshold: 80, // 80% = $120
+            thresholdType: 'PERCENTAGE',
+          },
+          subscribers: [
+            {
+              subscriptionType: 'SNS',
+              address: budgetAlertTopic.topicArn,
+            },
+          ],
+        },
+        {
+          notification: {
+            notificationType: 'ACTUAL',
+            comparisonOperator: 'GREATER_THAN',
+            threshold: 100, // 100% = $150
+            thresholdType: 'PERCENTAGE',
+          },
+          subscribers: [
+            {
+              subscriptionType: 'SNS',
+              address: budgetAlertTopic.topicArn,
+            },
+          ],
+        },
+      ],
+    })
+
+    // Apply resource tags to Budget
+    const budgetTags = createResourceTags(stage, 'observability', 'engineering@example.com', {
+      Service: 'Budget',
+      Function: 'CostMonitoring',
+      Component: 'Infrastructure',
+      BudgetLimit: '150USD',
+      AlertThresholds: '80,100',
+    })
+
+    // Apply tags to Budget (using CDK Tags API)
+    Tags.of(userMetricsBudget).add('Project', budgetTags.Project)
+    Tags.of(userMetricsBudget).add('Environment', budgetTags.Environment)
+    Tags.of(userMetricsBudget).add('ManagedBy', budgetTags.ManagedBy)
+    Tags.of(userMetricsBudget).add('CostCenter', budgetTags.CostCenter)
+    Tags.of(userMetricsBudget).add('Owner', budgetTags.Owner)
+    Tags.of(userMetricsBudget).add('Component', budgetTags.Component)
+    Tags.of(userMetricsBudget).add('Function', budgetTags.Function)
+    Tags.of(userMetricsBudget).add('Service', budgetTags.Service)
+    Tags.of(userMetricsBudget).add('BudgetLimit', budgetTags.BudgetLimit)
+    Tags.of(userMetricsBudget).add('AlertThresholds', budgetTags.AlertThresholds)
+
+    /**
+     * Cost Metrics Publisher Lambda Function
+     * - Scheduled function to query Cost Explorer API daily
+     * - Publishes custom metrics to CloudWatch for dashboard
+     * - Tracks cost trends by component and function
+     * - Monitors budget utilization percentage
+     */
+    const costMetricsPublisher = new Function(this, 'CostMetricsPublisher', {
+      functionName: `user-metrics-cost-publisher-${stage}`,
+      runtime: 'nodejs20.x',
+      handler: 'src/lambda/cost-monitoring/cost-metrics-publisher.handler',
+      timeout: '5 minutes',
+      environment: {
+        AWS_REGION: region,
+        STAGE: stage,
+      },
+      permissions: [
+        {
+          actions: [
+            'ce:GetCostAndUsage',
+            'ce:GetUsageReport',
+            'ce:ListCostCategoryDefinitions',
+            'cloudwatch:PutMetricData',
+          ],
+          resources: ['*'],
+        },
+      ],
+    })
+
+    // Apply resource tags to cost metrics publisher
+    const costPublisherTags = createResourceTags(
+      stage,
+      'observability',
+      'engineering@example.com',
+      {
+        Service: 'Lambda',
+        Function: 'CostMonitoring',
+        Component: 'Infrastructure',
+        Purpose: 'MetricsPublishing',
+      },
+    )
+
+    // Apply tags to Lambda function
+    Tags.of(costMetricsPublisher).add('Project', costPublisherTags.Project)
+    Tags.of(costMetricsPublisher).add('Environment', costPublisherTags.Environment)
+    Tags.of(costMetricsPublisher).add('ManagedBy', costPublisherTags.ManagedBy)
+    Tags.of(costMetricsPublisher).add('CostCenter', costPublisherTags.CostCenter)
+    Tags.of(costMetricsPublisher).add('Owner', costPublisherTags.Owner)
+    Tags.of(costMetricsPublisher).add('Component', costPublisherTags.Component)
+    Tags.of(costMetricsPublisher).add('Function', costPublisherTags.Function)
+    Tags.of(costMetricsPublisher).add('Service', costPublisherTags.Service)
+    Tags.of(costMetricsPublisher).add('Purpose', costPublisherTags.Purpose)
+
+    /**
+     * EventBridge Rule for Daily Cost Metrics Collection
+     * - Triggers cost metrics publisher daily at 6 AM UTC
+     * - Ensures fresh cost data for dashboard
+     * - Runs after AWS cost data is typically available
+     */
+    const costMetricsSchedule = new Rule(this, 'CostMetricsSchedule', {
+      ruleName: `user-metrics-cost-schedule-${stage}`,
+      description: 'Daily trigger for cost metrics collection',
+      schedule: Schedule.cron({
+        minute: '0',
+        hour: '6', // 6 AM UTC daily
+        day: '*',
+        month: '*',
+        year: '*',
+      }),
+    })
+
+    // Add Lambda function as target for the schedule
+    costMetricsSchedule.addTarget(new LambdaFunction(costMetricsPublisher))
+
+    // Apply tags to EventBridge rule
+    Tags.of(costMetricsSchedule).add('Project', costPublisherTags.Project)
+    Tags.of(costMetricsSchedule).add('Environment', costPublisherTags.Environment)
+    Tags.of(costMetricsSchedule).add('ManagedBy', costPublisherTags.ManagedBy)
+    Tags.of(costMetricsSchedule).add('CostCenter', costPublisherTags.CostCenter)
+    Tags.of(costMetricsSchedule).add('Owner', costPublisherTags.Owner)
+    Tags.of(costMetricsSchedule).add('Component', costPublisherTags.Component)
+    Tags.of(costMetricsSchedule).add('Function', costPublisherTags.Function)
+    Tags.of(costMetricsSchedule).add('Service', 'EventBridge')
+    Tags.of(costMetricsSchedule).add('Purpose', 'Scheduling')
+
+    /**
+     * CloudWatch Dashboard for Cost Monitoring
+     * - Real-time cost metrics and trends
+     * - Budget utilization tracking
+     * - Cost breakdown by component and function
+     * - Daily, weekly, and monthly views
+     */
+    const costMonitoringDashboard = new Dashboard(this, 'CostMonitoringDashboard', {
+      dashboardName: `UserMetrics-Cost-Monitoring-${stage}`,
+    })
+
+    // Total daily cost widget
+    const totalCostWidget = new SingleValueWidget({
+      title: 'Total Daily Cost',
+      metrics: [
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'TotalDailyCost',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Period: 'Daily',
+          },
+          statistic: 'Average',
+        }),
+      ],
+      width: 6,
+      height: 6,
+    })
+
+    // Budget utilization widget
+    const budgetUtilizationWidget = new SingleValueWidget({
+      title: 'Daily Budget Utilization (%)',
+      metrics: [
+        new Metric({
+          namespace: 'UserMetrics/Budget',
+          metricName: 'DailyBudgetUtilization',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+          },
+          statistic: 'Average',
+        }),
+      ],
+      width: 6,
+      height: 6,
+    })
+
+    // Cost trend by component widget
+    const componentCostWidget = new GraphWidget({
+      title: 'Daily Cost by Component (7 days)',
+      left: [
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByComponent',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Component: 'Infrastructure',
+          },
+          statistic: 'Average',
+          label: 'Infrastructure',
+        }),
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByComponent',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Component: 'OpenReplay',
+          },
+          statistic: 'Average',
+          label: 'OpenReplay',
+        }),
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByComponent',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Component: 'Umami',
+          },
+          statistic: 'Average',
+          label: 'Umami',
+        }),
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByComponent',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Component: 'CloudWatch',
+          },
+          statistic: 'Average',
+          label: 'CloudWatch',
+        }),
+      ],
+      width: 12,
+      height: 6,
+    })
+
+    // Cost trend by function widget
+    const functionCostWidget = new GraphWidget({
+      title: 'Daily Cost by Function (7 days)',
+      left: [
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByFunction',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Function: 'SessionReplay',
+          },
+          statistic: 'Average',
+          label: 'Session Replay',
+        }),
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByFunction',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Function: 'Analytics',
+          },
+          statistic: 'Average',
+          label: 'Analytics',
+        }),
+        new Metric({
+          namespace: 'UserMetrics/Cost',
+          metricName: 'DailyCostByFunction',
+          dimensionsMap: {
+            Project: 'UserMetrics',
+            Function: 'Metrics',
+          },
+          statistic: 'Average',
+          label: 'Metrics',
+        }),
+      ],
+      width: 12,
+      height: 6,
+    })
+
+    // Add widgets to dashboard
+    costMonitoringDashboard.addWidgets(totalCostWidget, budgetUtilizationWidget)
+    costMonitoringDashboard.addWidgets(componentCostWidget)
+    costMonitoringDashboard.addWidgets(functionCostWidget)
+
+    // Apply tags to dashboard
+    const dashboardTags = createResourceTags(stage, 'observability', 'engineering@example.com', {
+      Service: 'CloudWatch',
+      Function: 'Visualization',
+      Component: 'Infrastructure',
+      Purpose: 'CostMonitoring',
+    })
+
+    Tags.of(costMonitoringDashboard).add('Project', dashboardTags.Project)
+    Tags.of(costMonitoringDashboard).add('Environment', dashboardTags.Environment)
+    Tags.of(costMonitoringDashboard).add('ManagedBy', dashboardTags.ManagedBy)
+    Tags.of(costMonitoringDashboard).add('CostCenter', dashboardTags.CostCenter)
+    Tags.of(costMonitoringDashboard).add('Owner', dashboardTags.Owner)
+    Tags.of(costMonitoringDashboard).add('Component', dashboardTags.Component)
+    Tags.of(costMonitoringDashboard).add('Function', dashboardTags.Function)
+    Tags.of(costMonitoringDashboard).add('Service', dashboardTags.Service)
+    Tags.of(costMonitoringDashboard).add('Purpose', dashboardTags.Purpose)
 
     // Story 1.7: Database migrations
     // Story 1.8: Health check Lambda + API Gateway
@@ -530,6 +1290,283 @@ export default $config({
         authenticated: authenticatedRole.arn,
       },
     })
+
+    // ========================================
+    // Story 1.1: Observability IAM Roles and Policies
+    // ========================================
+
+    /**
+     * ECS Task Execution Role for Observability Services
+     * - Allows ECS tasks to pull images from ECR
+     * - Allows writing logs to CloudWatch Logs
+     * - Allows reading secrets from Secrets Manager
+     */
+    const ecsTaskExecutionRole = new aws.iam.Role('ObservabilityEcsTaskExecutionRole', {
+      assumeRolePolicy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              Service: 'ecs-tasks.amazonaws.com',
+            },
+            Action: 'sts:AssumeRole',
+          },
+        ],
+      }),
+      managedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'],
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-ecs-execution-role-${stage}`,
+        Purpose: 'ECSTaskExecution',
+        AccessLevel: 'ReadWrite',
+      },
+    })
+
+    /**
+     * ECS Task Role for OpenReplay
+     * - S3 bucket access for session storage (read/write)
+     * - CloudWatch Logs access for application logging
+     */
+    const openReplayTaskRole = new aws.iam.Role('OpenReplayTaskRole', {
+      assumeRolePolicy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              Service: 'ecs-tasks.amazonaws.com',
+            },
+            Action: 'sts:AssumeRole',
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-openreplay-task-role-${stage}`,
+        Service: 'OpenReplay',
+        Purpose: 'ECSTask',
+        AccessLevel: 'ReadWrite',
+      },
+    })
+
+    /**
+     * IAM Policy for OpenReplay S3 Access
+     * - Read/write access to session storage bucket
+     */
+    const openReplayS3Policy = new aws.iam.Policy('OpenReplayS3Policy', {
+      policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:ListBucket'],
+            Resource: [
+              'arn:aws:s3:::user-metrics-openreplay-sessions-*',
+              'arn:aws:s3:::user-metrics-openreplay-sessions-*/*',
+            ],
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-openreplay-s3-policy-${stage}`,
+        Service: 'OpenReplay',
+        Purpose: 'S3Access',
+      },
+    })
+
+    // Attach S3 policy to OpenReplay task role
+    new aws.iam.RolePolicyAttachment('OpenReplayS3PolicyAttachment', {
+      role: openReplayTaskRole.name,
+      policyArn: openReplayS3Policy.arn,
+    })
+
+    /**
+     * ECS Task Role for Umami
+     * - Aurora PostgreSQL access via RDS Proxy
+     * - CloudWatch Logs access for application logging
+     */
+    const umamiTaskRole = new aws.iam.Role('UmamiTaskRole', {
+      assumeRolePolicy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              Service: 'ecs-tasks.amazonaws.com',
+            },
+            Action: 'sts:AssumeRole',
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-umami-task-role-${stage}`,
+        Service: 'Umami',
+        Purpose: 'ECSTask',
+        AccessLevel: 'ReadWrite',
+      },
+    })
+
+    /**
+     * IAM Policy for Umami Aurora Access
+     * - Connect to Aurora PostgreSQL via RDS Proxy
+     */
+    const umamiRdsPolicy = new aws.iam.Policy('UmamiRdsPolicy', {
+      policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: ['rds-db:connect'],
+            Resource: [`arn:aws:rds-db:${aws.getRegionOutput().name}:*:dbuser:*/umami`],
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-umami-rds-policy-${stage}`,
+        Service: 'Umami',
+        Purpose: 'DatabaseAccess',
+      },
+    })
+
+    // Attach RDS policy to Umami task role
+    new aws.iam.RolePolicyAttachment('UmamiRdsPolicyAttachment', {
+      role: umamiTaskRole.name,
+      policyArn: umamiRdsPolicy.arn,
+    })
+
+    /**
+     * IAM Role for Amazon Managed Grafana
+     * - CloudWatch read permissions for metrics and logs
+     * - OpenSearch read permissions for log analysis
+     */
+    const grafanaWorkspaceRole = new aws.iam.Role('GrafanaWorkspaceRole', {
+      assumeRolePolicy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              Service: 'grafana.amazonaws.com',
+            },
+            Action: 'sts:AssumeRole',
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-grafana-role-${stage}`,
+        Service: 'Grafana',
+        Purpose: 'WorkspaceAccess',
+        AccessLevel: 'ReadOnly',
+      },
+    })
+
+    /**
+     * IAM Policy for Grafana CloudWatch Access
+     * - Read access to CloudWatch metrics and logs
+     */
+    const grafanaCloudWatchPolicy = new aws.iam.Policy('GrafanaCloudWatchPolicy', {
+      policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: [
+              'cloudwatch:DescribeAlarmsForMetric',
+              'cloudwatch:DescribeAlarmHistory',
+              'cloudwatch:DescribeAlarms',
+              'cloudwatch:ListMetrics',
+              'cloudwatch:GetMetricStatistics',
+              'cloudwatch:GetMetricData',
+              'cloudwatch:GetInsightRuleReport',
+            ],
+            Resource: '*',
+          },
+          {
+            Effect: 'Allow',
+            Action: [
+              'logs:DescribeLogGroups',
+              'logs:DescribeLogStreams',
+              'logs:GetLogEvents',
+              'logs:StartQuery',
+              'logs:StopQuery',
+              'logs:GetQueryResults',
+              'logs:GetLogRecord',
+            ],
+            Resource: '*',
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-grafana-cloudwatch-policy-${stage}`,
+        Service: 'Grafana',
+        Purpose: 'CloudWatchAccess',
+      },
+    })
+
+    /**
+     * IAM Policy for Grafana OpenSearch Access
+     * - Read access to OpenSearch for log analysis
+     */
+    const grafanaOpenSearchPolicy = new aws.iam.Policy('GrafanaOpenSearchPolicy', {
+      policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: ['es:ESHttpGet', 'es:ESHttpPost', 'es:ESHttpHead'],
+            Resource: `arn:aws:es:${aws.getRegionOutput().name}:*:domain/lego-api-opensearch-*/*`,
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-grafana-opensearch-policy-${stage}`,
+        Service: 'Grafana',
+        Purpose: 'OpenSearchAccess',
+      },
+    })
+
+    // Attach policies to Grafana workspace role
+    new aws.iam.RolePolicyAttachment('GrafanaCloudWatchPolicyAttachment', {
+      role: grafanaWorkspaceRole.name,
+      policyArn: grafanaCloudWatchPolicy.arn,
+    })
+
+    new aws.iam.RolePolicyAttachment('GrafanaOpenSearchPolicyAttachment', {
+      role: grafanaWorkspaceRole.name,
+      policyArn: grafanaOpenSearchPolicy.arn,
+    })
+
+    /**
+     * Enhanced Lambda Execution Policy for CloudWatch EMF
+     * - Adds CloudWatch PutMetricData permission for EMF metrics
+     */
+    const lambdaEmfPolicy = new aws.iam.Policy('LambdaEmfPolicy', {
+      policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: ['cloudwatch:PutMetricData'],
+            Resource: '*',
+          },
+        ],
+      }),
+      tags: {
+        ...createResourceTags(stage, 'iam', 'engineering@example.com'),
+        Name: `user-metrics-lambda-emf-policy-${stage}`,
+        Purpose: 'EMFMetrics',
+      },
+    })
+
+    // Note: This policy will be attached to Lambda functions in Phase 3 (Story 3.1)
+    // For now, we're just creating the policy as part of the infrastructure foundation
 
     // ========================================
     // Story 1.8: Health Check Lambda + API Gateway
@@ -963,7 +2000,7 @@ export default $config({
       handler: 'functions/gallery/upload-image/index.handler',
       timeout: '60 seconds', // Story 3.2 AC #9: Longer timeout for Sharp processing
       memory: '2048 MB', // Story 3.2 AC #9: Required for Sharp image processing
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -974,7 +2011,7 @@ export default $config({
       handler: 'functions/gallery/list-images/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -985,7 +2022,7 @@ export default $config({
       handler: 'functions/gallery/search-images/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -996,7 +2033,7 @@ export default $config({
       handler: 'functions/gallery/get-image/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1007,7 +2044,7 @@ export default $config({
       handler: 'functions/gallery/update-image/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1018,7 +2055,7 @@ export default $config({
       handler: 'functions/gallery/delete-image/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1029,7 +2066,7 @@ export default $config({
       handler: 'functions/gallery/flag-image/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1040,7 +2077,7 @@ export default $config({
       handler: 'functions/gallery/create-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1051,7 +2088,7 @@ export default $config({
       handler: 'functions/gallery/list-albums/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1062,7 +2099,7 @@ export default $config({
       handler: 'functions/gallery/get-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1073,7 +2110,7 @@ export default $config({
       handler: 'functions/gallery/update-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1084,7 +2121,7 @@ export default $config({
       handler: 'functions/gallery/delete-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1134,7 +2171,7 @@ export default $config({
       handler: 'functions/wishlist/list-wishlist/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1145,7 +2182,7 @@ export default $config({
       handler: 'functions/wishlist/get-wishlist-item/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1156,7 +2193,7 @@ export default $config({
       handler: 'functions/wishlist/create-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1167,7 +2204,7 @@ export default $config({
       handler: 'functions/wishlist/update-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1178,7 +2215,7 @@ export default $config({
       handler: 'functions/wishlist/delete-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1189,7 +2226,7 @@ export default $config({
       handler: 'functions/wishlist/reorder-wishlist/index.handler',
       timeout: '20 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1200,7 +2237,7 @@ export default $config({
       handler: 'functions/wishlist/upload-wishlist-image/index.handler',
       timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
       memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1211,7 +2248,7 @@ export default $config({
       handler: 'functions/wishlist/search-wishlist/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1259,7 +2296,7 @@ export default $config({
       handler: 'functions/moc-parts-lists/get-parts-lists/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1275,7 +2312,7 @@ export default $config({
       handler: 'functions/moc-parts-lists/create-parts-list/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1291,7 +2328,7 @@ export default $config({
       handler: 'functions/moc-parts-lists/update-parts-list/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1306,7 +2343,7 @@ export default $config({
       handler: 'functions/moc-parts-lists/update-parts-list-status/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1322,7 +2359,7 @@ export default $config({
       handler: 'functions/moc-parts-lists/delete-parts-list/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
-    
+
       // Story 5.3: Enable X-Ray tracing for distributed tracing
       tracing: 'active',
     })
@@ -1395,13 +2432,9 @@ export default $config({
         auth: { jwt: { authorizer: cognitoAuthorizer } },
       },
     )
-    api.route(
-      'POST /api/mocs/{id}/upload-parts-list',
-      parsePartsListFunction,
-      {
-        auth: { jwt: { authorizer: cognitoAuthorizer } },
-      },
-    )
+    api.route('POST /api/mocs/{id}/upload-parts-list', parsePartsListFunction, {
+      auth: { jwt: { authorizer: cognitoAuthorizer } },
+    })
     api.route('GET /api/user/parts-lists/summary', getUserPartsListsSummaryFunction, {
       auth: { jwt: { authorizer: cognitoAuthorizer } },
     })
@@ -1636,841 +2669,838 @@ export default $config({
 
     const dashboard = new aws.cloudwatch.Dashboard('LegoApiDashboard', {
       dashboardName,
-      dashboardBody: $jsonStringify($output([
-        api.id,
-        healthCheckFunction.name,
-        mocInstructionsFunction.name,
-        mocFileUploadFunction.name,
-        mocFileDownloadFunction.name,
-        uploadImageFunction.name,
-        listImagesFunction.name,
-        searchImagesFunction.name,
-        getImageFunction.name,
-        updateImageFunction.name,
-        deleteImageFunction.name,
-        listWishlistFunction.name,
-        createWishlistItemFunction.name,
-        updateWishlistItemFunction.name,
-        deleteWishlistItemFunction.name,
-        uploadWishlistImageFunction.name,
-        websocketConnectFunction.name,
-        websocketDisconnectFunction.name,
-        postgres.clusterIdentifier,
-        redis.clusterId,
-        openSearch.domainName,
-        region,
-        accountId,
-      ]).apply(([
-        apiId,
-        healthCheckFnName,
-        mocInstructionsFnName,
-        mocFileUploadFnName,
-        mocFileDownloadFnName,
-        uploadImageFnName,
-        listImagesFnName,
-        searchImagesFnName,
-        getImageFnName,
-        updateImageFnName,
-        deleteImageFnName,
-        listWishlistFnName,
-        createWishlistItemFnName,
-        updateWishlistItemFnName,
-        deleteWishlistItemFnName,
-        uploadWishlistImageFnName,
-        websocketConnectFnName,
-        websocketDisconnectFnName,
-        rdsClusterId,
-        redisId,
-        openSearchDomain,
-        region,
-        accountId,
-      ]) => {
-        const widgets: any[] = []
+      dashboardBody: $jsonStringify(
+        $output([
+          api.id,
+          healthCheckFunction.name,
+          mocInstructionsFunction.name,
+          mocFileUploadFunction.name,
+          mocFileDownloadFunction.name,
+          uploadImageFunction.name,
+          listImagesFunction.name,
+          searchImagesFunction.name,
+          getImageFunction.name,
+          updateImageFunction.name,
+          deleteImageFunction.name,
+          listWishlistFunction.name,
+          createWishlistItemFunction.name,
+          updateWishlistItemFunction.name,
+          deleteWishlistItemFunction.name,
+          uploadWishlistImageFunction.name,
+          websocketConnectFunction.name,
+          websocketDisconnectFunction.name,
+          postgres.clusterIdentifier,
+          redis.clusterId,
+          openSearch.domainName,
+          region,
+          accountId,
+        ]).apply(
+          ([
+            apiId,
+            healthCheckFnName,
+            mocInstructionsFnName,
+            mocFileUploadFnName,
+            mocFileDownloadFnName,
+            uploadImageFnName,
+            listImagesFnName,
+            searchImagesFnName,
+            getImageFnName,
+            updateImageFnName,
+            deleteImageFnName,
+            listWishlistFnName,
+            createWishlistItemFnName,
+            updateWishlistItemFnName,
+            deleteWishlistItemFnName,
+            uploadWishlistImageFnName,
+            websocketConnectFnName,
+            websocketDisconnectFnName,
+            rdsClusterId,
+            redisId,
+            openSearchDomain,
+            region,
+            accountId,
+          ]) => {
+            const widgets: any[] = []
 
-        // ========================================
-        // Overview Section
-        // ========================================
-        widgets.push(
-          {
-            type: 'text',
-            x: 0,
-            y: 0,
-            width: 24,
-            height: 2,
-            properties: {
-              markdown: `# LEGO API Production Monitoring\n\nReal-time metrics for SST serverless infrastructure - **${stage}** environment`,
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: 2,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'API Request Volume',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ApiGateway',
-                  'Count',
-                  { ApiId: apiId },
-                  { stat: 'Sum', label: 'Total Requests' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
+            // ========================================
+            // Overview Section
+            // ========================================
+            widgets.push(
+              {
+                type: 'text',
+                x: 0,
+                y: 0,
+                width: 24,
+                height: 2,
+                properties: {
+                  markdown: `# LEGO API Production Monitoring\n\nReal-time metrics for SST serverless infrastructure - **${stage}** environment`,
                 },
               },
-            },
-          },
-          {
-            type: 'metric',
-            x: 12,
-            y: 2,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'API Error Rate',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  { expression: '(m1 / m2) * 100', label: '5xx Error Rate (%)', id: 'e1' },
-                ],
-                [
-                  'AWS/ApiGateway',
-                  '5XXError',
-                  { ApiId: apiId },
-                  { stat: 'Sum', id: 'm1', visible: false },
-                ],
-                [
-                  'AWS/ApiGateway',
-                  'Count',
-                  { ApiId: apiId },
-                  { stat: 'Sum', id: 'm2', visible: false },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-        )
-
-        // ========================================
-        // Lambda Functions Section
-        // ========================================
-        const lambdaFunctions = [
-          { name: 'Health Check', functionName: healthCheckFnName },
-          { name: 'MOC Instructions', functionName: mocInstructionsFnName },
-          { name: 'MOC File Upload', functionName: mocFileUploadFnName },
-          { name: 'MOC File Download', functionName: mocFileDownloadFnName },
-          { name: 'Upload Image', functionName: uploadImageFnName },
-          { name: 'List Images', functionName: listImagesFnName },
-          { name: 'Search Images', functionName: searchImagesFnName },
-          { name: 'Get Image', functionName: getImageFnName },
-          { name: 'Update Image', functionName: updateImageFnName },
-          { name: 'Delete Image', functionName: deleteImageFnName },
-          { name: 'List Wishlist', functionName: listWishlistFnName },
-          { name: 'Create Wishlist', functionName: createWishlistItemFnName },
-          { name: 'Update Wishlist', functionName: updateWishlistItemFnName },
-          { name: 'Delete Wishlist', functionName: deleteWishlistItemFnName },
-          { name: 'Upload Wishlist Img', functionName: uploadWishlistImageFnName },
-          { name: 'WebSocket Connect', functionName: websocketConnectFnName },
-          { name: 'WebSocket Disconnect', functionName: websocketDisconnectFnName },
-        ]
-
-        let lambdaYPosition = 8
-
-        widgets.push({
-          type: 'text',
-          x: 0,
-          y: lambdaYPosition,
-          width: 24,
-          height: 1,
-          properties: {
-            markdown: '## Lambda Functions',
-          },
-        })
-
-        lambdaYPosition += 1
-
-        // Create widgets for each Lambda function (4 widgets per row)
-        lambdaFunctions.forEach((lambda, index) => {
-          const xPosition = (index % 4) * 6
-          const yPosition = lambdaYPosition + Math.floor(index / 4) * 6
-
-          widgets.push({
-            type: 'metric',
-            x: xPosition,
-            y: yPosition,
-            width: 6,
-            height: 6,
-            properties: {
-              title: `${lambda.name}`,
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/Lambda',
-                  'Invocations',
-                  { stat: 'Sum', label: 'Invocations', color: '#1f77b4' },
-                  { FunctionName: lambda.functionName },
-                ],
-                [
-                  '.',
-                  'Errors',
-                  { stat: 'Sum', label: 'Errors', yAxis: 'right', color: '#d62728' },
-                  { FunctionName: lambda.functionName },
-                ],
-                [
-                  '.',
-                  'Throttles',
-                  { stat: 'Sum', label: 'Throttles', yAxis: 'right', color: '#ff7f0e' },
-                  { FunctionName: lambda.functionName },
-                ],
-                [
-                  '.',
-                  'Duration',
-                  { stat: 'p50', label: 'p50 ms', yAxis: 'right', color: '#2ca02c' },
-                  { FunctionName: lambda.functionName },
-                ],
-                [
-                  '...',
-                  { stat: 'p95', label: 'p95 ms', yAxis: 'right', color: '#98df8a' },
-                  { FunctionName: lambda.functionName },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  label: 'Count',
-                  min: 0,
-                },
-                right: {
-                  label: 'Duration (ms) / Errors',
-                  min: 0,
-                },
-              },
-            },
-          })
-        })
-
-        lambdaYPosition += Math.ceil(lambdaFunctions.length / 4) * 6
-
-        // ========================================
-        // API Gateway Section
-        // ========================================
-        widgets.push(
-          {
-            type: 'text',
-            x: 0,
-            y: lambdaYPosition,
-            width: 24,
-            height: 1,
-            properties: {
-              markdown: '## API Gateway',
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Requests by Status',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ApiGateway',
-                  'Count',
-                  { ApiId: apiId },
-                  { stat: 'Sum', label: 'Total Requests' },
-                ],
-                ['...', '4XXError', { stat: 'Sum', label: '4xx Errors' }],
-                ['...', '5XXError', { stat: 'Sum', label: '5xx Errors' }],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 8,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'API Latency (Percentiles)',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ApiGateway',
-                  'Latency',
-                  { ApiId: apiId },
-                  { stat: 'p50', label: 'p50' },
-                ],
-                ['...', { stat: 'p95', label: 'p95' }],
-                ['...', { stat: 'p99', label: 'p99' }],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  label: 'Latency (ms)',
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 16,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Integration Latency',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ApiGateway',
-                  'IntegrationLatency',
-                  { ApiId: apiId },
-                  { stat: 'Average', label: 'Avg' },
-                ],
-                ['...', { stat: 'p95', label: 'p95' }],
-                ['...', { stat: 'p99', label: 'p99' }],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  label: 'Latency (ms)',
-                  min: 0,
-                },
-              },
-            },
-          },
-        )
-
-        lambdaYPosition += 7
-
-        // ========================================
-        // RDS PostgreSQL Section
-        // ========================================
-        widgets.push(
-          {
-            type: 'text',
-            x: 0,
-            y: lambdaYPosition,
-            width: 24,
-            height: 1,
-            properties: {
-              markdown: '## RDS PostgreSQL',
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Database Connections',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/RDS',
-                  'DatabaseConnections',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'Connections' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 8,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'CPU Utilization',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/RDS',
-                  'CPUUtilization',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'CPU %' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                  max: 100,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 16,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Freeable Memory',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/RDS',
-                  'FreeableMemory',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'Free Memory (bytes)' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 7,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'Read/Write IOPS',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/RDS',
-                  'ReadIOPS',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'Read IOPS' },
-                ],
-                [
-                  '.',
-                  'WriteIOPS',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'Write IOPS' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 12,
-            y: lambdaYPosition + 7,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'Read/Write Latency',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/RDS',
-                  'ReadLatency',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'Read Latency (ms)' },
-                ],
-                [
-                  '.',
-                  'WriteLatency',
-                  { DBClusterIdentifier: rdsClusterId },
-                  { stat: 'Average', label: 'Write Latency (ms)' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-        )
-
-        lambdaYPosition += 13
-
-        // ========================================
-        // ElastiCache Redis Section
-        // ========================================
-        widgets.push(
-          {
-            type: 'text',
-            x: 0,
-            y: lambdaYPosition,
-            width: 24,
-            height: 1,
-            properties: {
-              markdown: '## ElastiCache Redis',
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Cache Hit Rate',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  {
-                    expression: '(hits / (hits + misses)) * 100',
-                    label: 'Hit Rate (%)',
-                    id: 'e1',
+              {
+                type: 'metric',
+                x: 0,
+                y: 2,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'API Request Volume',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ApiGateway',
+                      'Count',
+                      { ApiId: apiId },
+                      { stat: 'Sum', label: 'Total Requests' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
                   },
-                ],
-                [
-                  'AWS/ElastiCache',
-                  'CacheHits',
-                  { CacheClusterId: redisId },
-                  { stat: 'Sum', id: 'hits', visible: false },
-                ],
-                [
-                  '.',
-                  'CacheMisses',
-                  { CacheClusterId: redisId },
-                  { stat: 'Sum', id: 'misses', visible: false },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                  max: 100,
                 },
               },
-            },
-          },
-          {
-            type: 'metric',
-            x: 8,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Evictions',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ElastiCache',
-                  'Evictions',
-                  { CacheClusterId: redisId },
-                  { stat: 'Sum', label: 'Evictions' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
+              {
+                type: 'metric',
+                x: 12,
+                y: 2,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'API Error Rate',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [{ expression: '(m1 / m2) * 100', label: '5xx Error Rate (%)', id: 'e1' }],
+                    [
+                      'AWS/ApiGateway',
+                      '5XXError',
+                      { ApiId: apiId },
+                      { stat: 'Sum', id: 'm1', visible: false },
+                    ],
+                    [
+                      'AWS/ApiGateway',
+                      'Count',
+                      { ApiId: apiId },
+                      { stat: 'Sum', id: 'm2', visible: false },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
                 },
               },
-            },
-          },
-          {
-            type: 'metric',
-            x: 16,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Current Connections',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ElastiCache',
-                  'CurrConnections',
-                  { CacheClusterId: redisId },
-                  { stat: 'Average', label: 'Connections' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 7,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'CPU Utilization',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ElastiCache',
-                  'CPUUtilization',
-                  { CacheClusterId: redisId },
-                  { stat: 'Average', label: 'CPU %' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                  max: 100,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 12,
-            y: lambdaYPosition + 7,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'Database Memory Usage',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ElastiCache',
-                  'DatabaseMemoryUsagePercentage',
-                  { CacheClusterId: redisId },
-                  { stat: 'Average', label: 'Memory %' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                  max: 100,
-                },
-              },
-            },
-          },
-        )
+            )
 
-        lambdaYPosition += 13
+            // ========================================
+            // Lambda Functions Section
+            // ========================================
+            const lambdaFunctions = [
+              { name: 'Health Check', functionName: healthCheckFnName },
+              { name: 'MOC Instructions', functionName: mocInstructionsFnName },
+              { name: 'MOC File Upload', functionName: mocFileUploadFnName },
+              { name: 'MOC File Download', functionName: mocFileDownloadFnName },
+              { name: 'Upload Image', functionName: uploadImageFnName },
+              { name: 'List Images', functionName: listImagesFnName },
+              { name: 'Search Images', functionName: searchImagesFnName },
+              { name: 'Get Image', functionName: getImageFnName },
+              { name: 'Update Image', functionName: updateImageFnName },
+              { name: 'Delete Image', functionName: deleteImageFnName },
+              { name: 'List Wishlist', functionName: listWishlistFnName },
+              { name: 'Create Wishlist', functionName: createWishlistItemFnName },
+              { name: 'Update Wishlist', functionName: updateWishlistItemFnName },
+              { name: 'Delete Wishlist', functionName: deleteWishlistItemFnName },
+              { name: 'Upload Wishlist Img', functionName: uploadWishlistImageFnName },
+              { name: 'WebSocket Connect', functionName: websocketConnectFnName },
+              { name: 'WebSocket Disconnect', functionName: websocketDisconnectFnName },
+            ]
 
-        // ========================================
-        // OpenSearch Section
-        // ========================================
-        widgets.push(
-          {
-            type: 'text',
-            x: 0,
-            y: lambdaYPosition,
-            width: 24,
-            height: 1,
-            properties: {
-              markdown: '## OpenSearch',
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Cluster Status',
-              view: 'singleValue',
-              region,
-              metrics: [
-                [
-                  'AWS/ES',
-                  'ClusterStatus.green',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Maximum', label: 'Green' },
-                ],
-                [
-                  '.',
-                  'ClusterStatus.yellow',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Maximum', label: 'Yellow' },
-                ],
-                [
-                  '.',
-                  'ClusterStatus.red',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Maximum', label: 'Red' },
-                ],
-              ],
-              period: 60,
-            },
-          },
-          {
-            type: 'metric',
-            x: 8,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Indexing Rate',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ES',
-                  'IndexingRate',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Average', label: 'Docs/min' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 16,
-            y: lambdaYPosition + 1,
-            width: 8,
-            height: 6,
-            properties: {
-              title: 'Search Latency',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ES',
-                  'SearchLatency',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Average', label: 'Latency (ms)' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 0,
-            y: lambdaYPosition + 7,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'CPU Utilization',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ES',
-                  'CPUUtilization',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Average', label: 'CPU %' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                  max: 100,
-                },
-              },
-            },
-          },
-          {
-            type: 'metric',
-            x: 12,
-            y: lambdaYPosition + 7,
-            width: 12,
-            height: 6,
-            properties: {
-              title: 'JVM Memory Pressure',
-              view: 'timeSeries',
-              stacked: false,
-              region,
-              metrics: [
-                [
-                  'AWS/ES',
-                  'JVMMemoryPressure',
-                  { DomainName: openSearchDomain, ClientId: accountId },
-                  { stat: 'Maximum', label: 'Pressure %' },
-                ],
-              ],
-              period: 60,
-              yAxis: {
-                left: {
-                  min: 0,
-                  max: 100,
-                },
-              },
-            },
-          },
-        )
+            let lambdaYPosition = 8
 
-        return { widgets }
-      })),
+            widgets.push({
+              type: 'text',
+              x: 0,
+              y: lambdaYPosition,
+              width: 24,
+              height: 1,
+              properties: {
+                markdown: '## Lambda Functions',
+              },
+            })
+
+            lambdaYPosition += 1
+
+            // Create widgets for each Lambda function (4 widgets per row)
+            lambdaFunctions.forEach((lambda, index) => {
+              const xPosition = (index % 4) * 6
+              const yPosition = lambdaYPosition + Math.floor(index / 4) * 6
+
+              widgets.push({
+                type: 'metric',
+                x: xPosition,
+                y: yPosition,
+                width: 6,
+                height: 6,
+                properties: {
+                  title: `${lambda.name}`,
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/Lambda',
+                      'Invocations',
+                      { stat: 'Sum', label: 'Invocations', color: '#1f77b4' },
+                      { FunctionName: lambda.functionName },
+                    ],
+                    [
+                      '.',
+                      'Errors',
+                      { stat: 'Sum', label: 'Errors', yAxis: 'right', color: '#d62728' },
+                      { FunctionName: lambda.functionName },
+                    ],
+                    [
+                      '.',
+                      'Throttles',
+                      { stat: 'Sum', label: 'Throttles', yAxis: 'right', color: '#ff7f0e' },
+                      { FunctionName: lambda.functionName },
+                    ],
+                    [
+                      '.',
+                      'Duration',
+                      { stat: 'p50', label: 'p50 ms', yAxis: 'right', color: '#2ca02c' },
+                      { FunctionName: lambda.functionName },
+                    ],
+                    [
+                      '...',
+                      { stat: 'p95', label: 'p95 ms', yAxis: 'right', color: '#98df8a' },
+                      { FunctionName: lambda.functionName },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      label: 'Count',
+                      min: 0,
+                    },
+                    right: {
+                      label: 'Duration (ms) / Errors',
+                      min: 0,
+                    },
+                  },
+                },
+              })
+            })
+
+            lambdaYPosition += Math.ceil(lambdaFunctions.length / 4) * 6
+
+            // ========================================
+            // API Gateway Section
+            // ========================================
+            widgets.push(
+              {
+                type: 'text',
+                x: 0,
+                y: lambdaYPosition,
+                width: 24,
+                height: 1,
+                properties: {
+                  markdown: '## API Gateway',
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Requests by Status',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ApiGateway',
+                      'Count',
+                      { ApiId: apiId },
+                      { stat: 'Sum', label: 'Total Requests' },
+                    ],
+                    ['...', '4XXError', { stat: 'Sum', label: '4xx Errors' }],
+                    ['...', '5XXError', { stat: 'Sum', label: '5xx Errors' }],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 8,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'API Latency (Percentiles)',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    ['AWS/ApiGateway', 'Latency', { ApiId: apiId }, { stat: 'p50', label: 'p50' }],
+                    ['...', { stat: 'p95', label: 'p95' }],
+                    ['...', { stat: 'p99', label: 'p99' }],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      label: 'Latency (ms)',
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 16,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Integration Latency',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ApiGateway',
+                      'IntegrationLatency',
+                      { ApiId: apiId },
+                      { stat: 'Average', label: 'Avg' },
+                    ],
+                    ['...', { stat: 'p95', label: 'p95' }],
+                    ['...', { stat: 'p99', label: 'p99' }],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      label: 'Latency (ms)',
+                      min: 0,
+                    },
+                  },
+                },
+              },
+            )
+
+            lambdaYPosition += 7
+
+            // ========================================
+            // RDS PostgreSQL Section
+            // ========================================
+            widgets.push(
+              {
+                type: 'text',
+                x: 0,
+                y: lambdaYPosition,
+                width: 24,
+                height: 1,
+                properties: {
+                  markdown: '## RDS PostgreSQL',
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Database Connections',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/RDS',
+                      'DatabaseConnections',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'Connections' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 8,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'CPU Utilization',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/RDS',
+                      'CPUUtilization',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'CPU %' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                      max: 100,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 16,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Freeable Memory',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/RDS',
+                      'FreeableMemory',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'Free Memory (bytes)' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 7,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'Read/Write IOPS',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/RDS',
+                      'ReadIOPS',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'Read IOPS' },
+                    ],
+                    [
+                      '.',
+                      'WriteIOPS',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'Write IOPS' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 12,
+                y: lambdaYPosition + 7,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'Read/Write Latency',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/RDS',
+                      'ReadLatency',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'Read Latency (ms)' },
+                    ],
+                    [
+                      '.',
+                      'WriteLatency',
+                      { DBClusterIdentifier: rdsClusterId },
+                      { stat: 'Average', label: 'Write Latency (ms)' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+            )
+
+            lambdaYPosition += 13
+
+            // ========================================
+            // ElastiCache Redis Section
+            // ========================================
+            widgets.push(
+              {
+                type: 'text',
+                x: 0,
+                y: lambdaYPosition,
+                width: 24,
+                height: 1,
+                properties: {
+                  markdown: '## ElastiCache Redis',
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Cache Hit Rate',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      {
+                        expression: '(hits / (hits + misses)) * 100',
+                        label: 'Hit Rate (%)',
+                        id: 'e1',
+                      },
+                    ],
+                    [
+                      'AWS/ElastiCache',
+                      'CacheHits',
+                      { CacheClusterId: redisId },
+                      { stat: 'Sum', id: 'hits', visible: false },
+                    ],
+                    [
+                      '.',
+                      'CacheMisses',
+                      { CacheClusterId: redisId },
+                      { stat: 'Sum', id: 'misses', visible: false },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                      max: 100,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 8,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Evictions',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ElastiCache',
+                      'Evictions',
+                      { CacheClusterId: redisId },
+                      { stat: 'Sum', label: 'Evictions' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 16,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Current Connections',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ElastiCache',
+                      'CurrConnections',
+                      { CacheClusterId: redisId },
+                      { stat: 'Average', label: 'Connections' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 7,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'CPU Utilization',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ElastiCache',
+                      'CPUUtilization',
+                      { CacheClusterId: redisId },
+                      { stat: 'Average', label: 'CPU %' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                      max: 100,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 12,
+                y: lambdaYPosition + 7,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'Database Memory Usage',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ElastiCache',
+                      'DatabaseMemoryUsagePercentage',
+                      { CacheClusterId: redisId },
+                      { stat: 'Average', label: 'Memory %' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                      max: 100,
+                    },
+                  },
+                },
+              },
+            )
+
+            lambdaYPosition += 13
+
+            // ========================================
+            // OpenSearch Section
+            // ========================================
+            widgets.push(
+              {
+                type: 'text',
+                x: 0,
+                y: lambdaYPosition,
+                width: 24,
+                height: 1,
+                properties: {
+                  markdown: '## OpenSearch',
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Cluster Status',
+                  view: 'singleValue',
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ES',
+                      'ClusterStatus.green',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Maximum', label: 'Green' },
+                    ],
+                    [
+                      '.',
+                      'ClusterStatus.yellow',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Maximum', label: 'Yellow' },
+                    ],
+                    [
+                      '.',
+                      'ClusterStatus.red',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Maximum', label: 'Red' },
+                    ],
+                  ],
+                  period: 60,
+                },
+              },
+              {
+                type: 'metric',
+                x: 8,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Indexing Rate',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ES',
+                      'IndexingRate',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Average', label: 'Docs/min' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 16,
+                y: lambdaYPosition + 1,
+                width: 8,
+                height: 6,
+                properties: {
+                  title: 'Search Latency',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ES',
+                      'SearchLatency',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Average', label: 'Latency (ms)' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 0,
+                y: lambdaYPosition + 7,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'CPU Utilization',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ES',
+                      'CPUUtilization',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Average', label: 'CPU %' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                      max: 100,
+                    },
+                  },
+                },
+              },
+              {
+                type: 'metric',
+                x: 12,
+                y: lambdaYPosition + 7,
+                width: 12,
+                height: 6,
+                properties: {
+                  title: 'JVM Memory Pressure',
+                  view: 'timeSeries',
+                  stacked: false,
+                  region,
+                  metrics: [
+                    [
+                      'AWS/ES',
+                      'JVMMemoryPressure',
+                      { DomainName: openSearchDomain, ClientId: accountId },
+                      { stat: 'Maximum', label: 'Pressure %' },
+                    ],
+                  ],
+                  period: 60,
+                  yAxis: {
+                    left: {
+                      min: 0,
+                      max: 100,
+                    },
+                  },
+                },
+              },
+            )
+
+            return { widgets }
+          },
+        ),
+      ),
     })
 
     // ========================================
@@ -2486,6 +3516,7 @@ export default $config({
      * - OpenSearch cluster health, JVM memory
      * - SNS notifications (email + optional Slack)
      */
+    const { createAlarms } = await import('./src/infrastructure/monitoring/alarms')
     const alarms = createAlarms({
       mocFunction: mocInstructionsFunction,
       galleryFunction: uploadImageFunction,
@@ -2513,6 +3544,11 @@ export default $config({
       rdsSecurityGroup: rdsSecurityGroup.id,
       openSearchSecurityGroup: openSearchSecurityGroup.id,
 
+      // Story 1.1: Observability Security Groups
+      openReplaySecurityGroup: openReplaySecurityGroup.id,
+      umamiSecurityGroup: umamiSecurityGroup.id,
+      observabilityAlbSecurityGroup: observabilityAlbSecurityGroup.id,
+
       // Database
       postgresHost: postgres.host,
       postgresPort: postgres.port,
@@ -2525,12 +3561,37 @@ export default $config({
       // Storage
       bucketName: bucket.name,
 
+      // Story 1.3: OpenReplay Session Storage
+      openReplaySessionsBucketName: openReplaySessionsBucket.name,
+      openReplaySessionsBucketArn: openReplaySessionsBucket.arn,
+      cloudWatchLogsBucketName: cloudWatchLogsBucket.name,
+      cloudWatchLogsBucketArn: cloudWatchLogsBucket.arn,
+
+      // Story 1.4: Cost Monitoring and Budget Alerts
+      budgetAlertTopicArn: budgetAlertTopic.topicArn,
+      budgetAlertTopicName: budgetAlertTopic.topicName,
+      userMetricsBudgetName: userMetricsBudget.ref,
+      costMetricsPublisherArn: costMetricsPublisher.functionArn,
+      costMetricsPublisherName: costMetricsPublisher.functionName,
+      costMonitoringDashboardName: costMonitoringDashboard.dashboardName,
+
       // Cognito Authentication
       userPoolId: userPool.id,
       userPoolArn: userPool.arn,
       userPoolClientId: userPoolClient.id,
       userPoolEndpoint: userPool.endpoint,
       identityPoolId: identityPool.id,
+
+      // Story 1.1: Observability IAM Roles
+      ecsTaskExecutionRoleArn: ecsTaskExecutionRole.arn,
+      ecsTaskExecutionRoleName: ecsTaskExecutionRole.name,
+      openReplayTaskRoleArn: openReplayTaskRole.arn,
+      openReplayTaskRoleName: openReplayTaskRole.name,
+      umamiTaskRoleArn: umamiTaskRole.arn,
+      umamiTaskRoleName: umamiTaskRole.name,
+      grafanaWorkspaceRoleArn: grafanaWorkspaceRole.arn,
+      grafanaWorkspaceRoleName: grafanaWorkspaceRole.name,
+      lambdaEmfPolicyArn: lambdaEmfPolicy.arn,
 
       // API Gateway
       apiUrl: api.url,

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { Button, FormSection } from '@repo/ui'
 import { AvatarUploader } from '@repo/profile'
-import { useAuth } from '../../hooks'
+import { useCognitoAuth } from '../../hooks'
 import type { Profile, ProfileForm } from '@repo/profile'
 import { LegoProfileContent } from './LegoProfileContent'
 
@@ -38,7 +38,7 @@ const mockProfile: Profile = {
 
 export const ProfilePage: React.FC = () => {
   const router = useRouter()
-  const { user, isLoading: isAuthLoading, isAuthenticated, error } = useAuth()
+  const { user, isLoading: isAuthLoading, isAuthenticated, error } = useCognitoAuth()
   const [isEditing, setIsEditing] = useState(false)
 
   // Redirect to login if not authenticated (after logout)

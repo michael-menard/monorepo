@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1732377600000,
+      "tag": "0000_initial_umami_schema",
+      "breakpoints": true
+    }
+  ]
+}
