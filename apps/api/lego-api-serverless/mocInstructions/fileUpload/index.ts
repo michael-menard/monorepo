@@ -5,55 +5,35 @@
  * Route: POST /api/mocs/:id/files
  *
  * Features:
- * - Multipart form data parsing
+ * - Multipart form data parsing (single or multi-file)
  * - File validation (type, size, mime type)
- * - S3 upload with signed URLs
- * - Database record creation
+ * - S3 upload with signed URLs (parallel for multi-file)
+ * - Database record creation (batch for multi-file)
  * - Cache invalidation
+ * - Partial success handling for multi-file uploads
+ *
+ * Story 4.7: Enhanced to support up to 10 files per request
  *
  * Authentication: JWT via AWS Cognito
  * Authorization: User must own the MOC
  */
 
-import {
-  successResponse,
-  errorResponseFromError,
-  type APIGatewayProxyResult,
-} from '@monorepo/lambda-responses'
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
+import { successResponse, errorResponseFromError } from '@monorepo/lambda-responses'
 import { FileUploadSchema } from '@/types/moc'
 import { BadRequestError, UnauthorizedError, ValidationError } from '@monorepo/lambda-responses'
-import { uploadMocFile } from '@/lib/services/moc-file-service'
-import { logger } from '../lib/utils/logger'
+import { uploadMocFile, uploadMocFilesParallel, insertFileRecordsBatch } from '@/lib/services/moc-file-service'
+import { parseMultipartForm } from '@/lib/utils/multipart-parser'
+import { createLogger } from '@/lib/utils/logger'
 
-/**
- * API Gateway Event Interface for File Upload
- */
-interface APIGatewayEvent {
-  requestContext: {
-    http: {
-      method: string
-      path: string
-    }
-    authorizer?: {
-      jwt?: {
-        claims: {
-          sub: string // User ID from Cognito
-          email?: string
-        }
-      }
-    }
-    requestId: string
-  }
-  pathParameters?: Record<string, string>
-  body?: string | null
-  isBase64Encoded?: boolean
-  headers?: Record<string, string>
-}
+const logger = createLogger('moc-file-upload')
 
 /**
  * Main Lambda Handler for File Upload
+ *
+ * Supports both single-file (backward compatible) and multi-file uploads
  */
-export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     logger.info('MOC File Upload Lambda invoked', {
       requestId: event.requestContext.requestId,
@@ -71,7 +51,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
     }
 
     // Verify content type is multipart/form-data
-    const contentType = event.headers?.['content-type'] || event.headers?.['Content-Type']
+    const contentType = event.headers['content-type'] || event.headers['Content-Type']
     if (!contentType?.includes('multipart/form-data')) {
       throw new BadRequestError('Content-Type must be multipart/form-data')
     }
@@ -80,23 +60,126 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       throw new BadRequestError('Request body is required')
     }
 
-    // Parse multipart form data
-    const { file, metadata } = await parseMultipartFormData(event)
+    // Parse multipart form data using shared parser
+    const formData = await parseMultipartForm(event)
 
-    // Validate metadata
-    const validationResult = FileUploadSchema.safeParse(metadata)
-    if (!validationResult.success) {
-      throw new ValidationError('Invalid file metadata', {
-        errors: validationResult.error.flatten(),
+    // Validate file count
+    if (formData.files.length === 0) {
+      throw new BadRequestError('No files provided')
+    }
+
+    if (formData.files.length > 10) {
+      throw new BadRequestError('Maximum 10 files per upload')
+    }
+
+    logger.info('Files parsed', {
+      fileCount: formData.files.length,
+      mode: formData.files.length === 1 ? 'single' : 'multi',
+    })
+
+    // ========================================
+    // SINGLE FILE MODE (Backward Compatible)
+    // ========================================
+    if (formData.files.length === 1) {
+      const file = formData.files[0]
+      const fileType = formData.fields.fileType
+
+      if (!fileType) {
+        throw new BadRequestError('fileType field is required')
+      }
+
+      // Validate metadata
+      const validationResult = FileUploadSchema.safeParse({ fileType })
+      if (!validationResult.success) {
+        throw new ValidationError('Invalid file metadata', {
+          errors: validationResult.error.flatten(),
+        })
+      }
+
+      // Use existing single-file service
+      const uploadedFile = await uploadMocFile(
+        mocId,
+        userId,
+        {
+          buffer: file.buffer,
+          filename: file.filename,
+          mimeType: file.mimetype,
+          size: file.buffer.length,
+        },
+        validationResult.data,
+      )
+
+      logger.info('Single file uploaded successfully', {
+        fileId: uploadedFile.id,
+        filename: file.filename,
+      })
+
+      return successResponse(201, {
+        success: true,
+        data: uploadedFile,
       })
     }
 
-    // Upload file to S3 and create database record
-    const uploadedFile = await uploadMocFile(mocId, userId, file, validationResult.data)
+    // ========================================
+    // MULTI-FILE MODE (Story 4.7)
+    // ========================================
 
-    return successResponse(201, {
-      success: true,
-      data: uploadedFile,
+    // Build fileType mapping from form fields
+    // Supports two patterns:
+    // 1. fileType_0, fileType_1, etc. (per-file type)
+    // 2. fileType (same type for all files)
+    const fileTypeMapping: Record<string, string> = {}
+
+    formData.files.forEach((file, index) => {
+      // Try specific field first (e.g., fileType_0)
+      const specificType = formData.fields[`fileType_${index}`]
+      // Fall back to generic fileType field
+      const genericType = formData.fields.fileType
+
+      fileTypeMapping[file.fieldname] = specificType || genericType || 'instruction'
+    })
+
+    logger.info('File type mapping created', { fileTypeMapping })
+
+    // Upload files in parallel
+    const uploadResults = await uploadMocFilesParallel(mocId, userId, formData.files, fileTypeMapping)
+
+    // Insert successful uploads to database
+    await insertFileRecordsBatch(mocId, uploadResults)
+
+    // Build response with uploaded and failed files
+    const uploaded = uploadResults
+      .filter(r => r.success)
+      .map(r => ({
+        id: r.fileId!,
+        filename: r.filename,
+        fileUrl: r.s3Url!,
+        fileSize: r.fileSize!,
+        fileType: r.fileType!,
+      }))
+
+    const failed = uploadResults
+      .filter(r => !r.success)
+      .map(r => ({
+        filename: r.filename,
+        error: r.error!,
+      }))
+
+    logger.info('Multi-file upload completed', {
+      total: formData.files.length,
+      succeeded: uploaded.length,
+      failed: failed.length,
+    })
+
+    // Return 200 even with partial failures (failures detailed in response)
+    return successResponse(200, {
+      uploaded,
+      failed,
+      summary: {
+        total: formData.files.length,
+        succeeded: uploaded.length,
+        failed: failed.length,
+      },
     })
   } catch (error) {
     logger.error('MOC File Upload Lambda error:', error)
@@ -107,7 +190,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
 /**
  * Extract user ID from JWT claims
  */
-function getUserIdFromEvent(event: APIGatewayEvent): string {
+function getUserIdFromEvent(event: APIGatewayProxyEventV2): string {
   const userId = event.requestContext.authorizer?.jwt?.claims.sub
 
   if (!userId) {
@@ -115,93 +198,4 @@ function getUserIdFromEvent(event: APIGatewayEvent): string {
   }
 
   return userId
-}
-
-/**
- * Parse multipart/form-data from API Gateway event
- * Returns file buffer and metadata
- */
-async function parseMultipartFormData(event: APIGatewayEvent): Promise<{
-  file: {
-    buffer: Buffer
-    filename: string
-    mimeType: string
-    size: number
-  }
-  metadata: {
-    fileType: string
-  }
-}> {
-  // For AWS Lambda with API Gateway, we need to use a library like busboy or multiparty
-  // Since we're in a serverless environment, we'll use busboy for streaming parsing
-  const { default: Busboy } = await import('busboy')
-
-  return new Promise((resolve, reject) => {
-    const contentType = event.headers?.['content-type'] || event.headers?.['Content-Type']
-    if (!contentType) {
-      return reject(new BadRequestError('Content-Type header is required'))
-    }
-
-    const busboy = Busboy({ headers: { 'content-type': contentType } })
-
-    let fileBuffer: Buffer | null = null
-    let filename = ''
-    let mimeType = ''
-    let fileSize = 0
-    const fields: Record<string, string> = {}
-
-    busboy.on('file', (_fieldname, file, info) => {
-      const { filename: fname, mimeType: mime } = info
-      filename = fname
-      mimeType = mime
-
-      const chunks: Buffer[] = []
-      file.on('data', chunk => {
-        chunks.push(chunk)
-        fileSize += chunk.length
-      })
-
-      file.on('end', () => {
-        fileBuffer = Buffer.concat(chunks)
-      })
-    })
-
-    busboy.on('field', (fieldname, value) => {
-      fields[fieldname] = value
-    })
-
-    busboy.on('finish', () => {
-      if (!fileBuffer) {
-        return reject(new BadRequestError('No file provided'))
-      }
-
-      if (!fields.fileType) {
-        return reject(new BadRequestError('fileType field is required'))
-      }
-
-      resolve({
-        file: {
-          buffer: fileBuffer,
-          filename,
-          mimeType,
-          size: fileSize,
-        },
-        metadata: {
-          fileType: fields.fileType,
-        },
-      })
-    })
-
-    busboy.on('error', (error: Error) => {
-      reject(new BadRequestError(`Failed to parse multipart data: ${error.message}`))
-    })
-
-    // Write the request body to busboy
-    const body = event.isBase64Encoded
-      ? Buffer.from(event.body!, 'base64')
-      : Buffer.from(event.body!, 'utf-8')
-
-    busboy.write(body)
-    busboy.end()
-  })
 }

@@ -14,8 +14,8 @@ import type { Config } from 'drizzle-kit'
  */
 
 export default {
-  schema: './core/db/schema.ts',
-  out: './core/db/migrations',
+  schema: './src/db/schema.ts',
+  out: './src/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     // These environment variables are auto-populated by SST Resource linking

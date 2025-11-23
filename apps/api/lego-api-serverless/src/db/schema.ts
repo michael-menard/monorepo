@@ -265,6 +265,27 @@ export const mocPartsLists = pgTable(
   }),
 )
 
+// MOC Parts Table - Individual parts from CSV upload
+export const mocParts = pgTable(
+  'moc_parts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partsListId: uuid('parts_list_id')
+      .notNull()
+      .references(() => mocPartsLists.id, { onDelete: 'cascade' }),
+    partId: text('part_id').notNull(), // LEGO part number (e.g., "3001")
+    partName: text('part_name').notNull(), // Part description (e.g., "Brick 2 x 4")
+    quantity: integer('quantity').notNull(), // Number of parts
+    color: text('color').notNull(), // Part color (e.g., "Red")
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => ({
+    partsListIdx: index('idx_moc_parts_parts_list_id').on(table.partsListId),
+    partIdIdx: index('idx_moc_parts_part_id').on(table.partId),
+    colorIdx: index('idx_moc_parts_color').on(table.color),
+  }),
+)
+
 // Define relationships for lazy loading
 export const galleryImagesRelations = relations(galleryImages, ({ one, many }) => ({
   album: one(galleryAlbums, {
@@ -328,7 +349,7 @@ export const mocGalleryAlbumsRelations = relations(mocGalleryAlbums, ({ one }) =
   }),
 }))
 
-export const mocPartsListsRelations = relations(mocPartsLists, ({ one }) => ({
+export const mocPartsListsRelations = relations(mocPartsLists, ({ one, many }) => ({
   moc: one(mocInstructions, {
     fields: [mocPartsLists.mocId],
     references: [mocInstructions.id],
@@ -336,6 +357,14 @@ export const mocPartsListsRelations = relations(mocPartsLists, ({ one }) => ({
   file: one(mocFiles, {
     fields: [mocPartsLists.fileId],
     references: [mocFiles.id],
+  }),
+  parts: many(mocParts),
+}))
+
+export const mocPartsRelations = relations(mocParts, ({ one }) => ({
+  partsList: one(mocPartsLists, {
+    fields: [mocParts.partsListId],
+    references: [mocPartsLists.id],
   }),
 }))
 

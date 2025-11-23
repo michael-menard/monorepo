@@ -1,7 +1,8 @@
 /**
- * S3 Client for File Storage
+ * S3 Client for File Storage (Story 5.3: X-Ray instrumented)
  *
  * Provides configured S3 client for image and file uploads.
+ * All S3 operations are automatically traced in X-Ray.
  */
 
 import {
@@ -15,6 +16,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { getEnv } from '@/lib/utils/env'
 import { createLogger } from '../utils/logger'
+import { instrumentAWSClient } from '../utils/xray'
 
 const logger = createLogger('s3-client')
 let _s3Client: S3Client | null = null
@@ -22,14 +24,20 @@ let _s3Client: S3Client | null = null
 /**
  * Get or create S3 client instance
  * - Client is reused across Lambda invocations
+ * - Story 5.3: Instrumented with X-Ray for automatic operation tracing
  */
 export async function getS3Client(): Promise<S3Client> {
   if (!_s3Client) {
     const env = getEnv()
 
-    _s3Client = new S3Client({
+    const client = new S3Client({
       region: env.AWS_REGION || 'us-east-1',
     })
+
+    // Story 5.3: Instrument S3 client with X-Ray for automatic tracing
+    _s3Client = instrumentAWSClient(client)
+
+    logger.info('S3 client initialized with X-Ray instrumentation')
   }
 
   return _s3Client

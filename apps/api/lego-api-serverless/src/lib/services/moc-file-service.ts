@@ -11,6 +11,16 @@
 import { eq, and } from 'drizzle-orm'
 import { PutObjectCommand, S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { randomUUID } from 'crypto'
+import {
+  validateFile,
+  validateMagicBytes,
+  createLegoInstructionValidationConfig,
+  createLegoPartsListValidationConfig,
+  createImageValidationConfig,
+} from '@monorepo/file-validator'
+import type { FileValidationConfig, FileValidator } from '@monorepo/file-validator'
+import { invalidateMocDetailCache } from './moc-service'
 import { db } from '@/lib/db/client'
 import { mocInstructions, mocFiles } from '@/db/schema'
 import type { MocFile } from '@/types/moc'
@@ -38,9 +48,79 @@ const ALLOWED_MIME_TYPES = {
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/csv',
+    'text/xml',
+    'application/xml',
+    'application/json',
   ],
-  thumbnail: ['image/jpeg', 'image/png', 'image/webp'],
-  'gallery-image': ['image/jpeg', 'image/png', 'image/webp'],
+  thumbnail: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+  'gallery-image': ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+}
+
+/**
+ * Custom validator for magic bytes verification
+ * Validates file signatures to prevent spoofed file types
+ */
+const magicBytesValidator: FileValidator = {
+  name: 'magic-bytes-validator',
+  validate: (file) => {
+    // Only validate if buffer is available
+    if (!('buffer' in file) || !file.buffer) {
+      return null // Skip validation if no buffer
+    }
+
+    const mimeType = 'mimetype' in file ? file.mimetype : file.type
+    const fileName = 'originalname' in file ? file.originalname : file.name
+
+    // Validate magic bytes
+    const isValid = validateMagicBytes(file.buffer, mimeType)
+
+    if (!isValid) {
+      return {
+        code: 'INVALID_FILE_SIGNATURE',
+        message: `File signature validation failed for ${fileName}. File may be corrupted or spoofed (claimed type: ${mimeType})`,
+        file,
+      }
+    }
+
+    return null
+  },
+}
+
+/**
+ * Get validation configuration based on file type
+ * Uses @monorepo/file-validator for magic bytes validation
+ *
+ * @param fileType - Type of file being uploaded
+ * @returns Validation configuration with magic bytes support
+ */
+function getValidationConfig(
+  fileType: 'instruction' | 'parts-list' | 'thumbnail' | 'gallery-image',
+): FileValidationConfig {
+  let config: FileValidationConfig
+
+  switch (fileType) {
+    case 'instruction':
+      config = createLegoInstructionValidationConfig()
+      break
+
+    case 'parts-list':
+      config = createLegoPartsListValidationConfig()
+      break
+
+    case 'thumbnail':
+    case 'gallery-image':
+      config = createImageValidationConfig(FILE_SIZE_LIMITS[fileType])
+      break
+
+    default:
+      throw new BadRequestError(`Unknown file type: ${fileType}`)
+  }
+
+  // Add magic bytes validator to all configs
+  return {
+    ...config,
+    customValidators: [...(config.customValidators || []), magicBytesValidator],
+  }
 }
 
 /**
@@ -81,20 +161,22 @@ export async function uploadMocFile(
     throw new ForbiddenError('You do not own this MOC')
   }
 
-  // Validate file size
-  const maxSize = FILE_SIZE_LIMITS[metadata.fileType]
-  if (file.size > maxSize) {
-    throw new BadRequestError(
-      `File size exceeds limit for ${metadata.fileType} (max: ${maxSize / 1024 / 1024} MB)`,
-    )
-  }
+  // Validate file using @monorepo/file-validator (includes magic bytes validation)
+  const validationConfig = getValidationConfig(metadata.fileType)
+  const validationResult = validateFile(
+    {
+      originalname: file.filename,
+      mimetype: file.mimeType,
+      size: file.size,
+      buffer: file.buffer,
+    },
+    validationConfig,
+    { environment: 'node' },
+  )
 
-  // Validate MIME type
-  const allowedTypes = ALLOWED_MIME_TYPES[metadata.fileType]
-  if (!allowedTypes.includes(file.mimeType)) {
-    throw new BadRequestError(
-      `Invalid file type for ${metadata.fileType}. Allowed types: ${allowedTypes.join(', ')}`,
-    )
+  if (!validationResult.isValid) {
+    const errorMessages = validationResult.errors.map(e => e.message).join('; ')
+    throw new BadRequestError(`File validation failed: ${errorMessages}`)
   }
 
   // Generate unique S3 key
@@ -265,3 +347,255 @@ function sanitizeFilename(filename: string): string {
     .toLowerCase()
 }
 
+<<<<<<< Updated upstream
+=======
+/**
+ * File upload result for individual file in parallel upload
+ */
+export interface FileUploadResult {
+  filename: string
+  success: boolean
+  fileId?: string
+  s3Url?: string
+  fileSize?: number
+  fileType?: 'instruction' | 'parts-list' | 'thumbnail' | 'gallery-image'
+  error?: string
+}
+
+/**
+ * Upload multiple files in parallel for a MOC
+ *
+ * Each file is validated and uploaded independently.
+ * Returns results for both successful and failed uploads.
+ *
+ * @param mocId - MOC ID to upload files to
+ * @param userId - User ID from JWT claims
+ * @param files - Array of files to upload
+ * @param fileTypeMapping - Maps file fieldname to fileType
+ * @returns Array of upload results (success + failures)
+ */
+export async function uploadMocFilesParallel(
+  mocId: string,
+  userId: string,
+  files: Array<{
+    buffer: Buffer
+    filename: string
+    mimetype: string
+    fieldname: string
+  }>,
+  fileTypeMapping: Record<string, string>,
+): Promise<FileUploadResult[]> {
+  logger.info('Starting parallel file upload', {
+    mocId,
+    userId,
+    fileCount: files.length,
+  })
+
+  // Verify MOC exists and user owns it (once, not per file)
+  const [moc] = await db
+    .select()
+    .from(mocInstructions)
+    .where(eq(mocInstructions.id, mocId))
+    .limit(1)
+
+  if (!moc) {
+    throw new NotFoundError('MOC not found')
+  }
+
+  if (moc.userId !== userId) {
+    throw new ForbiddenError('You do not own this MOC')
+  }
+
+  // Upload all files in parallel
+  const uploadPromises = files.map(async (file): Promise<FileUploadResult> => {
+    try {
+      // Get fileType from mapping (from form fields)
+      const fileType = fileTypeMapping[file.fieldname] as
+        | 'instruction'
+        | 'parts-list'
+        | 'thumbnail'
+        | 'gallery-image'
+
+      if (!fileType) {
+        return {
+          filename: file.filename,
+          success: false,
+          error: 'File type not specified',
+        }
+      }
+
+      // Validate file using @monorepo/file-validator (includes magic bytes validation)
+      const validationConfig = getValidationConfig(fileType)
+      const validationResult = validateFile(
+        {
+          originalname: file.filename,
+          mimetype: file.mimetype,
+          size: file.buffer.length,
+          buffer: file.buffer,
+        },
+        validationConfig,
+        { environment: 'node' },
+      )
+
+      if (!validationResult.isValid) {
+        const errorMessages = validationResult.errors.map(e => e.message).join('; ')
+        return {
+          filename: file.filename,
+          success: false,
+          error: errorMessages,
+        }
+      }
+
+      // Generate unique S3 key
+      const timestamp = Date.now()
+      const randomSuffix = Math.random().toString(36).substring(7)
+      const sanitizedFilename = sanitizeFilename(file.filename)
+      const s3Key = `mocs/${mocId}/${fileType}/${timestamp}-${randomSuffix}-${sanitizedFilename}`
+
+      // Upload to S3
+      const bucketName = process.env.LEGO_API_BUCKET_NAME
+      if (!bucketName) {
+        throw new DatabaseError('S3 bucket not configured')
+      }
+
+      const s3Client = new S3Client({})
+      const uploadCommand = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        Metadata: {
+          mocId,
+          userId,
+          fileType,
+          originalFilename: file.filename,
+        },
+      })
+
+      await s3Client.send(uploadCommand)
+
+      // Construct file URL
+      const region = process.env.AWS_REGION || 'us-east-1'
+      const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${s3Key}`
+
+      // Generate UUID for database record
+      const fileId = randomUUID()
+
+      logger.info('File uploaded to S3', {
+        filename: file.filename,
+        s3Key,
+        fileId,
+      })
+
+      return {
+        filename: file.filename,
+        success: true,
+        fileId,
+        s3Url: fileUrl,
+        fileSize: file.buffer.length,
+        fileType,
+      }
+    } catch (error) {
+      logger.error('File upload failed', error, {
+        filename: file.filename,
+      })
+
+      return {
+        filename: file.filename,
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed',
+      }
+    }
+  })
+
+  // Execute all uploads in parallel
+  const results = await Promise.all(uploadPromises)
+
+  logger.info('Parallel upload completed', {
+    total: results.length,
+    succeeded: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).length,
+  })
+
+  return results
+}
+
+/**
+ * Insert successful file uploads to database in a transaction
+ *
+ * Only inserts files that were successfully uploaded to S3.
+ * Uses a transaction to ensure atomicity.
+ *
+ * @param mocId - MOC ID
+ * @param uploadResults - Results from uploadMocFilesParallel
+ * @returns Array of created file records
+ */
+export async function insertFileRecordsBatch(
+  mocId: string,
+  uploadResults: FileUploadResult[],
+): Promise<MocFile[]> {
+  // Filter only successful uploads
+  const successfulUploads = uploadResults.filter(r => r.success)
+
+  if (successfulUploads.length === 0) {
+    logger.info('No successful uploads to insert')
+    return []
+  }
+
+  logger.info('Inserting file records in batch', {
+    count: successfulUploads.length,
+  })
+
+  // Use transaction for atomicity
+  const insertedRecords = await db.transaction(async tx => {
+    const fileRecords = successfulUploads.map(result => ({
+      id: result.fileId!,
+      mocId: mocId,
+      fileType: result.fileType!,
+      fileUrl: result.s3Url!,
+      originalFilename: result.filename,
+      mimeType: getMimeTypeFromFilename(result.filename),
+      createdAt: new Date(),
+    }))
+
+    // Batch insert
+    const inserted = await tx.insert(mocFiles).values(fileRecords).returning()
+
+    logger.info('File records inserted', { count: inserted.length })
+
+    return inserted
+  })
+
+  // Invalidate cache after successful insert
+  invalidateMocDetailCache(mocId)
+
+  return insertedRecords as unknown as MocFile[]
+}
+
+/**
+ * Helper: Get MIME type from filename extension
+ */
+function getMimeTypeFromFilename(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  const mimeTypes: Record<string, string> = {
+    pdf: 'application/pdf',
+    csv: 'text/csv',
+    xml: 'text/xml',
+    json: 'application/json',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    xls: 'application/vnd.ms-excel',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+  }
+  return mimeTypes[ext || ''] || 'application/octet-stream'
+}
+
+/**
+ * Export invalidation function for use by other services
+ */
+export { invalidateMocDetailCache }
+>>>>>>> Stashed changes

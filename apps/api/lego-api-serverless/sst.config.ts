@@ -12,6 +12,8 @@
  * - CloudWatch monitoring and alarms
  */
 
+import { createAlarms } from './src/infrastructure/monitoring/alarms'
+
 export default $config({
   app(input) {
     return {
@@ -19,6 +21,15 @@ export default $config({
       removal: input?.stage === 'production' ? 'retain' : 'remove',
       protect: ['production'].includes(input?.stage),
       home: 'aws',
+      // Story 5.7: AWS tagging schema compliance (all required tags)
+      tags: {
+        // Required tags (per aws-tagging-schema.md)
+        Project: 'lego-api',
+        Environment: input?.stage || 'development',
+        ManagedBy: 'SST',
+        CostCenter: 'Engineering',
+        Owner: 'engineering@bricklink.com',
+      },
     }
   },
   async run() {
@@ -541,6 +552,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -607,6 +620,8 @@ export default $config({
         LEGO_API_BUCKET_NAME: bucket.name,
         LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // TODO: Add JWT authorizer for Cognito (Story 2.1 AC 8)
@@ -625,24 +640,30 @@ export default $config({
 
     /**
      * MOC File Upload Lambda Function
-     * - Handles multipart/form-data file uploads
+     * - Handles multipart/form-data file uploads (single or multi-file)
      * - JWT authentication via Cognito
      * - Validates file type, size, and MIME type
-     * - Uploads to S3 with metadata
+     * - Uploads to S3 with metadata (parallel for multi-file)
      * - Creates database records
+     * - Story 4.7: Enhanced for multi-file uploads (up to 10 files)
      */
     const mocFileUploadFunction = new sst.aws.Function('MocFileUploadFunction', {
       handler: 'functions/moc-instructions/fileUpload/index.handler',
       runtime: 'nodejs20.x',
-      timeout: '60 seconds', // Longer timeout for file uploads
-      memory: '1024 MB', // More memory for file processing
+      timeout: '120 seconds', // 2 minutes for multi-file parallel uploads
+      memory: '2048 MB', // Increased memory for parallel processing
       vpc,
       link: [postgres, bucket],
       environment: {
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
         LEGO_API_BUCKET_NAME: bucket.name,
+        MAX_FILES_PER_UPLOAD: '10',
+        MAX_TOTAL_PAYLOAD: '52428800', // 50MB in bytes
+        MAX_FILE_SIZE: '52428800', // 50MB per file
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC File Upload Route
@@ -672,6 +693,8 @@ export default $config({
         STAGE: stage,
         LEGO_API_BUCKET_NAME: bucket.name,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC File Download Route
@@ -699,6 +722,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC File Delete Route
@@ -728,6 +753,8 @@ export default $config({
         STAGE: stage,
         LEGO_API_BUCKET_NAME: bucket.name,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC Parts List Upload Route
@@ -757,6 +784,8 @@ export default $config({
         STAGE: stage,
         LEGO_API_BUCKET_NAME: bucket.name,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -781,6 +810,8 @@ export default $config({
         LEGO_API_BUCKET_NAME: bucket.name,
         LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC with Files Routes
@@ -808,6 +839,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -826,6 +859,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -844,6 +879,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC Gallery Image Routes
@@ -871,6 +908,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -889,6 +928,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // MOC Analytics Routes
@@ -912,6 +953,8 @@ export default $config({
         LEGO_API_BUCKET_NAME: bucket.name,
         LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     }
 
     // Image Upload Handler - Requires high memory for Sharp image processing
@@ -920,6 +963,9 @@ export default $config({
       handler: 'functions/gallery/upload-image/index.handler',
       timeout: '60 seconds', // Story 3.2 AC #9: Longer timeout for Sharp processing
       memory: '2048 MB', // Story 3.2 AC #9: Required for Sharp image processing
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Image List Handler
@@ -928,6 +974,9 @@ export default $config({
       handler: 'functions/gallery/list-images/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Image Search Handler - Story 3.8: Gallery and Wishlist Search
@@ -936,6 +985,9 @@ export default $config({
       handler: 'functions/gallery/search-images/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Get Single Image Handler
@@ -944,6 +996,9 @@ export default $config({
       handler: 'functions/gallery/get-image/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Update Image Handler
@@ -952,6 +1007,9 @@ export default $config({
       handler: 'functions/gallery/update-image/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Delete Image Handler
@@ -960,6 +1018,9 @@ export default $config({
       handler: 'functions/gallery/delete-image/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Flag Image Handler
@@ -968,6 +1029,9 @@ export default $config({
       handler: 'functions/gallery/flag-image/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Create Album Handler
@@ -976,6 +1040,9 @@ export default $config({
       handler: 'functions/gallery/create-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // List Albums Handler
@@ -984,6 +1051,9 @@ export default $config({
       handler: 'functions/gallery/list-albums/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Get Album Handler
@@ -992,6 +1062,9 @@ export default $config({
       handler: 'functions/gallery/get-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Update Album Handler
@@ -1000,6 +1073,9 @@ export default $config({
       handler: 'functions/gallery/update-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Delete Album Handler
@@ -1008,6 +1084,9 @@ export default $config({
       handler: 'functions/gallery/delete-album/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Gallery Image API Routes
@@ -1045,6 +1124,8 @@ export default $config({
         LEGO_API_BUCKET_NAME: bucket.name,
         LEGO_API_OPENSEARCH_ENDPOINT: openSearch.endpoint,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     }
 
     // List Wishlist Items Handler
@@ -1053,6 +1134,9 @@ export default $config({
       handler: 'functions/wishlist/list-wishlist/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Get Wishlist Item Handler
@@ -1061,6 +1145,9 @@ export default $config({
       handler: 'functions/wishlist/get-wishlist-item/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Create Wishlist Item Handler
@@ -1069,6 +1156,9 @@ export default $config({
       handler: 'functions/wishlist/create-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Update Wishlist Item Handler
@@ -1077,6 +1167,9 @@ export default $config({
       handler: 'functions/wishlist/update-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Delete Wishlist Item Handler
@@ -1085,6 +1178,9 @@ export default $config({
       handler: 'functions/wishlist/delete-wishlist-item/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Reorder Wishlist Handler
@@ -1093,6 +1189,9 @@ export default $config({
       handler: 'functions/wishlist/reorder-wishlist/index.handler',
       timeout: '20 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Upload Wishlist Image Handler - Requires high memory for Sharp image processing
@@ -1101,6 +1200,9 @@ export default $config({
       handler: 'functions/wishlist/upload-wishlist-image/index.handler',
       timeout: '60 seconds', // Story 3.7 AC #7: Timeout for image processing
       memory: '1024 MB', // Story 3.7 AC #7: Memory for Sharp processing
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Search Wishlist Handler
@@ -1109,6 +1211,9 @@ export default $config({
       handler: 'functions/wishlist/search-wishlist/index.handler',
       timeout: '15 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // Wishlist API Routes (Story 3.5 AC #2)
@@ -1139,6 +1244,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     }
 
     /**
@@ -1152,6 +1259,9 @@ export default $config({
       handler: 'functions/moc-parts-lists/get-parts-lists/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1165,6 +1275,9 @@ export default $config({
       handler: 'functions/moc-parts-lists/create-parts-list/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1178,6 +1291,9 @@ export default $config({
       handler: 'functions/moc-parts-lists/update-parts-list/index.handler',
       timeout: '30 seconds',
       memory: '512 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1190,6 +1306,9 @@ export default $config({
       handler: 'functions/moc-parts-lists/update-parts-list-status/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1203,6 +1322,32 @@ export default $config({
       handler: 'functions/moc-parts-lists/delete-parts-list/index.handler',
       timeout: '10 seconds',
       memory: '256 MB',
+    
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
+    })
+
+    /**
+     * Parse CSV Parts List (Story 4.6)
+     * - Downloads CSV file from S3
+     * - Parses and validates CSV data
+     * - Expected format: Part ID, Part Name, Quantity, Color
+     * - Max 10,000 rows
+     * - Stores parts in mocPartsLists and mocParts tables
+     * - Updates MOC totalPieceCount
+     */
+    const parsePartsListFunction = new sst.aws.Function('ParsePartsListFunction', {
+      ...mocPartsListsLambdaConfig,
+      handler: 'functions/moc-parts-lists/parse-parts-list/index.handler',
+      timeout: '5 minutes', // 300 seconds for large CSV files
+      memory: '512 MB',
+      link: [postgres, bucket],
+      environment: {
+        ...mocPartsListsLambdaConfig.environment,
+        BUCKET_NAME: bucket.name,
+      },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1246,6 +1391,13 @@ export default $config({
     api.route(
       'DELETE /api/moc-instructions/{mocId}/parts-lists/{partsListId}',
       deletePartsListFunction,
+      {
+        auth: { jwt: { authorizer: cognitoAuthorizer } },
+      },
+    )
+    api.route(
+      'POST /api/mocs/{id}/upload-parts-list',
+      parsePartsListFunction,
       {
         auth: { jwt: { authorizer: cognitoAuthorizer } },
       },
@@ -1314,6 +1466,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1334,6 +1488,8 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     /**
@@ -1355,12 +1511,996 @@ export default $config({
         NODE_ENV: stage === 'production' ? 'production' : 'development',
         STAGE: stage,
       },
+      // Story 5.3: Enable X-Ray tracing for distributed tracing
+      tracing: 'active',
     })
 
     // WebSocket Routes
     websocketApi.route('$connect', websocketConnectFunction)
     websocketApi.route('$disconnect', websocketDisconnectFunction)
     websocketApi.route('$default', websocketDefaultFunction)
+
+    // ========================================
+    // Story 4.8: CloudWatch Alarms for Error Monitoring
+    // ========================================
+
+    /**
+     * SNS Topic for Error Alerts
+     * - Receives notifications when error rate exceeds threshold
+     * - Subscribe via email/SMS in AWS Console after deployment
+     */
+    const errorAlertTopic = new aws.sns.Topic('ErrorAlertTopic', {
+      name: `lego-api-error-alerts-${stage}`,
+      displayName: 'LEGO API Error Alerts',
+      tags: {
+        Environment: stage,
+        Service: 'lego-api-serverless',
+        Feature: 'monitoring',
+      },
+    })
+
+    /**
+     * Helper function to create error rate alarm for a Lambda function
+     * - Monitors error rate (errors / invocations) over 5-minute periods
+     * - Triggers alert if error rate exceeds 5% for 2 consecutive periods
+     * - Publishes to SNS topic for notifications
+     */
+    const createErrorRateAlarm = (functionName: string, lambdaFunction: any) => {
+      return new aws.cloudwatch.MetricAlarm(`${functionName}ErrorRateAlarm`, {
+        name: `${functionName}-error-rate-${stage}`,
+        comparisonOperator: 'GreaterThanThreshold',
+        evaluationPeriods: 2,
+        threshold: 5.0, // 5% error rate threshold (AC #10)
+        actionsEnabled: true,
+        alarmActions: [errorAlertTopic.arn],
+        metricQueries: [
+          {
+            id: 'errorRate',
+            expression: '(errors / invocations) * 100',
+            label: 'Error Rate (%)',
+            returnData: true,
+          },
+          {
+            id: 'errors',
+            metric: {
+              namespace: 'AWS/Lambda',
+              metricName: 'Errors',
+              period: 300, // 5 minutes
+              stat: 'Sum',
+              dimensions: {
+                FunctionName: lambdaFunction.name,
+              },
+            },
+          },
+          {
+            id: 'invocations',
+            metric: {
+              namespace: 'AWS/Lambda',
+              metricName: 'Invocations',
+              period: 300, // 5 minutes
+              stat: 'Sum',
+              dimensions: {
+                FunctionName: lambdaFunction.name,
+              },
+            },
+          },
+        ],
+        treatMissingData: 'notBreaching',
+        tags: {
+          Environment: stage,
+          Service: 'lego-api-serverless',
+          Function: functionName,
+        },
+      })
+    }
+
+    // Create error rate alarms for critical Lambda functions
+    createErrorRateAlarm('HealthCheck', healthCheckFunction)
+    createErrorRateAlarm('MocInstructions', mocInstructionsFunction)
+    createErrorRateAlarm('MocFileUpload', mocFileUploadFunction)
+    createErrorRateAlarm('MocFileDownload', mocFileDownloadFunction)
+    createErrorRateAlarm('UploadImage', uploadImageFunction)
+    createErrorRateAlarm('ListWishlist', listWishlistFunction)
+    createErrorRateAlarm('CreateWishlistItem', createWishlistItemFunction)
+    createErrorRateAlarm('UploadWishlistImage', uploadWishlistImageFunction)
+    createErrorRateAlarm('WebSocketConnect', websocketConnectFunction)
+
+    // ========================================
+    // Story 5.1: CloudWatch Dashboards for SST Services
+    // ========================================
+
+    /**
+     * Get current AWS account ID for dashboard configuration
+     */
+    const accountId = aws.getCallerIdentityOutput().accountId
+
+    /**
+     * Create CloudWatch Dashboard for monitoring all SST services using SST v3 globals
+     *
+     * IMPORTANT: This uses SST's global `aws` object, NOT Pulumi imports.
+     * SST v3 (Ion) provides Pulumi under the hood via global types.
+     *
+     * Dashboard includes:
+     * - Lambda functions: invocations, duration (p50/p95), errors, throttles
+     * - API Gateway: requests, latency (p50/p95/p99), errors
+     * - RDS PostgreSQL: connections, CPU, memory, IOPS, latency
+     * - ElastiCache Redis: cache hit rate, evictions, connections, CPU, memory
+     * - OpenSearch: cluster health, indexing rate, search latency, CPU, JVM
+     *
+     * Configuration:
+     * - Auto-refresh: 60-second period for all metrics
+     * - Time range: Configured via CloudWatch console (1h, 3h, 6h, 12h, 24h, 7d)
+     * - Period override: AUTO (adapts to selected time range)
+     */
+    const dashboardName = `lego-api-sst-${stage}`
+
+    const dashboard = new aws.cloudwatch.Dashboard('LegoApiDashboard', {
+      dashboardName,
+      dashboardBody: $jsonStringify($output([
+        api.id,
+        healthCheckFunction.name,
+        mocInstructionsFunction.name,
+        mocFileUploadFunction.name,
+        mocFileDownloadFunction.name,
+        uploadImageFunction.name,
+        listImagesFunction.name,
+        searchImagesFunction.name,
+        getImageFunction.name,
+        updateImageFunction.name,
+        deleteImageFunction.name,
+        listWishlistFunction.name,
+        createWishlistItemFunction.name,
+        updateWishlistItemFunction.name,
+        deleteWishlistItemFunction.name,
+        uploadWishlistImageFunction.name,
+        websocketConnectFunction.name,
+        websocketDisconnectFunction.name,
+        postgres.clusterIdentifier,
+        redis.clusterId,
+        openSearch.domainName,
+        region,
+        accountId,
+      ]).apply(([
+        apiId,
+        healthCheckFnName,
+        mocInstructionsFnName,
+        mocFileUploadFnName,
+        mocFileDownloadFnName,
+        uploadImageFnName,
+        listImagesFnName,
+        searchImagesFnName,
+        getImageFnName,
+        updateImageFnName,
+        deleteImageFnName,
+        listWishlistFnName,
+        createWishlistItemFnName,
+        updateWishlistItemFnName,
+        deleteWishlistItemFnName,
+        uploadWishlistImageFnName,
+        websocketConnectFnName,
+        websocketDisconnectFnName,
+        rdsClusterId,
+        redisId,
+        openSearchDomain,
+        region,
+        accountId,
+      ]) => {
+        const widgets: any[] = []
+
+        // ========================================
+        // Overview Section
+        // ========================================
+        widgets.push(
+          {
+            type: 'text',
+            x: 0,
+            y: 0,
+            width: 24,
+            height: 2,
+            properties: {
+              markdown: `# LEGO API Production Monitoring\n\nReal-time metrics for SST serverless infrastructure - **${stage}** environment`,
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: 2,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'API Request Volume',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ApiGateway',
+                  'Count',
+                  { ApiId: apiId },
+                  { stat: 'Sum', label: 'Total Requests' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 12,
+            y: 2,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'API Error Rate',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  { expression: '(m1 / m2) * 100', label: '5xx Error Rate (%)', id: 'e1' },
+                ],
+                [
+                  'AWS/ApiGateway',
+                  '5XXError',
+                  { ApiId: apiId },
+                  { stat: 'Sum', id: 'm1', visible: false },
+                ],
+                [
+                  'AWS/ApiGateway',
+                  'Count',
+                  { ApiId: apiId },
+                  { stat: 'Sum', id: 'm2', visible: false },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+        )
+
+        // ========================================
+        // Lambda Functions Section
+        // ========================================
+        const lambdaFunctions = [
+          { name: 'Health Check', functionName: healthCheckFnName },
+          { name: 'MOC Instructions', functionName: mocInstructionsFnName },
+          { name: 'MOC File Upload', functionName: mocFileUploadFnName },
+          { name: 'MOC File Download', functionName: mocFileDownloadFnName },
+          { name: 'Upload Image', functionName: uploadImageFnName },
+          { name: 'List Images', functionName: listImagesFnName },
+          { name: 'Search Images', functionName: searchImagesFnName },
+          { name: 'Get Image', functionName: getImageFnName },
+          { name: 'Update Image', functionName: updateImageFnName },
+          { name: 'Delete Image', functionName: deleteImageFnName },
+          { name: 'List Wishlist', functionName: listWishlistFnName },
+          { name: 'Create Wishlist', functionName: createWishlistItemFnName },
+          { name: 'Update Wishlist', functionName: updateWishlistItemFnName },
+          { name: 'Delete Wishlist', functionName: deleteWishlistItemFnName },
+          { name: 'Upload Wishlist Img', functionName: uploadWishlistImageFnName },
+          { name: 'WebSocket Connect', functionName: websocketConnectFnName },
+          { name: 'WebSocket Disconnect', functionName: websocketDisconnectFnName },
+        ]
+
+        let lambdaYPosition = 8
+
+        widgets.push({
+          type: 'text',
+          x: 0,
+          y: lambdaYPosition,
+          width: 24,
+          height: 1,
+          properties: {
+            markdown: '## Lambda Functions',
+          },
+        })
+
+        lambdaYPosition += 1
+
+        // Create widgets for each Lambda function (4 widgets per row)
+        lambdaFunctions.forEach((lambda, index) => {
+          const xPosition = (index % 4) * 6
+          const yPosition = lambdaYPosition + Math.floor(index / 4) * 6
+
+          widgets.push({
+            type: 'metric',
+            x: xPosition,
+            y: yPosition,
+            width: 6,
+            height: 6,
+            properties: {
+              title: `${lambda.name}`,
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/Lambda',
+                  'Invocations',
+                  { stat: 'Sum', label: 'Invocations', color: '#1f77b4' },
+                  { FunctionName: lambda.functionName },
+                ],
+                [
+                  '.',
+                  'Errors',
+                  { stat: 'Sum', label: 'Errors', yAxis: 'right', color: '#d62728' },
+                  { FunctionName: lambda.functionName },
+                ],
+                [
+                  '.',
+                  'Throttles',
+                  { stat: 'Sum', label: 'Throttles', yAxis: 'right', color: '#ff7f0e' },
+                  { FunctionName: lambda.functionName },
+                ],
+                [
+                  '.',
+                  'Duration',
+                  { stat: 'p50', label: 'p50 ms', yAxis: 'right', color: '#2ca02c' },
+                  { FunctionName: lambda.functionName },
+                ],
+                [
+                  '...',
+                  { stat: 'p95', label: 'p95 ms', yAxis: 'right', color: '#98df8a' },
+                  { FunctionName: lambda.functionName },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  label: 'Count',
+                  min: 0,
+                },
+                right: {
+                  label: 'Duration (ms) / Errors',
+                  min: 0,
+                },
+              },
+            },
+          })
+        })
+
+        lambdaYPosition += Math.ceil(lambdaFunctions.length / 4) * 6
+
+        // ========================================
+        // API Gateway Section
+        // ========================================
+        widgets.push(
+          {
+            type: 'text',
+            x: 0,
+            y: lambdaYPosition,
+            width: 24,
+            height: 1,
+            properties: {
+              markdown: '## API Gateway',
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Requests by Status',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ApiGateway',
+                  'Count',
+                  { ApiId: apiId },
+                  { stat: 'Sum', label: 'Total Requests' },
+                ],
+                ['...', '4XXError', { stat: 'Sum', label: '4xx Errors' }],
+                ['...', '5XXError', { stat: 'Sum', label: '5xx Errors' }],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 8,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'API Latency (Percentiles)',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ApiGateway',
+                  'Latency',
+                  { ApiId: apiId },
+                  { stat: 'p50', label: 'p50' },
+                ],
+                ['...', { stat: 'p95', label: 'p95' }],
+                ['...', { stat: 'p99', label: 'p99' }],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  label: 'Latency (ms)',
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 16,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Integration Latency',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ApiGateway',
+                  'IntegrationLatency',
+                  { ApiId: apiId },
+                  { stat: 'Average', label: 'Avg' },
+                ],
+                ['...', { stat: 'p95', label: 'p95' }],
+                ['...', { stat: 'p99', label: 'p99' }],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  label: 'Latency (ms)',
+                  min: 0,
+                },
+              },
+            },
+          },
+        )
+
+        lambdaYPosition += 7
+
+        // ========================================
+        // RDS PostgreSQL Section
+        // ========================================
+        widgets.push(
+          {
+            type: 'text',
+            x: 0,
+            y: lambdaYPosition,
+            width: 24,
+            height: 1,
+            properties: {
+              markdown: '## RDS PostgreSQL',
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Database Connections',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/RDS',
+                  'DatabaseConnections',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'Connections' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 8,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'CPU Utilization',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/RDS',
+                  'CPUUtilization',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'CPU %' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 16,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Freeable Memory',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/RDS',
+                  'FreeableMemory',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'Free Memory (bytes)' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 7,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'Read/Write IOPS',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/RDS',
+                  'ReadIOPS',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'Read IOPS' },
+                ],
+                [
+                  '.',
+                  'WriteIOPS',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'Write IOPS' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 12,
+            y: lambdaYPosition + 7,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'Read/Write Latency',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/RDS',
+                  'ReadLatency',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'Read Latency (ms)' },
+                ],
+                [
+                  '.',
+                  'WriteLatency',
+                  { DBClusterIdentifier: rdsClusterId },
+                  { stat: 'Average', label: 'Write Latency (ms)' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+        )
+
+        lambdaYPosition += 13
+
+        // ========================================
+        // ElastiCache Redis Section
+        // ========================================
+        widgets.push(
+          {
+            type: 'text',
+            x: 0,
+            y: lambdaYPosition,
+            width: 24,
+            height: 1,
+            properties: {
+              markdown: '## ElastiCache Redis',
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Cache Hit Rate',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  {
+                    expression: '(hits / (hits + misses)) * 100',
+                    label: 'Hit Rate (%)',
+                    id: 'e1',
+                  },
+                ],
+                [
+                  'AWS/ElastiCache',
+                  'CacheHits',
+                  { CacheClusterId: redisId },
+                  { stat: 'Sum', id: 'hits', visible: false },
+                ],
+                [
+                  '.',
+                  'CacheMisses',
+                  { CacheClusterId: redisId },
+                  { stat: 'Sum', id: 'misses', visible: false },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 8,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Evictions',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ElastiCache',
+                  'Evictions',
+                  { CacheClusterId: redisId },
+                  { stat: 'Sum', label: 'Evictions' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 16,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Current Connections',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ElastiCache',
+                  'CurrConnections',
+                  { CacheClusterId: redisId },
+                  { stat: 'Average', label: 'Connections' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 7,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'CPU Utilization',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ElastiCache',
+                  'CPUUtilization',
+                  { CacheClusterId: redisId },
+                  { stat: 'Average', label: 'CPU %' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 12,
+            y: lambdaYPosition + 7,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'Database Memory Usage',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ElastiCache',
+                  'DatabaseMemoryUsagePercentage',
+                  { CacheClusterId: redisId },
+                  { stat: 'Average', label: 'Memory %' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          },
+        )
+
+        lambdaYPosition += 13
+
+        // ========================================
+        // OpenSearch Section
+        // ========================================
+        widgets.push(
+          {
+            type: 'text',
+            x: 0,
+            y: lambdaYPosition,
+            width: 24,
+            height: 1,
+            properties: {
+              markdown: '## OpenSearch',
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Cluster Status',
+              view: 'singleValue',
+              region,
+              metrics: [
+                [
+                  'AWS/ES',
+                  'ClusterStatus.green',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Maximum', label: 'Green' },
+                ],
+                [
+                  '.',
+                  'ClusterStatus.yellow',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Maximum', label: 'Yellow' },
+                ],
+                [
+                  '.',
+                  'ClusterStatus.red',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Maximum', label: 'Red' },
+                ],
+              ],
+              period: 60,
+            },
+          },
+          {
+            type: 'metric',
+            x: 8,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Indexing Rate',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ES',
+                  'IndexingRate',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Average', label: 'Docs/min' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 16,
+            y: lambdaYPosition + 1,
+            width: 8,
+            height: 6,
+            properties: {
+              title: 'Search Latency',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ES',
+                  'SearchLatency',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Average', label: 'Latency (ms)' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 0,
+            y: lambdaYPosition + 7,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'CPU Utilization',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ES',
+                  'CPUUtilization',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Average', label: 'CPU %' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          },
+          {
+            type: 'metric',
+            x: 12,
+            y: lambdaYPosition + 7,
+            width: 12,
+            height: 6,
+            properties: {
+              title: 'JVM Memory Pressure',
+              view: 'timeSeries',
+              stacked: false,
+              region,
+              metrics: [
+                [
+                  'AWS/ES',
+                  'JVMMemoryPressure',
+                  { DomainName: openSearchDomain, ClientId: accountId },
+                  { stat: 'Maximum', label: 'Pressure %' },
+                ],
+              ],
+              period: 60,
+              yAxis: {
+                left: {
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          },
+        )
+
+        return { widgets }
+      })),
+    })
+
+    // ========================================
+    // Story 5.2: CloudWatch Alarms and SNS Notifications
+    // ========================================
+
+    /**
+     * Create comprehensive CloudWatch alarms for monitoring
+     * - Lambda errors, throttles, duration
+     * - API Gateway 5xx rate, latency
+     * - RDS CPU, connections, memory
+     * - Redis evictions, CPU, memory
+     * - OpenSearch cluster health, JVM memory
+     * - SNS notifications (email + optional Slack)
+     */
+    const alarms = createAlarms({
+      mocFunction: mocInstructionsFunction,
+      galleryFunction: uploadImageFunction,
+      wishlistFunction: createWishlistItemFunction,
+      healthCheckFunction: healthCheckFunction,
+      apiGateway: api,
+      database: postgres,
+      redis,
+      openSearch,
+      emailAddress: process.env.ALARM_EMAIL || 'devops@example.com',
+      slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+      stage,
+      region,
+      accountId,
+    })
 
     return {
       // VPC Infrastructure
@@ -1484,6 +2624,13 @@ export default $config({
       deletePartsListFunctionArn: deletePartsListFunction.arn,
       getUserPartsListsSummaryFunctionName: getUserPartsListsSummaryFunction.name,
       getUserPartsListsSummaryFunctionArn: getUserPartsListsSummaryFunction.arn,
+
+      // CloudWatch Dashboard (Story 5.1)
+      dashboardName: dashboardName,
+      dashboardUrl: $interpolate`https://console.aws.amazon.com/cloudwatch/home?region=${region}#dashboards:name=${dashboardName}`,
+
+      // CloudWatch Alarms (Story 5.2)
+      alarmTopicArn: alarms.topicArn,
     }
   },
 })

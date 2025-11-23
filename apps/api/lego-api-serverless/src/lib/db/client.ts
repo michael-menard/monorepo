@@ -6,8 +6,16 @@ import { createLogger } from '../utils/logger'
 
 const logger = createLogger('db-client')
 
+// Story 5.3: Import X-Ray for PostgreSQL query tracing
+let AWSXRay: any = null
+try {
+  AWSXRay = require('aws-xray-sdk-core')
+} catch (error) {
+  logger.warn('X-Ray SDK not available for database tracing')
+}
+
 /**
- * Database Client Configuration for Lambda Functions
+ * Database Client Configuration for Lambda Functions (Story 5.3: X-Ray enabled)
  *
  * This module provides a configured Drizzle ORM client for accessing PostgreSQL.
  * Connection pooling is optimized for serverless environments with RDS Proxy.
@@ -17,6 +25,7 @@ const logger = createLogger('db-client')
  * - RDS Proxy handles connection pooling at infrastructure level
  * - Environment-based configuration via SST Resource linking
  * - Type-safe queries with Drizzle ORM
+ * - X-Ray tracing for all database queries (Story 5.3)
  *
  * Usage:
  * ```typescript
@@ -24,6 +33,7 @@ const logger = createLogger('db-client')
  *
  * export async function handler(event) {
  *   const users = await db.select().from(schema.mocInstructions);
+ *   // Query is automatically traced in X-Ray
  *   return { statusCode: 200, body: JSON.stringify(users) };
  * }
  * ```
@@ -37,6 +47,7 @@ let _pool: Pool | null = null
  * - Pool is created once per Lambda container lifecycle
  * - RDS Proxy handles actual connection pooling
  * - Lambda connection pool kept small (max 1 connection)
+ * - Story 5.3: Instrumented with X-Ray for query tracing
  */
 function getPool(): Pool {
   if (!_pool) {
@@ -54,6 +65,16 @@ function getPool(): Pool {
       connectionTimeoutMillis: 5000, // Fail fast on connection issues
       ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     })
+
+    // Story 5.3: Instrument PostgreSQL with X-Ray for automatic query tracing
+    if (AWSXRay) {
+      try {
+        AWSXRay.capturePostgres(_pool)
+        logger.info('PostgreSQL client instrumented with X-Ray')
+      } catch (error) {
+        logger.warn('Failed to instrument PostgreSQL with X-Ray', { error })
+      }
+    }
 
     // Handle pool errors gracefully
     _pool.on('error', err => {

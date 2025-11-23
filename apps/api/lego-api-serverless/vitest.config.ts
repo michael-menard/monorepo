@@ -27,7 +27,12 @@ export default defineConfig({
         statements: 80,
       },
     },
-    include: ['src/**/__tests__/**/*.test.ts', 'websocket/**/__tests__/**/*.test.ts'],
+    include: [
+      'src/**/__tests__/**/*.test.ts',
+      'websocket/**/__tests__/**/*.test.ts',
+      'moc-parts-lists/**/__tests__/**/*.test.ts',
+      'scripts/**/__tests__/**/*.test.ts',
+    ],
     exclude: ['node_modules', 'dist', '.sst'],
   },
   resolve: {

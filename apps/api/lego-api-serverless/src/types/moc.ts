@@ -207,3 +207,33 @@ export const FileUploadSchema = z.object({
 })
 
 export type FileUpload = z.infer<typeof FileUploadSchema>
+
+/**
+ * Multi-File Upload Response Types
+ */
+export const UploadedFileSchema = z.object({
+  id: z.string().uuid(),
+  filename: z.string(),
+  fileUrl: z.string(),
+  fileSize: z.number().int(),
+  fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
+})
+
+export const FailedFileSchema = z.object({
+  filename: z.string(),
+  error: z.string(),
+})
+
+export const MultiFileUploadResponseSchema = z.object({
+  uploaded: z.array(UploadedFileSchema),
+  failed: z.array(FailedFileSchema),
+  summary: z.object({
+    total: z.number().int(),
+    succeeded: z.number().int(),
+    failed: z.number().int(),
+  }),
+})
+
+export type UploadedFile = z.infer<typeof UploadedFileSchema>
+export type FailedFile = z.infer<typeof FailedFileSchema>
+export type MultiFileUploadResponse = z.infer<typeof MultiFileUploadResponseSchema>

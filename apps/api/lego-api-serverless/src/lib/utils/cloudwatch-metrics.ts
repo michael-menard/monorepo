@@ -185,3 +185,52 @@ export async function measureProcessingTime<T>(
     throw error
   }
 }
+
+/**
+ * Generic metric emission for custom metrics
+ *
+ * @param params - Metric parameters
+ */
+export async function emitMetric(params: {
+  metricName: string
+  value: number
+  unit?: StandardUnit
+  dimensions?: Record<string, string>
+  namespace?: string
+}): Promise<void> {
+  try {
+    const client = getCloudWatchClient()
+    const env = getEnv()
+
+    const dimensions = [
+      {
+        Name: 'Environment',
+        Value: env.NODE_ENV ? String(env.NODE_ENV) : 'development',
+      },
+    ]
+
+    if (params.dimensions) {
+      for (const [name, value] of Object.entries(params.dimensions)) {
+        dimensions.push({ Name: name, Value: value })
+      }
+    }
+
+    await client.send(
+      new PutMetricDataCommand({
+        Namespace: params.namespace || 'LegoAPI/Lambda',
+        MetricData: [
+          {
+            MetricName: params.metricName,
+            Value: params.value,
+            Unit: params.unit || StandardUnit.Count,
+            Timestamp: new Date(),
+            Dimensions: dimensions,
+          },
+        ],
+      }),
+    )
+  } catch (error) {
+    // Don't throw - metrics failures should not break operations
+    logger.error('Failed to emit CloudWatch metric:', error)
+  }
+}

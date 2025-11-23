@@ -2,7 +2,7 @@
  * {{description}}
  *
  * Generated Lambda handler with JWT validation pre-configured.
- * 
+ *
  * Features:
  {{#unless (eq authType "none")}}
  * - JWT authentication using @monorepo/lambda-auth
@@ -15,11 +15,14 @@
  {{/unless}}
  * - Zod schema validation for requests and responses
  * - Structured logging with @repo/logger
- * - Proper error handling with typed errors
+ * - Automatic error handling with retry logic
+ * - Error sanitization for security
+ * - CloudWatch metrics and X-Ray tracing
  * - TypeScript strict mode
  */
 
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda'
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
+import { withErrorHandling } from '@/lib/utils/lambda-wrapper'
 {{#unless (eq authType "none")}}
 import {
   {{#if (eq authType "basic")}}
@@ -40,7 +43,8 @@ import {
 import { RequestSchema } from './schemas/request'
 import { ResponseSchema } from './schemas/response'
 {{/if}}
-import { createSuccessResponse, createErrorResponse } from './utils/response'
+import { successResponse, errorResponse } from '@monorepo/lambda-responses'
+import { ValidationError, NotFoundError } from '@monorepo/lambda-responses'
 import { logger } from '@repo/logger'
 
 {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
@@ -53,21 +57,11 @@ const JWT_CONFIG = createDefaultJwtConfig(
 {{/if}}
 
 /**
- * Main Lambda handler
+ * Internal Lambda handler (wrapped with error handling)
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-  context: Context
+const lambdaHandler = async (
+  event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
-  // Set up request logging
-  const requestId = context.awsRequestId
-  logger.info('Lambda invocation started', {
-    requestId,
-    httpMethod: event.requestContext.http.method,
-    path: event.requestContext.http.path,
-  })
-
-  try {
     {{#unless (eq authType "none")}}
     // Step 1: Authentication{{#if (eq authType "ownership")}} and Authorization{{/if}}
     {{#if (eq authType "basic")}}
@@ -86,16 +80,11 @@ export const handler = async (
     {{/if}}
 
     if (!authResult.authenticated{{#if (eq authType "ownership")}} || !authResult.authorized{{/if}}) {
-      logger.warn('Authentication{{#if (eq authType "ownership")}}/authorization{{/if}} failed', {
-        requestId,
-        error: authResult.error?.code,
-        message: authResult.error?.message,
-      })
-
-      return createErrorResponse(
-        authResult.error?.statusCode || 401,
-        authResult.error?.code || 'UNAUTHORIZED',
-        authResult.error?.message || 'Authentication required'
+      throw new ValidationError(
+        authResult.error?.message || 'Authentication required',
+        {
+          code: authResult.error?.code,
+        }
       )
     }
 
@@ -104,41 +93,24 @@ export const handler = async (
     const userClaims = authResult.claims
     {{/if}}
 
-    logger.info('User authenticated successfully', {
-      requestId,
-      userId,
-      {{#if (or (eq authType "enhanced") (eq authType "ownership"))}}
-      email: userClaims?.email,
-      {{/if}}
-    })
-
     {{/unless}}
     {{#if includeSchemas}}
     // Step {{#if (eq authType "none")}}1{{else}}2{{/if}}: Validate request body (if present)
     let requestData
     if (event.body) {
-      try {
-        const parsedBody = JSON.parse(event.body)
-        const validation = RequestSchema.safeParse(parsedBody)
-        
-        if (!validation.success) {
-          logger.warn('Request validation failed', {
-            requestId,
+      const parsedBody = JSON.parse(event.body)
+      const validation = RequestSchema.safeParse(parsedBody)
+
+      if (!validation.success) {
+        throw new ValidationError(
+          `Invalid request: ${validation.error.issues.map(i => i.message).join(', ')}`,
+          {
             errors: validation.error.issues,
-          })
-
-          return createErrorResponse(
-            400,
-            'VALIDATION_ERROR',
-            `Invalid request: ${validation.error.issues.map(i => i.message).join(', ')}`
-          )
-        }
-
-        requestData = validation.data
-      } catch (error) {
-        logger.warn('Invalid JSON in request body', { requestId, error })
-        return createErrorResponse(400, 'INVALID_JSON', 'Request body must be valid JSON')
+          }
+        )
       }
+
+      requestData = validation.data
     }
 
     {{/if}}
@@ -183,39 +155,26 @@ export const handler = async (
     // Step {{#if includeSchemas}}{{#if (eq authType "none")}}3{{else}}4{{/if}}{{else}}{{#if (eq authType "none")}}2{{else}}3{{/if}}{{/if}}: Validate response
     const responseValidation = ResponseSchema.safeParse(result)
     if (!responseValidation.success) {
-      logger.error('Response validation failed', {
-        requestId,
+      throw new ValidationError('Failed to generate valid response', {
         errors: responseValidation.error.issues,
       })
-
-      return createErrorResponse(
-        500,
-        'INTERNAL_ERROR',
-        'Failed to generate valid response'
-      )
     }
 
     {{/if}}
-    logger.info('Lambda execution completed successfully', {
-      requestId,
-      {{#unless (eq authType "none")}}
-      userId,
-      {{/unless}}
-    })
-
-    return createSuccessResponse(result)
-
-  } catch (error) {
-    logger.error('Unhandled error in Lambda execution', {
-      requestId,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-
-    return createErrorResponse(
-      500,
-      'INTERNAL_ERROR',
-      'An unexpected error occurred'
-    )
-  }
+    return successResponse(200, result)
 }
+
+/**
+ * Main Lambda handler with error handling wrapper
+ *
+ * The wrapper provides:
+ * - Automatic error catching and sanitization
+ * - Structured logging with request context
+ * - CloudWatch metrics for errors and latency
+ * - Error response generation
+ */
+export const handler = withErrorHandling(lambdaHandler, {
+  functionName: '{{kebabCase name}}',
+  logRequest: true,
+  logResponse: true,
+})

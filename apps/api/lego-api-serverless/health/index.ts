@@ -15,22 +15,25 @@
 
 import {
   healthCheckResponse,
-  errorResponseFromError,
   type APIGatewayProxyResult,
   HealthCheckData,
 } from '@monorepo/lambda-responses'
 import { testConnection } from '@/lib/db/client'
 import { testOpenSearchConnection } from '@/lib/search/opensearch-client'
 import { ServiceUnavailableError } from '@monorepo/lambda-responses'
-import { logger } from '../lib/utils/logger'
+import { withErrorHandling } from '@/lib/utils/lambda-wrapper'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('health-check')
 
 /**
  * Health Check Handler
  * - Checks all service dependencies in parallel
  * - Returns overall health status
+ * - Wrapped with withErrorHandling for consistent error handling and metrics
  */
-export async function handler(event: any): Promise<APIGatewayProxyResult> {
-  try {
+export const handler = withErrorHandling(
+  async (event: any): Promise<APIGatewayProxyResult> => {
     logger.info('Health check initiated', {
       requestId: event.requestContext.requestId,
       stage: process.env.STAGE,
@@ -66,11 +69,13 @@ export async function handler(event: any): Promise<APIGatewayProxyResult> {
     }
 
     return healthCheckResponse(healthData)
-  } catch (error) {
-    logger.error('Health check failed:', error)
-    return errorResponseFromError(error)
-  }
-}
+  },
+  {
+    functionName: 'HealthCheck',
+    logRequest: true,
+    logResponse: true,
+  },
+)
 
 /**
  * Determine overall health status based on service availability

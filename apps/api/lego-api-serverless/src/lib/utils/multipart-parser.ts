@@ -45,8 +45,8 @@ export async function parseMultipartForm(event: APIGatewayProxyEventV2): Promise
         'content-type': contentType,
       },
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max file size
-        files: 1, // Only allow 1 file per request
+        fileSize: 50 * 1024 * 1024, // 50MB max file size (per file)
+        files: 10, // Allow up to 10 files per request
         fields: 20, // Max 20 form fields
       },
     })
@@ -85,7 +85,7 @@ export async function parseMultipartForm(event: APIGatewayProxyEventV2): Promise
 
     // Handle limits exceeded
     busboy.on('filesLimit', () => {
-      reject(new Error('Files limit exceeded: maximum 1 file allowed'))
+      reject(new Error('Files limit exceeded: maximum 10 files allowed'))
     })
 
     busboy.on('fieldsLimit', () => {
@@ -94,6 +94,15 @@ export async function parseMultipartForm(event: APIGatewayProxyEventV2): Promise
 
     // Parsing complete
     busboy.on('finish', () => {
+      // Validate total payload size (max 50MB across all files)
+      const totalSize = files.reduce((sum, file) => sum + file.buffer.length, 0)
+      const maxTotalSize = 50 * 1024 * 1024 // 50MB
+
+      if (totalSize > maxTotalSize) {
+        reject(new Error(`Total payload exceeds 50MB limit (received: ${(totalSize / 1024 / 1024).toFixed(2)}MB)`))
+        return
+      }
+
       resolve({ fields, files })
     })
 

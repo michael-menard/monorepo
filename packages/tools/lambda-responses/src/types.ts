@@ -24,6 +24,8 @@ export const ApiErrorTypeSchema = z.enum([
   'FILE_ERROR',
   'SEARCH_ERROR',
   'DATABASE_ERROR',
+  'EXTERNAL_SERVICE_ERROR',
+  'THROTTLING_ERROR',
 ])
 
 export type ApiErrorType = z.infer<typeof ApiErrorTypeSchema>

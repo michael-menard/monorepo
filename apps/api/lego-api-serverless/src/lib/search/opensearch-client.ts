@@ -1,8 +1,17 @@
 /**
- * OpenSearch Client for Full-Text Search
+ * OpenSearch Client for Full-Text Search (Story 5.3: X-Ray tracing ready)
  *
  * Provides configured OpenSearch client for indexing and searching.
  * Optimized for serverless with connection reuse across Lambda invocations.
+ *
+ * X-Ray Tracing:
+ * - OpenSearch operations should be wrapped with traceSearch() for X-Ray subsegments
+ * - Example: await traceSearch('searchImages', async (subsegment) => {
+ *     subsegment?.addAnnotation('index', 'gallery_images')
+ *     return await client.search(params)
+ *   })
+ *
+ * @see {@link traceSearch} from '@/lib/utils/xray'
  */
 
 import { Client } from '@opensearch-project/opensearch'

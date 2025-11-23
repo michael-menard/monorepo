@@ -194,6 +194,39 @@ module.exports = function generator(plop) {
         },
       },
       {
+        type: 'input',
+        name: 'project',
+        message: 'Project name (for AWS tags):',
+        default: 'lego-api',
+        validate: (input) => {
+          if (!input) {
+            return 'Project name is required for AWS tagging'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'owner',
+        message: 'Owner email (for AWS tags):',
+        default: 'engineering@bricklink.com',
+        validate: (input) => {
+          if (!input) {
+            return 'Owner email is required for AWS tagging'
+          }
+          if (!input.includes('@')) {
+            return 'Owner must be a valid email address'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'costCenter',
+        message: 'Cost center (for AWS tags):',
+        default: 'Engineering',
+      },
+      {
         type: 'list',
         name: 'database',
         message: 'Which database?',
@@ -382,6 +415,39 @@ module.exports = function generator(plop) {
         default: (answers) => `Lambda handler for ${answers.name}`,
       },
       {
+        type: 'input',
+        name: 'project',
+        message: 'Project name (for AWS tags):',
+        default: 'lego-api',
+        validate: (input) => {
+          if (!input) {
+            return 'Project name is required for AWS tagging'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'owner',
+        message: 'Owner email (for AWS tags):',
+        default: 'engineering@bricklink.com',
+        validate: (input) => {
+          if (!input) {
+            return 'Owner email is required for AWS tagging'
+          }
+          if (!input.includes('@')) {
+            return 'Owner must be a valid email address'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'costCenter',
+        message: 'Cost center (for AWS tags):',
+        default: 'Engineering',
+      },
+      {
         type: 'confirm',
         name: 'needsDatabase',
         message: 'Does this function need database access (@monorepo/db)?',
@@ -557,6 +623,11 @@ module.exports = function generator(plop) {
             type: 'add',
             path: `${basePath}/README.md`,
             templateFile: 'templates/lambda-modular-README.md.hbs',
+          },
+          {
+            type: 'add',
+            path: `${basePath}/sst-config-example.ts`,
+            templateFile: 'templates/lambda-sst-config.ts.hbs',
           }
         )
       } else {
@@ -615,6 +686,11 @@ module.exports = function generator(plop) {
             path: `${basePath}/vitest.config.ts`,
             templateFile: 'templates/lambda-vitest.config.ts.hbs',
             skip: () => (!data.includeTests ? 'Skipping test config' : false),
+          },
+          {
+            type: 'add',
+            path: `${basePath}/sst-config-example.ts`,
+            templateFile: 'templates/lambda-sst-config.ts.hbs',
           }
         )
       }
