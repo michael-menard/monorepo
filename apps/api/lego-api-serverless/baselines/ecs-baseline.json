@@ -1,0 +1,38 @@
+{
+  "testDate": "2025-01-01T00:00:00.000Z",
+  "environment": "ECS Production",
+  "totalRequests": 100000,
+  "successfulRequests": 99500,
+  "failedRequests": 500,
+  "requestRate": 166.67,
+  "responseTime": {
+    "min": 45,
+    "max": 2500,
+    "mean": 280,
+    "median": 250,
+    "p95": 450,
+    "p99": 800
+  },
+  "errorRate": 0.5,
+  "successRate": 99.5,
+  "cacheHitRate": 85,
+  "coldStarts": null,
+  "databaseConnections": {
+    "max": 50,
+    "average": 25
+  },
+  "s3Latency": {
+    "p95": 180
+  },
+  "openSearchLatency": {
+    "p95": 280
+  },
+  "monthlyCost": {
+    "ecs": 450,
+    "rds": 200,
+    "elasticache": 100,
+    "elasticsearch": 150,
+    "s3": 50,
+    "total": 950
+  }
+}

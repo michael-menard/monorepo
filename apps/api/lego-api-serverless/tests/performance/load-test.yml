@@ -1,0 +1,140 @@
+config:
+  target: "{{ $processEnvironment.API_BASE_URL || 'http://localhost:3000' }}"
+  phases:
+    # Warm-up phase - wake up Lambda functions
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm-up"
+
+    # Ramp-up phase - gradually increase load
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 100
+      name: "Ramp-up to 100 users"
+
+    # Sustained load phase - 1000 concurrent users for 10 minutes
+    - duration: 600
+      arrivalRate: 100
+      name: "Sustained load (1000 concurrent users)"
+
+    # Ramp-down phase
+    - duration: 60
+      arrivalRate: 100
+      rampTo: 10
+      name: "Ramp-down"
+
+  processor: "./test-processor.js"
+
+  variables:
+    authToken: "Bearer {{ $processEnvironment.TEST_AUTH_TOKEN }}"
+
+  # Performance thresholds
+  ensure:
+    maxErrorRate: 1  # Max 1% error rate
+    p95: 500  # 95th percentile response time <500ms
+    p99: 2000  # 99th percentile response time <2000ms
+
+scenarios:
+  # Scenario 1: List MOCs (40% of traffic)
+  - name: "List MOCs"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/mocs"
+          headers:
+            Authorization: "{{ authToken }}"
+          capture:
+            - json: "$.data[0].id"
+              as: "mocId"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: data
+
+  # Scenario 2: Get MOC by ID (30% of traffic)
+  - name: "Get MOC by ID"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/mocs/{{ mocId }}"
+          headers:
+            Authorization: "{{ authToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: data
+
+  # Scenario 3: Search Gallery (20% of traffic)
+  - name: "Search Gallery"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/gallery?search=lego&limit=20"
+          headers:
+            Authorization: "{{ authToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: data
+
+  # Scenario 4: Get Wishlist (10% of traffic)
+  - name: "Get Wishlist"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/wishlist"
+          headers:
+            Authorization: "{{ authToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: data
+
+  # Scenario 5: Create MOC (5% of traffic)
+  - name: "Create MOC"
+    weight: 5
+    flow:
+      - post:
+          url: "/api/mocs"
+          headers:
+            Authorization: "{{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            title: "Test MOC {{ $randomString() }}"
+            description: "Performance test MOC"
+            pieceCount: 1000
+            difficulty: "medium"
+          capture:
+            - json: "$.data.id"
+              as: "newMocId"
+          expect:
+            - statusCode: 201
+            - contentType: json
+
+  # Scenario 6: Upload Image (rare, heavy operation - 2% of traffic)
+  - name: "Upload Gallery Image"
+    weight: 2
+    flow:
+      - post:
+          url: "/api/gallery"
+          headers:
+            Authorization: "{{ authToken }}"
+            Content-Type: "multipart/form-data"
+          formData:
+            title: "Test Image {{ $randomString() }}"
+            description: "Performance test image"
+            image:
+              path: "./fixtures/test-image.jpg"
+          expect:
+            - statusCode: 201
+
+  # Scenario 7: Health Check (monitoring - 3% of traffic)
+  - name: "Health Check"
+    weight: 3
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: status

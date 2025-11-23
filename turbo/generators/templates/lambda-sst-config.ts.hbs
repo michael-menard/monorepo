@@ -1,0 +1,84 @@
+/**
+ * SST Configuration for {{pascalCase name}} Lambda
+ * Generated: {{date}}
+ *
+ * Add this to your sst.config.ts file
+ */
+
+import { createLambdaTags } from './sst-tags'
+
+// AWS Tagging Configuration
+const lambdaTags = createLambdaTags({
+  project: '{{project}}',
+  environment: $app.stage,
+  owner: '{{owner}}',
+  costCenter: '{{costCenter}}',
+  endpoint: '{{pascalCase name}}',
+  runtime: 'nodejs20.x',
+})
+
+{{#if (eq structure "modular")}}
+// Lambda Function (Modular Structure)
+const {{camelCase name}}Function = new sst.aws.Function('{{pascalCase name}}Function', {
+  handler: '{{domain}}/{{kebabCase name}}/index.handler',
+  runtime: 'nodejs20.x',
+  timeout: '30 seconds',
+  memory: '512 MB',
+  {{#if needsDatabase}}
+  link: [postgres], // Adjust based on your database needs
+  {{/if}}
+  environment: {
+    NODE_ENV: $app.stage,
+    LOG_LEVEL: $app.stage === 'production' ? 'info' : 'debug',
+  },
+  tags: lambdaTags,
+})
+{{else}}
+// Lambda Function (Standalone Structure)
+const {{camelCase name}}Function = new sst.aws.Function('{{pascalCase name}}Function', {
+  handler: 'apps/api/lambda-{{kebabCase name}}/index.handler',
+  runtime: 'nodejs20.x',
+  timeout: '30 seconds',
+  memory: '512 MB',
+  environment: {
+    NODE_ENV: $app.stage,
+    LOG_LEVEL: $app.stage === 'production' ? 'info' : 'debug',
+  },
+  tags: lambdaTags,
+})
+{{/if}}
+
+{{#if (and addToSst (ne apiGatewayChoice "none"))}}
+{{#if (eq apiGatewayChoice "existing")}}
+// Add route to existing API Gateway
+{{existingApiGatewayName}}.route('{{#each httpMethods}}{{this}} {{/each}}{{apiRoute}}', {{camelCase name}}Function)
+{{else}}
+// Create new API Gateway
+const {{camelCase newApiGatewayName}} = new sst.aws.ApiGatewayV2('{{newApiGatewayName}}', {
+  tags: {
+    Project: '{{project}}',
+    Environment: $app.stage,
+    ManagedBy: 'SST',
+    CostCenter: '{{costCenter}}',
+    Owner: '{{owner}}',
+    Component: 'API',
+    Function: 'Gateway',
+  },
+})
+
+{{camelCase newApiGatewayName}}.route('{{#each httpMethods}}{{this}} {{/each}}{{apiRoute}}', {{camelCase name}}Function)
+{{/if}}
+{{/if}}
+
+{{#unless (eq authType "none")}}
+// Note: This Lambda uses {{authType}} authentication
+// Ensure API Gateway has appropriate authorizer configured
+{{/unless}}
+
+// Export the function ARN
+export const {{camelCase name}}FunctionArn = {{camelCase name}}Function.arn
+{{#if (and addToSst (ne apiGatewayChoice "none"))}}
+{{#if (eq apiGatewayChoice "new")}}
+export const {{camelCase newApiGatewayName}}Url = {{camelCase newApiGatewayName}}.url
+{{/if}}
+{{/if}}

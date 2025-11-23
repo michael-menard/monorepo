@@ -1,0 +1,231 @@
+# Workflow Validation Tests
+# This file documents the manual and automated tests for the CI/CD workflows
+
+## Test Coverage
+
+### 1. Pipeline Execution Tests
+
+#### Test 1.1: Pipeline runs on push to main
+**Trigger:** Push commit to main branch
+**Expected:** deploy-production.yml workflow starts automatically
+**Validation:**
+- Workflow appears in Actions tab
+- All jobs (lint, test, build, deploy) are queued
+
+#### Test 1.2: Pipeline runs on manual trigger
+**Trigger:** Navigate to Actions → Deploy to Production → Run workflow
+**Expected:** Workflow runs with manual trigger
+**Validation:**
+- Workflow starts when manually triggered
+- All stages execute
+
+#### Test 1.3: Pipeline fails if tests fail
+**Setup:** Create a failing test in codebase
+**Expected:** Pipeline stops at test stage
+**Validation:**
+- Test job fails with exit code 1
+- Build and deploy jobs are skipped
+- Red X appears on commit in GitHub
+
+### 2. Deployment Approval Tests
+
+#### Test 2.1: Production deployment requires approval
+**Trigger:** Push to main branch
+**Expected:** Deploy job waits for approval
+**Validation:**
+- Workflow pauses at deploy job
+- "Review pending" message appears
+- Notification sent to required reviewers
+
+#### Test 2.2: Deployment proceeds after approval
+**Trigger:** Approve pending deployment
+**Expected:** Deploy job executes
+**Validation:**
+- Deploy job starts immediately after approval
+- SST deploy command executes
+- Deployment completes successfully
+
+### 3. Rollback Tests
+
+#### Test 3.1: Manual rollback workflow deploys previous version
+**Setup:** Note current commit SHA, deploy a new version
+**Trigger:** Actions → Rollback Production → Run workflow → Enter previous SHA
+**Expected:** Previous version is deployed
+**Validation:**
+- Workflow checks out specified commit
+- SST deploys the old version
+- API returns expected version
+- Slack notification confirms rollback
+
+### 4. Notification Tests
+
+#### Test 4.1: Slack notification sent on deployment success
+**Trigger:** Successful deployment to production
+**Expected:** Success notification in Slack channel
+**Validation:**
+- Message contains commit SHA
+- Message contains author name
+- Message contains link to workflow run
+- Message has green checkmark emoji
+
+#### Test 4.2: Slack notification sent on deployment failure
+**Setup:** Introduce deployment failure (e.g., invalid AWS credentials)
+**Expected:** Failure notification in Slack channel
+**Validation:**
+- Message contains commit SHA
+- Message contains author name
+- Message contains link to workflow run
+- Message has red X emoji
+
+## Automated Validation
+
+### Workflow Syntax Validation
+```bash
+# Run locally with act (GitHub Actions local runner)
+act -l --workflows .github/workflows/deploy-production.yml
+act -l --workflows .github/workflows/rollback-production.yml
+```
+
+### YAML Linting
+```bash
+# Install yamllint
+pip install yamllint
+
+# Lint workflow files
+yamllint .github/workflows/deploy-production.yml
+yamllint .github/workflows/rollback-production.yml
+```
+
+## Security Tests
+
+### Test: Secrets are not exposed in logs
+**Trigger:** Run deployment workflow
+**Validation:**
+- Check workflow logs
+- Verify no AWS credentials appear in plaintext
+- Verify no database URLs appear in plaintext
+- All secrets should show as `***`
+
+### Test: Only main branch can trigger production deployment
+**Setup:** Create feature branch
+**Trigger:** Push to feature branch
+**Expected:** deploy-production.yml does not run
+**Validation:**
+- Workflow does not appear in Actions tab
+- No deployment occurs
+
+## Performance Tests
+
+### Test: Pipeline completes within expected time
+**Expected Duration:** ~10-15 minutes (excluding approval wait)
+- Lint: ~1-2 minutes
+- Test: ~3-5 minutes
+- Build: ~2-3 minutes
+- Deploy: ~3-5 minutes
+
+**Validation:**
+- Record actual duration for each job
+- Compare against expected times
+- Identify bottlenecks if over expected time
+
+## Integration Tests
+
+### Test: Database migrations run successfully
+**Trigger:** Deployment with pending migrations
+**Expected:** Migrations apply without errors
+**Validation:**
+- Check deploy job logs for migration output
+- Verify migrations table in production database
+- Confirm new schema changes are applied
+
+### Test: Build artifacts are uploaded and downloaded correctly
+**Validation:**
+- Build job uploads .sst directory
+- Deploy job downloads same artifacts
+- Artifact size is reasonable (~50-100 MB)
+- No "artifact not found" errors
+
+## Regression Tests
+
+### Test: Existing CI workflow still works
+**Trigger:** Create pull request
+**Expected:** CI workflow (.github/workflows/ci.yml) runs
+**Validation:**
+- CI workflow runs on PR
+- Does not conflict with production deployment workflow
+- Both workflows can run independently
+
+## Manual Test Checklist
+
+Before considering story complete, manually verify:
+
+- [ ] Push to main triggers deploy-production.yml
+- [ ] Lint stage passes with valid code
+- [ ] Test stage passes with all tests green
+- [ ] Build stage creates SST artifacts
+- [ ] Deploy stage requires approval
+- [ ] Deployment succeeds after approval
+- [ ] Database migrations run successfully
+- [ ] Slack notification sent on success
+- [ ] Rollback workflow can be triggered manually
+- [ ] Rollback deploys previous version
+- [ ] Slack notification sent on rollback
+- [ ] Failed deployment sends failure notification
+- [ ] Secrets are masked in logs
+- [ ] Pipeline completes in reasonable time
+
+## Test Data
+
+### Sample Commit SHAs for Rollback Testing
+```
+# Record these after deployments for rollback testing
+Current production: <commit-sha>
+Previous version: <commit-sha>
+Version before that: <commit-sha>
+```
+
+### Test Slack Channel
+- Channel: #deployments-test (or your configured channel)
+- Webhook: Configured in SLACK_WEBHOOK_URL secret
+
+### Test Environment URLs
+- Production API: https://api.lego-mocs.com
+- Health Check: https://api.lego-mocs.com/health
+
+## Troubleshooting Guide
+
+### Issue: Workflow doesn't start on push to main
+**Solutions:**
+- Check workflow file syntax
+- Verify workflow is enabled in Actions tab
+- Check branch name matches exactly (case-sensitive)
+
+### Issue: Approval gate doesn't appear
+**Solutions:**
+- Verify production environment exists
+- Check "Required reviewers" is enabled
+- Verify you're not the only reviewer (can't approve your own deployment)
+
+### Issue: Deploy fails with SST error
+**Solutions:**
+- Check AWS credentials are valid
+- Verify IAM permissions
+- Check CloudFormation stack status in AWS Console
+
+### Issue: No Slack notification received
+**Solutions:**
+- Verify SLACK_WEBHOOK_URL secret is set
+- Check webhook is active in Slack
+- Verify channel still exists
+- Check workflow logs for Slack API errors
+
+## Success Criteria
+
+All tests must pass for the story to be considered complete:
+- ✅ All pipeline execution tests pass (3/3)
+- ✅ All deployment approval tests pass (2/2)
+- ✅ All rollback tests pass (1/1)
+- ✅ All notification tests pass (2/2)
+- ✅ Security tests pass (secrets masked, branch restrictions work)
+- ✅ Performance within acceptable range
+- ✅ Manual test checklist 100% complete

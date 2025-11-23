@@ -1,0 +1,115 @@
+schema: 1
+story: "4.8"
+story_title: "Implement Advanced Error Handling and Retry Logic"
+gate: CONCERNS
+status_reason: "Comprehensive implementation of retry logic, error sanitization, and structured logging is excellent. However, CloudWatch alarms (AC #10) are not configured, and withErrorHandling wrapper is not applied to existing handlers."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-22T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "INFRA-001"
+    severity: medium
+    finding: "CloudWatch alarms not configured in sst.config.ts (AC #10 violation)"
+    suggested_action: "Add CloudWatch alarm configuration for error rate thresholds (>5% triggers alert) as specified in AC #10"
+    suggested_owner: dev
+    refs:
+      - "apps/api/lego-api-serverless/sst.config.ts"
+  - id: "IMPL-001"
+    severity: medium
+    finding: "withErrorHandling wrapper not applied to existing Lambda handlers"
+    suggested_action: "Refactor existing handlers to use withErrorHandling wrapper for consistent error handling across all endpoints"
+    suggested_owner: dev
+    refs:
+      - "apps/api/lego-api-serverless/health/index.ts"
+      - "apps/api/lego-api-serverless/websocket/*/index.ts"
+      - "apps/api/lego-api-serverless/wishlist/*/index.ts"
+  - id: "DEP-001"
+    severity: low
+    finding: "X-Ray SDK is optional dependency - may not be installed in production"
+    suggested_action: "Add aws-xray-sdk-core to package.json dependencies and configure X-Ray in SST"
+    suggested_owner: dev
+    refs:
+      - "apps/api/lego-api-serverless/src/lib/utils/xray.ts:29-40"
+
+quality_score: 70
+expires: "2025-02-05T00:00:00Z"
+
+evidence:
+  tests_reviewed: 29
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ac_gaps: [10]
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Excellent error sanitization prevents information leakage. All sensitive data (passwords, tokens, stack traces) properly filtered. SQL injection prevention through query sanitization."
+  performance:
+    status: PASS
+    notes: "Exponential backoff with jitter prevents thundering herd. Max retries capped at 3 to prevent infinite loops. Non-blocking OpenSearch indexing ensures fast response times."
+  reliability:
+    status: PASS
+    notes: "Comprehensive retry logic for transient failures. Database connection retry with jitter. S3 fallback to presigned URLs. Fire-and-forget pattern for non-critical operations."
+  maintainability:
+    status: PASS
+    notes: "Well-structured error classes with clear hierarchy. Comprehensive JSDoc documentation. Excellent separation of concerns. High test coverage (642+ lines of tests)."
+
+test_coverage_summary:
+  unit_tests: 29
+  integration_tests: 0
+  coverage_highlights:
+    - "retry.ts: 326 lines of comprehensive unit tests covering all retry scenarios"
+    - "error-sanitizer.ts: 316 lines of tests covering all sanitization patterns"
+    - "All core utilities have excellent test coverage"
+  coverage_gaps:
+    - "No integration tests for end-to-end retry scenarios with actual AWS services"
+    - "CloudWatch alarm configuration not testable (infrastructure as code)"
+    - "X-Ray tracing not integration tested"
+
+recommendations:
+  immediate:
+    - action: "Configure CloudWatch alarms in sst.config.ts for >5% error rate threshold"
+      refs: ["apps/api/lego-api-serverless/sst.config.ts"]
+      rationale: "Required by AC #10 - critical for production monitoring"
+    - action: "Apply withErrorHandling wrapper to all existing Lambda handlers"
+      refs:
+        - "apps/api/lego-api-serverless/health/index.ts"
+        - "apps/api/lego-api-serverless/websocket/*/index.ts"
+      rationale: "Ensures consistent error handling, logging, and metrics across all endpoints"
+  future:
+    - action: "Add aws-xray-sdk-core to dependencies and enable X-Ray in Lambda configuration"
+      refs: ["apps/api/lego-api-serverless/package.json"]
+      rationale: "Currently optional - should be required for production tracing"
+    - action: "Consider integration tests for retry scenarios with LocalStack or AWS SDK mocks"
+      refs: ["apps/api/lego-api-serverless/src/lib/**/__tests__/"]
+      rationale: "Validate end-to-end retry behavior with actual AWS service errors"
+    - action: "Add dead letter queue for failed OpenSearch indexing operations"
+      refs: ["apps/api/lego-api-serverless/src/lib/search/opensearch-retry.ts:139"]
+      rationale: "TODO comment indicates this is a planned enhancement for manual reprocessing"
+
+implementation_strengths:
+  - "Comprehensive retry logic with exponential backoff and jitter"
+  - "Excellent error sanitization preventing information leakage"
+  - "Well-designed custom error class hierarchy with isRetryable flag"
+  - "Fire-and-forget pattern for non-critical operations (OpenSearch)"
+  - "Presigned URL fallback for S3 failures provides excellent UX"
+  - "PostgreSQL-specific retry codes properly categorized"
+  - "Structured CloudWatch logging with request context"
+  - "Outstanding test coverage (642+ lines of comprehensive tests)"
+  - "Clear separation of concerns across utility modules"
+  - "Excellent documentation and JSDoc comments"
+
+design_decisions_validated:
+  - decision: "Exponential backoff with jitter"
+    validation: "CORRECT - Prevents thundering herd, industry best practice"
+  - decision: "Max 3 retry attempts"
+    validation: "CORRECT - Balances reliability vs latency, stays within Lambda timeout"
+  - decision: "Non-blocking OpenSearch"
+    validation: "CORRECT - Eventual consistency acceptable for search, prevents blocking critical operations"
+  - decision: "Sanitized error messages"
+    validation: "CORRECT - Excellent security practice, comprehensive implementation"
+  - decision: "Presigned URL fallback for S3"
+    validation: "EXCELLENT - Innovative fallback strategy improving reliability and UX"

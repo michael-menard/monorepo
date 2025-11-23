@@ -1,0 +1,24 @@
+schema: 1
+story: '4.6'
+gate: CONCERNS
+status_reason: 'Implementation complete with comprehensive logging, but missing automated tests and database migration for new mocParts table.'
+reviewer: 'Quinn'
+updated: '2025-01-22T16:15:00Z'
+top_issues:
+  - id: 'TEST-001'
+    severity: high
+    finding: 'No automated tests for CSV parsing Lambda function'
+    suggested_action: 'Add unit tests for parseCSV, validation errors, and handler logic before deployment'
+  - id: 'MNT-001'
+    severity: high
+    finding: 'Missing database migration for mocParts table'
+    suggested_action: 'Generate and run migration using drizzle-kit before deployment'
+  - id: 'TEST-002'
+    severity: medium
+    finding: 'No integration tests for S3 download and full flow'
+    suggested_action: 'Add integration test simulating complete CSV upload workflow'
+  - id: 'DOC-001'
+    severity: low
+    finding: 'No example CSV file in repository for testing'
+    suggested_action: 'Add sample CSV file to docs/examples for reference'
+waiver: { active: false }
