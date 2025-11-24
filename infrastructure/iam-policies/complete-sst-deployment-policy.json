@@ -1,0 +1,213 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "S3FullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:*"
+      ],
+      "Resource": [
+        "arn:aws:s3:::lego-*",
+        "arn:aws:s3:::lego-*/*",
+        "arn:aws:s3:::user-metrics-*",
+        "arn:aws:s3:::user-metrics-*/*",
+        "arn:aws:s3:::sst-*",
+        "arn:aws:s3:::sst-*/*"
+      ]
+    },
+    {
+      "Sid": "S3ListAllBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudFormationFullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMFullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "iam:*"
+      ],
+      "Resource": [
+        "arn:aws:iam::213351177820:role/sst-*",
+        "arn:aws:iam::213351177820:role/lego-*",
+        "arn:aws:iam::213351177820:role/user-metrics-*",
+        "arn:aws:iam::213351177820:role/*-lambda-role",
+        "arn:aws:iam::213351177820:role/*Function*",
+        "arn:aws:iam::213351177820:role/*TaskRole*",
+        "arn:aws:iam::213351177820:role/*ExecutionRole*",
+        "arn:aws:iam::213351177820:policy/sst-*",
+        "arn:aws:iam::213351177820:policy/lego-*",
+        "arn:aws:iam::213351177820:policy/user-metrics-*"
+      ]
+    },
+    {
+      "Sid": "VPCAndNetworking",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LambdaFullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:*"
+      ],
+      "Resource": [
+        "arn:aws:lambda:*:213351177820:function:sst-*",
+        "arn:aws:lambda:*:213351177820:function:lego-*",
+        "arn:aws:lambda:*:213351177820:function:user-metrics-*",
+        "arn:aws:lambda:*:213351177820:function:*Function*"
+      ]
+    },
+    {
+      "Sid": "APIGateway",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RDSAndDatabase",
+      "Effect": "Allow",
+      "Action": [
+        "rds:*",
+        "rds-db:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OpenSearchService",
+      "Effect": "Allow",
+      "Action": [
+        "es:*",
+        "opensearch:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CognitoServices",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:*",
+        "cognito-identity:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchAndLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:*",
+        "cloudwatch:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SNSTopics",
+      "Effect": "Allow",
+      "Action": [
+        "sns:*"
+      ],
+      "Resource": [
+        "arn:aws:sns:*:213351177820:lego-*",
+        "arn:aws:sns:*:213351177820:user-metrics-*",
+        "arn:aws:sns:*:213351177820:sst-*"
+      ]
+    },
+    {
+      "Sid": "EventBridge",
+      "Effect": "Allow",
+      "Action": [
+        "events:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BudgetsAndCostManagement",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:*",
+        "ce:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "XRayTracing",
+      "Effect": "Allow",
+      "Action": [
+        "xray:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManager",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:*"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:213351177820:secret:sst-*",
+        "arn:aws:secretsmanager:*:213351177820:secret:lego-*",
+        "arn:aws:secretsmanager:*:213351177820:secret:user-metrics-*"
+      ]
+    },
+    {
+      "Sid": "SSMParameterStore",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:DescribeParameters",
+        "ssm:GetParametersByPath",
+        "ssm:AddTagsToResource",
+        "ssm:RemoveTagsFromResource",
+        "ssm:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECRContainerRegistry",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ServiceDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "servicediscovery:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMServiceRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::213351177820:role/aws-service-role/*",
+        "arn:aws:iam::213351177820:role/AWSServiceRole*"
+      ]
+    }
+  ]
+}

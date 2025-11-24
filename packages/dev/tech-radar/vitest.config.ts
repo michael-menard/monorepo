@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom', // Tech radar has React components for visualization
-    setupFiles: ['../../../__tests__/setup.ts'],
+    setupFiles: ['./src/__tests__/setup.ts'],
     globals: true,
     testTimeout: 5000,
     hookTimeout: 5000,

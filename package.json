@@ -6,7 +6,6 @@
   "workspaces": [
     "apps/*",
     "apps/api/*",
-    "apps/api/lego-api-serverless",
     "apps/web/*",
     "packages/shared",
     "packages/core/ui",
@@ -154,11 +153,6 @@
   "engines": {
     "node": ">=18"
   },
-  "pnpm": {
-    "overrides": {
-      "esbuild": "^0.21.5"
-    }
-  },
   "lint-staged": {
     "apps/**/*.{ts,tsx,js,jsx}": [
       "prettier --write"
@@ -177,5 +171,11 @@
       "prettier --write"
     ]
   },
-  "exports": {}
+  "exports": {},
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.21.5",
+      "@smithy/types": "4.9.0"
+    }
+  }
 }

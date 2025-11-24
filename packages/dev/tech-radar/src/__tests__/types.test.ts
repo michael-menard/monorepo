@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type { Entry, Quadrant, Ring, RadarData, RadarEntryProps } from '../types'
 
 describe('Tech Radar Types', () => {

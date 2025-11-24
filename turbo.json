@@ -29,7 +29,13 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*", "vitest.config.*", "jest.config.*", "playwright.config.*"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "vitest.config.*",
+        "jest.config.*",
+        "playwright.config.*"
+      ],
       "outputs": ["coverage/**", "test-results/**", "playwright-report/**"]
     },
     "test:watch": {
@@ -89,8 +95,13 @@
       "persistent": true
     },
     "deploy": {
-      "dependsOn": ["build"],
+      "dependsOn": ["build", "test", "check-types"],
       "cache": false
+    },
+    "deploy:layers": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "outputs": ["apps/api/layers/*/layer-arn-*.txt", "apps/api/layers/*/*.zip"]
     },
     "serve": {
       "dependsOn": ["build"],
