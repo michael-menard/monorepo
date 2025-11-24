@@ -25,39 +25,36 @@ export function createCostMonitoring(stage: string) {
       STAGE: stage,
       BUDGET_NAME: `user-metrics-budget-${stage}`,
     },
-    transform: {
-      role: args => {
-        // Add Cost Explorer permissions
-        new aws.iam.RolePolicyAttachment('CostMetricsPublisherCostExplorerPolicy', {
-          role: args.name,
-          policyArn: 'arn:aws:iam::aws:policy/AWSCostExplorerServiceRolePolicy',
-        })
-        
-        // Add CloudWatch metrics permissions
-        new aws.iam.Policy('CostMetricsPublisherCloudWatchPolicy', {
-          policy: JSON.stringify({
-            Version: '2012-10-17',
-            Statement: [
-              {
-                Effect: 'Allow',
-                Action: [
-                  'cloudwatch:PutMetricData',
-                  'budgets:ViewBudget',
-                  'ce:GetCostAndUsage',
-                  'ce:GetUsageReport',
-                ],
-                Resource: '*',
-              },
-            ],
-          }),
-        }).arn.apply(policyArn => {
-          new aws.iam.RolePolicyAttachment('CostMetricsPublisherCloudWatchPolicyAttachment', {
-            role: args.name,
-            policyArn,
-          })
-        })
-      },
-    },
+  })
+
+  // Add Cost Explorer permissions after function creation
+  new aws.iam.RolePolicyAttachment('CostMetricsPublisherCostExplorerPolicy', {
+    role: costMetricsPublisher.nodes.role.name,
+    policyArn: 'arn:aws:iam::aws:policy/AWSCostExplorerServiceRolePolicy',
+  })
+
+  // Add CloudWatch metrics permissions
+  const costMetricsCloudWatchPolicy = new aws.iam.Policy('CostMetricsPublisherCloudWatchPolicy', {
+    policy: JSON.stringify({
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Action: [
+            'cloudwatch:PutMetricData',
+            'budgets:ViewBudget',
+            'ce:GetCostAndUsage',
+            'ce:GetUsageReport',
+          ],
+          Resource: '*',
+        },
+      ],
+    }),
+  })
+
+  new aws.iam.RolePolicyAttachment('CostMetricsPublisherCloudWatchPolicyAttachment', {
+    role: costMetricsPublisher.nodes.role.name,
+    policyArn: costMetricsCloudWatchPolicy.arn,
   })
 
   /**
@@ -66,14 +63,14 @@ export function createCostMonitoring(stage: string) {
    * - Ensures fresh cost data for dashboard
    * - Runs after AWS cost data is typically available
    */
-  const costMetricsSchedule = new aws.events.Rule('CostMetricsSchedule', {
+  const costMetricsSchedule = new aws.cloudwatch.EventRule('CostMetricsSchedule', {
     name: `user-metrics-cost-schedule-${stage}`,
     description: 'Daily trigger for cost metrics collection',
     scheduleExpression: 'cron(0 6 * * ? *)', // 6 AM UTC daily
-    state: 'ENABLED',
+    isEnabled: true,
   })
 
-  new aws.events.Target('CostMetricsScheduleTarget', {
+  new aws.cloudwatch.EventTarget('CostMetricsScheduleTarget', {
     rule: costMetricsSchedule.name,
     arn: costMetricsPublisher.arn,
   })

@@ -47,9 +47,20 @@
         "arn:aws:iam::213351177820:role/*Function*",
         "arn:aws:iam::213351177820:role/*TaskRole*",
         "arn:aws:iam::213351177820:role/*ExecutionRole*",
+        "arn:aws:iam::213351177820:role/OpenReplayTaskRole*",
+        "arn:aws:iam::213351177820:role/UmamiTaskRole*",
+        "arn:aws:iam::213351177820:role/ObservabilityEcsTaskExecutionRole*",
+        "arn:aws:iam::213351177820:role/GrafanaWorkspaceRole*",
+        "arn:aws:iam::213351177820:role/CognitoAuthenticatedRole*",
         "arn:aws:iam::213351177820:policy/sst-*",
         "arn:aws:iam::213351177820:policy/lego-*",
-        "arn:aws:iam::213351177820:policy/user-metrics-*"
+        "arn:aws:iam::213351177820:policy/user-metrics-*",
+        "arn:aws:iam::213351177820:policy/OpenSearchLambdaPolicy*",
+        "arn:aws:iam::213351177820:policy/OpenReplayS3Policy*",
+        "arn:aws:iam::213351177820:policy/GrafanaCloudWatchPolicy*",
+        "arn:aws:iam::213351177820:policy/GrafanaOpenSearchPolicy*",
+        "arn:aws:iam::213351177820:policy/LambdaEmfPolicy*",
+        "arn:aws:iam::213351177820:policy/UmamiRdsPolicy*"
       ]
     },
     {
@@ -96,6 +107,28 @@
       "Action": [
         "es:*",
         "opensearch:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DynamoDBFullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:*"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:*:213351177820:table/lego-*",
+        "arn:aws:dynamodb:*:213351177820:table/user-metrics-*",
+        "arn:aws:dynamodb:*:213351177820:table/sst-*",
+        "arn:aws:dynamodb:*:213351177820:table/*WebSocketConnectionsTable*"
+      ]
+    },
+    {
+      "Sid": "DynamoDBGlobalPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:ListTables",
+        "dynamodb:DescribeLimits"
       ],
       "Resource": "*"
     },
@@ -187,6 +220,22 @@
       "Effect": "Allow",
       "Action": [
         "ecr:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECSServices",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ElasticLoadBalancing",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:*"
       ],
       "Resource": "*"
     },

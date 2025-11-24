@@ -12,7 +12,7 @@ export function createVpc(stage: string, createResourceTags: Function) {
   const vpc = new sst.aws.Vpc('LegoApiVpc', {
     cidr: '10.0.0.0/24', // /24 CIDR block as required by Story 1.1
     az: 2, // Two Availability Zones for high availability
-    nat: 1, // Single NAT Gateway for cost optimization
+    nat: { type: 'managed' }, // Single NAT Gateway for cost optimization
     transform: {
       vpc: args => {
         // Apply UserMetrics observability tags

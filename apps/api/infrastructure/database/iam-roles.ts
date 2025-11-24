@@ -1,6 +1,6 @@
 /**
  * Database-related IAM Roles and Policies
- * 
+ *
  * Creates IAM roles for:
  * - ECS Task Execution (for observability services)
  * - OpenReplay Task Role (S3 and CloudWatch access)
@@ -8,6 +8,8 @@
  * - Grafana Workspace Role (CloudWatch and OpenSearch access)
  * - Lambda EMF Policy (CloudWatch metrics)
  */
+
+import * as pulumi from '@pulumi/pulumi'
 
 export function createDatabaseIamRoles(
   openReplaySessionsBucket: any,
@@ -70,24 +72,24 @@ export function createDatabaseIamRoles(
    * - Read/write access to CloudWatch logs bucket
    */
   const openReplayS3Policy = new aws.iam.Policy('OpenReplayS3Policy', {
-    policy: JSON.stringify({
+    policy: pulumi.all([openReplaySessionsBucket.nodes.bucket.arn, cloudWatchLogsBucket.nodes.bucket.arn]).apply(([sessionsArn, logsArn]) => JSON.stringify({
       Version: '2012-10-17',
       Statement: [
         {
           Effect: 'Allow',
           Action: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
           Resource: [
-            `${openReplaySessionsBucket.arn}/*`,
-            `${cloudWatchLogsBucket.arn}/*`,
+            `${sessionsArn}/*`,
+            `${logsArn}/*`,
           ],
         },
         {
           Effect: 'Allow',
           Action: ['s3:ListBucket'],
-          Resource: [openReplaySessionsBucket.arn, cloudWatchLogsBucket.arn],
+          Resource: [sessionsArn, logsArn],
         },
       ],
-    }),
+    })),
   })
 
   new aws.iam.RolePolicyAttachment('OpenReplayS3PolicyAttachment', {

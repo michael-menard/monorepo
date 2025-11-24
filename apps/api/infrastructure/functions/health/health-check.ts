@@ -26,15 +26,12 @@ export function createHealthCheckFunction(
       STAGE: stage,
     },
     link: [postgres, openSearch],
-    transform: {
-      role: args => {
-        // Attach EMF policy for CloudWatch metrics
-        new aws.iam.RolePolicyAttachment(`HealthCheckEmfPolicyAttachment`, {
-          role: args.name,
-          policyArn: lambdaEmfPolicy.arn,
-        })
-      },
-    },
+  })
+
+  // Attach EMF policy for CloudWatch metrics after function is created
+  new aws.iam.RolePolicyAttachment(`HealthCheckEmfPolicyAttachment`, {
+    role: healthCheckFunction.nodes.role.name,
+    policyArn: lambdaEmfPolicy.arn,
   })
 
   return { healthCheckFunction }

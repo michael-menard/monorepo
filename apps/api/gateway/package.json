@@ -1,0 +1,14 @@
+{
+  "name": "@repo/api-gateway",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "sst deploy",
+    "remove": "sst remove",
+    "build": "echo 'No build needed for API gateway'"
+  },
+  "devDependencies": {
+    "sst": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

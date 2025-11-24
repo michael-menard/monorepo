@@ -72,7 +72,6 @@
     "pg": "^8.16.3",
     "redis": "^5.7.0",
     "sharp": "0.34.5",
-    "sst": "^3.4.1",
     "uuid": "^11.1.0",
     "xmldom": "0.6.0",
     "zod": "^4.0.5"
@@ -96,6 +95,12 @@
     "eslint": "^9.31.0",
     "eslint-config-prettier": "^10.1.5",
     "prettier": "^3.6.2",
+    "serverless": "4.25.0",
+    "serverless-iam-roles-per-function": "3.2.0",
+    "serverless-offline": "14.4.0",
+    "serverless-plugin-typescript": "2.1.5",
+    "serverless-prune-plugin": "2.1.0",
+    "sst": "3.17.21",
     "tsx": "^4.20.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

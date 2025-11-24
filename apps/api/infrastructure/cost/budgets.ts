@@ -23,13 +23,7 @@ export function createBudgets(budgetAlertTopic: any, stage: string) {
     limitUnit: 'USD',
     timeUnit: 'MONTHLY',
     timePeriodStart: '2024-01-01_00:00',
-    
-    // Cost filters - only resources tagged with Project=UserMetrics
-    costFilters: {
-      TagKey: ['Project'],
-      TagValue: ['UserMetrics'],
-    },
-    
+
     // Budget notifications
     notifications: [
       {

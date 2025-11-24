@@ -1,6 +1,6 @@
 /**
  * All Lambda Functions for LEGO API Serverless
- * 
+ *
  * Creates all Lambda functions organized by domain:
  * - Health Check
  * - MOC Instructions (12 functions)
@@ -36,18 +36,6 @@ export function createAllFunctions(
   // Enhanced config for functions that need OpenSearch
   const searchConfig = {
     ...baseConfig,
-    transform: {
-      role: (args: any, functionName: string) => {
-        new aws.iam.RolePolicyAttachment(`${functionName}EmfPolicyAttachment`, {
-          role: args.name,
-          policyArn: lambdaEmfPolicy.arn,
-        })
-        new aws.iam.RolePolicyAttachment(`${functionName}OpenSearchPolicyAttachment`, {
-          role: args.name,
-          policyArn: openSearchLambdaPolicy.arn,
-        })
-      },
-    },
   }
 
   // WebSocket config with DynamoDB access
@@ -68,16 +56,6 @@ export function createAllFunctions(
   }
 
   // ========================================
-  // Health Check Function
-  // ========================================
-  const healthCheckFunction = new sst.aws.Function('HealthCheckFunction', {
-    ...baseConfig,
-    handler: 'endpoints/health/handler.handler',
-    timeout: '30 seconds',
-    memory: '256 MB',
-  })
-
-  // ========================================
   // MOC Instructions Functions
   // ========================================
   const mocInstructionsFunction = new sst.aws.Function('MocInstructionsFunction', {
@@ -85,9 +63,16 @@ export function createAllFunctions(
     handler: 'endpoints/moc-instructions/list/handler.handler',
     timeout: '30 seconds',
     memory: '512 MB',
-    transform: {
-      role: args => searchConfig.transform.role(args, 'MocInstructions'),
-    },
+  })
+
+  // Attach EMF and OpenSearch policies
+  new aws.iam.RolePolicyAttachment('MocInstructionsEmfPolicyAttachment', {
+    role: mocInstructionsFunction.nodes.role.name,
+    policyArn: lambdaEmfPolicy.arn,
+  })
+  new aws.iam.RolePolicyAttachment('MocInstructionsOpenSearchPolicyAttachment', {
+    role: mocInstructionsFunction.nodes.role.name,
+    policyArn: openSearchLambdaPolicy.arn,
   })
 
   const mocFileUploadFunction = new sst.aws.Function('MocFileUploadFunction', {
@@ -95,9 +80,16 @@ export function createAllFunctions(
     handler: 'endpoints/moc-instructions/upload-file/handler.handler',
     timeout: '120 seconds',
     memory: '2048 MB',
-    transform: {
-      role: args => searchConfig.transform.role(args, 'MocFileUpload'),
-    },
+  })
+
+  // Attach EMF and OpenSearch policies
+  new aws.iam.RolePolicyAttachment('MocFileUploadEmfPolicyAttachment', {
+    role: mocFileUploadFunction.nodes.role.name,
+    policyArn: lambdaEmfPolicy.arn,
+  })
+  new aws.iam.RolePolicyAttachment('MocFileUploadOpenSearchPolicyAttachment', {
+    role: mocFileUploadFunction.nodes.role.name,
+    policyArn: openSearchLambdaPolicy.arn,
   })
 
   const mocFileDownloadFunction = new sst.aws.Function('MocFileDownloadFunction', {
@@ -133,9 +125,16 @@ export function createAllFunctions(
     handler: 'endpoints/moc-instructions/finalize-with-files/handler.handler',
     timeout: '30 seconds',
     memory: '512 MB',
-    transform: {
-      role: args => searchConfig.transform.role(args, 'FinalizeMocWithFiles'),
-    },
+  })
+
+  // Attach EMF and OpenSearch policies
+  new aws.iam.RolePolicyAttachment('FinalizeMocWithFilesEmfPolicyAttachment', {
+    role: finalizeMocWithFilesFunction.nodes.role.name,
+    policyArn: lambdaEmfPolicy.arn,
+  })
+  new aws.iam.RolePolicyAttachment('FinalizeMocWithFilesOpenSearchPolicyAttachment', {
+    role: finalizeMocWithFilesFunction.nodes.role.name,
+    policyArn: openSearchLambdaPolicy.arn,
   })
 
   // More MOC Instructions Functions
@@ -227,9 +226,6 @@ export function createAllFunctions(
   })
 
   return {
-    // Health
-    healthCheckFunction,
-
     // MOC Instructions
     mocInstructionsFunction,
     mocFileUploadFunction,
@@ -254,5 +250,3 @@ export function createAllFunctions(
     getUserPartsListsSummaryFunction,
   }
 }
-
-// Continue in next chunk due to 150 line limit

@@ -1,9 +1,9 @@
 /**
  * Gallery, Wishlist, and WebSocket Lambda Functions
- * 
+ *
  * Creates the remaining Lambda functions:
  * - Gallery (12 functions)
- * - Wishlist (8 functions)  
+ * - Wishlist (8 functions)
  * - WebSocket (3 functions)
  */
 
@@ -35,18 +35,6 @@ export function createGalleryWishlistWebSocketFunctions(
     ...baseConfig,
     memory: '2048 MB',
     timeout: '60 seconds',
-    transform: {
-      role: (args: any, functionName: string) => {
-        new aws.iam.RolePolicyAttachment(`${functionName}EmfPolicyAttachment`, {
-          role: args.name,
-          policyArn: lambdaEmfPolicy.arn,
-        })
-        new aws.iam.RolePolicyAttachment(`${functionName}OpenSearchPolicyAttachment`, {
-          role: args.name,
-          policyArn: openSearchLambdaPolicy.arn,
-        })
-      },
-    },
   }
 
   // WebSocket config
@@ -65,9 +53,16 @@ export function createGalleryWishlistWebSocketFunctions(
   const uploadImageFunction = new sst.aws.Function('UploadImageFunction', {
     ...galleryConfig,
     handler: 'endpoints/gallery/upload-image/handler.handler',
-    transform: {
-      role: args => galleryConfig.transform.role(args, 'UploadImage'),
-    },
+  })
+
+  // Attach EMF and OpenSearch policies
+  new aws.iam.RolePolicyAttachment('UploadImageEmfPolicyAttachment', {
+    role: uploadImageFunction.nodes.role.name,
+    policyArn: lambdaEmfPolicy.arn,
+  })
+  new aws.iam.RolePolicyAttachment('UploadImageOpenSearchPolicyAttachment', {
+    role: uploadImageFunction.nodes.role.name,
+    policyArn: openSearchLambdaPolicy.arn,
   })
 
   const listImagesFunction = new sst.aws.Function('ListImagesFunction', {
@@ -82,9 +77,16 @@ export function createGalleryWishlistWebSocketFunctions(
     handler: 'endpoints/gallery/search-images/handler.handler',
     timeout: '30 seconds',
     memory: '512 MB',
-    transform: {
-      role: args => galleryConfig.transform.role(args, 'SearchImages'),
-    },
+  })
+
+  // Attach EMF and OpenSearch policies
+  new aws.iam.RolePolicyAttachment('SearchImagesEmfPolicyAttachment', {
+    role: searchImagesFunction.nodes.role.name,
+    policyArn: lambdaEmfPolicy.arn,
+  })
+  new aws.iam.RolePolicyAttachment('SearchImagesOpenSearchPolicyAttachment', {
+    role: searchImagesFunction.nodes.role.name,
+    policyArn: openSearchLambdaPolicy.arn,
   })
 
   const getImageFunction = new sst.aws.Function('GetImageFunction', {

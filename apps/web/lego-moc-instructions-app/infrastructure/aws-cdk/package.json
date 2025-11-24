@@ -11,7 +11,11 @@
     "deploy": "cdk deploy",
     "deploy:staging": "ENVIRONMENT=staging cdk deploy",
     "deploy:production": "ENVIRONMENT=production cdk deploy",
+    "deploy:dev": "ENVIRONMENT=dev cdk deploy",
     "destroy": "cdk destroy",
+    "destroy:staging": "ENVIRONMENT=staging cdk destroy",
+    "destroy:production": "ENVIRONMENT=production cdk destroy",
+    "destroy:dev": "ENVIRONMENT=dev cdk destroy",
     "synth": "cdk synth"
   },
   "devDependencies": {

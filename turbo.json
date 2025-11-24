@@ -95,8 +95,16 @@
       "persistent": true
     },
     "deploy": {
-      "dependsOn": ["build", "test", "check-types"],
-      "cache": false
+      "dependsOn": ["build"],
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "sst.config.ts", "infrastructure/**"],
+      "outputs": [".sst/**"]
+    },
+    "sst:deploy": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "sst.config.ts", "infrastructure/**"],
+      "outputs": [".sst/**"]
     },
     "deploy:layers": {
       "dependsOn": ["build"],

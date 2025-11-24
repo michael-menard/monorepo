@@ -11,8 +11,8 @@
 export function createOpenSearch(vpc: any, openSearchSecurityGroup: any, stage: string) {
   const openSearch = new sst.aws.OpenSearch('LegoApiOpenSearch', {
     vpc,
-    version: '2.13',
-    instance: stage === 'production' ? 'r6g.large.search' : 't3.small.search',
+    version: 'OpenSearch_2.13',
+    instance: stage === 'production' ? 'r6g.large' : 't3.small',
     volume: stage === 'production' ? 100 : 20,
     transform: {
       domain: args => {
@@ -62,7 +62,7 @@ export function createOpenSearch(vpc: any, openSearchSecurityGroup: any, stage: 
    * - Allows Lambda functions to read/write to OpenSearch
    */
   const openSearchLambdaPolicy = new aws.iam.Policy('OpenSearchLambdaPolicy', {
-    policy: JSON.stringify({
+    policy: openSearch.nodes.domain.arn.apply(arn => JSON.stringify({
       Version: '2012-10-17',
       Statement: [
         {
@@ -74,10 +74,10 @@ export function createOpenSearch(vpc: any, openSearchSecurityGroup: any, stage: 
             'es:ESHttpDelete',
             'es:ESHttpHead',
           ],
-          Resource: `${openSearch.arn}/*`,
+          Resource: `${arn}/*`,
         },
       ],
-    }),
+    })),
   })
 
   return {

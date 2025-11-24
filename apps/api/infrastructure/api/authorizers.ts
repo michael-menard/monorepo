@@ -17,7 +17,7 @@ export function createAuthorizers(api: any, userPool: any, userPoolClient: any, 
   const region = aws.getRegionOutput().name
 
   const cognitoAuthorizer = new aws.apigatewayv2.Authorizer('CognitoJwtAuthorizer', {
-    apiId: api.id,
+    apiId: api.nodes.api.id,
     authorizerType: 'JWT',
     identitySources: ['$request.header.Authorization'],
     name: `cognito-jwt-authorizer-${stage}`,

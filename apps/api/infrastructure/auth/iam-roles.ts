@@ -121,7 +121,7 @@ export function createAuthIamRoles(userPool: any, userPoolClient: any, openSearc
    * - Read access to OpenSearch for log analysis
    */
   const grafanaOpenSearchPolicy = new aws.iam.Policy('GrafanaOpenSearchPolicy', {
-    policy: JSON.stringify({
+    policy: openSearch.nodes.domain.arn.apply(arn => JSON.stringify({
       Version: '2012-10-17',
       Statement: [
         {
@@ -132,10 +132,10 @@ export function createAuthIamRoles(userPool: any, userPoolClient: any, openSearc
             'es:DescribeElasticsearchDomains',
             'es:ListDomainNames',
           ],
-          Resource: `${openSearch.arn}/*`,
+          Resource: `${arn}/*`,
         },
       ],
-    }),
+    })),
   })
 
   new aws.iam.RolePolicyAttachment('GrafanaOpenSearchPolicyAttachment', {
