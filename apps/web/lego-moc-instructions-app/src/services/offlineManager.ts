@@ -15,6 +15,33 @@ import {
 import type { IDBAction } from './idbQueue.js'
 
 /**
+ * Simple browser-compatible logger
+ */
+const logger = {
+  error: (message: string, error?: Error, metadata?: Record<string, unknown>) => {
+    // eslint-disable-next-line no-console
+    console.error(`[OfflineManager] ${message}`, { error, ...metadata })
+    // TODO: Send to remote logging service (e.g., Sentry, CloudWatch)
+  },
+  warn: (message: string, metadata?: Record<string, unknown>) => {
+    // eslint-disable-next-line no-console
+    console.warn(`[OfflineManager] ${message}`, metadata)
+  },
+  info: (message: string, metadata?: Record<string, unknown>) => {
+    if (config.app.environment === 'development') {
+      // eslint-disable-next-line no-console
+      console.info(`[OfflineManager] ${message}`, metadata)
+    }
+  },
+  debug: (message: string, metadata?: Record<string, unknown>) => {
+    if (config.app.environment === 'development') {
+      // eslint-disable-next-line no-console
+      console.debug(`[OfflineManager] ${message}`, metadata)
+    }
+  },
+}
+
+/**
  * Zod schemas for offline data
  */
 export const OfflineActionSchema = z.object({
@@ -61,7 +88,9 @@ class OfflineManager {
   }
 
   private handleOnlineEvent(): void {
-    this.processQueuedActions().catch(() => {})
+    this.processQueuedActions().catch(error => {
+      logger.error('Failed to process queued actions on online event', error as Error)
+    })
   }
 
   private handleOfflineEvent(): void {}
@@ -69,7 +98,9 @@ class OfflineManager {
   private handleVisibilityChange(): void {
     // Sync when app becomes visible and we're online
     if (!document.hidden && navigator.onLine) {
-      this.processQueuedActions().catch(() => {})
+      this.processQueuedActions().catch(error => {
+        logger.error('Failed to process queued actions on visibility change', error as Error)
+      })
     }
   }
 
@@ -120,8 +151,10 @@ class OfflineManager {
   private setOfflineDataLocal(data: OfflineData): void {
     try {
       localStorage.setItem(this.OFFLINE_DATA_KEY, JSON.stringify(data))
-    } catch {
-      // Silently fail if localStorage is unavailable
+    } catch (error) {
+      logger.error('Failed to set offline data in localStorage', error as Error, {
+        dataKeys: Object.keys(data.data),
+      })
     }
   }
 
@@ -141,8 +174,9 @@ class OfflineManager {
         offlineData.data[key] = { data, timestamp: Date.now() }
         this.setOfflineDataLocal(offlineData)
       }
-    } catch {
-      // Silently fail if storage is unavailable
+    } catch (error) {
+      logger.error('Failed to store offline data', error as Error, { key })
+      throw error // Re-throw so caller can handle appropriately
     }
   }
 
@@ -177,17 +211,29 @@ class OfflineManager {
         actions.push(newAction)
         this.setOfflineActionsLocal(actions)
       }
-    } catch {
-      // Silently fail if storage is unavailable
+    } catch (error) {
+      logger.error('Failed to queue offline action', error as Error, {
+        actionType: action.type,
+        endpoint: action.endpoint,
+      })
+      throw error // Re-throw so caller can handle appropriately
     }
   }
 
   // Process queued actions when online
   async processQueuedActions(): Promise<void> {
-    if (!navigator.onLine) return
+    if (!navigator.onLine) {
+      logger.debug('Skipping queued action processing - offline')
+      return
+    }
 
     const actions = await this.getOfflineActions()
-    if (actions.length === 0) return
+    if (actions.length === 0) {
+      logger.debug('No queued actions to process')
+      return
+    }
+
+    logger.info('Processing queued offline actions', { actionCount: actions.length })
 
     const processedActions: Array<OfflineAction> = []
     const failedActions: Array<OfflineAction> = []
@@ -196,10 +242,34 @@ class OfflineManager {
       try {
         await this.processAction(action)
         processedActions.push(action)
+        logger.debug('Successfully processed offline action', {
+          actionId: action.id,
+          type: action.type,
+          endpoint: action.endpoint,
+        })
       } catch (error) {
+        logger.error('Failed to process offline action', error as Error, {
+          actionId: action.id,
+          type: action.type,
+          endpoint: action.endpoint,
+          retryCount: action.retryCount,
+        })
+
         if (action.retryCount < this.MAX_RETRY_COUNT) {
           action.retryCount++
           failedActions.push(action)
+          logger.warn('Queuing action for retry', {
+            actionId: action.id,
+            retryCount: action.retryCount,
+            maxRetries: this.MAX_RETRY_COUNT,
+          })
+        } else {
+          logger.error('Action exceeded maximum retry count - discarding', undefined, {
+            actionId: action.id,
+            type: action.type,
+            endpoint: action.endpoint,
+            finalRetryCount: action.retryCount,
+          })
         }
       }
     }
@@ -212,7 +282,11 @@ class OfflineManager {
     offlineData.lastSync = Date.now()
     await this.setOfflineData(offlineData)
 
-    // Offline processing logging removed
+    logger.info('Completed processing queued actions', {
+      processed: processedActions.length,
+      failed: failedActions.length,
+      discarded: actions.length - processedActions.length - failedActions.length,
+    })
   }
 
   // Process a single action using fetch with proper headers and base URL
@@ -348,8 +422,9 @@ class OfflineManager {
         localStorage.removeItem(this.OFFLINE_DATA_KEY)
         this.initializeOfflineDataLocal()
       }
-    } catch {
-      // Silently fail if storage is unavailable
+    } catch (error) {
+      logger.error('Failed to clear offline storage', error as Error)
+      throw error // Re-throw so caller can handle appropriately
     }
   }
 
@@ -387,8 +462,10 @@ class OfflineManager {
   private setOfflineActionsLocal(actions: Array<OfflineAction>): void {
     try {
       localStorage.setItem(this.OFFLINE_ACTIONS_KEY, JSON.stringify(actions))
-    } catch {
-      // Silently fail if localStorage is unavailable
+    } catch (error) {
+      logger.error('Failed to set offline actions in localStorage', error as Error, {
+        actionCount: actions.length,
+      })
     }
   }
 
