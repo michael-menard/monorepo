@@ -1,0 +1,316 @@
+name: Reusable Lambda Deploy
+
+# Reusable workflow for deploying a single Lambda function
+# This workflow can be called by other workflows or triggered manually
+# All Lambda deployments use this same workflow for consistency
+
+on:
+  workflow_call:
+    inputs:
+      function-name:
+        description: 'Lambda function name (e.g., GalleryUploadImage)'
+        required: true
+        type: string
+      stage:
+        description: 'Deployment stage (dev, staging, production)'
+        required: true
+        type: string
+      region:
+        description: 'AWS region'
+        required: false
+        type: string
+        default: 'us-east-1'
+      run-tests:
+        description: 'Whether to run tests before deploying'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+    outputs:
+      function-arn:
+        description: 'Deployed Lambda function ARN'
+        value: ${{ jobs.deploy.outputs.function-arn }}
+      version:
+        description: 'Published version number'
+        value: ${{ jobs.deploy.outputs.version }}
+
+  workflow_dispatch:
+    inputs:
+      function-name:
+        description: 'Lambda function name'
+        required: true
+        type: choice
+        options:
+          - Health
+          - GalleryListAlbums
+          - GalleryGetAlbum
+          - GalleryCreateAlbum
+          - GalleryUpdateAlbum
+          - GalleryDeleteAlbum
+          - GalleryListImages
+          - GalleryGetImage
+          - GalleryDeleteImage
+          - GalleryUpdateImage
+          - GallerySearchImages
+          - GalleryFlagImage
+          - GalleryUploadImage
+          - WishlistList
+          - WishlistGetItem
+          - WishlistCreateItem
+          - WishlistUpdateItem
+          - WishlistDeleteItem
+          - WishlistReorder
+          - WishlistSearch
+          - WishlistUploadImage
+          - MocInstructionsList
+          - MocInstructionsDownloadFile
+          - MocInstructionsDeleteFile
+          - MocInstructionsLinkGalleryImage
+          - MocInstructionsUnlinkGalleryImage
+          - MocInstructionsGetGalleryImages
+          - MocInstructionsGetStats
+          - MocInstructionsGetUploadsOverTime
+          - MocInstructionsUploadFile
+          - MocInstructionsInitializeWithFiles
+          - MocInstructionsFinalizeWithFiles
+          - MocPartsListsGet
+          - MocPartsListsCreate
+          - MocPartsListsUpdate
+          - MocPartsListsUpdateStatus
+          - MocPartsListsDelete
+          - MocPartsListsGetUserSummary
+          - MocPartsListsParse
+          - WebsocketConnect
+          - WebsocketDisconnect
+          - WebsocketDefault
+      stage:
+        description: 'Deployment stage'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+        default: dev
+      region:
+        description: 'AWS region'
+        required: false
+        type: string
+        default: 'us-east-1'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ========================================
+  # Job 1: Test (Optional)
+  # ========================================
+  test:
+    name: Test ${{ inputs.function-name }}
+    runs-on: ubuntu-latest
+    if: inputs.run-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run type checking
+        run: |
+          cd apps/api
+          pnpm check-types
+
+      - name: Run linting
+        run: |
+          cd apps/api
+          pnpm lint
+
+      - name: Run tests
+        run: |
+          cd apps/api
+          pnpm test
+        env:
+          NODE_ENV: test
+
+  # ========================================
+  # Job 2: Deploy Lambda Function
+  # ========================================
+  deploy:
+    name: Deploy ${{ inputs.function-name }} to ${{ inputs.stage }}
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: |
+      always() &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
+    outputs:
+      function-arn: ${{ steps.deploy.outputs.arn }}
+      version: ${{ steps.deploy.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Check layer ARNs exist
+        id: check-layers
+        run: |
+          cd apps/api/layers
+
+          MISSING_LAYERS=""
+
+          for layer in minimal-layer standard-layer processing-layer; do
+            ARN_FILE="${layer}/layer-arn-${{ inputs.stage }}.txt"
+            if [ ! -f "$ARN_FILE" ]; then
+              MISSING_LAYERS="$MISSING_LAYERS $layer"
+            fi
+          done
+
+          if [ -n "$MISSING_LAYERS" ]; then
+            echo "missing=true" >> $GITHUB_OUTPUT
+            echo "layers=$MISSING_LAYERS" >> $GITHUB_OUTPUT
+          else
+            echo "missing=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and deploy layers (if missing)
+        if: steps.check-layers.outputs.missing == 'true'
+        run: |
+          cd apps/api/layers
+          chmod +x build-and-deploy-layers.sh
+          ./build-and-deploy-layers.sh ${{ inputs.stage }} ${{ inputs.region }}
+
+      - name: Deploy Lambda function
+        id: deploy
+        run: |
+          cd apps/api
+          chmod +x scripts/deploy-lambda.sh
+
+          OUTPUT=$(./scripts/deploy-lambda.sh \
+            "${{ inputs.function-name }}" \
+            "${{ inputs.stage }}" \
+            "${{ inputs.region }}" 2>&1)
+
+          echo "$OUTPUT"
+
+          # Extract ARN and version from output
+          ARN=$(echo "$OUTPUT" | grep "FunctionArn" | cut -d'"' -f4 || echo "")
+          VERSION=$(echo "$OUTPUT" | grep "Version:" | awk '{print $2}' || echo "")
+
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Run smoke test
+        id: smoke-test
+        run: |
+          FUNCTION_ARN="${{ steps.deploy.outputs.arn }}"
+
+          if [ -z "$FUNCTION_ARN" ]; then
+            echo "⚠️  Could not extract function ARN, skipping smoke test"
+            exit 0
+          fi
+
+          echo "Running smoke test for $FUNCTION_ARN..."
+
+          # Invoke the function with a test payload
+          aws lambda invoke \
+            --function-name "lego-api-${{ inputs.function-name }}-${{ inputs.stage }}" \
+            --payload '{"httpMethod":"GET","path":"/health"}' \
+            --region "${{ inputs.region }}" \
+            /tmp/response.json || true
+
+          # Check response
+          if [ -f /tmp/response.json ]; then
+            echo "Response:"
+            cat /tmp/response.json
+
+            # Check for errors
+            if grep -q "errorMessage" /tmp/response.json; then
+              echo "❌ Smoke test failed - function returned error"
+              exit 1
+            else
+              echo "✅ Smoke test passed"
+            fi
+          fi
+
+      - name: Create deployment summary
+        if: always()
+        run: |
+          echo "# Deployment Summary: ${{ inputs.function-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Stage:** ${{ inputs.stage }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ inputs.region }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.deploy.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ steps.deploy.outputs.arn }}" ]; then
+            echo "**Function ARN:**" >> $GITHUB_STEP_SUMMARY
+            echo "\`${{ steps.deploy.outputs.arn }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.smoke-test.outcome }}" == "success" ]; then
+            echo "✅ **Smoke test:** Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.smoke-test.outcome }}" == "failure" ]; then
+            echo "❌ **Smoke test:** Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️  **Smoke test:** Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.check-layers.outputs.missing }}" == "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️  **Note:** Lambda layers were rebuilt and deployed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed for ${{ inputs.function-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs above for details." >> $GITHUB_STEP_SUMMARY

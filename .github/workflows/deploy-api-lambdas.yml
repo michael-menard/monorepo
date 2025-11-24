@@ -1,0 +1,236 @@
+name: Deploy API Lambda Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-api-lambdas.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+
+env:
+  NODE_VERSION: '20'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # ========================================
+  # Job 1: Detect Affected Lambda Functions
+  # ========================================
+  detect-changes:
+    name: Detect Affected Functions
+    runs-on: ubuntu-latest
+    outputs:
+      affected-functions: ${{ steps.detect.outputs.functions }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+      layer-changes: ${{ steps.detect.outputs.layer-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for git diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Detect affected Lambda functions
+        id: detect
+        run: |
+          cd apps/api
+
+          # Get affected functions
+          AFFECTED=$(node scripts/get-affected-lambdas.js --base=origin/main --verbose)
+
+          echo "Affected functions: $AFFECTED"
+          echo "functions=$AFFECTED" >> $GITHUB_OUTPUT
+
+          if [ -n "$AFFECTED" ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if layers changed
+          LAYER_CHANGES=""
+          if git diff --name-only origin/main...HEAD | grep -q "apps/api/layers/"; then
+            LAYER_CHANGES="true"
+          fi
+          echo "layer-changes=$LAYER_CHANGES" >> $GITHUB_OUTPUT
+
+  # ========================================
+  # Job 2: Run Tests for Changed Code
+  # ========================================
+  test:
+    name: Test API
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run type checking
+        run: |
+          cd apps/api
+          pnpm check-types
+
+      - name: Run linting
+        run: |
+          cd apps/api
+          pnpm lint
+
+      - name: Run unit tests
+        run: |
+          cd apps/api
+          pnpm test
+
+      - name: Run integration tests
+        run: |
+          cd apps/api
+          pnpm test:integration
+        env:
+          # Add test environment variables here
+          NODE_ENV: test
+
+  # ========================================
+  # Job 3: Build and Deploy Lambda Layers (if changed)
+  # ========================================
+  deploy-layers:
+    name: Deploy Lambda Layers
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test]
+    if: needs.detect-changes.outputs.layer-changes == 'true'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Determine stage
+        id: stage
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "stage=production" >> $GITHUB_OUTPUT
+          else
+            echo "stage=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and deploy layers
+        run: |
+          cd apps/api/layers
+          chmod +x build-and-deploy-layers.sh
+          ./build-and-deploy-layers.sh ${{ steps.stage.outputs.stage }} ${{ env.AWS_REGION }}
+
+      - name: Save layer ARNs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: layer-arns-${{ steps.stage.outputs.stage }}
+          path: apps/api/layers/*/layer-arn-*.txt
+          retention-days: 7
+
+  # ========================================
+  # Job 4: Deploy Lambda Functions (using reusable workflow)
+  # ========================================
+  deploy-functions:
+    name: Deploy ${{ matrix.function }}
+    needs: [detect-changes, test, deploy-layers]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.has-changes == 'true' &&
+      needs.test.result == 'success' &&
+      (needs.deploy-layers.result == 'success' || needs.deploy-layers.result == 'skipped')
+    strategy:
+      matrix:
+        # Split affected functions into array
+        function: ${{ fromJson(format('["{0}"]', join(fromJson(format('[{0}]', needs.detect-changes.outputs.affected-functions)), '","'))) }}
+      fail-fast: false # Continue even if one function fails
+      max-parallel: 3 # Deploy up to 3 functions in parallel
+    uses: ./.github/workflows/reusable-deploy-lambda.yml
+    with:
+      function-name: ${{ matrix.function }}
+      stage: ${{ github.ref == 'refs/heads/main' && 'production' || 'dev' }}
+      region: us-east-1
+      run-tests: false # Tests already ran in the test job
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  # ========================================
+  # Job 5: Deployment Summary
+  # ========================================
+  summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test, deploy-layers, deploy-functions]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
+            echo "✅ No changes detected - no deployment needed" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "## Affected Functions" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.detect-changes.outputs.affected-functions }}" | tr ' ' '\n' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.deploy-layers.result }}" == "success" ]; then
+            echo "✅ Lambda layers deployed successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.deploy-layers.result }}" == "skipped" ]; then
+            echo "⏭️ Lambda layers - no changes" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Lambda layers deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-functions.result }}" == "success" ]; then
+            echo "✅ Lambda functions deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some Lambda functions failed to deploy" >> $GITHUB_STEP_SUMMARY
+          fi
