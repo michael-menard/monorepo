@@ -9,6 +9,10 @@
  */
 
 import { SNSEvent, SNSEventRecord } from 'aws-lambda'
+import { createLambdaLogger } from '@repo/logger'
+
+// Initialize structured logger
+const logger = createLambdaLogger('budget-alerts-handler')
 
 /**
  * Budget alert notification structure from AWS Budget service
@@ -73,7 +77,9 @@ export const parseBudgetAlert = (snsMessage: string): BudgetAlert | null => {
       timestamp: alertData.Time || new Date().toISOString(),
     }
   } catch (error) {
-    console.error('Failed to parse budget alert:', error)
+    logger.error('Failed to parse budget alert', error instanceof Error ? error : undefined, {
+      messagePreview: snsMessage.substring(0, 200),
+    })
     return null
   }
 }
@@ -133,25 +139,27 @@ export const handleBudgetAlerts = async (event: SNSEvent) => {
       const alert = parseBudgetAlert(record.Sns.Message)
 
       if (!alert) {
-        console.error('Failed to parse budget alert from SNS message')
+        logger.error('Failed to parse budget alert from SNS message', undefined, {
+          messageId: record.Sns.MessageId,
+          subject: record.Sns.Subject,
+        })
         continue
       }
 
       const analysis = processBudgetAlert(alert)
 
-      // Log alert details
-      console.log('Budget Alert Received:', {
+      // Log alert details with structured context
+      logger.warn('Budget alert received', {
         budgetName: alert.budgetName,
         severity: analysis.severity,
-        utilization: `${analysis.utilizationPercentage}%`,
-        amount: `$${alert.actualAmount.amount}`,
-        limit: `$${alert.budgetLimit.amount}`,
-        threshold: `${alert.threshold}%`,
+        utilizationPercentage: analysis.utilizationPercentage,
+        actualAmount: alert.actualAmount.amount,
+        budgetLimit: alert.budgetLimit.amount,
+        currency: alert.budgetLimit.unit,
+        threshold: alert.threshold,
         timestamp: alert.timestamp,
+        actions: analysis.actions,
       })
-
-      // Log recommended actions
-      console.log('Recommended Actions:', analysis.actions)
 
       results.push({
         budgetName: alert.budgetName,
@@ -162,7 +170,9 @@ export const handleBudgetAlerts = async (event: SNSEvent) => {
         processed: true,
       })
     } catch (error) {
-      console.error('Error processing budget alert:', error)
+      logger.error('Error processing budget alert', error instanceof Error ? error : undefined, {
+        messageId: record.Sns.MessageId,
+      })
       results.push({
         error: error instanceof Error ? error.message : 'Unknown error',
         processed: false,

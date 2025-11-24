@@ -14,9 +14,13 @@ import {
   getCostByComponent,
   getCostByFunction,
 } from '../../lib/cost-monitoring/cost-explorer'
+import { createLambdaLogger } from '@repo/logger'
 
 // Initialize CloudWatch client
 const cloudWatchClient = new CloudWatchClient({ region: process.env.AWS_REGION || 'us-east-1' })
+
+// Initialize structured logger
+const logger = createLambdaLogger('cost-metrics-publisher')
 
 /**
  * Publish cost metrics to CloudWatch
@@ -63,11 +67,15 @@ function getDateRange() {
  * Lambda handler for cost metrics publishing
  */
 export const handler = async (event: ScheduledEvent, context: Context) => {
-  console.log('📊 Starting cost metrics publishing...', { event, context })
+  logger.info('Starting cost metrics publishing', {
+    requestId: context.requestId,
+    eventId: event.id,
+    time: event.time,
+  })
 
   try {
     const { startDate, endDate } = getDateRange()
-    console.log(`Fetching cost data for ${startDate} to ${endDate}`)
+    logger.info('Fetching cost data', { startDate, endDate })
 
     // Fetch cost data from Cost Explorer
     const [projectCosts, componentCosts, functionCosts] = await Promise.all([
@@ -83,7 +91,7 @@ export const handler = async (event: ScheduledEvent, context: Context) => {
         { Name: 'Project', Value: 'UserMetrics' },
         { Name: 'Period', Value: 'Daily' },
       ])
-      console.log(`Published total daily cost: $${totalCost}`)
+      logger.info('Published total daily cost', { totalCost, currency: 'USD' })
     }
 
     // Publish cost by component
@@ -99,7 +107,7 @@ export const handler = async (event: ScheduledEvent, context: Context) => {
               { Name: 'Component', Value: component },
               { Name: 'Period', Value: 'Daily' },
             ])
-            console.log(`Published component cost: ${component} = $${cost}`)
+            logger.info('Published component cost', { component, cost, currency: 'USD' })
           }
         }
       }
@@ -118,7 +126,7 @@ export const handler = async (event: ScheduledEvent, context: Context) => {
               { Name: 'Function', Value: func },
               { Name: 'Period', Value: 'Daily' },
             ])
-            console.log(`Published function cost: ${func} = $${cost}`)
+            logger.info('Published function cost', { function: func, cost, currency: 'USD' })
           }
         }
       }
@@ -141,10 +149,20 @@ export const handler = async (event: ScheduledEvent, context: Context) => {
           { Name: 'BudgetLimit', Value: budgetLimit.toString() },
         ],
       )
-      console.log(`Published budget utilization: ${utilizationPercentage.toFixed(2)}%`)
+      logger.info('Published budget utilization', {
+        utilizationPercentage: utilizationPercentage.toFixed(2),
+        budgetLimit,
+        dailyCost,
+      })
     }
 
-    console.log('✅ Cost metrics publishing completed successfully')
+    logger.info('Cost metrics publishing completed successfully', {
+      totalMetricsPublished: {
+        projectCosts: projectCosts.length,
+        componentCosts: componentCosts.length,
+        functionCosts: functionCosts.length,
+      },
+    })
 
     return {
       statusCode: 200,
@@ -159,7 +177,9 @@ export const handler = async (event: ScheduledEvent, context: Context) => {
       }),
     }
   } catch (error) {
-    console.error('❌ Error publishing cost metrics:', error)
+    logger.error('Error publishing cost metrics', error instanceof Error ? error : undefined, {
+      errorType: error instanceof Error ? error.name : 'Unknown',
+    })
 
     // Publish error metric
     await publishCostMetrics('UserMetrics/Cost', 'PublishingErrors', 1, [
