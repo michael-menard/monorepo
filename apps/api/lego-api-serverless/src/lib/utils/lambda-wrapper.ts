@@ -25,12 +25,18 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { errorResponseFromError } from '@monorepo/lambda-responses'
 import { sanitizeError, sanitizeErrorForLogging } from './error-sanitizer'
-import { createLogger } from './logger'
+import {
+  createLambdaLogger,
+  generateCorrelationId,
+  getXRayTraceId,
+  extractCorrelationId,
+} from '@repo/logger'
 import { emitMetric } from './cloudwatch-metrics'
 import { addAnnotation, addMetadata, addError } from './xray'
 import { recordColdStart, recordExecution, recordError } from '../tracking/cloudwatch-emf'
 
-const logger = createLogger('lambda-wrapper')
+// Base logger for wrapper (context will be added per request)
+const baseLogger = createLambdaLogger('lambda-wrapper')
 
 /**
  * Cold start detection
@@ -117,6 +123,23 @@ export function withErrorHandling(
     const functionName =
       options?.functionName || process.env.AWS_LAMBDA_FUNCTION_NAME || 'lambda-handler'
 
+    // Story 3.2: Generate or extract correlation ID for request tracing
+    const correlationId = extractCorrelationId(event.headers) || generateCorrelationId()
+
+    // Story 3.2: Extract X-Ray trace ID if available
+    const traceId = getXRayTraceId()
+
+    // Story 3.2: Create request-specific logger with full structured context
+    const logger = baseLogger.child({
+      requestId: context.requestId,
+      correlationId,
+      traceId,
+      userId: context.userId,
+      functionName,
+      method: context.method,
+      path: context.path,
+    })
+
     // Story 3.1: Detect and record cold starts
     const isColdStart = !isContainerInitialized
     if (isColdStart) {
@@ -129,7 +152,7 @@ export function withErrorHandling(
         logger.debug('Failed to record cold start (non-blocking)', { error: err })
       })
 
-      logger.info('Cold start detected', { functionName })
+      logger.info('Cold start detected')
     }
 
     // Story 5.3: Add X-Ray annotations for searchable fields
@@ -140,9 +163,11 @@ export function withErrorHandling(
     addAnnotation('path', context.path || 'UNKNOWN')
     addAnnotation('functionName', functionName)
     addAnnotation('coldStart', isColdStart)
+    addAnnotation('correlationId', correlationId) // Story 3.2: Add correlation ID to X-Ray
 
     // Story 5.3: Add X-Ray metadata for additional context
     addMetadata('request', 'requestId', context.requestId)
+    addMetadata('request', 'correlationId', correlationId) // Story 3.2
     addMetadata('request', 'sourceIp', context.sourceIp || 'unknown')
     addMetadata('request', 'userAgent', context.userAgent || 'unknown')
     addMetadata('request', 'isColdStart', isColdStart)
@@ -154,11 +179,9 @@ export function withErrorHandling(
     }
 
     try {
-      // Log incoming request
+      // Log incoming request with structured context
       if (options?.logRequest !== false) {
         logger.info('Incoming request', {
-          functionName,
-          ...context,
           pathParameters: event.pathParameters,
           queryStringParameters: event.queryStringParameters,
         })
@@ -170,11 +193,9 @@ export function withErrorHandling(
       // Calculate duration
       const duration = Date.now() - startTime
 
-      // Log successful response
+      // Log successful response with structured context
       if (options?.logResponse !== false) {
         logger.info('Request completed successfully', {
-          functionName,
-          requestId: context.requestId,
           statusCode: response.statusCode,
           duration,
         })
@@ -212,7 +233,14 @@ export function withErrorHandling(
         },
       })
 
-      return response
+      // Story 3.2: Add correlation ID to response headers for client-side tracing
+      return {
+        ...response,
+        headers: {
+          ...response.headers,
+          'X-Correlation-ID': correlationId,
+        },
+      }
     } catch (error) {
       // Calculate duration
       const duration = Date.now() - startTime
@@ -229,13 +257,15 @@ export function withErrorHandling(
       // Sanitize error for logging (keeps stack trace but removes credentials)
       const sanitizedForLog = sanitizeErrorForLogging(error)
 
-      // Log error with full context
-      logger.error('Request failed with error', {
-        functionName,
-        ...context,
-        error: sanitizedForLog,
-        duration,
-      })
+      // Log error with structured context (error object handled by logger)
+      logger.error(
+        'Request failed with error',
+        sanitizedForLog instanceof Error ? sanitizedForLog : undefined,
+        {
+          duration,
+          errorType: sanitizedForLog instanceof Error ? sanitizedForLog.name : 'Unknown',
+        },
+      )
 
       // Sanitize error for client response
       const sanitizedError = sanitizeError(error)
@@ -289,8 +319,15 @@ export function withErrorHandling(
         },
       })
 
-      // Return sanitized error response
-      return errorResponseFromError(error)
+      // Story 3.2: Return sanitized error response with correlation ID header
+      const errorResponse = errorResponseFromError(error)
+      return {
+        ...errorResponse,
+        headers: {
+          ...errorResponse.headers,
+          'X-Correlation-ID': correlationId,
+        },
+      }
     }
   }
 }
@@ -343,13 +380,15 @@ export function withValidation<T>(
 /**
  * Log structured CloudWatch log with request context
  *
- * Automatically includes request ID and user ID from Lambda context
+ * Automatically includes request ID, correlation ID, and user ID from Lambda context
  * This is a convenience function for handlers that use the wrapper
  *
  * @param level - Log level
  * @param message - Log message
  * @param event - Lambda event for context
  * @param additionalData - Additional data to log
+ *
+ * @deprecated Use the logger instance provided in the handler context instead
  */
 export function logWithContext(
   level: 'info' | 'warn' | 'error' | 'debug',
@@ -358,9 +397,19 @@ export function logWithContext(
   additionalData?: Record<string, unknown>,
 ): void {
   const context = extractRequestContext(event)
+  const correlationId = extractCorrelationId(event.headers) || generateCorrelationId()
+  const traceId = getXRayTraceId()
 
-  logger[level](message, {
+  // Create a temporary logger with full context
+  const contextLogger = baseLogger.child({
     ...context,
-    ...additionalData,
+    correlationId,
+    traceId,
   })
+
+  if (level === 'error') {
+    contextLogger.error(message, undefined, additionalData)
+  } else {
+    contextLogger[level](message, additionalData)
+  }
 }
