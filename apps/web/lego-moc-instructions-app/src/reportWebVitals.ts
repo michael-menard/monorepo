@@ -1,6 +1,18 @@
-import { performanceMonitor } from './services/performance'
+/**
+ * Web Vitals Reporting (Story 3.3)
+ *
+ * This module initializes Web Vitals tracking, sending metrics to CloudWatch
+ * via the Lambda ingestion endpoint for monitoring in Grafana dashboards.
+ */
 
-// Web Vitals callback function type
+import {
+  initWebVitals,
+  reportWebVitals as reportWebVitalsTracking,
+} from './lib/tracking/web-vitals'
+import { performanceMonitor } from './services/performance'
+import type { Metric } from 'web-vitals'
+
+// Web Vitals callback function type (for backwards compatibility)
 type WebVitalsCallback = (metric: {
   id: string
   name: string
@@ -8,46 +20,57 @@ type WebVitalsCallback = (metric: {
   rating: 'good' | 'needs-improvement' | 'poor'
 }) => void
 
-// Default analytics function
-const sendToAnalytics = (metric: { id: string; name: string; value: number; rating: string }) => {
-  // Send to our performance monitoring service
+// Enhanced analytics function that sends to both CloudWatch and local performance monitor
+const sendToAnalytics = (metric: Metric) => {
+  // Send to local performance monitoring service for backwards compatibility
   performanceMonitor.trackPerformanceMetric(metric.name, metric.value)
 
   // In development, log to console
   if (process.env.NODE_ENV === 'development') {
-    // Web vitals logging removed for production
-  }
-
-  // In production, you can send to external analytics services
-  if (process.env.NODE_ENV === 'production') {
-    // Example: Send to Google Analytics
-    // gtag('event', metric.name, {
-    //   event_category: 'Web Vitals',
-    //   value: Math.round(metric.value),
-    //   event_label: metric.id,
-    //   non_interaction: true,
-    // })
+    console.log('[Web Vitals]', {
+      name: metric.name,
+      value: metric.value,
+      rating: metric.rating,
+      id: metric.id,
+    })
   }
 }
 
+/**
+ * Initialize Web Vitals tracking
+ * Sends metrics to CloudWatch via Lambda endpoint (Story 3.3)
+ */
 const reportWebVitals = (onPerfEntry?: WebVitalsCallback) => {
-  if (onPerfEntry && onPerfEntry instanceof Function) {
+  if (onPerfEntry && typeof onPerfEntry === 'function') {
+    // Custom callback provided - use it along with our CloudWatch tracking
     import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
-      onCLS(onPerfEntry)
-      onINP(onPerfEntry)
-      onFCP(onPerfEntry)
-      onLCP(onPerfEntry)
-      onTTFB(onPerfEntry)
+      onCLS(metric => {
+        onPerfEntry(metric)
+        sendToAnalytics(metric)
+      })
+      onINP(metric => {
+        onPerfEntry(metric)
+        sendToAnalytics(metric)
+      })
+      onFCP(metric => {
+        onPerfEntry(metric)
+        sendToAnalytics(metric)
+      })
+      onLCP(metric => {
+        onPerfEntry(metric)
+        sendToAnalytics(metric)
+      })
+      onTTFB(metric => {
+        onPerfEntry(metric)
+        sendToAnalytics(metric)
+      })
     })
+
+    // Also initialize CloudWatch tracking
+    initWebVitals()
   } else {
-    // Use default analytics function
-    import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
-      onCLS(sendToAnalytics)
-      onINP(sendToAnalytics)
-      onFCP(sendToAnalytics)
-      onLCP(sendToAnalytics)
-      onTTFB(sendToAnalytics)
-    })
+    // Use default: send to CloudWatch and local performance monitor
+    reportWebVitalsTracking(sendToAnalytics)
   }
 }
 
