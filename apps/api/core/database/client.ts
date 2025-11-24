@@ -11,7 +11,7 @@ let AWSXRay: any = null
 try {
   AWSXRay = require('aws-xray-sdk-core')
 } catch (error) {
-  logger.warn('X-Ray SDK not available for database tracing')
+  logger.warn('X-Ray SDK not available for database tracing', { error })
 }
 
 /**

@@ -8,7 +8,7 @@
  * @see docs/stories/1.4.cost-monitoring-budget-alerts.md for implementation details
  */
 
-import { SNSEvent, SNSEventRecord } from 'aws-lambda'
+import { SNSEvent } from 'aws-lambda'
 import { createLambdaLogger } from '@repo/logger'
 
 // Initialize structured logger

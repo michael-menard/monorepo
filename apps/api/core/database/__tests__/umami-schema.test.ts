@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { pgSchema } from 'drizzle-orm/pg-core'
+
 
 // Mock external dependencies
 vi.mock('pg', () => ({
@@ -184,7 +184,7 @@ describe('Umami Database Schema', () => {
 
   describe('Relationships', () => {
     it('should define proper foreign key relationships', async () => {
-      const { website, session, websiteEvent } = await import('../umami-schema')
+      const { session, websiteEvent } = await import('../umami-schema')
       
       // Check that foreign key references are properly defined
       expect(session.websiteId).toBeDefined()

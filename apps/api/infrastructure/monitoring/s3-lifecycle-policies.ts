@@ -27,7 +27,7 @@ export interface S3LifecyclePoliciesConfig {
  * Apply cost optimization lifecycle policies to S3 bucket
  */
 export function applyS3LifecyclePolicies(config: S3LifecyclePoliciesConfig): void {
-  const { bucket, stage } = config
+  const { bucket } = config
 
   // Lifecycle rule 1: MOC files - Intelligent-Tiering after 30 days
   // MOC files have unpredictable access patterns, so Intelligent-Tiering optimizes cost automatically

@@ -1,4 +1,4 @@
-/// <reference path="./.sst/platform/config.d.ts" />
+import type {} from './.sst/platform/config.d.ts'
 
 /**
  * SST v3 (Ion) Configuration for LEGO Projects API Serverless Migration
@@ -48,9 +48,7 @@ export default $config({
     const { LambdaFunction } = await import('aws-cdk-lib/aws-events-targets')
 
     // Dynamic import for observability tags (SST v3 requirement)
-    const { requiredTags, componentTags, createResourceTags } = await import(
-      './infrastructure/observability/tags'
-    )
+    const { createResourceTags } = await import('./infrastructure/observability/tags')
 
     // ========================================
     // Story 1.2: VPC Networking Infrastructure
@@ -92,7 +90,7 @@ export default $config({
             SubnetType: 'PrivateSubnet',
           }
         },
-        natGateway: (args, info) => {
+        natGateway: args => {
           args.tags = {
             ...createResourceTags(stage, 'networking', 'engineering@example.com'),
             Name: `user-metrics-nat-gateway-${stage}`,
@@ -2776,7 +2774,7 @@ export default $config({
      */
     const dashboardName = `lego-api-sst-${stage}`
 
-    const dashboard = new aws.cloudwatch.Dashboard('LegoApiDashboard', {
+    new aws.cloudwatch.Dashboard('LegoApiDashboard', {
       dashboardName,
       dashboardBody: $jsonStringify(
         $output([

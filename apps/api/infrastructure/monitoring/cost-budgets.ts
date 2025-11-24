@@ -59,7 +59,7 @@ export interface BudgetResources {
  * Create AWS Budget with multi-threshold alerts
  */
 export function createBudget(config: BudgetConfig): BudgetResources {
-  const { monthlyLimit, emailAddress, slackWebhookUrl, accountId, stage } = config
+  const { monthlyLimit, emailAddress, slackWebhookUrl, stage } = config
 
   // Create SNS topic for budget alerts
   const snsTopic = new aws.sns.Topic('BudgetAlertTopic', {

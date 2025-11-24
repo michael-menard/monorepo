@@ -17,7 +17,7 @@ import { LAMBDA_FUNCTIONS } from './lambda-layer-mapping'
 // ========================================
 
 export default $config({
-  app(input) {
+  app() {
     return {
       name: 'lego-api-serverless',
       // ...
@@ -41,7 +41,7 @@ export default $config({
     // ========================================
 
     // Example: Single function
-    const health = new sst.aws.Function('Health', {
+    new sst.aws.Function('Health', {
       handler: 'endpoints/health/handler.handler',
       layers: layers.minimal, // Minimal layer only
       memory: '256 MB',
@@ -50,7 +50,7 @@ export default $config({
     })
 
     // Example: Function with multiple layers
-    const galleryUploadImage = new sst.aws.Function('GalleryUploadImage', {
+    new sst.aws.Function('GalleryUploadImage', {
       handler: 'endpoints/gallery/upload-image/handler.handler',
       layers: layers.all, // Minimal + Standard + Processing
       memory: '1024 MB', // Sharp needs more memory

@@ -9,7 +9,6 @@ import { sanitizeError, sanitizeErrorForLogging } from '../error-sanitizer'
 import {
   ValidationError,
   NotFoundError,
-  DatabaseError,
   InternalServerError,
 } from '@/core/utils/responses'
 

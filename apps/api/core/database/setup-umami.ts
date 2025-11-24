@@ -341,7 +341,7 @@ class UmamiSetup {
           logger.warn('⚠️  Umami user can see public schema tables (metadata access only)')
         }
       } catch (error) {
-        logger.info('✅ Umami user properly restricted from public schema operations')
+        logger.info('✅ Umami user properly restricted from public schema operations', { error })
       }
     } finally {
       client.release()

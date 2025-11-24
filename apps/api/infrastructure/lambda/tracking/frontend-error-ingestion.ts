@@ -52,7 +52,7 @@ const BatchErrorPayloadSchema = z.object({
   errors: z.array(ErrorPayloadSchema),
 })
 
-type BatchErrorPayload = z.infer<typeof BatchErrorPayloadSchema>
+
 
 /**
  * Lambda handler for frontend error ingestion

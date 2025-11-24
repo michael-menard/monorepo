@@ -46,6 +46,7 @@ try {
 } catch (error) {
   // X-Ray SDK not installed - tracing will be no-op
   logger.warn('AWS X-Ray SDK not available. Tracing disabled.', {
+    error,
     note: 'Install aws-xray-sdk-core to enable tracing',
   })
 }

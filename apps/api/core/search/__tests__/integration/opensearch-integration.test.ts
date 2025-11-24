@@ -5,7 +5,7 @@
  * fuzzy matching, and PostgreSQL fallback.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mockMocs } from '@/core/__tests__/fixtures/mock-mocs'
 
