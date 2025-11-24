@@ -1,10 +1,11 @@
 /**
- * Lambda Handler Error Wrapper (Story 5.3: X-Ray annotations)
+ * Lambda Handler Error Wrapper (Story 3.1: EMF Instrumentation + Story 5.3: X-Ray annotations)
  *
  * Wraps Lambda handlers with:
  * - Automatic error handling and sanitization
  * - Structured logging with request context
- * - CloudWatch metrics emission
+ * - CloudWatch EMF metrics emission (Story 3.1)
+ * - Cold start detection and tracking (Story 3.1)
  * - Error response generation
  * - Request/response logging
  * - X-Ray annotations and metadata (Story 5.3)
@@ -27,8 +28,15 @@ import { sanitizeError, sanitizeErrorForLogging } from './error-sanitizer'
 import { createLogger } from './logger'
 import { emitMetric } from './cloudwatch-metrics'
 import { addAnnotation, addMetadata, addError } from './xray'
+import { recordColdStart, recordExecution, recordError } from '../tracking/cloudwatch-emf'
 
 const logger = createLogger('lambda-wrapper')
+
+/**
+ * Cold start detection
+ * This variable persists across warm invocations in the same container
+ */
+let isContainerInitialized = false
 
 /**
  * Request context for logging and tracing
@@ -106,7 +114,23 @@ export function withErrorHandling(
   return async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
     const startTime = Date.now()
     const context = extractRequestContext(event)
-    const functionName = options?.functionName || 'lambda-handler'
+    const functionName =
+      options?.functionName || process.env.AWS_LAMBDA_FUNCTION_NAME || 'lambda-handler'
+
+    // Story 3.1: Detect and record cold starts
+    const isColdStart = !isContainerInitialized
+    if (isColdStart) {
+      isContainerInitialized = true
+      // Record cold start asynchronously (non-blocking)
+      recordColdStart(functionName, {
+        Method: context.method || 'UNKNOWN',
+        Path: context.path || 'UNKNOWN',
+      }).catch(err => {
+        logger.debug('Failed to record cold start (non-blocking)', { error: err })
+      })
+
+      logger.info('Cold start detected', { functionName })
+    }
 
     // Story 5.3: Add X-Ray annotations for searchable fields
     if (context.userId) {
@@ -115,11 +139,13 @@ export function withErrorHandling(
     addAnnotation('method', context.method || 'UNKNOWN')
     addAnnotation('path', context.path || 'UNKNOWN')
     addAnnotation('functionName', functionName)
+    addAnnotation('coldStart', isColdStart)
 
     // Story 5.3: Add X-Ray metadata for additional context
     addMetadata('request', 'requestId', context.requestId)
     addMetadata('request', 'sourceIp', context.sourceIp || 'unknown')
     addMetadata('request', 'userAgent', context.userAgent || 'unknown')
+    addMetadata('request', 'isColdStart', isColdStart)
     if (event.pathParameters) {
       addMetadata('request', 'pathParameters', event.pathParameters)
     }
@@ -154,7 +180,17 @@ export function withErrorHandling(
         })
       }
 
-      // Emit success metrics
+      // Story 3.1: Record EMF execution metrics (asynchronous, non-blocking)
+      recordExecution(functionName, duration, false, {
+        Method: context.method || 'UNKNOWN',
+        Path: context.path || 'UNKNOWN',
+        StatusCode: response.statusCode.toString(),
+        ...(context.userId && { UserId: context.userId }),
+      }).catch(err => {
+        logger.debug('Failed to record EMF execution metrics (non-blocking)', { error: err })
+      })
+
+      // Emit legacy CloudWatch metrics (kept for backwards compatibility)
       await emitMetric({
         metricName: 'RequestSuccess',
         value: 1,
@@ -204,7 +240,33 @@ export function withErrorHandling(
       // Sanitize error for client response
       const sanitizedError = sanitizeError(error)
 
-      // Emit error metrics
+      // Story 3.1: Record EMF error metrics (asynchronous, non-blocking)
+      recordError(
+        functionName,
+        sanitizedError.errorType,
+        sanitizedError.message,
+        sanitizedError.statusCode,
+        {
+          Method: context.method || 'UNKNOWN',
+          Path: context.path || 'UNKNOWN',
+          ...(context.userId && { UserId: context.userId }),
+        },
+      ).catch(err => {
+        logger.debug('Failed to record EMF error metrics (non-blocking)', { error: err })
+      })
+
+      // Story 3.1: Record EMF execution metrics with error flag
+      recordExecution(functionName, duration, true, {
+        Method: context.method || 'UNKNOWN',
+        Path: context.path || 'UNKNOWN',
+        ErrorType: sanitizedError.errorType,
+        StatusCode: sanitizedError.statusCode.toString(),
+        ...(context.userId && { UserId: context.userId }),
+      }).catch(err => {
+        logger.debug('Failed to record EMF execution metrics (non-blocking)', { error: err })
+      })
+
+      // Emit legacy CloudWatch error metrics (kept for backwards compatibility)
       await emitMetric({
         metricName: 'RequestError',
         value: 1,
@@ -268,17 +330,14 @@ export function withValidation<T>(
     logResponse?: boolean
   },
 ): (event: APIGatewayProxyEventV2) => Promise<APIGatewayProxyResultV2> {
-  return withErrorHandling(
-    async (event: APIGatewayProxyEventV2) => {
-      // Parse and validate request body
-      const body = event.body ? JSON.parse(event.body) : {}
-      const validatedData = validator.parse(body)
+  return withErrorHandling(async (event: APIGatewayProxyEventV2) => {
+    // Parse and validate request body
+    const body = event.body ? JSON.parse(event.body) : {}
+    const validatedData = validator.parse(body)
 
-      // Call handler with validated data
-      return await handler(event, validatedData)
-    },
-    options,
-  )
+    // Call handler with validated data
+    return await handler(event, validatedData)
+  }, options)
 }
 
 /**

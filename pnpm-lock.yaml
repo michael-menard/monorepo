@@ -183,6 +183,9 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      aws-embedded-metrics:
+        specifier: 4.2.1
+        version: 4.2.1
       aws-jwt-verify:
         specifier: 5.1.1
         version: 5.1.1
@@ -3197,6 +3200,9 @@ packages:
   '@csstools/css-tokenizer@3.0.4':
     resolution: {integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==}
     engines: {node: '>=18'}
+
+  '@datastructures-js/heap@4.3.7':
+    resolution: {integrity: sha512-Dx4un7Uj0dVxkfoq4RkpzsY2OrvNJgQYZ3n3UlGdl88RxxdHd7oTi21/l3zoxUUe0sXFuNUrfmWqlHzqnoN6Ug==}
 
   '@dependents/detective-less@5.0.1':
     resolution: {integrity: sha512-Y6+WUMsTFWE5jb20IFP4YGa5IrGY/+a/FbOSjDF/wz9gepU2hwCYSXRHP/vPwBvwcY3SVMASt4yXxbXNXigmZQ==}
@@ -7414,6 +7420,10 @@ packages:
 
   aws-amplify@6.15.7:
     resolution: {integrity: sha512-ikCa5sRsUaZ5UteINjAtlmNsJnSOEtsqid+/Erc60ZbKB9tyF0W1etG4Xiu+azTZatiO5wTncGo7fzLXQZZIYw==}
+
+  aws-embedded-metrics@4.2.1:
+    resolution: {integrity: sha512-uzydBXlGQVTB2sZ9ACCQZM3y0u4wdvxxRKFL9LP6RdfI2GcOrCcAsz65UKQvX9iagxFhah322VvvatgP8E7MIg==}
+    engines: {node: '>=10.0.0'}
 
   aws-jwt-verify@5.1.1:
     resolution: {integrity: sha512-j6whGdGJmQ27agk4ijY8RPv6itb8JLb7SCJ86fEnneTcSBrpxuwL8kLq6y5WVH95aIknyAloEqAsaOLS1J8ITQ==}
@@ -16947,6 +16957,8 @@ snapshots:
 
   '@csstools/css-tokenizer@3.0.4': {}
 
+  '@datastructures-js/heap@4.3.7': {}
+
   '@dependents/detective-less@5.0.1':
     dependencies:
       gonzales-pe: 4.3.0
@@ -22626,6 +22638,10 @@ snapshots:
     transitivePeerDependencies:
       - '@aws-amplify/react-native'
       - aws-crt
+
+  aws-embedded-metrics@4.2.1:
+    dependencies:
+      '@datastructures-js/heap': 4.3.7
 
   aws-jwt-verify@5.1.1: {}
 
