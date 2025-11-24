@@ -11,8 +11,8 @@ import {
   idbSetData,
   idbSetLastSync,
   isIDBAvailable,
-} from './idbQueue'
-import type { IDBAction } from './idbQueue'
+} from './idbQueue.js'
+import type { IDBAction } from './idbQueue.js'
 
 /**
  * Zod schemas for offline data
@@ -61,7 +61,7 @@ class OfflineManager {
   }
 
   private handleOnlineEvent(): void {
-    this.processQueuedActions().catch(error => {})
+    this.processQueuedActions().catch(() => {})
   }
 
   private handleOfflineEvent(): void {}
@@ -69,7 +69,7 @@ class OfflineManager {
   private handleVisibilityChange(): void {
     // Sync when app becomes visible and we're online
     if (!document.hidden && navigator.onLine) {
-      this.processQueuedActions().catch(error => {})
+      this.processQueuedActions().catch(() => {})
     }
   }
 
@@ -120,7 +120,9 @@ class OfflineManager {
   private setOfflineDataLocal(data: OfflineData): void {
     try {
       localStorage.setItem(this.OFFLINE_DATA_KEY, JSON.stringify(data))
-    } catch (error) {}
+    } catch {
+      // Silently fail if localStorage is unavailable
+    }
   }
 
   /* =========================
@@ -139,7 +141,9 @@ class OfflineManager {
         offlineData.data[key] = { data, timestamp: Date.now() }
         this.setOfflineDataLocal(offlineData)
       }
-    } catch (error) {}
+    } catch {
+      // Silently fail if storage is unavailable
+    }
   }
 
   // Retrieve data for offline access
@@ -173,7 +177,9 @@ class OfflineManager {
         actions.push(newAction)
         this.setOfflineActionsLocal(actions)
       }
-    } catch (error) {}
+    } catch {
+      // Silently fail if storage is unavailable
+    }
   }
 
   // Process queued actions when online
@@ -342,7 +348,9 @@ class OfflineManager {
         localStorage.removeItem(this.OFFLINE_DATA_KEY)
         this.initializeOfflineDataLocal()
       }
-    } catch (error) {}
+    } catch {
+      // Silently fail if storage is unavailable
+    }
   }
 
   /* =========================
@@ -379,7 +387,9 @@ class OfflineManager {
   private setOfflineActionsLocal(actions: Array<OfflineAction>): void {
     try {
       localStorage.setItem(this.OFFLINE_ACTIONS_KEY, JSON.stringify(actions))
-    } catch (error) {}
+    } catch {
+      // Silently fail if localStorage is unavailable
+    }
   }
 
   private generateId(): string {

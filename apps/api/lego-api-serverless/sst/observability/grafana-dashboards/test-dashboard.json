@@ -1,0 +1,210 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "cloudwatch-test",
+    "title": "CloudWatch Data Source Test Dashboard",
+    "tags": ["test", "validation", "cloudwatch"],
+    "style": "dark",
+    "timezone": "UTC",
+    "refresh": "1m",
+    "folderId": null,
+    "folderUid": "application-folder",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "stage",
+          "type": "custom",
+          "options": [
+            { "text": "dev", "value": "dev", "selected": true },
+            { "text": "staging", "value": "staging", "selected": false },
+            { "text": "prod", "value": "prod", "selected": false }
+          ],
+          "current": { "text": "dev", "value": "dev" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Data Source Connection Test",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/Lambda",
+            "metricName": "Invocations",
+            "dimensions": {},
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "green", "value": 1 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Lambda Functions Available",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/Lambda",
+            "metricName": "Invocations",
+            "dimensions": {},
+            "statistics": ["SampleCount"],
+            "period": "3600"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "API Gateway Metrics Test",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {},
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "green", "value": 1 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 }
+      },
+      {
+        "id": 4,
+        "title": "RDS Metrics Test",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/RDS",
+            "metricName": "CPUUtilization",
+            "dimensions": {},
+            "statistics": ["Average"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 50 },
+                { "color": "red", "value": 80 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 }
+      },
+      {
+        "id": 5,
+        "title": "CloudWatch Logs Test",
+        "type": "logs",
+        "targets": [
+          {
+            "datasource": "CloudWatch-Logs-UserMetrics",
+            "expression": "fields @timestamp, @message | limit 10",
+            "logGroups": ["/aws/lambda/lego-api-serverless-$stage-HealthCheckFunction"]
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 }
+      },
+      {
+        "id": 6,
+        "title": "Metric Discovery Test",
+        "type": "table",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/Lambda",
+            "metricName": "Duration",
+            "dimensions": {},
+            "statistics": ["Average", "Maximum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "ms"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 }
+      },
+      {
+        "id": 7,
+        "title": "Time Series Data Test",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/Lambda",
+            "metricName": "Invocations",
+            "dimensions": {},
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        },
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Data Source Test Results",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": false,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "type": "dashboard"
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}

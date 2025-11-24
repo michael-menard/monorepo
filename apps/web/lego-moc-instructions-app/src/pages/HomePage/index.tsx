@@ -13,10 +13,10 @@ import {
   Zap,
 } from 'lucide-react'
 import { config } from '../../config/environment.js'
-import DesignSystemGrid from '../../components/DesignSystemGrid'
-import ColorTest from '../../components/ColorTest'
-import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo'
-import TypographyShowcase from '../../components/TypographyShowcase'
+import DesignSystemGrid from '../../components/DesignSystemGrid.js'
+import ColorTest from '../../components/ColorTest.js'
+import ButtonCustomizationDemo from '../../components/ButtonCustomizationDemo.js'
+import TypographyShowcase from '../../components/TypographyShowcase.js'
 
 function HomePage() {
   // Mock authentication hook - will be replaced with real auth later
