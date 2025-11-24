@@ -17,6 +17,10 @@
     "./schema": {
       "types": "./dist/schema.d.ts",
       "default": "./dist/schema.js"
+    },
+    "./generated-schemas": {
+      "types": "./dist/generated-schemas.d.ts",
+      "default": "./dist/generated-schemas.js"
     }
   },
   "scripts": {
@@ -27,10 +31,13 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.38.3",
-    "pg": "^8.13.1"
+    "drizzle-zod": "0.8.3",
+    "pg": "^8.13.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",
+    "tsx": "4.20.6",
     "typescript": "^5.8.0"
   },
   "keywords": [
