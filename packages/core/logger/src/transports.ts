@@ -185,3 +185,62 @@ export class NullTransport implements ILogTransport {
     // Do nothing
   }
 }
+
+/**
+ * Browser console transport (pino-free for browser compatibility)
+ */
+export class BrowserConsoleTransport implements ILogTransport {
+  private readonly context?: string
+
+  constructor(context?: string) {
+    this.context = context
+  }
+
+  log(entry: LogEntry): void {
+    const { level, message, context, metadata, error } = entry
+    const prefix = context || this.context ? `[${context || this.context}]` : ''
+    const fullMessage = prefix ? `${prefix} ${message}` : message
+
+    const logData = {
+      ...(metadata && metadata),
+      ...(error && { error }),
+    }
+
+    const hasData = Object.keys(logData).length > 0
+
+    switch (level) {
+      case LogLevel.DEBUG:
+        if (hasData) {
+          console.debug(fullMessage, logData)
+        } else {
+          console.debug(fullMessage)
+        }
+        break
+      case LogLevel.INFO:
+        if (hasData) {
+          console.info(fullMessage, logData)
+        } else {
+          console.info(fullMessage)
+        }
+        break
+      case LogLevel.WARN:
+        if (hasData) {
+          console.warn(fullMessage, logData)
+        } else {
+          console.warn(fullMessage)
+        }
+        break
+      case LogLevel.ERROR:
+        if (hasData) {
+          console.error(fullMessage, logData)
+        } else {
+          console.error(fullMessage)
+        }
+        break
+    }
+  }
+
+  async flush(): Promise<void> {
+    // No-op for console transport
+  }
+}

@@ -1,6 +1,12 @@
 // Main exports
 export { Logger, PerformanceLogger, ApiLogger } from './logger'
-export { ConsoleTransport, StorageTransport, RemoteTransport, NullTransport } from './transports'
+export {
+  ConsoleTransport,
+  StorageTransport,
+  RemoteTransport,
+  NullTransport,
+  BrowserConsoleTransport,
+} from './transports'
 export {
   LoggerFactory,
   createEnvironmentConfig,

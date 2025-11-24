@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Logger, BrowserConsoleTransport, LogLevel } from '@repo/logger'
 import { config } from '../config/environment.js'
 import {
   idbAddAction,
@@ -15,31 +16,20 @@ import {
 import type { IDBAction } from './idbQueue.js'
 
 /**
- * Simple browser-compatible logger
+ * Initialize logger for offline manager
  */
-const logger = {
-  error: (message: string, error?: Error, metadata?: Record<string, unknown>) => {
-    // eslint-disable-next-line no-console
-    console.error(`[OfflineManager] ${message}`, { error, ...metadata })
-    // TODO: Send to remote logging service (e.g., Sentry, CloudWatch)
-  },
-  warn: (message: string, metadata?: Record<string, unknown>) => {
-    // eslint-disable-next-line no-console
-    console.warn(`[OfflineManager] ${message}`, metadata)
-  },
-  info: (message: string, metadata?: Record<string, unknown>) => {
-    if (config.app.environment === 'development') {
-      // eslint-disable-next-line no-console
-      console.info(`[OfflineManager] ${message}`, metadata)
-    }
-  },
-  debug: (message: string, metadata?: Record<string, unknown>) => {
-    if (config.app.environment === 'development') {
-      // eslint-disable-next-line no-console
-      console.debug(`[OfflineManager] ${message}`, metadata)
-    }
-  },
-}
+const logger = new Logger({
+  level: config.app.environment === 'development' ? LogLevel.DEBUG : LogLevel.WARN,
+  context: 'OfflineManager',
+})
+
+// Add browser console transport
+logger.addTransport(new BrowserConsoleTransport('OfflineManager'))
+
+// TODO: Add remote transport for production error tracking
+// if (config.app.environment === 'production') {
+//   logger.addTransport(new RemoteTransport(config.logging.endpoint))
+// }
 
 /**
  * Zod schemas for offline data
