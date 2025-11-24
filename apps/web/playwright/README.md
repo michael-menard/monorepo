@@ -1,10 +1,10 @@
-# E2E Testing App
+# Playwright Testing App
 
 This app contains all end-to-end (E2E) tests for the monorepo using Playwright.
 
 ## Overview
 
-All Playwright tests have been centralized in this dedicated e2e app to:
+All Playwright tests have been centralized in this dedicated playwright app to:
 
 - Provide a single location for all E2E tests
 - Simplify test organization and maintenance
@@ -14,7 +14,7 @@ All Playwright tests have been centralized in this dedicated e2e app to:
 ## Directory Structure
 
 ```
-apps/e2e/
+apps/web/playwright/
 ├── tests/
 │   ├── auth/           # Authentication flow tests
 │   ├── navigation/     # Navigation and routing tests

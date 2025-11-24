@@ -185,7 +185,7 @@ else
     echo -e "${GREEN}✅ Test users already seeded ($USER_COUNT users)${NC}"
 fi
 
-cd apps/e2e
+cd apps/web/playwright
 
 # If setup-only flag is set, exit here
 if [ "$SETUP_ONLY" = true ]; then

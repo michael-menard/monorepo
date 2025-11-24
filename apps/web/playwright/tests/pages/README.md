@@ -85,15 +85,15 @@ This directory contains comprehensive end-to-end tests for all pages in the Lego
 # From monorepo root
 pnpm test:e2e:pages
 
-# From e2e app directory
-cd apps/e2e
+# From playwright app directory
+cd apps/web/playwright
 pnpm test:pages
 ```
 
 ### Run Specific Page Tests
 ```bash
-# From e2e app directory
-cd apps/e2e
+# From playwright app directory
+cd apps/web/playwright
 
 # Run only home page tests
 pnpm test tests/pages/app-pages-native.spec.ts
@@ -107,7 +107,7 @@ pnpm test tests/pages/ --grep "error"
 
 ### Run Tests with UI
 ```bash
-cd apps/e2e
+cd apps/web/playwright
 pnpm test:ui
 ```
 

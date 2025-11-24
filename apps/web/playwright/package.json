@@ -1,5 +1,5 @@
 {
-  "name": "@repo/e2e",
+  "name": "@repo/playwright",
   "private": true,
   "type": "module",
   "scripts": {
