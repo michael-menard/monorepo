@@ -16,6 +16,14 @@ const buttonVariants = cva(
         secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
         link: 'text-primary underline-offset-4 hover:underline',
+        // LEGO MOC-specific variants
+        'lego-primary': 'bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg transition-all duration-200 font-medium',
+        'lego-secondary': 'bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/80 hover:shadow-lg transition-all duration-200 font-medium border border-secondary-300',
+        'lego-accent': 'bg-accent text-accent-foreground shadow-md hover:bg-accent/90 hover:shadow-lg transition-all duration-200 font-medium',
+        'lego-success': 'bg-success text-success-foreground shadow-md hover:bg-success/90 hover:shadow-lg transition-all duration-200 font-medium',
+        'lego-warning': 'bg-warning text-warning-foreground shadow-md hover:bg-warning/90 hover:shadow-lg transition-all duration-200 font-medium',
+        'lego-outline': 'border-2 border-primary bg-background text-primary shadow-sm hover:bg-primary hover:text-primary-foreground hover:shadow-md transition-all duration-200 font-medium',
+        'lego-ghost': 'text-primary hover:bg-primary/10 hover:text-primary transition-all duration-200 font-medium',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',

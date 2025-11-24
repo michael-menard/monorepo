@@ -5,6 +5,9 @@ export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export { Input } from './input'
 export { Label } from './label'
 
+// LEGO MOC-specific components
+export { MocCard, MocCardCompact, DifficultyBadge, mocCardVariants } from './components/moc-card'
+
 // Form components
 export {
   Form,
@@ -312,6 +315,9 @@ export {
   TableSkeleton,
   ListSkeleton,
   FormSkeleton,
+  MocCardSkeleton,
+  MocCardCompactSkeleton,
+  GalleryGridSkeleton,
   skeletonVariants,
 } from './skeleton'
 

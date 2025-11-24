@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
+@import "@repo/design-system/design-tokens.css";
 
 @theme {
   --color-border: hsl(var(--border));
@@ -26,16 +28,16 @@
 
 @layer base {
   :root {
-    /* Your Enhanced Color Palette */
-    --background: 45 67% 97%;         /* #FAF8F1 - Your warm cream background */
-    --foreground: 188 45% 15%;        /* Very dark teal - high contrast */
-    --primary: 178 79% 32%;           /* #129990 - Your vibrant teal */
+    /* LEGO MOC Enhanced Color Palette - Light Theme */
+    --background: 45 67% 98%;         /* Very light warm cream background */
+    --foreground: 178 79% 15%;        /* Very dark teal - high contrast text */
+    --primary: 178 79% 32%;           /* Vibrant teal - primary actions */
     --primary-foreground: 0 0% 100%;  /* Pure white for maximum contrast */
-    --secondary: 45 67% 84%;          /* #FAEAB1 - Your warm cream */
-    --secondary-foreground: 178 79% 20%; /* Darker version of vibrant teal */
-    --accent: 168 18% 43%;            /* #5A827E - Your muted sage teal */
+    --secondary: 45 67% 90%;          /* Light warm cream - secondary elements */
+    --secondary-foreground: 178 79% 20%; /* Dark teal for secondary text */
+    --accent: 168 18% 43%;            /* Muted sage teal - accent elements */
     --accent-foreground: 0 0% 100%;   /* White text for good contrast */
-    --muted: 0 17% 96%;               /* #F6F0F0 - Your surface color */
+    --muted: 0 17% 96%;               /* Surface color - muted backgrounds */
     --muted-foreground: 168 18% 35%;  /* Darker sage for secondary text */
     --card: 0 17% 96%;                /* #F6F0F0 - Your surface color for cards */
     --card-foreground: 188 45% 15%;   /* Dark teal text */
@@ -44,8 +46,14 @@
     --border: 0 17% 90%;              /* Slightly darker than surface */
     --input: 0 17% 90%;               /* Input borders */
     --ring: 178 79% 32%;              /* Focus ring - vibrant teal */
-    --destructive: 0 89% 26%;         /* #7D0A0A - Your deep burgundy */
-    --destructive-foreground: 0 0% 100%; /* White text */
+    --destructive: 0 89% 26%;         /* Deep burgundy for destructive actions */
+    --destructive-foreground: 0 0% 100%; /* White text for destructive buttons */
+    --success: 142 76% 36%;           /* Green for success states */
+    --success-foreground: 0 0% 100%;  /* White text for success elements */
+    --warning: 38 92% 50%;            /* Orange/Yellow for warnings */
+    --warning-foreground: 0 0% 0%;    /* Black text for warning elements */
+    --info: 217 91% 60%;              /* Blue for informational elements */
+    --info-foreground: 0 0% 100%;     /* White text for info elements */
     --radius: 0.5rem;
   }
 
@@ -69,6 +77,12 @@
     --ring: 178 79% 45%;              /* Bright vibrant teal focus */
     --destructive: 0 89% 45%;         /* Brighter burgundy for dark mode */
     --destructive-foreground: 0 17% 96%; /* Light text */
+    --success: 142 76% 45%;           /* Brighter green for dark mode */
+    --success-foreground: 0 17% 96%;  /* Light text for success elements */
+    --warning: 38 92% 60%;            /* Brighter orange/yellow for dark mode */
+    --warning-foreground: 0 0% 0%;    /* Black text for warning elements */
+    --info: 217 91% 70%;              /* Brighter blue for dark mode */
+    --info-foreground: 0 0% 0%;       /* Black text for info elements */
   }
 
   * {

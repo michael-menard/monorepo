@@ -210,6 +210,97 @@ const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
 )
 FormSkeleton.displayName = 'FormSkeleton'
 
+// LEGO MOC-specific skeleton components
+export interface MocCardSkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  showImage?: boolean
+  showMetadata?: boolean
+  showActions?: boolean
+}
+
+const MocCardSkeleton = React.forwardRef<HTMLDivElement, MocCardSkeletonProps>(
+  ({ className, showImage = true, showMetadata = true, showActions = true, ...props }, ref) => (
+    <div ref={ref} className={cn('space-y-3', className)} {...props}>
+      {/* Image skeleton */}
+      {showImage && <Skeleton className="h-48 w-full rounded-t-xl" />}
+
+      {/* Content skeleton */}
+      <div className="p-6 space-y-3">
+        {/* Title skeleton */}
+        <Skeleton className="h-6 w-3/4" />
+
+        {/* Description skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+
+        {/* Metadata skeleton */}
+        {showMetadata && (
+          <div className="flex gap-2 pt-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        )}
+
+        {/* Actions skeleton */}
+        {showActions && (
+          <div className="flex gap-2 pt-3">
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        )}
+      </div>
+    </div>
+  ),
+)
+MocCardSkeleton.displayName = 'MocCardSkeleton'
+
+// Compact MOC Card Skeleton
+export interface MocCardCompactSkeletonProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+const MocCardCompactSkeleton = React.forwardRef<HTMLDivElement, MocCardCompactSkeletonProps>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('flex items-center gap-4 p-4', className)} {...props}>
+      {/* Image skeleton */}
+      <Skeleton className="h-16 w-16 rounded-lg flex-shrink-0" />
+
+      {/* Content skeleton */}
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <div className="flex gap-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-12" />
+        </div>
+      </div>
+
+      {/* Actions skeleton */}
+      <div className="flex gap-2 flex-shrink-0">
+        <Skeleton className="h-8 w-8 rounded" />
+        <Skeleton className="h-8 w-8 rounded" />
+      </div>
+    </div>
+  ),
+)
+MocCardCompactSkeleton.displayName = 'MocCardCompactSkeleton'
+
+// Gallery Grid Skeleton
+export interface GalleryGridSkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  count?: number
+}
+
+const GalleryGridSkeleton = React.forwardRef<HTMLDivElement, GalleryGridSkeletonProps>(
+  ({ className, count = 12, ...props }, ref) => (
+    <div ref={ref} className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6', className)} {...props}>
+      {Array.from({ length: count }).map((_, i) => (
+        <MocCardSkeleton key={i} />
+      ))}
+    </div>
+  ),
+)
+GalleryGridSkeleton.displayName = 'GalleryGridSkeleton'
+
 export {
   Skeleton,
   CardSkeleton,
@@ -218,5 +309,8 @@ export {
   TableSkeleton,
   ListSkeleton,
   FormSkeleton,
+  MocCardSkeleton,
+  MocCardCompactSkeleton,
+  GalleryGridSkeleton,
   skeletonVariants,
 }
