@@ -52,10 +52,10 @@ export const Default: Story = {
       variant="destructive"
       onConfirm={() => {
         // Handler removed
-      }
+      }}
       onCancel={() => {
         // Handler removed
-      }
+      }}
     />
   ),
 }
@@ -69,10 +69,10 @@ export const SimpleConfirmation: Story = {
       cancelText="Cancel"
       onConfirm={() => {
         // Handler removed
-      }
+      }}
       onCancel={() => {
         // Handler removed
-      }
+      }}
     />
   ),
 }
@@ -87,10 +87,10 @@ export const FileDeletion: Story = {
       variant="destructive"
       onConfirm={() => {
         // Handler removed
-      }
+      }}
       onCancel={() => {
         // Handler removed
-      }
+      }}
     />
   ),
 }
@@ -104,10 +104,10 @@ export const LogoutConfirmation: Story = {
       cancelText="Stay Signed In"
       onConfirm={() => {
         // Handler removed
-      }
+      }}
       onCancel={() => {
         // Handler removed
-      }
+      }}
     />
   ),
 }
@@ -122,10 +122,10 @@ export const UnsavedChanges: Story = {
       variant="destructive"
       onConfirm={() => {
         // Handler removed
-      }
+      }}
       onCancel={() => {
         // Handler removed
-      }
+      }}
     />
   ),
 }
@@ -139,10 +139,10 @@ export const CustomStyling: Story = {
       cancelText="Cancel"
       onConfirm={() => {
         // Handler removed
-      }
+      }}
       onCancel={() => {
         // Handler removed
-      }
+      }}
     />
   ),
 }
