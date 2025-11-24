@@ -32,6 +32,8 @@ import { PWAProvider } from './components/PWAProvider/index.ts'
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
 import reportWebVitals from './reportWebVitals.ts'
 import { store } from './store/store.ts'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { initErrorReporting } from './lib/tracking/error-reporting.ts'
 // Offline API disabled for now; will re-enable after full typing/integration
 // import { offlineApi } from './services/offlineApi'
 
@@ -81,22 +83,27 @@ if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <ThemeProvider>
-        <UserPreferencesProvider>
-          <Provider store={store}>
-            <PerformanceProvider>
-              <PWAProvider>
-                <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
-                  <RouterProvider router={router} />
-                </TanStackQueryProvider.Provider>
-              </PWAProvider>
-            </PerformanceProvider>
-          </Provider>
-        </UserPreferencesProvider>
-      </ThemeProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <UserPreferencesProvider>
+            <Provider store={store}>
+              <PerformanceProvider>
+                <PWAProvider>
+                  <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
+                    <RouterProvider router={router} />
+                  </TanStackQueryProvider.Provider>
+                </PWAProvider>
+              </PerformanceProvider>
+            </Provider>
+          </UserPreferencesProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
     </StrictMode>,
   )
 }
+
+// Initialize error reporting (Story 3.4)
+initErrorReporting()
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

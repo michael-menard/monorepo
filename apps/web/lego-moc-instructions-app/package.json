@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:check": "vite build && tsc",
     "serve": "vite preview",
+    "preview": "vite preview",
     "test": "NODE_OPTIONS='--max-old-space-size=4096' vitest run",
     "test:run": "NODE_OPTIONS='--max-old-space-size=8192' vitest run",
     "test:ui": "vitest --ui",
@@ -19,7 +20,12 @@
     "format": "prettier --write src/",
     "check": "prettier --write src/ && eslint --fix src/",
     "type-check": "tsc --noEmit",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "perf": "./scripts/performance/run-performance-tests.sh",
+    "perf:bundle": "tsx scripts/performance/analyze-bundle-size.ts",
+    "lhci": "lhci autorun",
+    "lhci:collect": "lhci collect",
+    "lhci:assert": "lhci assert"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "6.13.1",
