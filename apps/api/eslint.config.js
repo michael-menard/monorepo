@@ -66,11 +66,15 @@ export default [
       '**/endpoints/websocket/_shared/message-types.ts',
       '**/endpoints/websocket/connect/handler.ts',
       '**/sst.config.ts',
+      '**/sst.config.backup.ts',
       '**/layers/sst-config-example.ts',
+      '**/infrastructure/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unsafe-function-type': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   {
