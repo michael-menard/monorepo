@@ -31,18 +31,9 @@ class SimpleLogger {
     }
 
     // Create Pino logger instance
+    // Note: pino-pretty removed - it uses worker threads which are incompatible with Lambda
     this.pinoLogger = pino({
       level: this.getPinoLevel(this.config.level),
-      transport: this.config.enableConsole
-        ? {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'SYS:standard',
-              ignore: 'pid,hostname',
-            },
-          }
-        : undefined,
     })
   }
 
@@ -86,11 +77,17 @@ class SimpleLogger {
     this.pinoLogger.warn({ ...context, args }, message)
   }
 
-  error(message: string, error?: Error, ...args: any[]): void {
+  error(message: string, error?: unknown, ...args: any[]): void {
     if (!this.shouldLog(LogLevel.ERROR)) return
 
     const context = this.config.context ? { context: this.config.context } : {}
-    this.pinoLogger.error({ ...context, err: error, args }, message)
+    const errorObj =
+      error instanceof Error
+        ? error
+        : error !== undefined
+          ? { message: String(error), name: 'UnknownError' }
+          : undefined
+    this.pinoLogger.error({ ...context, err: errorObj, args }, message)
   }
 
   setLevel(level: LogLevel): void {

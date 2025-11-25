@@ -31,7 +31,6 @@ import {
   getXRayTraceId,
   extractCorrelationId,
 } from '@repo/logger'
-// emitMetric function not available - using recordColdStart, recordExecution, recordError instead
 import { addAnnotation, addMetadata, addError } from '@/core/observability/tracing'
 import { recordColdStart, recordExecution, recordError } from '@/core/observability/metrics'
 

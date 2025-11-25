@@ -29,18 +29,16 @@
     "mocInstructions/**/*",
     "moc-parts-lists/**/*",
     "websocket/**/*",
-    "health/**/*",
-    "sst-env.d.ts"
+    "health/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    ".sst",
+    ".serverless",
     ".build",
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "sst.config.ts",
     "infrastructure/**/*",
     "scripts/**/*"
   ]

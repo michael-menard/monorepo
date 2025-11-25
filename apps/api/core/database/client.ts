@@ -3,8 +3,18 @@ import { Pool } from 'pg'
 import * as schema from '@/core/database/schema'
 import { getEnv } from '@/core/utils/env'
 import { createLogger } from '@/core/observability/logger'
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager'
 
 const logger = createLogger('db-client')
+
+// Secrets Manager client (reused across invocations)
+const secretsClient = new SecretsManagerClient({})
+
+// Cached credentials
+let cachedCredentials: { username: string; password: string } | null = null
 
 // Story 5.3: Import X-Ray for PostgreSQL query tracing
 let AWSXRay: any = null
@@ -43,27 +53,76 @@ try {
 let _pool: Pool | null = null
 
 /**
+ * Fetch database credentials from Secrets Manager
+ * - Cached for the lifetime of the Lambda container
+ */
+async function getCredentials(): Promise<{ username: string; password: string }> {
+  if (cachedCredentials) {
+    return cachedCredentials
+  }
+
+  const secretArn = process.env.DB_SECRET_ARN
+  if (!secretArn) {
+    // Fall back to environment variables if no secret ARN
+    const env = getEnv()
+    return {
+      username: env.POSTGRES_USERNAME || 'postgres',
+      password: env.POSTGRES_PASSWORD || '',
+    }
+  }
+
+  try {
+    logger.info('Fetching database credentials from Secrets Manager')
+    const command = new GetSecretValueCommand({ SecretId: secretArn })
+    const response = await secretsClient.send(command)
+
+    if (!response.SecretString) {
+      throw new Error('Secret string is empty')
+    }
+
+    const secret = JSON.parse(response.SecretString)
+    cachedCredentials = {
+      username: secret.username,
+      password: secret.password,
+    }
+    logger.info('Database credentials fetched successfully')
+    return cachedCredentials
+  } catch (error) {
+    logger.error('Failed to fetch database credentials from Secrets Manager', error)
+    throw error
+  }
+}
+
+/**
  * Get or create PostgreSQL connection pool
  * - Pool is created once per Lambda container lifecycle
- * - RDS Proxy handles actual connection pooling
+ * - Fetches credentials from Secrets Manager
  * - Lambda connection pool kept small (max 1 connection)
  * - Story 5.3: Instrumented with X-Ray for query tracing
  */
-function getPool(): Pool {
+async function getPoolAsync(): Promise<Pool> {
   if (!_pool) {
     const env = getEnv()
+    const credentials = await getCredentials()
+
+    logger.info('Creating PostgreSQL connection pool', {
+      host: env.POSTGRES_HOST,
+      port: env.POSTGRES_PORT,
+      database: env.POSTGRES_DATABASE,
+      username: credentials.username,
+    })
 
     _pool = new Pool({
       host: env.POSTGRES_HOST,
       port: parseInt(env.POSTGRES_PORT || '5432'),
-      user: env.POSTGRES_USERNAME,
-      password: env.POSTGRES_PASSWORD,
+      user: credentials.username,
+      password: credentials.password,
       database: env.POSTGRES_DATABASE,
       // Serverless-optimized connection pool settings
       max: 1, // Single connection per Lambda (RDS Proxy handles pooling)
       idleTimeoutMillis: 30000, // Close idle connections after 30s
       connectionTimeoutMillis: 5000, // Fail fast on connection issues
-      ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: { rejectUnauthorized: false }, // Aurora requires SSL
     })
 
     // Story 5.3: Instrument PostgreSQL with X-Ray for automatic query tracing
@@ -86,12 +145,42 @@ function getPool(): Pool {
 }
 
 /**
- * Drizzle ORM Database Client
+ * Drizzle ORM Database Client (lazy initialized)
  * - Type-safe queries with full schema inference
  * - Lazy-loaded relationships
  * - Transaction support
+ * - Uses getDbAsync() for async initialization with Secrets Manager
  */
-export const db = drizzle(getPool(), { schema, logger: false })
+let _db: ReturnType<typeof drizzle> | null = null
+
+/**
+ * Get async-initialized Drizzle client
+ * - Fetches credentials from Secrets Manager on first call
+ * - Pool and client are cached for Lambda container lifecycle
+ */
+export async function getDbAsync() {
+  if (!_db) {
+    const pool = await getPoolAsync()
+    _db = drizzle(pool, { schema, logger: false })
+  }
+  return _db
+}
+
+/**
+ * Legacy sync db export - for backwards compatibility only
+ * WARNING: This may not work with Secrets Manager credentials
+ * Use getDbAsync() for proper async initialization
+ */
+export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(_target, prop) {
+    if (_db) {
+      return (_db as any)[prop]
+    }
+    throw new Error(
+      'Database not initialized. Call getDbAsync() first or use testConnection() to initialize.',
+    )
+  },
+})
 
 /**
  * Gracefully close database connection pool
@@ -109,10 +198,11 @@ export async function closePool(): Promise<void> {
  * Test database connectivity
  * - Used by health check Lambda
  * - Returns true if connection successful
+ * - Uses async pool with Secrets Manager credentials
  */
 export async function testConnection(): Promise<boolean> {
   try {
-    const pool = getPool()
+    const pool = await getPoolAsync()
     const result = await pool.query('SELECT 1 as health_check')
     return result.rows[0]?.health_check === 1
   } catch (error) {

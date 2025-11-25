@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "LEGO Projects API - Serverless migration using SST v3 (Ion)",
+  "description": "LEGO Projects API - Serverless Framework",
   "scripts": {
-    "dev": "sst dev",
+    "dev": "serverless offline start --stage dev",
     "build": "tsc",
-    "deploy": "sst deploy",
-    "deploy:staging": "sst deploy --stage staging",
-    "deploy:production": "sst deploy --stage production",
-    "remove": "sst remove",
+    "deploy": "serverless deploy --stage dev",
+    "deploy:staging": "serverless deploy --stage staging",
+    "deploy:production": "serverless deploy --stage production",
+    "remove": "serverless remove --stage dev",
     "sls:dev": "serverless offline start --stage dev",
     "sls:package": "serverless package --stage dev",
     "sls:deploy": "serverless deploy --stage dev",
@@ -46,7 +46,7 @@
     "db:umami:studio": "drizzle-kit studio --config drizzle.umami.config.ts",
     "db:umami:migrate": "tsx src/lib/db/migrate-umami.ts",
     "db:umami:migrate-drizzle": "drizzle-kit migrate --config drizzle.umami.config.ts",
-    "clean": "rm -rf .sst dist node_modules .turbo"
+    "clean": "rm -rf .serverless dist node_modules .turbo"
   },
   "dependencies": {
     "@aws-sdk/client-budgets": "^3.932.0",
@@ -110,7 +110,6 @@
     "serverless-offline": "13.9.0",
     "serverless-plugin-typescript": "2.1.5",
     "serverless-prune-plugin": "2.1.0",
-    "sst": "3.17.21",
     "tsx": "^4.20.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

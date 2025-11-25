@@ -1,7 +1,6 @@
-# SST artifacts
-.sst
+# Serverless Framework artifacts
+.serverless
 .build
-sst-env.d.ts
 
 # Build output
 dist/

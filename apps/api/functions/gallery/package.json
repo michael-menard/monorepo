@@ -3,15 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "sst deploy",
-    "remove": "sst remove",
     "build": "tsc --noEmit"
   },
   "dependencies": {
     "@repo/shared": "workspace:*"
   },
   "devDependencies": {
-    "sst": "^3.0.0",
     "typescript": "^5.0.0"
   }
 }

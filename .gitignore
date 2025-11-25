@@ -84,7 +84,6 @@ coverage/
 
 apps/api/lego-projects-api/uploads/**/*.jpg.envrc
 
-# SST (Ion) artifacts
-.sst/
+# Serverless Framework artifacts
+.serverless/
 .build/
-sst-env.d.ts

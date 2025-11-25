@@ -143,17 +143,22 @@ export class LambdaLogger {
   /**
    * Log error message
    */
-  error(message: string, error?: Error, context?: Record<string, unknown>): void {
-    const errorContext = {
-      ...this.mergeContext(context),
-      ...(error && {
-        error: {
-          message: error.message,
-          name: error.name,
-          stack: error.stack,
-        },
-      }),
+  error(message: string, error?: unknown, context?: Record<string, unknown>): void {
+    const baseContext = this.mergeContext(context)
+    let errorContext: Record<string, unknown> = baseContext
+
+    if (error) {
+      const errorInfo =
+        error instanceof Error
+          ? {
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }
+          : { message: String(error), name: 'UnknownError' }
+      errorContext = { ...baseContext, error: errorInfo }
     }
+
     this.pinoLogger.error(errorContext, message)
   }
 
