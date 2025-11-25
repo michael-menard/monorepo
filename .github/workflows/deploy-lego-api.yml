@@ -83,8 +83,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace packages
-        run: pnpm turbo build --filter="./packages/**"
+      - name: Build API dependencies
+        run: |
+          pnpm turbo build --filter=@repo/logger \
+            --filter=@monorepo/lambda-auth \
+            --filter=@monorepo/lambda-utils \
+            --filter=@monorepo/lambda-responses \
+            --filter=@monorepo/pii-sanitizer \
+            --filter=@monorepo/search \
+            --filter=@monorepo/image-processing \
+            --filter=@monorepo/file-validator \
+            --filter=@monorepo/cognito-client \
+            --filter=@monorepo/rate-limiter \
+            --filter=@monorepo/s3-client
 
       - name: Lint
         run: |
@@ -122,8 +133,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace packages
-        run: pnpm turbo build --filter="./packages/**"
+      - name: Build API dependencies
+        run: |
+          pnpm turbo build --filter=@repo/logger \
+            --filter=@monorepo/lambda-auth \
+            --filter=@monorepo/lambda-utils \
+            --filter=@monorepo/lambda-responses \
+            --filter=@monorepo/pii-sanitizer \
+            --filter=@monorepo/search \
+            --filter=@monorepo/image-processing \
+            --filter=@monorepo/file-validator \
+            --filter=@monorepo/cognito-client \
+            --filter=@monorepo/rate-limiter \
+            --filter=@monorepo/s3-client
 
       - name: Run unit tests
         run: |
