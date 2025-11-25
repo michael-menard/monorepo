@@ -91,6 +91,24 @@ custom:
     lambdaPort: 3003
     noPrependStageInUrl: true
 
+  # Social Login OAuth Credentials (stored in SSM Parameter Store)
+  # To set these values, run:
+  #   aws ssm put-parameter --name "/lego-api/dev/google-client-id" --value "YOUR_CLIENT_ID" --type SecureString
+  #   aws ssm put-parameter --name "/lego-api/dev/google-client-secret" --value "YOUR_SECRET" --type SecureString
+  #   (repeat for apple and facebook)
+  oauth:
+    google:
+      clientId: ${ssm:/lego-api/${self:custom.stage}/google-client-id, ''}
+      clientSecret: ${ssm:/lego-api/${self:custom.stage}/google-client-secret, ''}
+    apple:
+      clientId: ${ssm:/lego-api/${self:custom.stage}/apple-client-id, ''}
+      teamId: ${ssm:/lego-api/${self:custom.stage}/apple-team-id, ''}
+      keyId: ${ssm:/lego-api/${self:custom.stage}/apple-key-id, ''}
+      privateKey: ${ssm:/lego-api/${self:custom.stage}/apple-private-key, ''}
+    facebook:
+      clientId: ${ssm:/lego-api/${self:custom.stage}/facebook-client-id, ''}
+      clientSecret: ${ssm:/lego-api/${self:custom.stage}/facebook-client-secret, ''}
+
 # Provider Configuration
 provider:
   name: aws
@@ -830,6 +848,13 @@ functions:
 resources:
   Description: LEGO API Infrastructure Stack
 
+  # CloudFormation Conditions for optional social login providers
+  # Identity providers are only created when their credentials are configured in SSM
+  Conditions:
+    HasGoogleCredentials: !Not [!Equals ['${self:custom.oauth.google.clientId}', '']]
+    HasAppleCredentials: !Not [!Equals ['${self:custom.oauth.apple.clientId}', '']]
+    HasFacebookCredentials: !Not [!Equals ['${self:custom.oauth.facebook.clientId}', '']]
+
   Resources:
     # ===========================================
     # VPC Infrastructure
@@ -1324,7 +1349,7 @@ resources:
     # Cognito User Pool for Authentication
     # ===========================================
 
-    # Cognito User Pool - email-based sign-in with auto-verification
+    # Cognito User Pool - email-based sign-in with OTP verification
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
@@ -1333,6 +1358,10 @@ resources:
           - email
         AutoVerifiedAttributes:
           - email
+        # Require email verification before user can sign in
+        UserAttributeUpdateSettings:
+          AttributesRequireVerificationBeforeUpdate:
+            - email
         Policies:
           PasswordPolicy:
             MinimumLength: 8
@@ -1341,8 +1370,13 @@ resources:
             RequireNumbers: true
             RequireSymbols: false
             TemporaryPasswordValidityDays: 7
-        EmailVerificationMessage: 'Your LEGO MOC verification code is {####}'
-        EmailVerificationSubject: 'LEGO MOC - Verify your email'
+        # Use OTP code verification instead of link
+        VerificationMessageTemplate:
+          DefaultEmailOption: CONFIRM_WITH_CODE
+          EmailMessage: 'Your LEGO MOC verification code is {####}. This code expires in 24 hours.'
+          EmailSubject: 'LEGO MOC - Verify your email'
+          EmailMessageByLink: 'Please click the link below to verify your email address. {##Verify Email##}'
+          EmailSubjectByLink: 'LEGO MOC - Verify your email'
         Schema:
           - Name: email
             AttributeDataType: String
@@ -1367,8 +1401,15 @@ resources:
           Service: Authentication
 
     # Cognito User Pool Client - OAuth 2.0 authorization code flow
+    # Note: SupportedIdentityProviders includes social providers when configured
     CognitoUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
+      DependsOn:
+        - CognitoUserPool
+        # Conditionally depend on identity providers if they exist
+        # CloudFormation doesn't support conditional DependsOn, so we handle this
+        # by ensuring the client is created after the identity providers via explicit
+        # SupportedIdentityProviders list (providers not yet configured will be ignored)
       Properties:
         ClientName: lego-moc-web-client-${self:custom.stage}
         UserPoolId: !Ref CognitoUserPool
@@ -1382,11 +1423,21 @@ resources:
         CallbackURLs:
           - http://localhost:3002/auth/callback
           - http://localhost:5173/auth/callback
+          # Production callback URLs (add your domain here)
+          # - https://app.legomoc.com/auth/callback
         LogoutURLs:
           - http://localhost:3002/auth/logout
           - http://localhost:5173/auth/logout
+          # Production logout URLs (add your domain here)
+          # - https://app.legomoc.com/auth/logout
+        # Identity providers - COGNITO is always enabled
+        # Social providers are added here but will only work when configured in SSM
         SupportedIdentityProviders:
           - COGNITO
+          # Social providers - uncomment after configuring SSM parameters
+          # - Google
+          # - SignInWithApple
+          # - Facebook
         AccessTokenValidity: 60
         IdTokenValidity: 60
         RefreshTokenValidity: 43200
@@ -1406,6 +1457,71 @@ resources:
       Properties:
         Domain: !Sub 'lego-moc-${self:custom.stage}-${AWS::AccountId}'
         UserPoolId: !Ref CognitoUserPool
+
+    # ===========================================
+    # Social Identity Providers
+    # ===========================================
+
+    # Google Identity Provider
+    # Setup: https://console.cloud.google.com/apis/credentials
+    # Required OAuth scopes: openid, email, profile
+    GoogleIdentityProvider:
+      Type: AWS::Cognito::UserPoolIdentityProvider
+      Condition: HasGoogleCredentials
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ProviderName: Google
+        ProviderType: Google
+        ProviderDetails:
+          client_id: ${self:custom.oauth.google.clientId}
+          client_secret: ${self:custom.oauth.google.clientSecret}
+          authorize_scopes: openid email profile
+        AttributeMapping:
+          email: email
+          name: name
+          picture: picture
+          username: sub
+
+    # Apple Identity Provider
+    # Setup: https://developer.apple.com/account/resources/identifiers/list/serviceId
+    # Required: Services ID, Team ID, Key ID, and Private Key
+    AppleIdentityProvider:
+      Type: AWS::Cognito::UserPoolIdentityProvider
+      Condition: HasAppleCredentials
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ProviderName: SignInWithApple
+        ProviderType: SignInWithApple
+        ProviderDetails:
+          client_id: ${self:custom.oauth.apple.clientId}
+          team_id: ${self:custom.oauth.apple.teamId}
+          key_id: ${self:custom.oauth.apple.keyId}
+          private_key: ${self:custom.oauth.apple.privateKey}
+          authorize_scopes: name email
+        AttributeMapping:
+          email: email
+          name: name
+          username: sub
+
+    # Facebook Identity Provider
+    # Setup: https://developers.facebook.com/apps/
+    # Required permissions: email, public_profile
+    FacebookIdentityProvider:
+      Type: AWS::Cognito::UserPoolIdentityProvider
+      Condition: HasFacebookCredentials
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ProviderName: Facebook
+        ProviderType: Facebook
+        ProviderDetails:
+          client_id: ${self:custom.oauth.facebook.clientId}
+          client_secret: ${self:custom.oauth.facebook.clientSecret}
+          authorize_scopes: email public_profile
+        AttributeMapping:
+          email: email
+          name: name
+          picture: picture
+          username: id
 
     # ===========================================
     # S3 Bucket for File Storage

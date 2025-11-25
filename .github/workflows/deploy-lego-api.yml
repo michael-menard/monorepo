@@ -119,6 +119,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build packages
+        run: pnpm turbo build --filter=@repo/logger
+
       - name: Run unit tests
         run: |
           cd apps/api
