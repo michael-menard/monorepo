@@ -276,7 +276,7 @@ functions:
     handler: endpoints/gallery/upload-image/handler.handler
     description: Upload image to gallery
     memorySize: 512
-    timeout: 30
+    timeout: 29
     events:
       - httpApi:
           path: /api/gallery/images
@@ -449,7 +449,7 @@ functions:
     handler: endpoints/moc-instructions/initialize-with-files/handler.handler
     description: Initialize MOC instruction with files
     memorySize: 512
-    timeout: 30
+    timeout: 29
     events:
       - httpApi:
           path: /api/mocs
@@ -462,7 +462,7 @@ functions:
     handler: endpoints/moc-instructions/finalize-with-files/handler.handler
     description: Finalize MOC instruction with files
     memorySize: 512
-    timeout: 30
+    timeout: 29
     events:
       - httpApi:
           path: /api/mocs/{id}/finalize
@@ -475,7 +475,7 @@ functions:
     handler: endpoints/moc-instructions/upload-file/handler.handler
     description: Upload file to MOC instruction
     memorySize: 512
-    timeout: 60
+    timeout: 29
     events:
       - httpApi:
           path: /api/mocs/{id}/files
@@ -488,7 +488,7 @@ functions:
     handler: endpoints/moc-instructions/download-file/handler.handler
     description: Download file from MOC instruction
     memorySize: 256
-    timeout: 30
+    timeout: 29
     events:
       - httpApi:
           path: /api/mocs/{mocId}/files/{fileId}/download
@@ -579,7 +579,7 @@ functions:
     handler: endpoints/moc-instructions/upload-parts-list/handler.handler
     description: Upload parts list to MOC
     memorySize: 512
-    timeout: 30
+    timeout: 29
     events:
       - httpApi:
           path: /api/mocs/{id}/parts-list
@@ -687,7 +687,7 @@ functions:
     handler: endpoints/wishlist/upload-image/handler.handler
     description: Upload image to wishlist item
     memorySize: 512
-    timeout: 30
+    timeout: 29
     events:
       - httpApi:
           path: /api/wishlist/{id}/image
@@ -756,7 +756,7 @@ functions:
     handler: endpoints/moc-parts-lists/parse/handler.handler
     description: Parse MOC parts list file
     memorySize: 512
-    timeout: 60
+    timeout: 29
     events:
       - httpApi:
           path: /api/parts-lists/{id}/parse
@@ -1724,8 +1724,7 @@ resources:
                     ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", "lego-api-aurora-dev"]
                   ],
                   "period": 300,
-                  "stat": "Average",
-                  "yAxis": {"left": {"min": 0, "max": 100}}
+                  "stat": "Average"
                 }
               },
               {
@@ -1800,8 +1799,7 @@ resources:
                     ["AWS/ES", "JVMMemoryPressure", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"]
                   ],
                   "period": 300,
-                  "stat": "Average",
-                  "yAxis": {"left": {"min": 0, "max": 100}}
+                  "stat": "Average"
                 }
               },
               {
