@@ -445,6 +445,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build API dependencies (using Turbo cache)
+        run: pnpm turbo build --filter="lego-api-serverless^..."
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
