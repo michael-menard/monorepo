@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(__dirname, 'src/design-system.ts'),
       name: 'DesignSystem',
       fileName: 'index',
       formats: ['es', 'cjs'],

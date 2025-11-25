@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(__dirname, 'src/schemas/cache.ts'),
       name: 'SharedCache',
       fileName: 'shared-cache',
       formats: ['es', 'cjs'],

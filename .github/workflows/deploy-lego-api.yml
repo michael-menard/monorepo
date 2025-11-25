@@ -83,6 +83,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: pnpm turbo build --filter="./packages/**"
+
       - name: Lint
         run: |
           cd apps/api
@@ -119,8 +122,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm turbo build --filter=@repo/logger
+      - name: Build workspace packages
+        run: pnpm turbo build --filter="./packages/**"
 
       - name: Run unit tests
         run: |
