@@ -33,12 +33,16 @@ export default defineConfig({
       'moc-parts-lists/**/__tests__/**/*.test.ts',
       'scripts/**/__tests__/**/*.test.ts',
       'sst/**/__tests__/**/*.test.ts',
+      'endpoints/**/*.test.ts',
+      'core/**/__tests__/**/*.test.ts',
     ],
     exclude: ['node_modules', 'dist', '.sst'],
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(__dirname, '.'),
+      '@/core': path.resolve(__dirname, './core'),
+      '@/endpoints': path.resolve(__dirname, './endpoints'),
       '@/lib': path.resolve(__dirname, './src/lib'),
       '@/functions': path.resolve(__dirname, './src/functions'),
       '@/types': path.resolve(__dirname, './src/types'),

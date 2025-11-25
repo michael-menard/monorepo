@@ -5,10 +5,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { APIGatewayProxyWebsocketEventV2 } from 'aws-lambda'
-import { handler } from '../index'
 
 // Mock logger to prevent console output during tests
-vi.mock('../../../src/lib/utils/logger', () => ({
+vi.mock('@/core/observability/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -19,9 +18,14 @@ vi.mock('../../../src/lib/utils/logger', () => ({
 
 describe('WebSocket $default Handler', () => {
   const mockConnectionId = 'test-connection-123'
+  let handler: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+
+    // Dynamically import handler to ensure mocks are applied
+    const module = await import('./handler')
+    handler = module.handler
   })
 
   const createMockEvent = (body?: string): APIGatewayProxyWebsocketEventV2 => ({

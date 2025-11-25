@@ -9,7 +9,7 @@ import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb'
 import type { APIGatewayProxyWebsocketEventV2 } from 'aws-lambda'
 
 // Mock logger to prevent console output during tests
-vi.mock('../../../src/lib/utils/logger', () => ({
+vi.mock('@/core/observability/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -49,7 +49,7 @@ describe('WebSocket $connect Handler', () => {
     process.env.COGNITO_USER_POOL_ID = 'us-east-1_TEST123'
 
     // Dynamically import handler to ensure mocks are applied
-    const module = await import('../index')
+    const module = await import('./handler')
     handler = module.handler
   })
 

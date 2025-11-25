@@ -7,10 +7,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mockClient } from 'aws-sdk-client-mock'
 import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb'
 import type { APIGatewayProxyWebsocketEventV2 } from 'aws-lambda'
-import { handler } from '../index'
 
 // Mock logger to prevent console output during tests
-vi.mock('../../../src/lib/utils/logger', () => ({
+vi.mock('@/core/observability/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -23,13 +22,18 @@ const dynamoMock = mockClient(DynamoDBDocumentClient)
 
 describe('WebSocket $disconnect Handler', () => {
   const mockConnectionId = 'test-connection-123'
+  let handler: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     dynamoMock.reset()
     vi.clearAllMocks()
 
     // Set environment variables
     process.env.CONNECTIONS_TABLE_NAME = 'test-connections-table'
+
+    // Dynamically import handler to ensure mocks are applied
+    const module = await import('./handler')
+    handler = module.handler
   })
 
   const createMockEvent = (): APIGatewayProxyWebsocketEventV2 => ({

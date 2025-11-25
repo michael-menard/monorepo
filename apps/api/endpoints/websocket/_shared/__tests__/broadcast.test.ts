@@ -14,7 +14,7 @@ import {
 import { broadcastToUser, broadcastToConnection, broadcastToConnections } from '../broadcast'
 
 // Mock logger to prevent console output during tests
-vi.mock('../../utils/logger', () => ({
+vi.mock('@/core/observability/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

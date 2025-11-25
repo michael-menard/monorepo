@@ -1,0 +1,371 @@
+name: Deploy LEGO API (Serverless Framework)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-lego-api.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Deployment stage'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+        default: dev
+      skip-tests:
+        description: 'Skip tests (use for hotfixes only)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # ========================================
+  # Job 1: Detect Changes
+  # ========================================
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      packages: ${{ steps.filter.outputs.packages }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+            packages:
+              - 'packages/**'
+
+  # ========================================
+  # Job 2: Lint and Type Check
+  # ========================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.packages == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: |
+          cd apps/api
+          pnpm lint
+
+      - name: Type check
+        run: |
+          cd apps/api
+          pnpm check-types
+
+  # ========================================
+  # Job 3: Run Tests
+  # ========================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.packages == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.skip-tests != 'true')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: |
+          cd apps/api
+          pnpm test
+        env:
+          NODE_ENV: test
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: apps/api/coverage
+          flags: api
+          fail_ci_if_error: false
+
+  # ========================================
+  # Job 4: Package (Validate CloudFormation)
+  # ========================================
+  package:
+    name: Package & Validate
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: |
+      always() &&
+      (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Determine stage
+        id: stage
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "stage=${{ github.event.inputs.stage }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "stage=dev" >> $GITHUB_OUTPUT
+          else
+            echo "stage=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Package (validate CloudFormation)
+        run: |
+          cd apps/api
+          pnpm sls:package --stage ${{ steps.stage.outputs.stage }}
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: serverless-package-${{ steps.stage.outputs.stage }}
+          path: apps/api/.serverless
+          retention-days: 7
+
+  # ========================================
+  # Job 5: Deploy to Dev (on main branch push)
+  # ========================================
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [changes, package]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.package.result == 'success'
+    environment:
+      name: dev
+      url: https://k05eswihw7.execute-api.us-east-1.amazonaws.com/health
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to dev
+        id: deploy
+        run: |
+          cd apps/api
+          pnpm sls:deploy --stage dev 2>&1 | tee deploy-output.txt
+
+          # Extract API URL from output
+          API_URL=$(grep -oP 'https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com' deploy-output.txt | head -1 || echo "")
+          echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+
+      - name: Run smoke tests
+        run: |
+          # Health check
+          HEALTH_URL="${{ steps.deploy.outputs.api-url }}/health"
+          echo "Testing health endpoint: $HEALTH_URL"
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Health check failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "✅ Health check passed"
+
+      - name: Create deployment summary
+        if: always()
+        run: |
+          echo "# Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Stage:** dev" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.deploy.outputs.api-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Resources Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- 42 Lambda functions" >> $GITHUB_STEP_SUMMARY
+          echo "- HTTP API Gateway with Cognito JWT authorizer" >> $GITHUB_STEP_SUMMARY
+          echo "- WebSocket API Gateway" >> $GITHUB_STEP_SUMMARY
+          echo "- Aurora PostgreSQL Serverless v2" >> $GITHUB_STEP_SUMMARY
+          echo "- OpenSearch domain" >> $GITHUB_STEP_SUMMARY
+          echo "- DynamoDB (WebSocket connections)" >> $GITHUB_STEP_SUMMARY
+          echo "- CloudWatch Dashboard and Alarms" >> $GITHUB_STEP_SUMMARY
+
+  # ========================================
+  # Job 6: Deploy to Staging (manual)
+  # ========================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: package
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.stage == 'staging'
+    environment:
+      name: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to staging
+        run: |
+          cd apps/api
+          pnpm sls:deploy --stage staging
+
+  # ========================================
+  # Job 7: Deploy to Production (manual with approval)
+  # ========================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: package
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.stage == 'production'
+    environment:
+      name: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to production
+        run: |
+          cd apps/api
+          pnpm sls:deploy --stage production
+
+      - name: Create release tag
+        run: |
+          TAG="api-v$(date +%Y%m%d-%H%M%S)"
+          git tag $TAG
+          git push origin $TAG

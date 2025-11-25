@@ -1,0 +1,2081 @@
+# Serverless Framework Configuration for LEGO API
+# Migrated from SST v3 (Ion)
+#
+# This configuration defines:
+# - Service name and provider settings
+# - Stage-specific configurations
+# - VPC infrastructure (via CloudFormation)
+# - Lambda functions with API Gateway routes
+# - IAM roles and policies
+#
+# Usage:
+#   pnpm serverless deploy --stage dev-sf
+#   pnpm serverless deploy --stage staging
+#   pnpm serverless deploy --stage production
+
+service: lego-api
+
+frameworkVersion: '3'
+
+# Plugin Configuration
+plugins:
+  - serverless-esbuild
+  - serverless-iam-roles-per-function
+  - serverless-offline
+  - serverless-prune-plugin
+
+# Custom Variables
+custom:
+  # Stage-specific configurations
+  stages:
+    dev:
+      logLevel: debug
+      memorySize: 256
+      timeout: 30
+      rds:
+        instanceClass: db.t4g.micro
+        allocatedStorage: 20
+        maxAllocatedStorage: 50
+      opensearch:
+        instanceType: t3.small.search
+        instanceCount: 1
+    staging:
+      logLevel: info
+      memorySize: 512
+      timeout: 30
+      rds:
+        instanceClass: db.t4g.small
+        allocatedStorage: 50
+        maxAllocatedStorage: 100
+      opensearch:
+        instanceType: t3.medium.search
+        instanceCount: 2
+    production:
+      logLevel: warn
+      memorySize: 1024
+      timeout: 30
+      rds:
+        instanceClass: db.r6g.large
+        allocatedStorage: 100
+        maxAllocatedStorage: 500
+      opensearch:
+        instanceType: r6g.large.search
+        instanceCount: 3
+
+  # Current stage config (defaults to dev)
+  stage: ${opt:stage, 'dev'}
+  stageConfig: ${self:custom.stages.${self:custom.stage}, self:custom.stages.dev}
+
+  # esbuild configuration for TypeScript bundling
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    concurrency: 10
+    exclude:
+      - '@aws-sdk/*'
+    # Define path aliases (maps @/ imports)
+    plugins: esbuild-plugins.js
+
+  # Prune old Lambda versions (keep last 3)
+  prune:
+    automatic: true
+    number: 3
+
+  # Serverless offline configuration
+  serverless-offline:
+    httpPort: 3001
+    websocketPort: 3002
+    lambdaPort: 3003
+    noPrependStageInUrl: true
+
+# Provider Configuration
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${self:custom.stage}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: ${self:custom.stageConfig.memorySize}
+  timeout: ${self:custom.stageConfig.timeout}
+
+  # Deployment settings
+  deploymentMethod: direct
+
+  # Environment variables (shared across all functions)
+  environment:
+    STAGE: ${self:custom.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    NODE_OPTIONS: '--enable-source-maps'
+    LOG_LEVEL: ${self:custom.stageConfig.logLevel}
+    # Database connection details (matches env.ts POSTGRES_* schema)
+    POSTGRES_HOST: !GetAtt AuroraCluster.Endpoint.Address
+    POSTGRES_PORT: !GetAtt AuroraCluster.Endpoint.Port
+    POSTGRES_DATABASE: legoapidb
+    # Credentials fetched from Secrets Manager at runtime
+    DB_SECRET_ARN: !Ref DatabaseSecret
+    # OpenSearch endpoint
+    OPENSEARCH_ENDPOINT: !Sub 'https://${OpenSearchDomain.DomainEndpoint}'
+    # S3 bucket for file storage
+    S3_BUCKET: !Ref FilesBucket
+    # Cognito configuration
+    COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+    COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
+
+  # VPC Configuration - Lambda functions run in private subnets
+  vpc:
+    securityGroupIds:
+      - !Ref LambdaSecurityGroup
+    subnetIds:
+      - !Ref PrivateSubnet1
+      - !Ref PrivateSubnet2
+
+  # Default IAM role statements (additional per-function roles via plugin)
+  iam:
+    role:
+      statements:
+        # CloudWatch Logs
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: 'arn:aws:logs:${self:provider.region}:*:*'
+        # X-Ray tracing
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+        # VPC Network Interfaces (required for Lambda in VPC)
+        - Effect: Allow
+          Action:
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+            - ec2:AssignPrivateIpAddresses
+            - ec2:UnassignPrivateIpAddresses
+          Resource: '*'
+        # Secrets Manager (for database credentials)
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: !Ref DatabaseSecret
+        # OpenSearch access
+        - Effect: Allow
+          Action:
+            - es:ESHttpGet
+            - es:ESHttpPost
+            - es:ESHttpPut
+            - es:ESHttpDelete
+            - es:ESHttpHead
+          Resource: !Sub '${OpenSearchDomain.Arn}/*'
+        # S3 access for file storage
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+            - s3:GetObjectTagging
+            - s3:PutObjectTagging
+          Resource:
+            - !GetAtt FilesBucket.Arn
+            - !Sub '${FilesBucket.Arn}/*'
+
+  # API Gateway settings
+  httpApi:
+    name: lego-api-${self:custom.stage}
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+        - X-Request-Id
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
+    # Cognito JWT Authorizer
+    authorizers:
+      cognitoJwtAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: !Sub 'https://cognito-idp.${self:provider.region}.amazonaws.com/${CognitoUserPool}'
+        audience:
+          - !Ref CognitoUserPoolClient
+
+  # AWS Tags (applied to all resources)
+  tags:
+    Project: lego-api
+    Environment: ${self:custom.stage}
+    ManagedBy: Serverless
+    CostCenter: Engineering
+    Owner: engineering@bricklink.com
+
+# Package Configuration
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.sst/**'
+    - '!.turbo/**'
+    - '!docs/**'
+    - '!**/*.test.ts'
+    - '!**/*.spec.ts'
+    - '!**/__tests__/**'
+    - '!coverage/**'
+
+# Lambda Functions
+functions:
+  # Health Check - PUBLIC (no auth required)
+  healthCheck:
+    handler: endpoints/health/handler.handler
+    description: Health check endpoint for monitoring
+    memorySize: 256
+    timeout: 29  # HTTP API has 30s limit, keep Lambda timeout slightly lower
+    events:
+      - httpApi:
+          path: /health
+          method: GET
+  # ===========================================
+  # Gallery Functions
+  # ===========================================
+
+  # Upload image to gallery
+  galleryUploadImage:
+    handler: endpoints/gallery/upload-image/handler.handler
+    description: Upload image to gallery
+    memorySize: 512
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/gallery/images
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # List images in gallery
+  galleryListImages:
+    handler: endpoints/gallery/list-images/handler.handler
+    description: List gallery images
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/images
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Search images
+  gallerySearchImages:
+    handler: endpoints/gallery/search-images/handler.handler
+    description: Search gallery images
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/search
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get single image
+  galleryGetImage:
+    handler: endpoints/gallery/get-image/handler.handler
+    description: Get gallery image details
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/images/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update image
+  galleryUpdateImage:
+    handler: endpoints/gallery/update-image/handler.handler
+    description: Update gallery image
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/images/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Delete image
+  galleryDeleteImage:
+    handler: endpoints/gallery/delete-image/handler.handler
+    description: Delete gallery image
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/images/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Flag image
+  galleryFlagImage:
+    handler: endpoints/gallery/flag-image/handler.handler
+    description: Flag gallery image for review
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/images/{id}/flag
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Create album
+  galleryCreateAlbum:
+    handler: endpoints/gallery/create-album/handler.handler
+    description: Create gallery album
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/albums
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # List albums
+  galleryListAlbums:
+    handler: endpoints/gallery/list-albums/handler.handler
+    description: List gallery albums
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/albums
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get album
+  galleryGetAlbum:
+    handler: endpoints/gallery/get-album/handler.handler
+    description: Get gallery album
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/albums/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update album
+  galleryUpdateAlbum:
+    handler: endpoints/gallery/update-album/handler.handler
+    description: Update gallery album
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/albums/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Delete album
+  galleryDeleteAlbum:
+    handler: endpoints/gallery/delete-album/handler.handler
+    description: Delete gallery album
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/gallery/albums/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
+  # MOC Instructions Functions
+  # ===========================================
+
+  # List MOC instructions
+  mocList:
+    handler: endpoints/moc-instructions/list/handler.handler
+    description: List MOC instructions
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Initialize MOC with files
+  mocInitializeWithFiles:
+    handler: endpoints/moc-instructions/initialize-with-files/handler.handler
+    description: Initialize MOC instruction with files
+    memorySize: 512
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/mocs
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Finalize MOC with files
+  mocFinalizeWithFiles:
+    handler: endpoints/moc-instructions/finalize-with-files/handler.handler
+    description: Finalize MOC instruction with files
+    memorySize: 512
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/finalize
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Upload file to MOC
+  mocUploadFile:
+    handler: endpoints/moc-instructions/upload-file/handler.handler
+    description: Upload file to MOC instruction
+    memorySize: 512
+    timeout: 60
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/files
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Download file from MOC
+  mocDownloadFile:
+    handler: endpoints/moc-instructions/download-file/handler.handler
+    description: Download file from MOC instruction
+    memorySize: 256
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/mocs/{mocId}/files/{fileId}/download
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Delete file from MOC
+  mocDeleteFile:
+    handler: endpoints/moc-instructions/delete-file/handler.handler
+    description: Delete file from MOC instruction
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/files/{fileId}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get MOC stats
+  mocGetStats:
+    handler: endpoints/moc-instructions/get-stats/handler.handler
+    description: Get MOC instruction stats
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/stats
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get uploads over time
+  mocGetUploadsOverTime:
+    handler: endpoints/moc-instructions/get-uploads-over-time/handler.handler
+    description: Get MOC uploads over time
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/uploads-over-time
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get gallery images for MOC
+  mocGetGalleryImages:
+    handler: endpoints/moc-instructions/get-gallery-images/handler.handler
+    description: Get gallery images for MOC
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/gallery-images
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Link gallery image to MOC
+  mocLinkGalleryImage:
+    handler: endpoints/moc-instructions/link-gallery-image/handler.handler
+    description: Link gallery image to MOC
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/gallery-images
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Unlink gallery image from MOC
+  mocUnlinkGalleryImage:
+    handler: endpoints/moc-instructions/unlink-gallery-image/handler.handler
+    description: Unlink gallery image from MOC
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/gallery-images/{imageId}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Upload parts list to MOC
+  mocUploadPartsList:
+    handler: endpoints/moc-instructions/upload-parts-list/handler.handler
+    description: Upload parts list to MOC
+    memorySize: 512
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/mocs/{id}/parts-list
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
+  # Wishlist Functions (all require auth - user-specific)
+  # ===========================================
+
+  # List wishlist items
+  wishlistList:
+    handler: endpoints/wishlist/list/handler.handler
+    description: List wishlist items
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Create wishlist item
+  wishlistCreateItem:
+    handler: endpoints/wishlist/create-item/handler.handler
+    description: Create wishlist item
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get wishlist item
+  wishlistGetItem:
+    handler: endpoints/wishlist/get-item/handler.handler
+    description: Get wishlist item
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update wishlist item
+  wishlistUpdateItem:
+    handler: endpoints/wishlist/update-item/handler.handler
+    description: Update wishlist item
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Delete wishlist item
+  wishlistDeleteItem:
+    handler: endpoints/wishlist/delete-item/handler.handler
+    description: Delete wishlist item
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Reorder wishlist
+  wishlistReorder:
+    handler: endpoints/wishlist/reorder/handler.handler
+    description: Reorder wishlist items
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist/reorder
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Search wishlist
+  wishlistSearch:
+    handler: endpoints/wishlist/search/handler.handler
+    description: Search wishlist items
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/wishlist/search
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Upload image to wishlist item
+  wishlistUploadImage:
+    handler: endpoints/wishlist/upload-image/handler.handler
+    description: Upload image to wishlist item
+    memorySize: 512
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/wishlist/{id}/image
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
+  # MOC Parts Lists Functions
+  # ===========================================
+
+  # Create parts list
+  partsListCreate:
+    handler: endpoints/moc-parts-lists/create/handler.handler
+    description: Create MOC parts list
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/parts-lists
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get parts list
+  partsListGet:
+    handler: endpoints/moc-parts-lists/get/handler.handler
+    description: Get MOC parts list
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update parts list
+  partsListUpdate:
+    handler: endpoints/moc-parts-lists/update/handler.handler
+    description: Update MOC parts list
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Delete parts list
+  partsListDelete:
+    handler: endpoints/moc-parts-lists/delete/handler.handler
+    description: Delete MOC parts list
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Parse parts list
+  partsListParse:
+    handler: endpoints/moc-parts-lists/parse/handler.handler
+    description: Parse MOC parts list file
+    memorySize: 512
+    timeout: 60
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}/parse
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update parts list status
+  partsListUpdateStatus:
+    handler: endpoints/moc-parts-lists/update-status/handler.handler
+    description: Update MOC parts list status
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}/status
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get user summary
+  partsListGetUserSummary:
+    handler: endpoints/moc-parts-lists/get-user-summary/handler.handler
+    description: Get user parts list summary
+    memorySize: 256
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/parts-lists/user-summary
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
+  # WebSocket Functions
+  # ===========================================
+
+  # WebSocket $connect handler
+  websocketConnect:
+    handler: endpoints/websocket/connect/handler.handler
+    description: Handle WebSocket connections
+    memorySize: 256
+    timeout: 29
+    # WebSocket handlers don't need VPC access (just DynamoDB)
+    vpc: ~
+    environment:
+      CONNECTIONS_TABLE_NAME: !Ref WebSocketConnectionsTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: !GetAtt WebSocketConnectionsTable.Arn
+    events:
+      - websocket:
+          route: $connect
+
+  # WebSocket $disconnect handler
+  websocketDisconnect:
+    handler: endpoints/websocket/disconnect/handler.handler
+    description: Handle WebSocket disconnections
+    memorySize: 256
+    timeout: 29
+    vpc: ~
+    environment:
+      CONNECTIONS_TABLE_NAME: !Ref WebSocketConnectionsTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: !GetAtt WebSocketConnectionsTable.Arn
+    events:
+      - websocket:
+          route: $disconnect
+
+  # WebSocket $default handler (for messages)
+  websocketDefault:
+    handler: endpoints/websocket/default/handler.handler
+    description: Handle WebSocket messages
+    memorySize: 256
+    timeout: 29
+    vpc: ~
+    environment:
+      CONNECTIONS_TABLE_NAME: !Ref WebSocketConnectionsTable
+    events:
+      - websocket:
+          route: $default
+
+# CloudFormation Resources
+resources:
+  Description: LEGO API Infrastructure Stack
+
+  Resources:
+    # ===========================================
+    # VPC Infrastructure
+    # ===========================================
+
+    # VPC with /24 CIDR block (256 IP addresses)
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/24
+        EnableDnsHostnames: true
+        EnableDnsSupport: true
+        Tags:
+          - Key: Name
+            Value: lego-api-vpc-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Internet Gateway for public subnet internet access
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: lego-api-igw-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Attach Internet Gateway to VPC
+    InternetGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        InternetGatewayId: !Ref InternetGateway
+        VpcId: !Ref VPC
+
+    # ===========================================
+    # Public Subnets (for NAT Gateway, ALB)
+    # ===========================================
+
+    # Public Subnet 1 - /27 (32 IPs) in AZ-a
+    PublicSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [0, !GetAZs '']
+        CidrBlock: 10.0.0.0/27
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: lego-api-public-subnet-1-${self:custom.stage}
+          - Key: SubnetType
+            Value: PublicSubnet
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Public Subnet 2 - /27 (32 IPs) in AZ-b
+    PublicSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [1, !GetAZs '']
+        CidrBlock: 10.0.0.32/27
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: lego-api-public-subnet-2-${self:custom.stage}
+          - Key: SubnetType
+            Value: PublicSubnet
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # Private Subnets (for Lambda, RDS, OpenSearch)
+    # ===========================================
+
+    # Private Subnet 1 - /26 (64 IPs) in AZ-a
+    PrivateSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [0, !GetAZs '']
+        CidrBlock: 10.0.0.64/26
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: lego-api-private-subnet-1-${self:custom.stage}
+          - Key: SubnetType
+            Value: PrivateSubnet
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Private Subnet 2 - /26 (64 IPs) in AZ-b
+    PrivateSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [1, !GetAZs '']
+        CidrBlock: 10.0.0.128/26
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: lego-api-private-subnet-2-${self:custom.stage}
+          - Key: SubnetType
+            Value: PrivateSubnet
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # NAT Gateway (single for cost optimization - $32/month)
+    # ===========================================
+
+    # Elastic IP for NAT Gateway
+    NatEIP:
+      Type: AWS::EC2::EIP
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        Domain: vpc
+        Tags:
+          - Key: Name
+            Value: lego-api-nat-eip-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # NAT Gateway in Public Subnet 1
+    NatGateway:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt NatEIP.AllocationId
+        SubnetId: !Ref PublicSubnet1
+        Tags:
+          - Key: Name
+            Value: lego-api-nat-gateway-${self:custom.stage}
+          - Key: Purpose
+            Value: InternetAccess
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # Route Tables
+    # ===========================================
+
+    # Public Route Table
+    PublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: lego-api-public-rt-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Public Route to Internet Gateway
+    PublicRoute:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref InternetGateway
+
+    # Associate Public Subnet 1 with Public Route Table
+    PublicSubnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnet1
+
+    # Associate Public Subnet 2 with Public Route Table
+    PublicSubnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnet2
+
+    # Private Route Table
+    PrivateRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: lego-api-private-rt-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Private Route to NAT Gateway
+    PrivateRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NatGateway
+
+    # Associate Private Subnet 1 with Private Route Table
+    PrivateSubnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable
+        SubnetId: !Ref PrivateSubnet1
+
+    # Associate Private Subnet 2 with Private Route Table
+    PrivateSubnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable
+        SubnetId: !Ref PrivateSubnet2
+
+    # ===========================================
+    # Security Groups
+    # ===========================================
+
+    # Lambda Security Group - allows outbound to RDS, OpenSearch, and Internet
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: lego-api-lambda-sg-${self:custom.stage}
+        GroupDescription: Security group for Lambda functions
+        VpcId: !Ref VPC
+        SecurityGroupEgress:
+          # Allow all outbound traffic (to RDS, OpenSearch, S3, etc.)
+          - IpProtocol: '-1'
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: Name
+            Value: lego-api-lambda-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Database Security Group - allows inbound from Lambda
+    DatabaseSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: lego-api-database-sg-${self:custom.stage}
+        GroupDescription: Security group for RDS database
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          # Allow PostgreSQL from Lambda security group
+          - IpProtocol: tcp
+            FromPort: 5432
+            ToPort: 5432
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+            Description: PostgreSQL from Lambda
+        Tags:
+          - Key: Name
+            Value: lego-api-database-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # OpenSearch Security Group - allows inbound from Lambda
+    OpenSearchSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: lego-api-opensearch-sg-${self:custom.stage}
+        GroupDescription: Security group for OpenSearch domain
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          # Allow HTTPS from Lambda security group
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+            Description: HTTPS from Lambda
+        Tags:
+          - Key: Name
+            Value: lego-api-opensearch-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # RDS Aurora Serverless v2 PostgreSQL
+    # ===========================================
+
+    # DB Subnet Group - places database in private subnets
+    DBSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupName: lego-api-db-subnet-group-${self:custom.stage}
+        DBSubnetGroupDescription: Subnet group for LEGO API Aurora PostgreSQL
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        Tags:
+          - Key: Name
+            Value: lego-api-db-subnet-group-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Secrets Manager Secret for database credentials
+    DatabaseSecret:
+      Type: AWS::SecretsManager::Secret
+      Properties:
+        Name: lego-api-db-credentials-${self:custom.stage}
+        Description: Aurora PostgreSQL credentials for LEGO API
+        GenerateSecretString:
+          SecretStringTemplate: '{"username": "postgres"}'
+          GenerateStringKey: password
+          PasswordLength: 32
+          ExcludeCharacters: '"@/\'
+        Tags:
+          - Key: Name
+            Value: lego-api-db-credentials-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Aurora PostgreSQL Serverless v2 Cluster
+    AuroraCluster:
+      Type: AWS::RDS::DBCluster
+      DependsOn:
+        - DBSubnetGroup
+        - DatabaseSecurityGroup
+      Properties:
+        DBClusterIdentifier: lego-api-aurora-${self:custom.stage}
+        Engine: aurora-postgresql
+        EngineVersion: '15.8'
+        EngineMode: provisioned
+        Port: 5432
+        ServerlessV2ScalingConfiguration:
+          MinCapacity: 0.5
+          MaxCapacity: 2
+        MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}'
+        MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}'
+        DatabaseName: legoapidb
+        DBSubnetGroupName: !Ref DBSubnetGroup
+        VpcSecurityGroupIds:
+          - !Ref DatabaseSecurityGroup
+        StorageEncrypted: true
+        BackupRetentionPeriod: 7
+        DeletionProtection: false
+        EnableHttpEndpoint: true
+        Tags:
+          - Key: Name
+            Value: lego-api-aurora-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Aurora PostgreSQL Serverless v2 Instance
+    AuroraInstance:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        DBInstanceIdentifier: lego-api-aurora-instance-${self:custom.stage}
+        DBClusterIdentifier: !Ref AuroraCluster
+        DBInstanceClass: db.serverless
+        Engine: aurora-postgresql
+        PubliclyAccessible: false
+        Tags:
+          - Key: Name
+            Value: lego-api-aurora-instance-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Attach secret to RDS cluster for rotation
+    SecretTargetAttachment:
+      Type: AWS::SecretsManager::SecretTargetAttachment
+      Properties:
+        SecretId: !Ref DatabaseSecret
+        TargetId: !Ref AuroraCluster
+        TargetType: AWS::RDS::DBCluster
+
+    # ===========================================
+    # OpenSearch Domain
+    # ===========================================
+
+    # OpenSearch Service-Linked Role (required for VPC deployment)
+    # Note: This may already exist in the account - deployment will continue if it does
+    OpenSearchServiceLinkedRole:
+      Type: AWS::IAM::ServiceLinkedRole
+      Properties:
+        AWSServiceName: es.amazonaws.com
+        Description: Service-linked role for OpenSearch
+
+    # OpenSearch Domain - Single-node for dev, multi-node for production
+    OpenSearchDomain:
+      Type: AWS::OpenSearchService::Domain
+      DependsOn:
+        - OpenSearchServiceLinkedRole
+      Properties:
+        DomainName: lego-api-${self:custom.stage}
+        EngineVersion: OpenSearch_2.13
+        ClusterConfig:
+          InstanceType: ${self:custom.stageConfig.opensearch.instanceType}
+          InstanceCount: ${self:custom.stageConfig.opensearch.instanceCount}
+          DedicatedMasterEnabled: false
+          ZoneAwarenessEnabled: false
+          WarmEnabled: false
+        EBSOptions:
+          EBSEnabled: true
+          VolumeType: gp3
+          VolumeSize: 20
+        VPCOptions:
+          SecurityGroupIds:
+            - !Ref OpenSearchSecurityGroup
+          SubnetIds:
+            - !Ref PrivateSubnet1
+        NodeToNodeEncryptionOptions:
+          Enabled: true
+        EncryptionAtRestOptions:
+          Enabled: true
+        DomainEndpointOptions:
+          EnforceHTTPS: true
+          TLSSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+        AdvancedSecurityOptions:
+          Enabled: false
+        # Note: VPC-based domains use security groups for access control, not IP-based policies
+        AccessPolicies:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: '*'
+              Action: 'es:*'
+              Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/lego-api-${self:custom.stage}/*'
+        Tags:
+          - Key: Name
+            Value: lego-api-opensearch-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # DynamoDB Table for WebSocket Connections
+    # ===========================================
+
+    # WebSocket connections table - stores active connections with userId mapping
+    WebSocketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: lego-api-websocket-connections-${self:custom.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: userIdIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+        Tags:
+          - Key: Name
+            Value: lego-api-websocket-connections-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # Cognito User Pool for Authentication
+    # ===========================================
+
+    # Cognito User Pool - email-based sign-in with auto-verification
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: lego-moc-users-${self:custom.stage}
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireUppercase: true
+            RequireNumbers: true
+            RequireSymbols: false
+            TemporaryPasswordValidityDays: 7
+        EmailVerificationMessage: 'Your LEGO MOC verification code is {####}'
+        EmailVerificationSubject: 'LEGO MOC - Verify your email'
+        Schema:
+          - Name: email
+            AttributeDataType: String
+            Mutable: true
+            Required: true
+          - Name: avatar_url
+            AttributeDataType: String
+            Mutable: true
+            Required: false
+          - Name: preferences
+            AttributeDataType: String
+            Mutable: true
+            Required: false
+        AccountRecoverySetting:
+          RecoveryMechanisms:
+            - Name: verified_email
+              Priority: 1
+        DeletionProtection: INACTIVE
+        UserPoolTags:
+          Environment: ${self:custom.stage}
+          Project: lego-api
+          Service: Authentication
+
+    # Cognito User Pool Client - OAuth 2.0 authorization code flow
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: lego-moc-web-client-${self:custom.stage}
+        UserPoolId: !Ref CognitoUserPool
+        AllowedOAuthFlows:
+          - code
+        AllowedOAuthScopes:
+          - openid
+          - email
+          - profile
+        AllowedOAuthFlowsUserPoolClient: true
+        CallbackURLs:
+          - http://localhost:3002/auth/callback
+          - http://localhost:5173/auth/callback
+        LogoutURLs:
+          - http://localhost:3002/auth/logout
+          - http://localhost:5173/auth/logout
+        SupportedIdentityProviders:
+          - COGNITO
+        AccessTokenValidity: 60
+        IdTokenValidity: 60
+        RefreshTokenValidity: 43200
+        TokenValidityUnits:
+          AccessToken: minutes
+          IdToken: minutes
+          RefreshToken: minutes
+        GenerateSecret: false
+        PreventUserExistenceErrors: ENABLED
+        ExplicitAuthFlows:
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+
+    # Cognito User Pool Domain - for hosted UI (optional)
+    CognitoUserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        Domain: !Sub 'lego-moc-${self:custom.stage}-${AWS::AccountId}'
+        UserPoolId: !Ref CognitoUserPool
+
+    # ===========================================
+    # S3 Bucket for File Storage
+    # ===========================================
+
+    # S3 Bucket for MOC files, gallery images, and other uploads
+    FilesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: !Sub 'lego-api-files-${self:custom.stage}-${AWS::AccountId}'
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              AllowedOrigins:
+                - http://localhost:3000
+              MaxAge: 3600
+        LifecycleConfiguration:
+          Rules:
+            - Id: CleanupIncompleteUploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload:
+                DaysAfterInitiation: 7
+        Tags:
+          - Key: Name
+            Value: lego-api-files-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # CloudWatch Dashboard
+    # ===========================================
+
+    ApiDashboard:
+      Type: AWS::CloudWatch::Dashboard
+      Properties:
+        DashboardName: lego-api-${self:custom.stage}
+        DashboardBody: !Sub |
+          {
+            "widgets": [
+              {
+                "type": "text",
+                "x": 0,
+                "y": 0,
+                "width": 24,
+                "height": 1,
+                "properties": {
+                  "markdown": "# LEGO API Dashboard - dev"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 1,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Invocations",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-healthCheck"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-galleryListImages"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-galleryUploadImage"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-mocList"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-wishlistList"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 1,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Errors",
+                  "view": "timeSeries",
+                  "stacked": true,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-dev-healthCheck"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-dev-galleryListImages"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-dev-galleryUploadImage"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-dev-mocList"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-dev-wishlistList"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 1,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Duration (p95)",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-dev-healthCheck"],
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-dev-galleryListImages"],
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-dev-galleryUploadImage"],
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-dev-mocList"]
+                  ],
+                  "period": 300,
+                  "stat": "p95"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 7,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "API Gateway Requests",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ApiGateway", "Count", "ApiId", "${HttpApi}"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 7,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "API Gateway Latency (Avg)",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ApiGateway", "Latency", "ApiId", "${HttpApi}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 7,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "API Gateway Errors",
+                  "view": "timeSeries",
+                  "stacked": true,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ApiGateway", "4xx", "ApiId", "${HttpApi}"],
+                    ["AWS/ApiGateway", "5xx", "ApiId", "${HttpApi}"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 13,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Aurora Serverless CPU Utilization",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", "lego-api-aurora-dev"]
+                  ],
+                  "period": 300,
+                  "stat": "Average",
+                  "yAxis": {"left": {"min": 0, "max": 100}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 13,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Aurora Database Connections",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/RDS", "DatabaseConnections", "DBClusterIdentifier", "lego-api-aurora-dev"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 13,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Aurora Serverless ACU",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/RDS", "ServerlessDatabaseCapacity", "DBClusterIdentifier", "lego-api-aurora-dev"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 19,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "OpenSearch Cluster Health",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ES", "ClusterStatus.green", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "ClusterStatus.yellow", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "ClusterStatus.red", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"]
+                  ],
+                  "period": 300,
+                  "stat": "Maximum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 19,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "OpenSearch CPU & JVM",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ES", "CPUUtilization", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "JVMMemoryPressure", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average",
+                  "yAxis": {"left": {"min": 0, "max": 100}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 19,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "OpenSearch Latency",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ES", "SearchLatency", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "IndexingLatency", "DomainName", "lego-api-dev", "ClientId", "${AWS::AccountId}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 25,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "WebSocket DynamoDB Usage",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "lego-api-websocket-connections-dev"],
+                    ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "lego-api-websocket-connections-dev"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 25,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "WebSocket Lambda Functions",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-websocketConnect"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-websocketDisconnect"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-dev-websocketDefault"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 25,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Concurrent Executions",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", "lego-api-dev-healthCheck"],
+                    ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", "lego-api-dev-galleryListImages"],
+                    ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", "lego-api-dev-mocList"]
+                  ],
+                  "period": 300,
+                  "stat": "Maximum"
+                }
+              }
+            ]
+          }
+
+    # ===========================================
+    # CloudWatch Alarms
+    # ===========================================
+
+    # Lambda Error Alarm - triggers when any function has errors
+    LambdaErrorAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-lambda-errors
+        AlarmDescription: Lambda function errors detected
+        MetricName: Errors
+        Namespace: AWS/Lambda
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 2
+        Threshold: 5
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: FunctionName
+            Value: ${self:service}-${self:custom.stage}-healthCheck
+
+    # API Gateway 5xx Error Alarm
+    ApiGateway5xxAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-api-5xx-errors
+        AlarmDescription: API Gateway 5xx errors detected
+        MetricName: 5xx
+        Namespace: AWS/ApiGateway
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 2
+        Threshold: 10
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: ApiId
+            Value: !Ref HttpApi
+
+    # API Gateway High Latency Alarm
+    ApiGatewayLatencyAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-api-high-latency
+        AlarmDescription: API Gateway latency is high (>5s p95)
+        MetricName: Latency
+        Namespace: AWS/ApiGateway
+        ExtendedStatistic: p95
+        Period: 300
+        EvaluationPeriods: 3
+        Threshold: 5000
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: ApiId
+            Value: !Ref HttpApi
+
+    # Aurora CPU Utilization Alarm
+    AuroraCpuAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-aurora-high-cpu
+        AlarmDescription: Aurora cluster CPU utilization is high (>80%)
+        MetricName: CPUUtilization
+        Namespace: AWS/RDS
+        Statistic: Average
+        Period: 300
+        EvaluationPeriods: 3
+        Threshold: 80
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DBClusterIdentifier
+            Value: lego-api-aurora-${self:custom.stage}
+
+    # Aurora Connection Count Alarm
+    AuroraConnectionsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-aurora-high-connections
+        AlarmDescription: Aurora cluster has high connection count (>50)
+        MetricName: DatabaseConnections
+        Namespace: AWS/RDS
+        Statistic: Average
+        Period: 300
+        EvaluationPeriods: 2
+        Threshold: 50
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DBClusterIdentifier
+            Value: lego-api-aurora-${self:custom.stage}
+
+    # OpenSearch Cluster Red Alarm
+    OpenSearchClusterRedAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-opensearch-cluster-red
+        AlarmDescription: OpenSearch cluster status is RED
+        MetricName: ClusterStatus.red
+        Namespace: AWS/ES
+        Statistic: Maximum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DomainName
+            Value: lego-api-${self:custom.stage}
+          - Name: ClientId
+            Value: !Ref AWS::AccountId
+
+    # OpenSearch JVM Memory Pressure Alarm
+    OpenSearchJvmAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-opensearch-jvm-pressure
+        AlarmDescription: OpenSearch JVM memory pressure is high (>80%)
+        MetricName: JVMMemoryPressure
+        Namespace: AWS/ES
+        Statistic: Maximum
+        Period: 300
+        EvaluationPeriods: 3
+        Threshold: 80
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DomainName
+            Value: lego-api-${self:custom.stage}
+          - Name: ClientId
+            Value: !Ref AWS::AccountId
+
+    # DynamoDB Throttle Alarm
+    DynamoDBThrottleAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-dynamodb-throttle
+        AlarmDescription: DynamoDB WebSocket connections table is being throttled
+        MetricName: ThrottledRequests
+        Namespace: AWS/DynamoDB
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: TableName
+            Value: lego-api-websocket-connections-${self:custom.stage}
+
+    # Lambda Duration Alarm (approaching timeout)
+    LambdaDurationAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-lambda-slow
+        AlarmDescription: Lambda function duration approaching timeout (>25s p95)
+        MetricName: Duration
+        Namespace: AWS/Lambda
+        ExtendedStatistic: p95
+        Period: 300
+        EvaluationPeriods: 2
+        Threshold: 25000
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: FunctionName
+            Value: ${self:service}-${self:custom.stage}-mocFinalizeWithFiles
+
+    # Health Check Failure Alarm
+    HealthCheckAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-health-check-failing
+        AlarmDescription: Health check endpoint is failing
+        MetricName: Errors
+        Namespace: AWS/Lambda
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 3
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: FunctionName
+            Value: ${self:service}-${self:custom.stage}-healthCheck
+
+  Outputs:
+    # Note: Serverless Framework auto-generates HttpApiUrl output
+
+    VpcId:
+      Description: VPC ID
+      Value: !Ref VPC
+      Export:
+        Name: ${self:service}-${self:custom.stage}-VpcId
+
+    PrivateSubnet1Id:
+      Description: Private Subnet 1 ID
+      Value: !Ref PrivateSubnet1
+      Export:
+        Name: ${self:service}-${self:custom.stage}-PrivateSubnet1Id
+
+    PrivateSubnet2Id:
+      Description: Private Subnet 2 ID
+      Value: !Ref PrivateSubnet2
+      Export:
+        Name: ${self:service}-${self:custom.stage}-PrivateSubnet2Id
+
+    LambdaSecurityGroupId:
+      Description: Lambda Security Group ID
+      Value: !Ref LambdaSecurityGroup
+      Export:
+        Name: ${self:service}-${self:custom.stage}-LambdaSecurityGroupId
+
+    DatabaseSecurityGroupId:
+      Description: Database Security Group ID
+      Value: !Ref DatabaseSecurityGroup
+      Export:
+        Name: ${self:service}-${self:custom.stage}-DatabaseSecurityGroupId
+
+    OpenSearchSecurityGroupId:
+      Description: OpenSearch Security Group ID
+      Value: !Ref OpenSearchSecurityGroup
+      Export:
+        Name: ${self:service}-${self:custom.stage}-OpenSearchSecurityGroupId
+
+    AuroraClusterEndpoint:
+      Description: Aurora PostgreSQL Cluster Endpoint
+      Value: !GetAtt AuroraCluster.Endpoint.Address
+      Export:
+        Name: ${self:service}-${self:custom.stage}-AuroraClusterEndpoint
+
+    AuroraClusterPort:
+      Description: Aurora PostgreSQL Cluster Port
+      Value: !GetAtt AuroraCluster.Endpoint.Port
+      Export:
+        Name: ${self:service}-${self:custom.stage}-AuroraClusterPort
+
+    DatabaseSecretArn:
+      Description: Database Credentials Secret ARN
+      Value: !Ref DatabaseSecret
+      Export:
+        Name: ${self:service}-${self:custom.stage}-DatabaseSecretArn
+
+    OpenSearchEndpoint:
+      Description: OpenSearch Domain Endpoint
+      Value: !GetAtt OpenSearchDomain.DomainEndpoint
+      Export:
+        Name: ${self:service}-${self:custom.stage}-OpenSearchEndpoint
+
+    OpenSearchDomainArn:
+      Description: OpenSearch Domain ARN
+      Value: !GetAtt OpenSearchDomain.Arn
+      Export:
+        Name: ${self:service}-${self:custom.stage}-OpenSearchDomainArn
+
+    FilesBucketName:
+      Description: S3 Bucket for file storage
+      Value: !Ref FilesBucket
+      Export:
+        Name: ${self:service}-${self:custom.stage}-FilesBucketName
+
+    FilesBucketArn:
+      Description: S3 Bucket ARN
+      Value: !GetAtt FilesBucket.Arn
+      Export:
+        Name: ${self:service}-${self:custom.stage}-FilesBucketArn
+
+    CognitoUserPoolId:
+      Description: Cognito User Pool ID
+      Value: !Ref CognitoUserPool
+      Export:
+        Name: ${self:service}-${self:custom.stage}-CognitoUserPoolId
+
+    CognitoUserPoolArn:
+      Description: Cognito User Pool ARN
+      Value: !GetAtt CognitoUserPool.Arn
+      Export:
+        Name: ${self:service}-${self:custom.stage}-CognitoUserPoolArn
+
+    CognitoUserPoolClientId:
+      Description: Cognito User Pool Client ID
+      Value: !Ref CognitoUserPoolClient
+      Export:
+        Name: ${self:service}-${self:custom.stage}-CognitoUserPoolClientId
+
+    CognitoUserPoolDomain:
+      Description: Cognito User Pool Domain
+      Value: !Sub 'https://lego-moc-${self:custom.stage}-${AWS::AccountId}.auth.${self:provider.region}.amazoncognito.com'
+      Export:
+        Name: ${self:service}-${self:custom.stage}-CognitoUserPoolDomain
+
+    WebSocketConnectionsTableName:
+      Description: DynamoDB table for WebSocket connections
+      Value: !Ref WebSocketConnectionsTable
+      Export:
+        Name: ${self:service}-${self:custom.stage}-WebSocketConnectionsTableName
+
+    WebSocketConnectionsTableArn:
+      Description: DynamoDB table ARN for WebSocket connections
+      Value: !GetAtt WebSocketConnectionsTable.Arn
+      Export:
+        Name: ${self:service}-${self:custom.stage}-WebSocketConnectionsTableArn
+
+    CloudWatchDashboardUrl:
+      Description: CloudWatch Dashboard URL
+      Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=lego-api-${self:custom.stage}'
+      Export:
+        Name: ${self:service}-${self:custom.stage}-CloudWatchDashboardUrl
