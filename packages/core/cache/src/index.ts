@@ -22,6 +22,45 @@ export {
   createCacheMonitor,
 } from './utils/rtkQueryCache'
 
+// Serverless cache utilities
+export {
+  SERVERLESS_CACHE_CONFIGS,
+  SERVERLESS_BATCH_CONFIGS,
+  SERVERLESS_INVALIDATION_PATTERNS,
+  DEFAULT_SERVERLESS_WARMING_CONFIG,
+  getServerlessCacheConfig,
+  createServerlessCacheConfig,
+  getServerlessBatchConfig,
+  createServerlessWarmingConfig,
+  getServerlessInvalidationConfig,
+  ServerlessCache,
+} from './utils/serverlessCache'
+export type {
+  ServerlessCacheStrategy,
+  ServerlessBatchStrategy,
+  ServerlessInvalidationStrategy,
+  ServerlessWarmingConfig,
+  ServerlessCacheConfig,
+  BatchOperation,
+  BatchResult,
+  ServerlessCacheStats,
+} from './utils/serverlessCache'
+
+// Serverless cache manager
+export {
+  ServerlessCacheManager,
+  getServerlessCacheManager,
+  resetServerlessCacheManager,
+} from './utils/serverlessCacheManager'
+export type { ServerlessCacheManagerConfig } from './utils/serverlessCacheManager'
+
+// Serverless cache hooks
+export { useServerlessCache, useServerlessCacheValue } from './hooks/useServerlessCache'
+export type {
+  UseServerlessCacheOptions,
+  UseServerlessCacheReturn,
+} from './hooks/useServerlessCache'
+
 // React components
 export { CachedImage, ImageGallery, CacheStatus } from './components/CachedImage'
 
