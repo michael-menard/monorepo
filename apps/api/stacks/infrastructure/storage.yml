@@ -1,0 +1,130 @@
+# Infrastructure Stack: Storage
+# Deploys: S3 Bucket for file storage
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/infrastructure/storage.yml --stage dev
+#
+# Dependencies: None (standalone)
+# Dependents: functions-*
+
+service: lego-storage
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  deploymentMethod: direct
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: storage
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+
+resources:
+  Description: LEGO API Storage Infrastructure (S3)
+
+  Resources:
+    # S3 Bucket for MOC files, gallery images, and other uploads
+    FilesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: !Sub 'lego-api-files-${self:custom.stage}-${AWS::AccountId}'
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              AllowedOrigins:
+                - http://localhost:3000
+                - http://localhost:5173
+              MaxAge: 3600
+        LifecycleConfiguration:
+          Rules:
+            - Id: CleanupIncompleteUploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload:
+                DaysAfterInitiation: 7
+            # Optional: Move old files to cheaper storage
+            # - Id: TransitionToIA
+            #   Status: Enabled
+            #   Transitions:
+            #     - StorageClass: STANDARD_IA
+            #       TransitionInDays: 90
+        Tags:
+          - Key: Name
+            Value: lego-api-files-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # IAM Policies for S3 Access
+    # ===========================================
+
+    # IAM Policy for Lambda functions to access S3
+    S3AccessPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        ManagedPolicyName: lego-api-s3-access-${self:custom.stage}
+        Description: Policy for Lambda functions to access S3 bucket
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+                - s3:ListBucket
+                - s3:GetObjectTagging
+                - s3:PutObjectTagging
+              Resource:
+                - !GetAtt FilesBucket.Arn
+                - !Sub '${FilesBucket.Arn}/*'
+
+  Outputs:
+    FilesBucketName:
+      Description: S3 Bucket Name for file storage
+      Value: !Ref FilesBucket
+      Export:
+        Name: lego-storage-${self:custom.stage}-BucketName
+
+    FilesBucketArn:
+      Description: S3 Bucket ARN
+      Value: !GetAtt FilesBucket.Arn
+      Export:
+        Name: lego-storage-${self:custom.stage}-BucketArn
+
+    FilesBucketDomainName:
+      Description: S3 Bucket Domain Name
+      Value: !GetAtt FilesBucket.DomainName
+      Export:
+        Name: lego-storage-${self:custom.stage}-BucketDomainName
+
+    S3AccessPolicyArn:
+      Description: IAM Policy ARN for S3 access
+      Value: !Ref S3AccessPolicy
+      Export:
+        Name: lego-storage-${self:custom.stage}-AccessPolicyArn

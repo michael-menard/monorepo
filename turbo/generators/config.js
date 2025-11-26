@@ -699,6 +699,361 @@ module.exports = function generator(plop) {
     },
   })
 
+  // React App generator
+  plop.setGenerator('react-app', {
+    description: 'Generate a new React application (shell, module, or standalone)',
+    prompts: [
+      {
+        type: 'input',
+        name: 'name',
+        message: 'App name (kebab-case):',
+        validate: (input) => {
+          if (!input) {
+            return 'App name is required'
+          }
+          if (input.includes(' ')) {
+            return 'App name cannot include spaces'
+          }
+          if (!input.match(/^[a-z0-9-]+$/)) {
+            return 'App name must be kebab-case (lowercase, hyphens only)'
+          }
+          return true
+        },
+      },
+      {
+        type: 'list',
+        name: 'type',
+        message: 'App type:',
+        choices: [
+          { name: 'Shell App - Main coordinator with auth, routing, layout', value: 'shell' },
+          { name: 'Module App - Feature module that plugs into shell', value: 'module' },
+          { name: 'Standalone App - Independent application', value: 'standalone' },
+        ],
+        default: 'module',
+      },
+      {
+        type: 'input',
+        name: 'displayName',
+        message: 'Display name:',
+        default: (answers) => answers.name.split('-').map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' '),
+      },
+      {
+        type: 'input',
+        name: 'description',
+        message: 'App description:',
+        default: (answers) => `${answers.displayName} application`,
+      },
+      {
+        type: 'input',
+        name: 'port',
+        message: 'Development port:',
+        default: (answers) => {
+          const basePort = answers.type === 'shell' ? 3000 : 3001
+          return basePort.toString()
+        },
+        validate: (input) => {
+          const port = parseInt(input)
+          if (isNaN(port) || port < 3000 || port > 9999) {
+            return 'Port must be a number between 3000 and 9999'
+          }
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'shellApp',
+        message: 'Parent shell app name (for module registration):',
+        default: 'main-app',
+        when: answers => answers.type === 'module',
+        validate: (input) => {
+          if (!input) {
+            return 'Shell app name is required for modules'
+          }
+          return true
+        },
+      },
+      {
+        type: 'confirm',
+        name: 'includeAuth',
+        message: 'Include authentication integration?',
+        default: (answers) => answers.type === 'shell',
+        when: answers => answers.type !== 'module', // Modules inherit auth from shell
+      },
+      {
+        type: 'confirm',
+        name: 'includeRouting',
+        message: 'Include TanStack Router?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'includeRedux',
+        message: 'Include Redux Toolkit store?',
+        default: (answers) => answers.type === 'shell',
+      },
+      {
+        type: 'confirm',
+        name: 'includeStorybook',
+        message: 'Include Storybook setup?',
+        default: false,
+      },
+    ],
+    actions: (data) => {
+      const actions = []
+      const appPath = `apps/web/{{kebabCase name}}`
+
+      // Core files for all app types
+      actions.push(
+        // Package.json
+        {
+          type: 'add',
+          path: `${appPath}/package.json`,
+          templateFile: 'templates/react-app-package.json.hbs',
+        },
+        // TypeScript configs
+        {
+          type: 'add',
+          path: `${appPath}/tsconfig.json`,
+          templateFile: 'templates/react-app-tsconfig.json.hbs',
+        },
+        {
+          type: 'add',
+          path: `${appPath}/tsconfig.node.json`,
+          templateFile: 'templates/react-app-tsconfig.node.json.hbs',
+        },
+        // Vite config
+        {
+          type: 'add',
+          path: `${appPath}/vite.config.ts`,
+          templateFile: 'templates/react-app-vite.config.ts.hbs',
+        },
+        // Tailwind config (extends shared config)
+        {
+          type: 'add',
+          path: `${appPath}/tailwind.config.ts`,
+          templateFile: 'templates/react-app-tailwind.config.ts.hbs',
+        },
+        // HTML template
+        {
+          type: 'add',
+          path: `${appPath}/index.html`,
+          templateFile: 'templates/react-app-index.html.hbs',
+        },
+        // Environment files
+        {
+          type: 'add',
+          path: `${appPath}/.env.example`,
+          templateFile: 'templates/react-app-env.example.hbs',
+        },
+        // Main entry point
+        {
+          type: 'add',
+          path: `${appPath}/src/main.tsx`,
+          templateFile: 'templates/react-app-main.tsx.hbs',
+        },
+        // App component
+        {
+          type: 'add',
+          path: `${appPath}/src/App.tsx`,
+          templateFile: 'templates/react-app-App.tsx.hbs',
+        },
+        // Global styles
+        {
+          type: 'add',
+          path: `${appPath}/src/styles/globals.css`,
+          templateFile: 'templates/react-app-globals.css.hbs',
+        },
+        // README
+        {
+          type: 'add',
+          path: `${appPath}/README.md`,
+          templateFile: 'templates/react-app-README.md.hbs',
+        },
+        // Vitest config
+        {
+          type: 'add',
+          path: `${appPath}/vitest.config.ts`,
+          templateFile: 'templates/react-app-vitest.config.ts.hbs',
+        },
+        // Test setup
+        {
+          type: 'add',
+          path: `${appPath}/src/test/setup.ts`,
+          templateFile: 'templates/react-app-test-setup.ts.hbs',
+        },
+        // MSW setup
+        {
+          type: 'add',
+          path: `${appPath}/src/test/mocks/server.ts`,
+          templateFile: 'templates/react-app-msw-server.ts.hbs',
+        },
+        {
+          type: 'add',
+          path: `${appPath}/src/test/mocks/handlers.ts`,
+          templateFile: 'templates/react-app-msw-handlers.ts.hbs',
+        },
+        {
+          type: 'add',
+          path: `${appPath}/src/test/mocks/browser.ts`,
+          templateFile: 'templates/react-app-msw-browser.ts.hbs',
+        },
+        // Sample test
+        {
+          type: 'add',
+          path: `${appPath}/src/App.test.tsx`,
+          templateFile: 'templates/react-app-sample-test.tsx.hbs',
+        }
+      )
+
+      // Shell app specific files
+      if (data.type === 'shell') {
+        actions.push(
+          // Layout components
+          {
+            type: 'add',
+            path: `${appPath}/src/components/Layout/RootLayout.tsx`,
+            templateFile: 'templates/react-app-shell-RootLayout.tsx.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/components/Layout/Header.tsx`,
+            templateFile: 'templates/react-app-shell-Header.tsx.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/components/Layout/Sidebar.tsx`,
+            templateFile: 'templates/react-app-shell-Sidebar.tsx.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/components/Layout/Footer.tsx`,
+            templateFile: 'templates/react-app-shell-Footer.tsx.hbs',
+          },
+          // Error boundary
+          {
+            type: 'add',
+            path: `${appPath}/src/components/ErrorBoundary/ErrorBoundary.tsx`,
+            templateFile: 'templates/react-app-shell-ErrorBoundary.tsx.hbs',
+          },
+          // Auth provider
+          {
+            type: 'add',
+            path: `${appPath}/src/services/auth/AuthProvider.tsx`,
+            templateFile: 'templates/react-app-shell-AuthProvider.tsx.hbs',
+          },
+          // Redux store
+          {
+            type: 'add',
+            path: `${appPath}/src/store/index.ts`,
+            templateFile: 'templates/react-app-shell-store.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/store/slices/authSlice.ts`,
+            templateFile: 'templates/react-app-shell-authSlice.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/store/slices/themeSlice.ts`,
+            templateFile: 'templates/react-app-shell-themeSlice.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/store/slices/navigationSlice.ts`,
+            templateFile: 'templates/react-app-shell-navigationSlice.ts.hbs',
+          },
+          // Routing
+          {
+            type: 'add',
+            path: `${appPath}/src/routes/index.ts`,
+            templateFile: 'templates/react-app-shell-routes.ts.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/routes/pages/HomePage.tsx`,
+            templateFile: 'templates/react-app-shell-HomePage.tsx.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/routes/pages/LoginPage.tsx`,
+            templateFile: 'templates/react-app-shell-LoginPage.tsx.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/routes/pages/NotFoundPage.tsx`,
+            templateFile: 'templates/react-app-shell-NotFoundPage.tsx.hbs',
+          },
+          {
+            type: 'add',
+            path: `${appPath}/src/routes/pages/LoadingPage.tsx`,
+            templateFile: 'templates/react-app-shell-LoadingPage.tsx.hbs',
+          }
+        )
+      }
+
+      // Module app specific files
+      if (data.type === 'module') {
+        actions.push(
+          // Module entry point
+          {
+            type: 'add',
+            path: `${appPath}/src/Module.tsx`,
+            templateFile: 'templates/react-app-module-Module.tsx.hbs',
+          },
+          // Module pages
+          {
+            type: 'add',
+            path: `${appPath}/src/pages/MainPage.tsx`,
+            templateFile: 'templates/react-app-module-MainPage.tsx.hbs',
+          },
+          // Module components
+          {
+            type: 'add',
+            path: `${appPath}/src/components/ModuleLayout.tsx`,
+            templateFile: 'templates/react-app-module-ModuleLayout.tsx.hbs',
+          },
+          // Module hooks
+          {
+            type: 'add',
+            path: `${appPath}/src/hooks/useModuleAuth.ts`,
+            templateFile: 'templates/react-app-module-useModuleAuth.ts.hbs',
+          }
+        )
+      }
+
+      // Standalone app specific files
+      if (data.type === 'standalone') {
+        actions.push(
+          // Basic layout
+          {
+            type: 'add',
+            path: `${appPath}/src/components/Layout/Layout.tsx`,
+            templateFile: 'templates/react-app-standalone-Layout.tsx.hbs',
+          },
+          // Basic pages
+          {
+            type: 'add',
+            path: `${appPath}/src/pages/HomePage.tsx`,
+            templateFile: 'templates/react-app-standalone-HomePage.tsx.hbs',
+          }
+        )
+      }
+
+      // Conditional files based on options
+      if (data.includeStorybook) {
+        actions.push({
+          type: 'add',
+          path: `${appPath}/.storybook/main.ts`,
+          templateFile: 'templates/react-app-storybook-main.ts.hbs',
+        })
+      }
+
+      return actions
+    },
+  })
+
   // PRD generator
   plop.setGenerator('prd', {
     description: 'Generate a Product Requirements Document',

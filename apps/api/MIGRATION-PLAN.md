@@ -75,17 +75,19 @@
 
 ## Migration Strategy
 
-### Phase 1: Setup (Day 1 - Morning)
+### Phase 1: Setup (Day 1 - Morning) ✅ COMPLETED
 
-- [ ] Install Serverless Framework
-- [ ] Install required plugins:
-  - serverless-offline
-  - serverless-plugin-typescript
-  - serverless-iam-roles-per-function
-  - serverless-apigatewayv2-authorizer
-  - serverless-prune-plugin
-- [ ] Create base `serverless.yml`
-- [ ] Configure stage-specific variables
+- [x] Install Serverless Framework (v3.40.0 - v4 requires login)
+- [x] Install required plugins:
+  - serverless-esbuild (v1.56.0) - for TypeScript bundling with path aliases
+  - serverless-offline (v13.9.0)
+  - serverless-iam-roles-per-function (v3.2.0)
+  - serverless-prune-plugin (v2.1.0)
+- [x] Create base `serverless.yml`
+- [x] Configure stage-specific variables (dev-sf, staging, production)
+- [x] Create `esbuild-plugins.js` for TypeScript path alias resolution (@/core/*, @/endpoints/*)
+- [x] Add package.json scripts (sls:dev, sls:package, sls:deploy, etc.)
+- [x] Test serverless package - **SUCCESS** (healthCheck.zip ~1.1MB)
 
 ### Phase 2: Core Infrastructure (Day 1 - Afternoon)
 
@@ -193,5 +195,35 @@
 
 ---
 
-**Status**: Ready to begin Phase 1
+**Status**: Phase 1 Complete - Ready for Phase 2 (VPC Infrastructure)
 **Last Updated**: 2025-11-24
+
+## Files Created/Modified
+
+| File | Purpose |
+|------|---------|
+| `serverless.yml` | Main Serverless Framework configuration |
+| `esbuild-plugins.js` | TypeScript path alias resolution for @/core/*, @/endpoints/* |
+| `tsconfig.serverless.json` | TypeScript config for serverless builds |
+| `package.json` | Added sls:* scripts |
+
+## Commands Available
+
+```bash
+# Local development
+pnpm sls:dev
+
+# Package (build without deploy)
+pnpm sls:package
+
+# Deploy to AWS
+pnpm sls:deploy              # dev-sf stage
+pnpm sls:deploy:staging      # staging stage
+pnpm sls:deploy:production   # production stage
+
+# Remove stack
+pnpm sls:remove
+
+# View info
+pnpm sls:info
+```

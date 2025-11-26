@@ -1,0 +1,234 @@
+# Infrastructure Stack: Auth
+# Deploys: Cognito User Pool, Client, Domain, and Social Identity Providers
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/infrastructure/auth.yml --stage dev
+#
+# Dependencies: None (standalone)
+# Dependents: api-gateway, functions-*
+
+service: lego-auth
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  deploymentMethod: direct
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: auth
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+
+  # Social Login OAuth Credentials (stored in SSM Parameter Store)
+  oauth:
+    google:
+      clientId: ${ssm:/lego-api/${self:custom.stage}/google-client-id, ''}
+      clientSecret: ${ssm:/lego-api/${self:custom.stage}/google-client-secret, ''}
+    apple:
+      clientId: ${ssm:/lego-api/${self:custom.stage}/apple-client-id, ''}
+      teamId: ${ssm:/lego-api/${self:custom.stage}/apple-team-id, ''}
+      keyId: ${ssm:/lego-api/${self:custom.stage}/apple-key-id, ''}
+      privateKey: ${ssm:/lego-api/${self:custom.stage}/apple-private-key, ''}
+    facebook:
+      clientId: ${ssm:/lego-api/${self:custom.stage}/facebook-client-id, ''}
+      clientSecret: ${ssm:/lego-api/${self:custom.stage}/facebook-client-secret, ''}
+
+resources:
+  Description: LEGO API Authentication Infrastructure (Cognito)
+
+  # CloudFormation Conditions for optional social login providers
+  Conditions:
+    HasGoogleCredentials: !Not [!Equals ['${self:custom.oauth.google.clientId}', '']]
+    HasAppleCredentials: !Not [!Equals ['${self:custom.oauth.apple.clientId}', '']]
+    HasFacebookCredentials: !Not [!Equals ['${self:custom.oauth.facebook.clientId}', '']]
+
+  Resources:
+    # Cognito User Pool - email-based sign-in with OTP verification
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:custom.shared.cognito.userPoolName}-${self:custom.stage}
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        UserAttributeUpdateSettings:
+          AttributesRequireVerificationBeforeUpdate:
+            - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: ${self:custom.shared.cognito.passwordMinLength}
+            RequireLowercase: true
+            RequireUppercase: true
+            RequireNumbers: true
+            RequireSymbols: false
+            TemporaryPasswordValidityDays: 7
+        VerificationMessageTemplate:
+          DefaultEmailOption: CONFIRM_WITH_CODE
+          EmailMessage: 'Your LEGO MOC verification code is {####}. This code expires in 24 hours.'
+          EmailSubject: 'LEGO MOC - Verify your email'
+          EmailMessageByLink: 'Please click the link below to verify your email address. {##Verify Email##}'
+          EmailSubjectByLink: 'LEGO MOC - Verify your email'
+        Schema:
+          - Name: email
+            AttributeDataType: String
+            Mutable: true
+            Required: true
+          - Name: avatar_url
+            AttributeDataType: String
+            Mutable: true
+            Required: false
+          - Name: preferences
+            AttributeDataType: String
+            Mutable: true
+            Required: false
+        AccountRecoverySetting:
+          RecoveryMechanisms:
+            - Name: verified_email
+              Priority: 1
+        DeletionProtection: INACTIVE
+        UserPoolTags:
+          Environment: ${self:custom.stage}
+          Project: lego-api
+          Service: Authentication
+
+    # Cognito User Pool Client - OAuth 2.0 authorization code flow
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      DependsOn:
+        - CognitoUserPool
+      Properties:
+        ClientName: lego-moc-web-client-${self:custom.stage}
+        UserPoolId: !Ref CognitoUserPool
+        AllowedOAuthFlows:
+          - code
+        AllowedOAuthScopes:
+          - openid
+          - email
+          - profile
+        AllowedOAuthFlowsUserPoolClient: true
+        CallbackURLs:
+          - http://localhost:3002/auth/callback
+          - http://localhost:5173/auth/callback
+        LogoutURLs:
+          - http://localhost:3002/auth/logout
+          - http://localhost:5173/auth/logout
+        SupportedIdentityProviders:
+          - COGNITO
+        AccessTokenValidity: ${self:custom.shared.cognito.accessTokenValidity}
+        IdTokenValidity: ${self:custom.shared.cognito.idTokenValidity}
+        RefreshTokenValidity: ${self:custom.shared.cognito.refreshTokenValidity}
+        TokenValidityUnits:
+          AccessToken: minutes
+          IdToken: minutes
+          RefreshToken: minutes
+        GenerateSecret: false
+        PreventUserExistenceErrors: ENABLED
+        ExplicitAuthFlows:
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+
+    # Cognito User Pool Domain - for hosted UI
+    CognitoUserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        Domain: !Sub 'lego-moc-${self:custom.stage}-${AWS::AccountId}'
+        UserPoolId: !Ref CognitoUserPool
+
+    # ===========================================
+    # Social Identity Providers (Conditional)
+    # ===========================================
+
+    # Google Identity Provider
+    GoogleIdentityProvider:
+      Type: AWS::Cognito::UserPoolIdentityProvider
+      Condition: HasGoogleCredentials
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ProviderName: Google
+        ProviderType: Google
+        ProviderDetails:
+          client_id: ${self:custom.oauth.google.clientId}
+          client_secret: ${self:custom.oauth.google.clientSecret}
+          authorize_scopes: openid email profile
+        AttributeMapping:
+          email: email
+          name: name
+          picture: picture
+          username: sub
+
+    # Apple Identity Provider
+    AppleIdentityProvider:
+      Type: AWS::Cognito::UserPoolIdentityProvider
+      Condition: HasAppleCredentials
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ProviderName: SignInWithApple
+        ProviderType: SignInWithApple
+        ProviderDetails:
+          client_id: ${self:custom.oauth.apple.clientId}
+          team_id: ${self:custom.oauth.apple.teamId}
+          key_id: ${self:custom.oauth.apple.keyId}
+          private_key: ${self:custom.oauth.apple.privateKey}
+          authorize_scopes: name email
+        AttributeMapping:
+          email: email
+          name: name
+          username: sub
+
+    # Facebook Identity Provider
+    FacebookIdentityProvider:
+      Type: AWS::Cognito::UserPoolIdentityProvider
+      Condition: HasFacebookCredentials
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ProviderName: Facebook
+        ProviderType: Facebook
+        ProviderDetails:
+          client_id: ${self:custom.oauth.facebook.clientId}
+          client_secret: ${self:custom.oauth.facebook.clientSecret}
+          authorize_scopes: email public_profile
+        AttributeMapping:
+          email: email
+          name: name
+          picture: picture
+          username: id
+
+  Outputs:
+    CognitoUserPoolId:
+      Description: Cognito User Pool ID
+      Value: !Ref CognitoUserPool
+      Export:
+        Name: lego-auth-${self:custom.stage}-UserPoolId
+
+    CognitoUserPoolArn:
+      Description: Cognito User Pool ARN
+      Value: !GetAtt CognitoUserPool.Arn
+      Export:
+        Name: lego-auth-${self:custom.stage}-UserPoolArn
+
+    CognitoUserPoolClientId:
+      Description: Cognito User Pool Client ID
+      Value: !Ref CognitoUserPoolClient
+      Export:
+        Name: lego-auth-${self:custom.stage}-UserPoolClientId
+
+    CognitoUserPoolDomain:
+      Description: Cognito User Pool Domain URL
+      Value: !Sub 'https://lego-moc-${self:custom.stage}-${AWS::AccountId}.auth.${self:provider.region}.amazoncognito.com'
+      Export:
+        Name: lego-auth-${self:custom.stage}-UserPoolDomainUrl
+
+    CognitoIssuerUrl:
+      Description: Cognito Issuer URL (for JWT validation)
+      Value: !Sub 'https://cognito-idp.${self:provider.region}.amazonaws.com/${CognitoUserPool}'
+      Export:
+        Name: lego-auth-${self:custom.stage}-IssuerUrl

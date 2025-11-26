@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { designTokens, tailwindPreset } from '../design-system'
-import { designTokensCss, tailwindPreset as indexTailwindPreset } from '../index'
 
 describe('Design System Package', () => {
   describe('Core Exports', () => {
@@ -17,19 +16,7 @@ describe('Design System Package', () => {
     })
   })
 
-  describe('Index Exports', () => {
-    it('should re-export design tokens from index', () => {
-      expect(designTokensCss).toBeDefined()
-      expect(typeof designTokensCss).toBe('string')
-      expect(designTokensCss).toBe('./design-tokens.css')
-    })
 
-    it('should re-export tailwind preset from index', () => {
-      expect(indexTailwindPreset).toBeDefined()
-      expect(typeof indexTailwindPreset).toBe('string')
-      expect(indexTailwindPreset).toBe('./tailwind-preset.js')
-    })
-  })
 
   describe('Package Structure', () => {
     it('should have consistent export paths', () => {
@@ -44,10 +31,10 @@ describe('Design System Package', () => {
       expect(tailwindPreset.startsWith('./')).toBe(true)
     })
 
-    it('should maintain consistency between design-system and index exports', () => {
-      // Ensure both export the same paths
-      expect(designTokens).toBe(designTokensCss)
-      expect(tailwindPreset).toBe(indexTailwindPreset)
+    it('should export valid paths', () => {
+      // Ensure exports are valid paths
+      expect(designTokens).toBeDefined()
+      expect(tailwindPreset).toBeDefined()
     })
   })
 

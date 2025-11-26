@@ -1,0 +1,127 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+
+export interface NavigationItem {
+  id: string
+  label: string
+  href: string
+  icon?: string
+  badge?: string | number
+  isActive?: boolean
+  children?: NavigationItem[]
+}
+
+interface NavigationState {
+  primaryNavigation: NavigationItem[]
+  activeRoute: string
+  isMobileMenuOpen: boolean
+  breadcrumbs: Array<{
+    label: string
+    href?: string
+  }>
+  isLoading: boolean
+}
+
+const initialState: NavigationState = {
+  primaryNavigation: [
+    {
+      id: 'home',
+      label: 'Home',
+      href: '/',
+      icon: 'Home',
+    },
+    {
+      id: 'gallery',
+      label: 'Gallery',
+      href: '/gallery',
+      icon: 'Images',
+    },
+    {
+      id: 'wishlist',
+      label: 'Wishlist',
+      href: '/wishlist',
+      icon: 'Heart',
+    },
+    {
+      id: 'instructions',
+      label: 'MOC Instructions',
+      href: '/instructions',
+      icon: 'BookOpen',
+    },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      href: '/dashboard',
+      icon: 'LayoutDashboard',
+    },
+  ],
+  activeRoute: '/',
+  isMobileMenuOpen: false,
+  breadcrumbs: [],
+  isLoading: false,
+}
+
+export const navigationSlice = createSlice({
+  name: 'navigation',
+  initialState,
+  reducers: {
+    setActiveRoute: (state, action: PayloadAction<string>) => {
+      state.activeRoute = action.payload
+      
+      // Update active state in navigation items
+      state.primaryNavigation = state.primaryNavigation.map(item => ({
+        ...item,
+        isActive: item.href === action.payload || action.payload.startsWith(item.href + '/'),
+      }))
+    },
+    
+    toggleMobileMenu: (state) => {
+      state.isMobileMenuOpen = !state.isMobileMenuOpen
+    },
+    
+    closeMobileMenu: (state) => {
+      state.isMobileMenuOpen = false
+    },
+    
+    setBreadcrumbs: (state, action: PayloadAction<NavigationState['breadcrumbs']>) => {
+      state.breadcrumbs = action.payload
+    },
+    
+    addBreadcrumb: (state, action: PayloadAction<{ label: string; href?: string }>) => {
+      state.breadcrumbs.push(action.payload)
+    },
+    
+    clearBreadcrumbs: (state) => {
+      state.breadcrumbs = []
+    },
+    
+    updateNavigationBadge: (state, action: PayloadAction<{ id: string; badge?: string | number }>) => {
+      const item = state.primaryNavigation.find(nav => nav.id === action.payload.id)
+      if (item) {
+        item.badge = action.payload.badge
+      }
+    },
+    
+    setNavigationLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload
+    },
+  },
+})
+
+export const {
+  setActiveRoute,
+  toggleMobileMenu,
+  closeMobileMenu,
+  setBreadcrumbs,
+  addBreadcrumb,
+  clearBreadcrumbs,
+  updateNavigationBadge,
+  setNavigationLoading,
+} = navigationSlice.actions
+
+// Selectors
+export const selectNavigation = (state: { navigation: NavigationState }) => state.navigation
+export const selectPrimaryNavigation = (state: { navigation: NavigationState }) => state.navigation.primaryNavigation
+export const selectActiveRoute = (state: { navigation: NavigationState }) => state.navigation.activeRoute
+export const selectIsMobileMenuOpen = (state: { navigation: NavigationState }) => state.navigation.isMobileMenuOpen
+export const selectBreadcrumbs = (state: { navigation: NavigationState }) => state.navigation.breadcrumbs
+export const selectNavigationLoading = (state: { navigation: NavigationState }) => state.navigation.isLoading

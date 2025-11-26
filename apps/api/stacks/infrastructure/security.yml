@@ -1,0 +1,116 @@
+# Infrastructure Stack: Security
+# Deploys: Security Groups for Lambda, Database, and OpenSearch
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/infrastructure/security.yml --stage dev
+#
+# Dependencies: network
+# Dependents: database, search, functions-*
+
+service: lego-security
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  deploymentMethod: direct
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: security
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+  # Import VPC ID from network stack
+  vpcId: ${cf:lego-network-${self:custom.stage}.VpcId}
+
+resources:
+  Description: LEGO API Security Groups
+
+  Resources:
+    # Lambda Security Group - allows outbound to RDS, OpenSearch, and Internet
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: lego-api-lambda-sg-${self:custom.stage}
+        GroupDescription: Security group for Lambda functions
+        VpcId: ${self:custom.vpcId}
+        SecurityGroupEgress:
+          # Allow all outbound traffic (to RDS, OpenSearch, S3, etc.)
+          - IpProtocol: '-1'
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: Name
+            Value: lego-api-lambda-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # Database Security Group - allows inbound from Lambda
+    DatabaseSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: lego-api-database-sg-${self:custom.stage}
+        GroupDescription: Security group for RDS database
+        VpcId: ${self:custom.vpcId}
+        SecurityGroupIngress:
+          # Allow PostgreSQL from Lambda security group
+          - IpProtocol: tcp
+            FromPort: 5432
+            ToPort: 5432
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+            Description: PostgreSQL from Lambda
+        Tags:
+          - Key: Name
+            Value: lego-api-database-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # OpenSearch Security Group - allows inbound from Lambda
+    OpenSearchSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: lego-api-opensearch-sg-${self:custom.stage}
+        GroupDescription: Security group for OpenSearch domain
+        VpcId: ${self:custom.vpcId}
+        SecurityGroupIngress:
+          # Allow HTTPS from Lambda security group
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+            Description: HTTPS from Lambda
+        Tags:
+          - Key: Name
+            Value: lego-api-opensearch-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+  Outputs:
+    LambdaSecurityGroupId:
+      Description: Lambda Security Group ID
+      Value: !Ref LambdaSecurityGroup
+      Export:
+        Name: lego-security-${self:custom.stage}-LambdaSecurityGroupId
+
+    DatabaseSecurityGroupId:
+      Description: Database Security Group ID
+      Value: !Ref DatabaseSecurityGroup
+      Export:
+        Name: lego-security-${self:custom.stage}-DatabaseSecurityGroupId
+
+    OpenSearchSecurityGroupId:
+      Description: OpenSearch Security Group ID
+      Value: !Ref OpenSearchSecurityGroup
+      Export:
+        Name: lego-security-${self:custom.stage}-OpenSearchSecurityGroupId

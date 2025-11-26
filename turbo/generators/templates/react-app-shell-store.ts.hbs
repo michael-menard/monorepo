@@ -1,0 +1,65 @@
+import { configureStore } from '@reduxjs/toolkit'
+import { createGalleryApi, createWishlistApi, getCognitoAuthToken } from '@repo/api-client'
+import { authSlice } from './slices/authSlice'
+import { themeSlice } from './slices/themeSlice'
+import { navigationSlice } from './slices/navigationSlice'
+
+// Create API instances with Cognito authentication
+export const galleryApi = createGalleryApi(() => getCognitoAuthToken())
+export const wishlistApi = createWishlistApi(() => getCognitoAuthToken())
+
+export const store = configureStore({
+  reducer: {
+    // Core shell app slices
+    auth: authSlice.reducer,
+    theme: themeSlice.reducer,
+    navigation: navigationSlice.reducer,
+    
+    // API slices
+    [galleryApi.reducerPath]: galleryApi.reducer,
+    [wishlistApi.reducerPath]: wishlistApi.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [
+          // Ignore RTK Query actions
+          'persist/PERSIST',
+          'persist/REHYDRATE',
+        ],
+      },
+    })
+      .concat(galleryApi.middleware)
+      .concat(wishlistApi.middleware),
+  devTools: import.meta.env.DEV,
+})
+
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
+
+// Export API hooks for use in components
+export const {
+  useSearchGalleryQuery,
+  useGetGalleryImageQuery,
+  useUploadGalleryImageMutation,
+  useBatchUploadGalleryImagesMutation,
+  useUpdateGalleryImageMutation,
+  useDeleteGalleryImageMutation,
+  useBatchGalleryOperationMutation,
+  useGetGalleryStatsQuery,
+} = galleryApi
+
+export const {
+  useGetWishlistQuery,
+  useGetWishlistItemQuery,
+  useAddWishlistItemMutation,
+  useUpdateWishlistItemMutation,
+  useDeleteWishlistItemMutation,
+  useBatchWishlistOperationMutation,
+  useShareWishlistMutation,
+  useGetSharedWishlistQuery,
+  useGetWishlistStatsQuery,
+  useImportWishlistItemsMutation,
+  useExportWishlistMutation,
+  useGetPriceEstimatesQuery,
+} = wishlistApi

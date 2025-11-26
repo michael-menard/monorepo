@@ -289,37 +289,10 @@ export { useAlbumDragAndDrop, useInfiniteGallery, useIntersectionObserver }
 
 // Export schemas and types
 export * from './schemas/index.js'
-export type { GalleryFilters, GalleryItem, GalleryResponse } from './store/galleryApi.js'
 
-// Export gallery API and hooks
-export { galleryApi } from './store/galleryApi.js'
-export {
-  useGetGalleryQuery,
-  useGetImagesQuery,
-  useGetImageByIdQuery,
-  useSearchImagesQuery,
-  useGetAvailableTagsQuery,
-  useGetAvailableCategoriesQuery,
-  useUploadImageMutation,
-  useUpdateImageMutation,
-  useDeleteImageMutation,
-  useBatchDeleteImagesMutation,
-  useBatchAddImagesToAlbumMutation,
-  // Inspiration-specific hooks
-  useGetInspirationItemsQuery,
-  useGetInspirationItemByIdQuery,
-  useLikeInspirationItemMutation,
-  useCreateInspirationItemMutation,
-  useUpdateInspirationItemMutation,
-  useDeleteInspirationItemMutation,
-} from './store/galleryApi.js'
-
-// Export inspiration types
-export type {
-  InspirationItem,
-  InspirationResponse,
-  InspirationFilters,
-} from './store/galleryApi.js'
+// Note: Gallery API hooks are now provided by the enhanced serverless API client
+// Import from: @repo/api-client/rtk/gallery-api
+// Example: import { useEnhancedGallerySearchQuery } from '@repo/api-client/rtk/gallery-api'
 
 // Default export
 export default Gallery

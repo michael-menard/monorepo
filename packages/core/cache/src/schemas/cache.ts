@@ -51,7 +51,7 @@ export const ImageCacheEntrySchema = z.object({
 // RTK Query cache configuration schema
 export const RTKQueryCacheConfigSchema = z.object({
   keepUnusedDataFor: z.number().positive().default(60), // 60 seconds default
-  refetchOnMountOrArgChange: z.boolean().default(false),
+  refetchOnMountOrArgChange: z.union([z.boolean(), z.number().positive()]).default(false),
   refetchOnFocus: z.boolean().default(true),
   refetchOnReconnect: z.boolean().default(true),
   pollingInterval: z.number().positive().optional(),

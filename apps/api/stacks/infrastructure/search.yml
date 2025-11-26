@@ -1,0 +1,147 @@
+# Infrastructure Stack: Search
+# Deploys: OpenSearch Domain with VPC configuration
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/infrastructure/search.yml --stage dev
+#
+# Dependencies: network, security
+# Dependents: functions-*, monitoring
+
+service: lego-search
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  deploymentMethod: direct
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: search
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+  stageConfig: ${self:custom.shared.stages.${self:custom.stage}, self:custom.shared.stages.dev}
+
+  # Import from dependent stacks
+  privateSubnet1Id: ${cf:lego-network-${self:custom.stage}.PrivateSubnet1Id}
+  openSearchSecurityGroupId: ${cf:lego-security-${self:custom.stage}.OpenSearchSecurityGroupId}
+
+resources:
+  Description: LEGO API Search Infrastructure (OpenSearch)
+
+  Resources:
+    # OpenSearch Service-Linked Role (required for VPC deployment)
+    # Note: This may already exist in the account - deployment will continue if it does
+    OpenSearchServiceLinkedRole:
+      Type: AWS::IAM::ServiceLinkedRole
+      Properties:
+        AWSServiceName: es.amazonaws.com
+        Description: Service-linked role for OpenSearch
+
+    # OpenSearch Domain - Single-node for dev, multi-node for production
+    OpenSearchDomain:
+      Type: AWS::OpenSearchService::Domain
+      DependsOn:
+        - OpenSearchServiceLinkedRole
+      Properties:
+        DomainName: lego-api-${self:custom.stage}
+        EngineVersion: ${self:custom.shared.opensearch.engineVersion}
+        ClusterConfig:
+          InstanceType: ${self:custom.stageConfig.opensearch.instanceType}
+          InstanceCount: ${self:custom.stageConfig.opensearch.instanceCount}
+          DedicatedMasterEnabled: false
+          ZoneAwarenessEnabled: false
+          WarmEnabled: false
+        EBSOptions:
+          EBSEnabled: true
+          VolumeType: ${self:custom.shared.opensearch.volumeType}
+          VolumeSize: ${self:custom.shared.opensearch.volumeSize}
+        VPCOptions:
+          SecurityGroupIds:
+            - ${self:custom.openSearchSecurityGroupId}
+          SubnetIds:
+            - ${self:custom.privateSubnet1Id}
+        NodeToNodeEncryptionOptions:
+          Enabled: true
+        EncryptionAtRestOptions:
+          Enabled: true
+        DomainEndpointOptions:
+          EnforceHTTPS: true
+          TLSSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+        AdvancedSecurityOptions:
+          Enabled: false
+        # Note: VPC-based domains use security groups for access control, not IP-based policies
+        AccessPolicies:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: '*'
+              Action: 'es:*'
+              Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/lego-api-${self:custom.stage}/*'
+        Tags:
+          - Key: Name
+            Value: lego-api-opensearch-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # IAM Policies for OpenSearch Access
+    # ===========================================
+
+    # IAM Policy for Lambda functions to access OpenSearch
+    OpenSearchAccessPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        ManagedPolicyName: lego-api-opensearch-access-${self:custom.stage}
+        Description: Policy for Lambda functions to access OpenSearch
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - es:ESHttpGet
+                - es:ESHttpPost
+                - es:ESHttpPut
+                - es:ESHttpDelete
+                - es:ESHttpHead
+              Resource: !Sub '${OpenSearchDomain.Arn}/*'
+
+  Outputs:
+    OpenSearchEndpoint:
+      Description: OpenSearch Domain Endpoint
+      Value: !GetAtt OpenSearchDomain.DomainEndpoint
+      Export:
+        Name: lego-search-${self:custom.stage}-Endpoint
+
+    OpenSearchEndpointUrl:
+      Description: OpenSearch Domain Endpoint URL (with https://)
+      Value: !Sub 'https://${OpenSearchDomain.DomainEndpoint}'
+      Export:
+        Name: lego-search-${self:custom.stage}-EndpointUrl
+
+    OpenSearchDomainArn:
+      Description: OpenSearch Domain ARN
+      Value: !GetAtt OpenSearchDomain.Arn
+      Export:
+        Name: lego-search-${self:custom.stage}-DomainArn
+
+    OpenSearchDomainName:
+      Description: OpenSearch Domain Name
+      Value: !Sub 'lego-api-${self:custom.stage}'
+      Export:
+        Name: lego-search-${self:custom.stage}-DomainName
+
+    OpenSearchAccessPolicyArn:
+      Description: IAM Policy ARN for OpenSearch access
+      Value: !Ref OpenSearchAccessPolicy
+      Export:
+        Name: lego-search-${self:custom.stage}-AccessPolicyArn

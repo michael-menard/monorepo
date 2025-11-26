@@ -1,0 +1,83 @@
+{
+  "name": "@repo/api-client",
+  "version": "0.0.1",
+  "description": "Serverless-optimized API client with retry logic and error handling",
+  "type": "module",
+  "exports": {
+    "./client/serverless-client": {
+      "import": "./src/client/serverless-client.ts",
+      "types": "./src/client/serverless-client.ts"
+    },
+    "./rtk/base-query": {
+      "import": "./src/rtk/base-query.ts",
+      "types": "./src/rtk/base-query.ts"
+    },
+    "./rtk/gallery-api": {
+      "import": "./src/rtk/gallery-api.ts",
+      "types": "./src/rtk/gallery-api.ts"
+    },
+    "./rtk/wishlist-api": {
+      "import": "./src/rtk/wishlist-api.ts",
+      "types": "./src/rtk/wishlist-api.ts"
+    },
+    "./auth/cognito-integration": {
+      "import": "./src/auth/cognito-integration.ts",
+      "types": "./src/auth/cognito-integration.ts"
+    },
+    "./auth/auth-middleware": {
+      "import": "./src/auth/auth-middleware.ts",
+      "types": "./src/auth/auth-middleware.ts"
+    },
+    "./auth/rtk-auth-integration": {
+      "import": "./src/auth/rtk-auth-integration.ts",
+      "types": "./src/auth/rtk-auth-integration.ts"
+    },
+    "./retry/retry-logic": {
+      "import": "./src/retry/retry-logic.ts",
+      "types": "./src/retry/retry-logic.ts"
+    },
+    "./config/environments": {
+      "import": "./src/config/environments.ts",
+      "types": "./src/config/environments.ts"
+    },
+    "./config/endpoints": {
+      "import": "./src/config/endpoints.ts",
+      "types": "./src/config/endpoints.ts"
+    },
+    "./types/api-responses": {
+      "import": "./src/types/api-responses.ts",
+      "types": "./src/types/api-responses.ts"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
+    "@repo/cache": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.3.5",
+    "vite-plugin-dts": "^4.3.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}

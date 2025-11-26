@@ -78,6 +78,16 @@ export default [
     },
   },
   {
-    ignores: ['dist', '.sst', 'node_modules', '**/*.d.ts', 'drizzle', 'scripts/**/*'],
+    ignores: [
+      'dist',
+      '.sst',
+      'node_modules',
+      '**/*.d.ts',
+      'drizzle',
+      'scripts/**/*',
+      // Legacy SST config files (migrating to Serverless Framework)
+      'gateway/sst.config.ts',
+      'functions/**/sst.config.ts',
+    ],
   },
 ]

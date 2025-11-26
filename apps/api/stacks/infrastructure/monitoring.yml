@@ -1,0 +1,345 @@
+# Infrastructure Stack: Monitoring
+# Deploys: CloudWatch Dashboard and Alarms
+#
+# Deploy LAST - after all other infrastructure and function stacks
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/infrastructure/monitoring.yml --stage dev
+#
+# Dependencies: database, search, realtime, functions-*
+# Dependents: None
+
+service: lego-monitoring
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  deploymentMethod: direct
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: monitoring
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+
+resources:
+  Description: LEGO API Monitoring Infrastructure (CloudWatch Dashboard & Alarms)
+
+  Resources:
+    # ===========================================
+    # CloudWatch Dashboard
+    # ===========================================
+    ApiDashboard:
+      Type: AWS::CloudWatch::Dashboard
+      Properties:
+        DashboardName: lego-api-${self:custom.stage}
+        DashboardBody: !Sub |
+          {
+            "widgets": [
+              {
+                "type": "text",
+                "x": 0,
+                "y": 0,
+                "width": 24,
+                "height": 1,
+                "properties": {
+                  "markdown": "# LEGO API Dashboard - ${self:custom.stage}"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 1,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Invocations",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-health-${self:custom.stage}-healthCheck"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-gallery-${self:custom.stage}-listImages"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-gallery-${self:custom.stage}-uploadImage"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-moc-${self:custom.stage}-list"],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "lego-api-wishlist-${self:custom.stage}-list"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 1,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Errors",
+                  "view": "timeSeries",
+                  "stacked": true,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-health-${self:custom.stage}-healthCheck"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-gallery-${self:custom.stage}-listImages"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-gallery-${self:custom.stage}-uploadImage"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-moc-${self:custom.stage}-list"],
+                    ["AWS/Lambda", "Errors", "FunctionName", "lego-api-wishlist-${self:custom.stage}-list"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 1,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Lambda Duration (p95)",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-health-${self:custom.stage}-healthCheck"],
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-gallery-${self:custom.stage}-listImages"],
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-gallery-${self:custom.stage}-uploadImage"],
+                    ["AWS/Lambda", "Duration", "FunctionName", "lego-api-moc-${self:custom.stage}-list"]
+                  ],
+                  "period": 300,
+                  "stat": "p95"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 7,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Aurora Serverless CPU Utilization",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", "lego-api-aurora-${self:custom.stage}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 7,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Aurora Database Connections",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/RDS", "DatabaseConnections", "DBClusterIdentifier", "lego-api-aurora-${self:custom.stage}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 7,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "Aurora Serverless ACU",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/RDS", "ServerlessDatabaseCapacity", "DBClusterIdentifier", "lego-api-aurora-${self:custom.stage}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 13,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "OpenSearch Cluster Health",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ES", "ClusterStatus.green", "DomainName", "lego-api-${self:custom.stage}", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "ClusterStatus.yellow", "DomainName", "lego-api-${self:custom.stage}", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "ClusterStatus.red", "DomainName", "lego-api-${self:custom.stage}", "ClientId", "${AWS::AccountId}"]
+                  ],
+                  "period": 300,
+                  "stat": "Maximum"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8,
+                "y": 13,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "OpenSearch CPU & JVM",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/ES", "CPUUtilization", "DomainName", "lego-api-${self:custom.stage}", "ClientId", "${AWS::AccountId}"],
+                    ["AWS/ES", "JVMMemoryPressure", "DomainName", "lego-api-${self:custom.stage}", "ClientId", "${AWS::AccountId}"]
+                  ],
+                  "period": 300,
+                  "stat": "Average"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16,
+                "y": 13,
+                "width": 8,
+                "height": 6,
+                "properties": {
+                  "title": "WebSocket DynamoDB Usage",
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "metrics": [
+                    ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "lego-api-websocket-connections-${self:custom.stage}"],
+                    ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "lego-api-websocket-connections-${self:custom.stage}"]
+                  ],
+                  "period": 300,
+                  "stat": "Sum"
+                }
+              }
+            ]
+          }
+
+    # ===========================================
+    # CloudWatch Alarms
+    # ===========================================
+
+    # Aurora CPU Utilization Alarm
+    AuroraCpuAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-aurora-high-cpu
+        AlarmDescription: Aurora cluster CPU utilization is high (>80%)
+        MetricName: CPUUtilization
+        Namespace: AWS/RDS
+        Statistic: Average
+        Period: 300
+        EvaluationPeriods: 3
+        Threshold: 80
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DBClusterIdentifier
+            Value: lego-api-aurora-${self:custom.stage}
+
+    # Aurora Connection Count Alarm
+    AuroraConnectionsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-aurora-high-connections
+        AlarmDescription: Aurora cluster has high connection count (>50)
+        MetricName: DatabaseConnections
+        Namespace: AWS/RDS
+        Statistic: Average
+        Period: 300
+        EvaluationPeriods: 2
+        Threshold: 50
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DBClusterIdentifier
+            Value: lego-api-aurora-${self:custom.stage}
+
+    # OpenSearch Cluster Red Alarm
+    OpenSearchClusterRedAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-opensearch-cluster-red
+        AlarmDescription: OpenSearch cluster status is RED
+        MetricName: ClusterStatus.red
+        Namespace: AWS/ES
+        Statistic: Maximum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DomainName
+            Value: lego-api-${self:custom.stage}
+          - Name: ClientId
+            Value: !Ref AWS::AccountId
+
+    # OpenSearch JVM Memory Pressure Alarm
+    OpenSearchJvmAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-opensearch-jvm-pressure
+        AlarmDescription: OpenSearch JVM memory pressure is high (>80%)
+        MetricName: JVMMemoryPressure
+        Namespace: AWS/ES
+        Statistic: Maximum
+        Period: 300
+        EvaluationPeriods: 3
+        Threshold: 80
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: DomainName
+            Value: lego-api-${self:custom.stage}
+          - Name: ClientId
+            Value: !Ref AWS::AccountId
+
+    # DynamoDB Throttle Alarm
+    DynamoDBThrottleAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: lego-api-${self:custom.stage}-dynamodb-throttle
+        AlarmDescription: DynamoDB WebSocket connections table is being throttled
+        MetricName: ThrottledRequests
+        Namespace: AWS/DynamoDB
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        Dimensions:
+          - Name: TableName
+            Value: lego-api-websocket-connections-${self:custom.stage}
+
+  Outputs:
+    CloudWatchDashboardUrl:
+      Description: CloudWatch Dashboard URL
+      Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=lego-api-${self:custom.stage}'
+      Export:
+        Name: lego-monitoring-${self:custom.stage}-DashboardUrl
+
+    CloudWatchDashboardName:
+      Description: CloudWatch Dashboard Name
+      Value: lego-api-${self:custom.stage}
+      Export:
+        Name: lego-monitoring-${self:custom.stage}-DashboardName

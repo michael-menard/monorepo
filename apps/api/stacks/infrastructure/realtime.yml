@@ -1,0 +1,108 @@
+# Infrastructure Stack: Realtime
+# Deploys: DynamoDB table for WebSocket connections
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/infrastructure/realtime.yml --stage dev
+#
+# Dependencies: None (standalone)
+# Dependents: functions-websocket
+
+service: lego-realtime
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  deploymentMethod: direct
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: realtime
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+
+resources:
+  Description: LEGO API Realtime Infrastructure (DynamoDB for WebSocket)
+
+  Resources:
+    # WebSocket connections table - stores active connections with userId mapping
+    WebSocketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: lego-api-websocket-connections-${self:custom.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: userIdIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+        Tags:
+          - Key: Name
+            Value: lego-api-websocket-connections-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # IAM Policies for DynamoDB Access
+    # ===========================================
+
+    # IAM Policy for WebSocket Lambda functions to access DynamoDB
+    WebSocketDynamoDBPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        ManagedPolicyName: lego-api-websocket-dynamodb-${self:custom.stage}
+        Description: Policy for WebSocket Lambda functions to access DynamoDB
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt WebSocketConnectionsTable.Arn
+                - !Sub '${WebSocketConnectionsTable.Arn}/index/*'
+
+  Outputs:
+    WebSocketConnectionsTableName:
+      Description: DynamoDB table name for WebSocket connections
+      Value: !Ref WebSocketConnectionsTable
+      Export:
+        Name: lego-realtime-${self:custom.stage}-TableName
+
+    WebSocketConnectionsTableArn:
+      Description: DynamoDB table ARN for WebSocket connections
+      Value: !GetAtt WebSocketConnectionsTable.Arn
+      Export:
+        Name: lego-realtime-${self:custom.stage}-TableArn
+
+    WebSocketDynamoDBPolicyArn:
+      Description: IAM Policy ARN for WebSocket DynamoDB access
+      Value: !Ref WebSocketDynamoDBPolicy
+      Export:
+        Name: lego-realtime-${self:custom.stage}-PolicyArn

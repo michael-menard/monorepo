@@ -1,0 +1,96 @@
+import React, { useEffect } from 'react'
+import { Outlet, useLocation } from '@tanstack/react-router'
+import { useDispatch, useSelector } from 'react-redux'
+import { Header } from './Header'
+import { Sidebar } from './Sidebar'
+import { Footer } from './Footer'
+import { LoadingSpinner } from '@repo/ui'
+import { setActiveRoute, closeMobileMenu } from '@/store/slices/navigationSlice'
+import { selectAuth } from '@/store/slices/authSlice'
+import { selectIsMobileMenuOpen } from '@/store/slices/navigationSlice'
+import { cn } from '@repo/ui/lib/utils'
+
+export function RootLayout() {
+  const dispatch = useDispatch()
+  const location = useLocation()
+  const auth = useSelector(selectAuth)
+  const isMobileMenuOpen = useSelector(selectIsMobileMenuOpen)
+
+  // Update active route when location changes
+  useEffect(() => {
+    dispatch(setActiveRoute(location.pathname))
+    dispatch(closeMobileMenu())
+  }, [location.pathname, dispatch])
+
+  // Show loading spinner while auth is loading
+  if (auth.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-muted-foreground">Loading {{displayName}}...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Public routes that don't need authentication
+  const publicRoutes = ['/login', '/register', '/forgot-password']
+  const isPublicRoute = publicRoutes.includes(location.pathname)
+
+  // If not authenticated and not on a public route, show minimal layout
+  if (!auth.isAuthenticated && !isPublicRoute) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <Outlet />
+        </div>
+      </div>
+    )
+  }
+
+  // Authenticated layout with full navigation
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <Header />
+      
+      {/* Main content area */}
+      <div className="flex">
+        {/* Sidebar - only show for authenticated users */}
+        {auth.isAuthenticated && (
+          <>
+            {/* Desktop sidebar */}
+            <Sidebar className="hidden lg:flex" />
+            
+            {/* Mobile sidebar overlay */}
+            {isMobileMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                  onClick={() => dispatch(closeMobileMenu())}
+                />
+                <Sidebar className="fixed left-0 top-16 bottom-0 z-50 lg:hidden" />
+              </>
+            )}
+          </>
+        )}
+        
+        {/* Main content */}
+        <main 
+          className={cn(
+            "flex-1 min-h-[calc(100vh-4rem)]",
+            auth.isAuthenticated && "lg:ml-64"
+          )}
+        >
+          <div className="container mx-auto px-4 py-6">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+      
+      {/* Footer */}
+      <Footer />
+    </div>
+  )
+}

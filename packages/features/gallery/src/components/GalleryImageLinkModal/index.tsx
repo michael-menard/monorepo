@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { z } from 'zod'
-import { Button, Input, Label } from '@repo/ui'
+import { Button } from '@repo/ui/button'
+import { Input } from '@repo/ui/input'
+import { Label } from '@repo/ui/label'
 
 // Zod schemas for type safety
 const MocSchema = z.object({

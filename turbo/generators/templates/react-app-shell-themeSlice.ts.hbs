@@ -1,0 +1,71 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+
+export type Theme = 'light' | 'dark' | 'system'
+
+interface ThemeState {
+  theme: Theme
+  resolvedTheme: 'light' | 'dark'
+  systemTheme: 'light' | 'dark'
+}
+
+const getSystemTheme = (): 'light' | 'dark' => {
+  if (typeof window !== 'undefined') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return 'light'
+}
+
+const getResolvedTheme = (theme: Theme, systemTheme: 'light' | 'dark'): 'light' | 'dark' => {
+  return theme === 'system' ? systemTheme : theme
+}
+
+const initialState: ThemeState = {
+  theme: 'system',
+  systemTheme: getSystemTheme(),
+  resolvedTheme: 'light',
+}
+
+// Initialize resolved theme
+initialState.resolvedTheme = getResolvedTheme(initialState.theme, initialState.systemTheme)
+
+export const themeSlice = createSlice({
+  name: 'theme',
+  initialState,
+  reducers: {
+    setTheme: (state, action: PayloadAction<Theme>) => {
+      state.theme = action.payload
+      state.resolvedTheme = getResolvedTheme(action.payload, state.systemTheme)
+      
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('{{kebabCase name}}-theme', action.payload)
+      }
+    },
+    
+    setSystemTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
+      state.systemTheme = action.payload
+      state.resolvedTheme = getResolvedTheme(state.theme, action.payload)
+    },
+    
+    initializeTheme: (state) => {
+      // Load theme from localStorage
+      if (typeof window !== 'undefined') {
+        const savedTheme = localStorage.getItem('{{kebabCase name}}-theme') as Theme
+        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+          state.theme = savedTheme
+        }
+        
+        // Update system theme
+        state.systemTheme = getSystemTheme()
+        state.resolvedTheme = getResolvedTheme(state.theme, state.systemTheme)
+      }
+    },
+  },
+})
+
+export const { setTheme, setSystemTheme, initializeTheme } = themeSlice.actions
+
+// Selectors
+export const selectTheme = (state: { theme: ThemeState }) => state.theme.theme
+export const selectResolvedTheme = (state: { theme: ThemeState }) => state.theme.resolvedTheme
+export const selectSystemTheme = (state: { theme: ThemeState }) => state.theme.systemTheme

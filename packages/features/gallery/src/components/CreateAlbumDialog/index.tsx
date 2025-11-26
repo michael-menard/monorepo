@@ -4,8 +4,16 @@ import { motion } from 'framer-motion'
 // Module-level counter to ensure only one overlay is marked primary at a time (helps in StrictMode/test double mounts)
 // removed unused vars
 import { z } from 'zod'
-import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js'
-import type { GalleryAlbum } from '../../store/albumsApi.js'
+// TODO: Replace with enhanced serverless gallery API
+// import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '@repo/api-client/rtk/gallery-api'
+
+// Temporary type until migration is complete
+interface GalleryAlbum {
+  id: string
+  name: string
+  description?: string
+  images?: any[]
+}
 import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js'
 import {
   AlbumCreationDataSchema,

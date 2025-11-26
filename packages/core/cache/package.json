@@ -3,16 +3,63 @@
   "version": "1.0.0",
   "description": "Shared caching utilities for the monorepo",
   "type": "module",
-  "main": "./dist/shared-cache.js",
-  "browser": "./dist/shared-cache.js",
-  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "browser": "./dist/shared-cache.js",
-      "import": "./dist/shared-cache.js",
-      "require": "./dist/shared-cache.cjs",
-      "types": "./dist/index.d.ts"
+      "import": "./src/schemas/cache.ts",
+      "types": "./src/schemas/cache.ts"
+    },
+    "./utils/memoryCache": {
+      "import": "./src/utils/memoryCache.ts",
+      "types": "./src/utils/memoryCache.ts"
+    },
+    "./utils/storageCache": {
+      "import": "./src/utils/storageCache.ts",
+      "types": "./src/utils/storageCache.ts"
+    },
+    "./utils/imageCache": {
+      "import": "./src/utils/imageCache.ts",
+      "types": "./src/utils/imageCache.ts"
+    },
+    "./utils/rtkQueryCache": {
+      "import": "./src/utils/rtkQueryCache.ts",
+      "types": "./src/utils/rtkQueryCache.ts"
+    },
+    "./utils/serverlessCache": {
+      "import": "./src/utils/serverlessCache.ts",
+      "types": "./src/utils/serverlessCache.ts"
+    },
+    "./managers/IntelligentCacheManager": {
+      "import": "./src/managers/IntelligentCacheManager.ts",
+      "types": "./src/managers/IntelligentCacheManager.ts"
+    },
+    "./rtk/IntelligentRTKCacheEnhancer": {
+      "import": "./src/rtk/IntelligentRTKCacheEnhancer.ts",
+      "types": "./src/rtk/IntelligentRTKCacheEnhancer.ts"
+    },
+    "./analytics/CacheAnalytics": {
+      "import": "./src/analytics/CacheAnalytics.ts",
+      "types": "./src/analytics/CacheAnalytics.ts"
+    },
+    "./utils/performanceMonitor": {
+      "import": "./src/utils/performanceMonitor.ts",
+      "types": "./src/utils/performanceMonitor.ts"
+    },
+    "./utils/serverlessCacheManager": {
+      "import": "./src/utils/serverlessCacheManager.ts",
+      "types": "./src/utils/serverlessCacheManager.ts"
+    },
+    "./hooks/useServerlessCache": {
+      "import": "./src/hooks/useServerlessCache.ts",
+      "types": "./src/hooks/useServerlessCache.ts"
+    },
+    "./components/CachedImage": {
+      "import": "./src/components/CachedImage.tsx",
+      "types": "./src/components/CachedImage.tsx"
+    },
+    "./schemas/cache": {
+      "import": "./src/schemas/cache.ts",
+      "types": "./src/schemas/cache.ts"
     }
   },
   "scripts": {

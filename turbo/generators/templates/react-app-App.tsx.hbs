@@ -1,0 +1,45 @@
+import React from 'react'
+{{#if includeRouting}}import { RouterProvider } from '@tanstack/react-router'{{/if}}
+{{#if includeRedux}}import { Provider } from 'react-redux'{{/if}}
+import { ThemeProvider } from '@repo/ui'
+{{#if includeRouting}}import { router } from './routes'{{/if}}
+{{#if includeRedux}}import { store } from './store'{{/if}}
+{{#if includeAuth}}import { AuthProvider } from './services/auth/AuthProvider'{{/if}}
+{{#if (eq type "shell")}}import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary'{{/if}}
+{{#if includeAuth}}import { initializeCognitoTokenManager } from '@repo/api-client'{{/if}}
+{{#if (eq type "module")}}import { Module } from './Module'{{/if}}
+{{#if (eq type "standalone")}}import { Layout } from './components/Layout/Layout'
+import { HomePage } from './pages/HomePage'{{/if}}
+
+{{#if includeAuth}}// Initialize Cognito token manager
+initializeCognitoTokenManager(){{/if}}
+
+export function App() {
+  return (
+    {{#if (eq type "shell")}}
+    <ErrorBoundary>
+      {{#if includeRedux}}<Provider store={store}>{{/if}}
+        <ThemeProvider defaultTheme="system" storageKey="{{kebabCase name}}-theme">
+          {{#if includeAuth}}<AuthProvider>{{/if}}
+            {{#if includeRouting}}<RouterProvider router={router} />{{else}}<div>{{displayName}} Shell App</div>{{/if}}
+          {{#if includeAuth}}</AuthProvider>{{/if}}
+        </ThemeProvider>
+      {{#if includeRedux}}</Provider>{{/if}}
+    </ErrorBoundary>
+    {{else if (eq type "module")}}
+    <ThemeProvider defaultTheme="system" storageKey="{{kebabCase name}}-theme">
+      <Module />
+    </ThemeProvider>
+    {{else}}
+    {{#if includeRedux}}<Provider store={store}>{{/if}}
+      <ThemeProvider defaultTheme="system" storageKey="{{kebabCase name}}-theme">
+        {{#if includeAuth}}<AuthProvider>{{/if}}
+          <Layout>
+            {{#if includeRouting}}<RouterProvider router={router} />{{else}}<HomePage />{{/if}}
+          </Layout>
+        {{#if includeAuth}}</AuthProvider>{{/if}}
+      </ThemeProvider>
+    {{#if includeRedux}}</Provider>{{/if}}
+    {{/if}}
+  )
+}

@@ -2,17 +2,14 @@
   "name": "@repo/ui",
   "version": "0.0.1",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
     "./globals.css": "./src/globals.css",
+    "./alert": {
+      "import": "./dist/alert.js",
+      "require": "./dist/alert.js",
+      "types": "./dist/alert.d.ts"
+    },
     "./avatar": {
       "import": "./dist/avatar.js",
       "require": "./dist/avatar.js",
@@ -102,6 +99,26 @@
       "import": "./dist/guided-tour.js",
       "require": "./dist/guided-tour.js",
       "types": "./dist/guided-tour.d.ts"
+    },
+    "./loading-spinner": {
+      "import": "./dist/loading-spinner/index.js",
+      "require": "./dist/loading-spinner/index.js",
+      "types": "./dist/loading-spinner/index.d.ts"
+    },
+    "./progress": {
+      "import": "./dist/progress.js",
+      "require": "./dist/progress.js",
+      "types": "./dist/progress.d.ts"
+    },
+    "./providers/ThemeProvider": {
+      "import": "./dist/providers/ThemeProvider.js",
+      "require": "./dist/providers/ThemeProvider.js",
+      "types": "./dist/providers/ThemeProvider.d.ts"
+    },
+    "./lib/utils": {
+      "import": "./dist/lib/utils.js",
+      "require": "./dist/lib/utils.js",
+      "types": "./dist/lib/utils.d.ts"
     }
   },
   "scripts": {

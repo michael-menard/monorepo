@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trash2, FolderPlus, Download, Share2, X, Check } from 'lucide-react'
-import { Button } from '@repo/ui'
-import { useDeleteImageMutation } from '../../store/galleryApi.js'
-import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '../../store/albumsApi.js'
+import { Button } from '@repo/ui/button'
+// TODO: Replace with enhanced serverless gallery API
+// import { useDeleteImageMutation } from '@repo/api-client/rtk/gallery-api'
+// import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '@repo/api-client/rtk/gallery-api'
 import CreateAlbumDialog from '../CreateAlbumDialog/index.js'
 // import { z } from 'zod';
 

@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
-import { createCachedBaseQuery, getRTKQueryCacheConfig } from '@repo/cache'
+import { createCachedBaseQuery } from '@repo/cache/utils/rtkQueryCache'
+import { getRTKQueryCacheConfig } from '@repo/cache/utils/rtkQueryCache'
 import { apiClient } from './apiClient.js'
 
 // Zod schemas for type safety - Updated to match backend API response

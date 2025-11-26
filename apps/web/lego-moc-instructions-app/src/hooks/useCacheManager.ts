@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { MemoryCache, StorageCache, useImageCache } from '@repo/cache'
-import type { CacheStats } from '@repo/cache'
+import { MemoryCache } from '@repo/cache/utils/memoryCache'
+import { StorageCache } from '@repo/cache/utils/storageCache'
+import { useImageCache } from '@repo/cache/utils/imageCache'
+import type { CacheStats } from '@repo/cache/schemas/cache'
 
 /**
  * Hook for managing all caching strategies in the application

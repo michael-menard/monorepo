@@ -489,6 +489,9 @@ importers:
       '@aws-amplify/ui-react':
         specifier: 6.13.1
         version: 6.13.1(@aws-amplify/core@6.13.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(aws-amplify@6.15.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(xstate@4.38.3)
+      '@hookform/resolvers':
+        specifier: 5.2.2
+        version: 5.2.2(react-hook-form@7.66.1(react@19.2.0))
       '@reduxjs/toolkit':
         specifier: ^2.8.2
         version: 2.11.0(react-redux@9.2.0(@types/react@19.2.7)(react@19.2.0)(redux@5.0.1))(react@19.2.0)
@@ -528,6 +531,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.0(react@19.2.0)
+      react-hook-form:
+        specifier: 7.66.1
+        version: 7.66.1(react@19.2.0)
       react-redux:
         specifier: ^9.2.0
         version: 9.2.0(@types/react@19.2.7)(react@19.2.0)(redux@5.0.1)

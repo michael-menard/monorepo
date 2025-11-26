@@ -1,0 +1,244 @@
+# Functions Stack: Parts Lists
+# Deploys: MOC parts lists Lambda functions
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/functions/parts-lists.yml --stage dev
+#
+# Dependencies: network, security, database, storage, auth
+# Dependents: monitoring
+
+service: lego-api-parts
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-esbuild
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: ${self:custom.stageConfig.memorySize}
+  timeout: 29
+  deploymentMethod: direct
+
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    NODE_OPTIONS: '--enable-source-maps'
+    LOG_LEVEL: ${self:custom.stageConfig.logLevel}
+    # Database
+    POSTGRES_HOST: ${cf:lego-database-${self:provider.stage}.ClusterEndpoint}
+    POSTGRES_PORT: ${cf:lego-database-${self:provider.stage}.ClusterPort}
+    POSTGRES_DATABASE: ${cf:lego-database-${self:provider.stage}.DatabaseName}
+    DB_SECRET_ARN: ${cf:lego-database-${self:provider.stage}.SecretArn}
+    # S3
+    S3_BUCKET: ${cf:lego-storage-${self:provider.stage}.BucketName}
+    # Cognito
+    COGNITO_USER_POOL_ID: ${cf:lego-auth-${self:provider.stage}.UserPoolId}
+    COGNITO_CLIENT_ID: ${cf:lego-auth-${self:provider.stage}.UserPoolClientId}
+
+  vpc:
+    securityGroupIds:
+      - ${cf:lego-security-${self:provider.stage}.LambdaSecurityGroupId}
+    subnetIds:
+      - ${cf:lego-network-${self:provider.stage}.PrivateSubnet1Id}
+      - ${cf:lego-network-${self:provider.stage}.PrivateSubnet2Id}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: 'arn:aws:logs:${self:provider.region}:*:*'
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+            - ec2:AssignPrivateIpAddresses
+            - ec2:UnassignPrivateIpAddresses
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: ${cf:lego-database-${self:provider.stage}.SecretArn}
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+            - s3:GetObjectTagging
+            - s3:PutObjectTagging
+          Resource:
+            - ${cf:lego-storage-${self:provider.stage}.BucketArn}
+            - !Sub '${cf:lego-storage-${self:provider.stage}.BucketArn}/*'
+
+  httpApi:
+    name: lego-api-parts-${self:provider.stage}
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+        - http://localhost:5173
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+        - X-Request-Id
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
+    authorizers:
+      cognitoJwtAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: ${cf:lego-auth-${self:provider.stage}.IssuerUrl}
+        audience:
+          - ${cf:lego-auth-${self:provider.stage}.UserPoolClientId}
+
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: functions-parts
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+  stageConfig: ${self:custom.shared.stages.${self:custom.stage}, self:custom.shared.stages.dev}
+
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    concurrency: 10
+    exclude:
+      - '@aws-sdk/*'
+    plugins: ../../esbuild-plugins.js
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.sst/**'
+    - '!.turbo/**'
+    - '!docs/**'
+    - '!**/*.test.ts'
+    - '!**/*.spec.ts'
+    - '!**/__tests__/**'
+    - '!coverage/**'
+
+functions:
+  # Create parts list
+  create:
+    handler: ../../endpoints/moc-parts-lists/create/handler.handler
+    description: Create MOC parts list
+    events:
+      - httpApi:
+          path: /api/parts-lists
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get parts list
+  get:
+    handler: ../../endpoints/moc-parts-lists/get/handler.handler
+    description: Get MOC parts list
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update parts list
+  update:
+    handler: ../../endpoints/moc-parts-lists/update/handler.handler
+    description: Update MOC parts list
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Delete parts list
+  delete:
+    handler: ../../endpoints/moc-parts-lists/delete/handler.handler
+    description: Delete MOC parts list
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Parse parts list
+  parse:
+    handler: ../../endpoints/moc-parts-lists/parse/handler.handler
+    description: Parse MOC parts list file
+    memorySize: 512
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}/parse
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Update parts list status
+  updateStatus:
+    handler: ../../endpoints/moc-parts-lists/update-status/handler.handler
+    description: Update MOC parts list status
+    events:
+      - httpApi:
+          path: /api/parts-lists/{id}/status
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get user summary
+  getUserSummary:
+    handler: ../../endpoints/moc-parts-lists/get-user-summary/handler.handler
+    description: Get user parts list summary
+    events:
+      - httpApi:
+          path: /api/parts-lists/user-summary
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+resources:
+  Outputs:
+    HttpApiUrl:
+      Description: Parts Lists API URL
+      Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+      Export:
+        Name: lego-api-parts-${self:provider.stage}-ApiUrl
+
+    HttpApiId:
+      Description: Parts Lists API Gateway ID
+      Value: !Ref HttpApi
+      Export:
+        Name: lego-api-parts-${self:provider.stage}-ApiId

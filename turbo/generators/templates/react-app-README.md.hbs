@@ -1,0 +1,153 @@
+# {{displayName}}
+
+{{description}}
+
+{{#if (eq type "shell")}}
+## Shell Application
+
+This is the main shell application that coordinates all modules in the LEGO MOC Instructions platform. It provides:
+
+- **Unified Authentication** - AWS Cognito integration with token management
+- **Global Navigation** - Consistent header, sidebar, and routing
+- **Module Coordination** - Lazy loading and error boundaries for feature modules
+- **Theme Management** - Global theme provider with light/dark mode
+- **Error Handling** - Global error boundaries and fallback UI
+
+## Architecture
+
+```
+Shell App ({{kebabCase name}})
+├── Authentication (AWS Cognito + Redux)
+├── Routing (TanStack Router + Auth Guards)
+├── Layout (Header, Sidebar, Footer)
+├── Theme Provider (Global Tailwind)
+└── Module Loading (Lazy loading + Error boundaries)
+```
+
+{{else if (eq type "module")}}
+## Module Application
+
+This is a feature module that plugs into the shell application ({{shellApp}}). It provides:
+
+- **Feature-specific Components** - UI components for this module
+- **Module State Management** - Local state with shared auth from shell
+- **API Integration** - Uses shell's authentication for API calls
+- **Lazy Loading** - Dynamically loaded by the shell application
+
+## Integration
+
+This module is registered in the shell app's routing configuration and loaded on-demand.
+
+{{else}}
+## Standalone Application
+
+This is an independent React application with its own authentication and routing.
+
+{{/if}}
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Run tests
+pnpm test
+
+# Type checking
+pnpm type-check
+```
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and configure:
+
+```bash
+cp .env.example .env.local
+```
+
+{{#if (eq type "shell")}}
+### Required Variables
+
+- `VITE_AWS_USER_POOL_ID` - AWS Cognito User Pool ID
+- `VITE_AWS_USER_POOL_WEB_CLIENT_ID` - AWS Cognito Client ID
+- `VITE_SERVERLESS_API_BASE_URL` - Serverless API base URL
+
+{{else if (eq type "module")}}
+### Module Configuration
+
+- `VITE_MODULE_NAME` - Module identifier
+- `VITE_SHELL_APP_URL` - Shell application URL for development
+
+{{/if}}
+
+## Scripts
+
+- `pnpm dev` - Start development server on port {{port}}
+- `pnpm build` - Build for production
+- `pnpm preview` - Preview production build
+- `pnpm test` - Run tests
+- `pnpm test:watch` - Run tests in watch mode
+- `pnpm lint` - Lint code
+- `pnpm type-check` - TypeScript type checking
+
+{{#if includeStorybook}}
+## Storybook
+
+```bash
+# Start Storybook
+pnpm storybook
+
+# Build Storybook
+pnpm build-storybook
+```
+
+{{/if}}
+
+## Tech Stack
+
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **Tailwind CSS** - Styling with shared design system
+{{#if includeRouting}}- **TanStack Router** - Type-safe routing{{/if}}
+{{#if includeRedux}}- **Redux Toolkit** - State management{{/if}}
+{{#if includeAuth}}- **AWS Amplify** - Authentication with Cognito{{/if}}
+- **@repo/ui** - Shared component library
+- **@repo/api-client** - Serverless API client
+- **Vitest** - Testing framework
+
+## Project Structure
+
+```
+src/
+{{#if (eq type "shell")}}├── components/
+│   ├── Layout/          # Shell layout components
+│   └── ErrorBoundary/   # Global error handling
+├── services/
+│   └── auth/            # Authentication provider
+├── store/               # Redux store and slices
+├── routes/              # Routing configuration
+│   ├── pages/           # Route components
+│   └── modules/         # Module loading
+└── styles/              # Global styles{{else if (eq type "module")}}├── components/          # Module components
+├── pages/               # Module pages
+├── hooks/               # Module-specific hooks
+└── Module.tsx           # Module entry point{{else}}├── components/          # App components
+├── pages/               # App pages
+└── styles/              # Global styles{{/if}}
+```
+
+## Contributing
+
+1. Follow the established patterns in the codebase
+2. Use TypeScript for all new code
+3. Write tests for new functionality
+4. Follow the component and naming conventions
+5. Update documentation as needed

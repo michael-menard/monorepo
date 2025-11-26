@@ -1,0 +1,39 @@
+# {{displayName}} Environment Configuration
+
+{{#if (eq type "shell")}}
+# Serverless API Configuration
+VITE_SERVERLESS_API_BASE_URL=https://api.execute-api.us-east-1.amazonaws.com/prod
+VITE_SERVERLESS_API_TIMEOUT=15000
+VITE_SERVERLESS_API_RETRY_ATTEMPTS=3
+
+# AWS Amplify Configuration
+VITE_AWS_REGION=us-east-1
+VITE_AWS_USER_POOL_ID=us-east-1_XXXXXXXXX
+VITE_AWS_USER_POOL_WEB_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXX
+{{else if (eq type "module")}}
+# Module Configuration
+VITE_MODULE_NAME={{kebabCase name}}
+VITE_SHELL_APP_URL=http://localhost:3000
+{{else}}
+# Serverless API Configuration (if needed)
+VITE_SERVERLESS_API_BASE_URL=https://api.execute-api.us-east-1.amazonaws.com/prod
+VITE_SERVERLESS_API_TIMEOUT=15000
+VITE_SERVERLESS_API_RETRY_ATTEMPTS=3
+{{/if}}
+
+# Application Configuration
+VITE_APP_NAME={{displayName}}
+VITE_APP_VERSION=1.0.0
+VITE_APP_ENVIRONMENT=development
+
+# Feature Flags
+VITE_ENABLE_DEVTOOLS=true
+VITE_ENABLE_PERFORMANCE_MONITORING=false
+VITE_ENABLE_ERROR_REPORTING=false
+VITE_ENABLE_MSW=false
+
+{{#if (eq type "shell")}}
+# Module Loading Configuration
+VITE_ENABLE_MODULE_PRELOADING=true
+VITE_MODULE_LOAD_TIMEOUT=10000
+{{/if}}

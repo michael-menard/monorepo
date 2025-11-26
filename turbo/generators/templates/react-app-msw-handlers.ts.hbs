@@ -1,0 +1,182 @@
+import { http, HttpResponse } from 'msw'
+
+const API_BASE_URL = 'http://localhost:3001'
+
+export const handlers = [
+  // Health check endpoint
+  http.get(`${API_BASE_URL}/health`, () => {
+    return HttpResponse.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: '{{kebabCase name}}',
+    })
+  }),
+
+  {{#if (eq type "shell")}}
+  // Authentication endpoints
+  http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
+    const { email, password } = await request.json() as { email: string; password: string }
+    
+    if (email === 'test@example.com' && password === 'password') {
+      return HttpResponse.json({
+        data: {
+          user: {
+            id: 'user-123',
+            email: 'test@example.com',
+            name: 'Test User',
+            roles: ['user'],
+          },
+          tokens: {
+            accessToken: 'mock-access-token',
+            idToken: 'mock-id-token',
+            refreshToken: 'mock-refresh-token',
+          },
+        },
+        meta: {
+          requestId: 'req-123',
+          timestamp: new Date().toISOString(),
+        },
+      })
+    }
+    
+    return HttpResponse.json(
+      {
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid email or password',
+        },
+      },
+      { status: 401 }
+    )
+  }),
+
+  // Gallery endpoints
+  http.get(`${API_BASE_URL}/api/v2/gallery/search`, ({ request }) => {
+    const url = new URL(request.url)
+    const query = url.searchParams.get('query') || ''
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = parseInt(url.searchParams.get('limit') || '12')
+    
+    return HttpResponse.json({
+      data: {
+        images: Array.from({ length: limit }, (_, i) => ({
+          id: `image-${page}-${i + 1}`,
+          title: `${query || 'Sample'} MOC ${page}-${i + 1}`,
+          imageUrl: `https://picsum.photos/400/300?random=${page * limit + i}`,
+          thumbnailUrl: `https://picsum.photos/200/150?random=${page * limit + i}`,
+          category: 'vehicles',
+          tags: ['star-wars', 'moc'],
+          partCount: Math.floor(Math.random() * 1000) + 100,
+          difficulty: 'intermediate',
+          uploadedBy: 'test-user',
+          uploadedAt: new Date().toISOString(),
+        })),
+        pagination: {
+          page,
+          limit,
+          total: 100,
+          totalPages: Math.ceil(100 / limit),
+        },
+      },
+      meta: {
+        requestId: `req-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  }),
+
+  // Wishlist endpoints
+  http.get(`${API_BASE_URL}/api/v2/wishlist/items`, () => {
+    return HttpResponse.json({
+      data: {
+        items: [
+          {
+            id: 'wishlist-1',
+            mocId: 'moc-123',
+            title: 'Millennium Falcon UCS',
+            imageUrl: 'https://picsum.photos/400/300?random=1',
+            priority: 'high',
+            estimatedCost: 799.99,
+            partCount: 7541,
+            category: 'star-wars',
+            tags: ['ucs', 'millennium-falcon'],
+            addedAt: new Date().toISOString(),
+          },
+          {
+            id: 'wishlist-2',
+            mocId: 'moc-456',
+            title: 'Hogwarts Castle',
+            imageUrl: 'https://picsum.photos/400/300?random=2',
+            priority: 'medium',
+            estimatedCost: 469.99,
+            partCount: 6020,
+            category: 'harry-potter',
+            tags: ['hogwarts', 'castle'],
+            addedAt: new Date().toISOString(),
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 2,
+          totalPages: 1,
+        },
+      },
+      meta: {
+        requestId: `req-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  }),
+  {{else if (eq type "module")}}
+  // Module-specific mock endpoints
+  http.get(`${API_BASE_URL}/api/v2/{{kebabCase name}}/data`, () => {
+    return HttpResponse.json({
+      data: {
+        message: 'Mock data for {{displayName}} module',
+        items: [
+          { id: 1, name: 'Sample Item 1' },
+          { id: 2, name: 'Sample Item 2' },
+        ],
+      },
+      meta: {
+        requestId: `req-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  }),
+  {{else}}
+  // Standalone app mock endpoints
+  http.get(`${API_BASE_URL}/api/data`, () => {
+    return HttpResponse.json({
+      data: {
+        message: 'Mock data for {{displayName}}',
+        version: '1.0.0',
+      },
+      meta: {
+        requestId: `req-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  }),
+  {{/if}}
+
+  // Error simulation endpoints
+  http.get(`${API_BASE_URL}/api/error/500`, () => {
+    return HttpResponse.json(
+      {
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Simulated server error',
+        },
+      },
+      { status: 500 }
+    )
+  }),
+
+  http.get(`${API_BASE_URL}/api/error/timeout`, () => {
+    return new Promise(() => {
+      // Never resolve to simulate timeout
+    })
+  }),
+]

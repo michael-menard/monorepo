@@ -1,0 +1,142 @@
+# Functions Stack: WebSocket
+# Deploys: WebSocket Lambda functions (connect, disconnect, default)
+#
+# Note: WebSocket handlers do NOT run in VPC - they only access DynamoDB
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/functions/websocket.yml --stage dev
+#
+# Dependencies: realtime (DynamoDB)
+# Dependents: monitoring
+
+service: lego-api-ws
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-esbuild
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 256
+  timeout: 29
+  deploymentMethod: direct
+
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    NODE_OPTIONS: '--enable-source-maps'
+    LOG_LEVEL: ${self:custom.stageConfig.logLevel}
+    CONNECTIONS_TABLE_NAME: ${cf:lego-realtime-${self:provider.stage}.TableName}
+
+  # WebSocket handlers do NOT run in VPC - they only need DynamoDB access
+  # vpc: ~ (explicitly no VPC)
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: 'arn:aws:logs:${self:provider.region}:*:*'
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+          Resource:
+            - ${cf:lego-realtime-${self:provider.stage}.TableArn}
+            - !Sub '${cf:lego-realtime-${self:provider.stage}.TableArn}/index/*'
+        # Permission to post messages back to WebSocket clients
+        - Effect: Allow
+          Action:
+            - execute-api:ManageConnections
+          Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/@connections/*'
+
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: functions-websocket
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+  stageConfig: ${self:custom.shared.stages.${self:custom.stage}, self:custom.shared.stages.dev}
+
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    concurrency: 10
+    exclude:
+      - '@aws-sdk/*'
+    plugins: ../../esbuild-plugins.js
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.sst/**'
+    - '!.turbo/**'
+    - '!docs/**'
+    - '!**/*.test.ts'
+    - '!**/*.spec.ts'
+    - '!**/__tests__/**'
+    - '!coverage/**'
+
+functions:
+  # WebSocket $connect handler
+  connect:
+    handler: ../../endpoints/websocket/connect/handler.handler
+    description: Handle WebSocket connections
+    events:
+      - websocket:
+          route: $connect
+
+  # WebSocket $disconnect handler
+  disconnect:
+    handler: ../../endpoints/websocket/disconnect/handler.handler
+    description: Handle WebSocket disconnections
+    events:
+      - websocket:
+          route: $disconnect
+
+  # WebSocket $default handler (for messages)
+  default:
+    handler: ../../endpoints/websocket/default/handler.handler
+    description: Handle WebSocket messages
+    events:
+      - websocket:
+          route: $default
+
+resources:
+  Outputs:
+    WebSocketApiUrl:
+      Description: WebSocket API URL
+      Value: !Sub 'wss://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
+      Export:
+        Name: lego-api-ws-${self:provider.stage}-ApiUrl
+
+    WebSocketApiId:
+      Description: WebSocket API Gateway ID
+      Value: !Ref WebsocketsApi
+      Export:
+        Name: lego-api-ws-${self:provider.stage}-ApiId
