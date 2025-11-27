@@ -1,1 +1,0 @@
-export { PWAUpdateNotification } from './PWAUpdateNotification'
