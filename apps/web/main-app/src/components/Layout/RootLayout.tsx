@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Outlet, useLocation } from '@tanstack/react-router'
+import { useLocation } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
@@ -8,6 +8,7 @@ import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { Footer } from './Footer'
+import { MainArea } from './MainArea'
 import {
   setActiveRoute,
   closeMobileMenu,
@@ -33,24 +34,6 @@ const legoBrickVariants = {
     scale: 0,
     rotate: 180,
     opacity: 0,
-    transition: { duration: 0.2 },
-  },
-}
-
-// Page transition variants
-const pageTransitionVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-      ease: 'easeOut',
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -20,
     transition: { duration: 0.2 },
   },
 }
@@ -118,9 +101,11 @@ export function RootLayout() {
   if (!auth.isAuthenticated && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <Outlet />
-        </div>
+        <MainArea
+          isAuthenticated={false}
+          isPageTransitioning={isPageTransitioning}
+          currentPath={location.pathname}
+        />
       </div>
     )
   }
@@ -184,53 +169,12 @@ export function RootLayout() {
             </>
           ) : null}
 
-          {/* Main content with page transitions */}
-          <main
-            className={cn(
-              'flex-1 min-h-[calc(100vh-4rem)] transition-all duration-300',
-              auth.isAuthenticated && 'lg:ml-64',
-            )}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="container mx-auto px-4 py-6"
-              >
-                {/* Loading overlay during page transitions */}
-                {isPageTransitioning ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10"
-                  >
-                    <div className="flex gap-2">
-                      {[...Array(3)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="h-3 w-3 rounded-full bg-sky-500"
-                          animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [0.5, 1, 0.5],
-                          }}
-                          transition={{
-                            duration: 0.6,
-                            repeat: Infinity,
-                            delay: i * 0.1,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                ) : null}
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </main>
+          {/* Main content area */}
+          <MainArea
+            isAuthenticated={auth.isAuthenticated}
+            isPageTransitioning={isPageTransitioning}
+            currentPath={location.pathname}
+          />
         </div>
 
         {/* Footer with slide-up animation */}

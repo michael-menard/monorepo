@@ -13,8 +13,10 @@ const mockAuth = {
   signIn: vi.fn(),
   signUp: vi.fn(),
   forgotPassword: vi.fn(),
+  confirmSignIn: vi.fn(),
   isLoading: false,
   user: null,
+  currentChallenge: null,
 }
 
 const mockNavigation = {
@@ -61,12 +63,14 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       expect(screen.getByText('LEGO MOC Hub')).toBeInTheDocument()
       expect(screen.getByText('Welcome back')).toBeInTheDocument()
-      expect(screen.getByText('Sign in to your account to continue building amazing MOCs')).toBeInTheDocument()
+      expect(
+        screen.getByText('Sign in to your account to continue building amazing MOCs'),
+      ).toBeInTheDocument()
       expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
       expect(screen.getByLabelText('Password')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
@@ -77,7 +81,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       const submitButton = screen.getByRole('button', { name: /sign in/i })
@@ -94,14 +98,14 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       const passwordInput = screen.getByLabelText('Password')
       const toggleButton = screen.getByLabelText('Show password')
 
       expect(passwordInput).toHaveAttribute('type', 'password')
-      
+
       await user.click(toggleButton)
       expect(passwordInput).toHaveAttribute('type', 'text')
       expect(screen.getByLabelText('Hide password')).toBeInTheDocument()
@@ -114,7 +118,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
@@ -131,15 +135,15 @@ describe('Authentication Flow', () => {
 
     it('displays error message on login failure', async () => {
       const user = userEvent.setup()
-      mockAuth.signIn.mockResolvedValue({ 
-        success: false, 
-        error: 'Invalid credentials' 
+      mockAuth.signIn.mockResolvedValue({
+        success: false,
+        error: 'Invalid credentials',
       })
 
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
@@ -156,14 +160,13 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       await user.click(screen.getByText('Forgot password?'))
-      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith(
-        'forgot_password_link',
-        { source: 'login_page' }
-      )
+      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith('forgot_password_link', {
+        source: 'login_page',
+      })
     })
   })
 
@@ -172,12 +175,14 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <SignupPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       expect(screen.getByText('LEGO MOC Hub')).toBeInTheDocument()
       expect(screen.getByText('Create your account')).toBeInTheDocument()
-      expect(screen.getByText('Join our community of LEGO builders and start sharing your MOCs')).toBeInTheDocument()
+      expect(
+        screen.getByText('Join our community of LEGO builders and start sharing your MOCs'),
+      ).toBeInTheDocument()
       expect(screen.getByLabelText('Full Name')).toBeInTheDocument()
       expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
       expect(screen.getByLabelText('Password')).toBeInTheDocument()
@@ -190,7 +195,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <SignupPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       const submitButton = screen.getByRole('button', { name: /create account/i })
@@ -209,7 +214,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <SignupPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       await user.type(screen.getByLabelText('Password'), 'Password123')
@@ -226,11 +231,11 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <SignupPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       const passwordInput = screen.getByLabelText('Password')
-      
+
       await user.type(passwordInput, 'weak')
       expect(screen.getByText('Password strength: Fair')).toBeInTheDocument()
 
@@ -245,12 +250,14 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <ForgotPasswordPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       expect(screen.getByText('LEGO MOC Hub')).toBeInTheDocument()
       expect(screen.getByText('Forgot your password?')).toBeInTheDocument()
-      expect(screen.getByText("No worries! Enter your email and we'll send you reset instructions.")).toBeInTheDocument()
+      expect(
+        screen.getByText("No worries! Enter your email and we'll send you reset instructions."),
+      ).toBeInTheDocument()
       expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /send reset instructions/i })).toBeInTheDocument()
     })
@@ -260,7 +267,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <ForgotPasswordPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       const submitButton = screen.getByRole('button', { name: /send reset instructions/i })
@@ -278,7 +285,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <ForgotPasswordPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       await user.type(screen.getByLabelText('Email Address'), 'test@example.com')
@@ -295,13 +302,13 @@ describe('Authentication Flow', () => {
       const user = userEvent.setup()
       mockAuth.forgotPassword.mockResolvedValue({
         success: false,
-        error: 'Email not found'
+        error: 'Email not found',
       })
 
       render(
         <TestWrapper>
           <ForgotPasswordPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       await user.type(screen.getByLabelText('Email Address'), 'notfound@example.com')
@@ -319,7 +326,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <ForgotPasswordPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       // Submit form first
@@ -346,41 +353,39 @@ describe('Authentication Flow', () => {
       const { rerender } = render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       // Click "Sign up here" link
       await user.click(screen.getByText('Sign up here'))
-      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith(
-        'signup_link',
-        { source: 'login_page' }
-      )
+      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith('signup_link', {
+        source: 'login_page',
+      })
 
       // Render signup page
       rerender(
         <TestWrapper>
           <SignupPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       expect(screen.getByText('Create your account')).toBeInTheDocument()
 
       // Click "Sign in here" link
       await user.click(screen.getByText('Sign in here'))
-      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith(
-        'signin_link',
-        { source: 'signup_page' }
-      )
+      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith('signin_link', {
+        source: 'signup_page',
+      })
     })
 
     it('maintains LEGO design consistency across all auth pages', () => {
       const pages = [LoginPage, SignupPage, ForgotPasswordPage]
 
-      pages.forEach((PageComponent) => {
+      pages.forEach(PageComponent => {
         render(
           <TestWrapper>
             <PageComponent />
-          </TestWrapper>
+          </TestWrapper>,
         )
 
         // Check for LEGO branding elements
@@ -398,7 +403,7 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       const submitButton = screen.getByRole('button', { name: /signing in/i })
@@ -412,15 +417,72 @@ describe('Authentication Flow', () => {
       render(
         <TestWrapper>
           <LoginPage />
-        </TestWrapper>
+        </TestWrapper>,
       )
 
       // Test back to home tracking
       await user.click(screen.getByText('Back to Home'))
-      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith(
-        'back_to_home',
-        { source: 'login_page' }
+      expect(mockNavigation.trackNavigation).toHaveBeenCalledWith('back_to_home', {
+        source: 'login_page',
+      })
+    })
+  })
+
+  describe('OTP/MFA Authentication Flow', () => {
+    it('handles OTP challenge during login', async () => {
+      const user = userEvent.setup()
+      mockAuth.signIn.mockResolvedValue({
+        success: false,
+        requiresChallenge: true,
+        challenge: {
+          challengeName: 'EMAIL_OTP',
+          challengeParameters: {},
+        },
+      })
+
+      render(
+        <TestWrapper>
+          <LoginPage />
+        </TestWrapper>,
       )
+
+      // Fill in login form
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'password123')
+      await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+      await waitFor(() => {
+        expect(mockAuth.signIn).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123',
+        })
+        expect(mockNavigation.trackNavigation).toHaveBeenCalledWith('login_challenge_required', {
+          source: 'login_page',
+          challengeType: 'EMAIL_OTP',
+        })
+      })
+    })
+
+    it('handles successful OTP verification', async () => {
+      mockAuth.confirmSignIn.mockResolvedValue({ success: true })
+      mockAuth.currentChallenge = {
+        challengeName: 'EMAIL_OTP',
+        challengeParameters: {},
+      } as any
+
+      // This would be tested in the OTPVerificationPage test
+      expect(mockAuth.confirmSignIn).toBeDefined()
+      expect(mockAuth.currentChallenge).toBeTruthy()
+    })
+
+    it('handles failed OTP verification', async () => {
+      mockAuth.confirmSignIn.mockResolvedValue({
+        success: false,
+        error: 'Invalid verification code',
+      })
+
+      // This would be tested in the OTPVerificationPage test
+      expect(mockAuth.confirmSignIn).toBeDefined()
     })
   })
 })

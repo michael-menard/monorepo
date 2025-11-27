@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
+import { Card, CardHeader, CardTitle } from '@repo/ui/card'
 import { BookOpen, FileText, Video, Download } from 'lucide-react'
 
 export function InstructionsModule() {

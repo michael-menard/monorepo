@@ -104,6 +104,7 @@ vi.mock('@repo/ui/button', () => ({
   Button: vi.fn(({ children, onClick, className, ...props }) =>
     React.createElement('button', { onClick, className, ...props }, children),
   ),
+  buttonVariants: vi.fn(() => 'button-variants-class'),
 }))
 
 vi.mock('@repo/ui/card', () => ({
@@ -178,26 +179,31 @@ vi.mock('@repo/ui/loading-spinner', () => ({
 
 // Mock additional UI components needed for auth tests
 vi.mock('@repo/ui/input', () => ({
-  Input: vi.fn((props) => React.createElement('input', { 'data-testid': 'input', ...props })),
+  Input: vi.fn(props => React.createElement('input', { 'data-testid': 'input', ...props })),
 }))
 
 vi.mock('@repo/ui/label', () => ({
   Label: vi.fn(({ children, ...props }) =>
-    React.createElement('label', { 'data-testid': 'label', ...props }, children)),
+    React.createElement('label', { 'data-testid': 'label', ...props }, children),
+  ),
 }))
 
 vi.mock('@repo/ui/checkbox', () => ({
-  Checkbox: vi.fn((props) =>
-    React.createElement('input', { type: 'checkbox', 'data-testid': 'checkbox', ...props })),
+  Checkbox: vi.fn(props =>
+    React.createElement('input', { type: 'checkbox', 'data-testid': 'checkbox', ...props }),
+  ),
 }))
 
 vi.mock('@repo/ui/alert', () => ({
   Alert: vi.fn(({ children, ...props }) =>
-    React.createElement('div', { 'data-testid': 'alert', ...props }, children)),
+    React.createElement('div', { 'data-testid': 'alert', ...props }, children),
+  ),
   AlertTitle: vi.fn(({ children, ...props }) =>
-    React.createElement('div', { 'data-testid': 'alert-title', ...props }, children)),
+    React.createElement('div', { 'data-testid': 'alert-title', ...props }, children),
+  ),
   AlertDescription: vi.fn(({ children, ...props }) =>
-    React.createElement('div', { 'data-testid': 'alert-description', ...props }, children)),
+    React.createElement('div', { 'data-testid': 'alert-description', ...props }, children),
+  ),
 }))
 
 // Mock Framer Motion
@@ -207,7 +213,7 @@ vi.mock('framer-motion', () => ({
     span: vi.fn(({ children, ...props }) => React.createElement('span', props, children)),
     button: vi.fn(({ children, ...props }) => React.createElement('button', props, children)),
     form: vi.fn(({ children, ...props }) => React.createElement('form', props, children)),
-    input: vi.fn((props) => React.createElement('input', props)),
+    input: vi.fn(props => React.createElement('input', props)),
   },
   AnimatePresence: vi.fn(({ children }) => children),
   useAnimation: vi.fn(() => ({
@@ -221,29 +227,6 @@ vi.mock('framer-motion', () => ({
     on: vi.fn(),
     destroy: vi.fn(),
   })),
-}))
-
-// Mock Lucide React icons
-vi.mock('lucide-react', () => ({
-  Mail: vi.fn(() => React.createElement('svg', { 'data-testid': 'mail-icon' })),
-  Lock: vi.fn(() => React.createElement('svg', { 'data-testid': 'lock-icon' })),
-  Eye: vi.fn(() => React.createElement('svg', { 'data-testid': 'eye-icon' })),
-  EyeOff: vi.fn(() => React.createElement('svg', { 'data-testid': 'eye-off-icon' })),
-  User: vi.fn(() => React.createElement('svg', { 'data-testid': 'user-icon' })),
-  KeyRound: vi.fn(() => React.createElement('svg', { 'data-testid': 'key-round-icon' })),
-  CheckCircle: vi.fn(() => React.createElement('svg', { 'data-testid': 'check-circle-icon' })),
-  AlertCircle: vi.fn(() => React.createElement('svg', { 'data-testid': 'alert-circle-icon' })),
-  ArrowLeft: vi.fn(() => React.createElement('svg', { 'data-testid': 'arrow-left-icon' })),
-  ArrowRight: vi.fn(() => React.createElement('svg', { 'data-testid': 'arrow-right-icon' })),
-  Home: vi.fn(() => React.createElement('svg', { 'data-testid': 'home-icon' })),
-  Search: vi.fn(() => React.createElement('svg', { 'data-testid': 'search-icon' })),
-  Settings: vi.fn(() => React.createElement('svg', { 'data-testid': 'settings-icon' })),
-  Menu: vi.fn(() => React.createElement('svg', { 'data-testid': 'menu-icon' })),
-  X: vi.fn(() => React.createElement('svg', { 'data-testid': 'x-icon' })),
-  ChevronDown: vi.fn(() => React.createElement('svg', { 'data-testid': 'chevron-down-icon' })),
-  ChevronUp: vi.fn(() => React.createElement('svg', { 'data-testid': 'chevron-up-icon' })),
-  ChevronLeft: vi.fn(() => React.createElement('svg', { 'data-testid': 'chevron-left-icon' })),
-  ChevronRight: vi.fn(() => React.createElement('svg', { 'data-testid': 'chevron-right-icon' })),
 }))
 
 vi.mock('@repo/ui/progress', () => ({
@@ -274,32 +257,6 @@ vi.mock('@repo/ui/tabs', () => ({
   TabsTrigger: vi.fn(({ children }) => React.createElement('button', {}, children)),
 }))
 
-vi.mock('@repo/ui/input', () => ({
-  Input: vi.fn(props => React.createElement('input', props)),
-}))
-
-vi.mock('@repo/ui/label', () => ({
-  Label: vi.fn(({ children, className, ...props }) =>
-    React.createElement('label', { className, ...props }, children),
-  ),
-}))
-
-vi.mock('@repo/ui/alert', () => ({
-  Alert: vi.fn(({ children, className, ...props }) =>
-    React.createElement('div', { className, 'data-testid': 'alert', ...props }, children),
-  ),
-  AlertTitle: vi.fn(({ children, className, ...props }) =>
-    React.createElement('div', { className, ...props }, children),
-  ),
-  AlertDescription: vi.fn(({ children, className, ...props }) =>
-    React.createElement('div', { className, ...props }, children),
-  ),
-}))
-
-vi.mock('@repo/ui/checkbox', () => ({
-  Checkbox: vi.fn(props => React.createElement('input', { type: 'checkbox', ...props })),
-}))
-
 vi.mock('@repo/ui/lib/utils', () => ({
   cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
 }))
@@ -307,6 +264,55 @@ vi.mock('@repo/ui/lib/utils', () => ({
 vi.mock('@repo/ui/providers/ThemeProvider', () => ({
   ThemeProvider: vi.fn(({ children }) => children),
   useTheme: vi.fn(() => ({ theme: 'light', setTheme: vi.fn() })),
+}))
+
+// Mock AuthLayout component
+vi.mock('@/components/Layout/RootLayout', () => ({
+  AuthLayout: vi.fn(({ children }) =>
+    React.createElement('div', { 'data-testid': 'auth-layout' }, children),
+  ),
+}))
+
+// Mock Auth Provider
+vi.mock('@/services/auth/AuthProvider', () => ({
+  useAuth: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    handleSignIn: vi.fn().mockResolvedValue({ isSignedIn: true }),
+    handleSignUp: vi.fn().mockResolvedValue({ isSignUpComplete: false }),
+    handleSignOut: vi.fn().mockResolvedValue({}),
+    handleConfirmSignIn: vi.fn().mockResolvedValue({ isSignedIn: true }),
+    currentChallenge: null,
+  })),
+}))
+
+// Mock Navigation Provider
+vi.mock('@/components/Navigation/NavigationProvider', () => ({
+  useNavigation: vi.fn(() => ({
+    trackEvent: vi.fn(),
+    trackPageView: vi.fn(),
+    trackUserAction: vi.fn(),
+  })),
+}))
+
+// Mock react-hook-form
+vi.mock('react-hook-form', () => ({
+  useForm: vi.fn(() => ({
+    register: vi.fn(() => ({})),
+    handleSubmit: vi.fn(fn => fn),
+    formState: { errors: {}, isSubmitting: false },
+    watch: vi.fn(),
+    setValue: vi.fn(),
+    getValues: vi.fn(() => ({})),
+  })),
+  Controller: vi.fn(({ render }) => render({ field: {}, fieldState: {}, formState: {} })),
+}))
+
+// Mock zod resolver
+vi.mock('@hookform/resolvers/zod', () => ({
+  zodResolver: vi.fn(() => vi.fn()),
 }))
 
 // Note: Redux mocking is handled per test file as needed
@@ -332,6 +338,9 @@ vi.mock('lucide-react', () => ({
   ),
   HelpCircle: vi.fn(props =>
     React.createElement('svg', { 'data-testid': 'help-circle-icon', ...props }),
+  ),
+  Lightbulb: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'lightbulb-icon', ...props }),
   ),
   LogOut: vi.fn(props => React.createElement('svg', { 'data-testid': 'logout-icon', ...props })),
   ChevronDown: vi.fn(props =>
@@ -385,9 +394,15 @@ vi.mock('lucide-react', () => ({
   Lock: vi.fn(props => React.createElement('svg', { 'data-testid': 'lock-icon', ...props })),
   Eye: vi.fn(props => React.createElement('svg', { 'data-testid': 'eye-icon', ...props })),
   EyeOff: vi.fn(props => React.createElement('svg', { 'data-testid': 'eye-off-icon', ...props })),
-  KeyRound: vi.fn(props => React.createElement('svg', { 'data-testid': 'key-round-icon', ...props })),
-  CheckCircle: vi.fn(props => React.createElement('svg', { 'data-testid': 'check-circle-icon', ...props })),
-  AlertCircle: vi.fn(props => React.createElement('svg', { 'data-testid': 'alert-circle-icon', ...props })),
+  KeyRound: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'key-round-icon', ...props }),
+  ),
+  CheckCircle: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'check-circle-icon', ...props }),
+  ),
+  AlertCircle: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'alert-circle-icon', ...props }),
+  ),
 }))
 
 // Global test utilities

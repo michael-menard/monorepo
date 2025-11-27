@@ -4,9 +4,8 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Badge } from '@repo/ui/badge'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
-import { Progress } from '@repo/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select'
-import { Images, Upload, Search, Filter, Grid, List, TrendingUp, Clock } from 'lucide-react'
+import { Images, Upload, Search, Grid, TrendingUp, Clock } from 'lucide-react'
 import { useEnhancedGallerySearchQuery, useGetEnhancedGalleryStatsQuery } from '@/store'
 
 /**

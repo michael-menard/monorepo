@@ -72,10 +72,8 @@ const renderWithProviders = (component: React.ReactElement, initialState = {}) =
   const store = createTestStore(initialState)
   return render(
     <Provider store={store}>
-      <NavigationProvider>
-        {component}
-      </NavigationProvider>
-    </Provider>
+      <NavigationProvider>{component}</NavigationProvider>
+    </Provider>,
   )
 }
 
@@ -87,20 +85,20 @@ describe('UnifiedNavigation', () => {
   describe('Unauthenticated State', () => {
     it('renders sign in and sign up buttons when not authenticated', () => {
       renderWithProviders(<UnifiedNavigation />)
-      
+
       expect(screen.getByText('Sign In')).toBeInTheDocument()
       expect(screen.getByText('Sign Up')).toBeInTheDocument()
     })
 
     it('does not show private navigation links when not authenticated', () => {
       renderWithProviders(<UnifiedNavigation />)
-      
+
       expect(screen.queryByText('Wishlist')).not.toBeInTheDocument()
     })
 
     it('shows public navigation links when not authenticated', () => {
       renderWithProviders(<UnifiedNavigation />)
-      
+
       expect(screen.getByText('Browse MOCs')).toBeInTheDocument()
       expect(screen.getByText('Inspiration')).toBeInTheDocument()
     })
@@ -121,23 +119,23 @@ describe('UnifiedNavigation', () => {
 
     it('renders user avatar and menu when authenticated', () => {
       renderWithProviders(<UnifiedNavigation />, authenticatedState)
-      
+
       expect(screen.getByLabelText('User menu')).toBeInTheDocument()
       expect(screen.getByText('JD')).toBeInTheDocument() // Avatar fallback
     })
 
     it('shows private navigation links when authenticated', () => {
       renderWithProviders(<UnifiedNavigation />, authenticatedState)
-      
+
       expect(screen.getByText('Wishlist')).toBeInTheDocument()
     })
 
     it('opens user dropdown menu on click', async () => {
       renderWithProviders(<UnifiedNavigation />, authenticatedState)
-      
+
       const userMenuButton = screen.getByLabelText('User menu')
       fireEvent.click(userMenuButton)
-      
+
       await waitFor(() => {
         expect(screen.getByText('Profile')).toBeInTheDocument()
         expect(screen.getByText('Account Settings')).toBeInTheDocument()
@@ -147,15 +145,15 @@ describe('UnifiedNavigation', () => {
 
     it('handles logout correctly', async () => {
       renderWithProviders(<UnifiedNavigation />, authenticatedState)
-      
+
       const userMenuButton = screen.getByLabelText('User menu')
       fireEvent.click(userMenuButton)
-      
+
       await waitFor(() => {
         const logoutButton = screen.getByText('Logout')
         fireEvent.click(logoutButton)
       })
-      
+
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
     })
   })
@@ -163,7 +161,7 @@ describe('UnifiedNavigation', () => {
   describe('Mobile Navigation', () => {
     it('shows mobile menu button', () => {
       renderWithProviders(<UnifiedNavigation />)
-      
+
       expect(screen.getByLabelText('Toggle mobile menu')).toBeInTheDocument()
     })
 
@@ -174,12 +172,12 @@ describe('UnifiedNavigation', () => {
           <NavigationProvider>
             <UnifiedNavigation />
           </NavigationProvider>
-        </Provider>
+        </Provider>,
       )
-      
+
       const mobileMenuButton = screen.getByLabelText('Toggle mobile menu')
       fireEvent.click(mobileMenuButton)
-      
+
       // Check if the store state was updated
       const state = store.getState()
       expect(state.navigation.isMobileMenuOpen).toBe(true)
@@ -189,20 +187,20 @@ describe('UnifiedNavigation', () => {
   describe('Navigation Analytics', () => {
     it('tracks navigation clicks', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
-      
+
       renderWithProviders(<UnifiedNavigation />)
-      
+
       const browseLink = screen.getByText('Browse MOCs')
       fireEvent.click(browseLink)
-      
+
       expect(consoleSpy).toHaveBeenCalledWith(
         'Navigation Analytics:',
         expect.objectContaining({
           itemId: '/gallery',
           route: '/',
-        })
+        }),
       )
-      
+
       consoleSpy.mockRestore()
     })
   })
@@ -210,13 +208,13 @@ describe('UnifiedNavigation', () => {
   describe('Accessibility', () => {
     it('has proper ARIA labels', () => {
       renderWithProviders(<UnifiedNavigation />)
-      
+
       expect(screen.getByLabelText('Toggle mobile menu')).toBeInTheDocument()
     })
 
     it('supports keyboard navigation', () => {
       renderWithProviders(<UnifiedNavigation />)
-      
+
       const browseLink = screen.getByText('Browse MOCs')
       browseLink.focus()
       expect(browseLink).toHaveFocus()

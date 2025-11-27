@@ -501,6 +501,9 @@ importers:
       '@repo/cache':
         specifier: workspace:*
         version: link:../../../packages/core/cache
+      '@repo/logger':
+        specifier: workspace:*
+        version: link:../../../packages/core/logger
       '@repo/ui':
         specifier: workspace:*
         version: link:../../../packages/core/ui

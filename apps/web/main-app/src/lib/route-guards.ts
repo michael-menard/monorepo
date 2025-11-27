@@ -172,7 +172,7 @@ export interface RouteMetadata {
 /**
  * Common route metadata configurations
  */
-export const RouteMetadata = {
+export const ROUTE_METADATA_CONFIG = {
   home: {
     title: 'Home - LEGO MOC Instructions',
     description: 'Discover and create amazing LEGO MOC instructions',

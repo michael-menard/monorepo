@@ -9,7 +9,7 @@
  * - Cache management controls
  */
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
@@ -34,8 +34,7 @@ import { useCacheStatistics, useCacheManager } from '@/hooks/useIntelligentCache
  */
 export function CacheDashboard() {
   const { statistics, insights, performance } = useCacheStatistics()
-  const { invalidatePattern, warmCache, getInsights } = useCacheManager()
-  const [selectedInsight, setSelectedInsight] = useState<any>(null)
+  const { invalidatePattern, warmCache } = useCacheManager()
 
   return (
     <div className="space-y-6">
@@ -140,10 +139,10 @@ export function CacheDashboard() {
               {insights.length > 0 ? (
                 <div className="space-y-3">
                   {insights.slice(0, 5).map((insight, index) => (
-                    <div
+                    <button
+                      type="button"
                       key={index}
-                      className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent"
-                      onClick={() => setSelectedInsight(insight)}
+                      className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent w-full text-left"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -172,7 +171,7 @@ export function CacheDashboard() {
                           Next access: {Math.round(insight.predictedNextAccess / 1000)}s
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (

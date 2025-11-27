@@ -10,7 +10,6 @@
  */
 
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { useSelector } from 'react-redux'
 import { IntelligentCacheManager } from '@repo/cache/managers/IntelligentCacheManager'
 import { createLogger } from '@repo/logger'
 

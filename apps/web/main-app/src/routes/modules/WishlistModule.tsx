@@ -1,41 +1,22 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs'
-import {
-  Heart,
-  Star,
-  Share,
-  Download,
-  DollarSign,
-  Bell,
-  Calendar,
-  TrendingUp,
-  Clock,
-  AlertTriangle,
-  Gift,
-} from 'lucide-react'
-import {
-  useEnhancedWishlistQueryQuery,
-  useGetEnhancedWishlistStatsQuery,
-  useGetEnhancedPriceEstimatesQuery,
-} from '@/store'
+import { Heart, Star, DollarSign, Bell, Calendar, TrendingUp, Clock, Gift } from 'lucide-react'
+import { useEnhancedWishlistQueryQuery, useGetEnhancedPriceEstimatesQuery } from '@/store'
 
 /**
  * Enhanced Wishlist Module showcasing our serverless API client features
  */
 export function WishlistModule() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<string[]>(['high', 'urgent'])
+  const [priorityFilter] = useState<string[]>(['high', 'urgent'])
 
   // Use enhanced wishlist query with all optimizations
   const {
     data: wishlistData,
     isLoading: isWishlistLoading,
-    isFetching,
     error: wishlistError,
   } = useEnhancedWishlistQueryQuery({
     priorityLevels: priorityFilter as any,
@@ -47,9 +28,6 @@ export function WishlistModule() {
     includeAvailability: true,
     prefetchRelated: true,
   })
-
-  // Get enhanced wishlist statistics
-  const { data: statsData, isLoading: isStatsLoading } = useGetEnhancedWishlistStatsQuery()
 
   // Get price estimates for all items
   const itemIds = wishlistData?.data?.items?.map(item => item.id) || []
@@ -223,7 +201,6 @@ export function WishlistModule() {
                   category={category}
                   isLoading={isWishlistLoading}
                   error={wishlistError}
-                  priceData={priceData}
                 />
               </TabsContent>
             ))}
@@ -286,13 +263,11 @@ function WishlistItemsGrid({
   category,
   isLoading,
   error,
-  priceData,
 }: {
   items: any[]
   category: any
   isLoading: boolean
   error: any
-  priceData: any
 }) {
   const filteredItems =
     category.id === 'all'

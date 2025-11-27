@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useSelector, useDispatch } from 'react-redux'
+import { logger } from '@repo/logger'
 import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
 import {
   Heart,
@@ -78,7 +79,7 @@ export function UnifiedNavigation({ className }: UnifiedNavigationProps) {
         localStorage.removeItem('user-preferences')
         localStorage.removeItem('user-settings')
       } catch (error) {
-        console.warn('Failed to clear localStorage:', error)
+        logger.warn('Failed to clear localStorage:', error)
       }
 
       // Close user menu
@@ -87,13 +88,13 @@ export function UnifiedNavigation({ className }: UnifiedNavigationProps) {
       // Navigate to home page
       navigate({ to: '/' })
     } catch (error) {
-      console.error('Logout error:', error)
+      logger.error('Logout error:', error)
       // Even if logout fails, clear localStorage for security
       try {
         localStorage.removeItem('user-preferences')
         localStorage.removeItem('user-settings')
       } catch (storageError) {
-        console.warn('Failed to clear localStorage on error:', storageError)
+        logger.warn('Failed to clear localStorage on error:', storageError)
       }
 
       // Close user menu and navigate anyway

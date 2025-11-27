@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { logger } from '@repo/logger'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
@@ -28,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+    logger.error('ErrorBoundary caught an error:', error, errorInfo)
 
     this.setState({
       error,
@@ -38,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // Report error to monitoring service
     if (import.meta.env.VITE_ENABLE_ERROR_REPORTING === 'true') {
       // Error reporting logic would go here
-      console.error('Error reported to monitoring service:', {
+      logger.error('Error reported to monitoring service:', {
         error: error.message,
         stack: error.stack,
         componentStack: errorInfo.componentStack,
@@ -114,11 +115,11 @@ export class ErrorBoundary extends Component<Props, State> {
  */
 export function useErrorHandler() {
   return (error: Error, errorInfo?: ErrorInfo) => {
-    console.error('Error caught by useErrorHandler:', error, errorInfo)
+    logger.error('Error caught by useErrorHandler:', error, errorInfo)
 
     if (import.meta.env.VITE_ENABLE_ERROR_REPORTING === 'true') {
       // Report error to monitoring service
-      console.error('Error reported to monitoring service:', {
+      logger.error('Error reported to monitoring service:', {
         error: error.message,
         stack: error.stack,
         ...errorInfo,

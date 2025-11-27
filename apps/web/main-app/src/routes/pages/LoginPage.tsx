@@ -76,6 +76,13 @@ export function LoginPage() {
           redirectTo: '/dashboard',
         })
         navigate({ to: '/dashboard' })
+      } else if (result.requiresChallenge) {
+        // Multi-step authentication required - navigate to OTP page
+        trackNavigation('login_challenge_required', {
+          source: 'login_page',
+          challengeType: result.challenge?.challengeName,
+        })
+        navigate({ to: '/auth/otp-verification' })
       } else {
         setError(result.error || 'Login failed. Please try again.')
         trackNavigation('login_error', {

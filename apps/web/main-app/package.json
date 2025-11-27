@@ -33,6 +33,7 @@
     "@reduxjs/toolkit": "^2.8.2",
     "@repo/api-client": "workspace:*",
     "@repo/cache": "workspace:*",
+    "@repo/logger": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-router": "^1.130.2",
     "@tanstack/react-router-devtools": "^1.130.2",

@@ -251,7 +251,6 @@ export const navigationSlice = createSlice({
   reducers: {
     // Core navigation actions
     setActiveRoute: (state, action: PayloadAction<string>) => {
-      const previousRoute = state.activeRoute
       state.activeRoute = action.payload
 
       // Update active state in all navigation items

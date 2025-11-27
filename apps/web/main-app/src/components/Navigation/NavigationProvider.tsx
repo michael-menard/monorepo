@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate } from '@tanstack/react-router'
+import { logger } from '@repo/logger'
 import {
   setActiveRoute,
   addRecentSearch,
@@ -48,75 +49,101 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
 
   // Set up contextual navigation based on current route
   useEffect(() => {
-    const contextualItems = generateContextualNavigation(location.pathname, activeItem)
+    const contextualItems = generateContextualNavigation(location.pathname)
     if (contextualItems.length > 0) {
       dispatch(setContextualNavigation(contextualItems))
     }
-  }, [location.pathname, activeItem, dispatch])
+  }, [location.pathname, dispatch])
 
   const navigate = useNavigate()
 
   // Navigation actions
-  const navigateToItem = (item: NavigationItem) => {
-    // Track navigation analytics
-    trackNavigation(item.id, {
-      source: 'navigation_menu',
-      timestamp: new Date().toISOString(),
-    })
+  const trackNavigation = useCallback(
+    (itemId: string, metadata?: Record<string, unknown>) => {
+      // Enhanced analytics tracking
+      logger.info('Navigation Analytics:', {
+        itemId,
+        route: location.pathname,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        ...metadata,
+      })
 
-    // Use TanStack Router navigation
-    navigate({ to: item.href })
-  }
+      // In a real app, this would send to analytics service
+      // Example: analytics.track('navigation', { itemId, ...metadata })
+    },
+    [location.pathname],
+  )
 
-  const searchNavigation = (query: string) => {
-    if (query.trim()) {
-      dispatch(addRecentSearch(query))
-
-      // Track search analytics
-      trackNavigation('search', {
-        query,
-        source: 'navigation_search',
+  const navigateToItem = useCallback(
+    (item: NavigationItem) => {
+      // Track navigation analytics
+      trackNavigation(item.id, {
+        source: 'navigation_menu',
         timestamp: new Date().toISOString(),
       })
-    }
-  }
 
-  const addToFavorites = (itemId: string) => {
-    // This would typically dispatch toggleFavoriteItem
-    // For now, we'll track the analytics
-    trackNavigation(itemId, {
-      action: 'add_to_favorites',
-      timestamp: new Date().toISOString(),
-    })
-  }
+      // Use TanStack Router navigation
+      navigate({ to: item.href })
+    },
+    [navigate, trackNavigation],
+  )
 
-  const setContextualItems = (items: NavigationItem[]) => {
-    dispatch(setContextualNavigation(items))
-  }
+  const searchNavigation = useCallback(
+    (query: string) => {
+      if (query.trim()) {
+        dispatch(addRecentSearch(query))
 
-  const trackNavigation = (itemId: string, metadata?: Record<string, any>) => {
-    // Enhanced analytics tracking
-    console.log('Navigation Analytics:', {
-      itemId,
-      route: location.pathname,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
-      ...metadata,
-    })
+        // Track search analytics
+        trackNavigation('search', {
+          query,
+          source: 'navigation_search',
+          timestamp: new Date().toISOString(),
+        })
+      }
+    },
+    [dispatch, trackNavigation],
+  )
 
-    // In a real app, this would send to analytics service
-    // Example: analytics.track('navigation', { itemId, ...metadata })
-  }
+  const addToFavorites = useCallback(
+    (itemId: string) => {
+      // This would typically dispatch toggleFavoriteItem
+      // For now, we'll track the analytics
+      trackNavigation(itemId, {
+        action: 'add_to_favorites',
+        timestamp: new Date().toISOString(),
+      })
+    },
+    [trackNavigation],
+  )
 
-  const contextValue: NavigationContextType = {
-    navigation,
-    activeItem,
-    navigateToItem,
-    searchNavigation,
-    addToFavorites,
-    setContextualItems,
-    trackNavigation,
-  }
+  const setContextualItems = useCallback(
+    (items: NavigationItem[]) => {
+      dispatch(setContextualNavigation(items))
+    },
+    [dispatch],
+  )
+
+  const contextValue = useMemo<NavigationContextType>(
+    () => ({
+      navigation,
+      activeItem,
+      navigateToItem,
+      searchNavigation,
+      addToFavorites,
+      setContextualItems,
+      trackNavigation,
+    }),
+    [
+      navigation,
+      activeItem,
+      navigateToItem,
+      searchNavigation,
+      addToFavorites,
+      setContextualItems,
+      trackNavigation,
+    ],
+  )
 
   return <NavigationContext.Provider value={contextValue}>{children}</NavigationContext.Provider>
 }
@@ -135,10 +162,7 @@ export function useNavigation() {
 /**
  * Generate contextual navigation items based on current route
  */
-function generateContextualNavigation(
-  pathname: string,
-  activeItem: NavigationItem | undefined,
-): NavigationItem[] {
+function generateContextualNavigation(pathname: string): NavigationItem[] {
   const contextualItems: NavigationItem[] = []
 
   // Gallery contextual navigation

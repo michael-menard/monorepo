@@ -278,7 +278,7 @@ export function DashboardModule() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {galleryStats?.data?.popularCategories?.slice(0, 3).map((category, index) => (
+              {galleryStats?.data?.popularCategories?.slice(0, 3).map(category => (
                 <div key={category} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-primary rounded-full" />

@@ -20,7 +20,7 @@ export const createMockStore = (initialState = {}) => {
       cache: cacheSlice,
     },
     preloadedState: initialState,
-    middleware: (getDefaultMiddleware) =>
+    middleware: getDefaultMiddleware =>
       getDefaultMiddleware({
         serializableCheck: {
           ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
@@ -81,9 +81,7 @@ export const TestWrapper: React.FC<TestWrapperProps> = ({
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <NavigationProvider>
-              <div data-testid="auth-layout">
-                {children}
-              </div>
+              <div data-testid="auth-layout">{children}</div>
             </NavigationProvider>
           </AuthProvider>
         </QueryClientProvider>
@@ -99,16 +97,12 @@ export const renderWithProviders = (
     initialState?: any
     queryClient?: QueryClient
     router?: any
-  } = {}
+  } = {},
 ) => {
   const { initialState, queryClient, router, ...renderOptions } = options
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestWrapper
-      initialState={initialState}
-      queryClient={queryClient}
-      router={router}
-    >
+    <TestWrapper initialState={initialState} queryClient={queryClient} router={router}>
       {children}
     </TestWrapper>
   )

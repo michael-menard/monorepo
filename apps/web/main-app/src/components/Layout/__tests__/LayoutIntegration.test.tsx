@@ -92,20 +92,16 @@ const createTestStore = (initialState = {}) => {
 
 const renderWithProviders = (component: React.ReactElement, initialState = {}) => {
   const store = createTestStore(initialState)
-  return render(
-    <Provider store={store}>
-      {component}
-    </Provider>
-  )
+  return render(<Provider store={store}>{component}</Provider>)
 }
 
 describe('Layout Integration', () => {
   describe('Loading State', () => {
     it('shows LEGO brick loading animation when auth is loading', () => {
       renderWithProviders(<RootLayout />, {
-        auth: { isLoading: true }
+        auth: { isLoading: true },
       })
-      
+
       expect(screen.getByText('Building your LEGO MOC experience...')).toBeInTheDocument()
     })
   })
@@ -113,7 +109,7 @@ describe('Layout Integration', () => {
   describe('Unauthenticated Layout', () => {
     it('shows minimal layout for unauthenticated users on non-public routes', () => {
       renderWithProviders(<RootLayout />)
-      
+
       expect(screen.getByTestId('outlet')).toBeInTheDocument()
       expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
     })
@@ -133,21 +129,21 @@ describe('Layout Integration', () => {
 
     it('renders full layout with header, sidebar, and footer for authenticated users', () => {
       renderWithProviders(<RootLayout />, authenticatedState)
-      
+
       // Header should be present
       expect(screen.getByText('LEGO MOC Instructions')).toBeInTheDocument()
-      
+
       // Sidebar navigation should be present
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Gallery')).toBeInTheDocument()
-      
+
       // Main content should be present
       expect(screen.getByTestId('outlet')).toBeInTheDocument()
     })
 
     it('shows legacy navigation routes in sidebar', () => {
       renderWithProviders(<RootLayout />, authenticatedState)
-      
+
       expect(screen.getByText('MOC Gallery')).toBeInTheDocument()
       expect(screen.getByText('Inspiration')).toBeInTheDocument()
       expect(screen.getByText('My Profile')).toBeInTheDocument()
@@ -158,13 +154,13 @@ describe('Layout Integration', () => {
       render(
         <Provider store={store}>
           <RootLayout />
-        </Provider>
+        </Provider>,
       )
-      
+
       // Find and click mobile menu button
       const mobileMenuButton = screen.getByLabelText('Toggle navigation menu')
       fireEvent.click(mobileMenuButton)
-      
+
       // Check if mobile menu state was updated
       const state = store.getState()
       expect(state.navigation.isMobileMenuOpen).toBe(true)
@@ -174,9 +170,9 @@ describe('Layout Integration', () => {
   describe('Responsive Behavior', () => {
     it('applies correct classes for desktop sidebar layout', () => {
       renderWithProviders(<RootLayout />, {
-        auth: { isAuthenticated: true }
+        auth: { isAuthenticated: true },
       })
-      
+
       const mainContent = screen.getByRole('main')
       expect(mainContent).toHaveClass('lg:ml-64')
     })
@@ -185,18 +181,18 @@ describe('Layout Integration', () => {
   describe('LEGO Design System Integration', () => {
     it('applies LEGO-inspired gradient backgrounds', () => {
       renderWithProviders(<RootLayout />, {
-        auth: { isAuthenticated: true }
+        auth: { isAuthenticated: true },
       })
-      
+
       const rootDiv = screen.getByTestId('outlet').closest('.min-h-screen')
       expect(rootDiv).toHaveClass('bg-gradient-to-br')
     })
 
     it('shows LEGO-inspired brand elements in sidebar', () => {
       renderWithProviders(<RootLayout />, {
-        auth: { isAuthenticated: true }
+        auth: { isAuthenticated: true },
       })
-      
+
       expect(screen.getByText('LEGO MOC Hub')).toBeInTheDocument()
     })
   })
@@ -204,14 +200,14 @@ describe('Layout Integration', () => {
   describe('Performance Optimization', () => {
     it('renders without performance issues', () => {
       const startTime = performance.now()
-      
+
       renderWithProviders(<RootLayout />, {
-        auth: { isAuthenticated: true }
+        auth: { isAuthenticated: true },
       })
-      
+
       const endTime = performance.now()
       const renderTime = endTime - startTime
-      
+
       // Should render within reasonable time (less than 100ms)
       expect(renderTime).toBeLessThan(100)
     })
@@ -220,9 +216,9 @@ describe('Layout Integration', () => {
   describe('Accessibility', () => {
     it('has proper ARIA landmarks', () => {
       renderWithProviders(<RootLayout />, {
-        auth: { isAuthenticated: true }
+        auth: { isAuthenticated: true },
       })
-      
+
       expect(screen.getByRole('main')).toBeInTheDocument()
       expect(screen.getByRole('navigation')).toBeInTheDocument()
       expect(screen.getByRole('contentinfo')).toBeInTheDocument()
@@ -230,9 +226,9 @@ describe('Layout Integration', () => {
 
     it('supports keyboard navigation', () => {
       renderWithProviders(<RootLayout />, {
-        auth: { isAuthenticated: true }
+        auth: { isAuthenticated: true },
       })
-      
+
       const dashboardLink = screen.getByText('Dashboard')
       dashboardLink.focus()
       expect(dashboardLink).toHaveFocus()

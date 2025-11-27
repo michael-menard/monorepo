@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { cn } from '@repo/ui/lib/utils'
-import { useNavigation } from '../Navigation/NavigationProvider'
 import { selectAuth } from '@/store/slices/authSlice'
 
 // LEGO stud animation variants
@@ -22,17 +21,7 @@ const legoStudVariants = {
 
 export function Footer() {
   const auth = useSelector(selectAuth)
-  const { trackNavigation } = useNavigation()
   const currentYear = new Date().getFullYear()
-
-  const handleFooterLinkClick = (linkId: string, href: string) => {
-    trackNavigation('footer_link', {
-      linkId,
-      href,
-      source: 'footer',
-      timestamp: Date.now(),
-    })
-  }
 
   // Don't show footer on auth pages
   if (!auth.isAuthenticated) {

@@ -1,9 +1,10 @@
 import React from 'react'
 import { Link } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
+import { logger } from '@repo/logger'
 import { Button } from '@repo/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar'
-import { Menu, Search, Bell, Settings, LogOut, User, Moon, Sun } from 'lucide-react'
+import { Menu, Bell, Settings, LogOut, User, Moon, Sun } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from '@repo/ui/dropdown-menu'
 import { Badge } from '@repo/ui/badge'
-import { cn } from '@repo/ui/lib/utils'
 import { NavigationSearch } from '../Navigation/NavigationSearch'
 import { EnhancedBreadcrumb } from '../Navigation/EnhancedBreadcrumb'
 import { toggleMobileMenu, selectNavigationNotifications } from '@/store/slices/navigationSlice'
@@ -42,7 +42,7 @@ export function Header() {
     try {
       await signOut()
     } catch (error) {
-      console.error('Sign out failed:', error)
+      logger.error('Sign out failed:', error)
     }
   }
 

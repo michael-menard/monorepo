@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
     build: {
       lib: {
         entry: {
+          'index': path.resolve(__dirname, 'src/index.ts'),
           'alert': path.resolve(__dirname, 'src/alert.tsx'),
           'avatar': path.resolve(__dirname, 'src/avatar.tsx'),
           'badge': path.resolve(__dirname, 'src/badge.tsx'),

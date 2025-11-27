@@ -1,4 +1,5 @@
 import { onCLS, onFID, onFCP, onLCP, onTTFB, type Metric } from 'web-vitals'
+import { logger } from '@repo/logger'
 
 export interface PerformanceMetrics {
   cls: number | null
@@ -84,7 +85,7 @@ class PerformanceMonitor {
       navObserver.observe({ entryTypes: ['navigation'] })
       this.observers.push(navObserver)
     } catch (e) {
-      console.warn('Navigation timing observer not supported')
+      logger.warn('Navigation timing observer not supported')
     }
 
     // Observe resource timing
@@ -92,7 +93,7 @@ class PerformanceMonitor {
       const entries = list.getEntries()
       entries.forEach(entry => {
         if (entry.entryType === 'resource') {
-          this.handleResourceTiming(entry as PerformanceResourceTiming)
+          this.handleResourceTiming(entry as PerformanceEntry & { transferSize?: number })
         }
       })
     })
@@ -101,7 +102,7 @@ class PerformanceMonitor {
       resourceObserver.observe({ entryTypes: ['resource'] })
       this.observers.push(resourceObserver)
     } catch (e) {
-      console.warn('Resource timing observer not supported')
+      logger.warn('Resource timing observer not supported')
     }
   }
 
@@ -115,13 +116,13 @@ class PerformanceMonitor {
       load: entry.loadEventEnd - entry.loadEventStart,
     }
 
-    console.log('Navigation Timing:', timing)
+    logger.info('Navigation Timing:', timing)
   }
 
-  private handleResourceTiming(entry: PerformanceResourceTiming) {
+  private handleResourceTiming(entry: PerformanceEntry & { transferSize?: number }) {
     // Log slow resources (>1s)
     if (entry.duration > 1000) {
-      console.warn('Slow resource:', {
+      logger.warn('Slow resource:', {
         name: entry.name,
         duration: entry.duration,
         size: entry.transferSize,
@@ -140,7 +141,7 @@ class PerformanceMonitor {
       // })
     }
 
-    console.log('Web Vital:', {
+    logger.info('Web Vital:', {
       name: metric.name,
       value: metric.value,
       rating: this.getRating(metric.name, metric.value),

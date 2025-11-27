@@ -4,18 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs'
-import {
-  Navigation,
-  Search,
-  Zap,
-  Star,
-  Bell,
-  Settings,
-  BarChart3,
-  Compass,
-  Target,
-  Layers,
-} from 'lucide-react'
+import { Navigation, Search, Zap, Star, Bell, BarChart3, Compass, Target } from 'lucide-react'
 import {
   NavigationSearch,
   QuickActions,
@@ -24,7 +13,6 @@ import {
   useNavigation,
   addNotification,
   updateNavigationBadge,
-  setContextualNavigation,
   selectNavigationAnalytics,
   selectUserPreferences,
   selectNavigationNotifications,

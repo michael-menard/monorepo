@@ -20,8 +20,8 @@ import {
 import { cn } from '@repo/ui/lib/utils'
 import { QuickActions } from '../Navigation/QuickActions'
 import { useNavigation } from '../Navigation/NavigationProvider'
-import { selectPrimaryNavigation, selectAuth } from '@/store/slices/navigationSlice'
-import { selectAuth as selectAuthState } from '@/store/slices/authSlice'
+import { selectPrimaryNavigation } from '@/store/slices/navigationSlice'
+import { selectAuth } from '@/store/slices/authSlice'
 
 interface SidebarProps {
   className?: string
@@ -94,7 +94,7 @@ const legoSnapVariants = {
 export function Sidebar({ className, showLegacyRoutes = true }: SidebarProps) {
   const location = useLocation()
   const navigation = useSelector(selectPrimaryNavigation)
-  const auth = useSelector(selectAuthState)
+  const auth = useSelector(selectAuth)
   const { trackNavigation } = useNavigation()
 
   const handleNavigationClick = (itemId: string, href: string) => {

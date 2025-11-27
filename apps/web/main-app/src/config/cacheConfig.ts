@@ -182,7 +182,7 @@ export function getCacheConfig(): CacheConfig {
  * Create configured intelligent cache manager
  */
 export function createConfiguredCacheManager(): IntelligentCacheManager {
-  const config = getCacheConfig()
+  // getCacheConfig() is available for future use when IntelligentCacheManager supports configuration
   const manager = new IntelligentCacheManager()
 
   // Apply configuration settings

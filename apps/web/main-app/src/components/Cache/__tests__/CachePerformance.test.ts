@@ -1,6 +1,6 @@
 /**
  * Cache Performance Tests
- * 
+ *
  * Comprehensive tests for intelligent caching system performance:
  * - Cache hit/miss rate validation
  * - Performance benchmarking
@@ -36,7 +36,7 @@ describe('Cache Performance Tests', () => {
 
       // First access - cache miss
       await cacheManager.set(key, testData)
-      
+
       // Subsequent accesses - should be cache hits
       for (let i = 0; i < 10; i++) {
         const result = await cacheManager.get(key)
@@ -45,7 +45,7 @@ describe('Cache Performance Tests', () => {
 
       const stats = cacheManager.getStatistics()
       const pattern = stats.usagePatterns.find(p => p.key === key)
-      
+
       expect(pattern).toBeDefined()
       expect(pattern!.accessCount).toBeGreaterThan(10)
       expect(pattern!.hitRate).toBeGreaterThan(0.9) // 90%+ hit rate
@@ -59,12 +59,12 @@ describe('Cache Performance Tests', () => {
       for (let i = 0; i < 1000; i++) {
         const key = `load-test:${i % 100}` // 100 unique keys, 10x repetition
         const data = { id: i, value: `test-data-${i}` }
-        
+
         promises.push(cacheManager.set(key, data))
       }
 
       await Promise.all(promises)
-      
+
       const endTime = performance.now()
       const duration = endTime - startTime
 
@@ -86,7 +86,7 @@ describe('Cache Performance Tests', () => {
       for (let hour = 0; hour < 24; hour++) {
         const key = `${baseKey}:${hour}`
         await cacheManager.set(key, testData, { userId: 'test-user' })
-        
+
         // Simulate multiple accesses during business hours
         if (hour >= 9 && hour <= 17) {
           for (let access = 0; access < 5; access++) {
@@ -96,15 +96,14 @@ describe('Cache Performance Tests', () => {
       }
 
       const insights = cacheManager.generatePredictiveInsights()
-      
+
       expect(insights.length).toBeGreaterThan(0)
-      
+
       // Check for high-confidence insights during business hours
       const businessHourInsights = insights.filter(
-        insight => insight.confidence > 0.7 && 
-        insight.recommendedAction === 'prefetch'
+        insight => insight.confidence > 0.7 && insight.recommendedAction === 'prefetch',
       )
-      
+
       expect(businessHourInsights.length).toBeGreaterThan(0)
     })
 
@@ -127,7 +126,7 @@ describe('Cache Performance Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 100))
 
       const insights = cacheManager.generatePredictiveInsights()
-      
+
       const highUsageInsight = insights.find(i => i.key === highUsageKey)
       const lowUsageInsight = insights.find(i => i.key === lowUsageKey)
 
@@ -156,7 +155,7 @@ describe('Cache Performance Tests', () => {
             tags: new Array(50).fill(`tag-${i}`),
           },
         }
-        
+
         await cacheManager.set(key, largeData)
       }
 
@@ -181,7 +180,7 @@ describe('Cache Performance Tests', () => {
 
       // Set up parent-child relationships
       await cacheManager.set(parentKey, testData)
-      
+
       for (const childKey of childKeys) {
         await cacheManager.set(childKey, testData, {
           dependencies: [parentKey],
@@ -215,18 +214,18 @@ describe('Cache Performance Tests', () => {
 
       for (let i = 0; i < operations; i++) {
         const endTimer = performanceMonitor.startOperation()
-        
+
         promises.push(
           cacheManager.set(`perf-test:${i}`, { value: i }).then(() => {
             endTimer()
-          })
+          }),
         )
       }
 
       await Promise.all(promises)
 
       const metrics = performanceMonitor.getMetrics()
-      
+
       expect(metrics.operationCount).toBe(operations)
       expect(metrics.averageLatency).toBeGreaterThan(0)
       expect(metrics.averageLatency).toBeLessThan(100) // Should be fast
@@ -237,16 +236,16 @@ describe('Cache Performance Tests', () => {
       // Simulate slow operations
       for (let i = 0; i < 5; i++) {
         const endTimer = performanceMonitor.startOperation()
-        
+
         // Simulate slow operation
         await new Promise(resolve => setTimeout(resolve, 200))
-        
+
         endTimer()
       }
 
       const alerts = performanceMonitor.getAlerts()
       const latencyAlerts = alerts.filter(alert => alert.type === 'latency')
-      
+
       expect(latencyAlerts.length).toBeGreaterThan(0)
       expect(latencyAlerts[0].severity).toBe('warning')
     })
@@ -264,7 +263,7 @@ describe('Cache Performance Tests', () => {
       analytics.recordInvalidation(key, 'test', 0)
 
       const metrics = analytics.getMetrics()
-      
+
       expect(metrics.totalRequests).toBe(2) // 2 hit/miss events
       expect(metrics.totalHits).toBe(1)
       expect(metrics.totalMisses).toBe(1)
@@ -280,7 +279,7 @@ describe('Cache Performance Tests', () => {
 
       const insights = analytics.generateInsights()
       const hitRateInsights = insights.filter(i => i.category === 'performance')
-      
+
       expect(hitRateInsights.length).toBeGreaterThan(0)
       expect(hitRateInsights[0].severity).toBe('critical')
       expect(hitRateInsights[0].title).toContain('Hit Rate')

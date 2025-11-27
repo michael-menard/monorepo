@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { logger } from '@repo/logger'
 import { Amplify } from 'aws-amplify'
 import {
   getCurrentUser,
@@ -8,6 +9,7 @@ import {
   signIn,
   signUp,
   resetPassword,
+  confirmSignIn,
 } from 'aws-amplify/auth'
 import {
   initializeCognitoTokenManager,
@@ -38,11 +40,23 @@ Amplify.configure({
   },
 })
 
+// Multi-step authentication types
+export interface AuthChallenge {
+  challengeName: string
+  challengeParameters?: Record<string, string>
+  session?: string
+}
+
+export interface SignInResult {
+  success: boolean
+  error?: string
+  requiresChallenge?: boolean
+  challenge?: AuthChallenge
+}
+
 interface AuthContextType {
-  signIn: (credentials: {
-    email: string
-    password: string
-  }) => Promise<{ success: boolean; error?: string }>
+  signIn: (credentials: { email: string; password: string }) => Promise<SignInResult>
+  confirmSignIn: (challengeResponse: string) => Promise<{ success: boolean; error?: string }>
   signUp: (userData: {
     name: string
     email: string
@@ -53,6 +67,7 @@ interface AuthContextType {
   refreshTokens: () => Promise<void>
   getAuthMetrics: () => ReturnType<typeof getCognitoTokenMetrics>
   isLoading: boolean
+  currentChallenge: AuthChallenge | null
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -64,6 +79,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const dispatch = useDispatch()
   const auth = useSelector(selectAuth)
+  const [currentChallenge, setCurrentChallenge] = React.useState<AuthChallenge | null>(null)
 
   useEffect(() => {
     checkAuthState()
@@ -123,7 +139,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         dispatch(setUnauthenticated())
       }
     } catch (error) {
-      console.error('Auth check failed:', error)
+      logger.error('Auth check failed:', error)
       dispatch(setUnauthenticated())
     }
   }
@@ -160,15 +176,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       throw new Error('No tokens received')
     } catch (error) {
-      console.error('Token refresh failed:', error)
+      logger.error('Token refresh failed:', error)
       dispatch(setError('Failed to refresh authentication tokens'))
       throw error
     }
   }
 
-  const handleSignIn = async (credentials: { email: string; password: string }) => {
+  const handleSignIn = async (credentials: {
+    email: string
+    password: string
+  }): Promise<SignInResult> => {
     try {
       dispatch(setLoading(true))
+      setCurrentChallenge(null)
 
       const result = await signIn({
         username: credentials.email,
@@ -176,16 +196,79 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       if (result.isSignedIn) {
-        // Refresh auth state after successful sign in
+        // Complete sign-in - refresh auth state
         await checkAuthState()
+        dispatch(setLoading(false))
         return { success: true }
+      } else if (result.nextStep) {
+        // Multi-step authentication required
+        dispatch(setLoading(false))
+
+        const challenge: AuthChallenge = {
+          challengeName: result.nextStep.signInStep,
+          challengeParameters: result.nextStep.additionalInfo,
+        }
+
+        setCurrentChallenge(challenge)
+
+        return {
+          success: false,
+          requiresChallenge: true,
+          challenge,
+        }
       } else {
+        dispatch(setLoading(false))
         return { success: false, error: 'Sign in incomplete' }
       }
     } catch (error: any) {
-      console.error('Sign in failed:', error)
+      logger.error('Sign in failed:', error)
       const errorMessage = error.message || 'Failed to sign in'
       dispatch(setError(errorMessage))
+      dispatch(setLoading(false))
+      setCurrentChallenge(null)
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const handleConfirmSignIn = async (challengeResponse: string) => {
+    try {
+      dispatch(setLoading(true))
+
+      if (!currentChallenge) {
+        dispatch(setLoading(false))
+        return { success: false, error: 'No active challenge found' }
+      }
+
+      const result = await confirmSignIn({
+        challengeResponse,
+      })
+
+      if (result.isSignedIn) {
+        // Challenge completed successfully
+        await checkAuthState()
+        setCurrentChallenge(null)
+        dispatch(setLoading(false))
+        return { success: true }
+      } else if (result.nextStep) {
+        // Additional challenge required
+        const challenge: AuthChallenge = {
+          challengeName: result.nextStep.signInStep,
+          challengeParameters: result.nextStep.additionalInfo,
+        }
+
+        setCurrentChallenge(challenge)
+        dispatch(setLoading(false))
+        return { success: false, error: 'Additional challenge required' }
+      } else {
+        dispatch(setLoading(false))
+        setCurrentChallenge(null)
+        return { success: false, error: 'Challenge verification failed' }
+      }
+    } catch (error: any) {
+      logger.error('Challenge confirmation failed:', error)
+      const errorMessage = error.message || 'Failed to verify challenge'
+      dispatch(setError(errorMessage))
+      dispatch(setLoading(false))
       return { success: false, error: errorMessage }
     }
   }
@@ -211,7 +294,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return { success: true } // User needs to verify email
       }
     } catch (error: any) {
-      console.error('Sign up failed:', error)
+      logger.error('Sign up failed:', error)
       const errorMessage = error.message || 'Failed to sign up'
       dispatch(setError(errorMessage))
       return { success: false, error: errorMessage }
@@ -225,7 +308,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await resetPassword({ username: email })
       return { success: true }
     } catch (error: any) {
-      console.error('Forgot password failed:', error)
+      logger.error('Forgot password failed:', error)
       const errorMessage = error.message || 'Failed to send reset email'
       dispatch(setError(errorMessage))
       return { success: false, error: errorMessage }
@@ -246,24 +329,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       dispatch(setUnauthenticated())
     } catch (error) {
-      console.error('Sign out failed:', error)
+      logger.error('Sign out failed:', error)
       dispatch(setError('Failed to sign out'))
     }
   }
 
-  const getAuthMetrics = () => {
+  const getAuthMetrics = useCallback(() => {
     return getCognitoTokenMetrics()
-  }
+  }, [])
 
-  const contextValue: AuthContextType = {
-    signIn: handleSignIn,
-    signUp: handleSignUp,
-    forgotPassword: handleForgotPassword,
-    signOut: handleSignOut,
-    refreshTokens,
-    getAuthMetrics,
-    isLoading: auth.isLoading,
-  }
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      signIn: handleSignIn,
+      confirmSignIn: handleConfirmSignIn,
+      signUp: handleSignUp,
+      forgotPassword: handleForgotPassword,
+      signOut: handleSignOut,
+      refreshTokens,
+      getAuthMetrics,
+      isLoading: auth.isLoading,
+      currentChallenge,
+    }),
+    [
+      handleSignIn,
+      handleConfirmSignIn,
+      handleSignUp,
+      handleForgotPassword,
+      handleSignOut,
+      refreshTokens,
+      getAuthMetrics,
+      auth.isLoading,
+      currentChallenge,
+    ],
+  )
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
 }
