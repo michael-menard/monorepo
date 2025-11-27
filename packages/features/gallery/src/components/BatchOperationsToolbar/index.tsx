@@ -1,14 +1,36 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trash2, FolderPlus, Download, Share2, X, Check } from 'lucide-react'
 import { Button } from '@repo/ui/button'
-// TODO: Replace with enhanced serverless gallery API
-// import { useDeleteImageMutation } from '@repo/api-client/rtk/gallery-api'
-// import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '@repo/api-client/rtk/gallery-api'
 import CreateAlbumDialog from '../CreateAlbumDialog/index.js'
-// import { z } from 'zod';
 
-// Schema not used at runtime currently; remove to avoid unused var error
+// TODO: These mutations need to be implemented in gallery-api.ts
+// For now, we create stub hooks that return no-op functions matching RTK Query pattern
+const useDeleteGalleryImageMutation = () => {
+  const deleteImage = useCallback((_imageId: string) => {
+    // Stub implementation - will be replaced with real API
+    return { unwrap: () => Promise.resolve({}) }
+  }, [])
+  return [deleteImage, { isLoading: false }] as const
+}
+
+const useCreateAlbumMutation = () => {
+  const createAlbum = useCallback((_data: { name: string; description?: string }) => {
+    // Stub implementation - will be replaced with real API
+    return {
+      unwrap: () => Promise.resolve({ album: { id: `album-${Date.now()}`, name: _data.name } }),
+    }
+  }, [])
+  return [createAlbum, { isLoading: false }] as const
+}
+
+const useAddImageToAlbumMutation = () => {
+  const addImageToAlbum = useCallback((_data: { albumId: string; imageId: string }) => {
+    // Stub implementation - will be replaced with real API
+    return { unwrap: () => Promise.resolve({}) }
+  }, [])
+  return [addImageToAlbum, { isLoading: false }] as const
+}
 
 interface BatchOperationsToolbarProps {
   selectedImages: string[]
@@ -36,7 +58,7 @@ const BatchOperationsToolbar: React.FC<BatchOperationsToolbarProps> = ({
   const [isProcessing, setIsProcessing] = useState(false)
 
   // RTK Query mutations
-  const [deleteImage] = useDeleteImageMutation()
+  const [deleteImage] = useDeleteGalleryImageMutation()
   const [addImageToAlbum] = useAddImageToAlbumMutation()
   const [createAlbum] = useCreateAlbumMutation()
 

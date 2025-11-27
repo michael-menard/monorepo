@@ -1,15 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  showSuccessToast,
-  showErrorToast,
-} from '@repo/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
+import { logger } from '@repo/logger'
+
+// Toast helper functions - TODO: integrate with actual toast system
+const showSuccessToast = (message: string) => logger.info('[Toast Success]', message)
+const showErrorToast = (message: string) => logger.error('[Toast Error]', message)
 import { ArrowLeft, Download, Calendar, User, Package, Plus, Upload, ImageIcon } from 'lucide-react'
 import { FileList, FileActions, createCommonActions, normalizeFileItem } from '@repo/file-list'
 // Download functions available but not used in current implementation

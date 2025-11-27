@@ -1,19 +1,37 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 
 // Module-level counter to ensure only one overlay is marked primary at a time (helps in StrictMode/test double mounts)
 // removed unused vars
 import { z } from 'zod'
-// TODO: Replace with enhanced serverless gallery API
-// import { useCreateAlbumMutation, useAddImageToAlbumMutation } from '@repo/api-client/rtk/gallery-api'
 
 // Temporary type until migration is complete
 interface GalleryAlbum {
   id: string
   name: string
+  title?: string
   description?: string
   images?: any[]
 }
+
+// TODO: These mutations need to be implemented in gallery-api.ts
+// For now, we create stub hooks that return no-op functions
+const useCreateAlbumMutation = () => {
+  const createAlbum = useCallback(async (data: Partial<GalleryAlbum>) => {
+    // Stub implementation - will be replaced with real API
+    return { id: `album-${Date.now()}`, name: data.name || data.title || '' }
+  }, [])
+  return [createAlbum, { isLoading: false }] as const
+}
+
+const useAddImageToAlbumMutation = () => {
+  const addImageToAlbum = useCallback(async (_data: { albumId: string; imageId: string }) => {
+    // Stub implementation - will be replaced with real API
+    return {}
+  }, [])
+  return [addImageToAlbum, { isLoading: false }] as const
+}
+
 import { useAlbumDragAndDrop } from '../../hooks/useAlbumDragAndDrop.js'
 import {
   AlbumCreationDataSchema,
