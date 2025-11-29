@@ -2,13 +2,13 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import { createMemoryHistory } from '@tanstack/react-router'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { RootLayout } from '../RootLayout'
 import { authSlice } from '@/store/slices/authSlice'
 import { navigationSlice } from '@/store/slices/navigationSlice'
 
 // Mock framer-motion to avoid animation issues in tests
-jest.mock('framer-motion', () => ({
+vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
@@ -16,9 +16,8 @@ jest.mock('framer-motion', () => ({
 }))
 
 // Mock TanStack Router
-const mockNavigate = jest.fn()
-jest.mock('@tanstack/react-router', () => ({
-  ...jest.requireActual('@tanstack/react-router'),
+const mockNavigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => ({ pathname: '/dashboard' }),
   Outlet: () => <div data-testid="outlet">Main Content</div>,

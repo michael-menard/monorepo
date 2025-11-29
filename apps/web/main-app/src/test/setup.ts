@@ -8,6 +8,19 @@ afterEach(() => {
   cleanup()
 })
 
+// Polyfill for HTMLFormElement.prototype.requestSubmit (jsdom has stub that throws)
+// Force override to provide working implementation
+HTMLFormElement.prototype.requestSubmit = function (submitter?: HTMLElement) {
+  if (submitter) {
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+    ;(submitEvent as any).submitter = submitter
+    this.dispatchEvent(submitEvent)
+  } else {
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+    this.dispatchEvent(submitEvent)
+  }
+}
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -97,6 +110,18 @@ vi.mock('@repo/logger', () => ({
     warn: vi.fn(),
     debug: vi.fn(),
   },
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+    })),
+  })),
 }))
 
 // Mock UI Components with direct imports (no barrel files)
@@ -279,6 +304,7 @@ vi.mock('@/components/Layout/RootLayout', () => ({
 
 // Mock Auth Provider
 vi.mock('@/services/auth/AuthProvider', () => ({
+  AuthProvider: vi.fn(({ children }) => children),
   useAuth: vi.fn(() => ({
     user: null,
     isAuthenticated: false,
@@ -294,10 +320,33 @@ vi.mock('@/services/auth/AuthProvider', () => ({
 
 // Mock Navigation Provider
 vi.mock('@/components/Navigation/NavigationProvider', () => ({
+  NavigationProvider: vi.fn(({ children }) => children),
   useNavigation: vi.fn(() => ({
+    // Event tracking
     trackEvent: vi.fn(),
     trackPageView: vi.fn(),
     trackUserAction: vi.fn(),
+    trackNavigation: vi.fn(),
+    // Navigation state
+    currentPath: '/',
+    breadcrumbs: [],
+    searchQuery: '',
+    isSearchOpen: false,
+    contextualNavigation: [],
+    navigationHistory: [],
+    // Navigation functions
+    navigateToItem: vi.fn(),
+    searchNavigation: vi.fn(),
+    setContextualItems: vi.fn(),
+    addToFavorites: vi.fn(),
+    clearSearch: vi.fn(),
+    // Search state
+    search: {
+      query: '',
+      results: [],
+      recentSearches: [],
+      isLoading: false,
+    },
   })),
 }))
 
@@ -310,8 +359,21 @@ vi.mock('react-hook-form', () => ({
     watch: vi.fn(),
     setValue: vi.fn(),
     getValues: vi.fn(() => ({})),
+    reset: vi.fn(),
+    control: {},
   })),
   Controller: vi.fn(({ render }) => render({ field: {}, fieldState: {}, formState: {} })),
+  FormProvider: vi.fn(({ children }) => children),
+  useFormContext: vi.fn(() => ({
+    register: vi.fn(() => ({})),
+    handleSubmit: vi.fn(fn => fn),
+    formState: { errors: {}, isSubmitting: false },
+    watch: vi.fn(),
+    setValue: vi.fn(),
+    getValues: vi.fn(() => ({})),
+    reset: vi.fn(),
+    control: {},
+  })),
 }))
 
 // Mock zod resolver
@@ -335,6 +397,7 @@ vi.mock('lucide-react', () => ({
   X: vi.fn(props => React.createElement('svg', { 'data-testid': 'x-icon', ...props })),
   Sun: vi.fn(props => React.createElement('svg', { 'data-testid': 'sun-icon', ...props })),
   Moon: vi.fn(props => React.createElement('svg', { 'data-testid': 'moon-icon', ...props })),
+  Monitor: vi.fn(props => React.createElement('svg', { 'data-testid': 'monitor-icon', ...props })),
   Bell: vi.fn(props => React.createElement('svg', { 'data-testid': 'bell-icon', ...props })),
   User: vi.fn(props => React.createElement('svg', { 'data-testid': 'user-icon', ...props })),
   Settings: vi.fn(props =>
@@ -416,6 +479,20 @@ vi.mock('lucide-react', () => ({
   TrendingUp: vi.fn(props =>
     React.createElement('svg', { 'data-testid': 'trending-up-icon', ...props }),
   ),
+  // Navigation demo page icons
+  Navigation: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'navigation-icon', ...props }),
+  ),
+  Folder: vi.fn(props => React.createElement('svg', { 'data-testid': 'folder-icon', ...props })),
+  File: vi.fn(props => React.createElement('svg', { 'data-testid': 'file-icon', ...props })),
+  Info: vi.fn(props => React.createElement('svg', { 'data-testid': 'info-icon', ...props })),
+  Trash: vi.fn(props => React.createElement('svg', { 'data-testid': 'trash-icon', ...props })),
+  Edit: vi.fn(props => React.createElement('svg', { 'data-testid': 'edit-icon', ...props })),
+  Copy: vi.fn(props => React.createElement('svg', { 'data-testid': 'copy-icon', ...props })),
+  ExternalLink: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'external-link-icon', ...props }),
+  ),
+  Loader2: vi.fn(props => React.createElement('svg', { 'data-testid': 'loader-icon', ...props })),
 }))
 
 // Global test utilities

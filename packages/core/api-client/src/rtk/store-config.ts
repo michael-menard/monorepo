@@ -11,23 +11,23 @@ import { getConnectionWarmer } from '../retry/connection-warming'
 export interface ServerlessStoreConfig {
   // API slices to include
   apis: Api<any, any, any, any>[]
-  
+
   // Additional reducers
   reducers?: Record<string, any>
-  
+
   // Performance monitoring
   enablePerformanceMonitoring?: boolean
-  
+
   // Connection warming
   enableConnectionWarming?: boolean
   warmingEndpoints?: string[]
-  
+
   // Development tools
   enableDevTools?: boolean
-  
+
   // Custom middleware
   customMiddleware?: Middleware[]
-  
+
   // Serializable check options
   serializableCheck?: {
     ignoredActions?: string[]
@@ -45,7 +45,7 @@ export function createServerlessStore(config: ServerlessStoreConfig) {
     enablePerformanceMonitoring = true,
     enableConnectionWarming = true,
     warmingEndpoints = [],
-    enableDevTools = process.env.NODE_ENV === 'development',
+    enableDevTools = (typeof import.meta !== 'undefined' && import.meta.env?.DEV) ?? false,
     customMiddleware = [],
     serializableCheck = {},
   } = config
@@ -79,7 +79,7 @@ export function createServerlessStore(config: ServerlessStoreConfig) {
   // Configure store
   const store = configureStore({
     reducer: storeReducers,
-    middleware: (getDefaultMiddleware) =>
+    middleware: getDefaultMiddleware =>
       getDefaultMiddleware({
         serializableCheck: {
           ignoredActions: [
@@ -169,7 +169,7 @@ export const STORE_PRESETS = {
 export function createServerlessStoreWithPreset(
   preset: keyof typeof STORE_PRESETS,
   apis: Api<any, any, any, any>[],
-  overrides: Partial<ServerlessStoreConfig> = {}
+  overrides: Partial<ServerlessStoreConfig> = {},
 ) {
   const baseConfig = STORE_PRESETS[preset](apis)
   const finalConfig = { ...baseConfig, ...overrides }
@@ -181,19 +181,19 @@ export function createServerlessStoreWithPreset(
  */
 export function getStoreHealth(store: any) {
   const state = store.getState()
-  
+
   // Check for common issues
   const issues: string[] = []
-  
+
   // Check state size (warn if > 10MB)
   const stateSize = JSON.stringify(state).length
   if (stateSize > 10 * 1024 * 1024) {
     issues.push(`Large state size: ${(stateSize / 1024 / 1024).toFixed(2)}MB`)
   }
-  
+
   // Check for stale cache data
   // This would need to be implemented based on specific API slices
-  
+
   return {
     healthy: issues.length === 0,
     issues,

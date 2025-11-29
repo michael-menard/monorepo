@@ -45,8 +45,8 @@ export function MainArea({
   return (
     <main
       className={cn(
-        'flex-1 min-h-[calc(100vh-4rem)] transition-all duration-300',
-        isAuthenticated && 'lg:ml-64', // Account for sidebar width when authenticated
+        'flex-1 min-h-[calc(100vh-4rem)] overflow-auto transition-all duration-300',
+        isAuthenticated && 'md:ml-64', // Account for sidebar width when authenticated (matches sidebar md:block)
         className,
       )}
     >

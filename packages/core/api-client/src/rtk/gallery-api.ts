@@ -28,20 +28,20 @@ export interface EnhancedGallerySearchParams {
   query?: string
   category?: string
   tags?: string[]
-  
+
   // Pagination
   page?: number
   limit?: number
   offset?: number
-  
+
   // Sorting
   sortBy?: 'newest' | 'oldest' | 'popular' | 'title' | 'size' | 'views'
   sortOrder?: 'asc' | 'desc'
-  
+
   // Advanced filtering
   dateRange?: {
     from?: string // ISO date string
-    to?: string   // ISO date string
+    to?: string // ISO date string
   }
   sizeRange?: {
     minWidth?: number
@@ -50,9 +50,9 @@ export interface EnhancedGallerySearchParams {
     maxHeight?: number
   }
   fileFormat?: string[] // ['jpg', 'png', 'webp']
-  minFileSize?: number   // bytes
-  maxFileSize?: number   // bytes
-  
+  minFileSize?: number // bytes
+  maxFileSize?: number // bytes
+
   // MOC-specific filters
   mocCategory?: string
   difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert'
@@ -60,12 +60,12 @@ export interface EnhancedGallerySearchParams {
     min?: number
     max?: number
   }
-  
+
   // User filters
   uploadedBy?: string
   isPublic?: boolean
   isFeatured?: boolean
-  
+
   // Performance options
   includeThumbnails?: boolean
   includeMetadata?: boolean
@@ -108,26 +108,28 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
   return createIntelligentApi({
     reducerPath: 'enhancedGalleryApi',
     baseQuery: createAuthenticatedBaseQuery({
-      baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
+      baseUrl:
+        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVERLESS_API_BASE_URL) ||
+        '/api',
       enableRetryLogic: true,
       enablePerformanceMonitoring: true,
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
       requireAuthForEndpoints: ['/api/v2/gallery'],
-      onAuthFailure: (error) => {
+      onAuthFailure: error => {
         logger.warn('Gallery API authentication failed', undefined, { error })
       },
-      onTokenRefresh: (token) => {
+      onTokenRefresh: token => {
         logger.debug('Gallery API token refreshed')
       },
     }),
     tagTypes: ['Gallery', 'GalleryImage', 'GalleryStats', 'GalleryBatch'],
-    endpoints: (builder) => ({
+    endpoints: builder => ({
       // Enhanced search with advanced filtering, caching, and performance monitoring
       enhancedGallerySearch: builder.query<GallerySearchResponse, EnhancedGallerySearchParams>({
         query: (params = {}) => {
           logger.debug('Enhanced gallery search initiated', undefined, {
-            params: { ...params, dateRange: !!params.dateRange, sizeRange: !!params.sizeRange }
+            params: { ...params, dateRange: !!params.dateRange, sizeRange: !!params.sizeRange },
           })
 
           return {
@@ -137,7 +139,9 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
               // Serialize complex objects for URL params
               dateRange: params.dateRange ? JSON.stringify(params.dateRange) : undefined,
               sizeRange: params.sizeRange ? JSON.stringify(params.sizeRange) : undefined,
-              partCountRange: params.partCountRange ? JSON.stringify(params.partCountRange) : undefined,
+              partCountRange: params.partCountRange
+                ? JSON.stringify(params.partCountRange)
+                : undefined,
               pieceCount: params.pieceCount ? JSON.stringify(params.pieceCount) : undefined,
               // Add performance tracking
               _requestId: `gallery_search_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -164,9 +168,12 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
           ]
 
           // Add cache tags based on search parameters for intelligent invalidation
-          if (params.category) tags.push({ type: 'Gallery' as const, id: `category:${params.category}` })
-          if (params.tags?.length) tags.push({ type: 'Gallery' as const, id: `tags:${params.tags.join(',')}` })
-          if (params.difficulty?.length) tags.push({ type: 'Gallery' as const, id: `difficulty:${params.difficulty.join(',')}` })
+          if (params.category)
+            tags.push({ type: 'Gallery' as const, id: `category:${params.category}` })
+          if (params.tags?.length)
+            tags.push({ type: 'Gallery' as const, id: `tags:${params.tags.join(',')}` })
+          if (params.difficulty?.length)
+            tags.push({ type: 'Gallery' as const, id: `difficulty:${params.difficulty.join(',')}` })
 
           return tags
         },
@@ -176,21 +183,21 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
 
       // Get single image with full metadata
       getGalleryImage: builder.query<ServerlessResponse<GalleryImage>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.GET_IMAGE, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.GET_IMAGE, { id }),
         providesTags: (_, __, id) => [{ type: 'GalleryImage', id }],
         ...getServerlessCacheConfig('long'),
       }),
 
       // Get image metadata only (faster)
       getGalleryImageMetadata: builder.query<ServerlessResponse<any>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.GET_METADATA, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.GET_METADATA, { id }),
         providesTags: (_, __, id) => [{ type: 'GalleryImage', id: `${id}-metadata` }],
         ...getServerlessCacheConfig('long'),
       }),
 
       // Batch load multiple images for performance
       batchGetGalleryImages: builder.query<ServerlessResponse<GalleryImage[]>, string[]>({
-        query: (imageIds) => {
+        query: imageIds => {
           logger.debug('Batch loading gallery images', undefined, { count: imageIds.length })
 
           return {
@@ -226,7 +233,7 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
           const formData = new FormData()
           formData.append('file', file)
           formData.append('metadata', JSON.stringify(metadata))
-          
+
           return {
             url: SERVERLESS_ENDPOINTS.GALLERY.UPLOAD,
             method: 'POST',
@@ -243,21 +250,24 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
         ServerlessResponse<GalleryImage[]>,
         GalleryUploadParams[]
       >({
-        query: (uploads) => {
+        query: uploads => {
           const formData = new FormData()
           uploads.forEach((upload, index) => {
             formData.append(`file_${index}`, upload.file)
-            formData.append(`metadata_${index}`, JSON.stringify({
-              title: upload.title,
-              description: upload.description,
-              tags: upload.tags,
-              category: upload.category,
-              mocId: upload.mocId,
-              isPublic: upload.isPublic,
-              generateThumbnail: upload.generateThumbnail,
-            }))
+            formData.append(
+              `metadata_${index}`,
+              JSON.stringify({
+                title: upload.title,
+                description: upload.description,
+                tags: upload.tags,
+                category: upload.category,
+                mocId: upload.mocId,
+                isPublic: upload.isPublic,
+                generateThumbnail: upload.generateThumbnail,
+              }),
+            )
           })
-          
+
           return {
             url: `${SERVERLESS_ENDPOINTS.GALLERY.UPLOAD}/batch`,
             method: 'POST',
@@ -278,28 +288,21 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
           method: 'PUT',
           body: updates,
         }),
-        invalidatesTags: (_, __, { id }) => [
-          { type: 'GalleryImage', id },
-          'Gallery',
-        ],
+        invalidatesTags: (_, __, { id }) => [{ type: 'GalleryImage', id }, 'Gallery'],
       }),
 
       // Delete single image
       deleteGalleryImage: builder.mutation<ServerlessResponse<void>, string>({
-        query: (id) => ({
+        query: id => ({
           url: buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.DELETE, { id }),
           method: 'DELETE',
         }),
-        invalidatesTags: (_, __, id) => [
-          { type: 'GalleryImage', id },
-          'Gallery',
-          'GalleryStats',
-        ],
+        invalidatesTags: (_, __, id) => [{ type: 'GalleryImage', id }, 'Gallery', 'GalleryStats'],
       }),
 
       // Enhanced batch operations with performance monitoring and caching
       enhancedBatchGalleryOperation: builder.mutation<ServerlessResponse<any>, GalleryBatchParams>({
-        query: (params) => {
+        query: params => {
           logger.info('Enhanced batch gallery operation initiated', undefined, {
             operation: params.operation,
             imageCount: params.imageIds.length,
@@ -317,7 +320,10 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
         transformResponse: (response: ServerlessResponse<any>, meta, params) => {
           const duration = performance.now() - (performance.now() - 100)
 
-          performanceMonitor.trackComponentRender(`gallery-batch-${params.operation}-${Date.now()}`, duration)
+          performanceMonitor.trackComponentRender(
+            `gallery-batch-${params.operation}-${Date.now()}`,
+            duration,
+          )
 
           logger.info('Enhanced batch gallery operation completed', undefined, {
             operation: params.operation,
@@ -357,11 +363,11 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
             // Optimistically remove images from cache
             params.imageIds.forEach(id => {
               dispatch(
-                galleryApi.util.updateQueryData('enhancedGallerySearch', {} as any, (draft) => {
+                galleryApi.util.updateQueryData('enhancedGallerySearch', {} as any, draft => {
                   if (draft?.data?.images) {
                     draft.data.images = draft.data.images.filter(img => img.id !== id)
                   }
-                })
+                }),
               )
             })
           }

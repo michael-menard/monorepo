@@ -21,18 +21,18 @@ export const keyboardDragStateSchema = z.object({
   totalItems: z.number(),
 })
 
-export const useKeyboardDragAndDropOptionsSchema = z.object({
-  totalItems: z.number(),
-  onReorder: z.function().args(z.number(), z.number()).returns(z.void()).optional(),
-  onMove: z.function().args(z.string(), z.number(), z.number()).returns(z.void()).optional(),
-  onCancel: z.function().returns(z.void()).optional(),
-  onConfirm: z.function().returns(z.void()).optional(),
-  itemType: z.string().optional(),
-})
+// TypeScript interface for options (functions don't work well with Zod in newer versions)
+export interface UseKeyboardDragAndDropOptions {
+  totalItems: number
+  onReorder?: (fromIndex: number, toIndex: number) => void
+  onMove?: (itemId: string, fromIndex: number, toIndex: number) => void
+  onCancel?: () => void
+  onConfirm?: () => void
+  itemType?: string
+}
 
 // Inferred types from Zod schemas
 export type KeyboardDragState = z.infer<typeof keyboardDragStateSchema>
-export type UseKeyboardDragAndDropOptions = z.infer<typeof useKeyboardDragAndDropOptionsSchema>
 
 // Actions interface (keeping as interface since it's a return type with functions)
 export interface KeyboardDragActions {

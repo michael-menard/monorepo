@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { logger } from '@repo/logger'
 import { Button } from '@repo/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar'
-import { Menu, Bell, Settings, LogOut, User, Moon, Sun } from 'lucide-react'
+import { Menu, Bell, Settings, LogOut, User, Moon, Sun, Monitor } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,20 +15,29 @@ import {
 import { Badge } from '@repo/ui/badge'
 import { NavigationSearch } from '../Navigation/NavigationSearch'
 import { EnhancedBreadcrumb } from '../Navigation/EnhancedBreadcrumb'
-import { toggleMobileMenu, selectNavigationNotifications } from '@/store/slices/navigationSlice'
+import { selectNavigationNotifications } from '@/store/slices/navigationSlice'
+import { toggleSidebar } from '@/store/slices/globalUISlice'
 import { selectAuth } from '@/store/slices/authSlice'
-import { selectResolvedTheme, setTheme } from '@/store/slices/themeSlice'
+import { selectTheme, selectResolvedTheme, setTheme, type Theme } from '@/store/slices/themeSlice'
 import { useAuth } from '@/services/auth/AuthProvider'
 
 export function Header() {
   const dispatch = useDispatch()
   const auth = useSelector(selectAuth)
+  const theme = useSelector(selectTheme)
   const resolvedTheme = useSelector(selectResolvedTheme)
   const notifications = useSelector(selectNavigationNotifications)
   const { signOut } = useAuth()
 
-  const handleThemeToggle = () => {
-    dispatch(setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'))
+  const handleThemeChange = (newTheme: Theme) => {
+    dispatch(setTheme(newTheme))
+  }
+
+  const getThemeIcon = () => {
+    if (theme === 'system') {
+      return <Monitor className="h-4 w-4" />
+    }
+    return resolvedTheme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />
   }
 
   // Calculate total notification count
@@ -51,13 +60,13 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Left side - Logo and mobile menu */}
           <div className="flex items-center gap-4">
-            {/* Mobile menu button */}
+            {/* Mobile menu button - visible on mobile, hidden on md and up (AC: 8) */}
             {auth.isAuthenticated ? (
               <Button
                 variant="ghost"
                 size="sm"
-                className="lg:hidden"
-                onClick={() => dispatch(toggleMobileMenu())}
+                className="md:hidden"
+                onClick={() => dispatch(toggleSidebar())}
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
@@ -88,15 +97,38 @@ export function Header() {
 
           {/* Right side - User actions */}
           <div className="flex items-center gap-2">
-            {/* Theme toggle */}
-            <Button variant="ghost" size="sm" onClick={handleThemeToggle} className="h-9 w-9">
-              {resolvedTheme === 'dark' ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-              <span className="sr-only">Toggle theme</span>
-            </Button>
+            {/* Theme toggle dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 w-9">
+                  {getThemeIcon()}
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => handleThemeChange('light')}
+                  className={theme === 'light' ? 'bg-accent' : ''}
+                >
+                  <Sun className="mr-2 h-4 w-4" />
+                  Light
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleThemeChange('dark')}
+                  className={theme === 'dark' ? 'bg-accent' : ''}
+                >
+                  <Moon className="mr-2 h-4 w-4" />
+                  Dark
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleThemeChange('system')}
+                  className={theme === 'system' ? 'bg-accent' : ''}
+                >
+                  <Monitor className="mr-2 h-4 w-4" />
+                  System
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {auth.isAuthenticated ? (
               <>

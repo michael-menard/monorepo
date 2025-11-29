@@ -10,11 +10,7 @@ import { createAuthenticatedBaseQuery } from '../auth/rtk-auth-integration'
 import { SERVERLESS_ENDPOINTS, buildEndpoint } from '../config/endpoints'
 import { performanceMonitor } from '../lib/performance'
 import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
-import type {
-  WishlistResponse,
-  WishlistItem,
-  ServerlessResponse,
-} from '../types/api-responses'
+import type { WishlistResponse, WishlistItem, ServerlessResponse } from '../types/api-responses'
 
 const logger = createLogger('api-client:wishlist')
 const cacheManager = getServerlessCacheManager()
@@ -27,20 +23,20 @@ export interface EnhancedWishlistParams {
   priority?: 'low' | 'medium' | 'high'
   category?: string
   tags?: string[]
-  
+
   // Pagination
   page?: number
   limit?: number
   offset?: number
-  
+
   // Sorting
   sortBy?: 'newest' | 'oldest' | 'priority' | 'title' | 'estimatedCost' | 'partCount'
   sortOrder?: 'asc' | 'desc'
-  
+
   // Advanced filtering
   dateRange?: {
     from?: string // ISO date string
-    to?: string   // ISO date string
+    to?: string // ISO date string
   }
   costRange?: {
     min?: number
@@ -50,7 +46,7 @@ export interface EnhancedWishlistParams {
     min?: number
     max?: number
   }
-  
+
   // Status filters
   hasNotes?: boolean
   hasEstimatedCost?: boolean
@@ -139,26 +135,35 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
   return createApi({
     reducerPath: 'enhancedWishlistApi',
     baseQuery: createAuthenticatedBaseQuery({
-      baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
+      baseUrl:
+        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVERLESS_API_BASE_URL) ||
+        '/api',
       enableRetryLogic: true,
       enablePerformanceMonitoring: true,
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
       requireAuthForEndpoints: ['/api/v2/wishlist'],
-      onAuthFailure: (error) => {
+      onAuthFailure: error => {
         logger.warn('Wishlist API authentication failed', undefined, { error })
       },
-      onTokenRefresh: (token) => {
+      onTokenRefresh: token => {
         logger.debug('Wishlist API token refreshed')
       },
     }),
-    tagTypes: ['Wishlist', 'WishlistItem', 'WishlistStats', 'SharedWishlist', 'WishlistBatch', 'PriceAlert'],
-    endpoints: (builder) => ({
+    tagTypes: [
+      'Wishlist',
+      'WishlistItem',
+      'WishlistStats',
+      'SharedWishlist',
+      'WishlistBatch',
+      'PriceAlert',
+    ],
+    endpoints: builder => ({
       // Enhanced wishlist with advanced filtering, caching, and performance monitoring
       enhancedWishlistQuery: builder.query<WishlistResponse, EnhancedWishlistParams>({
         query: (params = {}) => {
           logger.debug('Enhanced wishlist query initiated', undefined, {
-            params: { ...params, dateRange: !!params.dateRange, costRange: !!params.costRange }
+            params: { ...params, dateRange: !!params.dateRange, costRange: !!params.costRange },
           })
 
           return {
@@ -168,7 +173,9 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
               // Serialize complex objects for URL params
               dateRange: params.dateRange ? JSON.stringify(params.dateRange) : undefined,
               costRange: params.costRange ? JSON.stringify(params.costRange) : undefined,
-              partCountRange: params.partCountRange ? JSON.stringify(params.partCountRange) : undefined,
+              partCountRange: params.partCountRange
+                ? JSON.stringify(params.partCountRange)
+                : undefined,
               themes: params.themes ? JSON.stringify(params.themes) : undefined,
               setNumbers: params.setNumbers ? JSON.stringify(params.setNumbers) : undefined,
               // Add performance tracking
@@ -185,7 +192,10 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
             resultCount: response.data.items.length,
             duration,
             hasMore: response.pagination?.hasMore,
-            totalCost: response.data.items.reduce((sum, item) => sum + (item.estimatedCost || 0), 0),
+            totalCost: response.data.items.reduce(
+              (sum, item) => sum + (item.estimatedCost || 0),
+              0,
+            ),
           })
 
           return response
@@ -197,36 +207,37 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
           ]
 
           // Add cache tags based on search parameters for intelligent invalidation
-          if (params.category) tags.push({ type: 'Wishlist' as const, id: `category:${params.category}` })
-          if (params.priority) tags.push({ type: 'Wishlist' as const, id: `priority:${params.priority}` })
-          if (params.themes?.length) tags.push({ type: 'Wishlist' as const, id: `themes:${params.themes.join(',')}` })
+          if (params.category)
+            tags.push({ type: 'Wishlist' as const, id: `category:${params.category}` })
+          if (params.priority)
+            tags.push({ type: 'Wishlist' as const, id: `priority:${params.priority}` })
+          if (params.themes?.length)
+            tags.push({ type: 'Wishlist' as const, id: `themes:${params.themes.join(',')}` })
           if (params.priceAlerts) tags.push({ type: 'PriceAlert' as const, id: 'active' })
 
           return tags
         },
         // Use advanced caching strategy based on query complexity
-        ...getServerlessCacheConfig(
-          params => {
-            // Simple queries get longer cache
-            if (!params.query && !params.dateRange && !params.costRange) return 'medium'
-            // Price-sensitive queries get shorter cache
-            if (params.priceComparison || params.priceAlerts) return 'short'
-            // Complex queries get medium cache
-            return 'medium'
-          }
-        ),
+        ...getServerlessCacheConfig(params => {
+          // Simple queries get longer cache
+          if (!params.query && !params.dateRange && !params.costRange) return 'medium'
+          // Price-sensitive queries get shorter cache
+          if (params.priceComparison || params.priceAlerts) return 'short'
+          // Complex queries get medium cache
+          return 'medium'
+        }),
       }),
 
       // Get single wishlist item
       getWishlistItem: builder.query<ServerlessResponse<WishlistItem>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.WISHLIST.UPDATE_ITEM, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.WISHLIST.UPDATE_ITEM, { id }),
         providesTags: (_, __, id) => [{ type: 'WishlistItem', id }],
         ...getServerlessCacheConfig('medium'),
       }),
 
       // Add item to wishlist
       addWishlistItem: builder.mutation<ServerlessResponse<WishlistItem>, WishlistItemParams>({
-        query: (item) => ({
+        query: item => ({
           url: SERVERLESS_ENDPOINTS.WISHLIST.ADD_ITEM,
           method: 'POST',
           body: item,
@@ -253,20 +264,19 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
 
       // Delete wishlist item
       deleteWishlistItem: builder.mutation<ServerlessResponse<void>, string>({
-        query: (id) => ({
+        query: id => ({
           url: buildEndpoint(SERVERLESS_ENDPOINTS.WISHLIST.DELETE_ITEM, { id }),
           method: 'DELETE',
         }),
-        invalidatesTags: (_, __, id) => [
-          { type: 'WishlistItem', id },
-          'Wishlist',
-          'WishlistStats',
-        ],
+        invalidatesTags: (_, __, id) => [{ type: 'WishlistItem', id }, 'Wishlist', 'WishlistStats'],
       }),
 
       // Enhanced batch operations with performance monitoring and optimistic updates
-      enhancedBatchWishlistOperation: builder.mutation<ServerlessResponse<any>, WishlistBatchParams>({
-        query: (params) => {
+      enhancedBatchWishlistOperation: builder.mutation<
+        ServerlessResponse<any>,
+        WishlistBatchParams
+      >({
+        query: params => {
           logger.info('Enhanced batch wishlist operation initiated', undefined, {
             operation: params.operation,
             itemCount: params.itemIds.length,
@@ -284,7 +294,10 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         transformResponse: (response: ServerlessResponse<any>, meta, params) => {
           const duration = performance.now() - (performance.now() - 100)
 
-          performanceMonitor.trackComponentRender(`wishlist-batch-${params.operation}-${Date.now()}`, duration)
+          performanceMonitor.trackComponentRender(
+            `wishlist-batch-${params.operation}-${Date.now()}`,
+            duration,
+          )
 
           logger.info('Enhanced batch wishlist operation completed', undefined, {
             operation: params.operation,
@@ -327,11 +340,11 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
             // Optimistically remove items from cache
             params.itemIds.forEach(id => {
               dispatch(
-                wishlistApi.util.updateQueryData('enhancedWishlistQuery', {} as any, (draft) => {
+                wishlistApi.util.updateQueryData('enhancedWishlistQuery', {} as any, draft => {
                   if (draft?.data?.items) {
                     draft.data.items = draft.data.items.filter(item => item.id !== id)
                   }
-                })
+                }),
               )
             })
           }
@@ -352,7 +365,7 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         ServerlessResponse<{ shareId: string; shareUrl: string }>,
         WishlistSharingParams
       >({
-        query: (params) => ({
+        query: params => ({
           url: SERVERLESS_ENDPOINTS.WISHLIST.SHARE,
           method: 'POST',
           body: params,
@@ -362,7 +375,7 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
 
       // Get shared wishlist
       getSharedWishlist: builder.query<ServerlessResponse<any>, string>({
-        query: (shareId) => buildEndpoint(SERVERLESS_ENDPOINTS.WISHLIST.GET_SHARED, { shareId }),
+        query: shareId => buildEndpoint(SERVERLESS_ENDPOINTS.WISHLIST.GET_SHARED, { shareId }),
         providesTags: (_, __, shareId) => [{ type: 'SharedWishlist', id: shareId }],
         ...getServerlessCacheConfig('medium'),
       }),
@@ -379,7 +392,7 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         ServerlessResponse<WishlistItem[]>,
         { source: 'bricklink' | 'rebrickable' | 'csv'; data: any }
       >({
-        query: (params) => ({
+        query: params => ({
           url: `${SERVERLESS_ENDPOINTS.WISHLIST.ADD_ITEM}/import`,
           method: 'POST',
           body: params,
@@ -392,7 +405,7 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         ServerlessResponse<{ downloadUrl: string }>,
         { format: 'csv' | 'json' | 'bricklink'; itemIds?: string[] }
       >({
-        query: (params) => ({
+        query: params => ({
           url: `${SERVERLESS_ENDPOINTS.WISHLIST.GET_ITEMS}/export`,
           method: 'POST',
           body: params,
@@ -401,8 +414,10 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
 
       // Enhanced price estimates with tracking and alerts
       getEnhancedPriceEstimates: builder.query<ServerlessResponse<any>, string[]>({
-        query: (itemIds) => {
-          logger.debug('Fetching enhanced price estimates', undefined, { itemCount: itemIds.length })
+        query: itemIds => {
+          logger.debug('Fetching enhanced price estimates', undefined, {
+            itemCount: itemIds.length,
+          })
 
           return {
             url: `${SERVERLESS_ENDPOINTS.WISHLIST.GET_ITEMS}/price-estimates`,
@@ -415,7 +430,10 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         transformResponse: (response: ServerlessResponse<any>, meta, itemIds) => {
           const duration = performance.now() - (performance.now() - 50)
 
-          performanceMonitor.trackComponentRender(`wishlist-price-estimates-${Date.now()}`, duration)
+          performanceMonitor.trackComponentRender(
+            `wishlist-price-estimates-${Date.now()}`,
+            duration,
+          )
 
           logger.info('Enhanced price estimates loaded', undefined, {
             itemCount: itemIds.length,
@@ -469,7 +487,7 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         ServerlessResponse<any>,
         { itemIds: string[]; operation: 'enable' | 'disable' | 'update'; alertThreshold?: number }
       >({
-        query: (params) => {
+        query: params => {
           logger.info('Managing price alerts', undefined, {
             operation: params.operation,
             itemCount: params.itemIds.length,
@@ -487,7 +505,10 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
         transformResponse: (response: ServerlessResponse<any>, meta, params) => {
           const duration = performance.now() - (performance.now() - 100)
 
-          performanceMonitor.trackComponentRender(`wishlist-price-alerts-${params.operation}-${Date.now()}`, duration)
+          performanceMonitor.trackComponentRender(
+            `wishlist-price-alerts-${params.operation}-${Date.now()}`,
+            duration,
+          )
 
           logger.info('Price alerts management completed', undefined, {
             operation: params.operation,

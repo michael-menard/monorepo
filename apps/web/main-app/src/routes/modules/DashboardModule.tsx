@@ -14,9 +14,8 @@
  * - 2.9: Dashboard Loading State
  */
 
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@repo/ui/alert'
-import { AlertCircle } from 'lucide-react'
 import { useGetStatsQuery, useGetRecentMocsQuery } from '@/store'
 import {
   StatsCards,
@@ -86,7 +85,7 @@ export function DashboardModule() {
       <QuickActions />
 
       {/* Stats Cards (Story 2.5) */}
-      {stats && <StatsCards stats={stats} />}
+      {stats ? <StatsCards stats={stats} /> : null}
 
       {/* Recent MOCs Grid (Story 2.6) */}
       <RecentMocsGrid mocs={recentMocs} />

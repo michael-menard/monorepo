@@ -1,7 +1,6 @@
 import type { ChangeEvent } from 'react'
 import React, { useRef, useState } from 'react'
 import { Edit, LogOut, Settings, Upload, User } from 'lucide-react'
-import { z } from 'zod'
 import { showErrorToast } from './toast-utils'
 import { ConfirmationDialog } from './ConfirmationDialog'
 import {
@@ -30,23 +29,21 @@ declare global {
   }
 }
 
-// Zod schema for component props
-const AppAvatarSchema = z.object({
-  avatarUrl: z.string().optional(),
-  userName: z.string().optional(),
-  userEmail: z.string().optional(),
-  onAvatarUpload: z.function().args(z.instanceof(File)).returns(z.promise(z.void())).optional(),
-  onProfileClick: z.function().returns(z.void()).optional(),
-  onLogout: z.function().returns(z.void()).optional(),
-  onUserSettingsClick: z.function().returns(z.void()).optional(),
-  className: z.string().optional(),
-  size: z.enum(['sm', 'md', 'lg']).default('md'),
-  showEditButton: z.boolean().default(true),
-  disabled: z.boolean().default(false),
-  clickable: z.boolean().default(true),
-})
-
-type AppAvatarProps = z.infer<typeof AppAvatarSchema>
+// Props interface - using TypeScript types directly instead of Zod for functions
+interface AppAvatarProps {
+  avatarUrl?: string
+  userName?: string
+  userEmail?: string
+  onAvatarUpload?: (file: File) => Promise<void>
+  onProfileClick?: () => void
+  onLogout?: () => void
+  onUserSettingsClick?: () => void
+  className?: string
+  size?: 'sm' | 'md' | 'lg'
+  showEditButton?: boolean
+  disabled?: boolean
+  clickable?: boolean
+}
 
 // Size configurations
 const sizeConfig = {

@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
 import { cn } from '@repo/ui/lib/utils'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
+import { MobileSidebar } from './MobileSidebar'
 import { Footer } from './Footer'
 import { MainArea } from './MainArea'
-import {
-  setActiveRoute,
-  closeMobileMenu,
-  selectIsMobileMenuOpen,
-} from '@/store/slices/navigationSlice'
+import { setActiveRoute } from '@/store/slices/navigationSlice'
 import { selectAuth } from '@/store/slices/authSlice'
 
 // LEGO brick building animation for loading states
@@ -42,14 +39,12 @@ export function RootLayout() {
   const dispatch = useDispatch()
   const location = useLocation()
   const auth = useSelector(selectAuth)
-  const isMobileMenuOpen = useSelector(selectIsMobileMenuOpen)
   const [isPageTransitioning, setIsPageTransitioning] = useState(false)
 
   // Update active route when location changes with smooth transitions
   useEffect(() => {
     setIsPageTransitioning(true)
     dispatch(setActiveRoute(location.pathname))
-    dispatch(closeMobileMenu())
 
     // Reset transition state after animation
     const timer = setTimeout(() => setIsPageTransitioning(false), 300)
@@ -128,44 +123,18 @@ export function RootLayout() {
           {/* Sidebar - only show for authenticated users */}
           {auth.isAuthenticated ? (
             <>
-              {/* Desktop sidebar with slide-in animation */}
+              {/* Desktop sidebar with slide-in animation - visible on md and up */}
               <motion.div
                 initial={{ x: -264, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="hidden lg:block"
+                className="hidden md:block"
               >
                 <Sidebar className="fixed left-0 top-16 bottom-0 z-30" showLegacyRoutes={true} />
               </motion.div>
 
-              {/* Mobile sidebar overlay with enhanced animations */}
-              <AnimatePresence>
-                {isMobileMenuOpen ? (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-                      onClick={() => dispatch(closeMobileMenu())}
-                    />
-                    <motion.div
-                      initial={{ x: -264, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: -264, opacity: 0 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                      className="fixed left-0 top-16 bottom-0 z-50 lg:hidden"
-                    >
-                      <Sidebar showLegacyRoutes={true} />
-                    </motion.div>
-                  </>
-                ) : null}
-              </AnimatePresence>
+              {/* Mobile sidebar drawer - uses globalUISlice */}
+              <MobileSidebar />
             </>
           ) : null}
 

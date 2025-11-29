@@ -6,6 +6,7 @@ import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
 import { authSlice } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
 import { navigationSlice } from './slices/navigationSlice'
+import { globalUISlice } from './slices/globalUISlice'
 
 // Use enhanced API instances (authentication is handled internally)
 export const galleryApi = enhancedGalleryApi
@@ -18,6 +19,7 @@ export const store = configureStore({
     auth: authSlice.reducer,
     theme: themeSlice.reducer,
     navigation: navigationSlice.reducer,
+    globalUI: globalUISlice.reducer,
 
     // Enhanced API slices
     [enhancedGalleryApi.reducerPath]: enhancedGalleryApi.reducer,

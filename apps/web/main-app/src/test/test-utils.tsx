@@ -6,6 +6,8 @@ import { AuthProvider } from '../services/auth/AuthProvider'
 import { NavigationProvider } from '../components/Navigation/NavigationProvider'
 import { authSlice } from '../store/slices/authSlice'
 import { navigationSlice } from '../store/slices/navigationSlice'
+import { themeSlice } from '../store/slices/themeSlice'
+import { globalUISlice } from '../store/slices/globalUISlice'
 
 // Mock store configuration
 export const createMockStore = (initialState = {}) => {
@@ -13,6 +15,8 @@ export const createMockStore = (initialState = {}) => {
     reducer: {
       auth: authSlice.reducer,
       navigation: navigationSlice.reducer,
+      theme: themeSlice.reducer,
+      globalUI: globalUISlice.reducer,
     },
     preloadedState: initialState,
     middleware: getDefaultMiddleware =>
