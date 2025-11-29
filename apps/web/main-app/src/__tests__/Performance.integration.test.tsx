@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { authSlice } from '../store/slices/authSlice'
@@ -62,27 +62,6 @@ describe('Performance Integration Tests', () => {
         theme: themeSlice.reducer,
         navigation: navigationSlice.reducer,
       },
-      preloadedState: {
-        auth: {
-          isAuthenticated: true,
-          isLoading: false,
-          user: { id: 'test-user', email: 'test@example.com', name: 'Test User' },
-          tokens: null,
-          error: null,
-        },
-        theme: {
-          theme: 'light',
-          resolvedTheme: 'light',
-          systemTheme: 'light',
-        },
-        navigation: {
-          primaryNavigation: [],
-          activeRoute: '/',
-          isMobileMenuOpen: false,
-          breadcrumbs: [],
-          isLoading: false,
-        },
-      },
     })
   }
 
@@ -91,22 +70,28 @@ describe('Performance Integration Tests', () => {
     performanceEntries = []
 
     // Mock performance.mark and performance.measure
-    vi.spyOn(performance, 'mark').mockImplementation(name => {
-      performanceEntries.push({
+    vi.spyOn(performance, 'mark').mockImplementation((name: string) => {
+      const entry = {
         name,
         entryType: 'mark',
         startTime: performance.now(),
         duration: 0,
-      } as PerformanceEntry)
+        detail: null,
+        toJSON: () => ({}),
+      } as PerformanceMark
+      performanceEntries.push(entry)
+      return entry
     })
 
-    vi.spyOn(performance, 'measure').mockImplementation((name, startMark, endMark) => {
+    vi.spyOn(performance, 'measure').mockImplementation((name: string) => {
       const entry = {
         name,
         entryType: 'measure',
         startTime: performance.now(),
         duration: Math.random() * 50, // Random duration for testing
-      } as PerformanceEntry
+        detail: null,
+        toJSON: () => ({}),
+      } as PerformanceMeasure
       performanceEntries.push(entry)
       return entry
     })
