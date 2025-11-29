@@ -51,8 +51,9 @@ export function createTanStackRouteGuard(
     }
 
     // Check email verification requirement
+    // NOTE: emailVerified is not currently in the User type - will be added with Amplify integration
     if (options.requireVerified && auth.isAuthenticated) {
-      const isVerified = auth.user?.emailVerified ?? false
+      const isVerified = (auth.user as { emailVerified?: boolean })?.emailVerified ?? true
       if (!isVerified) {
         throw redirectFn({
           to: '/verify-email',

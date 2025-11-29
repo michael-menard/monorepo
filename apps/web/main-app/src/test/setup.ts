@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach, beforeAll, afterAll, vi } from 'vitest'
-import React from 'react'
+import { afterEach, vi } from 'vitest'
+import * as React from 'react'
 
 // Cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {

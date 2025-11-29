@@ -1,4 +1,3 @@
-import React from 'react'
 import { Card, CardHeader, CardTitle } from '@repo/ui/card'
 import { BookOpen, FileText, Video, Download } from 'lucide-react'
 

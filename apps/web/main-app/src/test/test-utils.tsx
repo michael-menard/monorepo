@@ -1,23 +1,18 @@
-import React from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createRouter, RouterProvider } from '@tanstack/react-router'
-import { routeTree } from '../routes'
+import { router } from '../routes'
 import { AuthProvider } from '../services/auth/AuthProvider'
 import { NavigationProvider } from '../components/Navigation/NavigationProvider'
-import authSlice from '../store/slices/authSlice'
-import navigationSlice from '../store/slices/navigationSlice'
-import cacheSlice from '../store/slices/cacheSlice'
+import { authSlice } from '../store/slices/authSlice'
+import { navigationSlice } from '../store/slices/navigationSlice'
 
 // Mock store configuration
 export const createMockStore = (initialState = {}) => {
   return configureStore({
     reducer: {
-      auth: authSlice,
-      navigation: navigationSlice,
-      cache: cacheSlice,
+      auth: authSlice.reducer,
+      navigation: navigationSlice.reducer,
     },
     preloadedState: initialState,
     middleware: getDefaultMiddleware =>
@@ -29,62 +24,26 @@ export const createMockStore = (initialState = {}) => {
   })
 }
 
-// Mock query client
-export const createMockQueryClient = () => {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        gcTime: 0,
-      },
-      mutations: {
-        retry: false,
-      },
-    },
-  })
-}
-
-// Mock router
-export const createMockRouter = () => {
-  return createRouter({
-    routeTree,
-    defaultPreload: 'intent',
-    context: {
-      auth: {
-        isAuthenticated: false,
-        user: null,
-        isLoading: false,
-      },
-    },
-  })
-}
+// Get the existing router
+export const getMockRouter = () => router
 
 // Test wrapper component
 interface TestWrapperProps {
   children: React.ReactNode
-  initialState?: any
-  queryClient?: QueryClient
-  router?: any
+  initialState?: Record<string, unknown>
 }
 
-export const TestWrapper: React.FC<TestWrapperProps> = ({
-  children,
-  initialState = {},
-  queryClient = createMockQueryClient(),
-  router = createMockRouter(),
-}) => {
+export function TestWrapper({ children, initialState = {} }: TestWrapperProps) {
   const store = createMockStore(initialState)
 
   return (
     <div data-testid="test-wrapper">
       <Provider store={store}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <NavigationProvider>
-              <div data-testid="auth-layout">{children}</div>
-            </NavigationProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <AuthProvider>
+          <NavigationProvider>
+            <div data-testid="auth-layout">{children}</div>
+          </NavigationProvider>
+        </AuthProvider>
       </Provider>
     </div>
   )
@@ -94,17 +53,13 @@ export const TestWrapper: React.FC<TestWrapperProps> = ({
 export const renderWithProviders = (
   ui: React.ReactElement,
   options: RenderOptions & {
-    initialState?: any
-    queryClient?: QueryClient
-    router?: any
+    initialState?: Record<string, unknown>
   } = {},
 ) => {
-  const { initialState, queryClient, router, ...renderOptions } = options
+  const { initialState, ...renderOptions } = options
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestWrapper initialState={initialState} queryClient={queryClient} router={router}>
-      {children}
-    </TestWrapper>
+    <TestWrapper initialState={initialState}>{children}</TestWrapper>
   )
 
   return render(ui, { wrapper: Wrapper, ...renderOptions })

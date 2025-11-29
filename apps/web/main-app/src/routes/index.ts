@@ -7,7 +7,13 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
-import { RouteGuards, ROUTE_METADATA_CONFIG } from '@/lib/route-guards'
+import { RouteGuards } from '@/lib/route-guards'
+import type { AuthState } from '@/store/slices/authSlice'
+
+// Route context type
+interface RouteContext {
+  auth?: AuthState
+}
 
 // Root route with layout
 const rootRoute = createRootRoute({
@@ -19,7 +25,6 @@ const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: HomePage,
-  meta: () => [ROUTE_METADATA_CONFIG.home],
 })
 
 // Authentication routes
@@ -28,7 +33,6 @@ const loginRoute = createRoute({
   path: '/login',
   component: LoginPage,
   beforeLoad: RouteGuards.guestOnly,
-  meta: () => [ROUTE_METADATA_CONFIG.login],
 })
 
 const registerRoute = createRoute({
@@ -36,7 +40,6 @@ const registerRoute = createRoute({
   path: '/register',
   component: SignupPage,
   beforeLoad: RouteGuards.guestOnly,
-  meta: () => [ROUTE_METADATA_CONFIG.register],
 })
 
 const forgotPasswordRoute = createRoute({
@@ -44,7 +47,6 @@ const forgotPasswordRoute = createRoute({
   path: '/forgot-password',
   component: ForgotPasswordPage,
   beforeLoad: RouteGuards.guestOnly,
-  meta: () => [ROUTE_METADATA_CONFIG.forgotPassword],
 })
 
 // TODO: Implement ResetPasswordPage and VerifyEmailPage components
@@ -69,7 +71,6 @@ const otpVerificationRoute = createRoute({
   path: '/auth/otp-verification',
   component: OTPVerificationPage,
   beforeLoad: RouteGuards.guestOnly,
-  meta: () => [{ title: 'Verify Code - LEGO MOC' }],
 })
 
 const wishlistRoute = createRoute({
@@ -80,7 +81,7 @@ const wishlistRoute = createRoute({
     return import('./modules/WishlistModule').then(module => module.WishlistModule)
   },
   pendingComponent: LoadingPage,
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context }: { context: RouteContext }) => {
     // Check authentication
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })
@@ -96,7 +97,7 @@ const instructionsRoute = createRoute({
     return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
   },
   pendingComponent: LoadingPage,
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context }: { context: RouteContext }) => {
     // Check authentication
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })
@@ -112,7 +113,7 @@ const dashboardRoute = createRoute({
     return import('./modules/DashboardModule').then(module => module.DashboardModule)
   },
   pendingComponent: LoadingPage,
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context }: { context: RouteContext }) => {
     // Check authentication
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })

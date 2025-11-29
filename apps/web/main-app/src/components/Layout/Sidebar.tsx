@@ -1,4 +1,4 @@
-import React from 'react'
+import { useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { useSelector } from 'react-redux'
 import { Button } from '@repo/ui/button'
@@ -76,7 +76,7 @@ const legoSnapVariants = {
   hover: {
     scale: 1.02,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 400,
       damping: 10,
     },
@@ -84,7 +84,7 @@ const legoSnapVariants = {
   tap: {
     scale: 0.98,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 600,
       damping: 15,
     },
@@ -312,7 +312,7 @@ export function Sidebar({ className, showLegacyRoutes = true }: SidebarProps) {
  * Collapsible sidebar for larger screens
  */
 export function CollapsibleSidebar({ className }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = React.useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const location = useLocation()
   const navigation = useSelector(selectPrimaryNavigation)
 

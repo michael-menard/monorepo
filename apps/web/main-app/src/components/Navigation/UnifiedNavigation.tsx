@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useSelector, useDispatch } from 'react-redux'
 import { logger } from '@repo/logger'
@@ -172,9 +172,9 @@ export function UnifiedNavigation({ className }: UnifiedNavigationProps) {
                 aria-label="User menu"
               >
                 <Avatar className="h-8 w-8">
-                  {auth.user?.avatarUrl ? (
+                  {auth.user?.avatar ? (
                     <AvatarImage
-                      src={auth.user.avatarUrl}
+                      src={auth.user.avatar}
                       alt={auth.user?.name || auth.user?.email || 'User'}
                     />
                   ) : null}

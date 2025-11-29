@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { logger } from '@repo/logger'

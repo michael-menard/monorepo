@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
@@ -248,90 +248,105 @@ export function GalleryModule() {
             <div className="space-y-4">
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {galleryData.data.images.map(image => (
-                  <Card
-                    key={image.id}
-                    className="overflow-hidden hover:shadow-lg transition-shadow"
-                  >
-                    <div className="aspect-square bg-muted relative">
-                      {image.thumbnailUrl ? (
-                        <img
-                          src={image.thumbnailUrl}
-                          alt={image.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Images className="h-12 w-12 text-muted-foreground" />
-                        </div>
-                      )}
+                {galleryData.data.images.map(
+                  (image: {
+                    id: string
+                    title: string
+                    thumbnailUrl?: string
+                    url: string
+                    tags?: string[]
+                    themes?: string[]
+                    description?: string
+                    difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+                    pieceCount?: number
+                    hasInstructions?: boolean
+                    isOriginalDesign?: boolean
+                    isFeatured?: boolean
+                  }) => (
+                    <Card
+                      key={image.id}
+                      className="overflow-hidden hover:shadow-lg transition-shadow"
+                    >
+                      <div className="aspect-square bg-muted relative">
+                        {image.thumbnailUrl ? (
+                          <img
+                            src={image.thumbnailUrl}
+                            alt={image.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Images className="h-12 w-12 text-muted-foreground" />
+                          </div>
+                        )}
 
-                      {/* Difficulty Badge */}
-                      {image.difficulty ? (
-                        <Badge
-                          className="absolute top-2 right-2"
-                          variant={
-                            image.difficulty === 'expert'
-                              ? 'destructive'
-                              : image.difficulty === 'advanced'
-                                ? 'default'
-                                : image.difficulty === 'intermediate'
-                                  ? 'secondary'
-                                  : 'outline'
-                          }
-                        >
-                          {image.difficulty}
-                        </Badge>
-                      ) : null}
-                    </div>
-
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold truncate mb-2">{image.title}</h3>
-
-                      {/* Piece Count */}
-                      {image.pieceCount ? (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {image.pieceCount.toLocaleString()} pieces
-                        </p>
-                      ) : null}
-
-                      {/* Themes */}
-                      {image.themes && image.themes.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {image.themes.slice(0, 2).map(theme => (
-                            <Badge key={theme} variant="outline" className="text-xs">
-                              {theme}
-                            </Badge>
-                          ))}
-                          {image.themes.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{image.themes.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      ) : null}
-
-                      {/* Features */}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {image.hasInstructions ? (
-                          <Badge variant="outline" className="text-xs">
-                            Instructions
-                          </Badge>
-                        ) : null}
-                        {image.isOriginalDesign ? (
-                          <Badge variant="outline" className="text-xs">
-                            Original
-                          </Badge>
-                        ) : null}
-                        {image.isFeatured ? (
-                          <Badge variant="default" className="text-xs">
-                            Featured
+                        {/* Difficulty Badge */}
+                        {image.difficulty ? (
+                          <Badge
+                            className="absolute top-2 right-2"
+                            variant={
+                              image.difficulty === 'expert'
+                                ? 'destructive'
+                                : image.difficulty === 'advanced'
+                                  ? 'default'
+                                  : image.difficulty === 'intermediate'
+                                    ? 'secondary'
+                                    : 'outline'
+                            }
+                          >
+                            {image.difficulty}
                           </Badge>
                         ) : null}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold truncate mb-2">{image.title}</h3>
+
+                        {/* Piece Count */}
+                        {image.pieceCount ? (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {image.pieceCount.toLocaleString()} pieces
+                          </p>
+                        ) : null}
+
+                        {/* Themes */}
+                        {image.themes && image.themes.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {image.themes.slice(0, 2).map((theme: string) => (
+                              <Badge key={theme} variant="outline" className="text-xs">
+                                {theme}
+                              </Badge>
+                            ))}
+                            {image.themes.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{image.themes.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : null}
+
+                        {/* Features */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {image.hasInstructions ? (
+                            <Badge variant="outline" className="text-xs">
+                              Instructions
+                            </Badge>
+                          ) : null}
+                          {image.isOriginalDesign ? (
+                            <Badge variant="outline" className="text-xs">
+                              Original
+                            </Badge>
+                          ) : null}
+                          {image.isFeatured ? (
+                            <Badge variant="default" className="text-xs">
+                              Featured
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ),
+                )}
               </div>
 
               {/* Pagination */}

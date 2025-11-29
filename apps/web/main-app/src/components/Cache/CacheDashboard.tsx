@@ -9,7 +9,6 @@
  * - Cache management controls
  */
 
-import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'

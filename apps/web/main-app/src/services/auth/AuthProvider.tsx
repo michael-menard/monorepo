@@ -64,7 +64,7 @@ interface AuthContextType {
   }) => Promise<{ success: boolean; error?: string }>
   forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
-  refreshTokens: () => Promise<void>
+  refreshTokens: () => Promise<{ accessToken: string; idToken?: string; refreshToken?: string }>
   getAuthMetrics: () => ReturnType<typeof getCognitoTokenMetrics>
   isLoading: boolean
   currentChallenge: AuthChallenge | null
@@ -104,7 +104,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const tokens = {
           accessToken: session.tokens.accessToken?.toString(),
           idToken: session.tokens.idToken?.toString(),
-          refreshToken: session.tokens.refreshToken?.toString(),
+          refreshToken: (
+            session.tokens as unknown as { refreshToken?: { toString: () => string } }
+          ).refreshToken?.toString(),
         }
 
         // Initialize enhanced Cognito token manager with tokens
@@ -152,7 +154,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const tokens = {
           accessToken: session.tokens.accessToken?.toString(),
           idToken: session.tokens.idToken?.toString(),
-          refreshToken: session.tokens.refreshToken?.toString(),
+          refreshToken: (
+            session.tokens as unknown as { refreshToken?: { toString: () => string } }
+          ).refreshToken?.toString(),
         }
 
         dispatch(updateTokens(tokens))
@@ -206,7 +210,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         const challenge: AuthChallenge = {
           challengeName: result.nextStep.signInStep,
-          challengeParameters: result.nextStep.additionalInfo,
+          challengeParameters: (
+            result.nextStep as unknown as { additionalInfo?: Record<string, string> }
+          ).additionalInfo,
         }
 
         setCurrentChallenge(challenge)
@@ -253,7 +259,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Additional challenge required
         const challenge: AuthChallenge = {
           challengeName: result.nextStep.signInStep,
-          challengeParameters: result.nextStep.additionalInfo,
+          challengeParameters: (
+            result.nextStep as unknown as { additionalInfo?: Record<string, string> }
+          ).additionalInfo,
         }
 
         setCurrentChallenge(challenge)

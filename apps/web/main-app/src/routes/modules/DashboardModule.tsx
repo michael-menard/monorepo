@@ -1,4 +1,3 @@
-import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
 import { Badge } from '@repo/ui/badge'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
@@ -97,8 +96,14 @@ export function DashboardModule() {
                   <Heart className="h-4 w-4" />
                   Wishlist API
                 </h4>
-                {wishlistStats?.performance ? (
-                  <Badge variant="outline">{wishlistStats.performance.duration.toFixed(0)}ms</Badge>
+                {(wishlistStats as unknown as { performance?: { duration: number } })
+                  ?.performance ? (
+                  <Badge variant="outline">
+                    {(
+                      wishlistStats as unknown as { performance: { duration: number } }
+                    ).performance.duration.toFixed(0)}
+                    ms
+                  </Badge>
                 ) : null}
               </div>
 
@@ -278,7 +283,7 @@ export function DashboardModule() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {galleryStats?.data?.popularCategories?.slice(0, 3).map(category => (
+              {galleryStats?.data?.popularCategories?.slice(0, 3).map((category: string) => (
                 <div key={category} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-primary rounded-full" />

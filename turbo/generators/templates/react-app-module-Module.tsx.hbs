@@ -1,0 +1,37 @@
+/**
+ * {{pascalCase name}} Module
+ *
+ * Main entry point for the {{displayName}} feature module.
+ * This module is designed to be lazy-loaded by the shell app.
+ */
+import { z } from 'zod'
+
+import { ModuleLayout } from './components/module-layout'
+import { MainPage } from './pages/main-page'
+
+/**
+ * Module props schema - validated at runtime
+ */
+const {{pascalCase name}}ModulePropsSchema = z.object({
+  /** Optional className for styling */
+  className: z.string().optional(),
+})
+
+export type {{pascalCase name}}ModuleProps = z.infer<typeof {{pascalCase name}}ModulePropsSchema>
+
+/**
+ * {{pascalCase name}} Module Component
+ *
+ * This is the main export that the shell app will lazy-load.
+ */
+export function {{pascalCase name}}Module({ className }: {{pascalCase name}}ModuleProps) {
+  return (
+    <ModuleLayout className={className}>
+      <MainPage />
+    </ModuleLayout>
+  )
+}
+
+// Default export for lazy loading
+export default {{pascalCase name}}Module
+

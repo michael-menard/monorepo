@@ -12,9 +12,19 @@ vi.mock('web-vitals', () => ({
 }))
 
 // Mock PerformanceObserver
-const mockPerformanceObserver = vi.fn()
-mockPerformanceObserver.prototype.observe = vi.fn()
-mockPerformanceObserver.prototype.disconnect = vi.fn()
+const mockPerformanceObserver = vi.fn() as unknown as typeof PerformanceObserver
+;(
+  mockPerformanceObserver as unknown as {
+    prototype: { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }
+  }
+).prototype = {
+  observe: vi.fn(),
+  disconnect: vi.fn(),
+}
+Object.defineProperty(mockPerformanceObserver, 'supportedEntryTypes', {
+  value: ['paint', 'navigation', 'resource', 'longtask'],
+  writable: false,
+})
 global.PerformanceObserver = mockPerformanceObserver
 
 describe('Performance Monitoring', () => {
@@ -47,7 +57,7 @@ describe('Performance Monitoring', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
       // Trigger metric reporting by creating a new monitor
-      const testMonitor = new (performanceMonitor.constructor as any)()
+      new (performanceMonitor.constructor as new () => unknown)()
 
       expect(consoleSpy).toHaveBeenCalledWith(
         'Web Vital:',

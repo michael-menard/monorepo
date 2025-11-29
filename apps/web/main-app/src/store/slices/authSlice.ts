@@ -13,7 +13,7 @@ export interface User {
   }
 }
 
-interface AuthState {
+export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   user: User | null

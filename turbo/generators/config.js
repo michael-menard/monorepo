@@ -1,5 +1,8 @@
 /** @type {import('@turbo/gen').PlopTypes.NodePlopAPI} */
 module.exports = function generator(plop) {
+  // Register custom Handlebars helpers
+  plop.setHelper('eq', (a, b) => a === b)
+
   // Package generator
   plop.setGenerator('package', {
     description: 'Generate a new package for the monorepo',
@@ -8,7 +11,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'What is the name of the package?',
-        validate: (input) => {
+        validate: input => {
           if (input.includes('.')) {
             return 'Package name cannot include an extension'
           }
@@ -95,7 +98,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'Component name:',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Component name is required'
           }
@@ -167,7 +170,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'API service name:',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'API service name is required'
           }
@@ -178,14 +181,14 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'packageName',
         message: 'Package name (e.g., @repo/api-service-name):',
-        default: (answers) => `@repo/api-${answers.name}`,
+        default: answers => `@repo/api-${answers.name}`,
       },
       {
         type: 'input',
         name: 'port',
         message: 'Port number:',
         default: '4000',
-        validate: (input) => {
+        validate: input => {
           const port = parseInt(input)
           if (isNaN(port) || port < 1000 || port > 65535) {
             return 'Port must be a number between 1000 and 65535'
@@ -198,7 +201,7 @@ module.exports = function generator(plop) {
         name: 'project',
         message: 'Project name (for AWS tags):',
         default: 'lego-api',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Project name is required for AWS tagging'
           }
@@ -210,7 +213,7 @@ module.exports = function generator(plop) {
         name: 'owner',
         message: 'Owner email (for AWS tags):',
         default: 'engineering@bricklink.com',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Owner email is required for AWS tagging'
           }
@@ -357,13 +360,17 @@ module.exports = function generator(plop) {
         type: 'add',
         path: 'apps/api/{{kebabCase name}}/docker-compose.yml',
         templateFile: 'templates/docker-compose.hbs',
-        skip: data => (!data.includeDocker || data.database === 'none' ? 'Skipping docker-compose' : false),
+        skip: data =>
+          !data.includeDocker || data.database === 'none' ? 'Skipping docker-compose' : false,
       },
       {
         type: 'add',
         path: 'apps/api/{{kebabCase name}}/docker-compose.db.yml',
         templateFile: 'templates/docker-compose.db.hbs',
-        skip: data => (!data.includeDocker || data.database === 'none' ? 'Skipping database docker-compose' : false),
+        skip: data =>
+          !data.includeDocker || data.database === 'none'
+            ? 'Skipping database docker-compose'
+            : false,
       },
     ],
   })
@@ -377,7 +384,10 @@ module.exports = function generator(plop) {
         name: 'structure',
         message: 'Lambda structure:',
         choices: [
-          { name: 'Modular (lego-api-serverless/{domain}/{function}/) - Recommended', value: 'modular' },
+          {
+            name: 'Modular (lego-api-serverless/{domain}/{function}/) - Recommended',
+            value: 'modular',
+          },
           { name: 'Standalone (apps/api/lambda-{name}/) - Legacy', value: 'standalone' },
         ],
         default: 'modular',
@@ -387,7 +397,7 @@ module.exports = function generator(plop) {
         name: 'domain',
         message: 'Domain/category (e.g., mocInstructions, gallery, wishlist):',
         when: answers => answers.structure === 'modular',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Domain is required for modular structure'
           }
@@ -398,7 +408,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'Lambda handler name (kebab-case):',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Lambda handler name is required'
           }
@@ -412,14 +422,14 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'description',
         message: 'Handler description:',
-        default: (answers) => `Lambda handler for ${answers.name}`,
+        default: answers => `Lambda handler for ${answers.name}`,
       },
       {
         type: 'input',
         name: 'project',
         message: 'Project name (for AWS tags):',
         default: 'lego-api',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Project name is required for AWS tagging'
           }
@@ -431,7 +441,7 @@ module.exports = function generator(plop) {
         name: 'owner',
         message: 'Owner email (for AWS tags):',
         default: 'engineering@bricklink.com',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Owner email is required for AWS tagging'
           }
@@ -461,7 +471,10 @@ module.exports = function generator(plop) {
         choices: [
           { name: 'Basic JWT validation (API Gateway only)', value: 'basic' },
           { name: 'Enhanced JWT validation (with Cognito verification)', value: 'enhanced' },
-          { name: 'Resource ownership validation (user can only access own resources)', value: 'ownership' },
+          {
+            name: 'Resource ownership validation (user can only access own resources)',
+            value: 'ownership',
+          },
           { name: 'No authentication', value: 'none' },
         ],
         default: 'enhanced',
@@ -471,7 +484,7 @@ module.exports = function generator(plop) {
         name: 'cognitoUserPoolId',
         message: 'Cognito User Pool ID (e.g., us-east-1_ABC123):',
         when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'User Pool ID is required for enhanced authentication'
           }
@@ -486,7 +499,7 @@ module.exports = function generator(plop) {
         name: 'cognitoClientId',
         message: 'Cognito Client ID:',
         when: answers => answers.authType === 'enhanced' || answers.authType === 'ownership',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Client ID is required for enhanced authentication'
           }
@@ -536,7 +549,7 @@ module.exports = function generator(plop) {
         message: 'New API Gateway name (PascalCase):',
         default: answers => `${answers.name.replace(/[^a-zA-Z0-9]/g, '')}Api`,
         when: answers => answers.addToSst && answers.apiGatewayChoice === 'new',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'API Gateway name is required'
           }
@@ -552,7 +565,7 @@ module.exports = function generator(plop) {
         message: 'Existing API Gateway variable name:',
         default: 'api',
         when: answers => answers.addToSst && answers.apiGatewayChoice === 'existing',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'API Gateway variable name is required'
           }
@@ -568,7 +581,7 @@ module.exports = function generator(plop) {
         message: 'API route path (e.g., /api/my-endpoint):',
         default: answers => `/api/${answers.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
         when: answers => answers.addToSst && answers.apiGatewayChoice !== 'none',
-        validate: (input) => {
+        validate: input => {
           if (!input.startsWith('/')) {
             return 'Route must start with /'
           }
@@ -590,7 +603,7 @@ module.exports = function generator(plop) {
           { name: 'DELETE', value: 'DELETE', checked: false },
         ],
         when: answers => answers.addToSst && answers.apiGatewayChoice !== 'none',
-        validate: (input) => {
+        validate: input => {
           if (input.length === 0) {
             return 'At least one HTTP method must be selected'
           }
@@ -598,7 +611,7 @@ module.exports = function generator(plop) {
         },
       },
     ],
-    actions: (data) => {
+    actions: data => {
       const isModular = data.structure === 'modular'
       const basePath = isModular
         ? `apps/api/lego-api-serverless/{{domain}}/{{kebabCase name}}`
@@ -628,7 +641,7 @@ module.exports = function generator(plop) {
             type: 'add',
             path: `${basePath}/sst-config-example.ts`,
             templateFile: 'templates/lambda-sst-config.ts.hbs',
-          }
+          },
         )
       } else {
         // Standalone structure (legacy - full structure)
@@ -691,7 +704,7 @@ module.exports = function generator(plop) {
             type: 'add',
             path: `${basePath}/sst-config-example.ts`,
             templateFile: 'templates/lambda-sst-config.ts.hbs',
-          }
+          },
         )
       }
 
@@ -707,7 +720,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'App name (kebab-case):',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'App name is required'
           }
@@ -735,25 +748,27 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'displayName',
         message: 'Display name:',
-        default: (answers) => answers.name.split('-').map(word =>
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' '),
+        default: answers =>
+          answers.name
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '),
       },
       {
         type: 'input',
         name: 'description',
         message: 'App description:',
-        default: (answers) => `${answers.displayName} application`,
+        default: answers => `${answers.displayName} application`,
       },
       {
         type: 'input',
         name: 'port',
         message: 'Development port:',
-        default: (answers) => {
+        default: answers => {
           const basePort = answers.type === 'shell' ? 3000 : 3001
           return basePort.toString()
         },
-        validate: (input) => {
+        validate: input => {
           const port = parseInt(input)
           if (isNaN(port) || port < 3000 || port > 9999) {
             return 'Port must be a number between 3000 and 9999'
@@ -767,7 +782,7 @@ module.exports = function generator(plop) {
         message: 'Parent shell app name (for module registration):',
         default: 'main-app',
         when: answers => answers.type === 'module',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'Shell app name is required for modules'
           }
@@ -778,7 +793,7 @@ module.exports = function generator(plop) {
         type: 'confirm',
         name: 'includeAuth',
         message: 'Include authentication integration?',
-        default: (answers) => answers.type === 'shell',
+        default: answers => answers.type === 'shell',
         when: answers => answers.type !== 'module', // Modules inherit auth from shell
       },
       {
@@ -791,7 +806,7 @@ module.exports = function generator(plop) {
         type: 'confirm',
         name: 'includeRedux',
         message: 'Include Redux Toolkit store?',
-        default: (answers) => answers.type === 'shell',
+        default: answers => answers.type === 'shell',
       },
       {
         type: 'confirm',
@@ -800,7 +815,7 @@ module.exports = function generator(plop) {
         default: false,
       },
     ],
-    actions: (data) => {
+    actions: data => {
       const actions = []
       const appPath = `apps/web/{{kebabCase name}}`
 
@@ -904,7 +919,7 @@ module.exports = function generator(plop) {
           type: 'add',
           path: `${appPath}/src/App.test.tsx`,
           templateFile: 'templates/react-app-sample-test.tsx.hbs',
-        }
+        },
       )
 
       // Shell app specific files
@@ -989,37 +1004,37 @@ module.exports = function generator(plop) {
             type: 'add',
             path: `${appPath}/src/routes/pages/LoadingPage.tsx`,
             templateFile: 'templates/react-app-shell-LoadingPage.tsx.hbs',
-          }
+          },
         )
       }
 
       // Module app specific files
       if (data.type === 'module') {
         actions.push(
-          // Module entry point
+          // Module entry point (PascalCase for main export)
           {
             type: 'add',
             path: `${appPath}/src/Module.tsx`,
             templateFile: 'templates/react-app-module-Module.tsx.hbs',
           },
-          // Module pages
+          // Module pages (kebab-case per coding standards)
           {
             type: 'add',
-            path: `${appPath}/src/pages/MainPage.tsx`,
+            path: `${appPath}/src/pages/main-page.tsx`,
             templateFile: 'templates/react-app-module-MainPage.tsx.hbs',
           },
-          // Module components
+          // Module components (kebab-case per coding standards)
           {
             type: 'add',
-            path: `${appPath}/src/components/ModuleLayout.tsx`,
+            path: `${appPath}/src/components/module-layout.tsx`,
             templateFile: 'templates/react-app-module-ModuleLayout.tsx.hbs',
           },
-          // Module hooks
+          // Module hooks (kebab-case per coding standards)
           {
             type: 'add',
-            path: `${appPath}/src/hooks/useModuleAuth.ts`,
+            path: `${appPath}/src/hooks/use-module-auth.ts`,
             templateFile: 'templates/react-app-module-useModuleAuth.ts.hbs',
-          }
+          },
         )
       }
 
@@ -1037,7 +1052,7 @@ module.exports = function generator(plop) {
             type: 'add',
             path: `${appPath}/src/pages/HomePage.tsx`,
             templateFile: 'templates/react-app-standalone-HomePage.tsx.hbs',
-          }
+          },
         )
       }
 
@@ -1062,7 +1077,7 @@ module.exports = function generator(plop) {
         type: 'input',
         name: 'name',
         message: 'PRD name (will be kebab-cased):',
-        validate: (input) => {
+        validate: input => {
           if (!input) {
             return 'PRD name is required'
           }

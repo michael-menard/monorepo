@@ -1,4 +1,3 @@
-import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
 import { Provider } from 'react-redux'
 import { ThemeProvider } from '@repo/ui/providers/ThemeProvider'

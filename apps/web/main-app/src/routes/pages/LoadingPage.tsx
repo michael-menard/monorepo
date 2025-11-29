@@ -1,4 +1,3 @@
-import React from 'react'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
 
 interface LoadingPageProps {

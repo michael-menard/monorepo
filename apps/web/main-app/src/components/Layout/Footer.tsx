@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from '@tanstack/react-router'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
@@ -12,7 +11,7 @@ const legoStudVariants = {
     scale: 1.1,
     rotate: 5,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 300,
       damping: 10,
     },

@@ -57,6 +57,14 @@
       "import": "./src/components/CachedImage.tsx",
       "types": "./src/components/CachedImage.tsx"
     },
+    "./components/CacheDashboard": {
+      "import": "./src/components/CacheDashboard/index.tsx",
+      "types": "./src/components/CacheDashboard/index.tsx"
+    },
+    "./hooks/useIntelligentCache": {
+      "import": "./src/hooks/useIntelligentCache.ts",
+      "types": "./src/hooks/useIntelligentCache.ts"
+    },
     "./schemas/cache": {
       "import": "./src/schemas/cache.ts",
       "types": "./src/schemas/cache.ts"
@@ -76,6 +84,7 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
+    "@repo/ui": "workspace:*",
     "zod": "^3.25.76",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

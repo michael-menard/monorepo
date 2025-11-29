@@ -1,4 +1,3 @@
-import React from 'react'
 import { Outlet } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@repo/ui/lib/utils'
@@ -18,7 +17,7 @@ const pageTransitionVariants = {
     y: 0,
     transition: {
       duration: 0.3,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     },
   },
   exit: {

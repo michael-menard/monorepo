@@ -254,7 +254,7 @@ export const navigationSlice = createSlice({
       state.activeRoute = action.payload
 
       // Update active state in all navigation items
-      const updateActiveState = (items: NavigationItem[]) => {
+      const updateActiveState = (items: NavigationItem[]): NavigationItem[] => {
         return items.map(item => ({
           ...item,
           isActive: item.href === action.payload || action.payload.startsWith(item.href + '/'),
@@ -325,7 +325,7 @@ export const navigationSlice = createSlice({
       state,
       action: PayloadAction<{ id: string; badge?: string | number }>,
     ) => {
-      const updateBadge = (items: NavigationItem[]) => {
+      const updateBadge = (items: NavigationItem[]): NavigationItem[] => {
         return items.map(item => {
           if (item.id === action.payload.id) {
             return { ...item, badge: action.payload.badge }

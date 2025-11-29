@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
 import { Badge } from '@repo/ui/badge'
 import { LoadingSpinner } from '@repo/ui/loading-spinner'
@@ -53,7 +53,9 @@ export function WishlistModule() {
     const items =
       categoryId === 'all'
         ? wishlistData.data.items
-        : wishlistData.data.items.filter(item => item.wishlistCategories?.includes(categoryId))
+        : wishlistData.data.items.filter(item =>
+            (item as { wishlistCategories?: string[] }).wishlistCategories?.includes(categoryId),
+          )
 
     return {
       count: items.length,
@@ -77,11 +79,19 @@ export function WishlistModule() {
           </div>
 
           {/* Performance indicator */}
-          {wishlistData?.performance ? (
+          {(wishlistData as unknown as { performance?: { duration: number; cacheHit: boolean } })
+            ?.performance ? (
             <div className="text-right text-sm text-muted-foreground">
-              <div>Loaded in {wishlistData.performance.duration.toFixed(0)}ms</div>
+              <div>
+                Loaded in{' '}
+                {(
+                  wishlistData as unknown as { performance: { duration: number } }
+                ).performance.duration.toFixed(0)}
+                ms
+              </div>
               <div className="flex items-center gap-1">
-                {wishlistData.performance.cacheHit ? (
+                {(wishlistData as unknown as { performance: { cacheHit: boolean } }).performance
+                  .cacheHit ? (
                   <>
                     <TrendingUp className="h-3 w-3 text-green-500" />
                     Cached
@@ -108,7 +118,7 @@ export function WishlistModule() {
                 {isWishlistLoading ? (
                   <LoadingSpinner size="sm" />
                 ) : (
-                  wishlistData?.data?.totalCount?.toLocaleString() || '0'
+                  wishlistData?.data?.summary?.totalItems?.toLocaleString() || '0'
                 )}
               </div>
             </CardContent>
@@ -138,7 +148,7 @@ export function WishlistModule() {
                 {isWishlistLoading ? (
                   <LoadingSpinner size="sm" />
                 ) : (
-                  wishlistData?.data?.highPriorityCount || '0'
+                  wishlistData?.data?.summary?.priorityCounts?.high || '0'
                 )}
               </div>
             </CardContent>
@@ -153,7 +163,9 @@ export function WishlistModule() {
                 {isWishlistLoading ? (
                   <LoadingSpinner size="sm" />
                 ) : (
-                  priceData?.data?.priceAlerts?.filter(alert => alert.enabled)?.length || '0'
+                  priceData?.data?.priceAlerts?.filter(
+                    (alert: { enabled: boolean }) => alert.enabled,
+                  )?.length || '0'
                 )}
               </div>
             </CardContent>

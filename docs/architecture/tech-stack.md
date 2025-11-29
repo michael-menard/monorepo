@@ -8,6 +8,7 @@
 | Routing            | TanStack Router      | 1.130.2 | Enhanced for modular routing      | File-based routing, perfect for modules      |
 | State Management   | Redux Toolkit        | 2.8.2   | Enhanced with modular patterns    | RTK Query for API, modular store design      |
 | Styling            | Tailwind CSS         | 4.1.11  | Enhanced design system foundation | Latest v4 with custom colors, excellent base |
+| Component Library  | Shadcn/ui            | Latest  | Enhanced design system foundation |                                              |
 | Build Tool         | Vite                 | 6.3.5   | Optimized for modular builds      | Fast builds, perfect for micro-frontends     |
 | Testing            | Vitest               | 3.0.5   | Enhanced with module testing      | Vite-native, excellent performance           |
 | Monorepo           | Turborepo            | 2.5.4   | Enhanced for modular architecture | Incremental builds, perfect for modules      |
