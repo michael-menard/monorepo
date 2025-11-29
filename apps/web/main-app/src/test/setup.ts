@@ -261,6 +261,10 @@ vi.mock('@repo/ui/lib/utils', () => ({
   cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
 }))
 
+vi.mock('@repo/ui/utils', () => ({
+  cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
+}))
+
 vi.mock('@repo/ui/providers/ThemeProvider', () => ({
   ThemeProvider: vi.fn(({ children }) => children),
   useTheme: vi.fn(() => ({ theme: 'light', setTheme: vi.fn() })),
@@ -402,6 +406,15 @@ vi.mock('lucide-react', () => ({
   ),
   AlertCircle: vi.fn(props =>
     React.createElement('svg', { 'data-testid': 'alert-circle-icon', ...props }),
+  ),
+  // Dashboard component icons
+  Blocks: vi.fn(props => React.createElement('svg', { 'data-testid': 'blocks-icon', ...props })),
+  Palette: vi.fn(props => React.createElement('svg', { 'data-testid': 'palette-icon', ...props })),
+  DollarSign: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'dollar-sign-icon', ...props }),
+  ),
+  TrendingUp: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'trending-up-icon', ...props }),
   ),
 }))
 

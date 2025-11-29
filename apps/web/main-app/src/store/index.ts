@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { enhancedGalleryApi } from '@repo/api-client/rtk/gallery-api'
 import { enhancedWishlistApi } from '@repo/api-client/rtk/wishlist-api'
+import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
 import { authSlice } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
 import { navigationSlice } from './slices/navigationSlice'
@@ -8,6 +9,7 @@ import { navigationSlice } from './slices/navigationSlice'
 // Use enhanced API instances (authentication is handled internally)
 export const galleryApi = enhancedGalleryApi
 export const wishlistApi = enhancedWishlistApi
+export { dashboardApi }
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +21,7 @@ export const store = configureStore({
     // Enhanced API slices
     [enhancedGalleryApi.reducerPath]: enhancedGalleryApi.reducer,
     [enhancedWishlistApi.reducerPath]: enhancedWishlistApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -31,7 +34,8 @@ export const store = configureStore({
       },
     })
       .concat(enhancedGalleryApi.middleware)
-      .concat(enhancedWishlistApi.middleware),
+      .concat(enhancedWishlistApi.middleware)
+      .concat(dashboardApi.middleware),
   devTools: import.meta.env.DEV,
 })
 
@@ -71,6 +75,9 @@ export const {
   useGetEnhancedWishlistStatsQuery,
   useManagePriceAlertsMutation,
 } = enhancedWishlistApi
+
+// Dashboard API hooks (Story 2.2, 2.3, 2.4)
+export const { useGetStatsQuery, useGetRecentMocsQuery, useRefreshDashboardMutation } = dashboardApi
 
 // Legacy hook aliases for backward compatibility
 export const useSearchGalleryQuery = useEnhancedGallerySearchQuery

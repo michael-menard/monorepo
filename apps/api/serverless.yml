@@ -26,38 +26,51 @@ plugins:
 
 # Custom Variables
 custom:
-  # Stage-specific configurations
+  # Stage-specific configurations (COST OPTIMIZED)
   stages:
     dev:
       logLevel: debug
-      memorySize: 256
+      memorySize: 128 # Reduced from 256 for cost savings
+      uploadMemorySize: 256 # Keep higher for upload functions
       timeout: 30
-      rds:
-        instanceClass: db.t4g.micro
-        allocatedStorage: 20
-        maxAllocatedStorage: 50
+      # Cost optimization flags
+      deployNatGateway: false # Use VPC endpoints instead (~$32/mo savings)
+      deployOpenSearch: false # Use PostgreSQL FTS instead (~$25-40/mo savings)
+      deployDashboard: false # Skip dashboard (~$3/mo savings)
+      pruneVersions: 1 # Keep only 1 version
+      aurora:
+        minCapacity: 0.5
+        maxCapacity: 1 # Reduced from 2 for dev
       opensearch:
         instanceType: t3.small.search
         instanceCount: 1
     staging:
       logLevel: info
-      memorySize: 512
+      memorySize: 256
+      uploadMemorySize: 512
       timeout: 30
-      rds:
-        instanceClass: db.t4g.small
-        allocatedStorage: 50
-        maxAllocatedStorage: 100
+      deployNatGateway: true
+      deployOpenSearch: true
+      deployDashboard: true
+      pruneVersions: 3
+      aurora:
+        minCapacity: 0.5
+        maxCapacity: 2
       opensearch:
         instanceType: t3.medium.search
         instanceCount: 2
     production:
       logLevel: warn
-      memorySize: 1024
+      memorySize: 512 # Reduced from 1024 - optimize per function
+      uploadMemorySize: 1024
       timeout: 30
-      rds:
-        instanceClass: db.r6g.large
-        allocatedStorage: 100
-        maxAllocatedStorage: 500
+      deployNatGateway: true
+      deployOpenSearch: true
+      deployDashboard: true
+      pruneVersions: 5
+      aurora:
+        minCapacity: 0.5
+        maxCapacity: 4
       opensearch:
         instanceType: r6g.large.search
         instanceCount: 3
@@ -79,10 +92,10 @@ custom:
     # Define path aliases (maps @/ imports)
     plugins: esbuild-plugins.js
 
-  # Prune old Lambda versions (keep last 3)
+  # Prune old Lambda versions (stage-specific to reduce storage costs)
   prune:
     automatic: true
-    number: 3
+    number: ${self:custom.stageConfig.pruneVersions}
 
   # Serverless offline configuration
   serverless-offline:
@@ -262,7 +275,7 @@ functions:
     handler: endpoints/health/handler.handler
     description: Health check endpoint for monitoring
     memorySize: 256
-    timeout: 29  # HTTP API has 30s limit, keep Lambda timeout slightly lower
+    timeout: 29 # HTTP API has 30s limit, keep Lambda timeout slightly lower
     events:
       - httpApi:
           path: /health
@@ -275,7 +288,7 @@ functions:
   galleryUploadImage:
     handler: endpoints/gallery/upload-image/handler.handler
     description: Upload image to gallery
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -288,7 +301,7 @@ functions:
   galleryListImages:
     handler: endpoints/gallery/list-images/handler.handler
     description: List gallery images
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -301,7 +314,7 @@ functions:
   gallerySearchImages:
     handler: endpoints/gallery/search-images/handler.handler
     description: Search gallery images
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -314,7 +327,7 @@ functions:
   galleryGetImage:
     handler: endpoints/gallery/get-image/handler.handler
     description: Get gallery image details
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -327,7 +340,7 @@ functions:
   galleryUpdateImage:
     handler: endpoints/gallery/update-image/handler.handler
     description: Update gallery image
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -340,7 +353,7 @@ functions:
   galleryDeleteImage:
     handler: endpoints/gallery/delete-image/handler.handler
     description: Delete gallery image
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -353,7 +366,7 @@ functions:
   galleryFlagImage:
     handler: endpoints/gallery/flag-image/handler.handler
     description: Flag gallery image for review
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -366,7 +379,7 @@ functions:
   galleryCreateAlbum:
     handler: endpoints/gallery/create-album/handler.handler
     description: Create gallery album
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -379,7 +392,7 @@ functions:
   galleryListAlbums:
     handler: endpoints/gallery/list-albums/handler.handler
     description: List gallery albums
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -392,7 +405,7 @@ functions:
   galleryGetAlbum:
     handler: endpoints/gallery/get-album/handler.handler
     description: Get gallery album
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -405,7 +418,7 @@ functions:
   galleryUpdateAlbum:
     handler: endpoints/gallery/update-album/handler.handler
     description: Update gallery album
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -418,7 +431,7 @@ functions:
   galleryDeleteAlbum:
     handler: endpoints/gallery/delete-album/handler.handler
     description: Delete gallery album
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -435,7 +448,7 @@ functions:
   mocList:
     handler: endpoints/moc-instructions/list/handler.handler
     description: List MOC instructions
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -448,7 +461,7 @@ functions:
   mocInitializeWithFiles:
     handler: endpoints/moc-instructions/initialize-with-files/handler.handler
     description: Initialize MOC instruction with files
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -461,7 +474,7 @@ functions:
   mocFinalizeWithFiles:
     handler: endpoints/moc-instructions/finalize-with-files/handler.handler
     description: Finalize MOC instruction with files
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -474,7 +487,7 @@ functions:
   mocUploadFile:
     handler: endpoints/moc-instructions/upload-file/handler.handler
     description: Upload file to MOC instruction
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -487,7 +500,7 @@ functions:
   mocDownloadFile:
     handler: endpoints/moc-instructions/download-file/handler.handler
     description: Download file from MOC instruction
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -500,7 +513,7 @@ functions:
   mocDeleteFile:
     handler: endpoints/moc-instructions/delete-file/handler.handler
     description: Delete file from MOC instruction
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -513,7 +526,7 @@ functions:
   mocGetStats:
     handler: endpoints/moc-instructions/get-stats/handler.handler
     description: Get MOC instruction stats
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -526,7 +539,7 @@ functions:
   mocGetUploadsOverTime:
     handler: endpoints/moc-instructions/get-uploads-over-time/handler.handler
     description: Get MOC uploads over time
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -539,7 +552,7 @@ functions:
   mocGetGalleryImages:
     handler: endpoints/moc-instructions/get-gallery-images/handler.handler
     description: Get gallery images for MOC
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -552,7 +565,7 @@ functions:
   mocLinkGalleryImage:
     handler: endpoints/moc-instructions/link-gallery-image/handler.handler
     description: Link gallery image to MOC
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -565,7 +578,7 @@ functions:
   mocUnlinkGalleryImage:
     handler: endpoints/moc-instructions/unlink-gallery-image/handler.handler
     description: Unlink gallery image from MOC
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -578,7 +591,7 @@ functions:
   mocUploadPartsList:
     handler: endpoints/moc-instructions/upload-parts-list/handler.handler
     description: Upload parts list to MOC
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -595,7 +608,7 @@ functions:
   wishlistList:
     handler: endpoints/wishlist/list/handler.handler
     description: List wishlist items
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -608,7 +621,7 @@ functions:
   wishlistCreateItem:
     handler: endpoints/wishlist/create-item/handler.handler
     description: Create wishlist item
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -621,7 +634,7 @@ functions:
   wishlistGetItem:
     handler: endpoints/wishlist/get-item/handler.handler
     description: Get wishlist item
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -634,7 +647,7 @@ functions:
   wishlistUpdateItem:
     handler: endpoints/wishlist/update-item/handler.handler
     description: Update wishlist item
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -647,7 +660,7 @@ functions:
   wishlistDeleteItem:
     handler: endpoints/wishlist/delete-item/handler.handler
     description: Delete wishlist item
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -660,7 +673,7 @@ functions:
   wishlistReorder:
     handler: endpoints/wishlist/reorder/handler.handler
     description: Reorder wishlist items
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -673,7 +686,7 @@ functions:
   wishlistSearch:
     handler: endpoints/wishlist/search/handler.handler
     description: Search wishlist items
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -686,7 +699,7 @@ functions:
   wishlistUploadImage:
     handler: endpoints/wishlist/upload-image/handler.handler
     description: Upload image to wishlist item
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -703,7 +716,7 @@ functions:
   partsListCreate:
     handler: endpoints/moc-parts-lists/create/handler.handler
     description: Create MOC parts list
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -716,7 +729,7 @@ functions:
   partsListGet:
     handler: endpoints/moc-parts-lists/get/handler.handler
     description: Get MOC parts list
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -729,7 +742,7 @@ functions:
   partsListUpdate:
     handler: endpoints/moc-parts-lists/update/handler.handler
     description: Update MOC parts list
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -742,7 +755,7 @@ functions:
   partsListDelete:
     handler: endpoints/moc-parts-lists/delete/handler.handler
     description: Delete MOC parts list
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -755,7 +768,7 @@ functions:
   partsListParse:
     handler: endpoints/moc-parts-lists/parse/handler.handler
     description: Parse MOC parts list file
-    memorySize: 512
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
     timeout: 29
     events:
       - httpApi:
@@ -768,7 +781,7 @@ functions:
   partsListUpdateStatus:
     handler: endpoints/moc-parts-lists/update-status/handler.handler
     description: Update MOC parts list status
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -848,9 +861,14 @@ functions:
 resources:
   Description: LEGO API Infrastructure Stack
 
-  # CloudFormation Conditions for optional social login providers
-  # Identity providers are only created when their credentials are configured in SSM
+  # CloudFormation Conditions for cost optimization and optional features
   Conditions:
+    # Cost optimization: Only deploy expensive resources in staging/production
+    DeployNatGateway: !Equals ['${self:custom.stageConfig.deployNatGateway}', true]
+    DeployOpenSearch: !Equals ['${self:custom.stageConfig.deployOpenSearch}', true]
+    DeployDashboard: !Equals ['${self:custom.stageConfig.deployDashboard}', true]
+
+    # Social login providers - only created when credentials are configured in SSM
     HasGoogleCredentials: !Not [!Equals ['${self:custom.oauth.google.clientId}', '']]
     HasAppleCredentials: !Not [!Equals ['${self:custom.oauth.apple.clientId}', '']]
     HasFacebookCredentials: !Not [!Equals ['${self:custom.oauth.facebook.clientId}', '']]
@@ -975,12 +993,82 @@ resources:
             Value: ${self:custom.stage}
 
     # ===========================================
-    # NAT Gateway (single for cost optimization - $32/month)
+    # VPC Endpoints (Cost-effective alternative to NAT Gateway for dev)
+    # These allow Lambda to access AWS services without NAT Gateway
+    # ===========================================
+
+    # S3 Gateway Endpoint (FREE - no hourly charge)
+    S3VpcEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+        VpcId: !Ref VPC
+        VpcEndpointType: Gateway
+        RouteTableIds:
+          - !Ref PrivateRouteTable
+
+    # Secrets Manager Interface Endpoint (for DB credentials)
+    # Only created when NAT Gateway is not deployed
+    SecretsManagerVpcEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Condition: !Not [DeployNatGateway]
+      Properties:
+        ServiceName: !Sub 'com.amazonaws.${AWS::Region}.secretsmanager'
+        VpcId: !Ref VPC
+        VpcEndpointType: Interface
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        SecurityGroupIds:
+          - !Ref VpcEndpointSecurityGroup
+        PrivateDnsEnabled: true
+
+    # CloudWatch Logs Interface Endpoint (for Lambda logging without NAT)
+    CloudWatchLogsVpcEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Condition: !Not [DeployNatGateway]
+      Properties:
+        ServiceName: !Sub 'com.amazonaws.${AWS::Region}.logs'
+        VpcId: !Ref VPC
+        VpcEndpointType: Interface
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        SecurityGroupIds:
+          - !Ref VpcEndpointSecurityGroup
+        PrivateDnsEnabled: true
+
+    # Security Group for VPC Endpoints
+    VpcEndpointSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Condition: !Not [DeployNatGateway]
+      Properties:
+        GroupName: lego-api-vpce-sg-${self:custom.stage}
+        GroupDescription: Security group for VPC Endpoints
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+            Description: HTTPS from Lambda
+        Tags:
+          - Key: Name
+            Value: lego-api-vpce-sg-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # ===========================================
+    # NAT Gateway (conditional - only for staging/production)
+    # Saves ~$32+/month in dev by using VPC Endpoints instead
     # ===========================================
 
     # Elastic IP for NAT Gateway
     NatEIP:
       Type: AWS::EC2::EIP
+      Condition: DeployNatGateway
       DependsOn: InternetGatewayAttachment
       Properties:
         Domain: vpc
@@ -995,6 +1083,7 @@ resources:
     # NAT Gateway in Public Subnet 1
     NatGateway:
       Type: AWS::EC2::NatGateway
+      Condition: DeployNatGateway
       Properties:
         AllocationId: !GetAtt NatEIP.AllocationId
         SubnetId: !Ref PublicSubnet1
@@ -1061,9 +1150,10 @@ resources:
           - Key: Environment
             Value: ${self:custom.stage}
 
-    # Private Route to NAT Gateway
+    # Private Route to NAT Gateway (only when NAT Gateway is deployed)
     PrivateRoute:
       Type: AWS::EC2::Route
+      Condition: DeployNatGateway
       Properties:
         RouteTableId: !Ref PrivateRouteTable
         DestinationCidrBlock: 0.0.0.0/0
@@ -1203,8 +1293,8 @@ resources:
         EngineMode: provisioned
         Port: 5432
         ServerlessV2ScalingConfiguration:
-          MinCapacity: 0.5
-          MaxCapacity: 2
+          MinCapacity: ${self:custom.stageConfig.aurora.minCapacity}
+          MaxCapacity: ${self:custom.stageConfig.aurora.maxCapacity}
         MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}'
         MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}'
         DatabaseName: legoapidb
@@ -1256,13 +1346,16 @@ resources:
     # Note: This may already exist in the account - deployment will continue if it does
     OpenSearchServiceLinkedRole:
       Type: AWS::IAM::ServiceLinkedRole
+      Condition: DeployOpenSearch
       Properties:
         AWSServiceName: es.amazonaws.com
         Description: Service-linked role for OpenSearch
 
-    # OpenSearch Domain - Single-node for dev, multi-node for production
+    # OpenSearch Domain - Only deployed in staging/production
+    # For dev, use PostgreSQL full-text search instead (~$25-40/mo savings)
     OpenSearchDomain:
       Type: AWS::OpenSearchService::Domain
+      Condition: DeployOpenSearch
       DependsOn:
         - OpenSearchServiceLinkedRole
       Properties:
@@ -1569,11 +1662,12 @@ resources:
             Value: ${self:custom.stage}
 
     # ===========================================
-    # CloudWatch Dashboard
+    # CloudWatch Dashboard (conditional - saves ~$3/mo in dev)
     # ===========================================
 
     ApiDashboard:
       Type: AWS::CloudWatch::Dashboard
+      Condition: DeployDashboard
       Properties:
         DashboardName: lego-api-${self:custom.stage}
         DashboardBody: !Sub |

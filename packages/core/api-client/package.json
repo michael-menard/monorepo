@@ -20,6 +20,10 @@
       "import": "./src/rtk/wishlist-api.ts",
       "types": "./src/rtk/wishlist-api.ts"
     },
+    "./rtk/dashboard-api": {
+      "import": "./src/rtk/dashboard-api.ts",
+      "types": "./src/rtk/dashboard-api.ts"
+    },
     "./auth/cognito-integration": {
       "import": "./src/auth/cognito-integration.ts",
       "types": "./src/auth/cognito-integration.ts"
