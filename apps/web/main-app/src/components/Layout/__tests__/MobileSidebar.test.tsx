@@ -34,7 +34,11 @@ vi.mock('framer-motion', () => ({
       'aria-hidden': ariaHidden,
       ...props
     }: React.HTMLAttributes<HTMLDivElement> & { 'aria-hidden'?: string }) =>
-      React.createElement('div', { className, onClick, 'aria-hidden': ariaHidden, ...props }, children),
+      React.createElement(
+        'div',
+        { className, onClick, 'aria-hidden': ariaHidden, ...props },
+        children,
+      ),
     aside: ({
       children,
       className,
@@ -42,10 +46,19 @@ vi.mock('framer-motion', () => ({
       'aria-modal': ariaModal,
       'aria-label': ariaLabel,
       ...props
-    }: React.HTMLAttributes<HTMLElement> & { role?: string; 'aria-modal'?: string; 'aria-label'?: string }) =>
-      React.createElement('aside', { className, role, 'aria-modal': ariaModal, 'aria-label': ariaLabel, ...props }, children),
+    }: React.HTMLAttributes<HTMLElement> & {
+      role?: string
+      'aria-modal'?: string
+      'aria-label'?: string
+    }) =>
+      React.createElement(
+        'aside',
+        { className, role, 'aria-modal': ariaModal, 'aria-label': ariaLabel, ...props },
+        children,
+      ),
   },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
 }))
 
 // Store type for tests

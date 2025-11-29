@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
 import { OTPInput } from '@/components/Auth/OTPInput'
@@ -7,7 +7,7 @@ import { AuthLayout } from '@/components/Layout/RootLayout'
 
 export function OTPVerificationPage() {
   const router = useRouter()
-  const { confirmSignIn, currentChallenge, isLoading } = useAuth()
+  const { confirmSignIn, currentChallenge, clearChallenge, isLoading } = useAuth()
   const [otpCode, setOtpCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,6 +36,10 @@ export function OTPVerificationPage() {
       if (result.success) {
         // Navigate to dashboard on successful verification
         router.navigate({ to: '/' })
+      } else if (result.error === 'Additional challenge required') {
+        // Another challenge step is required - currentChallenge is already updated
+        // The component will re-render with the new challenge info
+        setOtpCode('')
       } else {
         setError(result.error || 'Invalid verification code. Please try again.')
         setOtpCode('') // Clear the input for retry
@@ -49,16 +53,17 @@ export function OTPVerificationPage() {
   }
 
   const handleBackToLogin = () => {
+    clearChallenge()
     router.navigate({ to: '/auth/login' })
   }
 
   const getChallengeTitle = () => {
     switch (currentChallenge?.challengeName) {
-      case 'SMS_MFA':
+      case 'CONFIRM_SIGN_IN_WITH_SMS_CODE':
         return 'Enter SMS Code'
-      case 'SOFTWARE_TOKEN_MFA':
+      case 'CONFIRM_SIGN_IN_WITH_TOTP_CODE':
         return 'Enter Authenticator Code'
-      case 'EMAIL_OTP':
+      case 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE':
         return 'Enter Email Code'
       default:
         return 'Enter Verification Code'
@@ -67,16 +72,21 @@ export function OTPVerificationPage() {
 
   const getChallengeDescription = () => {
     switch (currentChallenge?.challengeName) {
-      case 'SMS_MFA':
+      case 'CONFIRM_SIGN_IN_WITH_SMS_CODE':
         return 'We sent a 6-digit code to your phone number. Enter it below to complete sign in.'
-      case 'SOFTWARE_TOKEN_MFA':
+      case 'CONFIRM_SIGN_IN_WITH_TOTP_CODE':
         return 'Open your authenticator app and enter the 6-digit code to complete sign in.'
-      case 'EMAIL_OTP':
+      case 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE':
         return 'We sent a 6-digit code to your email address. Enter it below to complete sign in.'
       default:
         return 'Enter the 6-digit verification code to complete sign in.'
     }
   }
+
+  // Check if this challenge type supports resend (TOTP doesn't need resend)
+  const canShowResendHelp =
+    currentChallenge?.challengeName === 'CONFIRM_SIGN_IN_WITH_SMS_CODE' ||
+    currentChallenge?.challengeName === 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE'
 
   if (!currentChallenge) {
     return null // Will redirect via useEffect
@@ -117,6 +127,21 @@ export function OTPVerificationPage() {
               >
                 {isSubmitting ? 'Verifying...' : 'Verify Code'}
               </Button>
+
+              {canShowResendHelp ? (
+                <p className="text-sm text-center text-muted-foreground">
+                  {"Didn't receive a code? "}
+                  <button
+                    type="button"
+                    className="text-primary underline-offset-4 hover:underline"
+                    onClick={handleBackToLogin}
+                    disabled={isSubmitting || isLoading}
+                  >
+                    Try signing in again
+                  </button>
+                  {' to get a new code.'}
+                </p>
+              ) : null}
 
               <Button
                 type="button"

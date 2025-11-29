@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from '@tanstack/react-router'
+import { Hub } from 'aws-amplify/utils'
 import { logger } from '@repo/logger'
-import { Amplify } from 'aws-amplify'
 import {
   getCurrentUser,
   fetchAuthSession,
@@ -9,7 +10,11 @@ import {
   signIn,
   signUp,
   resetPassword,
+  confirmResetPassword as amplifyConfirmResetPassword,
   confirmSignIn,
+  confirmSignUp as amplifyConfirmSignUp,
+  resendSignUpCode as amplifyResendSignUpCode,
+  autoSignIn,
 } from 'aws-amplify/auth'
 import {
   initializeCognitoTokenManager,
@@ -17,6 +22,9 @@ import {
   getCognitoTokenMetrics,
 } from '@repo/api-client/auth/cognito-integration'
 import { getAuthMiddleware } from '@repo/api-client/auth/auth-middleware'
+import { enhancedGalleryApi } from '@repo/api-client/rtk/gallery-api'
+import { enhancedWishlistApi } from '@repo/api-client/rtk/wishlist-api'
+import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
 import {
   setLoading,
   setAuthenticated,
@@ -27,18 +35,8 @@ import {
   type User,
 } from '@/store/slices/authSlice'
 
-// Configure Amplify
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: import.meta.env.VITE_AWS_USER_POOL_ID,
-      userPoolClientId: import.meta.env.VITE_AWS_USER_POOL_WEB_CLIENT_ID,
-      loginWith: {
-        email: true,
-      },
-    },
-  },
-})
+// Note: Amplify.configure() is called in main.tsx BEFORE React renders
+// This ensures auth is ready when AuthProvider initializes
 
 // Multi-step authentication types
 export interface AuthChallenge {
@@ -61,13 +59,25 @@ interface AuthContextType {
     name: string
     email: string
     password: string
-  }) => Promise<{ success: boolean; error?: string }>
+  }) => Promise<{ success: boolean; error?: string; requiresConfirmation?: boolean }>
+  confirmSignUp: (
+    email: string,
+    code: string,
+  ) => Promise<{ success: boolean; error?: string; autoSignedIn?: boolean }>
+  resendSignUpCode: (email: string) => Promise<{ success: boolean; error?: string }>
   forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>
+  confirmResetPassword: (
+    email: string,
+    code: string,
+    newPassword: string,
+  ) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
   refreshTokens: () => Promise<{ accessToken: string; idToken?: string; refreshToken?: string }>
   getAuthMetrics: () => ReturnType<typeof getCognitoTokenMetrics>
+  clearChallenge: () => void
   isLoading: boolean
   currentChallenge: AuthChallenge | null
+  pendingVerificationEmail: string | null
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -78,12 +88,85 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const auth = useSelector(selectAuth)
   const [currentChallenge, setCurrentChallenge] = React.useState<AuthChallenge | null>(null)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = React.useState<string | null>(
+    null,
+  )
 
   useEffect(() => {
     checkAuthState()
   }, [])
+
+  // Listen for Amplify Hub auth events (token refresh, sign out, etc.)
+  useEffect(() => {
+    const hubListener = Hub.listen('auth', async ({ payload }) => {
+      logger.debug('Hub auth event:', payload.event)
+
+      switch (payload.event) {
+        case 'signedOut': {
+          // User signed out (from another tab or session expiry)
+          logger.info('User signed out via Hub event')
+          dispatch(setUnauthenticated())
+
+          // Clear Cognito token manager
+          const tokenManager = getCognitoTokenManager()
+          if (tokenManager) {
+            tokenManager.clearTokens()
+          }
+          break
+        }
+
+        case 'tokenRefresh':
+          // Tokens were refreshed - update Redux state
+          logger.debug('Tokens refreshed via Hub event')
+          try {
+            const session = await fetchAuthSession()
+            if (session.tokens) {
+              const tokens = {
+                accessToken: session.tokens.accessToken?.toString(),
+                idToken: session.tokens.idToken?.toString(),
+                refreshToken: (
+                  session.tokens as unknown as { refreshToken?: { toString: () => string } }
+                ).refreshToken?.toString(),
+              }
+              dispatch(updateTokens(tokens))
+
+              // Update Cognito token manager
+              const manager = getCognitoTokenManager()
+              if (manager && tokens.accessToken) {
+                manager.setTokens({
+                  accessToken: tokens.accessToken,
+                  idToken: tokens.idToken,
+                  refreshToken: tokens.refreshToken,
+                })
+              }
+            }
+          } catch (error) {
+            logger.error('Failed to update tokens after refresh:', error)
+          }
+          break
+
+        case 'tokenRefresh_failure':
+          // Token refresh failed - user needs to re-authenticate
+          logger.warn('Token refresh failed - signing out user')
+          dispatch(setUnauthenticated())
+          break
+
+        case 'signedIn':
+          // User signed in (possibly from another tab)
+          logger.info('User signed in via Hub event')
+          await checkAuthState()
+          break
+      }
+    })
+
+    // Cleanup listener on unmount
+    return () => {
+      hubListener()
+    }
+  }, [dispatch])
 
   const checkAuthState = async () => {
     try {
@@ -293,17 +376,106 @@ export function AuthProvider({ children }: AuthProviderProps) {
             email: userData.email,
             name: userData.name,
           },
+          autoSignIn: true, // Enable auto sign-in after confirmation
         },
       })
 
       if (result.isSignUpComplete) {
-        return { success: true }
+        dispatch(setLoading(false))
+        return { success: true, requiresConfirmation: false }
       } else {
-        return { success: true } // User needs to verify email
+        // User needs to verify email - store email for verification page
+        setPendingVerificationEmail(userData.email)
+        // Also store in sessionStorage for page refresh persistence
+        sessionStorage.setItem('pendingVerificationEmail', userData.email)
+        dispatch(setLoading(false))
+        return { success: true, requiresConfirmation: true }
       }
     } catch (error: any) {
       logger.error('Sign up failed:', error)
       const errorMessage = error.message || 'Failed to sign up'
+      dispatch(setError(errorMessage))
+      dispatch(setLoading(false))
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const handleConfirmSignUp = async (email: string, code: string) => {
+    try {
+      dispatch(setLoading(true))
+
+      const result = await amplifyConfirmSignUp({
+        username: email,
+        confirmationCode: code,
+      })
+
+      if (result.isSignUpComplete) {
+        // Clear pending email
+        setPendingVerificationEmail(null)
+        sessionStorage.removeItem('pendingVerificationEmail')
+
+        // Try auto sign-in if enabled
+        try {
+          const signInResult = await autoSignIn()
+          if (signInResult.isSignedIn) {
+            await checkAuthState()
+            dispatch(setLoading(false))
+            return { success: true, autoSignedIn: true }
+          }
+        } catch (autoSignInError) {
+          // Auto sign-in failed, user will need to sign in manually
+          logger.debug('Auto sign-in after confirmation failed:', autoSignInError)
+        }
+
+        dispatch(setLoading(false))
+        return { success: true, autoSignedIn: false }
+      } else {
+        dispatch(setLoading(false))
+        return { success: false, error: 'Verification incomplete' }
+      }
+    } catch (error: any) {
+      logger.error('Confirm sign up failed:', error)
+      dispatch(setLoading(false))
+
+      // Map Amplify errors to user-friendly messages
+      let errorMessage = 'Verification failed. Please try again.'
+      if (error.name === 'CodeMismatchException') {
+        errorMessage = 'Invalid verification code. Please check and try again.'
+      } else if (error.name === 'ExpiredCodeException') {
+        errorMessage = 'This code has expired. Please request a new one.'
+      } else if (error.name === 'LimitExceededException') {
+        errorMessage = 'Too many attempts. Please wait before trying again.'
+      } else if (error.name === 'UserNotFoundException') {
+        errorMessage = 'No account found with this email address.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      dispatch(setError(errorMessage))
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const handleResendSignUpCode = async (email: string) => {
+    try {
+      dispatch(setLoading(true))
+
+      await amplifyResendSignUpCode({ username: email })
+      dispatch(setLoading(false))
+      return { success: true }
+    } catch (error: any) {
+      logger.error('Resend sign up code failed:', error)
+      dispatch(setLoading(false))
+
+      let errorMessage = 'Failed to resend code. Please try again.'
+      if (error.name === 'LimitExceededException') {
+        errorMessage = 'Too many attempts. Please wait before trying again.'
+      } else if (error.name === 'UserNotFoundException') {
+        errorMessage = 'No account found with this email address.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       dispatch(setError(errorMessage))
       return { success: false, error: errorMessage }
     }
@@ -325,9 +497,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const handleConfirmResetPassword = async (email: string, code: string, newPassword: string) => {
+    try {
+      dispatch(setLoading(true))
+
+      await amplifyConfirmResetPassword({
+        username: email,
+        confirmationCode: code,
+        newPassword,
+      })
+
+      // Clear pending reset email from sessionStorage
+      sessionStorage.removeItem('pendingResetEmail')
+
+      return { success: true }
+    } catch (error: any) {
+      logger.error('Confirm reset password failed:', error)
+      dispatch(setLoading(false))
+
+      // Map Amplify errors to user-friendly messages
+      let errorMessage = 'Password reset failed. Please try again.'
+      if (error.name === 'CodeMismatchException') {
+        errorMessage = 'Invalid verification code. Please check and try again.'
+      } else if (error.name === 'ExpiredCodeException') {
+        errorMessage = 'This code has expired. Please request a new one.'
+      } else if (error.name === 'InvalidPasswordException') {
+        errorMessage = error.message || 'Password does not meet requirements.'
+      } else if (error.name === 'LimitExceededException') {
+        errorMessage = 'Too many attempts. Please wait before trying again.'
+      } else if (error.name === 'UserNotFoundException') {
+        errorMessage = 'No account found with this email address.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      dispatch(setError(errorMessage))
+      return { success: false, error: errorMessage }
+    } finally {
+      dispatch(setLoading(false))
+    }
+  }
+
   const handleSignOut = async () => {
     try {
-      await signOut()
+      // Sign out from all devices (AC: 2)
+      await signOut({ global: true })
 
       // Clear Cognito token manager
       const tokenManager = getCognitoTokenManager()
@@ -335,10 +549,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
         tokenManager.clearTokens()
       }
 
+      // Clear RTK Query caches (AC: 4)
+      dispatch(enhancedGalleryApi.util.resetApiState())
+      dispatch(enhancedWishlistApi.util.resetApiState())
+      dispatch(dashboardApi.util.resetApiState())
+
+      // Clear Redux auth state (AC: 3)
       dispatch(setUnauthenticated())
+
+      // Redirect to home page (AC: 5)
+      navigate({ to: '/' })
     } catch (error) {
       logger.error('Sign out failed:', error)
-      dispatch(setError('Failed to sign out'))
+      // Even if Amplify signOut fails, still clear local state
+      dispatch(setUnauthenticated())
+      navigate({ to: '/' })
     }
   }
 
@@ -346,28 +571,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return getCognitoTokenMetrics()
   }, [])
 
+  const clearChallenge = useCallback(() => {
+    setCurrentChallenge(null)
+  }, [])
+
   const contextValue = useMemo<AuthContextType>(
     () => ({
       signIn: handleSignIn,
       confirmSignIn: handleConfirmSignIn,
       signUp: handleSignUp,
+      confirmSignUp: handleConfirmSignUp,
+      resendSignUpCode: handleResendSignUpCode,
       forgotPassword: handleForgotPassword,
+      confirmResetPassword: handleConfirmResetPassword,
       signOut: handleSignOut,
       refreshTokens,
       getAuthMetrics,
+      clearChallenge,
       isLoading: auth.isLoading,
       currentChallenge,
+      pendingVerificationEmail,
     }),
     [
       handleSignIn,
       handleConfirmSignIn,
       handleSignUp,
+      handleConfirmSignUp,
+      handleResendSignUpCode,
       handleForgotPassword,
+      handleConfirmResetPassword,
       handleSignOut,
       refreshTokens,
       getAuthMetrics,
+      clearChallenge,
       auth.isLoading,
       currentChallenge,
+      pendingVerificationEmail,
     ],
   )
 

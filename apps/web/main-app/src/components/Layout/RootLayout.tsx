@@ -89,7 +89,15 @@ export function RootLayout() {
   }
 
   // Public routes that don't need authentication
-  const publicRoutes = ['/login', '/register', '/forgot-password']
+  const publicRoutes = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/auth/verify-email',
+    '/auth/otp-verification',
+    '/auth/new-password',
+  ]
   const isPublicRoute = publicRoutes.includes(location.pathname)
 
   // If not authenticated and not on a public route, show minimal layout

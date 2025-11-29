@@ -11,8 +11,20 @@ import { globalUISlice } from '@/store/slices/globalUISlice'
 
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ to, children, className }: { to: string; children: React.ReactNode; className?: string }) => (
-    <a href={to} className={className} data-testid={`link-${to.replace(/\//g, '-').slice(1) || 'home'}`}>
+  Link: ({
+    to,
+    children,
+    className,
+  }: {
+    to: string
+    children: React.ReactNode
+    className?: string
+  }) => (
+    <a
+      href={to}
+      className={className}
+      data-testid={`link-${to.replace(/\//g, '-').slice(1) || 'home'}`}
+    >
       {children}
     </a>
   ),
@@ -22,7 +34,9 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div className={className} {...props}>{children}</div>
+      <div className={className} {...props}>
+        {children}
+      </div>
     ),
   },
 }))

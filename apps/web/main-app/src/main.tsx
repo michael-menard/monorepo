@@ -1,8 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { logger } from '@repo/logger'
+import { configureAmplify } from './lib/amplify-config'
 import { App } from './App'
 import './styles/globals.css'
+
+// Configure AWS Amplify BEFORE React renders
+// This ensures auth operations are available immediately
+configureAmplify()
 
 // Initialize performance monitoring
 if (import.meta.env.VITE_ENABLE_PERFORMANCE_MONITORING === 'true') {

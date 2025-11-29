@@ -8,6 +8,8 @@ export interface RouteGuardOptions {
   redirectTo?: string
   allowedPaths?: string[]
   blockedPaths?: string[]
+  /** For guest-only routes: redirect authenticated users to this path */
+  guestOnly?: boolean
 }
 
 /**
@@ -40,6 +42,11 @@ export function createTanStackRouteGuard(
     // Check if path is explicitly blocked
     if (options.blockedPaths?.some(path => location.pathname.startsWith(path))) {
       throw redirectFn({ to: options.redirectTo || '/' })
+    }
+
+    // Guest-only routes: redirect authenticated users away
+    if (options.guestOnly && auth.isAuthenticated) {
+      throw redirectFn({ to: options.redirectTo || '/dashboard' })
     }
 
     // Check authentication requirement
@@ -108,10 +115,9 @@ export const RouteGuards = {
     redirectTo: '/unauthorized',
   }),
 
-  // Guest only routes - redirect authenticated users
+  // Guest only routes - redirect authenticated users to dashboard
   guestOnly: createTanStackRouteGuard({
-    requireAuth: false,
-    blockedPaths: ['/login', '/register', '/forgot-password'],
+    guestOnly: true,
     redirectTo: '/dashboard',
   }),
 }

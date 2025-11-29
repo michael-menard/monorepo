@@ -36,9 +36,7 @@ const createTestStore = (preloadedState?: Partial<TestState>) =>
     preloadedState: preloadedState as TestState,
   })
 
-const renderWithStore = (
-  store: EnhancedStore<TestState>,
-) => {
+const renderWithStore = (store: EnhancedStore<TestState>) => {
   return render(
     <Provider store={store}>
       <Header />
@@ -307,14 +305,54 @@ describe('Header', () => {
       expect(screen.getByText('test@example.com')).toBeInTheDocument()
     })
 
-    it('should call signOut when Sign out is clicked', () => {
+    it('should show logout confirmation dialog when Sign out is clicked', () => {
       const store = createTestStore(authenticatedState)
       renderWithStore(store)
 
       const signOutButton = screen.getByText('Sign out')
       fireEvent.click(signOutButton)
 
+      // Confirmation dialog should appear
+      expect(screen.getByText('Log out?')).toBeInTheDocument()
+      expect(
+        screen.getByText('You will need to sign in again to access your account.'),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
+    })
+
+    it('should call signOut when confirmation dialog Log out button is clicked', async () => {
+      const store = createTestStore(authenticatedState)
+      renderWithStore(store)
+
+      // First click Sign out in the menu
+      const signOutButton = screen.getByText('Sign out')
+      fireEvent.click(signOutButton)
+
+      // Then click Log out in the confirmation dialog
+      const confirmButton = screen.getByRole('button', { name: 'Log out' })
+      fireEvent.click(confirmButton)
+
       expect(mockSignOut).toHaveBeenCalled()
+    })
+
+    it('should close dialog without signing out when Cancel is clicked', () => {
+      const store = createTestStore(authenticatedState)
+      renderWithStore(store)
+
+      // First click Sign out in the menu
+      const signOutButton = screen.getByText('Sign out')
+      fireEvent.click(signOutButton)
+
+      // Dialog should be visible
+      expect(screen.getByText('Log out?')).toBeInTheDocument()
+
+      // Click Cancel
+      const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+      fireEvent.click(cancelButton)
+
+      // signOut should not be called
+      expect(mockSignOut).not.toHaveBeenCalled()
     })
   })
 

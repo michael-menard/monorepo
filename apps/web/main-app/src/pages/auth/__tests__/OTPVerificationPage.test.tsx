@@ -17,6 +17,8 @@ describe('OTPVerificationPage', () => {
   const mockConfirmSignIn = vi.fn()
   const mockNavigate = vi.fn()
 
+  const mockClearChallenge = vi.fn()
+
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -26,8 +28,9 @@ describe('OTPVerificationPage', () => {
 
     mockUseAuth.mockReturnValue({
       confirmSignIn: mockConfirmSignIn,
+      clearChallenge: mockClearChallenge,
       currentChallenge: {
-        challengeName: 'EMAIL_OTP',
+        challengeName: 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE',
         challengeParameters: {},
       },
       isLoading: false,
@@ -43,11 +46,12 @@ describe('OTPVerificationPage', () => {
     expect(screen.getByTestId('verify-button')).toBeInTheDocument()
   })
 
-  it('shows correct title and description for SMS_MFA challenge', () => {
+  it('shows correct title and description for CONFIRM_SIGN_IN_WITH_SMS_CODE challenge', () => {
     mockUseAuth.mockReturnValue({
       confirmSignIn: mockConfirmSignIn,
+      clearChallenge: mockClearChallenge,
       currentChallenge: {
-        challengeName: 'SMS_MFA',
+        challengeName: 'CONFIRM_SIGN_IN_WITH_SMS_CODE',
         challengeParameters: {},
       },
       isLoading: false,
@@ -59,11 +63,12 @@ describe('OTPVerificationPage', () => {
     expect(screen.getByText(/We sent a 6-digit code to your phone/)).toBeInTheDocument()
   })
 
-  it('shows correct title and description for SOFTWARE_TOKEN_MFA challenge', () => {
+  it('shows correct title and description for CONFIRM_SIGN_IN_WITH_TOTP_CODE challenge', () => {
     mockUseAuth.mockReturnValue({
       confirmSignIn: mockConfirmSignIn,
+      clearChallenge: mockClearChallenge,
       currentChallenge: {
-        challengeName: 'SOFTWARE_TOKEN_MFA',
+        challengeName: 'CONFIRM_SIGN_IN_WITH_TOTP_CODE',
         challengeParameters: {},
       },
       isLoading: false,
@@ -78,6 +83,7 @@ describe('OTPVerificationPage', () => {
   it('redirects to login if no current challenge', () => {
     mockUseAuth.mockReturnValue({
       confirmSignIn: mockConfirmSignIn,
+      clearChallenge: mockClearChallenge,
       currentChallenge: null,
       isLoading: false,
     } as any)
@@ -180,7 +186,33 @@ describe('OTPVerificationPage', () => {
     const backButton = screen.getByTestId('back-to-login-button')
     await user.click(backButton)
 
+    expect(mockClearChallenge).toHaveBeenCalled()
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
+  })
+
+  it('handles additional challenge step without showing error', async () => {
+    const user = userEvent.setup()
+    mockConfirmSignIn.mockResolvedValue({
+      success: false,
+      error: 'Additional challenge required',
+    })
+
+    render(<OTPVerificationPage />)
+
+    // Enter OTP code
+    const inputs = screen.getAllByRole('textbox')
+    for (let i = 0; i < 6; i++) {
+      await user.type(inputs[i], (i + 1).toString())
+    }
+
+    // Submit form
+    const submitButton = screen.getByTestId('verify-button')
+    await user.click(submitButton)
+
+    // Should not show error message for additional challenge
+    await waitFor(() => {
+      expect(screen.queryByTestId('error-message')).not.toBeInTheDocument()
+    })
   })
 
   it('disables form during submission', async () => {

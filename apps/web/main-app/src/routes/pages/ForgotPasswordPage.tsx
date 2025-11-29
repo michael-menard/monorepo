@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
@@ -39,11 +39,13 @@ const legoBrickVariants = {
 }
 
 export function ForgotPasswordPage() {
+  const router = useRouter()
   const { forgotPassword, isLoading } = useAuth()
   const { trackNavigation } = useNavigation()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null)
 
   const {
     register,
@@ -65,12 +67,27 @@ export function ForgotPasswordPage() {
 
       const result = await forgotPassword(data.email)
 
-      if (result.success) {
+      // For security, always show success message to prevent account enumeration
+      // The backend may return UserNotFoundException, but we don't reveal this
+      if (result.success || result.error?.includes('UserNotFoundException')) {
         setSuccess('Password reset instructions have been sent to your email address.')
         setEmailSent(true)
+        setSubmittedEmail(data.email)
+        // Store email for reset password page
+        sessionStorage.setItem('pendingResetEmail', data.email)
         trackNavigation('forgot_password_success', {
           source: 'forgot_password_page',
-          email: data.email,
+        })
+      } else if (result.error?.includes('LimitExceededException')) {
+        // Rate limiting - show specific error
+        setError('Too many attempts. Please try again later.')
+        trackNavigation('forgot_password_rate_limited', {
+          source: 'forgot_password_page',
+        })
+      } else if (result.error?.includes('InvalidParameterException')) {
+        setError('Please enter a valid email address.')
+        trackNavigation('forgot_password_invalid_email', {
+          source: 'forgot_password_page',
         })
       } else {
         setError(result.error || 'Failed to send reset email. Please try again.')
@@ -79,14 +96,39 @@ export function ForgotPasswordPage() {
           error: result.error,
         })
       }
-    } catch (err) {
-      const errorMessage = 'Failed to send reset email. Please try again.'
-      setError(errorMessage)
+    } catch (err: any) {
+      // Handle errors thrown from AuthProvider
+      const errorName = err?.name || ''
+
+      // For security, UserNotFoundException should show success
+      if (errorName === 'UserNotFoundException') {
+        setSuccess('Password reset instructions have been sent to your email address.')
+        setEmailSent(true)
+        setSubmittedEmail(data.email)
+        sessionStorage.setItem('pendingResetEmail', data.email)
+        trackNavigation('forgot_password_success', {
+          source: 'forgot_password_page',
+        })
+        return
+      }
+
+      if (errorName === 'LimitExceededException') {
+        setError('Too many attempts. Please try again later.')
+      } else {
+        setError('Failed to send reset email. Please try again.')
+      }
       trackNavigation('forgot_password_error', {
         source: 'forgot_password_page',
-        error: errorMessage,
+        error: errorName,
       })
     }
+  }
+
+  const handleContinueToReset = () => {
+    trackNavigation('continue_to_reset_password', {
+      source: 'forgot_password_page',
+    })
+    router.navigate({ to: '/reset-password' })
   }
 
   return (
@@ -148,15 +190,23 @@ export function ForgotPasswordPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {/* Live region for screen reader announcements */}
+            <div aria-live="polite" aria-atomic="true" className="sr-only">
+              {success ? success : null}
+              {error ? error : null}
+            </div>
+
             {/* Success Alert */}
             {success ? (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
+                role="status"
+                data-testid="success-alert"
               >
                 <Alert className="border-green-200 bg-green-50 text-green-800">
-                  <CheckCircle className="h-4 w-4" />
+                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>{success}</AlertDescription>
                 </Alert>
               </motion.div>
@@ -168,40 +218,55 @@ export function ForgotPasswordPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
+                role="alert"
+                data-testid="error-alert"
               >
                 <Alert variant="destructive" className="border-red-200 bg-red-50">
-                  <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               </motion.div>
             ) : null}
 
             {!emailSent ? (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="space-y-5"
+                data-testid="forgot-password-form"
+              >
                 {/* Email Field */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium text-slate-700">
                     Email Address
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <Mail
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4"
+                      aria-hidden="true"
+                    />
                     <Input
                       id="email"
                       type="email"
                       placeholder="Enter your email address"
+                      autoComplete="email"
                       className={cn(
                         'pl-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
                         errors.email && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                       )}
                       {...register('email')}
                       aria-invalid={errors.email ? 'true' : 'false'}
+                      aria-describedby={errors.email ? 'email-error' : undefined}
+                      data-testid="email-input"
                     />
                   </div>
                   {errors.email ? (
                     <motion.p
+                      id="email-error"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="text-red-600 text-sm"
+                      role="alert"
+                      data-testid="email-error"
                     >
                       {errors.email.message}
                     </motion.p>
@@ -220,42 +285,67 @@ export function ForgotPasswordPage() {
                       'transition-all duration-200',
                       'disabled:opacity-50 disabled:cursor-not-allowed',
                     )}
+                    data-testid="submit-button"
                   >
                     {isSubmitting || isLoading ? (
                       <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Sending instructions...
+                        <div
+                          className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"
+                          aria-hidden="true"
+                        ></div>
+                        <span>Sending instructions...</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        Send Reset Instructions
+                        <Mail className="h-4 w-4" aria-hidden="true" />
+                        <span>Send Reset Instructions</span>
                       </div>
                     )}
                   </Button>
                 </motion.div>
               </form>
             ) : (
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-4" data-testid="success-section">
                 <div className="p-6 bg-green-50 rounded-lg border border-green-200">
-                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                  <CheckCircle
+                    className="w-12 h-12 text-green-500 mx-auto mb-3"
+                    aria-hidden="true"
+                  />
                   <p className="text-green-800 font-medium mb-2">Email sent successfully!</p>
                   <p className="text-green-700 text-sm">
-                    Please check your inbox and follow the instructions to reset your password.
+                    We've sent a password reset code to{' '}
+                    <span className="font-medium">{submittedEmail}</span>. Check your inbox and
+                    enter the code on the next page.
                   </p>
                 </div>
 
-                <Button
-                  onClick={() => {
-                    setEmailSent(false)
-                    setSuccess(null)
-                    setError(null)
-                  }}
-                  variant="outline"
-                  className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                >
-                  Send to different email
-                </Button>
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleContinueToReset}
+                    className={cn(
+                      'w-full h-11 bg-gradient-to-r from-orange-500 to-red-500',
+                      'hover:from-orange-600 hover:to-red-600',
+                      'text-white font-medium shadow-lg',
+                    )}
+                    data-testid="continue-to-reset-button"
+                  >
+                    Continue to Reset Password
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setEmailSent(false)
+                      setSuccess(null)
+                      setError(null)
+                      setSubmittedEmail(null)
+                    }}
+                    variant="outline"
+                    className="w-full border-slate-200 text-slate-600 hover:bg-slate-50"
+                    data-testid="try-different-email-button"
+                  >
+                    Try a different email
+                  </Button>
+                </div>
               </div>
             )}
 

@@ -794,7 +794,7 @@ functions:
   partsListGetUserSummary:
     handler: endpoints/moc-parts-lists/get-user-summary/handler.handler
     description: Get user parts list summary
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     events:
       - httpApi:
@@ -811,7 +811,7 @@ functions:
   websocketConnect:
     handler: endpoints/websocket/connect/handler.handler
     description: Handle WebSocket connections
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     # WebSocket handlers don't need VPC access (just DynamoDB)
     vpc: ~
@@ -830,7 +830,7 @@ functions:
   websocketDisconnect:
     handler: endpoints/websocket/disconnect/handler.handler
     description: Handle WebSocket disconnections
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     vpc: ~
     environment:
@@ -848,7 +848,7 @@ functions:
   websocketDefault:
     handler: endpoints/websocket/default/handler.handler
     description: Handle WebSocket messages
-    memorySize: 256
+    memorySize: ${self:custom.stageConfig.memorySize}
     timeout: 29
     vpc: ~
     environment:
@@ -865,6 +865,7 @@ resources:
   Conditions:
     # Cost optimization: Only deploy expensive resources in staging/production
     DeployNatGateway: !Equals ['${self:custom.stageConfig.deployNatGateway}', true]
+    SkipNatGateway: !Not [!Equals ['${self:custom.stageConfig.deployNatGateway}', true]]
     DeployOpenSearch: !Equals ['${self:custom.stageConfig.deployOpenSearch}', true]
     DeployDashboard: !Equals ['${self:custom.stageConfig.deployDashboard}', true]
 
@@ -1011,7 +1012,7 @@ resources:
     # Only created when NAT Gateway is not deployed
     SecretsManagerVpcEndpoint:
       Type: AWS::EC2::VPCEndpoint
-      Condition: !Not [DeployNatGateway]
+      Condition: SkipNatGateway
       Properties:
         ServiceName: !Sub 'com.amazonaws.${AWS::Region}.secretsmanager'
         VpcId: !Ref VPC
@@ -1026,7 +1027,7 @@ resources:
     # CloudWatch Logs Interface Endpoint (for Lambda logging without NAT)
     CloudWatchLogsVpcEndpoint:
       Type: AWS::EC2::VPCEndpoint
-      Condition: !Not [DeployNatGateway]
+      Condition: SkipNatGateway
       Properties:
         ServiceName: !Sub 'com.amazonaws.${AWS::Region}.logs'
         VpcId: !Ref VPC
@@ -1041,7 +1042,7 @@ resources:
     # Security Group for VPC Endpoints
     VpcEndpointSecurityGroup:
       Type: AWS::EC2::SecurityGroup
-      Condition: !Not [DeployNatGateway]
+      Condition: SkipNatGateway
       Properties:
         GroupName: lego-api-vpce-sg-${self:custom.stage}
         GroupDescription: Security group for VPC Endpoints

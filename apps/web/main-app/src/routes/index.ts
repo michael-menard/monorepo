@@ -1,9 +1,12 @@
 import { createRouter, createRootRoute, createRoute, redirect } from '@tanstack/react-router'
 import { OTPVerificationPage } from '../pages/auth/OTPVerificationPage'
+import { EmailVerificationPage } from '../pages/auth/EmailVerificationPage'
+import { NewPasswordPage } from '../pages/auth/NewPasswordPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
@@ -49,27 +52,31 @@ const forgotPasswordRoute = createRoute({
   beforeLoad: RouteGuards.guestOnly,
 })
 
-// TODO: Implement ResetPasswordPage and VerifyEmailPage components
-// const resetPasswordRoute = createRoute({
-//   getParentRoute: () => rootRoute,
-//   path: '/reset-password',
-//   component: () => import('./pages/ResetPasswordPage').then(m => m.ResetPasswordPage),
-//   pendingComponent: LoadingPage,
-//   beforeLoad: RouteGuards.guestOnly,
-// })
-
-// const verifyEmailRoute = createRoute({
-//   getParentRoute: () => rootRoute,
-//   path: '/verify-email',
-//   component: () => import('./pages/VerifyEmailPage').then(m => m.VerifyEmailPage),
-//   pendingComponent: LoadingPage,
-//   beforeLoad: RouteGuards.protected,
-// })
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPasswordPage,
+  beforeLoad: RouteGuards.guestOnly,
+})
 
 const otpVerificationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/otp-verification',
   component: OTPVerificationPage,
+  beforeLoad: RouteGuards.guestOnly,
+})
+
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/verify-email',
+  component: EmailVerificationPage,
+  beforeLoad: RouteGuards.guestOnly,
+})
+
+const newPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/new-password',
+  component: NewPasswordPage,
   beforeLoad: RouteGuards.guestOnly,
 })
 
@@ -175,7 +182,10 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
   forgotPasswordRoute,
+  resetPasswordRoute,
   otpVerificationRoute,
+  verifyEmailRoute,
+  newPasswordRoute,
   wishlistRoute,
   instructionsRoute,
   dashboardRoute,

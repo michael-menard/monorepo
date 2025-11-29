@@ -1,18 +1,29 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { logger } from '@repo/logger'
-import { Button } from '@repo/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar'
-import { Menu, Bell, Settings, LogOut, User, Moon, Sun, Monitor } from 'lucide-react'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Badge,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@repo/ui/dropdown-menu'
-import { Badge } from '@repo/ui/badge'
+} from '@repo/ui'
+import { Menu, Bell, Settings, LogOut, User, Moon, Sun, Monitor } from 'lucide-react'
 import { NavigationSearch } from '../Navigation/NavigationSearch'
 import { EnhancedBreadcrumb } from '../Navigation/EnhancedBreadcrumb'
 import { selectNavigationNotifications } from '@/store/slices/navigationSlice'
@@ -28,6 +39,7 @@ export function Header() {
   const resolvedTheme = useSelector(selectResolvedTheme)
   const notifications = useSelector(selectNavigationNotifications)
   const { signOut } = useAuth()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const handleThemeChange = (newTheme: Theme) => {
     dispatch(setTheme(newTheme))
@@ -46,11 +58,17 @@ export function Header() {
     0,
   )
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const handleSignOutConfirm = async () => {
     try {
       await signOut()
     } catch (error) {
       logger.error('Sign out failed:', error)
+    } finally {
+      setShowLogoutConfirm(false)
     }
   }
 
@@ -185,7 +203,7 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                    <DropdownMenuItem onClick={handleSignOutClick} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign out
                     </DropdownMenuItem>
@@ -215,6 +233,22 @@ export function Header() {
           </div>
         ) : null}
       </div>
+
+      {/* Logout Confirmation Dialog (AC: 6) */}
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will need to sign in again to access your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOutConfirm}>Log out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   )
 }

@@ -1,18 +1,24 @@
 import { useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
-import { Button } from '@repo/ui/button'
-import { Input } from '@repo/ui/input'
-import { Label } from '@repo/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Alert, AlertDescription } from '@repo/ui/alert'
-import { Checkbox } from '@repo/ui/checkbox'
+import {
+  Button,
+  Input,
+  Label,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Alert,
+  AlertDescription,
+  Checkbox,
+  cn,
+} from '@repo/ui'
 import { Lock, Mail, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react'
-import { cn } from '@repo/ui/lib/utils'
-import { AuthLayout } from '@/components/Layout/RootLayout'
 import { useAuth } from '@/services/auth/AuthProvider'
 import { useNavigation } from '@/components/Navigation/NavigationProvider'
 
@@ -43,10 +49,14 @@ const legoBrickVariants = {
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as { redirect?: string }
   const { signIn, isLoading } = useAuth()
   const { trackNavigation } = useNavigation()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+
+  // Get redirect URL from search params (set by protected route guard)
+  const redirectTo = search.redirect || '/dashboard'
 
   const {
     register,
@@ -73,16 +83,30 @@ export function LoginPage() {
       if (result.success) {
         trackNavigation('login_success', {
           source: 'login_page',
-          redirectTo: '/dashboard',
+          redirectTo,
         })
-        navigate({ to: '/dashboard' })
-      } else if (result.requiresChallenge) {
-        // Multi-step authentication required - navigate to OTP page
+        navigate({ to: redirectTo })
+      } else if (result.requiresChallenge && result.challenge) {
+        // Multi-step authentication required - route based on challenge type
         trackNavigation('login_challenge_required', {
           source: 'login_page',
-          challengeType: result.challenge?.challengeName,
+          challengeType: result.challenge.challengeName,
         })
-        navigate({ to: '/auth/otp-verification' })
+
+        // Route to appropriate page based on challenge type
+        switch (result.challenge.challengeName) {
+          case 'CONFIRM_SIGN_IN_WITH_SMS_CODE':
+          case 'CONFIRM_SIGN_IN_WITH_TOTP_CODE':
+          case 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE':
+            navigate({ to: '/auth/otp-verification' })
+            break
+          case 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED':
+            navigate({ to: '/auth/new-password' })
+            break
+          default:
+            // Fallback to OTP page for unknown challenge types
+            navigate({ to: '/auth/otp-verification' })
+        }
       } else {
         setError(result.error || 'Login failed. Please try again.')
         trackNavigation('login_error', {
@@ -101,13 +125,14 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout>
+    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
-        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm dark:bg-slate-900/95">
           <CardHeader className="text-center pb-6">
             {/* LEGO-inspired brand header */}
             <motion.div
@@ -149,19 +174,26 @@ export function LoginPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Error Alert */}
-            {error ? (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Alert variant="destructive" className="border-red-200 bg-red-50">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              </motion.div>
-            ) : null}
+            {/* Error Alert - aria-live for screen reader announcements */}
+            <div aria-live="polite" aria-atomic="true">
+              {error ? (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert
+                    variant="destructive"
+                    className="border-red-200 bg-red-50"
+                    role="alert"
+                    data-testid="login-error"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              ) : null}
+            </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Email Field */}
@@ -181,13 +213,16 @@ export function LoginPage() {
                     )}
                     {...register('email')}
                     aria-invalid={errors.email ? 'true' : 'false'}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
                   />
                 </div>
                 {errors.email ? (
                   <motion.p
+                    id="email-error"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-red-600 text-sm"
+                    role="alert"
                   >
                     {errors.email.message}
                   </motion.p>
@@ -211,6 +246,7 @@ export function LoginPage() {
                     )}
                     {...register('password')}
                     aria-invalid={errors.password ? 'true' : 'false'}
+                    aria-describedby={errors.password ? 'password-error' : undefined}
                   />
                   <button
                     type="button"
@@ -223,9 +259,11 @@ export function LoginPage() {
                 </div>
                 {errors.password ? (
                   <motion.p
+                    id="password-error"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-red-600 text-sm"
+                    role="alert"
                   >
                     {errors.password.message}
                   </motion.p>
@@ -315,6 +353,6 @@ export function LoginPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </AuthLayout>
+    </div>
   )
 }

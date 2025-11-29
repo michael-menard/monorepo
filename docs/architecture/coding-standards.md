@@ -7,6 +7,7 @@ This document defines the coding standards and best practices for the LEGO MOC I
 - [Language Standards](#language-standards)
 - [File Naming](#file-naming)
 - [Code Style](#code-style)
+- [Modern ES7+ Syntax](#modern-es7-syntax)
 - [Import Order](#import-order)
 - [React Standards](#react-standards)
 - [Type Safety](#type-safety)
@@ -17,6 +18,9 @@ This document defines the coding standards and best practices for the LEGO MOC I
 - [Performance](#performance)
 - [Documentation](#documentation)
 - [Git Workflow](#git-workflow)
+- [Design System](#design-system)
+- [Common Pitfalls to Avoid](#common-pitfalls-to-avoid)
+- [Key Dependencies](#key-dependencies)
 
 ## Language Standards
 
@@ -30,6 +34,7 @@ This document defines the coding standards and best practices for the LEGO MOC I
 - ✅ Strict mode enabled across all packages
 
 **Example:**
+
 ```typescript
 // ✅ Good - TypeScript with explicit types
 export function calculateTotal(items: CartItem[]): number {
@@ -51,6 +56,7 @@ export function calculateTotal(items) {
 - ✅ Single source of truth for shape and validation logic
 
 **Example:**
+
 ```typescript
 // ✅ Preferred - Single source of truth
 import { z } from 'zod'
@@ -76,7 +82,9 @@ interface User {
 }
 
 // Now you need separate validation logic
-if (!isValidEmail(user.email)) { /* ... */ }
+if (!isValidEmail(user.email)) {
+  /* ... */
+}
 ```
 
 ## File Naming
@@ -90,6 +98,7 @@ if (!isValidEmail(user.email)) { /* ... */ }
 - **Types/Interfaces**: `PascalCase` (e.g., `UserProfile`, `ApiResponse`)
 
 **Examples:**
+
 ```
 ✅ Good
 src/
@@ -121,6 +130,28 @@ src/
 - Run `pnpm lint:fix` before committing
 - Pre-commit hooks enforce formatting
 
+#### Prettier Configuration
+
+```json
+{
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "arrowParens": "avoid",
+  "endOfLine": "lf"
+}
+```
+
+#### ESLint Key Rules
+
+- `@typescript-eslint/no-explicit-any`: OFF (any is allowed but discouraged)
+- `no-console`: WARN (use `@repo/logger` instead)
+- `prefer-const`: ERROR
+- Import order: builtin -> external -> internal -> parent -> sibling -> index
+- React hooks rules disabled (ESLint 9 compatibility)
+
 ### TypeScript Strict Mode
 
 ```json
@@ -136,12 +167,233 @@ src/
 }
 ```
 
-- ❌ **Never use `any`** - Use `unknown` and narrow the type
+- ⚠️ **Avoid `any` when possible** - Use `unknown` and narrow the type (ESLint allows `any` but it's discouraged)
+
+### Modern ES7+ Syntax
+
+**CRITICAL: Use modern JavaScript/TypeScript syntax. Arrow functions and ES7+ features are preferred.**
+
+#### Arrow Functions
+
+- ✅ **Prefer arrow functions** for all non-method functions
+- ✅ Use implicit returns for simple expressions
+- ✅ Use arrow functions for callbacks, event handlers, and utility functions
+
+```typescript
+// ✅ Preferred - Arrow functions
+const calculateTotal = (items: CartItem[]): number =>
+  items.reduce((sum, item) => sum + item.price, 0)
+
+const handleClick = () => {
+  dispatch(updateItem(itemId))
+}
+
+const users = data.filter(user => user.isActive).map(user => user.name)
+
+// ❌ Avoid - Function declarations for utilities
+function calculateTotal(items: CartItem[]): number {
+  return items.reduce(function (sum, item) {
+    return sum + item.price
+  }, 0)
+}
+```
+
+#### ES7+ Features to Use
+
+```typescript
+// ✅ Object spread
+const updated = { ...original, name: 'New Name' }
+
+// ✅ Array spread
+const combined = [...array1, ...array2]
+
+// ✅ Optional chaining
+const name = user?.profile?.displayName
+
+// ✅ Nullish coalescing
+const value = input ?? defaultValue
+
+// ✅ Logical assignment operators
+options.timeout ??= 5000
+user.count ||= 0
+
+// ✅ Array methods (map, filter, reduce, find, some, every)
+const activeUsers = users.filter(u => u.isActive)
+const hasAdmin = users.some(u => u.role === 'admin')
+
+// ✅ Object.entries, Object.fromEntries
+const entries = Object.entries(config)
+const mapped = Object.fromEntries(entries.map(([k, v]) => [k, v.toUpperCase()]))
+
+// ✅ Async/await over .then() chains
+const fetchUser = async (id: string): Promise<User> => {
+  const response = await api.get(`/users/${id}`)
+  return response.data
+}
+
+// ❌ Avoid - Promise .then() chains
+function fetchUser(id) {
+  return api.get(`/users/${id}`).then(response => {
+    return response.data
+  })
+}
+
+// ✅ Destructuring
+const { name, email, role = 'user' } = user
+const [first, second, ...rest] = items
+
+// ✅ Template literals
+const message = `Hello ${user.name}, you have ${count} notifications`
+
+// ❌ Avoid - String concatenation
+const message = 'Hello ' + user.name + ', you have ' + count + ' notifications'
+```
+
+#### Functional Programming Paradigm
+
+**CRITICAL: This codebase uses functional programming. Classes are prohibited except where required by external libraries.**
+
+- ❌ **NEVER** create classes for business logic, services, or utilities
+- ❌ **NEVER** use class-based patterns (inheritance, abstract classes, class decorators)
+- ✅ **ALWAYS** use pure functions, closures, and composition
+- ✅ **ALWAYS** prefer immutable data patterns
+
+```typescript
+// ❌ PROHIBITED - Class-based service
+class UserService {
+  private cache: Map<string, User>
+
+  constructor() {
+    this.cache = new Map()
+  }
+
+  async getUser(id: string): Promise<User> {
+    if (this.cache.has(id)) return this.cache.get(id)!
+    const user = await fetchUser(id)
+    this.cache.set(id, user)
+    return user
+  }
+}
+
+// ✅ REQUIRED - Functional approach with closures
+const createUserService = () => {
+  const cache = new Map<string, User>()
+
+  return {
+    getUser: async (id: string): Promise<User> => {
+      if (cache.has(id)) return cache.get(id)!
+      const user = await fetchUser(id)
+      cache.set(id, user)
+      return user
+    },
+  }
+}
+
+// ✅ PREFERRED - Pure functions with explicit dependencies
+const getUser = async (
+  id: string,
+  cache: Map<string, User>,
+  fetcher: (id: string) => Promise<User>,
+): Promise<User> => {
+  if (cache.has(id)) return cache.get(id)!
+  const user = await fetcher(id)
+  cache.set(id, user)
+  return user
+}
+```
+
+#### Functional Patterns to Use
+
+```typescript
+// ✅ Composition over inheritance
+const withLogging =
+  <T extends (...args: unknown[]) => unknown>(fn: T) =>
+  (...args: Parameters<T>): ReturnType<T> => {
+    logger.debug('Calling function', { args })
+    return fn(...args) as ReturnType<T>
+  }
+
+// ✅ Factory functions instead of constructors
+const createValidator = (schema: ZodSchema) => ({
+  validate: (data: unknown) => schema.safeParse(data),
+  validateOrThrow: (data: unknown) => schema.parse(data),
+})
+
+// ✅ Higher-order functions
+const filterByStatus = (status: string) => (items: Item[]) =>
+  items.filter(item => item.status === status)
+
+const activeItems = filterByStatus('active')
+const pendingItems = filterByStatus('pending')
+
+// ✅ Immutable updates
+const updateUser = (user: User, updates: Partial<User>): User => ({
+  ...user,
+  ...updates,
+  updatedAt: new Date(),
+})
+
+// ❌ PROHIBITED - Mutating state
+const updateUser = (user: User, updates: Partial<User>): User => {
+  user.name = updates.name ?? user.name
+  user.updatedAt = new Date()
+  return user
+}
+```
+
+#### When Classes Are Acceptable
+
+Classes are ONLY acceptable when:
+
+- Required by external libraries (e.g., custom Error classes)
+- React class components for error boundaries (the only case React requires classes)
+
+```typescript
+// ✅ Acceptable - Custom error class (required pattern)
+export class ValidationError extends Error {
+  constructor(
+    message: string,
+    public field: string,
+    public code: string,
+  ) {
+    super(message)
+    this.name = 'ValidationError'
+  }
+}
+
+// ✅ Acceptable - React Error Boundary (React requires class)
+class ErrorBoundary extends React.Component<Props, State> {
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+  // ...
+}
+```
+
+#### Function Declarations vs Arrow Functions
+
+Both are acceptable for React components:
+
+```typescript
+// ✅ Acceptable - Function declaration for components
+export function UserProfile({ userId }: UserProfileProps) {
+  return <div>...</div>
+}
+
+// ✅ Also acceptable - Arrow function for components
+export const UserProfile = ({ userId }: UserProfileProps) => {
+  return <div>...</div>
+}
+```
+
+### Additional TypeScript Rules
+
 - ❌ **Avoid `@ts-ignore`** - Use `@ts-expect-error` with justification comment
 - ✅ Use type guards for narrowing
 - ✅ Prefer `const` over `let`, never use `var`
 
 **Example:**
+
 ```typescript
 // ❌ Bad - Uses any
 function processData(data: any) {
@@ -170,6 +422,7 @@ Organize imports in three groups, separated by blank lines:
 3. **Relative imports** (`./ or ../`)
 
 **Example:**
+
 ```typescript
 // ✅ Good - Properly ordered imports
 import { useState, useEffect } from 'react'
@@ -191,8 +444,84 @@ import { formatDate } from './utils/date-formatter'
 ### Use Specific Imports
 
 - ✅ Import specific exports: `import { Button } from '@repo/ui'`
-- ❌ Avoid barrel exports when possible (performance)
 - ✅ Use path aliases from tsconfig.json
+
+### No Barrel Files
+
+**CRITICAL: Barrel files (index.ts re-exports) are PROHIBITED in this codebase.**
+
+#### Why Barrel Files Are Banned
+
+1. **Bundle size**: Tree-shaking becomes ineffective; unused exports get bundled
+2. **Build performance**: Turborepo/Vite must process entire dependency chains
+3. **Circular dependencies**: Barrel files are the #1 cause of circular import issues
+4. **IDE performance**: Slower autocomplete and go-to-definition
+5. **Hot reload**: Changes trigger unnecessary module reloads
+
+#### The Rule
+
+- ❌ **NEVER** create `index.ts` files that re-export from other files
+- ❌ **NEVER** import from a directory path (e.g., `from '@/components'`)
+- ✅ **ALWAYS** import directly from the source file
+
+```typescript
+// ❌ PROHIBITED - Barrel file pattern
+// components/index.ts
+export { Button } from './Button'
+export { Card } from './Card'
+export { Dialog } from './Dialog'
+
+// ❌ PROHIBITED - Importing from barrel/directory
+import { Button, Card } from '@/components'
+import { userSlice } from '@/store/slices'
+
+// ✅ REQUIRED - Direct imports from source files
+import { Button } from '@/components/Button'
+import { Card } from '@/components/Card'
+import { userSlice } from '@/store/slices/userSlice'
+```
+
+#### Exceptions
+
+The ONLY acceptable barrel files are in shared packages where the package.json `exports` field explicitly defines the entry point:
+
+- `@repo/ui` - The UI package barrel is acceptable (package boundary)
+- `@repo/logger` - The logger package barrel is acceptable (package boundary)
+
+These package-level barrels are managed carefully and represent published API surfaces.
+
+### Package Import Patterns
+
+#### shadcn/ui Components
+
+**ALWAYS import shadcn/ui components from the @repo/ui package:**
+
+```typescript
+// ✅ Correct - Single import from package
+import { Button, Card, Table, Dialog } from '@repo/ui'
+
+// ❌ Wrong - Individual path imports
+import { Button } from '@repo/ui/button'
+import { Card } from '@repo/ui/card'
+```
+
+#### Logging
+
+**ALWAYS use @repo/logger instead of console.log:**
+
+```typescript
+// ✅ Correct - Using logger package
+import { logger } from '@repo/logger'
+
+logger.info('User action completed')
+logger.error('API call failed', { error, userId })
+logger.warn('Rate limit approaching', { count })
+logger.debug('Processing data', { payload })
+
+// ❌ Wrong - Console logging
+console.log('User action completed')
+console.error('API call failed', error)
+```
 
 ## React Standards
 
@@ -205,6 +534,7 @@ import { formatDate } from './utils/date-formatter'
 - ✅ TypeScript with explicit prop types
 
 **Example:**
+
 ```typescript
 // ✅ Good - Functional component with TypeScript
 interface UserProfileProps {
@@ -303,8 +633,7 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
   },
   // Add the RTK Query middleware
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(authApi.middleware),
+  middleware: getDefaultMiddleware => getDefaultMiddleware().concat(authApi.middleware),
 })
 
 // Enable refetchOnFocus/refetchOnReconnect behaviors
@@ -350,7 +679,7 @@ const authSlice = createSlice({
       state.user = action.payload
       state.isAuthenticated = true
     },
-    logout: (state) => {
+    logout: state => {
       state.user = null
       state.isAuthenticated = false
     },
@@ -413,16 +742,16 @@ export const userApi = createApi({
     },
   }),
   tagTypes: ['User', 'Profile'],
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     // Query endpoints (GET)
     getUser: builder.query<User, string>({
-      query: (userId) => `/users/${userId}`,
+      query: userId => `/users/${userId}`,
       providesTags: (result, error, userId) => [{ type: 'User', id: userId }],
     }),
 
     listUsers: builder.query<User[], void>({
       query: () => '/users',
-      providesTags: (result) =>
+      providesTags: result =>
         result
           ? [
               ...result.map(({ id }) => ({ type: 'User' as const, id })),
@@ -433,7 +762,7 @@ export const userApi = createApi({
 
     // Mutation endpoints (POST, PUT, DELETE)
     createUser: builder.mutation<User, CreateUserRequest>({
-      query: (body) => ({
+      query: body => ({
         url: '/users',
         method: 'POST',
         body,
@@ -451,7 +780,7 @@ export const userApi = createApi({
     }),
 
     deleteUser: builder.mutation<void, string>({
-      query: (userId) => ({
+      query: userId => ({
         url: `/users/${userId}`,
         method: 'DELETE',
       }),
@@ -531,6 +860,7 @@ function UserProfile({ userId }: { userId: string }) {
 5. **Prefetching**: Use `usePrefetch` or manual `dispatch` for data preloading
 
 **Optimistic Update Example:**
+
 ```typescript
 updateUser: builder.mutation<User, { id: string; data: UpdateUserRequest }>({
   query: ({ id, data }) => ({
@@ -664,9 +994,7 @@ function SearchInput() {
 useEffect(() => {
   const controller = new AbortController()
 
-  fetchData(userId, controller.signal)
-    .then(setData)
-    .catch(handleError)
+  fetchData(userId, controller.signal).then(setData).catch(handleError)
 
   return () => controller.abort() // Cleanup
 }, [userId]) // Explicit dependency
@@ -835,6 +1163,7 @@ function LoginForm() {
 - ✅ Errors should be typed and provide context
 
 **Example:**
+
 ```typescript
 // ✅ Good - Custom error class
 export class ValidationError extends Error {
@@ -866,6 +1195,7 @@ if (!isValidEmail(email)) {
 - ✅ When necessary, add comment explaining why it's safe
 
 **Example:**
+
 ```typescript
 // ❌ Bad - Non-null assertion without validation
 const userId = pathParams.id!
@@ -892,6 +1222,7 @@ const userId = pathParams.id! // Safe: API Gateway guarantees id in path params 
 - ✅ Use custom error types with error codes
 
 **Example:**
+
 ```typescript
 // ✅ Good - User-friendly error handling
 try {
@@ -900,7 +1231,11 @@ try {
   logger.error('Payment processing failed', { error, orderId: order.id })
 
   if (error instanceof PaymentError) {
-    throw new ApiError(400, 'PAYMENT_FAILED', 'Unable to process payment. Please check your card details.')
+    throw new ApiError(
+      400,
+      'PAYMENT_FAILED',
+      'Unable to process payment. Please check your card details.',
+    )
   }
 
   throw new ApiError(500, 'INTERNAL_ERROR', 'An unexpected error occurred. Please try again later.')
@@ -931,6 +1266,7 @@ try {
 - ✅ Structured logging with context
 
 **Example:**
+
 ```typescript
 // ✅ Good - Winston logger
 import { logger } from '@/lib/logger'
@@ -978,15 +1314,18 @@ logger.error(`Failed to create user ${email}: ${error}`)
 ### Test Definitions
 
 **Unit Test:**
+
 - Tests one module in isolation
 - **Must mock all imports** (API calls, database, Redux, contexts, hooks, 3rd-party deps)
 
 **Integration Test:**
+
 - Tests interactions between our modules
 - **May mock only** 3rd-party deps, API calls, database
 - **Do not mock** internal modules under test
 
 **Example:**
+
 ```typescript
 // ✅ Good - Unit test with all mocks
 describe('UserService.createUser (unit)', () => {
@@ -1038,11 +1377,11 @@ Feature: User Login
 import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 
-Given('I am on the login page', async function() {
+Given('I am on the login page', async function () {
   await this.page.goto('/login')
 })
 
-When('I enter email {string}', async function(email: string) {
+When('I enter email {string}', async function (email: string) {
   await this.page.fill('[data-testid="email-input"]', email)
 })
 ```
@@ -1065,6 +1404,7 @@ When('I enter email {string}', async function(email: string) {
 - ✅ Never trust client-provided user IDs
 
 **Example:**
+
 ```typescript
 // ✅ Good - Validates ownership
 async function deleteProject(projectId: string, userId: string) {
@@ -1136,6 +1476,7 @@ async function deleteProject(projectId: string) {
 - ❌ Don't comment obvious code
 
 **Example:**
+
 ```typescript
 // ✅ Good - Explains complex logic
 /**
@@ -1174,6 +1515,7 @@ function add(a: number, b: number): number {
 - ✅ Add body for complex changes
 
 **Example:**
+
 ```bash
 ✅ Good
 feat(api): add wishlist CRUD endpoints
@@ -1207,12 +1549,14 @@ wip
 **Only create commits when explicitly requested by user.**
 
 When creating commits:
+
 1. Run `git status` and `git diff` to see changes
 2. Review recent commits with `git log` to match style
 3. Draft a commit message that explains "why" not "what"
 4. Add all relevant files with `git add`
 5. Create commit with properly formatted message
 6. Include co-author credit:
+
    ```
    🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -1224,6 +1568,7 @@ When creating commits:
 **Only create PRs when explicitly requested by user.**
 
 When creating PRs:
+
 1. Analyze all commits that will be included
 2. Create comprehensive PR summary with test plan
 3. Use `gh pr create` with title and body
@@ -1275,6 +1620,89 @@ When creating PRs:
 - ✅ Build all packages
 - ✅ Check bundle sizes
 
+## Design System
+
+### LEGO-Inspired Theme
+
+The application uses a LEGO-inspired design language with specific color palettes and animation patterns.
+
+#### Primary Colors
+
+- **Primary Colors**: Sky (500-600) and Teal (500-600)
+- **Gradients**: `from-sky-500 to-teal-500` for CTAs and accents
+- **Shadows**: `shadow-lg`, `shadow-xl` for depth and 3D LEGO-like appearance
+- **Typography**: Bold headings, readable body text
+
+#### Animation Patterns
+
+```typescript
+// LEGO brick building animation with Framer Motion
+import { motion } from 'framer-motion'
+
+const legoBrickVariants = {
+  initial: { scale: 0, rotate: -180, opacity: 0 },
+  animate: {
+    scale: 1,
+    rotate: 0,
+    opacity: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 260,
+      damping: 20,
+    },
+  },
+}
+
+// Usage
+<motion.div variants={legoBrickVariants} initial="initial" animate="animate">
+  {/* LEGO brick content */}
+</motion.div>
+```
+
+#### Color Usage
+
+```typescript
+// ✅ Good - Using Tailwind classes
+<div className="bg-gradient-to-r from-sky-500 to-teal-500">
+  <Button className="bg-sky-600 hover:bg-sky-700">Primary Action</Button>
+</div>
+
+// ❌ Bad - Hardcoded colors
+<div style={{ background: '#0ea5e9' }}>
+  <button style={{ backgroundColor: '#0284c7' }}>Primary Action</button>
+</div>
+```
+
+## Common Pitfalls to Avoid
+
+1. **Don't** manually edit package.json - use pnpm commands
+2. **Don't** ignore TypeScript errors - fix them
+3. **Don't** skip tests - maintain coverage thresholds
+4. **Don't** use `any` without consideration (though it's allowed)
+5. **Don't** forget accessibility attributes
+6. **Don't** hardcode colors - use Tailwind classes
+7. **Don't** ignore ESLint warnings - address them
+8. **Don't** create barrel files (index.ts re-exports) - **PROHIBITED** - import directly from source files
+9. **Don't** use TypeScript interfaces when Zod schemas provide better validation
+10. **Don't** import shadcn components from individual paths - use @repo/ui package
+11. **Don't** use console.log - use @repo/logger for all logging
+12. **Don't** use classes - **PROHIBITED** - use functional programming patterns (pure functions, closures, composition)
+
+## Key Dependencies
+
+| Package              | Version  | Purpose                                 |
+| -------------------- | -------- | --------------------------------------- |
+| React                | 19.0.0   | Core framework with concurrent features |
+| TanStack Router      | 1.130.2  | Type-safe routing                       |
+| Redux Toolkit        | 2.8.2    | State management with RTK Query         |
+| @repo/ui (shadcn/ui) | Latest   | Component library                       |
+| @repo/logger         | Latest   | Centralized logging                     |
+| Tailwind CSS         | 4.1.11   | Utility-first styling                   |
+| Framer Motion        | 12.23.24 | Animations                              |
+| AWS Amplify          | 6.15.7   | Authentication (Cognito)                |
+| Vitest               | 3.0.5    | Testing framework                       |
+| Zod                  | Latest   | Schema validation and type inference    |
+
 ## Resources
 
 - **Monorepo Documentation**: `/CLAUDE.md`
@@ -1284,5 +1712,5 @@ When creating PRs:
 
 ---
 
-**Last Updated**: 2025-11-02
-**Version**: 1.0
+**Last Updated**: 2025-11-29
+**Version**: 1.1

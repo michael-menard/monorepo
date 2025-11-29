@@ -13,7 +13,9 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div className={className} {...props}>{children}</div>
+      <div className={className} {...props}>
+        {children}
+      </div>
     ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -176,10 +178,7 @@ describe('MainAreaHeader', () => {
 
   it('should render actions when provided', () => {
     render(
-      <MainAreaHeader
-        title="Title"
-        actions={<button data-testid="action-btn">Action</button>}
-      />,
+      <MainAreaHeader title="Title" actions={<button data-testid="action-btn">Action</button>} />,
     )
 
     expect(screen.getByTestId('action-btn')).toBeInTheDocument()
@@ -199,9 +198,7 @@ describe('MainAreaHeader', () => {
   })
 
   it('should have flex layout for title and actions', () => {
-    const { container } = render(
-      <MainAreaHeader title="Title" actions={<button>Action</button>} />,
-    )
+    const { container } = render(<MainAreaHeader title="Title" actions={<button>Action</button>} />)
 
     const flexDiv = container.querySelector('.flex.items-center.justify-between')
     expect(flexDiv).toBeInTheDocument()
