@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
+import { setupListeners } from '@reduxjs/toolkit/query'
 import { enhancedGalleryApi } from '@repo/api-client/rtk/gallery-api'
 import { enhancedWishlistApi } from '@repo/api-client/rtk/wishlist-api'
 import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
@@ -38,6 +39,9 @@ export const store = configureStore({
       .concat(dashboardApi.middleware),
   devTools: import.meta.env.DEV,
 })
+
+// Enable refetchOnFocus and refetchOnReconnect behaviors for RTK Query
+setupListeners(store.dispatch)
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
