@@ -15,6 +15,7 @@ import {
   confirmSignUp as amplifyConfirmSignUp,
   resendSignUpCode as amplifyResendSignUpCode,
   autoSignIn,
+  signInWithRedirect,
 } from 'aws-amplify/auth'
 import {
   initializeCognitoTokenManager,
@@ -52,8 +53,12 @@ export interface SignInResult {
   challenge?: AuthChallenge
 }
 
+// Social provider type
+export type SocialProvider = 'Facebook' | 'Google' | 'Apple' | 'Amazon'
+
 interface AuthContextType {
   signIn: (credentials: { email: string; password: string }) => Promise<SignInResult>
+  signInWithSocial: (provider: SocialProvider) => Promise<void>
   confirmSignIn: (challengeResponse: string) => Promise<{ success: boolean; error?: string }>
   signUp: (userData: {
     name: string
@@ -319,6 +324,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const handleSignInWithSocial = async (provider: SocialProvider) => {
+    try {
+      dispatch(setLoading(true))
+      logger.info('Starting social sign-in', { provider })
+
+      // signInWithRedirect will redirect to the OAuth provider
+      // After successful auth, user will be redirected back and Hub events will handle the rest
+      await signInWithRedirect({ provider })
+    } catch (error: any) {
+      logger.error('Social sign-in failed:', error)
+      const errorMessage = error.message || `Failed to sign in with ${provider}`
+      dispatch(setError(errorMessage))
+      dispatch(setLoading(false))
+    }
+  }
+
   const handleConfirmSignIn = async (challengeResponse: string) => {
     try {
       dispatch(setLoading(true))
@@ -578,6 +599,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const contextValue = useMemo<AuthContextType>(
     () => ({
       signIn: handleSignIn,
+      signInWithSocial: handleSignInWithSocial,
       confirmSignIn: handleConfirmSignIn,
       signUp: handleSignUp,
       confirmSignUp: handleConfirmSignUp,
@@ -594,6 +616,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }),
     [
       handleSignIn,
+      handleSignInWithSocial,
       handleConfirmSignIn,
       handleSignUp,
       handleConfirmSignUp,

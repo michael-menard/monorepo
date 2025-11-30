@@ -189,7 +189,7 @@ export function HomePage() {
                     </Button>
                   </motion.div>
                 </Link>
-                <Link to="/auth/signup">
+                <Link to="/register">
                   <motion.div whileHover="hover" variants={brickVariants}>
                     <Button
                       variant="outline"
@@ -351,7 +351,7 @@ export function HomePage() {
               </motion.div>
             </Link>
             {!auth.isAuthenticated && (
-              <Link to="/auth/signup">
+              <Link to="/register">
                 <motion.div whileHover="hover" variants={brickVariants}>
                   <Button
                     variant="outline"

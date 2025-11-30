@@ -1,14 +1,21 @@
 import { defineConfig, devices } from '@playwright/test'
+import { defineBddConfig, cucumberReporter } from 'playwright-bdd'
 import { config } from 'dotenv'
 
 // Load environment variables from .env file
 config({ path: '.env' })
 
+// Define BDD configuration
+const testDir = defineBddConfig({
+  features: './features/**/*.feature',
+  steps: './steps/**/*.ts',
+})
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './tests',
+  testDir,
   /* Run tests one at a time for easier debugging */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -24,7 +31,11 @@ export default defineConfig({
     timeout: 10000, // 10 seconds for expect assertions
   },
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'list',
+  reporter: [
+    ['list'],
+    cucumberReporter('html', { outputFile: 'cucumber-report/report.html' }),
+    cucumberReporter('json', { outputFile: 'cucumber-report/report.json' }),
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -64,6 +75,6 @@ export default defineConfig({
     url: 'http://localhost:3002',
     reuseExistingServer: true, // Always reuse existing server
     timeout: 120 * 1000,
-    cwd: '../web/lego-moc-instructions-app',
+    cwd: '../main-app',
   },
 })

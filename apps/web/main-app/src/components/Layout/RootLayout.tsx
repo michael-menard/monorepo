@@ -12,6 +12,7 @@ import { Footer } from './Footer'
 import { MainArea } from './MainArea'
 import { setActiveRoute } from '@/store/slices/navigationSlice'
 import { selectAuth } from '@/store/slices/authSlice'
+import { AuthProvider } from '@/services/auth/AuthProvider'
 
 // LEGO brick building animation for loading states
 const legoBrickVariants = {
@@ -35,7 +36,12 @@ const legoBrickVariants = {
   },
 }
 
-export function RootLayout() {
+/**
+ * Inner layout component that renders the actual layout content.
+ * Separated from RootLayout so AuthProvider can wrap it while being
+ * inside the RouterProvider context.
+ */
+function RootLayoutContent() {
   const dispatch = useDispatch()
   const location = useLocation()
   const auth = useSelector(selectAuth)
@@ -164,6 +170,19 @@ export function RootLayout() {
         </motion.div>
       </div>
     </NavigationProvider>
+  )
+}
+
+/**
+ * Root layout component that wraps content with AuthProvider.
+ * AuthProvider is placed here (inside RouterProvider) so it has
+ * access to TanStack Router's navigation context.
+ */
+export function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutContent />
+    </AuthProvider>
   )
 }
 

@@ -4,7 +4,6 @@ import { ThemeProvider } from '@repo/ui/providers/ThemeProvider'
 import { initializeCognitoTokenManager } from '@repo/api-client/auth/cognito-integration'
 import { router } from './routes'
 import { store } from './store'
-import { AuthProvider } from './services/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary'
 import { selectAuth } from './store/slices/authSlice'
 
@@ -16,6 +15,9 @@ initializeCognitoTokenManager()
 /**
  * Inner app component that connects auth state to router context
  * This enables route guards to access authentication state
+ *
+ * Note: AuthProvider is inside RootLayout (the root route component)
+ * so it has access to TanStack Router's navigation context.
  */
 function InnerApp() {
   const auth = useSelector(selectAuth)
@@ -28,9 +30,7 @@ export function App() {
     <ErrorBoundary>
       <Provider store={store}>
         <ThemeProvider defaultTheme="system" storageKey="main-app-theme">
-          <AuthProvider>
-            <InnerApp />
-          </AuthProvider>
+          <InnerApp />
         </ThemeProvider>
       </Provider>
     </ErrorBoundary>

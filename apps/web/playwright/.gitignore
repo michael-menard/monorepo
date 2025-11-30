@@ -1,0 +1,15 @@
+# playwright-bdd generated test files
+.features-gen/
+
+# Cucumber reports
+cucumber-report/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Screenshots and videos from failed tests
+screenshots/
+videos/
