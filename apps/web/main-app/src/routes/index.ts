@@ -201,3 +201,11 @@ export const router = createRouter({
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
 })
+
+// Type registration for type-safe routing
+// This enables autocomplete and type-checking for Link, useNavigate, etc.
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
