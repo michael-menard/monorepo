@@ -1,0 +1,97 @@
+schema: 1
+story: '1.8'
+story_title: 'AppBar Component'
+gate: PASS
+status_reason: 'All 8 ACs verified. Header component provides complete app bar with logo, search, theme toggle, user menu, and mobile responsiveness. 31 tests passing.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-29T20:10:00Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+quality_score: 100
+expires: '2025-12-13T20:10:00Z'
+
+evidence:
+  tests_reviewed: 31
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Logout confirmation dialog prevents accidental sign-out'
+  performance:
+    status: PASS
+    notes: 'Memoized selectors, tree-shaken icons, backdrop-blur with graceful degradation'
+  reliability:
+    status: PASS
+    notes: 'Handles auth state transitions, error handling in signOut'
+  maintainability:
+    status: PASS
+    notes: 'Clean component structure, uses @repo/ui components'
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future: []
+
+verification_summary:
+  component_file: 'apps/web/main-app/src/components/Layout/Header.tsx'
+  component_lines: 255
+  test_file: 'apps/web/main-app/src/components/Layout/__tests__/Header.test.tsx'
+  test_lines: 498
+  features:
+    logo:
+      present: true
+      linked_to_home: true
+      text: 'LEGO MOC Instructions'
+    search:
+      present: true
+      component: 'NavigationSearch'
+      placeholder: 'Search navigation, MOCs, instructions...'
+    theme_toggle:
+      present: true
+      type: 'dropdown'
+      options: ['light', 'dark', 'system']
+      icons: ['Sun', 'Moon', 'Monitor']
+    user_menu:
+      authenticated:
+        - 'Avatar with fallback'
+        - 'User name and email display'
+        - 'Dashboard link'
+        - 'Settings link'
+        - 'Sign out with confirmation'
+      unauthenticated:
+        - 'Sign In button'
+    notifications:
+      badge: true
+      overflow: '99+'
+    mobile:
+      hamburger_menu: true
+      breakpoint: 'md:hidden'
+    positioning:
+      sticky: true
+      backdrop_blur: true
+      z_index: 50
+  ui_components_used:
+    - 'Button'
+    - 'DropdownMenu'
+    - 'Avatar'
+    - 'Badge'
+    - 'AlertDialog'
+    - 'NavigationSearch'
+    - 'EnhancedBreadcrumb'
+  test_results:
+    tests: 31
+    passed: 31
+    failed: 0
+    duration_ms: 47

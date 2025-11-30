@@ -1,0 +1,107 @@
+schema: 1
+story: '1.12'
+story_title: 'Main Layout'
+gate: PASS
+status_reason: 'All 7 ACs verified. RootLayout composes Header, Sidebar, MobileSidebar, Footer, MainArea with proper responsive behavior. 22 tests passing.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-29T21:00:00Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+quality_score: 100
+expires: '2025-12-13T21:00:00Z'
+
+evidence:
+  tests_reviewed: 22
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Layout components are UI-only, no sensitive operations'
+  performance:
+    status: PASS
+    notes: 'CSS transitions for responsive changes, Framer Motion for page transitions'
+  reliability:
+    status: PASS
+    notes: 'Proper component composition, consistent layout structure'
+  maintainability:
+    status: PASS
+    notes: 'Clear separation of concerns, MainAreaContainer and MainAreaHeader helpers'
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future: []
+
+verification_summary:
+  component_files:
+    - file: 'apps/web/main-app/src/components/Layout/RootLayout.tsx'
+      lines: 191
+      description: 'Main layout composition component'
+    - file: 'apps/web/main-app/src/components/Layout/MainArea.tsx'
+      lines: 141
+      description: 'Content area with Outlet and page transitions'
+  test_file: 'apps/web/main-app/src/components/Layout/__tests__/MainArea.test.tsx'
+  composition:
+    provider: 'NavigationProvider wraps entire layout'
+    header: 'Header at top with sticky positioning'
+    sidebar: 'Sidebar fixed left for authenticated users (md:block)'
+    mobile_sidebar: 'MobileSidebar drawer for authenticated users (md:hidden)'
+    content: 'MainArea with flex-1, overflow-auto, md:ml-64'
+    footer: 'Footer at end of content flow'
+  features:
+    viewport:
+      class: 'min-h-screen'
+      purpose: 'Full viewport height (AC: 5)'
+    scrolling:
+      class: 'overflow-auto'
+      component: 'MainArea'
+      purpose: 'Independent content scrolling (AC: 3)'
+    layout:
+      type: 'flexbox'
+      wrapper: 'flex relative'
+      sidebar_position: 'fixed left-0 top-16 bottom-0'
+      content_margin: 'md:ml-64'
+      purpose: 'Sidebar left, content right (AC: 4)'
+    responsive:
+      sidebar_desktop: 'hidden md:block'
+      mobile_drawer: 'md:hidden'
+      content_margin: 'md:ml-64 (none on mobile)'
+      purpose: 'Responsive layout (AC: 6)'
+    children:
+      component: 'Outlet from TanStack Router'
+      wrapper: 'container mx-auto px-4 py-6'
+      purpose: 'Children rendering (AC: 7)'
+    page_transitions:
+      library: 'framer-motion'
+      component: 'AnimatePresence'
+      animation: 'opacity and y translate'
+  helper_components:
+    - name: 'MainAreaContainer'
+      purpose: 'Consistent spacing wrapper (space-y-6)'
+    - name: 'MainAreaHeader'
+      purpose: 'Standard page header with title, description, icon, actions'
+  test_results:
+    tests: 22
+    passed: 22
+    failed: 0
+    duration_ms: 95
+    test_categories:
+      main_area_rendering: 2
+      layout_classes: 4
+      responsive_behavior: 2
+      custom_className: 1
+      container_structure: 1
+      main_area_container: 3
+      main_area_header: 9

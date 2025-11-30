@@ -1,0 +1,86 @@
+schema: 1
+story: '1.7'
+story_title: 'Global UI Slice'
+gate: PASS
+status_reason: 'All 7 ACs verified. globalUISlice provides comprehensive UI state management. 28 tests passing with excellent coverage.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-29T20:05:00Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+quality_score: 100
+expires: '2025-12-13T20:05:00Z'
+
+evidence:
+  tests_reviewed: 28
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'UI state management only - no security concerns'
+  performance:
+    status: PASS
+    notes: 'Flat state structure, efficient selectors'
+  reliability:
+    status: PASS
+    notes: 'resetGlobalUI for clean state reset'
+  maintainability:
+    status: PASS
+    notes: 'Clear separation of sidebar, loading, modal concerns'
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future: []
+
+verification_summary:
+  slice_file: 'apps/web/main-app/src/store/slices/globalUISlice.ts'
+  slice_lines: 124
+  store_integration: 'apps/web/main-app/src/store/index.ts:22'
+  state_fields:
+    sidebar:
+      - 'isOpen: boolean'
+      - 'isCollapsed: boolean'
+    loading:
+      - 'isNavigating: boolean'
+      - 'isPageLoading: boolean'
+    modal:
+      - 'activeModal: string | null'
+      - 'modalProps: Record<string, unknown>'
+  actions_exported:
+    - 'toggleSidebar'
+    - 'setSidebarOpen'
+    - 'setSidebarCollapsed'
+    - 'toggleSidebarCollapsed'
+    - 'setNavigating'
+    - 'setPageLoading'
+    - 'openModal'
+    - 'closeModal'
+    - 'resetGlobalUI'
+  selectors_exported:
+    - 'selectSidebarOpen'
+    - 'selectSidebarCollapsed'
+    - 'selectSidebar'
+    - 'selectIsNavigating'
+    - 'selectIsPageLoading'
+    - 'selectLoading'
+    - 'selectActiveModal'
+    - 'selectModalProps'
+    - 'selectModal'
+    - 'selectIsLoading (computed)'
+  test_results:
+    tests: 28
+    passed: 28
+    failed: 0
+    duration_ms: 7

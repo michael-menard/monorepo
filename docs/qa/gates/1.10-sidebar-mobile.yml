@@ -1,0 +1,106 @@
+schema: 1
+story: '1.10'
+story_title: 'Sidebar Mobile'
+gate: PASS
+status_reason: 'All 8 ACs verified. MobileSidebar provides complete mobile drawer with Framer Motion animations, accessibility, and all close behaviors. 16 tests passing.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-29T20:25:00Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+quality_score: 100
+expires: '2025-12-13T20:25:00Z'
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Navigation drawer is UI-only, no sensitive operations'
+  performance:
+    status: PASS
+    notes: 'GPU-accelerated Framer Motion, useCallback optimization, proper cleanup'
+  reliability:
+    status: PASS
+    notes: 'All close behaviors implemented, body scroll properly managed'
+  maintainability:
+    status: PASS
+    notes: 'Clear AC comments in code, single-responsibility component'
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future: []
+
+verification_summary:
+  component_file: 'apps/web/main-app/src/components/Layout/MobileSidebar.tsx'
+  component_lines: 121
+  test_file: 'apps/web/main-app/src/components/Layout/__tests__/MobileSidebar.test.tsx'
+  test_lines: 276
+  integration_points:
+    header:
+      file: 'apps/web/main-app/src/components/Layout/Header.tsx'
+      trigger: 'toggleSidebar action on hamburger button click (line 87)'
+      visibility: 'md:hidden class on button'
+    root_layout:
+      file: 'apps/web/main-app/src/components/Layout/RootLayout.tsx'
+      render: 'MobileSidebar component for authenticated users (line 145)'
+    global_ui_slice:
+      file: 'apps/web/main-app/src/store/slices/globalUISlice.ts'
+      state: 'selectSidebarOpen, setSidebarOpen'
+  features:
+    animation:
+      library: 'framer-motion'
+      type: 'spring'
+      initial: "x: '-100%'"
+      animate: 'x: 0'
+      stiffness: 300
+      damping: 30
+    backdrop:
+      class: 'bg-black/60 backdrop-blur-sm'
+      z_index: 40
+    drawer:
+      width: 'w-64'
+      z_index: 50
+      position: 'fixed left-0 top-0 bottom-0'
+    close_behaviors:
+      - 'Backdrop click (handleBackdropClick)'
+      - 'Escape key (handleKeyDown with useCallback)'
+      - 'Navigation (useEffect on location.pathname)'
+      - 'Close button (X icon, aria-label)'
+    accessibility:
+      role: 'dialog'
+      aria_modal: 'true'
+      aria_label: 'Navigation menu'
+      close_button_label: 'Close navigation menu'
+    responsive:
+      breakpoint: 'md:hidden'
+      applies_to: ['backdrop', 'drawer']
+    scroll_lock:
+      method: 'document.body.style.overflow'
+      cleanup: 'useEffect cleanup function'
+  test_results:
+    tests: 16
+    passed: 16
+    failed: 0
+    duration_ms: 80
+    test_categories:
+      visibility: 3
+      backdrop_behavior: 2
+      close_button: 2
+      escape_key: 2
+      body_scroll_lock: 2
+      responsive_visibility: 2
+      drawer_styling: 3

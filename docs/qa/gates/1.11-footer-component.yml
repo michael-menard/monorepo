@@ -1,0 +1,105 @@
+schema: 1
+story: '1.11'
+story_title: 'Footer Component'
+gate: PASS
+status_reason: 'All 6 ACs verified. Footer provides polished 4-column layout with LEGO theming, copyright, version, legal links, responsive design. 20 tests passing.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-29T20:30:00Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+quality_score: 100
+expires: '2025-12-13T20:30:00Z'
+
+evidence:
+  tests_reviewed: 20
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'External links have rel="noopener noreferrer"'
+  performance:
+    status: PASS
+    notes: 'GPU-accelerated Framer Motion, simple Redux selector'
+  reliability:
+    status: PASS
+    notes: 'Graceful fallbacks for VITE_APP_VERSION and VITE_APP_ENVIRONMENT'
+  maintainability:
+    status: PASS
+    notes: '4-column grid with clear sections, dark mode support'
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future: []
+
+verification_summary:
+  component_file: 'apps/web/main-app/src/components/Layout/Footer.tsx'
+  component_lines: 205
+  test_file: 'apps/web/main-app/src/components/Layout/__tests__/Footer.test.tsx'
+  test_lines: 421
+  features:
+    visibility:
+      authenticated_only: true
+      reason: 'Keep auth pages clean'
+    layout:
+      type: 'grid'
+      mobile: 'grid-cols-1'
+      desktop: 'md:grid-cols-4'
+      sections:
+        - 'Brand (with LEGO stud decorations)'
+        - 'Quick Links (Gallery, Wishlist, Instructions, Profile)'
+        - 'Support (Help Center, Contact Us, Feedback, Report Bug)'
+        - 'Legal (Privacy Policy, Terms of Service, Cookie Policy)'
+    bottom_bar:
+      layout: 'flex-col sm:flex-row'
+      content:
+        - 'Copyright with dynamic year'
+        - 'Version (from VITE_APP_VERSION)'
+        - 'Environment (from VITE_APP_ENVIRONMENT)'
+    copyright:
+      format: '© {year} LEGO MOC Instructions. All rights reserved.'
+      year_source: 'new Date().getFullYear()'
+    version:
+      source: 'import.meta.env.VITE_APP_VERSION'
+      fallback: '1.0.0'
+    environment:
+      source: 'import.meta.env.VITE_APP_ENVIRONMENT'
+      fallback: 'development'
+    legal_links:
+      - { text: 'Privacy Policy', href: '/privacy' }
+      - { text: 'Terms of Service', href: '/terms' }
+      - { text: 'Cookie Policy', href: '/cookies' }
+    positioning:
+      method: 'In content flow (not fixed)'
+      class: 'No fixed/sticky positioning'
+    styling:
+      gradient: 'bg-gradient-to-r from-slate-50 to-sky-50'
+      dark_mode: 'dark:from-slate-950 dark:to-sky-950'
+      animations: 'Framer Motion legoStudVariants'
+  test_results:
+    tests: 20
+    passed: 20
+    failed: 0
+    duration_ms: 85
+    test_categories:
+      visibility: 2
+      copyright: 1
+      version_display: 2
+      legal_links: 3
+      quick_links: 3
+      support_links: 2
+      responsive_layout: 2
+      branding: 2
+      section_headings: 3

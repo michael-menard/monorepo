@@ -1,0 +1,88 @@
+schema: 1
+story: '1.6'
+story_title: 'Theme Slice'
+gate: PASS
+status_reason: 'All 8 ACs verified. themeSlice and ThemeProvider work together for complete theme system. 16 tests passing.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-29T20:00:00Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+quality_score: 95
+expires: '2025-12-13T20:00:00Z'
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Theme preferences are not sensitive data'
+  performance:
+    status: PASS
+    notes: 'Efficient matchMedia listener with proper cleanup'
+  reliability:
+    status: PASS
+    notes: 'SSR-safe with typeof window checks'
+  maintainability:
+    status: PASS
+    notes: 'Clean separation: slice (72 lines) for Redux, provider (92 lines) for React'
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Consider adding dedicated themeSlice unit tests (low priority)'
+      refs: ['src/store/slices/themeSlice.ts']
+
+verification_summary:
+  slice_file: 'apps/web/main-app/src/store/slices/themeSlice.ts'
+  slice_lines: 72
+  provider_file: 'packages/core/ui/src/providers/ThemeProvider.tsx'
+  provider_lines: 92
+  theme_types:
+    - 'light'
+    - 'dark'
+    - 'system'
+  state_fields:
+    - 'theme: Theme'
+    - 'resolvedTheme: light | dark'
+    - 'systemTheme: light | dark'
+  actions_exported:
+    - 'setTheme'
+    - 'setSystemTheme'
+    - 'initializeTheme'
+  selectors_exported:
+    - 'selectTheme'
+    - 'selectResolvedTheme'
+    - 'selectSystemTheme'
+  localStorage_key: 'main-app-theme'
+  features:
+    ssr_safe: true
+    system_preference_listener: true
+    dark_class_application: true
+  test_results:
+    ThemeProvider_test:
+      tests: 8
+      passed: 8
+    theme_integration_test:
+      tests: 3
+      passed: 3
+    ThemeToggle_test:
+      tests: 5
+      passed: 5
+    total:
+      tests: 16
+      passed: 16
+      failed: 0
