@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
 import { OTPInput } from '@/components/Auth/OTPInput'
 import { ResendCodeButton } from '@/components/Auth/ResendCodeButton'
 import { useAuth } from '@/services/auth/AuthProvider'

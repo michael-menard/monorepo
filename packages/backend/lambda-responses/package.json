@@ -1,0 +1,49 @@
+{
+  "name": "@repo/lambda-responses",
+  "version": "1.0.0",
+  "description": "Standardized error classes and response builders for Lambda functions",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
+    },
+    "./responses": {
+      "types": "./dist/responses.d.ts",
+      "default": "./dist/responses.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "lambda",
+    "api-gateway",
+    "errors",
+    "responses",
+    "aws"
+  ]
+}

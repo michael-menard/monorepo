@@ -7,6 +7,7 @@ import { Sidebar } from '../Sidebar'
 import { authSlice } from '../../../store/slices/authSlice'
 import { themeSlice } from '../../../store/slices/themeSlice'
 import { navigationSlice } from '../../../store/slices/navigationSlice'
+import { globalUISlice } from '../../../store/slices/globalUISlice'
 
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', async () => {
@@ -33,14 +34,36 @@ describe('Navigation Integration', () => {
   let store: ReturnType<typeof configureStore>
 
   const createMockStore = (initialState = {}) => {
+    const baseNavigationState = navigationSlice.getInitialState()
+    const baseAuthState = authSlice.getInitialState()
+    const baseThemeState = themeSlice.getInitialState()
+    const baseGlobalUIState = globalUISlice.getInitialState()
+    const defaultGlobalUIState = {
+      ...baseGlobalUIState,
+      sidebar: {
+        ...baseGlobalUIState.sidebar,
+        // Start closed so header toggle behavior is visible in tests
+        isOpen: false,
+      },
+    }
+
+    const overrides = initialState as {
+      auth?: Partial<typeof baseAuthState>
+      theme?: Partial<typeof baseThemeState>
+      navigation?: Partial<typeof baseNavigationState>
+      globalUI?: Partial<typeof defaultGlobalUIState>
+    }
+
     return configureStore({
       reducer: {
         auth: authSlice.reducer,
         theme: themeSlice.reducer,
         navigation: navigationSlice.reducer,
+        globalUI: globalUISlice.reducer,
       },
       preloadedState: {
         auth: {
+          ...baseAuthState,
           isAuthenticated: true,
           isLoading: false,
           user: {
@@ -48,15 +71,17 @@ describe('Navigation Integration', () => {
             email: 'test@example.com',
             name: 'Test User',
           },
-          tokens: null,
-          error: null,
+          ...overrides.auth,
         },
         theme: {
+          ...baseThemeState,
           theme: 'system',
           resolvedTheme: 'light',
           systemTheme: 'light',
+          ...overrides.theme,
         },
         navigation: {
+          ...baseNavigationState,
           primaryNavigation: [
             { id: 'home', label: 'Home', href: '/', icon: 'Home' },
             { id: 'gallery', label: 'Gallery', href: '/gallery', icon: 'Images' },
@@ -73,8 +98,12 @@ describe('Navigation Integration', () => {
           isMobileMenuOpen: false,
           breadcrumbs: [],
           isLoading: false,
+          ...overrides.navigation,
         },
-        ...initialState,
+        globalUI: {
+          ...defaultGlobalUIState,
+          ...overrides.globalUI,
+        },
       },
     })
   }
@@ -99,15 +128,15 @@ describe('Navigation Integration', () => {
     it('mobile menu button in header controls sidebar visibility', () => {
       renderNavigation()
 
-      // Initially mobile menu should be closed
-      expect(store.getState().navigation.isMobileMenuOpen).toBe(false)
+      // Initially mobile sidebar should be closed
+      expect(store.getState().globalUI.sidebar.isOpen).toBe(false)
 
       // Click mobile menu button in header
       const mobileMenuButton = screen.getByRole('button', { name: /toggle navigation menu/i })
       fireEvent.click(mobileMenuButton)
 
-      // Mobile menu should now be open
-      expect(store.getState().navigation.isMobileMenuOpen).toBe(true)
+      // Mobile sidebar should now be open
+      expect(store.getState().globalUI.sidebar.isOpen).toBe(true)
     })
 
     it('both header and sidebar show same navigation items', () => {
@@ -123,7 +152,8 @@ describe('Navigation Integration', () => {
 
       // Sidebar should show all navigation items
       expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /gallery/i })).toBeInTheDocument()
+      // Use exact match for Gallery to avoid also matching "MOC Gallery"
+      expect(screen.getByRole('link', { name: /^gallery$/i })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /wishlist/i })).toBeInTheDocument()
       // Use more specific selector for MOC Instructions to avoid matching the header logo
       expect(screen.getByRole('link', { name: /^moc instructions$/i })).toBeInTheDocument()
@@ -162,9 +192,13 @@ describe('Navigation Integration', () => {
       // Initially light theme
       expect(store.getState().theme.resolvedTheme).toBe('light')
 
-      // Click theme toggle
+      // Open theme dropdown
       const themeButton = screen.getByRole('button', { name: /toggle theme/i })
       fireEvent.click(themeButton)
+
+      // Select "Dark" theme from menu
+      const darkOption = screen.getByText(/dark/i)
+      fireEvent.click(darkOption)
 
       // Theme should change to dark
       expect(store.getState().theme.theme).toBe('dark')

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { cn } from '@repo/ui/lib/utils'
+import { cn } from '@repo/app-component-library'
 import { selectAuth } from '@/store/slices/authSlice'
 
 // LEGO stud animation variants

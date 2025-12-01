@@ -1,5 +1,5 @@
 import React from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/app-component-library'
 import { AlertCircle, FileX, File } from 'lucide-react'
 import type { FileItem, FileListConfig, ResponsiveColumns } from '../schemas'
 import { formatFileSize, formatDate, getFileIcon } from '../utils'

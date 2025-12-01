@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useSelector, useDispatch } from 'react-redux'
 import { logger } from '@repo/logger'
-import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/ui'
+import { Button, Avatar, AvatarFallback, AvatarImage } from '@repo/app-component-library'
 import {
   Heart,
   LogOut,
@@ -14,7 +14,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
-import { cn } from '@repo/ui/lib/utils'
+import { cn } from '@repo/app-component-library'
 import { useNavigation } from './NavigationProvider'
 import { selectAuth } from '@/store/slices/authSlice'
 import {

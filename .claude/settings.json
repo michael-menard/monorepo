@@ -1,28 +1,18 @@
 {
   "allow": [
-    // === FILE READING - ALL AGENTS ===
-    // Documentation and BMAD core files
     "Read(./docs/**)",
     "Read(./.bmad-core/**)",
     "Read(./.bmad-infrastructure-devops/**)",
     "Read(./README.md)",
     "Read(./package.json)",
     "Read(./tsconfig.json)",
-
-    // Source code reading (all agents may need context)
     "Read(./apps/**)",
     "Read(./packages/**)",
-
-    // === PM AGENT - Product Manager ===
-    // PRD and planning document creation/editing
     "Write(./docs/prd.md)",
     "Write(./docs/project-brief.md)",
     "Write(./docs/prd/**)",
     "Edit(./docs/prd.md)",
     "Edit(./docs/prd/**)",
-
-    // === ARCHITECT AGENT ===
-    // Architecture document creation/editing
     "Write(./docs/architecture.md)",
     "Write(./docs/fullstack-architecture.md)",
     "Write(./docs/architecture/**)",
@@ -30,9 +20,6 @@
     "Edit(./docs/architecture/**)",
     "WebSearch",
     "WebFetch(domain:github.com)",
-
-    // === PO AGENT - Product Owner ===
-    // Document sharding and validation
     "Write(./docs/prd/**)",
     "Write(./docs/architecture/**)",
     "Write(./docs/epics/**)",
@@ -40,23 +27,14 @@
     "Edit(./docs/architecture/**)",
     "Bash(md-tree explode*)",
     "Bash(npx @kayvan/markdown-tree-parser*)",
-
-    // === SM AGENT - Scrum Master ===
-    // Story creation and management
     "Write(./docs/stories/**)",
     "Edit(./docs/stories/**)",
-
-    // === DEV AGENT - Developer ===
-    // Full code editing and file operations
     "Write(./apps/**)",
     "Write(./packages/**)",
     "Edit(./apps/**)",
     "Edit(./packages/**)",
     "Write(./docs/stories/**)",
     "Edit(./docs/stories/**)",
-
-    // === QA AGENT - Quality Assurance ===
-    // QA assessments, gates, and test file editing
     "Write(./docs/qa/**)",
     "Edit(./docs/qa/**)",
     "Edit(./apps/**/*.test.*)",
@@ -67,8 +45,6 @@
     "Edit(./packages/**/test/**)",
     "Edit(./apps/**/__tests__/**)",
     "Edit(./packages/**/__tests__/**)",
-
-    // === GIT OPERATIONS - ALL AGENTS ===
     "Bash(git status)",
     "Bash(git log*)",
     "Bash(git diff*)",
@@ -78,8 +54,6 @@
     "Bash(git checkout*)",
     "Bash(git branch*)",
     "Bash(git reset --soft*)",
-
-    // === BUILD & TEST OPERATIONS - DEV & QA ===
     "Bash(pnpm build*)",
     "Bash(pnpm turbo build*)",
     "Bash(pnpm test*)",
@@ -90,13 +64,9 @@
     "Bash(npm run build*)",
     "Bash(npm run test*)",
     "Bash(npm test*)",
-
-    // === PACKAGE MANAGEMENT - DEV ===
     "Bash(pnpm add*)",
     "Bash(pnpm install*)",
     "Bash(npm install*)",
-
-    // === GITHUB OPERATIONS - ALL AGENTS ===
     "Bash(gh issue view*)",
     "Bash(gh issue list*)",
     "Bash(gh issue create*)",
@@ -108,19 +78,13 @@
     "Bash(gh label list*)",
     "Bash(gh label create*)",
     "WebFetch(domain:github.com)",
-
-    // === UTILITY COMMANDS ===
     "Bash(ls*)",
     "Bash(pwd)",
     "Bash(cat*)",
     "Bash(chmod*)",
     "Bash(mkdir*)",
     "Bash(./scripts/create-github-issues.sh*)",
-
-    // === DATABASE QUERIES (READ-ONLY) ===
     "Bash(npx drizzle-kit studio*)",
-
-    // === LINTING & FORMATTING ===
     "Bash(eslint*)",
     "Bash(prettier*)",
     "Bash(pnpm lint*)",
@@ -128,31 +92,20 @@
   ],
 
   "ask": [
-    // === DESTRUCTIVE GIT OPERATIONS ===
-    // Require approval for dangerous git operations
     "Bash(git reset --hard*)",
     "Bash(git push --force*)",
     "Bash(git push -f*)",
     "Bash(git clean*)",
     "Bash(git rebase*)",
-
-    // === DESTRUCTIVE FILE OPERATIONS ===
     "Bash(rm -rf*)",
     "Bash(rm *)",
-
-    // === DATABASE MIGRATIONS & SCHEMA CHANGES ===
-    // Require approval for schema changes
     "Bash(npx drizzle-kit push*)",
     "Bash(npx drizzle-kit migrate*)",
     "Bash(npx drizzle-kit drop*)",
     "Bash(npx drizzle-kit generate*)",
-
-    // === DEPLOYMENT OPERATIONS ===
     "Bash(sst deploy*)",
     "Bash(sst remove*)",
     "Bash(aws*)",
-
-    // === CONFIGURATION FILE CHANGES ===
     "Edit(./.claude/**)",
     "Edit(./.bmad-core/core-config.yaml)",
     "Edit(./package.json)",
@@ -162,35 +115,23 @@
   ],
 
   "deny": [
-    // === SENSITIVE FILES - COMPLETELY BLOCKED ===
-    // Environment files
     "Read(./.env)",
     "Read(./.env.*)",
     "Write(./.env)",
     "Write(./.env.*)",
     "Edit(./.env)",
     "Edit(./.env.*)",
-
-    // Secrets directories
     "Read(./secrets/**)",
     "Write(./secrets/**)",
     "Edit(./secrets/**)",
-
-    // AWS credentials
     "Read(~/.aws/**)",
     "Write(~/.aws/**)",
     "Edit(~/.aws/**)",
-
-    // SSH keys
     "Read(~/.ssh/**)",
     "Write(~/.ssh/**)",
     "Edit(~/.ssh/**)",
-
-    // Node modules (too large, unnecessary)
     "Write(./node_modules/**)",
     "Edit(./node_modules/**)",
-
-    // Git internal files
     "Write(./.git/**)",
     "Edit(./.git/**)"
   ]

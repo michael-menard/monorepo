@@ -1,5 +1,5 @@
 {
-  "name": "@monorepo/charts",
+  "name": "@repo/charts",
   "version": "1.0.0",
   "description": "Reusable D3.js chart components",
   "main": "dist/index.js",

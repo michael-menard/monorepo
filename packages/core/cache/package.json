@@ -84,7 +84,7 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
-    "@repo/ui": "workspace:*",
+    "@repo/app-component-library": "workspace:*",
     "zod": "^3.25.76",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

@@ -4,15 +4,21 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
-import { Button } from '@repo/ui/button'
-import { Input } from '@repo/ui/input'
-import { Label } from '@repo/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Alert, AlertDescription } from '@repo/ui/alert'
-import { Checkbox } from '@repo/ui/checkbox'
+import {
+  Button,
+  Input,
+  Label,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Alert,
+  AlertDescription,
+  Checkbox,
+  cn,
+} from '@repo/app-component-library'
 import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react'
-import { cn } from '@repo/ui/lib/utils'
-import { AuthLayout } from '@/components/Layout/RootLayout'
 import { useAuth, type SocialProvider } from '@/services/auth/AuthProvider'
 import { useNavigation } from '@/components/Navigation/NavigationProvider'
 
@@ -177,13 +183,14 @@ export function SignupPage() {
   }
 
   return (
-    <AuthLayout>
+    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
-        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm dark:bg-slate-900/95">
           <CardHeader className="text-center pb-6">
             {/* LEGO-inspired brand header */}
             <motion.div
@@ -218,7 +225,9 @@ export function SignupPage() {
               </span>
             </motion.div>
 
-            <CardTitle className="text-2xl font-bold text-slate-800">Create your account</CardTitle>
+            <CardTitle className="text-2xl font-bold text-slate-800 dark:text-teal-400">
+              Create your account
+            </CardTitle>
             <CardDescription className="text-slate-600">
               Join our community of LEGO builders and start sharing your MOCs
             </CardDescription>
@@ -256,7 +265,10 @@ export function SignupPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Name Field */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-slate-700">
+                <Label
+                  htmlFor="name"
+                  className="text-sm font-medium text-slate-700 dark:text-slate-400"
+                >
                   Full Name
                 </Label>
                 <div className="relative">
@@ -266,7 +278,7 @@ export function SignupPage() {
                     type="text"
                     placeholder="Enter your full name"
                     className={cn(
-                      'pl-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
+                      'pl-10 h-11 border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-sky-500 focus:ring-sky-500',
                       errors.name && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('name')}
@@ -286,7 +298,10 @@ export function SignupPage() {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium text-slate-700 dark:text-slate-400"
+                >
                   Email Address
                 </Label>
                 <div className="relative">
@@ -296,7 +311,7 @@ export function SignupPage() {
                     type="email"
                     placeholder="Enter your email"
                     className={cn(
-                      'pl-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
+                      'pl-10 h-11 border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-sky-500 focus:ring-sky-500',
                       errors.email && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('email')}
@@ -316,7 +331,10 @@ export function SignupPage() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+                <Label
+                  htmlFor="password"
+                  className="text-sm font-medium text-slate-700 dark:text-slate-400"
+                >
                   Password
                 </Label>
                 <div className="relative">
@@ -326,7 +344,7 @@ export function SignupPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Create a strong password"
                     className={cn(
-                      'pl-10 pr-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
+                      'pl-10 pr-10 h-11 border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-sky-500 focus:ring-sky-500',
                       errors.password && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('password')}
@@ -335,7 +353,7 @@ export function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -380,7 +398,10 @@ export function SignupPage() {
 
               {/* Confirm Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-sm font-medium text-slate-700 dark:text-slate-400"
+                >
                   Confirm Password
                 </Label>
                 <div className="relative">
@@ -390,7 +411,7 @@ export function SignupPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="Confirm your password"
                     className={cn(
-                      'pl-10 pr-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
+                      'pl-10 pr-10 h-11 border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-sky-500 focus:ring-sky-500',
                       errors.confirmPassword &&
                         'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
@@ -400,7 +421,7 @@ export function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >
                     {showConfirmPassword ? (
@@ -427,21 +448,27 @@ export function SignupPage() {
                   id="acceptTerms"
                   {...register('acceptTerms')}
                   className={cn(
-                    'mt-1 border-slate-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500',
+                    'mt-1 border-slate-300 dark:border-slate-600 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500',
                     errors.acceptTerms && 'border-red-300',
                   )}
                 />
                 <div className="space-y-1">
                   <Label
                     htmlFor="acceptTerms"
-                    className="text-sm text-slate-700 cursor-pointer leading-relaxed"
+                    className="text-sm text-slate-700 dark:text-slate-300 cursor-pointer leading-relaxed"
                   >
                     I agree to the{' '}
-                    <Link to="/terms" className="text-sky-600 hover:text-sky-500 underline">
+                    <Link
+                      to="/terms"
+                      className="text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300 underline"
+                    >
                       Terms of Service
                     </Link>{' '}
                     and{' '}
-                    <Link to="/privacy" className="text-sky-600 hover:text-sky-500 underline">
+                    <Link
+                      to="/privacy"
+                      className="text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300 underline"
+                    >
                       Privacy Policy
                     </Link>
                   </Label>
@@ -491,7 +518,9 @@ export function SignupPage() {
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-slate-500">Or sign up with</span>
+                <span className="px-4 bg-white dark:bg-slate-900 text-slate-500">
+                  Or sign up with
+                </span>
               </div>
             </div>
 
@@ -503,7 +532,7 @@ export function SignupPage() {
                   variant="outline"
                   onClick={() => handleSocialSignUp('Google')}
                   disabled={isLoading}
-                  className="w-full h-11 border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 gap-2"
+                  className="w-full h-11 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 gap-2"
                   aria-label="Sign up with Google"
                 >
                   <GoogleIcon />
@@ -517,7 +546,7 @@ export function SignupPage() {
                   variant="outline"
                   onClick={() => handleSocialSignUp('Facebook')}
                   disabled={isLoading}
-                  className="w-full h-11 border-slate-300 bg-white text-[#1877F2] hover:bg-slate-100 gap-2"
+                  className="w-full h-11 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[#1877F2] dark:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700 gap-2"
                   aria-label="Sign up with Facebook"
                 >
                   <FacebookIcon />
@@ -531,7 +560,7 @@ export function SignupPage() {
                   variant="outline"
                   onClick={() => handleSocialSignUp('Apple')}
                   disabled={isLoading}
-                  className="w-full h-11 border-slate-300 bg-white text-slate-900 hover:bg-slate-100 gap-2"
+                  className="w-full h-11 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 gap-2"
                   aria-label="Sign up with Apple"
                 >
                   <AppleIcon />
@@ -541,12 +570,12 @@ export function SignupPage() {
             </div>
 
             {/* Sign In Link */}
-            <div className="text-center pt-4 border-t border-slate-200">
-              <p className="text-sm text-slate-600">
+            <div className="text-center pt-4 border-t border-slate-200 dark:border-slate-700">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Already have an account?{' '}
                 <Link
                   to="/login"
-                  className="text-sky-600 hover:text-sky-500 font-medium transition-colors"
+                  className="text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300 font-medium transition-colors"
                   onClick={() => trackNavigation('signin_link', { source: 'signup_page' })}
                 >
                   Sign in here
@@ -559,7 +588,7 @@ export function SignupPage() {
               <Button
                 variant="outline"
                 asChild
-                className="border-slate-200 text-slate-600 hover:bg-slate-50"
+                className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <Link
                   to="/"
@@ -573,6 +602,6 @@ export function SignupPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </AuthLayout>
+    </div>
   )
 }

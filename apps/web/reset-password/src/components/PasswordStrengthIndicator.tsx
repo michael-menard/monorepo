@@ -1,4 +1,4 @@
-import { cn } from '@repo/ui'
+import { cn } from '@repo/app-component-library'
 
 interface PasswordStrength {
   score: number // 0-4

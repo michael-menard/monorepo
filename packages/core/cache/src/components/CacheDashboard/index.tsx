@@ -9,11 +9,20 @@
  * - Cache management controls
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Button } from '@repo/ui/button'
-import { Badge } from '@repo/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs'
-import { Progress } from '@repo/ui/progress'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button,
+  Badge,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Progress,
+} from '@repo/app-component-library'
 import {
   BarChart3,
   TrendingUp,

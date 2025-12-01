@@ -1,0 +1,17 @@
+{
+  "name": "LEGO MOC Instructions",
+  "short_name": "MOC Instructions",
+  "description": "Build, Share, and Discover Amazing LEGO Creations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F1ED",
+  "theme_color": "#1B5E6D",
+  "icons": [
+    {
+      "src": "/lego-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+

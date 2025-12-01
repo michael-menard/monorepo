@@ -23,7 +23,7 @@ vi.mock('web-vitals', () => ({
 }))
 
 // Mock UI components with direct imports (no barrel files)
-vi.mock('@repo/ui/card', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Card: ({ children, className }: any) => (
     <div className={className} data-testid="card">
       {children}
@@ -35,7 +35,7 @@ vi.mock('@repo/ui/card', () => ({
   CardTitle: ({ children }: any) => <div data-testid="card-title">{children}</div>,
 }))
 
-vi.mock('@repo/ui/button', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, onClick, className, ...props }: any) => (
     <button onClick={onClick} className={className} {...props}>
       {children}
@@ -43,7 +43,7 @@ vi.mock('@repo/ui/button', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/badge', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Badge: ({ children, className }: any) => (
     <span className={className} data-testid="badge">
       {children}

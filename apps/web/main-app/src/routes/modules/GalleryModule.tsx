@@ -1,10 +1,22 @@
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Button } from '@repo/ui/button'
-import { Input } from '@repo/ui/input'
-import { Badge } from '@repo/ui/badge'
-import { LoadingSpinner } from '@repo/ui/loading-spinner'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
+import { Button } from '@repo/app-component-library'
+import { Input } from '@repo/app-component-library'
+import { Badge } from '@repo/app-component-library'
+import { LoadingSpinner } from '@repo/app-component-library'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@repo/app-component-library'
 import { Images, Upload, Search, Grid, TrendingUp, Clock } from 'lucide-react'
 import { useEnhancedGallerySearchQuery, useGetEnhancedGalleryStatsQuery } from '@/store'
 

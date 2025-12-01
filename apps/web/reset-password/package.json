@@ -27,7 +27,7 @@
   "dependencies": {
     "@hookform/resolvers": "5.2.2",
     "@repo/logger": "workspace:*",
-    "@repo/ui": "workspace:*",
+    "@repo/app-component-library": "workspace:*",
     "aws-amplify": "6.15.7",
     "framer-motion": "12.23.24",
     "lucide-react": "^0.476.0",

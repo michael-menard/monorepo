@@ -169,7 +169,7 @@ export type GalleryAlbum = z.infer<typeof GalleryAlbumSchema>
  */
 
 // Re-export types from the package
-export type { ProcessedImage, ImageProcessingOptions } from '@monorepo/image-processing'
+export type { ProcessedImage, ImageProcessingOptions } from '@repo/image-processing'
 
 // Zod validation schemas for runtime validation
 export const ImageFormatSchema = z.enum(['webp', 'jpeg', 'png'])

@@ -3,7 +3,7 @@ import { useLocation } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
-import { Button } from '@repo/ui/button'
+import { Button } from '@repo/app-component-library'
 import { Sidebar } from './Sidebar'
 import { selectSidebarOpen, setSidebarOpen } from '@/store/slices/globalUISlice'
 

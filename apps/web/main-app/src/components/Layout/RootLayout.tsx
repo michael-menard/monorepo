@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useLocation } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { LoadingSpinner } from '@repo/ui/loading-spinner'
-import { cn } from '@repo/ui/lib/utils'
+import { LoadingSpinner } from '@repo/app-component-library'
+import { cn } from '@repo/app-component-library'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
+import { PageTransitionSpinner } from '../PageTransitionSpinner/PageTransitionSpinner'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { MobileSidebar } from './MobileSidebar'
@@ -13,6 +14,8 @@ import { MainArea } from './MainArea'
 import { setActiveRoute } from '@/store/slices/navigationSlice'
 import { selectAuth } from '@/store/slices/authSlice'
 import { AuthProvider } from '@/services/auth/AuthProvider'
+import { useTokenRefresh } from '@/hooks/useTokenRefresh'
+import { useNavigationSync } from '@/hooks/useNavigationSync'
 
 // LEGO brick building animation for loading states
 const legoBrickVariants = {
@@ -46,6 +49,14 @@ function RootLayoutContent() {
   const location = useLocation()
   const auth = useSelector(selectAuth)
   const [isPageTransitioning, setIsPageTransitioning] = useState(false)
+
+  // Sync router navigation state with Redux (Story 1.31)
+  // Must be inside RouterProvider context
+  useNavigationSync()
+
+  // Automatically refresh tokens before they expire (Story 1.28)
+  // Must be inside AuthProvider context
+  useTokenRefresh()
 
   // Update active route when location changes with smooth transitions
   useEffect(() => {
@@ -123,6 +134,9 @@ function RootLayoutContent() {
   return (
     <NavigationProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
+        {/* Page transition spinner - shows during route navigation */}
+        <PageTransitionSpinner />
+
         {/* Header with enhanced styling */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}

@@ -1,0 +1,194 @@
+# Story 1.21: Error Boundary
+
+## Status
+
+Ready for Review
+
+## Story
+
+**As a** user,
+**I want** errors to be caught gracefully,
+**so that** I see a friendly message instead of a broken page.
+
+## Acceptance Criteria
+
+1. ✅ ErrorBoundary component exists
+2. ✅ Catches JavaScript errors in child tree
+3. ✅ Displays user-friendly error message
+4. ✅ "Try Again" button to retry/reload
+5. ✅ Logs errors for debugging
+6. ✅ Wraps main content area
+
+## Tasks / Subtasks
+
+- [x] **Task 1: Verify Component Exists** (AC: 1)
+  - [x] Check components/ErrorBoundary/ErrorBoundary.tsx
+  - [x] Review current implementation
+
+- [x] **Task 2: Error Catching** (AC: 2)
+  - [x] Implement componentDidCatch or use react-error-boundary
+  - [x] Catch rendering errors
+  - [x] Handle async errors where possible
+
+- [x] **Task 3: Error UI** (AC: 3-4)
+  - [x] Design friendly error message
+  - [x] Add "Try Again" button
+  - [x] Optionally show error details in dev
+  - [x] Use brand styling
+
+- [x] **Task 4: Logging** (AC: 5)
+  - [x] Log to @repo/logger
+  - [x] Include error stack, component stack
+  - [x] Consider error reporting service
+
+- [x] **Task 5: Integration** (AC: 6)
+  - [x] Wrap Outlet in RootLayout
+  - [x] Or use router errorComponent
+
+## File List
+
+### Modified Files
+- `apps/web/main-app/src/components/ErrorBoundary/ErrorBoundary.tsx` - Fixed imports to use @repo/ui barrel export, added RouteErrorComponent for router integration
+- `apps/web/main-app/src/routes/index.ts` - Added errorComponent to root route configuration
+
+### Created Files
+- `apps/web/main-app/src/components/ErrorBoundary/__tests__/ErrorBoundary.test.tsx` - Comprehensive test suite (26 tests)
+
+## Dev Notes
+
+### Existing Implementation
+
+**File:** `apps/web/main-app/src/components/ErrorBoundary/ErrorBoundary.tsx`
+
+### Class Component Pattern
+
+```typescript
+interface State {
+  hasError: boolean
+  error: Error | null
+}
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  state = { hasError: false, error: null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logger.error('ErrorBoundary caught error', { error, errorInfo })
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null })
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback onRetry={this.handleRetry} />
+    }
+    return this.props.children
+  }
+}
+```
+
+### Error Fallback UI
+
+```typescript
+function ErrorFallback({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh]">
+      <AlertTriangle className="h-12 w-12 text-destructive" />
+      <h2 className="mt-4 text-xl font-semibold">Something went wrong</h2>
+      <p className="text-muted-foreground">We're sorry, an error occurred.</p>
+      <Button onClick={onRetry} className="mt-4">
+        Try Again
+      </Button>
+    </div>
+  )
+}
+```
+
+### TanStack Router Integration
+
+```typescript
+const rootRoute = createRootRoute({
+  component: RootLayout,
+  errorComponent: ErrorFallback,
+})
+```
+
+### Testing
+
+- Test error boundary catches errors
+- Test fallback UI renders
+- Test retry button resets state
+- Test logging is called
+
+## Story Wrap Up
+
+### Summary
+The ErrorBoundary component was already largely implemented. This story verified the implementation, fixed coding standard violations (import paths), added TanStack Router integration via `RouteErrorComponent`, and created a comprehensive test suite.
+
+### Key Changes Made
+1. **Fixed imports** - Changed from individual path imports (`@repo/ui/button`, `@repo/ui/card`) to barrel export (`@repo/ui`)
+2. **Added RouteErrorComponent** - Functional component for TanStack Router's `errorComponent` prop
+3. **Router integration** - Added `errorComponent: RouteErrorComponent` to root route in `routes/index.ts`
+4. **Comprehensive test suite** - 26 tests covering all acceptance criteria
+
+### Model Used
+Claude claude-opus-4-5-20251101 (Opus 4.5)
+
+### Technical Decisions
+- Used class component for ErrorBoundary (only acceptable class pattern per coding standards, as React requires it for error boundaries)
+- Created separate `RouteErrorComponent` functional component for router integration
+- Error details only shown in development mode (`import.meta.env.DEV`)
+- Logs use `@repo/logger` (never console.log per coding standards)
+
+### DoD Checklist
+
+1. **Requirements Met:**
+   - [x] All functional requirements specified in the story are implemented
+   - [x] All acceptance criteria defined in the story are met
+
+2. **Coding Standards & Project Structure:**
+   - [x] All new/modified code strictly adheres to `Operational Guidelines`
+   - [x] All new/modified code aligns with `Project Structure`
+   - [x] Adherence to `Tech Stack` for technologies/versions used
+   - [N/A] Adherence to `Api Reference` and `Data Models` (no API changes)
+   - [x] Basic security best practices applied
+   - [x] No new linter errors or warnings introduced
+   - [x] Code is well-commented where necessary
+
+3. **Testing:**
+   - [x] All required unit tests implemented (26 tests)
+   - [N/A] Integration tests (component is UI-only)
+   - [x] All tests pass successfully
+   - [x] Test coverage meets project standards
+
+4. **Functionality & Verification:**
+   - [x] Functionality verified by running tests
+   - [x] Edge cases and error conditions handled
+
+5. **Story Administration:**
+   - [x] All tasks within the story file are marked as complete
+   - [x] Clarifications documented in story file
+   - [x] Story wrap up section completed
+
+6. **Dependencies, Build & Configuration:**
+   - [x] Project builds successfully without errors
+   - [x] Project linting passes
+   - [N/A] No new dependencies added
+   - [N/A] No new environment variables
+
+7. **Documentation:**
+   - [x] Code has JSDoc comments for public APIs
+   - [N/A] User-facing documentation (internal component)
+   - [N/A] Technical documentation (no architectural changes)
+
+## Change Log
+
+| Date       | Version | Description   | Author   |
+| ---------- | ------- | ------------- | -------- |
+| 2025-11-28 | 0.1     | Initial draft | SM Agent |
+| 2025-11-30 | 1.0     | Implementation complete - Fixed imports, added RouteErrorComponent, created comprehensive test suite (26 tests passing) | Dev Agent |

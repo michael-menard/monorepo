@@ -6,8 +6,8 @@
  * and PostgreSQL (fallback) support.
  */
 
-import { createSearchEngine, SearchEngine } from '@monorepo/search'
-import type { SearchConfig, SearchOptions, SearchResult } from '@monorepo/search'
+import { createSearchEngine, SearchEngine } from '@repo/search'
+import type { SearchConfig, SearchOptions, SearchResult } from '@repo/search'
 import { getOpenSearchClient } from '@/core/search/opensearch'
 import { db } from '@/core/database/client'
 import { galleryImages, wishlistItems } from '@/core/database/schema'

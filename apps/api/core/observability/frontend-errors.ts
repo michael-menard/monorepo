@@ -7,7 +7,7 @@
  */
 
 import { createLambdaLogger } from '@repo/logger'
-import { sanitizeObject, sanitizeString } from '@monorepo/pii-sanitizer'
+import { sanitizeObject, sanitizeString } from '@repo/pii-sanitizer'
 
 const logger = createLambdaLogger('cloudwatch-frontend-errors')
 

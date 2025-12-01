@@ -35,7 +35,7 @@ vi.mock('lucide-react', () => ({
 }))
 
 // Mock @repo/ui components
-vi.mock('@repo/ui/card', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Card: ({ children, ...props }: any) => (
     <div data-testid="card" {...props}>
       {children}
@@ -63,11 +63,11 @@ vi.mock('@repo/ui/card', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/input', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Input: ({ ...props }: any) => <input data-testid="input" {...props} />,
 }))
 
-vi.mock('@repo/ui/button', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, ...props }: any) => (
     <button data-testid="button" {...props}>
       {children}
@@ -75,7 +75,7 @@ vi.mock('@repo/ui/button', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/badge', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Badge: ({ children, ...props }: any) => (
     <span data-testid="badge" {...props}>
       {children}
@@ -83,7 +83,7 @@ vi.mock('@repo/ui/badge', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/select', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Select: ({ children, ...props }: any) => (
     <div data-testid="select" {...props}>
       {children}
@@ -107,7 +107,7 @@ vi.mock('@repo/ui/select', () => ({
   SelectValue: ({ ...props }: any) => <div data-testid="select-value" {...props} />,
 }))
 
-vi.mock('@repo/ui', () => ({
+vi.mock('@repo/app-component-library', () => ({
   // Table components
   Table: ({ children, ...props }: any) => (
     <table data-testid="table" {...props}>

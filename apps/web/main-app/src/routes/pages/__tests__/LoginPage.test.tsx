@@ -11,7 +11,7 @@ vi.unmock('@tanstack/react-router')
 vi.unmock('@/services/auth/AuthProvider')
 vi.unmock('@/components/Navigation/NavigationProvider')
 vi.unmock('@/components/Layout/RootLayout')
-vi.unmock('@repo/ui')
+vi.unmock('@repo/app-component-library')
 vi.unmock('react-hook-form')
 vi.unmock('@hookform/resolvers/zod')
 vi.unmock('lucide-react')
@@ -69,7 +69,7 @@ vi.mock('@/components/Navigation/NavigationProvider', () => ({
 // It's rendered directly by the router without an AuthLayout wrapper
 
 // Mock @repo/ui components
-vi.mock('@repo/ui', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, disabled, type, className, asChild, ...props }: any) => {
     if (asChild) {
       return children

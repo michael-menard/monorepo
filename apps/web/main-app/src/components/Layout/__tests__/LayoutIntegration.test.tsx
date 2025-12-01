@@ -5,12 +5,15 @@ import { configureStore } from '@reduxjs/toolkit'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { RootLayout } from '../RootLayout'
 import { authSlice } from '@/store/slices/authSlice'
+import { themeSlice } from '@/store/slices/themeSlice'
 import { navigationSlice } from '@/store/slices/navigationSlice'
+import { globalUISlice } from '@/store/slices/globalUISlice'
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    aside: ({ children, ...props }: any) => <aside {...props}>{children}</aside>,
   },
   AnimatePresence: ({ children }: any) => children,
 }))
@@ -30,60 +33,51 @@ vi.mock('@tanstack/react-router', () => ({
 
 // Test store setup
 const createTestStore = (initialState = {}) => {
+  const baseNavigationState = navigationSlice.getInitialState()
+  const baseAuthState = authSlice.getInitialState()
+  const baseThemeState = themeSlice.getInitialState()
+  const baseGlobalUIState = globalUISlice.getInitialState()
+  const defaultGlobalUIState = {
+    ...baseGlobalUIState,
+    sidebar: {
+      ...baseGlobalUIState.sidebar,
+      // For tests, start with sidebar closed so toggle behavior is observable
+      isOpen: false,
+    },
+  }
+
+  const overrides = initialState as {
+    auth?: Partial<typeof baseAuthState>
+    theme?: Partial<typeof baseThemeState>
+    navigation?: Partial<typeof baseNavigationState>
+    globalUI?: Partial<typeof defaultGlobalUIState>
+  }
+
   return configureStore({
     reducer: {
       auth: authSlice.reducer,
+      theme: themeSlice.reducer,
       navigation: navigationSlice.reducer,
+      globalUI: globalUISlice.reducer,
     },
     preloadedState: {
       auth: {
-        isAuthenticated: false,
+        ...baseAuthState,
+        // In layout tests we want auth to be non-loading by default
         isLoading: false,
-        user: null,
-        tokens: null,
-        error: null,
-        ...initialState.auth,
+        ...overrides.auth,
+      },
+      theme: {
+        ...baseThemeState,
+        ...overrides.theme,
       },
       navigation: {
-        activeRoute: '/dashboard',
-        isMobileMenuOpen: false,
-        breadcrumbs: [],
-        isLoading: false,
-        primaryNavigation: [
-          {
-            id: 'dashboard',
-            label: 'Dashboard',
-            href: '/dashboard',
-            icon: 'LayoutDashboard',
-          },
-          {
-            id: 'gallery',
-            label: 'Gallery',
-            href: '/gallery',
-            icon: 'Images',
-          },
-        ],
-        secondaryNavigation: [],
-        contextualNavigation: [],
-        search: {
-          query: '',
-          results: [],
-          recentSearches: [],
-          isSearching: false,
-        },
-        analytics: {
-          totalClicks: 0,
-          popularItems: [],
-          recentlyVisited: [],
-        },
-        userPreferences: {
-          favoriteItems: [],
-          hiddenItems: [],
-          customOrder: [],
-          compactMode: false,
-        },
-        notifications: [],
-        ...initialState.navigation,
+        ...baseNavigationState,
+        ...overrides.navigation,
+      },
+      globalUI: {
+        ...defaultGlobalUIState,
+        ...overrides.globalUI,
       },
     },
   })
@@ -130,11 +124,11 @@ describe('Layout Integration', () => {
       renderWithProviders(<RootLayout />, authenticatedState)
 
       // Header should be present
-      expect(screen.getByText('LEGO MOC Instructions')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /LEGO MOC Instructions/i })).toBeInTheDocument()
 
       // Sidebar navigation should be present
-      expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('Gallery')).toBeInTheDocument()
+      expect(screen.getAllByRole('link', { name: /Dashboard/i }).length).toBeGreaterThan(0)
+      expect(screen.getAllByRole('link', { name: /^Gallery$/i }).length).toBeGreaterThan(0)
 
       // Main content should be present
       expect(screen.getByTestId('outlet')).toBeInTheDocument()
@@ -157,12 +151,14 @@ describe('Layout Integration', () => {
       )
 
       // Find and click mobile menu button
-      const mobileMenuButton = screen.getByLabelText('Toggle navigation menu')
+      const mobileMenuButton = screen.getByRole('button', {
+        name: /toggle navigation menu/i,
+      })
       fireEvent.click(mobileMenuButton)
 
-      // Check if mobile menu state was updated
+      // Check if mobile menu state was updated via global UI slice
       const state = store.getState()
-      expect(state.navigation.isMobileMenuOpen).toBe(true)
+      expect(state.globalUI.sidebar.isOpen).toBe(true)
     })
   })
 
@@ -173,7 +169,7 @@ describe('Layout Integration', () => {
       })
 
       const mainContent = screen.getByRole('main')
-      expect(mainContent).toHaveClass('lg:ml-64')
+      expect(mainContent).toHaveClass('md:ml-64')
     })
   })
 
@@ -192,7 +188,8 @@ describe('Layout Integration', () => {
         auth: { isAuthenticated: true },
       })
 
-      expect(screen.getByText('LEGO MOC Hub')).toBeInTheDocument()
+      const brandLabels = screen.getAllByText('LEGO MOC Hub')
+      expect(brandLabels.length).toBeGreaterThan(0)
     })
   })
 
@@ -219,7 +216,8 @@ describe('Layout Integration', () => {
       })
 
       expect(screen.getByRole('main')).toBeInTheDocument()
-      expect(screen.getByRole('navigation')).toBeInTheDocument()
+      const navigations = screen.getAllByRole('navigation')
+      expect(navigations.length).toBeGreaterThan(0)
       expect(screen.getByRole('contentinfo')).toBeInTheDocument()
     })
 
@@ -228,9 +226,9 @@ describe('Layout Integration', () => {
         auth: { isAuthenticated: true },
       })
 
-      const dashboardLink = screen.getByText('Dashboard')
-      dashboardLink.focus()
-      expect(dashboardLink).toHaveFocus()
+      const [dashboardElement] = screen.getAllByText('Dashboard')
+      dashboardElement.focus()
+      expect(dashboardElement).toHaveFocus()
     })
   })
 })

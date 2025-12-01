@@ -4,6 +4,7 @@
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { createLogger } from '@repo/logger'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 import { createAuthenticatedBaseQuery } from '../auth/rtk-auth-integration'
@@ -100,10 +101,21 @@ export interface GalleryBatchParams {
 }
 
 /**
+ * Gallery API configuration options
+ */
+export interface GalleryApiConfig {
+  getAuthToken?: () => string | undefined
+  onAuthFailure?: (error: FetchBaseQueryError) => void
+  onTokenRefresh?: (token: string) => void
+}
+
+/**
  * Create enhanced Gallery API with serverless optimizations
  */
-export function createGalleryApi(getAuthToken?: () => string | undefined) {
+export function createGalleryApi(config?: GalleryApiConfig) {
   logger.info('Creating enhanced Gallery API with serverless optimizations')
+
+  const { getAuthToken, onAuthFailure, onTokenRefresh } = config || {}
 
   return createIntelligentApi({
     reducerPath: 'enhancedGalleryApi',
@@ -116,12 +128,12 @@ export function createGalleryApi(getAuthToken?: () => string | undefined) {
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
       requireAuthForEndpoints: ['/api/v2/gallery'],
-      onAuthFailure: error => {
+      onAuthFailure: onAuthFailure || (error => {
         logger.warn('Gallery API authentication failed', undefined, { error })
-      },
-      onTokenRefresh: token => {
+      }),
+      onTokenRefresh: onTokenRefresh || (token => {
         logger.debug('Gallery API token refreshed')
-      },
+      }),
     }),
     tagTypes: ['Gallery', 'GalleryImage', 'GalleryStats', 'GalleryBatch'],
     endpoints: builder => ({

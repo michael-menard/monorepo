@@ -19,7 +19,7 @@ vi.mock('@tanstack/react-router', async () => {
   const actual = await vi.importActual('@tanstack/react-router')
   return {
     ...actual,
-    redirect: vi.fn((opts) => {
+    redirect: vi.fn(opts => {
       throw { type: 'redirect', ...opts }
     }),
   }
@@ -180,7 +180,9 @@ describe('TanStack Router Setup', () => {
       // Get lazy-loaded routes
       const dashboardRoute = Object.values(children).find((r: any) => r.path === 'dashboard') as any
       const wishlistRoute = Object.values(children).find((r: any) => r.path === 'wishlist') as any
-      const instructionsRoute = Object.values(children).find((r: any) => r.path === 'instructions') as any
+      const instructionsRoute = Object.values(children).find(
+        (r: any) => r.path === 'instructions',
+      ) as any
 
       // Verify component is a function (lazy loader)
       expect(typeof dashboardRoute?.options?.component).toBe('function')
@@ -197,11 +199,10 @@ describe('TanStack Router Setup', () => {
       const children = router.routeTree.children || {}
       const lazyRoutes = ['dashboard', 'wishlist', 'instructions']
 
-      lazyRoutes.forEach((path) => {
+      lazyRoutes.forEach(path => {
         const route = Object.values(children).find((r: any) => r.path === path)
         expect(route).toBeDefined()
       })
     })
   })
 })
-

@@ -7,9 +7,9 @@
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { v4 as uuidv4 } from 'uuid'
-import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
+import { validateFile, createImageValidationConfig } from '@repo/file-validator'
 import { logger } from '@/core/observability/logger'
-import { getUserIdFromEvent } from '@monorepo/lambda-auth'
+import { getUserIdFromEvent } from '@repo/lambda-auth'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { CreateGalleryImageSchema } from '@/endpoints/gallery/schemas'
 import { db } from '@/core/database/client'
@@ -17,8 +17,8 @@ import { uploadToS3 } from '@/core/storage/s3'
 import { getRedisClient } from '@/core/cache/redis'
 import { indexDocument } from '@/core/search/opensearch'
 import { galleryImages } from '@/core/database/schema'
-import { parseMultipartForm, getFile, getField } from '@monorepo/lambda-utils'
-import { processImage, generateThumbnail } from '@monorepo/image-processing'
+import { parseMultipartForm, getFile, getField } from '@repo/lambda-utils'
+import { processImage, generateThumbnail } from '@repo/image-processing'
 
 /**
  * Upload Gallery Image Handler

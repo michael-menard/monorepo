@@ -17,13 +17,13 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq } from 'drizzle-orm'
 import { logger } from '@/core/observability/logger'
-import { getUserIdFromEvent } from '@monorepo/lambda-auth'
+import { getUserIdFromEvent } from '@repo/lambda-auth'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { WishlistItemIdSchema } from '@/endpoints/wishlist/schemas'
 import { db } from '@/core/database/client'
 import { getRedisClient } from '@/core/cache/redis'
 import { wishlistItems } from '@/core/database/schema'
-import { parseMultipartForm, getFile } from '@monorepo/lambda-utils'
+import { parseMultipartForm, getFile } from '@repo/lambda-utils'
 import { uploadImage, ImageUploadOptionsSchema } from '@/core/utils/image-upload-service'
 
 /**

@@ -130,15 +130,17 @@ describe('TechRadar Component', () => {
     it('should handle fetch errors gracefully', async () => {
       mockFetch.mockRejectedValue(new Error('Failed to fetch'))
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       render(<TechRadar />)
 
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to load radar data:', expect.any(Error))
-      })
-
-      consoleSpy.mockRestore()
+      // Component should fall back to default data on error (no console.error logged)
+      await waitFor(
+        () => {
+          // Should still render with default fallback data
+          expect(screen.getByText('Tech Radar')).toBeInTheDocument()
+          expect(screen.getByTestId('radar-visualization')).toBeInTheDocument()
+        },
+        { timeout: 3000 },
+      )
     })
 
     it('should handle invalid JSON response', async () => {
@@ -147,15 +149,17 @@ describe('TechRadar Component', () => {
         json: () => Promise.reject(new Error('Invalid JSON')),
       })
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       render(<TechRadar />)
 
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalled()
-      })
-
-      consoleSpy.mockRestore()
+      // Component should fall back to default data on JSON parse error
+      await waitFor(
+        () => {
+          // Should still render with default fallback data
+          expect(screen.getByText('Tech Radar')).toBeInTheDocument()
+          expect(screen.getByTestId('radar-visualization')).toBeInTheDocument()
+        },
+        { timeout: 3000 },
+      )
     })
   })
 

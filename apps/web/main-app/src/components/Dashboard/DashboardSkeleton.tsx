@@ -3,7 +3,7 @@
  * Story 2.9: Loading state with skeleton loaders
  */
 
-import { cn } from '@repo/ui/utils'
+import { cn } from '@repo/app-component-library'
 
 interface SkeletonProps {
   className?: string

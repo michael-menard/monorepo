@@ -1,6 +1,6 @@
 import { Outlet } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@repo/ui/lib/utils'
+import { cn } from '@repo/app-component-library'
 
 interface MainAreaProps {
   className?: string

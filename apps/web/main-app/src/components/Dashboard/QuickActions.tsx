@@ -4,7 +4,7 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { Button } from '@repo/ui/button'
+import { Button } from '@repo/app-component-library'
 import { Plus, Images, Heart } from 'lucide-react'
 
 /**

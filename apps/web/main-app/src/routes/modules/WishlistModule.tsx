@@ -1,8 +1,14 @@
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Badge } from '@repo/ui/badge'
-import { LoadingSpinner } from '@repo/ui/loading-spinner'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
+import { Badge } from '@repo/app-component-library'
+import { LoadingSpinner } from '@repo/app-component-library'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/app-component-library'
 import { Heart, Star, DollarSign, Bell, Calendar, TrendingUp, Clock, Gift } from 'lucide-react'
 import { useEnhancedWishlistQueryQuery, useGetEnhancedPriceEstimatesQuery } from '@/store'
 

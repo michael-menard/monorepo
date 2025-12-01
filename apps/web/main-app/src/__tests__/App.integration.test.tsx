@@ -35,7 +35,7 @@ vi.mock('../services/auth/AuthProvider', () => ({
 }))
 
 // Mock the theme provider with direct import
-vi.mock('@repo/ui/providers/ThemeProvider', () => ({
+vi.mock('@repo/app-component-library', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="theme-provider">{children}</div>
   ),

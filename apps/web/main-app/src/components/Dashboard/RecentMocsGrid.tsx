@@ -4,7 +4,7 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { Card, CardContent } from '@repo/ui/card'
+import { Card, CardContent } from '@repo/app-component-library'
 import { Blocks, Clock } from 'lucide-react'
 import type { RecentMoc } from '@repo/api-client/rtk/dashboard-api'
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button } from '@repo/ui'
+import { Button } from '@repo/app-component-library'
 import { MoreHorizontal, Eye, Download, Trash2, Edit, Share2 } from 'lucide-react'
 import type { FileItem, ActionConfig } from '../schemas'
 

@@ -124,15 +124,93 @@ vi.mock('@repo/logger', () => ({
   })),
 }))
 
+// Mock @repo/ui barrel import
+vi.mock('@repo/app-component-library', () => ({
+  StatsCards: vi.fn(({ items, isLoading, error, emptyTitle, emptyDescription, ariaLabel }) => {
+    if (isLoading) {
+      return React.createElement(
+        'div',
+        {
+          role: 'region',
+          'aria-label': ariaLabel || 'Statistics',
+          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+        },
+        Array.from({ length: items?.length || 3 }).map((_, i) =>
+          React.createElement('div', { key: i, className: 'animate-pulse', 'data-testid': 'card' }),
+        ),
+      )
+    }
+    if (error) {
+      return React.createElement(
+        'div',
+        {
+          role: 'region',
+          'aria-label': ariaLabel || 'Statistics',
+          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+        },
+        React.createElement('div', { 'data-testid': 'card' }, [
+          React.createElement('h3', { key: 'title' }, 'Unable to load statistics'),
+          React.createElement('p', { key: 'message' }, error.message),
+        ]),
+      )
+    }
+    const isEmpty = items?.every((item: { value: number }) => item.value === 0)
+    if (isEmpty) {
+      return React.createElement(
+        'div',
+        {
+          role: 'region',
+          'aria-label': ariaLabel || 'Statistics',
+          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+        },
+        React.createElement('div', { 'data-testid': 'card' }, [
+          React.createElement('h3', { key: 'title' }, emptyTitle || 'No data yet'),
+          React.createElement(
+            'p',
+            { key: 'desc' },
+            emptyDescription || 'Data will appear here once available.',
+          ),
+        ]),
+      )
+    }
+    return React.createElement(
+      'div',
+      {
+        role: 'region',
+        'aria-label': ariaLabel || 'Statistics',
+        className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+      },
+      items?.map((item: { label: string; value: number }, index: number) =>
+        React.createElement(
+          'article',
+          {
+            key: item.label,
+            role: 'region',
+            'aria-label': `Statistic: ${item.label} - ${item.value.toLocaleString()}`,
+          },
+          React.createElement('div', { 'data-testid': 'card' }, [
+            React.createElement('h3', { key: 'label' }, item.label),
+            React.createElement('span', { key: 'value' }, item.value.toLocaleString()),
+          ]),
+        ),
+      ),
+    )
+  }),
+  Card: vi.fn(({ children, className, ...props }) =>
+    React.createElement('div', { className, 'data-testid': 'card', ...props }, children),
+  ),
+  cn: vi.fn((...classes: (string | undefined)[]) => classes.filter(Boolean).join(' ')),
+}))
+
 // Mock UI Components with direct imports (no barrel files)
-vi.mock('@repo/ui/button', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Button: vi.fn(({ children, onClick, className, ...props }) =>
     React.createElement('button', { onClick, className, ...props }, children),
   ),
   buttonVariants: vi.fn(() => 'button-variants-class'),
 }))
 
-vi.mock('@repo/ui/card', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Card: vi.fn(({ children, className, ...props }) =>
     React.createElement('div', { className, 'data-testid': 'card', ...props }, children),
   ),
@@ -150,7 +228,7 @@ vi.mock('@repo/ui/card', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/dropdown-menu', () => ({
+vi.mock('@repo/app-component-library', () => ({
   DropdownMenu: vi.fn(({ children }) =>
     React.createElement('div', { 'data-testid': 'dropdown-menu' }, children),
   ),
@@ -178,7 +256,7 @@ vi.mock('@repo/ui/dropdown-menu', () => ({
   }),
 }))
 
-vi.mock('@repo/ui/avatar', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Avatar: vi.fn(({ children, className, ...props }) =>
     React.createElement('span', { className, ...props }, children),
   ),
@@ -190,36 +268,36 @@ vi.mock('@repo/ui/avatar', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/badge', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Badge: vi.fn(({ children, className, variant, ...props }) =>
     React.createElement('span', { className, 'data-variant': variant, ...props }, children),
   ),
 }))
 
-vi.mock('@repo/ui/loading-spinner', () => ({
+vi.mock('@repo/app-component-library', () => ({
   LoadingSpinner: vi.fn(({ className, ...props }) =>
     React.createElement('div', { className, 'data-testid': 'loading-spinner', ...props }),
   ),
 }))
 
 // Mock additional UI components needed for auth tests
-vi.mock('@repo/ui/input', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Input: vi.fn(props => React.createElement('input', { 'data-testid': 'input', ...props })),
 }))
 
-vi.mock('@repo/ui/label', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Label: vi.fn(({ children, ...props }) =>
     React.createElement('label', { 'data-testid': 'label', ...props }, children),
   ),
 }))
 
-vi.mock('@repo/ui/checkbox', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Checkbox: vi.fn(props =>
     React.createElement('input', { type: 'checkbox', 'data-testid': 'checkbox', ...props }),
   ),
 }))
 
-vi.mock('@repo/ui/alert', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Alert: vi.fn(({ children, ...props }) =>
     React.createElement('div', { 'data-testid': 'alert', ...props }, children),
   ),
@@ -239,6 +317,7 @@ vi.mock('framer-motion', () => ({
     button: vi.fn(({ children, ...props }) => React.createElement('button', props, children)),
     form: vi.fn(({ children, ...props }) => React.createElement('form', props, children)),
     input: vi.fn(props => React.createElement('input', props)),
+    article: vi.fn(({ children, ...props }) => React.createElement('article', props, children)),
   },
   AnimatePresence: vi.fn(({ children }) => children),
   useAnimation: vi.fn(() => ({
@@ -252,9 +331,16 @@ vi.mock('framer-motion', () => ({
     on: vi.fn(),
     destroy: vi.fn(),
   })),
+  animate: vi.fn((_value, target, options) => {
+    // Immediately call onUpdate with target value for testing
+    if (options?.onUpdate) {
+      options.onUpdate(target)
+    }
+    return { stop: vi.fn() }
+  }),
 }))
 
-vi.mock('@repo/ui/progress', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Progress: vi.fn(({ className, value, ...props }) =>
     React.createElement('div', {
       className,
@@ -265,7 +351,7 @@ vi.mock('@repo/ui/progress', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/select', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Select: vi.fn(({ children }) =>
     React.createElement('div', { 'data-testid': 'select' }, children),
   ),
@@ -275,32 +361,39 @@ vi.mock('@repo/ui/select', () => ({
   SelectValue: vi.fn(() => React.createElement('span', {})),
 }))
 
-vi.mock('@repo/ui/tabs', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Tabs: vi.fn(({ children }) => React.createElement('div', { 'data-testid': 'tabs' }, children)),
   TabsContent: vi.fn(({ children }) => React.createElement('div', {}, children)),
   TabsList: vi.fn(({ children }) => React.createElement('div', {}, children)),
   TabsTrigger: vi.fn(({ children }) => React.createElement('button', {}, children)),
 }))
 
-vi.mock('@repo/ui/lib/utils', () => ({
+vi.mock('@repo/app-component-library', () => ({
   cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
 }))
 
-vi.mock('@repo/ui/utils', () => ({
+vi.mock('@repo/app-component-library', () => ({
   cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
 }))
 
-vi.mock('@repo/ui/providers/ThemeProvider', () => ({
+vi.mock('@repo/app-component-library', () => ({
   ThemeProvider: vi.fn(({ children }) => children),
   useTheme: vi.fn(() => ({ theme: 'light', setTheme: vi.fn() })),
 }))
 
-// Mock AuthLayout component
-vi.mock('@/components/Layout/RootLayout', () => ({
-  AuthLayout: vi.fn(({ children }) =>
-    React.createElement('div', { 'data-testid': 'auth-layout' }, children),
-  ),
-}))
+// Mock AuthLayout component while preserving real RootLayout and ErrorLayout
+vi.mock('@/components/Layout/RootLayout', async () => {
+  const actual = await vi.importActual<typeof import('@/components/Layout/RootLayout')>(
+    '@/components/Layout/RootLayout',
+  )
+
+  return {
+    ...actual,
+    AuthLayout: vi.fn(({ children }) =>
+      React.createElement('div', { 'data-testid': 'auth-layout' }, children),
+    ),
+  }
+})
 
 // Mock Auth Provider
 vi.mock('@/services/auth/AuthProvider', () => ({
@@ -493,6 +586,7 @@ vi.mock('lucide-react', () => ({
     React.createElement('svg', { 'data-testid': 'external-link-icon', ...props }),
   ),
   Loader2: vi.fn(props => React.createElement('svg', { 'data-testid': 'loader-icon', ...props })),
+  Package: vi.fn(props => React.createElement('svg', { 'data-testid': 'package-icon', ...props })),
 }))
 
 // Global test utilities

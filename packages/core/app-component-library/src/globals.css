@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+/*
+ * App Component Library - Global Styles
+ * ======================================
+ * Imports all tokens from the design system.
+ * Add component-library-specific styles here (if any).
+ */
+
+/* Import the single source of truth */
+@import '@repo/design-system/design-tokens.css';
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-primary);
+    font-optical-sizing: auto;
+    font-style: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}

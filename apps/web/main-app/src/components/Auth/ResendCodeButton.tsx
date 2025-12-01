@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Button, cn } from '@repo/ui'
+import { Button, cn } from '@repo/app-component-library'
 
 // SessionStorage keys for cooldown persistence
 const RESEND_COOLDOWN_KEY = 'auth_resend_cooldown'

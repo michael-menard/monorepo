@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { useSelector } from 'react-redux'
-import { Button } from '@repo/ui/button'
-import { Badge } from '@repo/ui/badge'
+import { CustomButton, AppBadge, cn } from '@repo/app-component-library'
 import { motion } from 'framer-motion'
 import {
   Home,
@@ -17,7 +16,6 @@ import {
   Lightbulb,
   User,
 } from 'lucide-react'
-import { cn } from '@repo/ui/lib/utils'
 import { QuickActions } from '../Navigation/QuickActions'
 import { useNavigation } from '../Navigation/NavigationProvider'
 import { selectPrimaryNavigation } from '@/store/slices/navigationSlice'
@@ -168,12 +166,12 @@ export function Sidebar({ className, showLegacyRoutes = true }: SidebarProps) {
                     <Icon className="h-4 w-4 flex-shrink-0" />
                     <span className="flex-1 truncate">{item.label}</span>
                     {item.badge ? (
-                      <Badge
+                      <AppBadge
                         variant="secondary"
                         className="h-5 text-xs bg-sky-100 text-sky-700 border-sky-200"
                       >
                         {item.badge}
-                      </Badge>
+                      </AppBadge>
                     ) : null}
                     {item.children ? <ChevronRight className="h-4 w-4 flex-shrink-0" /> : null}
                   </Link>
@@ -326,7 +324,7 @@ export function CollapsibleSidebar({ className }: SidebarProps) {
     >
       {/* Toggle button */}
       <div className="p-4 border-b border-border">
-        <Button
+        <CustomButton
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -336,7 +334,7 @@ export function CollapsibleSidebar({ className }: SidebarProps) {
             className={cn('h-4 w-4 transition-transform', isCollapsed ? 'rotate-0' : 'rotate-180')}
           />
           {!isCollapsed && <span className="ml-2">Collapse</span>}
-        </Button>
+        </CustomButton>
       </div>
 
       {/* Navigation */}
@@ -365,9 +363,9 @@ export function CollapsibleSidebar({ className }: SidebarProps) {
                 <>
                   <span className="flex-1">{item.label}</span>
                   {item.badge ? (
-                    <Badge variant="secondary" className="h-5 text-xs">
+                    <AppBadge variant="secondary" className="h-5 text-xs">
                       {item.badge}
-                    </Badge>
+                    </AppBadge>
                   ) : null}
                 </>
               )}

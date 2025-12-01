@@ -4,11 +4,17 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
-import { Button } from '@repo/ui/button'
-import { Input } from '@repo/ui/input'
-import { Label } from '@repo/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Alert, AlertDescription } from '@repo/ui/alert'
+import { Button } from '@repo/app-component-library'
+import { Input } from '@repo/app-component-library'
+import { Label } from '@repo/app-component-library'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
+import { Alert, AlertDescription } from '@repo/app-component-library'
 import {
   Mail,
   Lock,
@@ -19,7 +25,7 @@ import {
   CheckCircle,
   KeyRound,
 } from 'lucide-react'
-import { cn } from '@repo/ui/lib/utils'
+import { cn } from '@repo/app-component-library'
 import { AuthLayout } from '@/components/Layout/RootLayout'
 import { useAuth } from '@/services/auth/AuthProvider'
 import { useNavigation } from '@/components/Navigation/NavigationProvider'

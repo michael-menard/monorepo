@@ -14,7 +14,14 @@ import {
   Users,
   Zap,
 } from 'lucide-react'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
 import { selectAuth } from '@/store/slices/authSlice'
 
 // Zod schemas for type safety (following coding style preferences)

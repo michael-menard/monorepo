@@ -18,8 +18,8 @@ import {
   createLegoInstructionValidationConfig,
   createLegoPartsListValidationConfig,
   createImageValidationConfig,
-} from '@monorepo/file-validator'
-import type { FileValidationConfig, FileValidator } from '@monorepo/file-validator'
+} from '@repo/file-validator'
+import type { FileValidationConfig, FileValidator } from '@repo/file-validator'
 import { invalidateMocDetailCache } from './moc-service'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles } from '@/core/database/schema'

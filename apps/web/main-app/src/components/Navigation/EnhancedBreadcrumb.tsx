@@ -2,9 +2,9 @@ import React from 'react'
 import { useSelector } from 'react-redux'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Home, ArrowLeft } from 'lucide-react'
-import { Button } from '@repo/ui/button'
-import { Badge } from '@repo/ui/badge'
-import { cn } from '@repo/ui/lib/utils'
+import { Button } from '@repo/app-component-library'
+import { Badge } from '@repo/app-component-library'
+import { cn } from '@repo/app-component-library'
 import { useNavigation } from './NavigationProvider'
 import {
   selectBreadcrumbs,

@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['../../../__tests__/setup.ts'],
+    setupFiles: ['./src/test/setup.ts'],
     // Memory management
     pool: 'forks',
     poolOptions: {

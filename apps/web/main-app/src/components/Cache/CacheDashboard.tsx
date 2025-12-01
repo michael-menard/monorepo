@@ -9,11 +9,17 @@
  * - Cache management controls
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
-import { Button } from '@repo/ui/button'
-import { Badge } from '@repo/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs'
-import { Progress } from '@repo/ui/progress'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
+import { Button } from '@repo/app-component-library'
+import { Badge } from '@repo/app-component-library'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/app-component-library'
+import { Progress } from '@repo/app-component-library'
 import {
   BarChart3,
   TrendingUp,

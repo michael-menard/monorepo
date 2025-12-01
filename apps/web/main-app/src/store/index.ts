@@ -1,14 +1,25 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
-import { enhancedGalleryApi } from '@repo/api-client/rtk/gallery-api'
-import { enhancedWishlistApi } from '@repo/api-client/rtk/wishlist-api'
+import { createGalleryApi } from '@repo/api-client/rtk/gallery-api'
+import { createWishlistApi } from '@repo/api-client/rtk/wishlist-api'
 import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
 import { authSlice } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
 import { navigationSlice } from './slices/navigationSlice'
 import { globalUISlice } from './slices/globalUISlice'
+import { getAuthFailureHandler } from '@/services/api/authFailureHandler'
 
-// Use enhanced API instances (authentication is handled internally)
+// Create enhanced API instances with global auth failure handler (Story 1.29)
+// The handler redirects to login on 401 responses after token refresh fails
+export const enhancedGalleryApi = createGalleryApi({
+  onAuthFailure: getAuthFailureHandler(),
+})
+
+export const enhancedWishlistApi = createWishlistApi({
+  onAuthFailure: getAuthFailureHandler(),
+})
+
+// Legacy exports for backward compatibility
 export const galleryApi = enhancedGalleryApi
 export const wishlistApi = enhancedWishlistApi
 export { dashboardApi }

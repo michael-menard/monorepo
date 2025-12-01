@@ -4,6 +4,7 @@
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { createLogger } from '@repo/logger'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 import { createAuthenticatedBaseQuery } from '../auth/rtk-auth-integration'
@@ -127,10 +128,21 @@ export interface WishlistBatchParams {
 }
 
 /**
+ * Wishlist API configuration options
+ */
+export interface WishlistApiConfig {
+  getAuthToken?: () => string | undefined
+  onAuthFailure?: (error: FetchBaseQueryError) => void
+  onTokenRefresh?: (token: string) => void
+}
+
+/**
  * Create enhanced Wishlist API with serverless optimizations
  */
-export function createWishlistApi(getAuthToken?: () => string | undefined) {
+export function createWishlistApi(config?: WishlistApiConfig) {
   logger.info('Creating enhanced Wishlist API with serverless optimizations')
+
+  const { getAuthToken, onAuthFailure, onTokenRefresh } = config || {}
 
   return createApi({
     reducerPath: 'enhancedWishlistApi',
@@ -143,12 +155,12 @@ export function createWishlistApi(getAuthToken?: () => string | undefined) {
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
       requireAuthForEndpoints: ['/api/v2/wishlist'],
-      onAuthFailure: error => {
+      onAuthFailure: onAuthFailure || (error => {
         logger.warn('Wishlist API authentication failed', undefined, { error })
-      },
-      onTokenRefresh: token => {
+      }),
+      onTokenRefresh: onTokenRefresh || (token => {
         logger.debug('Wishlist API token refreshed')
-      },
+      }),
     }),
     tagTypes: [
       'Wishlist',

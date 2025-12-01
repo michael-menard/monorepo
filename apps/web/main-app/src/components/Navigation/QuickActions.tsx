@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Plus, Zap, Star, Clock, MoreHorizontal } from 'lucide-react'
-import { Button } from '@repo/ui/button'
-import { Badge } from '@repo/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
+import { Button } from '@repo/app-component-library'
+import { Badge } from '@repo/app-component-library'
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@repo/ui/dropdown-menu'
-import { cn } from '@repo/ui/lib/utils'
+} from '@repo/app-component-library'
+import { cn } from '@repo/app-component-library'
 import { useNavigation } from './NavigationProvider'
 import {
   selectQuickActions,

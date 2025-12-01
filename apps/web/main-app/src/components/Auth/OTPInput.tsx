@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { Input, cn } from '@repo/ui'
+import { Input, cn } from '@repo/app-component-library'
 
 interface OTPInputProps {
   value: string

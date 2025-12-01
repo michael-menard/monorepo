@@ -1,61 +1,57 @@
 /**
- * Stats Cards Component
- * Story 2.5: Displays dashboard statistics as cards
+ * Dashboard Stats Cards Component
+ * Story 2.5: Wrapper for @repo/app-component-library StatsCards with LEGO-specific configuration
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
+import { StatsCards as BaseStatsCards } from '@repo/app-component-library'
+import type { StatItem } from '@repo/app-component-library'
 import { Blocks, Heart, Palette } from 'lucide-react'
 import type { DashboardStats } from '@repo/api-client/rtk/dashboard-api'
 
-interface StatsCardsProps {
+export interface DashboardStatsCardsProps {
   stats: DashboardStats
+  isLoading?: boolean
+  error?: Error | null
 }
 
 /**
- * Displays dashboard statistics in a responsive grid of cards
+ * Dashboard-specific stats cards with LEGO branding
+ * Uses the generic StatsCards component from @repo/app-component-library
  */
-export function StatsCards({ stats }: StatsCardsProps) {
-  const items = [
+export function StatsCards({ stats, isLoading = false, error = null }: DashboardStatsCardsProps) {
+  const items: StatItem[] = [
     {
       icon: Blocks,
       label: 'Total MOCs',
       value: stats.totalMocs,
-      color: 'text-lego-red',
-      bgColor: 'bg-lego-red/10',
+      colorClass: 'text-lego-red',
+      bgClass: 'bg-lego-red/10',
     },
     {
       icon: Heart,
       label: 'Wishlist Items',
       value: stats.wishlistCount,
-      color: 'text-lego-blue',
-      bgColor: 'bg-lego-blue/10',
+      colorClass: 'text-lego-blue',
+      bgClass: 'bg-lego-blue/10',
     },
     {
       icon: Palette,
       label: 'Themes',
       value: stats.themeCount,
-      color: 'text-lego-yellow',
-      bgColor: 'bg-lego-yellow/10',
+      colorClass: 'text-lego-yellow',
+      bgClass: 'bg-lego-yellow/10',
     },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map(item => (
-        <Card key={item.label} className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {item.label}
-            </CardTitle>
-            <div className={`p-2 rounded-lg ${item.bgColor}`}>
-              <item.icon className={`h-5 w-5 ${item.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{item.value.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <BaseStatsCards
+      items={items}
+      isLoading={isLoading}
+      error={error}
+      emptyTitle="No data yet"
+      emptyDescription="Start adding MOCs to see your stats!"
+      errorTitle="Unable to load statistics"
+      ariaLabel="Dashboard statistics"
+    />
   )
 }

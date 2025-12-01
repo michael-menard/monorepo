@@ -15,7 +15,7 @@ import {
   Alert,
   AlertDescription,
   cn,
-} from '@repo/ui'
+} from '@repo/app-component-library'
 import { Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/services/auth/AuthProvider'
 import { AuthLayout } from '@/components/Layout/RootLayout'

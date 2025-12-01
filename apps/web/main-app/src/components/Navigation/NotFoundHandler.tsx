@@ -1,6 +1,12 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Button } from '@repo/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card'
+import { Button } from '@repo/app-component-library'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@repo/app-component-library'
 import { Home, ArrowLeft, Search, AlertTriangle } from 'lucide-react'
 import { useNavigation } from './NavigationProvider'
 

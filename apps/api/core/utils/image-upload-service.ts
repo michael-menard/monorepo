@@ -18,8 +18,8 @@
 
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { z } from 'zod'
-import { validateFile, createImageValidationConfig } from '@monorepo/file-validator'
-import { processImage, generateThumbnail } from '@monorepo/image-processing'
+import { validateFile, createImageValidationConfig } from '@repo/file-validator'
+import { processImage, generateThumbnail } from '@repo/image-processing'
 import { getS3Client, uploadToS3, uploadToS3Multipart } from '@/core/storage/s3'
 import { getEnv } from '@/core/utils/env'
 import { createLogger } from '@/core/observability/logger'

@@ -1,0 +1,50 @@
+{
+  "name": "@repo/file-validator",
+  "version": "1.0.0",
+  "description": "Universal file validation library for frontend and backend",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./multer": "./dist/multer.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint --fix src/",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "file",
+    "validation",
+    "upload",
+    "mime-type",
+    "multer",
+    "universal"
+  ],
+  "author": "Your Team",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "multer": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "multer": {
+      "optional": true
+    }
+  }
+}

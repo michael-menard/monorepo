@@ -1,0 +1,95 @@
+{
+  "name": "@repo/upload",
+  "version": "1.0.0",
+  "description": "Unified file and image upload system with drag-and-drop, progress tracking, validation, and image processing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "dev": "vite build --watch",
+    "check-types": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint --fix src/ --ext .ts,.tsx --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "clean": "rm -rf dist node_modules .turbo"
+  },
+  "dependencies": {
+    "clsx": "^2.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sharp": "^0.33.0",
+    "tailwind-merge": "^2.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@repo/app-component-library": "workspace:*",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/addon-interactions": "^8.6.14",
+    "@storybook/react": "^8.6.14",
+    "@storybook/react-vite": "^8.6.14",
+    "@storybook/test": "^8.6.14",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@vitest/coverage-v8": "3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "eslint": "^8.0.0",
+    "jsdom": "^23.0.0",
+    "storybook": "^8.6.14",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "keywords": [
+    "upload",
+    "file-upload",
+    "image-upload",
+    "drag-and-drop",
+    "progress-tracking",
+    "image-processing",
+    "react",
+    "typescript",
+    "monorepo"
+  ],
+  "author": "Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/monorepo.git",
+    "directory": "packages/upload"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/monorepo/issues"
+  },
+  "homepage": "https://github.com/your-org/monorepo/tree/main/packages/upload#readme"
+}

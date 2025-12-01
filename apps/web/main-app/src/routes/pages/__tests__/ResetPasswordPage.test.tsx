@@ -9,7 +9,7 @@ vi.unmock('@tanstack/react-router')
 vi.unmock('@/services/auth/AuthProvider')
 vi.unmock('@/components/Navigation/NavigationProvider')
 vi.unmock('@/components/Layout/RootLayout')
-vi.unmock('@repo/ui')
+vi.unmock('@repo/app-component-library')
 vi.unmock('react-hook-form')
 vi.unmock('@hookform/resolvers/zod')
 vi.unmock('lucide-react')
@@ -89,7 +89,7 @@ vi.mock('@/components/Auth/OTPInput', () => ({
 }))
 
 // Mock @repo/ui components
-vi.mock('@repo/ui/button', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, disabled, type, className, asChild, variant, ...props }: any) => {
     if (asChild) {
       return children
@@ -108,13 +108,13 @@ vi.mock('@repo/ui/button', () => ({
   },
 }))
 
-vi.mock('@repo/ui/input', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Input: ({ id, type, placeholder, className, ...props }: any) => (
     <input id={id} type={type} placeholder={placeholder} className={className} {...props} />
   ),
 }))
 
-vi.mock('@repo/ui/label', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Label: ({ children, htmlFor, ...props }: any) => (
     <label htmlFor={htmlFor} {...props}>
       {children}
@@ -122,7 +122,7 @@ vi.mock('@repo/ui/label', () => ({
   ),
 }))
 
-vi.mock('@repo/ui/card', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Card: ({ children, className }: any) => <div className={className}>{children}</div>,
   CardContent: ({ children, className }: any) => <div className={className}>{children}</div>,
   CardDescription: ({ children, className }: any) => <p className={className}>{children}</p>,
@@ -130,7 +130,7 @@ vi.mock('@repo/ui/card', () => ({
   CardTitle: ({ children, className }: any) => <h2 className={className}>{children}</h2>,
 }))
 
-vi.mock('@repo/ui/alert', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Alert: ({ children, variant, role, ...props }: any) => (
     <div role={role} data-variant={variant} {...props}>
       {children}
@@ -139,7 +139,7 @@ vi.mock('@repo/ui/alert', () => ({
   AlertDescription: ({ children }: any) => <span>{children}</span>,
 }))
 
-vi.mock('@repo/ui/lib/utils', () => ({
+vi.mock('@repo/app-component-library', () => ({
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
 }))
 

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Search, Clock, Star, ArrowRight, Command } from 'lucide-react'
-import { Input } from '@repo/ui/input'
-import { Button } from '@repo/ui/button'
-import { Badge } from '@repo/ui/badge'
-import { Card, CardContent } from '@repo/ui/card'
-import { cn } from '@repo/ui/lib/utils'
+import { Input } from '@repo/app-component-library'
+import { Button } from '@repo/app-component-library'
+import { Badge } from '@repo/app-component-library'
+import { Card, CardContent } from '@repo/app-component-library'
+import { cn } from '@repo/app-component-library'
 import { useNavigation } from './NavigationProvider'
 import {
   setSearchQuery,

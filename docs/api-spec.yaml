@@ -1,0 +1,2092 @@
+openapi: 3.0.3
+info:
+  title: LEGO Inventory API
+  description: |
+    API for LEGO inventory management platform with tier-based authorization.
+    
+    ## Authentication
+    All endpoints require a valid JWT access token from AWS Cognito.
+    Include the token in the Authorization header: `Authorization: Bearer <token>`
+    
+    ## Authorization
+    Endpoints require specific scopes. See each endpoint's security requirements.
+    
+    ## Tiers
+    - **Free**: 5 MOCs, 50MB storage, 1 wishlist
+    - **Pro**: 100 MOCs, 1GB storage, 20 wishlists, 20 galleries, chat access
+    - **Power**: 200 MOCs, 2GB storage, 40 wishlists, 40 galleries, unlimited set lists, advanced features
+    - **Admin**: Unlimited everything, moderation tools
+    
+    ## Rate Limits
+    - Free tier: 100 requests/minute
+    - Pro tier: 1000 requests/minute
+    - Power tier: 5000 requests/minute
+    - Admin: Unlimited
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.lego-inventory.com/v1
+    description: Production server
+  - url: https://api-staging.lego-inventory.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: MOCs
+    description: My Own Creations management
+  - name: Wishlists
+    description: Wishlist management
+  - name: Galleries
+    description: Image gallery management (Pro/Power only)
+  - name: Set Lists
+    description: Set list management (Power only)
+  - name: Chat
+    description: Chat and messaging (Pro/Power only, age-restricted)
+  - name: Users
+    description: User profiles and discovery
+  - name: Reviews
+    description: MOC reviews and ratings (Pro/Power only)
+  - name: Admin
+    description: Admin endpoints (Admin only)
+  - name: Quotas
+    description: Quota and usage information
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        AWS Cognito JWT access token stored in HttpOnly cookie.
+
+        **Cookie-based Authentication:**
+        - Access token is automatically sent via HttpOnly cookie
+        - Cookie name: `access_token`
+        - Cookie attributes: HttpOnly, Secure, SameSite=Strict
+        - No need to manually set Authorization header
+
+        **For API testing tools (Postman, cURL):**
+        - You can still use Authorization header: `Bearer <token>`
+        - Or include cookie: `Cookie: access_token=<token>`
+  
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: quota_exceeded
+        message:
+          type: string
+          description: Human-readable error message
+          example: You have reached your MOC upload limit
+        details:
+          type: object
+          description: Additional error details
+        actions:
+          type: array
+          description: Suggested actions to resolve the error
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                example: Upgrade to Pro
+              url:
+                type: string
+                example: /pricing
+              description:
+                type: string
+                example: Get 100 MOC uploads and 1GB storage
+    
+    QuotaExceededError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            details:
+              type: object
+              properties:
+                quota_type:
+                  type: string
+                  example: mocs
+                current:
+                  type: integer
+                  example: 5
+                limit:
+                  type: integer
+                  example: 5
+                tier:
+                  type: string
+                  example: free-tier
+    
+    StorageExceededError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            details:
+              type: object
+              properties:
+                current_mb:
+                  type: number
+                  format: float
+                  example: 48.5
+                limit_mb:
+                  type: integer
+                  example: 50
+                file_size_mb:
+                  type: number
+                  format: float
+                  example: 2.3
+    
+    UserQuotas:
+      type: object
+      required:
+        - user_id
+        - tier
+        - mocs
+        - wishlists
+        - galleries
+        - setlists
+        - storage
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        tier:
+          type: string
+          enum: [admin, free-tier, pro-tier, power-tier]
+          example: pro-tier
+        mocs:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 23
+            limit:
+              type: integer
+              nullable: true
+              example: 100
+            percentage_used:
+              type: number
+              format: float
+              example: 23.0
+        wishlists:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 5
+            limit:
+              type: integer
+              nullable: true
+              example: 20
+            percentage_used:
+              type: number
+              format: float
+              example: 25.0
+        galleries:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 8
+            limit:
+              type: integer
+              nullable: true
+              example: 20
+            percentage_used:
+              type: number
+              format: float
+              example: 40.0
+        setlists:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 0
+            limit:
+              type: integer
+              nullable: true
+              example: null
+              description: null means unlimited
+        storage:
+          type: object
+          properties:
+            used_mb:
+              type: number
+              format: float
+              example: 456.78
+            limit_mb:
+              type: integer
+              nullable: true
+              example: 1000
+            percentage_used:
+              type: number
+              format: float
+              example: 45.68
+        add_ons:
+          type: object
+          properties:
+            price_scraping:
+              type: boolean
+              example: true
+            brick_tracking:
+              type: boolean
+              example: false
+        is_minor:
+          type: boolean
+          example: false
+          description: Whether user is under 18 years old
+
+    MOC:
+      type: object
+      required:
+        - id
+        - user_id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        user_id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Medieval Castle
+          maxLength: 200
+        description:
+          type: string
+          example: A detailed medieval castle with working drawbridge
+          maxLength: 5000
+        theme:
+          type: string
+          example: Castle
+          maxLength: 100
+        piece_count:
+          type: integer
+          example: 2847
+          minimum: 0
+        designer:
+          type: string
+          example: John Doe
+          maxLength: 200
+        purchase_url:
+          type: string
+          format: uri
+          example: https://rebrickable.com/mocs/MOC-12345
+        tags:
+          type: array
+          items:
+            type: string
+          example: [castle, medieval, knights, fortress]
+          maxItems: 20
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              filename:
+                type: string
+                example: instructions.pdf
+              file_type:
+                type: string
+                enum: [pdf, image]
+              file_size_mb:
+                type: number
+                format: float
+                example: 12.5
+              url:
+                type: string
+                format: uri
+                example: https://s3.amazonaws.com/bucket/files/abc123.pdf
+        build_status:
+          type: string
+          enum: [planning, building, completed, paused]
+          example: building
+        build_progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 65
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-12-01T10:30:00Z
+        updated_at:
+          type: string
+          format: date-time
+          example: 2025-12-01T15:45:00Z
+
+    MOCCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Medieval Castle
+          maxLength: 200
+        description:
+          type: string
+          example: A detailed medieval castle with working drawbridge
+          maxLength: 5000
+        theme:
+          type: string
+          example: Castle
+          maxLength: 100
+        piece_count:
+          type: integer
+          example: 2847
+          minimum: 0
+        designer:
+          type: string
+          example: John Doe
+          maxLength: 200
+        purchase_url:
+          type: string
+          format: uri
+          example: https://rebrickable.com/mocs/MOC-12345
+        tags:
+          type: array
+          items:
+            type: string
+          example: [castle, medieval, knights]
+          maxItems: 20
+
+    Wishlist:
+      type: object
+      required:
+        - id
+        - user_id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Dream Castle Sets
+          maxLength: 200
+        description:
+          type: string
+          example: All the castle sets I want to build
+          maxLength: 2000
+        is_public:
+          type: boolean
+          example: true
+          description: Whether this wishlist is visible to other users
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              moc_name:
+                type: string
+                example: King's Castle
+              set_number:
+                type: string
+                example: 10305
+              priority:
+                type: string
+                enum: [low, medium, high]
+                example: high
+              notes:
+                type: string
+                example: Wait for sale
+              added_at:
+                type: string
+                format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Gallery:
+      type: object
+      required:
+        - id
+        - user_id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Castle Collection Photos
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              filename:
+                type: string
+              file_size_mb:
+                type: number
+                format: float
+              url:
+                type: string
+                format: uri
+              caption:
+                type: string
+                maxLength: 500
+              uploaded_at:
+                type: string
+                format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SetList:
+      type: object
+      required:
+        - id
+        - user_id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Official Castle Sets I Own
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        sets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              set_number:
+                type: string
+                example: 10305
+              set_name:
+                type: string
+                example: Lion Knights' Castle
+              year:
+                type: integer
+                example: 2023
+              piece_count:
+                type: integer
+                example: 4514
+              condition:
+                type: string
+                enum: [new, used, incomplete]
+              notes:
+                type: string
+              added_at:
+                type: string
+                format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      required:
+        - id
+        - email
+        - tier
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        username:
+          type: string
+          example: castle_builder_42
+          maxLength: 50
+        tier:
+          type: string
+          enum: [admin, free-tier, pro-tier, power-tier]
+          example: pro-tier
+        profile_visibility:
+          type: string
+          enum: [public, network, private]
+          example: public
+          description: Who can see this user's profile
+        theme_breakdown:
+          type: object
+          description: Percentage breakdown of collection by theme
+          example:
+            Castle: 45
+            Pirates: 30
+            Space: 15
+            City: 10
+        theme_breakdown_visible:
+          type: boolean
+          example: true
+          description: Whether theme breakdown is visible to others
+        collection_stats:
+          type: object
+          properties:
+            total_mocs:
+              type: integer
+              example: 23
+            total_wishlists:
+              type: integer
+              example: 5
+            total_galleries:
+              type: integer
+              example: 8
+        currently_building:
+          type: array
+          items:
+            type: object
+            properties:
+              moc_id:
+                type: string
+                format: uuid
+              moc_name:
+                type: string
+              progress_percent:
+                type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      required:
+        - id
+        - user_id
+        - moc_id
+        - rating
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        moc_id:
+          type: string
+          format: uuid
+        moc_name:
+          type: string
+          example: Medieval Castle
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        review_text:
+          type: string
+          maxLength: 5000
+          example: Amazing build! Instructions were clear and the final result is stunning.
+        build_time_hours:
+          type: number
+          format: float
+          example: 24.5
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, expert]
+          example: medium
+        would_recommend:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate user and receive JWT tokens.
+
+        **Security Model:**
+        - Access token is set in an HttpOnly cookie (not accessible to JavaScript)
+        - Refresh token is returned in response body for storage in secure location
+        - Cookie attributes: HttpOnly, Secure, SameSite=Strict
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePassword123!
+      responses:
+        '200':
+          description: |
+            Login successful. Access token is set in HttpOnly cookie.
+
+            **Set-Cookie header:**
+            ```
+            Set-Cookie: access_token=<JWT>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600
+            ```
+          headers:
+            Set-Cookie:
+              description: HttpOnly cookie containing the access token
+              schema:
+                type: string
+                example: access_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    description: Basic user information
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        example: 550e8400-e29b-41d4-a716-446655440000
+                      email:
+                        type: string
+                        format: email
+                        example: user@example.com
+                      tier:
+                        type: string
+                        enum: [admin, free-tier, pro-tier, power-tier]
+                        example: pro-tier
+                  refresh_token:
+                    type: string
+                    description: Refresh token (30 days expiration) - store securely
+                    example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                  expires_in:
+                    type: integer
+                    example: 3600
+                    description: Access token expiration in seconds
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: |
+        Get a new access token using refresh token.
+
+        **Security Model:**
+        - New access token is set in an HttpOnly cookie
+        - Refresh token is provided in request body
+        - Cookie attributes: HttpOnly, Secure, SameSite=Strict
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  description: The refresh token received during login
+                  example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: |
+            Token refreshed successfully. New access token is set in HttpOnly cookie.
+
+            **Set-Cookie header:**
+            ```
+            Set-Cookie: access_token=<JWT>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600
+            ```
+          headers:
+            Set-Cookie:
+              description: HttpOnly cookie containing the new access token
+              schema:
+                type: string
+                example: access_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expires_in:
+                    type: integer
+                    example: 3600
+                    description: Access token expiration in seconds
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: |
+        Logout user by clearing the access token cookie.
+
+        **Security Model:**
+        - Clears the HttpOnly cookie
+        - Client should also discard the refresh token
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: |
+            Logout successful. Access token cookie is cleared.
+
+            **Set-Cookie header:**
+            ```
+            Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
+            ```
+          headers:
+            Set-Cookie:
+              description: Clears the access token cookie
+              schema:
+                type: string
+                example: access_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logout successful
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /quotas/me:
+    get:
+      tags:
+        - Quotas
+      summary: Get current user's quota information
+      description: Returns quota usage and limits for the authenticated user
+      operationId: getMyQuotas
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Quota information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserQuotas'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /mocs:
+    get:
+      tags:
+        - MOCs
+      summary: List user's MOCs
+      description: Get a paginated list of MOCs owned by the authenticated user
+      operationId: listMOCs
+      security:
+        - BearerAuth: [moc:manage]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: theme
+          in: query
+          description: Filter by theme
+          schema:
+            type: string
+        - name: build_status
+          in: query
+          description: Filter by build status
+          schema:
+            type: string
+            enum: [planning, building, completed, paused]
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [created_at, updated_at, name, piece_count]
+            default: created_at
+        - name: order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: MOCs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MOC'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 20
+                      total:
+                        type: integer
+                        example: 23
+                      total_pages:
+                        type: integer
+                        example: 2
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Missing required scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - MOCs
+      summary: Create a new MOC
+      description: Create a new MOC entry (without files). Use /mocs/{id}/files to upload files.
+      operationId: createMOC
+      security:
+        - BearerAuth: [moc:manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MOCCreate'
+      responses:
+        '201':
+          description: MOC created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MOC'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Missing required scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotaExceededError'
+
+  /mocs/{id}:
+    get:
+      tags:
+        - MOCs
+      summary: Get a specific MOC
+      description: Retrieve details of a specific MOC
+      operationId: getMOC
+      security:
+        - BearerAuth: [moc:manage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: MOC retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MOC'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Not your MOC
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: MOC not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - MOCs
+      summary: Update a MOC
+      description: Update MOC details
+      operationId: updateMOC
+      security:
+        - BearerAuth: [moc:manage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MOCCreate'
+      responses:
+        '200':
+          description: MOC updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MOC'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Not your MOC
+        '404':
+          description: MOC not found
+
+    delete:
+      tags:
+        - MOCs
+      summary: Delete a MOC
+      description: Delete a MOC and all associated files (frees up quota)
+      operationId: deleteMOC
+      security:
+        - BearerAuth: [moc:manage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: MOC deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Not your MOC
+        '404':
+          description: MOC not found
+
+  /mocs/{id}/files:
+    post:
+      tags:
+        - MOCs
+      summary: Upload file to MOC
+      description: Upload a PDF or image file to a MOC. Checks storage quota before upload.
+      operationId: uploadMOCFile
+      security:
+        - BearerAuth: [moc:manage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF or image file (max 100MB per file)
+                file_type:
+                  type: string
+                  enum: [pdf, image]
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  filename:
+                    type: string
+                  file_type:
+                    type: string
+                  file_size_mb:
+                    type: number
+                    format: float
+                  url:
+                    type: string
+                    format: uri
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Not your MOC
+        '413':
+          description: Storage quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageExceededError'
+        '429':
+          description: Rate limit exceeded
+
+  /mocs/{id}/files/{fileId}:
+    delete:
+      tags:
+        - MOCs
+      summary: Delete a file from MOC
+      description: Delete a file and free up storage quota
+      operationId: deleteMOCFile
+      security:
+        - BearerAuth: [moc:manage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: File deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: File not found
+
+  /wishlists:
+    get:
+      tags:
+        - Wishlists
+      summary: List user's wishlists
+      description: Get all wishlists owned by the authenticated user
+      operationId: listWishlists
+      security:
+        - BearerAuth: [wishlist:manage]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Wishlists retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Wishlist'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      total_pages:
+                        type: integer
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Missing required scope
+
+    post:
+      tags:
+        - Wishlists
+      summary: Create a new wishlist
+      description: Create a new wishlist (checks quota)
+      operationId: createWishlist
+      security:
+        - BearerAuth: [wishlist:manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 2000
+                is_public:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Wishlist created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wishlist'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '429':
+          description: Quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotaExceededError'
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user's profile
+      description: Retrieve the authenticated user's profile
+      operationId: getMyProfile
+      security:
+        - BearerAuth: [profile:manage]
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+
+    put:
+      tags:
+        - Users
+      summary: Update current user's profile
+      description: Update profile settings and privacy controls
+      operationId: updateMyProfile
+      security:
+        - BearerAuth: [profile:manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  maxLength: 50
+                profile_visibility:
+                  type: string
+                  enum: [public, network, private]
+                theme_breakdown_visible:
+                  type: boolean
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid input
+
+  /users/discover:
+    get:
+      tags:
+        - Users
+      summary: Discover users with similar collections
+      description: Find users with similar theme breakdowns (Pro/Power only)
+      operationId: discoverUsers
+      security:
+        - BearerAuth: [user:discover]
+      parameters:
+        - name: min_similarity
+          in: query
+          description: Minimum similarity percentage (0-100)
+          schema:
+            type: integer
+            default: 50
+            minimum: 0
+            maximum: 100
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+      responses:
+        '200':
+          description: Similar users found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user:
+                          $ref: '#/components/schemas/UserProfile'
+                        similarity_percent:
+                          type: number
+                          format: float
+                          example: 87.5
+                        shared_themes:
+                          type: array
+                          items:
+                            type: string
+                          example: [Castle, Pirates, Space]
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Requires Pro or Power tier
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Get another user's public profile
+      description: View another user's profile (respects privacy settings)
+      operationId: getUserProfile
+      security:
+        - BearerAuth: [user:discover]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Profile is private
+        '404':
+          description: User not found
+
+  /reviews:
+    get:
+      tags:
+        - Reviews
+      summary: List reviews
+      description: Get reviews (can filter by MOC or user)
+      operationId: listReviews
+      security:
+        - BearerAuth: [review:manage]
+      parameters:
+        - name: moc_id
+          in: query
+          description: Filter by MOC ID
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  pagination:
+                    type: object
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Requires Pro or Power tier
+
+    post:
+      tags:
+        - Reviews
+      summary: Create a review
+      description: Write a review for a MOC you own (Pro/Power only)
+      operationId: createReview
+      security:
+        - BearerAuth: [review:manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - moc_id
+                - rating
+              properties:
+                moc_id:
+                  type: string
+                  format: uuid
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                review_text:
+                  type: string
+                  maxLength: 5000
+                build_time_hours:
+                  type: number
+                  format: float
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard, expert]
+                would_recommend:
+                  type: boolean
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Must own the MOC or requires Pro/Power tier
+        '409':
+          description: Conflict - Already reviewed this MOC
+
+  /chat/channels:
+    get:
+      tags:
+        - Chat
+      summary: List available chat channels
+      description: Get list of general and theme-based channels (Pro/Power only, age-restricted)
+      operationId: listChatChannels
+      security:
+        - BearerAuth: [chat:participate]
+      responses:
+        '200':
+          description: Channels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: general
+                        name:
+                          type: string
+                          example: General Chat
+                        description:
+                          type: string
+                          example: General discussion about LEGO
+                        type:
+                          type: string
+                          enum: [general, theme]
+                        theme:
+                          type: string
+                          example: Castle
+                        member_count:
+                          type: integer
+                          example: 42
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Requires Pro/Power tier and age 18+
+
+  /chat/channels/{channelId}/messages:
+    get:
+      tags:
+        - Chat
+      summary: Get channel messages
+      description: Retrieve chat history (limited by tier - Pro=30 days, Power=365 days)
+      operationId: getChannelMessages
+      security:
+        - BearerAuth: [chat:participate]
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: before
+          in: query
+          description: Get messages before this timestamp (for pagination)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        user_id:
+                          type: string
+                          format: uuid
+                        username:
+                          type: string
+                        message:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                  has_more:
+                    type: boolean
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+    post:
+      tags:
+        - Chat
+      summary: Send a message to channel
+      description: Post a message to a chat channel
+      operationId: sendChannelMessage
+      security:
+        - BearerAuth: [chat:participate]
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  created_at:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '429':
+          description: Rate limit exceeded
+
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all users (Admin only)
+      description: Get paginated list of all users with quota information
+      operationId: adminListUsers
+      security:
+        - BearerAuth: [admin:users:manage]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: tier
+          in: query
+          description: Filter by tier
+          schema:
+            type: string
+            enum: [admin, free-tier, pro-tier, power-tier]
+        - name: search
+          in: query
+          description: Search by email or username
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/UserProfile'
+                        - type: object
+                          properties:
+                            quotas:
+                              $ref: '#/components/schemas/UserQuotas'
+                  pagination:
+                    type: object
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Requires admin role
+
+  /admin/users/{userId}:
+    get:
+      tags:
+        - Admin
+      summary: Get user details (Admin only)
+      description: Get detailed information about a specific user
+      operationId: adminGetUser
+      security:
+        - BearerAuth: [admin:users:manage]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UserProfile'
+                  - type: object
+                    properties:
+                      quotas:
+                        $ref: '#/components/schemas/UserQuotas'
+                      activity:
+                        type: object
+                        properties:
+                          last_login:
+                            type: string
+                            format: date-time
+                          total_logins:
+                            type: integer
+                          api_calls_last_30_days:
+                            type: integer
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: User not found
+
+    put:
+      tags:
+        - Admin
+      summary: Update user (Admin only)
+      description: Update user tier, quotas, or add-ons
+      operationId: adminUpdateUser
+      security:
+        - BearerAuth: [admin:users:manage]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tier:
+                  type: string
+                  enum: [free-tier, pro-tier, power-tier]
+                  description: Cannot set to admin via API
+                has_price_scraping_addon:
+                  type: boolean
+                has_brick_tracking_addon:
+                  type: boolean
+                custom_mocs_limit:
+                  type: integer
+                  description: Override default tier limit
+                custom_storage_limit_mb:
+                  type: integer
+                  description: Override default tier limit
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserQuotas'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: User not found
+
+    delete:
+      tags:
+        - Admin
+      summary: Delete user (Admin only)
+      description: Permanently delete a user and all their data
+      operationId: adminDeleteUser
+      security:
+        - BearerAuth: [admin:users:manage]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: User not found
+
+  /admin/content/mocs:
+    get:
+      tags:
+        - Admin
+      summary: List all MOCs (Admin only)
+      description: View all MOCs across all users for moderation
+      operationId: adminListMOCs
+      security:
+        - BearerAuth: [admin:content:moderate]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: user_id
+          in: query
+          description: Filter by user
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: MOCs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MOC'
+                  pagination:
+                    type: object
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /admin/content/mocs/{id}:
+    delete:
+      tags:
+        - Admin
+      summary: Delete any MOC (Admin only)
+      description: Delete a MOC for moderation purposes
+      operationId: adminDeleteMOC
+      security:
+        - BearerAuth: [admin:content:moderate]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reason
+          in: query
+          required: true
+          description: Reason for deletion (logged)
+          schema:
+            type: string
+      responses:
+        '204':
+          description: MOC deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: MOC not found
+
+  /admin/chat/messages:
+    get:
+      tags:
+        - Admin
+      summary: View all chat messages (Admin only)
+      description: View chat messages across all channels for moderation
+      operationId: adminListChatMessages
+      security:
+        - BearerAuth: [admin:chat:moderate]
+      parameters:
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Messages retrieved successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /admin/chat/messages/{messageId}:
+    delete:
+      tags:
+        - Admin
+      summary: Delete chat message (Admin only)
+      description: Remove a message for moderation purposes
+      operationId: adminDeleteChatMessage
+      security:
+        - BearerAuth: [admin:chat:moderate]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Message deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /admin/analytics:
+    get:
+      tags:
+        - Admin
+      summary: Get platform analytics (Admin only)
+      description: View usage statistics and metrics
+      operationId: adminGetAnalytics
+      security:
+        - BearerAuth: [admin:analytics:view]
+      parameters:
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 87
+                      by_tier:
+                        type: object
+                        properties:
+                          free:
+                            type: integer
+                            example: 45
+                          pro:
+                            type: integer
+                            example: 35
+                          power:
+                            type: integer
+                            example: 6
+                          admin:
+                            type: integer
+                            example: 1
+                      new_signups:
+                        type: integer
+                        example: 12
+                      upgrades:
+                        type: integer
+                        example: 3
+                  content:
+                    type: object
+                    properties:
+                      total_mocs:
+                        type: integer
+                        example: 342
+                      total_wishlists:
+                        type: integer
+                        example: 156
+                      total_galleries:
+                        type: integer
+                        example: 89
+                      total_setlists:
+                        type: integer
+                        example: 23
+                  storage:
+                    type: object
+                    properties:
+                      total_used_gb:
+                        type: number
+                        format: float
+                        example: 23.5
+                      average_per_user_mb:
+                        type: number
+                        format: float
+                        example: 270.1
+                  activity:
+                    type: object
+                    properties:
+                      api_calls:
+                        type: integer
+                        example: 45678
+                      chat_messages:
+                        type: integer
+                        example: 1234
+                      reviews_posted:
+                        type: integer
+                        example: 67
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+security:
+  - BearerAuth: []
+

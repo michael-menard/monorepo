@@ -8,8 +8,10 @@ import { SignupPage } from './pages/SignupPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
+import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
 import { RouteGuards } from '@/lib/route-guards'
 import type { AuthState } from '@/store/slices/authSlice'
 
@@ -18,9 +20,10 @@ interface RouteContext {
   auth?: AuthState
 }
 
-// Root route with layout
+// Root route with layout and error handling
 const rootRoute = createRootRoute({
   component: RootLayout,
+  errorComponent: RouteErrorComponent,
 })
 
 // Home route
@@ -169,6 +172,13 @@ const dashboardRoute = createRoute({
 //   beforeLoad: RouteGuards.protected,
 // })
 
+// 403 Unauthorized route
+const unauthorizedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/unauthorized',
+  component: UnauthorizedPage,
+})
+
 // 404 route
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -189,6 +199,7 @@ const routeTree = rootRoute.addChildren([
   wishlistRoute,
   instructionsRoute,
   dashboardRoute,
+  unauthorizedRoute,
   notFoundRoute,
 ])
 

@@ -3,26 +3,24 @@ import { Link } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { logger } from '@repo/logger'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Badge,
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@repo/ui'
+  AppAlertDialog,
+  AppAlertDialogAction,
+  AppAlertDialogCancel,
+  AppAlertDialogContent,
+  AppAlertDialogDescription,
+  AppAlertDialogFooter,
+  AppAlertDialogHeader,
+  AppAlertDialogTitle,
+  AppAvatar,
+  AppBadge,
+  CustomButton,
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuLabel,
+  AppDropdownMenuSeparator,
+  AppDropdownMenuTrigger,
+} from '@repo/app-component-library'
 import { Menu, Bell, Settings, LogOut, User, Moon, Sun, Monitor } from 'lucide-react'
 import { NavigationSearch } from '../Navigation/NavigationSearch'
 import { EnhancedBreadcrumb } from '../Navigation/EnhancedBreadcrumb'
@@ -80,7 +78,7 @@ export function Header() {
           <div className="flex items-center gap-4">
             {/* Mobile menu button - visible on mobile, hidden on md and up (AC: 8) */}
             {auth.isAuthenticated ? (
-              <Button
+              <CustomButton
                 variant="ghost"
                 size="sm"
                 className="md:hidden"
@@ -88,7 +86,7 @@ export function Header() {
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
-              </Button>
+              </CustomButton>
             ) : null}
 
             {/* Logo */}
@@ -116,70 +114,70 @@ export function Header() {
           {/* Right side - User actions */}
           <div className="flex items-center gap-2">
             {/* Theme toggle dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-9">
+            <AppDropdownMenu>
+              <AppDropdownMenuTrigger asChild>
+                <CustomButton variant="ghost" size="sm" className="h-9 w-9">
                   {getThemeIcon()}
                   <span className="sr-only">Toggle theme</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
+                </CustomButton>
+              </AppDropdownMenuTrigger>
+              <AppDropdownMenuContent align="end">
+                <AppDropdownMenuItem
                   onClick={() => handleThemeChange('light')}
                   className={theme === 'light' ? 'bg-accent' : ''}
                 >
                   <Sun className="mr-2 h-4 w-4" />
                   Light
-                </DropdownMenuItem>
-                <DropdownMenuItem
+                </AppDropdownMenuItem>
+                <AppDropdownMenuItem
                   onClick={() => handleThemeChange('dark')}
                   className={theme === 'dark' ? 'bg-accent' : ''}
                 >
                   <Moon className="mr-2 h-4 w-4" />
                   Dark
-                </DropdownMenuItem>
-                <DropdownMenuItem
+                </AppDropdownMenuItem>
+                <AppDropdownMenuItem
                   onClick={() => handleThemeChange('system')}
                   className={theme === 'system' ? 'bg-accent' : ''}
                 >
                   <Monitor className="mr-2 h-4 w-4" />
                   System
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </AppDropdownMenuItem>
+              </AppDropdownMenuContent>
+            </AppDropdownMenu>
 
             {auth.isAuthenticated ? (
               <>
                 {/* Enhanced Notifications */}
-                <Button variant="ghost" size="sm" className="h-9 w-9 relative">
+                <CustomButton variant="ghost" size="sm" className="h-9 w-9 relative">
                   <Bell className="h-4 w-4" />
                   {totalNotifications > 0 && (
-                    <Badge
+                    <AppBadge
                       variant="destructive"
                       className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                     >
                       {totalNotifications > 99 ? '99+' : totalNotifications}
-                    </Badge>
+                    </AppBadge>
                   )}
                   <span className="sr-only">
                     Notifications {totalNotifications > 0 && `(${totalNotifications})`}
                   </span>
-                </Button>
+                </CustomButton>
 
                 {/* User menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={auth.user?.avatar} alt={auth.user?.name} />
-                        <AvatarFallback>
-                          {auth.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
+                <AppDropdownMenu>
+                  <AppDropdownMenuTrigger asChild>
+                    <CustomButton variant="ghost" className="relative h-9 w-9 rounded-full">
+                      <AppAvatar
+                        src={auth.user?.avatar}
+                        alt={auth.user?.name}
+                        fallback={auth.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        size="sm"
+                      />
+                    </CustomButton>
+                  </AppDropdownMenuTrigger>
+                  <AppDropdownMenuContent className="w-56" align="end" forceMount>
+                    <AppDropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">
                           {auth.user?.name || 'User'}
@@ -188,33 +186,33 @@ export function Header() {
                           {auth.user?.email}
                         </p>
                       </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
+                    </AppDropdownMenuLabel>
+                    <AppDropdownMenuSeparator />
+                    <AppDropdownMenuItem asChild>
                       <Link to="/dashboard" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
                         Dashboard
                       </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    </AppDropdownMenuItem>
+                    <AppDropdownMenuItem asChild>
                       <Link to="/settings" className="cursor-pointer">
                         <Settings className="mr-2 h-4 w-4" />
                         Settings
                       </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOutClick} className="cursor-pointer">
+                    </AppDropdownMenuItem>
+                    <AppDropdownMenuSeparator />
+                    <AppDropdownMenuItem onClick={handleSignOutClick} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </AppDropdownMenuItem>
+                  </AppDropdownMenuContent>
+                </AppDropdownMenu>
               </>
             ) : (
               /* Login button for unauthenticated users */
-              <Button asChild>
+              <CustomButton asChild>
                 <Link to="/login">Sign In</Link>
-              </Button>
+              </CustomButton>
             )}
           </div>
         </div>
@@ -235,20 +233,20 @@ export function Header() {
       </div>
 
       {/* Logout Confirmation Dialog (AC: 6) */}
-      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Log out?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <AppAlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AppAlertDialogContent>
+          <AppAlertDialogHeader>
+            <AppAlertDialogTitle>Log out?</AppAlertDialogTitle>
+            <AppAlertDialogDescription>
               You will need to sign in again to access your account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSignOutConfirm}>Log out</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </AppAlertDialogDescription>
+          </AppAlertDialogHeader>
+          <AppAlertDialogFooter>
+            <AppAlertDialogCancel>Cancel</AppAlertDialogCancel>
+            <AppAlertDialogAction onClick={handleSignOutConfirm}>Log out</AppAlertDialogAction>
+          </AppAlertDialogFooter>
+        </AppAlertDialogContent>
+      </AppAlertDialog>
     </header>
   )
 }

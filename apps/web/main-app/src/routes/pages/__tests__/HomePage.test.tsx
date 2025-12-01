@@ -26,7 +26,7 @@ vi.mock('framer-motion', () => ({
 }))
 
 // Mock UI components
-vi.mock('@repo/ui', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,

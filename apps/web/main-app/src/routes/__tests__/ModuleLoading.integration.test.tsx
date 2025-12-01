@@ -13,7 +13,7 @@ vi.mock('react-redux', () => ({
 }))
 
 // Mock the UI components with direct imports (no barrel files)
-vi.mock('@repo/ui/card', () => ({
+vi.mock('@repo/app-component-library', () => ({
   Card: ({ children, className }: any) => (
     <div className={className} data-testid="card">
       {children}

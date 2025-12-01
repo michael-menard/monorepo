@@ -2,69 +2,45 @@
 module.exports = {
   theme: {
     extend: {
-      // LEGO MOC Color Palette
+      // LEGO MOC Color Palette - Teal/Sage/Taupe
       colors: {
-        // Primary - Vibrant Teal
-        primary: {
-          50: 'hsl(var(--color-primary-50))',
-          100: 'hsl(var(--color-primary-100))',
-          200: 'hsl(var(--color-primary-200))',
-          300: 'hsl(var(--color-primary-300))',
-          400: 'hsl(var(--color-primary-400))',
-          500: 'hsl(var(--color-primary-500))',
-          600: 'hsl(var(--color-primary-600))',
-          700: 'hsl(var(--color-primary-700))',
-          800: 'hsl(var(--color-primary-800))',
-          900: 'hsl(var(--color-primary-900))',
-          DEFAULT: 'hsl(var(--color-primary-500))',
+        // Primary Brand - Teal Family
+        teal: {
+          100: 'var(--color-teal-100)',  // #D1E3E8 - Disabled states
+          400: 'var(--color-teal-400)',  // #5FA3B8 - Secondary interactive
+          600: 'var(--color-teal-600)',  // #1B5E6D - Primary (DEFAULT)
+          800: 'var(--color-teal-800)',  // #0F4654 - Hover states
+          950: 'var(--color-teal-950)',  // #082B34 - Dark mode bg
+          DEFAULT: 'var(--color-teal-600)',
         },
-        // Secondary - Warm Cream
-        secondary: {
-          50: 'hsl(var(--color-secondary-50))',
-          100: 'hsl(var(--color-secondary-100))',
-          200: 'hsl(var(--color-secondary-200))',
-          300: 'hsl(var(--color-secondary-300))',
-          400: 'hsl(var(--color-secondary-400))',
-          500: 'hsl(var(--color-secondary-500))',
-          600: 'hsl(var(--color-secondary-600))',
-          700: 'hsl(var(--color-secondary-700))',
-          800: 'hsl(var(--color-secondary-800))',
-          900: 'hsl(var(--color-secondary-900))',
-          DEFAULT: 'hsl(var(--color-secondary-300))',
+        // Accent - Green/Sage Family
+        green: {
+          100: 'var(--color-green-100)', // #E9EDE8 - Soft backgrounds
+          300: 'var(--color-green-300)', // #C4D1C5 - Borders, dividers
+          500: 'var(--color-green-500)', // #A8B8A3 - Accents (DEFAULT)
+          700: 'var(--color-green-700)', // #6B7E68 - Secondary elements
+          900: 'var(--color-green-900)', // #2D5F4F - Success states
+          DEFAULT: 'var(--color-green-500)',
         },
-        // Accent - Sage Teal
-        accent: {
-          50: 'hsl(var(--color-accent-50))',
-          100: 'hsl(var(--color-accent-100))',
-          200: 'hsl(var(--color-accent-200))',
-          300: 'hsl(var(--color-accent-300))',
-          400: 'hsl(var(--color-accent-400))',
-          500: 'hsl(var(--color-accent-500))',
-          600: 'hsl(var(--color-accent-600))',
-          700: 'hsl(var(--color-accent-700))',
-          800: 'hsl(var(--color-accent-800))',
-          900: 'hsl(var(--color-accent-900))',
-          DEFAULT: 'hsl(var(--color-accent-500))',
-        },
-        // Neutral - Surface Colors
+        // Neutral - Taupe/Earth Family
         neutral: {
-          50: 'hsl(var(--color-neutral-50))',
-          100: 'hsl(var(--color-neutral-100))',
-          200: 'hsl(var(--color-neutral-200))',
-          300: 'hsl(var(--color-neutral-300))',
-          400: 'hsl(var(--color-neutral-400))',
-          500: 'hsl(var(--color-neutral-500))',
-          600: 'hsl(var(--color-neutral-600))',
-          700: 'hsl(var(--color-neutral-700))',
-          800: 'hsl(var(--color-neutral-800))',
-          900: 'hsl(var(--color-neutral-900))',
-          DEFAULT: 'hsl(var(--color-neutral-500))',
+          50: 'var(--color-neutral-50)',   // #F9F7F5 - Light backgrounds
+          100: 'var(--color-neutral-100)', // #F5F1ED - Primary background
+          300: 'var(--color-neutral-300)', // #D9CFC5 - Borders
+          500: 'var(--color-neutral-500)', // #9B8B7E - Secondary text
+          700: 'var(--color-neutral-700)', // #6B5D52 - Emphasis text
+          900: 'var(--color-neutral-900)', // #2C2C2C - Primary text
+          DEFAULT: 'var(--color-neutral-500)',
         },
         // Semantic Colors
-        success: 'hsl(var(--color-success-500))',
-        warning: 'hsl(var(--color-warning-500))',
-        error: 'hsl(var(--color-error-500))',
-        info: 'hsl(var(--color-info-500))',
+        success: 'var(--color-success)',   // #2D5F4F - Forest Green
+        warning: 'var(--color-warning)',   // #D4A574 - Warm Ochre
+        error: 'var(--color-error)',       // #A85B4B - Terracotta Red
+        info: 'var(--color-info)',         // #5FA3B8 - Soft Teal
+        // Additional Accents
+        clay: 'var(--color-clay)',         // #B89968 - MOC highlights
+        'dusty-blue': 'var(--color-dusty-blue)', // #7B8FA3 - Secondary accent
+        gold: 'var(--color-gold)',         // #B8A876 - Premium/featured
       },
       
       // Typography

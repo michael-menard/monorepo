@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,7 +17,8 @@ import {
   AlertDescription,
   Checkbox,
   cn,
-} from '@repo/ui'
+} from '@repo/app-component-library'
+import { useToast } from '@repo/app-component-library'
 import { Lock, Mail, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react'
 import { useAuth, type SocialProvider } from '@/services/auth/AuthProvider'
 import { useNavigation } from '@/components/Navigation/NavigationProvider'
@@ -83,14 +84,26 @@ const legoBrickVariants = {
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const search = useSearch({ strict: false }) as { redirect?: string }
+  const search = useSearch({ strict: false }) as { redirect?: string; expired?: string }
   const { signIn, signInWithSocial, isLoading } = useAuth()
   const { trackNavigation } = useNavigation()
+  const { toast } = useToast()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
-  // Get redirect URL from search params (set by protected route guard)
+  // Get redirect URL from search params (set by protected route guard or auth failure handler)
   const redirectTo = search.redirect || '/dashboard'
+
+  // Show session expired notification if redirected from 401 handler (Story 1.29)
+  useEffect(() => {
+    if (search.expired === 'true') {
+      toast({
+        title: 'Session Expired',
+        description: 'Please sign in again to continue.',
+        variant: 'destructive',
+      })
+    }
+  }, [search.expired, toast])
 
   const {
     register,
