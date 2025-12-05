@@ -21,7 +21,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '../_primitives/dropdown-menu'
-import { cn } from '../_lib/utils'
 
 export interface AppDropdownMenuProps extends React.ComponentProps<typeof DropdownMenu> {
   children?: React.ReactNode

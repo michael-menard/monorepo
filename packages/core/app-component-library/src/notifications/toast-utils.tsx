@@ -36,7 +36,7 @@ const CustomToast: React.FC<CustomToastProps> = ({
 }) => {
   const [progress, setProgress] = useState(100)
   const [isPaused, setIsPaused] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(duration)
+  const [_timeLeft, setTimeLeft] = useState(duration)
 
   useEffect(() => {
     if (isPaused) return

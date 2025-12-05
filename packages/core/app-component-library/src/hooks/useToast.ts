@@ -5,7 +5,6 @@ import {
   showErrorToast,
   showWarningToast,
   showInfoToast,
-  getErrorMessage,
 } from '../notifications/toast-utils'
 import type { ToastType } from '../notifications/toast-utils'
 

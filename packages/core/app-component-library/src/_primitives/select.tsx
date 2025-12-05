@@ -122,8 +122,9 @@ const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, disabled, ...props }, ref) => {
+  const dataState = (props as Record<string, unknown>)['data-state']
   const ariaAttributes = getAriaAttributes({
-    selected: props['data-state'] === 'checked',
+    selected: dataState === 'checked',
     disabled,
   })
 

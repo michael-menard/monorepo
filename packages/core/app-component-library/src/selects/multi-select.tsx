@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Check, ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import { Badge } from '../_primitives/badge'
 import { Button } from '../_primitives/button'
 import { Checkbox } from '../_primitives/checkbox'

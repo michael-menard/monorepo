@@ -157,7 +157,6 @@ export const getAriaAttributes = (options: {
 // Focus management utilities
 export const useFocusTrap = (isActive: boolean = false) => {
   const containerRef = useRef<HTMLElement>(null)
-  const focusableElementsRef = useRef<HTMLElement[]>([])
 
   const getFocusableElements = useCallback(() => {
     if (!containerRef.current) return []

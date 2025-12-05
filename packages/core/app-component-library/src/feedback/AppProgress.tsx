@@ -3,7 +3,6 @@
  * Application wrapper for Progress component with consistent styling
  */
 
-import * as React from 'react'
 import { Progress, type ProgressProps } from '../_primitives/progress'
 import { cn } from '../_lib/utils'
 

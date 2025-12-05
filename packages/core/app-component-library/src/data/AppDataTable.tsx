@@ -81,7 +81,7 @@ export function AppDataTable<T>({
       if (!column.responsive) return true
 
       // Simple responsive logic - can be enhanced with actual screen size detection
-      const hideAt = column.responsive.hideAt
+      // column.responsive.hideAt is available for future breakpoint-based hiding
       // For now, we'll show all columns but add responsive classes
       return true
     })

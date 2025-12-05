@@ -3,7 +3,6 @@
  * Application wrapper for Checkbox component with consistent styling
  */
 
-import * as React from 'react'
 import { Checkbox, type CheckboxProps } from '../_primitives/checkbox'
 import { cn } from '../_lib/utils'
 

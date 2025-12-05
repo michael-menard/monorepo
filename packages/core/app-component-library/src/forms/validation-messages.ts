@@ -87,7 +87,7 @@ export const createEnhancedSchemas = {
       .max(maxLength, validationMessages.maxLength(fieldName, maxLength))
       .regex(/^[a-zA-Z\s]+$/, `${fieldName} can only contain letters and spaces`),
 
-  username: (fieldName = 'Username') =>
+  username: (_fieldName = 'Username') =>
     z
       .string()
       .min(3, validationMessages.username.minLength(3))
@@ -100,7 +100,7 @@ export const createEnhancedSchemas = {
       .min(1, validationMessages.required(fieldName))
       .regex(/^[\+]?[1-9][\d]{0,15}$/, validationMessages.phone),
 
-  url: (fieldName = 'URL') => z.string().url(validationMessages.url()).optional(),
+  url: (_fieldName = 'URL') => z.string().url(validationMessages.url()).optional(),
 
   number: (fieldName = 'Number', min?: number, max?: number) => {
     let schema = z.number().positive(validationMessages.number.positive(fieldName))
@@ -145,7 +145,6 @@ export const validatePasswordStrength = (
   score: number
 } => {
   let score = 0
-  const messages: string[] = []
 
   // Length check
   if (password.length >= 8) score += 1
@@ -289,7 +288,7 @@ export const createFormValidationHelpers = {
   // Create a conditional required field
   conditionalRequired: <T extends z.ZodTypeAny>(
     schema: T,
-    condition: (data: any) => boolean,
+    _condition: (data: unknown) => boolean,
     fieldName: string,
   ) =>
     schema.refine(
@@ -314,7 +313,7 @@ export const createFormValidationHelpers = {
     schema.refine(
       async value => {
         if (!value) return true
-        return await checkUnique(value)
+        return await checkUnique(String(value))
       },
       {
         message: validationMessages.unique(fieldName),
