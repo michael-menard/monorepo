@@ -285,19 +285,102 @@ const MocCardCompactSkeleton = React.forwardRef<HTMLDivElement, MocCardCompactSk
 )
 MocCardCompactSkeleton.displayName = 'MocCardCompactSkeleton'
 
+/**
+ * Column configuration for responsive breakpoints
+ */
+export interface GalleryGridSkeletonColumns {
+  /** Number of columns on small screens (default: 1) */
+  sm?: number
+  /** Number of columns on medium screens (default: 2) */
+  md?: number
+  /** Number of columns on large screens (default: 3) */
+  lg?: number
+  /** Number of columns on extra-large screens (default: 4) */
+  xl?: number
+}
+
+/** Maps column count to Tailwind grid-cols class */
+const columnClassMap: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+}
+
+/** Maps gap value to Tailwind gap class */
+const gapClassMap: Record<number, string> = {
+  1: 'gap-1',
+  2: 'gap-2',
+  3: 'gap-3',
+  4: 'gap-4',
+  5: 'gap-5',
+  6: 'gap-6',
+  8: 'gap-8',
+  10: 'gap-10',
+  12: 'gap-12',
+}
+
+/**
+ * Generates responsive grid column classes based on configuration
+ */
+const getColumnClasses = (columns: GalleryGridSkeletonColumns): string => {
+  const { sm = 1, md = 2, lg = 3, xl = 4 } = columns
+
+  const classes: string[] = []
+
+  // Base (smallest) - use sm value
+  classes.push(columnClassMap[sm] ?? 'grid-cols-1')
+
+  // md breakpoint
+  if (sm !== md) {
+    classes.push(`md:${columnClassMap[md] ?? 'grid-cols-2'}`)
+  }
+
+  // lg breakpoint
+  if (md !== lg) {
+    classes.push(`lg:${columnClassMap[lg] ?? 'grid-cols-3'}`)
+  }
+
+  // xl breakpoint
+  if (lg !== xl) {
+    classes.push(`xl:${columnClassMap[xl] ?? 'grid-cols-4'}`)
+  }
+
+  return classes.join(' ')
+}
+
 // Gallery Grid Skeleton
 export interface GalleryGridSkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Number of skeleton items to render (default: 12) */
   count?: number
+  /** Custom column configuration per breakpoint */
+  columns?: GalleryGridSkeletonColumns
+  /** Gap size using Tailwind spacing scale (default: 6) */
+  gap?: 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12
+  /** Custom card skeleton render function */
+  renderCard?: (index: number) => React.ReactNode
 }
 
 const GalleryGridSkeleton = React.forwardRef<HTMLDivElement, GalleryGridSkeletonProps>(
-  ({ className, count = 12, ...props }, ref) => (
-    <div ref={ref} className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6', className)} {...props}>
-      {Array.from({ length: count }).map((_, i) => (
-        <MocCardSkeleton key={i} />
-      ))}
-    </div>
-  ),
+  ({ className, count = 12, columns = {}, gap = 6, renderCard, ...props }, ref) => {
+    const columnClasses = getColumnClasses(columns)
+    const gapClass = gapClassMap[gap] ?? 'gap-6'
+
+    return (
+      <div
+        ref={ref}
+        className={cn('grid', columnClasses, gapClass, className)}
+        data-testid="gallery-grid-skeleton"
+        {...props}
+      >
+        {Array.from({ length: count }).map((_, i) =>
+          renderCard ? renderCard(i) : <MocCardSkeleton key={i} />,
+        )}
+      </div>
+    )
+  },
 )
 GalleryGridSkeleton.displayName = 'GalleryGridSkeleton'
 

@@ -1,7 +1,9 @@
-import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'path'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
+  plugins: [react()],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
@@ -20,5 +22,11 @@ export default defineConfig({
     },
     sourcemap: true,
     emptyOutDir: true,
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/__tests__/setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })

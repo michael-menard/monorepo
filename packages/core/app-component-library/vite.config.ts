@@ -47,7 +47,6 @@ export default defineConfig(({ mode }) => {
           'forms/validation-messages': path.resolve(__dirname, 'src/forms/validation-messages.ts'),
 
           // App components - cards
-          'cards/AppCard': path.resolve(__dirname, 'src/cards/AppCard.tsx'),
           'cards/stats-cards': path.resolve(__dirname, 'src/cards/stats-cards.tsx'),
 
           // App components - avatars
