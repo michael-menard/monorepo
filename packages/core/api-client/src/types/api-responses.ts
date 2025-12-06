@@ -15,12 +15,14 @@ export const ServerlessResponseSchema = z.object({
     timestamp: z.string(),
     version: z.string().optional(),
   }),
-  pagination: z.object({
-    page: z.number(),
-    limit: z.number(),
-    total: z.number(),
-    totalPages: z.number(),
-  }).optional(),
+  pagination: z
+    .object({
+      page: z.number(),
+      limit: z.number(),
+      total: z.number(),
+      totalPages: z.number(),
+    })
+    .optional(),
 })
 
 export type ServerlessResponse<T = any> = {
@@ -121,11 +123,13 @@ export const MOCInstructionSchema = z.object({
   stepCount: z.number(),
   category: z.string(),
   tags: z.array(z.string()),
-  images: z.array(z.object({
-    url: z.string(),
-    thumbnailUrl: z.string(),
-    caption: z.string().optional(),
-  })),
+  images: z.array(
+    z.object({
+      url: z.string(),
+      thumbnailUrl: z.string(),
+      caption: z.string().optional(),
+    }),
+  ),
   author: z.object({
     id: z.string(),
     name: z.string(),
@@ -192,10 +196,12 @@ export const HealthCheckResponseSchema = z.object({
   status: z.enum(['healthy', 'degraded', 'unhealthy']),
   timestamp: z.string(),
   version: z.string(),
-  services: z.record(z.object({
-    status: z.enum(['up', 'down']),
-    responseTime: z.number(),
-  })),
+  services: z.record(
+    z.object({
+      status: z.enum(['up', 'down']),
+      responseTime: z.number(),
+    }),
+  ),
 })
 
 export type HealthCheckResponse = z.infer<typeof HealthCheckResponseSchema>

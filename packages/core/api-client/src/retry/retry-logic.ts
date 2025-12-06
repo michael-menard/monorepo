@@ -3,6 +3,10 @@
  * Handles cold starts, timeouts, transient failures, and circuit breaker patterns
  */
 
+import { createLogger } from '@repo/logger'
+
+const logger = createLogger('api-client:retry-logic')
+
 export interface RetryConfig {
   maxAttempts: number
   baseDelay: number
@@ -75,7 +79,7 @@ export function isRetryableError(error: any): RetryableError {
   const message = error?.message || error?.response?.statusText || 'Unknown error'
 
   // Cold start indicators
-  const isColdStart = 
+  const isColdStart =
     statusCode === 502 || // Bad Gateway (common during cold starts)
     statusCode === 503 || // Service Unavailable
     statusCode === 504 || // Gateway Timeout
@@ -84,14 +88,14 @@ export function isRetryableError(error: any): RetryableError {
     message.includes('function not ready')
 
   // Timeout indicators
-  const isTimeout = 
+  const isTimeout =
     statusCode === 408 || // Request Timeout
     statusCode === 504 || // Gateway Timeout
     message.includes('timeout') ||
     error?.code === 'TIMEOUT'
 
   // General retryable conditions
-  const isRetryable = 
+  const isRetryable =
     isColdStart ||
     isTimeout ||
     statusCode === 429 || // Rate Limited
@@ -188,7 +192,7 @@ export class CircuitBreaker {
 export function calculateRetryDelay(
   attempt: number,
   errorInfo: RetryableError,
-  config: RetryConfig = DEFAULT_RETRY_CONFIG
+  config: RetryConfig = DEFAULT_RETRY_CONFIG,
 ): number {
   let baseDelay = config.baseDelay
 
@@ -257,7 +261,7 @@ function getCircuitBreaker(endpoint: string): CircuitBreaker {
 export async function withRetry<T>(
   operation: () => Promise<T>,
   config: Partial<RetryConfig> = {},
-  endpoint = 'default'
+  endpoint = 'default',
 ): Promise<T> {
   const retryConfig = { ...DEFAULT_RETRY_CONFIG, ...config }
   const circuitBreaker = retryConfig.circuitBreakerEnabled ? getCircuitBreaker(endpoint) : null
@@ -309,8 +313,9 @@ export async function withRetry<T>(
       const delay = calculateRetryDelay(attempt, errorInfo, retryConfig)
       totalDelay += delay
 
-      console.warn(
-        `🔄 Retry attempt ${attempt}/${retryConfig.maxAttempts} after ${delay}ms`,
+      logger.warn(
+        `Retry attempt ${attempt}/${retryConfig.maxAttempts} after ${delay}ms`,
+        undefined,
         {
           endpoint,
           error: errorInfo.message,
@@ -318,7 +323,7 @@ export async function withRetry<T>(
           isTimeout: errorInfo.isTimeout,
           statusCode: errorInfo.statusCode,
           circuitBreakerState: circuitBreaker?.getState(),
-        }
+        },
       )
 
       await sleep(delay)
@@ -342,10 +347,10 @@ export async function withPriorityRetry<T>(
   operation: () => Promise<T>,
   priority: 'low' | 'medium' | 'high' | 'critical' = 'medium',
   config: Partial<RetryConfig> = {},
-  endpoint = 'default'
+  endpoint = 'default',
 ): Promise<T> {
   // Adjust retry config based on priority
-  const priorityConfig: Partial<RetryConfig> = {
+  const priorityConfigs: Record<string, Partial<RetryConfig>> = {
     low: { maxAttempts: 2, baseDelay: 2000 },
     medium: { maxAttempts: 3, baseDelay: 1000 },
     high: { maxAttempts: 4, baseDelay: 500 },
@@ -354,7 +359,7 @@ export async function withPriorityRetry<T>(
 
   const enhancedConfig = {
     ...config,
-    ...priorityConfig[priority],
+    ...priorityConfigs[priority],
   }
 
   return withRetry(operation, enhancedConfig, `${endpoint}:${priority}`)
@@ -366,7 +371,7 @@ export async function withPriorityRetry<T>(
 export async function withBatchRetry<T>(
   operations: Array<() => Promise<T>>,
   config: Partial<RetryConfig> = {},
-  maxConcurrency = 3
+  maxConcurrency = 3,
 ): Promise<Array<T | Error>> {
   const results: Array<T | Error> = []
   const batches: Array<Array<() => Promise<T>>> = []
@@ -456,9 +461,8 @@ export function getRetrySystemHealth(): {
   const recommendations: string[] = []
 
   // Calculate success rate
-  const successRate = metrics.totalAttempts > 0
-    ? metrics.successfulAttempts / metrics.totalAttempts
-    : 1
+  const successRate =
+    metrics.totalAttempts > 0 ? metrics.successfulAttempts / metrics.totalAttempts : 1
 
   // Determine health status
   let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy'

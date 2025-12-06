@@ -4,8 +4,8 @@
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
-import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 import { createLogger } from '@repo/logger'
+import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
 const logger = createLogger('api-client:dashboard')
 

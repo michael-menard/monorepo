@@ -6,12 +6,12 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { createLogger } from '@repo/logger'
-import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
+import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
 import { createAuthenticatedBaseQuery } from '../auth/rtk-auth-integration'
 import { SERVERLESS_ENDPOINTS, buildEndpoint } from '../config/endpoints'
 import { performanceMonitor } from '../lib/performance'
-import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
 import type { WishlistResponse, WishlistItem, ServerlessResponse } from '../types/api-responses'
+import { getServerlessCacheConfig } from './base-query'
 
 const logger = createLogger('api-client:wishlist')
 const cacheManager = getServerlessCacheManager()
@@ -142,7 +142,7 @@ export interface WishlistApiConfig {
 export function createWishlistApi(config?: WishlistApiConfig) {
   logger.info('Creating enhanced Wishlist API with serverless optimizations')
 
-  const { getAuthToken, onAuthFailure, onTokenRefresh } = config || {}
+  const { onAuthFailure, onTokenRefresh } = config || {}
 
   return createApi({
     reducerPath: 'enhancedWishlistApi',
@@ -155,12 +155,16 @@ export function createWishlistApi(config?: WishlistApiConfig) {
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
       requireAuthForEndpoints: ['/api/v2/wishlist'],
-      onAuthFailure: onAuthFailure || (error => {
-        logger.warn('Wishlist API authentication failed', undefined, { error })
-      }),
-      onTokenRefresh: onTokenRefresh || (token => {
-        logger.debug('Wishlist API token refreshed')
-      }),
+      onAuthFailure:
+        onAuthFailure ||
+        (error => {
+          logger.warn('Wishlist API authentication failed', undefined, { error })
+        }),
+      onTokenRefresh:
+        onTokenRefresh ||
+        (() => {
+          logger.debug('Wishlist API token refreshed')
+        }),
     }),
     tagTypes: [
       'Wishlist',
@@ -195,7 +199,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
             },
           }
         },
-        transformResponse: (response: WishlistResponse, meta, arg) => {
+        transformResponse: (response: WishlistResponse) => {
           const duration = performance.now() - (performance.now() - 100) // Approximate duration
 
           performanceMonitor.trackComponentRender(`wishlist-query-${Date.now()}`, duration)
@@ -203,7 +207,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
           logger.info('Enhanced wishlist query completed', undefined, {
             resultCount: response.data.items.length,
             duration,
-            hasMore: response.pagination?.hasMore,
+            totalPages: response.pagination?.totalPages,
             totalCost: response.data.items.reduce(
               (sum, item) => sum + (item.estimatedCost || 0),
               0,
@@ -213,8 +217,12 @@ export function createWishlistApi(config?: WishlistApiConfig) {
           return response
         },
         providesTags: (result, error, params) => {
-          const tags = [
-            'Wishlist',
+          const tags: Array<
+            | { type: 'Wishlist'; id?: string }
+            | { type: 'WishlistItem'; id: string }
+            | { type: 'PriceAlert'; id: string }
+          > = [
+            { type: 'Wishlist' as const },
             ...(result?.data.items.map(({ id }) => ({ type: 'WishlistItem' as const, id })) || []),
           ]
 
@@ -229,15 +237,8 @@ export function createWishlistApi(config?: WishlistApiConfig) {
 
           return tags
         },
-        // Use advanced caching strategy based on query complexity
-        ...getServerlessCacheConfig(params => {
-          // Simple queries get longer cache
-          if (!params.query && !params.dateRange && !params.costRange) return 'medium'
-          // Price-sensitive queries get shorter cache
-          if (params.priceComparison || params.priceAlerts) return 'short'
-          // Complex queries get medium cache
-          return 'medium'
-        }),
+        // Use medium caching strategy
+        ...getServerlessCacheConfig('medium'),
       }),
 
       // Get single wishlist item
@@ -314,22 +315,24 @@ export function createWishlistApi(config?: WishlistApiConfig) {
           logger.info('Enhanced batch wishlist operation completed', undefined, {
             operation: params.operation,
             itemCount: params.itemIds.length,
-            success: response.success,
             duration,
           })
 
           // Use serverless cache manager for batch invalidation
-          if (response.success) {
-            cacheManager.delete(`wishlist_batch_${params.operation}`)
-          }
+          cacheManager.delete(`wishlist_batch_${params.operation}`)
 
           return response
         },
         invalidatesTags: (result, error, { itemIds, operation }) => {
-          const tags = [
-            'Wishlist',
-            'WishlistStats',
-            'WishlistBatch',
+          const tags: Array<
+            | { type: 'Wishlist'; id?: string }
+            | { type: 'WishlistItem'; id: string }
+            | { type: 'WishlistStats' }
+            | { type: 'WishlistBatch' }
+          > = [
+            { type: 'Wishlist' as const },
+            { type: 'WishlistStats' as const },
+            { type: 'WishlistBatch' as const },
             ...itemIds.map(id => ({ type: 'WishlistItem' as const, id })),
           ]
 
@@ -456,7 +459,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
           return response
         },
         providesTags: (result, error, itemIds) => [
-          'PriceAlert',
+          { type: 'PriceAlert' as const, id: 'LIST' },
           ...itemIds.map(id => ({ type: 'WishlistItem' as const, id: `${id}-price` })),
         ],
         // Price data changes frequently, use shorter cache
@@ -525,15 +528,14 @@ export function createWishlistApi(config?: WishlistApiConfig) {
           logger.info('Price alerts management completed', undefined, {
             operation: params.operation,
             itemCount: params.itemIds.length,
-            success: response.success,
             duration,
           })
 
           return response
         },
         invalidatesTags: (result, error, { itemIds }) => [
-          'PriceAlert',
-          'WishlistStats',
+          { type: 'PriceAlert' as const, id: 'LIST' },
+          { type: 'WishlistStats' as const },
           ...itemIds.map(id => ({ type: 'WishlistItem' as const, id })),
         ],
       }),

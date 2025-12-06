@@ -1,11 +1,10 @@
-import React from 'react'
 import { ThemeProvider } from '@repo/app-component-library'
-import { Module } from './Module'
+import { AppWishlistGalleryModule } from './Module'
 
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="app-wishlist-gallery-theme">
-      <Module />
+      <AppWishlistGalleryModule />
     </ThemeProvider>
   )
 }

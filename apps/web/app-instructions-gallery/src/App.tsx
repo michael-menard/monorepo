@@ -1,11 +1,10 @@
-import React from 'react'
 import { ThemeProvider } from '@repo/app-component-library'
-import { Module } from './Module'
+import { InstuctionsGalleryModule } from './Module'
 
 export function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="instuctions-gallery-theme">
-      <Module />
+    <ThemeProvider defaultTheme="system" storageKey="instructions-gallery-theme">
+      <InstuctionsGalleryModule />
     </ThemeProvider>
   )
 }

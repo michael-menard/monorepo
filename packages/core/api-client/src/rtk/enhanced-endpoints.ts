@@ -4,12 +4,6 @@
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
-import {
-  createServerlessBaseQuery,
-  getServerlessCacheConfig,
-  getPerformanceOptimizedCacheConfig,
-  createAdaptiveCacheConfig,
-} from './base-query'
 import { SERVERLESS_ENDPOINTS, buildEndpoint } from '../config/endpoints'
 import type {
   GallerySearchResponse,
@@ -22,6 +16,12 @@ import type {
   HealthCheckResponse,
   ServerlessResponse,
 } from '../types/api-responses'
+import {
+  createServerlessBaseQuery,
+  getServerlessCacheConfig,
+  getPerformanceOptimizedCacheConfig,
+  createAdaptiveCacheConfig,
+} from './base-query'
 
 /**
  * Gallery search parameters
@@ -70,7 +70,7 @@ export function createServerlessApi(
     enablePerformanceMonitoring?: boolean
     enableCircuitBreaker?: boolean
     priority?: 'low' | 'medium' | 'high' | 'critical'
-  } = {}
+  } = {},
 ) {
   const {
     enablePerformanceMonitoring = true,
@@ -87,7 +87,7 @@ export function createServerlessApi(
       priority,
     }),
     tagTypes: ['Gallery', 'Wishlist', 'MOC', 'User'],
-    endpoints: (builder) => ({
+    endpoints: builder => ({
       // Gallery Endpoints with performance optimization
       searchGallery: builder.query<GallerySearchResponse, GallerySearchParams>({
         query: (params = {}) => ({
@@ -99,7 +99,7 @@ export function createServerlessApi(
       }),
 
       getGalleryImage: builder.query<ServerlessResponse<GalleryImage>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.GET_IMAGE, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.GET_IMAGE, { id }),
         providesTags: (_, __, id) => [{ type: 'Gallery', id }],
         ...createAdaptiveCacheConfig({
           usageFrequency: 'high',
@@ -109,7 +109,7 @@ export function createServerlessApi(
       }),
 
       uploadGalleryImage: builder.mutation<ServerlessResponse<GalleryImage>, FormData>({
-        query: (formData) => ({
+        query: formData => ({
           url: SERVERLESS_ENDPOINTS.GALLERY.UPLOAD,
           method: 'POST',
           body: formData,
@@ -119,7 +119,7 @@ export function createServerlessApi(
       }),
 
       deleteGalleryImage: builder.mutation<ServerlessResponse<void>, string>({
-        query: (id) => ({
+        query: id => ({
           url: buildEndpoint(SERVERLESS_ENDPOINTS.GALLERY.DELETE, { id }),
           method: 'DELETE',
         }),
@@ -137,7 +137,7 @@ export function createServerlessApi(
       }),
 
       addWishlistItem: builder.mutation<ServerlessResponse<WishlistItem>, Partial<WishlistItem>>({
-        query: (item) => ({
+        query: item => ({
           url: SERVERLESS_ENDPOINTS.WISHLIST.ADD_ITEM,
           method: 'POST',
           body: item,
@@ -158,14 +158,17 @@ export function createServerlessApi(
       }),
 
       deleteWishlistItem: builder.mutation<ServerlessResponse<void>, string>({
-        query: (id) => ({
+        query: id => ({
           url: buildEndpoint(SERVERLESS_ENDPOINTS.WISHLIST.DELETE_ITEM, { id }),
           method: 'DELETE',
         }),
         invalidatesTags: (_, __, id) => [{ type: 'Wishlist', id }, 'Wishlist'],
       }),
 
-      shareWishlist: builder.mutation<ServerlessResponse<{ shareId: string; shareUrl: string }>, void>({
+      shareWishlist: builder.mutation<
+        ServerlessResponse<{ shareId: string; shareUrl: string }>,
+        void
+      >({
         query: () => ({
           url: SERVERLESS_ENDPOINTS.WISHLIST.SHARE,
           method: 'POST',
@@ -183,19 +186,19 @@ export function createServerlessApi(
       }),
 
       getMOCInstruction: builder.query<ServerlessResponse<MOCInstruction>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_INSTRUCTION, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_INSTRUCTION, { id }),
         providesTags: (_, __, id) => [{ type: 'MOC', id }],
         ...getServerlessCacheConfig('long'),
       }),
 
       getMOCSteps: builder.query<ServerlessResponse<any[]>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_STEPS, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_STEPS, { id }),
         providesTags: (_result, _error, id) => [{ type: 'MOC', id: `${id}-steps` }],
         ...getServerlessCacheConfig('long'),
       }),
 
       getMOCPartsList: builder.query<ServerlessResponse<any[]>, string>({
-        query: (id) => buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_PARTS_LIST, { id }),
+        query: id => buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_PARTS_LIST, { id }),
         providesTags: (_, __, id) => [{ type: 'MOC', id: `${id}-parts` }],
         ...getServerlessCacheConfig('long'),
       }),
@@ -208,7 +211,7 @@ export function createServerlessApi(
       }),
 
       updateUserProfile: builder.mutation<UserProfileResponse, Partial<any>>({
-        query: (updates) => ({
+        query: updates => ({
           url: SERVERLESS_ENDPOINTS.USER.UPDATE_PROFILE,
           method: 'PUT',
           body: updates,

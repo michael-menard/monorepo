@@ -4,7 +4,7 @@
  */
 
 import { createLogger } from '@repo/logger'
-import { withRetry, withPriorityRetry } from '../retry/retry-logic'
+import { withPriorityRetry } from '../retry/retry-logic'
 import { performanceMonitor } from '../lib/performance'
 
 const logger = createLogger('api-client:cognito')
@@ -60,7 +60,7 @@ export class CognitoTokenManager {
   constructor(
     initialTokens?: CognitoTokens,
     refreshCallback?: () => Promise<CognitoTokens>,
-    config: CognitoTokenManagerConfig = {}
+    config: CognitoTokenManagerConfig = {},
   ) {
     this.tokens = initialTokens || null
     this.tokenRefreshCallback = refreshCallback
@@ -77,7 +77,7 @@ export class CognitoTokenManager {
     logger.info('CognitoTokenManager initialized', undefined, {
       hasInitialTokens: !!initialTokens,
       hasRefreshCallback: !!refreshCallback,
-      config: this.config
+      config: this.config,
     })
   }
 
@@ -162,7 +162,7 @@ export class CognitoTokenManager {
 
           logger.info('Token refresh completed successfully', undefined, {
             duration,
-            totalRefreshes: this.metrics.successfulRefreshes
+            totalRefreshes: this.metrics.successfulRefreshes,
           })
         }
 
@@ -172,10 +172,14 @@ export class CognitoTokenManager {
         this.metrics.failedRefreshes++
         this.metrics.consecutiveFailures++
 
-        logger.error('Token refresh failed', error instanceof Error ? error : new Error(String(error)), {
-          consecutiveFailures: this.metrics.consecutiveFailures,
-          totalAttempts: this.metrics.totalRefreshAttempts
-        })
+        logger.error(
+          'Token refresh failed',
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            consecutiveFailures: this.metrics.consecutiveFailures,
+            totalAttempts: this.metrics.totalRefreshAttempts,
+          },
+        )
 
         // Clear tokens on failure
         this.clearTokens()
@@ -192,7 +196,7 @@ export class CognitoTokenManager {
             maxAttempts: this.config.maxRefreshRetries,
             baseDelay: this.config.refreshRetryDelay,
           },
-          'cognito-token-refresh'
+          'cognito-token-refresh',
         )
       } else {
         this.refreshPromise = refreshOperation()
@@ -201,7 +205,10 @@ export class CognitoTokenManager {
       const result = await this.refreshPromise
       return result
     } catch (error) {
-      logger.error('Token refresh failed after all retries', error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        'Token refresh failed after all retries',
+        error instanceof Error ? error : new Error(String(error)),
+      )
       return null
     } finally {
       this.refreshPromise = null
@@ -221,13 +228,13 @@ export class CognitoTokenManager {
     if (this.isTokenExpiredOrExpiringSoon(this.tokens.accessToken)) {
       logger.info('Access token expired or expiring soon, attempting refresh...', undefined, {
         hasRefreshCallback: !!this.tokenRefreshCallback,
-        consecutiveFailures: this.metrics.consecutiveFailures
+        consecutiveFailures: this.metrics.consecutiveFailures,
       })
 
       // Check circuit breaker logic
       if (this.config.enableCircuitBreaker && this.metrics.consecutiveFailures >= 3) {
         logger.warn('Token refresh circuit breaker open, skipping refresh attempt', undefined, {
-          consecutiveFailures: this.metrics.consecutiveFailures
+          consecutiveFailures: this.metrics.consecutiveFailures,
         })
         return undefined
       }
@@ -250,21 +257,24 @@ export class CognitoTokenManager {
       const bufferTime = this.config.tokenExpirationBuffer || 300 // 5 minutes default
 
       // Check if token is expired or will expire within buffer time
-      const isExpiredOrExpiringSoon = expirationTime < (currentTime + bufferTime)
+      const isExpiredOrExpiringSoon = expirationTime < currentTime + bufferTime
 
       if (isExpiredOrExpiringSoon) {
         const timeUntilExpiry = expirationTime - currentTime
         logger.debug('Token expiration check', undefined, {
           timeUntilExpiry,
           bufferTime,
-          isExpiredOrExpiringSoon
+          isExpiredOrExpiringSoon,
         })
       }
 
       return isExpiredOrExpiringSoon
     } catch (error) {
       // If we can't parse the token, assume it's expired
-      logger.warn('Failed to parse JWT token for expiration check', error instanceof Error ? error : new Error(String(error)))
+      logger.warn(
+        'Failed to parse JWT token for expiration check',
+        error instanceof Error ? error : new Error(String(error)),
+      )
       return true
     }
   }
@@ -300,7 +310,7 @@ export class CognitoTokenManager {
         ...payload,
       }
     } catch (error) {
-      console.error('Failed to decode token:', error)
+      logger.error('Failed to decode token', error as Error)
       return null
     }
   }
@@ -337,7 +347,7 @@ export class CognitoTokenManager {
    * Check if circuit breaker is open
    */
   isCircuitBreakerOpen(): boolean {
-    return this.config.enableCircuitBreaker && this.metrics.consecutiveFailures >= 3
+    return (this.config.enableCircuitBreaker ?? false) && this.metrics.consecutiveFailures >= 3
   }
 
   /**
@@ -362,12 +372,15 @@ export class CognitoTokenManager {
 
       return {
         isExpired: expirationTime < currentTime,
-        isExpiringSoon: expirationTime < (currentTime + bufferTime),
+        isExpiringSoon: expirationTime < currentTime + bufferTime,
         timeUntilExpiry,
         expirationTime,
       }
     } catch (error) {
-      logger.warn('Failed to get token expiration info', error instanceof Error ? error : new Error(String(error)))
+      logger.warn(
+        'Failed to get token expiration info',
+        error instanceof Error ? error : new Error(String(error)),
+      )
       return {
         isExpired: true,
         isExpiringSoon: true,
@@ -395,14 +408,14 @@ let globalTokenManager: CognitoTokenManager | null = null
 export function initializeCognitoTokenManager(
   initialTokens?: CognitoTokens,
   refreshCallback?: () => Promise<CognitoTokens>,
-  config?: CognitoTokenManagerConfig
+  config?: CognitoTokenManagerConfig,
 ): CognitoTokenManager {
   if (!globalTokenManager) {
     globalTokenManager = new CognitoTokenManager(initialTokens, refreshCallback, config)
     logger.info('Global CognitoTokenManager initialized', undefined, {
       hasInitialTokens: !!initialTokens,
       hasRefreshCallback: !!refreshCallback,
-      config
+      config,
     })
   } else {
     if (initialTokens) {
@@ -459,7 +472,10 @@ export async function isCognitoAuthenticationValid(): Promise<boolean> {
     const token = await globalTokenManager.getValidAccessToken()
     return !!token
   } catch (error) {
-    logger.warn('Authentication validation failed', error instanceof Error ? error : new Error(String(error)))
+    logger.warn(
+      'Authentication validation failed',
+      error instanceof Error ? error : new Error(String(error)),
+    )
     return false
   }
 }

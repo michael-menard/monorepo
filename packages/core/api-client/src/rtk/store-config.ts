@@ -5,8 +5,8 @@
 
 import { configureStore, type Middleware } from '@reduxjs/toolkit'
 import type { Api } from '@reduxjs/toolkit/query/react'
-import { rtkQueryPerformanceMiddleware } from './performance-monitoring'
 import { getConnectionWarmer } from '../retry/connection-warming'
+import { rtkQueryPerformanceMiddleware } from './performance-monitoring'
 
 export interface ServerlessStoreConfig {
   // API slices to include

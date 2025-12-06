@@ -6,9 +6,9 @@
 import { createLogger } from '@repo/logger'
 import { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { getAuthToken, validateAuthentication, getAuthMiddleware } from './auth-middleware'
 import { withRetry } from '../retry/retry-logic'
 import { performanceMonitor } from '../lib/performance'
+import { getAuthToken, validateAuthentication, getAuthMiddleware } from './auth-middleware'
 
 const logger = createLogger('api-client:rtk-auth')
 
@@ -27,13 +27,12 @@ export interface AuthenticatedBaseQueryConfig {
  * Create an authenticated base query for RTK Query with enhanced features
  */
 export function createAuthenticatedBaseQuery(
-  config: AuthenticatedBaseQueryConfig
+  config: AuthenticatedBaseQueryConfig,
 ): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> {
   const {
     baseUrl,
     enableRetryLogic = true,
     enablePerformanceMonitoring = true,
-    enableAuthCaching = true,
     skipAuthForEndpoints = [],
     requireAuthForEndpoints = [],
     onAuthFailure,
@@ -43,29 +42,31 @@ export function createAuthenticatedBaseQuery(
   // Create base query
   const baseQuery = fetchBaseQuery({
     baseUrl,
-    prepareHeaders: async (headers, { endpoint, getState }) => {
+    prepareHeaders: async (headers, { endpoint }) => {
       const startTime = enablePerformanceMonitoring ? performance.now() : 0
 
       try {
         // Check if this endpoint needs authentication
         const needsAuth = shouldAddAuth(endpoint, skipAuthForEndpoints, requireAuthForEndpoints)
-        
+
         if (needsAuth) {
           logger.debug('Adding authentication to request', undefined, { endpoint })
-          
+
           // Get auth token with caching
           const token = await getAuthToken()
-          
+
           if (token) {
             headers.set('Authorization', `Bearer ${token}`)
-            
+
             if (onTokenRefresh) {
               onTokenRefresh(token)
             }
-            
+
             logger.debug('Authentication header added', undefined, { endpoint, hasToken: true })
           } else {
-            logger.warn('No authentication token available for protected endpoint', undefined, { endpoint })
+            logger.warn('No authentication token available for protected endpoint', undefined, {
+              endpoint,
+            })
           }
         }
 
@@ -81,35 +82,39 @@ export function createAuthenticatedBaseQuery(
 
         return headers
       } catch (error) {
-        logger.error('Failed to prepare authentication headers', error instanceof Error ? error : new Error(String(error)), { endpoint })
+        logger.error(
+          'Failed to prepare authentication headers',
+          error instanceof Error ? error : new Error(String(error)),
+          { endpoint },
+        )
         return headers
       }
     },
   })
 
   // Enhanced base query with authentication handling
-  const authenticatedBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
-    args,
-    api,
-    extraOptions
-  ) => {
+  const authenticatedBaseQuery: BaseQueryFn<
+    string | FetchArgs,
+    unknown,
+    FetchBaseQueryError
+  > = async (args, api, extraOptions) => {
     const startTime = enablePerformanceMonitoring ? performance.now() : 0
     const endpoint = typeof args === 'string' ? args : args.url
 
     try {
       // Validate authentication if required
       const needsAuth = shouldAddAuth(endpoint, skipAuthForEndpoints, requireAuthForEndpoints)
-      
+
       if (needsAuth) {
         const { isValid, context } = await validateAuthentication(endpoint)
-        
+
         if (!isValid) {
-          logger.warn('Authentication validation failed for endpoint', undefined, { 
+          logger.warn('Authentication validation failed for endpoint', undefined, {
             endpoint,
             isAuthenticated: context.isAuthenticated,
-            hasToken: !!context.token
+            hasToken: !!context.token,
           })
-          
+
           const authError: FetchBaseQueryError = {
             status: 401,
             data: {
@@ -117,11 +122,11 @@ export function createAuthenticatedBaseQuery(
               message: 'Valid authentication token is required for this endpoint',
             },
           }
-          
+
           if (onAuthFailure) {
             onAuthFailure(authError)
           }
-          
+
           return { error: authError }
         }
       }
@@ -129,32 +134,34 @@ export function createAuthenticatedBaseQuery(
       // Execute the query with retry logic if enabled
       const executeQuery = async () => {
         const result = await baseQuery(args, api, extraOptions)
-        
+
         // Handle authentication errors
         if (result.error && result.error.status === 401) {
           logger.warn('Received 401 authentication error', undefined, { endpoint })
-          
+
           // Try to refresh token and retry once
           const newToken = await getAuthToken(true) // Force refresh
-          
+
           if (newToken) {
             logger.info('Token refreshed, retrying request', undefined, { endpoint })
-            
+
             if (onTokenRefresh) {
               onTokenRefresh(newToken)
             }
-            
+
             // Retry the request with new token
             return await baseQuery(args, api, extraOptions)
           } else {
-            logger.error('Token refresh failed, authentication error persists', undefined, { endpoint })
-            
+            logger.error('Token refresh failed, authentication error persists', undefined, {
+              endpoint,
+            })
+
             if (onAuthFailure) {
               onAuthFailure(result.error)
             }
           }
         }
-        
+
         return result
       }
 
@@ -165,16 +172,8 @@ export function createAuthenticatedBaseQuery(
           {
             maxAttempts: 3,
             baseDelay: 1000,
-            shouldRetry: (error) => {
-              // Don't retry authentication errors (401) or client errors (4xx)
-              if (error && typeof error === 'object' && 'status' in error) {
-                const status = (error as any).status
-                return status >= 500 || status === 0 // Only retry server errors or network errors
-              }
-              return true
-            },
           },
-          `rtk-query-${endpoint}`
+          `rtk-query-${endpoint}`,
         )
       } else {
         result = await executeQuery()
@@ -183,19 +182,23 @@ export function createAuthenticatedBaseQuery(
       if (enablePerformanceMonitoring) {
         const duration = performance.now() - startTime
         performanceMonitor.trackComponentRender(`rtk-query-${endpoint}-${Date.now()}`, duration)
-        
+
         logger.debug('RTK Query request completed', undefined, {
           endpoint,
           duration,
           success: !result.error,
-          status: result.error ? (result.error as any).status : 'success'
+          status: result.error ? (result.error as any).status : 'success',
         })
       }
 
       return result
     } catch (error) {
-      logger.error('RTK Query request failed', error instanceof Error ? error : new Error(String(error)), { endpoint })
-      
+      logger.error(
+        'RTK Query request failed',
+        error instanceof Error ? error : new Error(String(error)),
+        { endpoint },
+      )
+
       return {
         error: {
           status: 'FETCH_ERROR',
@@ -214,7 +217,7 @@ export function createAuthenticatedBaseQuery(
 function shouldAddAuth(
   endpoint: string,
   skipAuthForEndpoints: string[],
-  requireAuthForEndpoints: string[]
+  requireAuthForEndpoints: string[],
 ): boolean {
   // Check if explicitly skipped
   if (skipAuthForEndpoints.some(skip => endpoint.includes(skip))) {
@@ -235,7 +238,7 @@ function shouldAddAuth(
  * Create authentication middleware for RTK Query
  */
 export function createAuthMiddleware() {
-  return (api: any) => (next: any) => (action: any) => {
+  return () => (next: any) => (action: any) => {
     // Add authentication context to RTK Query actions
     if (action.type?.endsWith('/pending')) {
       const authMiddleware = getAuthMiddleware()

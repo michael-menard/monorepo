@@ -4,13 +4,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { 
+import {
   useEnhancedWishlistQueryQuery,
   useEnhancedBatchWishlistOperationMutation,
   useGetEnhancedPriceEstimatesQuery,
   useGetEnhancedWishlistStatsQuery,
   useManagePriceAlertsMutation,
-  type EnhancedWishlistParams 
+  type EnhancedWishlistParams,
 } from './wishlist-api'
 
 /**
@@ -22,41 +22,41 @@ export function useAdvancedWishlistQuery() {
     priority: 'high',
     category: 'lego-sets',
     tags: ['technic', 'creator'],
-    
+
     // LEGO-specific filters
     themes: ['Technic', 'Creator Expert', 'Architecture'],
     setNumbers: ['42143', '10294', '21058'],
     availability: ['available', 'upcoming'],
     condition: ['new', 'sealed'],
-    
+
     // Advanced wishlist features
     priorityLevels: ['high', 'urgent'],
     wishlistCategories: ['birthday-gifts', 'personal-collection'],
     priceAlerts: true, // Only items with price alerts
     giftIdeas: false,
     seasonalItems: ['holiday', 'birthday'],
-    
+
     // Price and cost filtering
     costRange: { min: 50, max: 500 },
     partCountRange: { min: 500, max: 3000 },
-    
+
     // Status filters
     isPurchased: false,
     isWatching: true, // Watching for price drops
     hasNotes: true,
     hasEstimatedCost: true,
-    
+
     // Search and discovery
     query: 'modular building',
     similarItems: true, // Include similar item suggestions
     priceComparison: true, // Include price comparison data
-    
+
     // Pagination and sorting
     page: 1,
     limit: 25,
     sortBy: 'priority',
     sortOrder: 'desc',
-    
+
     // Performance optimizations
     includeMetadata: true,
     includePriceHistory: true,
@@ -66,18 +66,15 @@ export function useAdvancedWishlistQuery() {
     prefetchRelated: true, // Prefetch related/similar items
   }
 
-  const {
-    data,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useEnhancedWishlistQueryQuery(wishlistParams, {
-    // RTK Query options with serverless optimizations
-    refetchOnMountOrArgChange: 300, // 5 minutes
-    refetchOnFocus: false,
-    refetchOnReconnect: true,
-  })
+  const { data, isLoading, isFetching, error, refetch } = useEnhancedWishlistQueryQuery(
+    wishlistParams,
+    {
+      // RTK Query options with serverless optimizations
+      refetchOnMountOrArgChange: 300, // 5 minutes
+      refetchOnFocus: false,
+      refetchOnReconnect: true,
+    },
+  )
 
   return {
     items: data?.data.items || [],
@@ -144,7 +141,7 @@ export function useWishlistBatchOperations() {
  */
 export function usePriceTrackingAndAlerts(itemIds: string[]) {
   const [managePriceAlerts, { isLoading: isManaging }] = useManagePriceAlertsMutation()
-  
+
   const {
     data: priceData,
     isLoading: isPriceLoading,
@@ -198,12 +195,7 @@ export function usePriceTrackingAndAlerts(itemIds: string[]) {
  * Example 4: Wishlist Statistics and Analytics
  */
 export function useWishlistAnalytics() {
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useGetEnhancedWishlistStatsQuery(undefined, {
+  const { data, isLoading, error, refetch } = useGetEnhancedWishlistStatsQuery(undefined, {
     // Statistics don't change often, use longer cache
     refetchOnMountOrArgChange: 1800, // 30 minutes
     refetchOnFocus: false,
@@ -295,14 +287,17 @@ function analyzeWishlistItems(items: any[]) {
   }
 
   // Analyze theme preferences
-  const themeCount = items.reduce((acc, item) => {
-    item.themes?.forEach((theme: string) => {
-      acc[theme] = (acc[theme] || 0) + 1
-    })
-    return acc
-  }, {} as Record<string, number>)
+  const themeCount = items.reduce(
+    (acc, item) => {
+      item.themes?.forEach((theme: string) => {
+        acc[theme] = (acc[theme] || 0) + 1
+      })
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 
-  const topTheme = Object.entries(themeCount).sort(([,a], [,b]) => b - a)[0]
+  const topTheme = Object.entries(themeCount).sort(([, a], [, b]) => b - a)[0]
   if (topTheme && topTheme[1] > 3) {
     suggestions.push({
       type: 'theme',
@@ -316,17 +311,23 @@ function analyzeWishlistItems(items: any[]) {
 }
 
 function getCategoryBreakdown(items: any[]) {
-  return items.reduce((acc, item) => {
-    const category = item.category || 'Uncategorized'
-    acc[category] = (acc[category] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  return items.reduce(
+    (acc, item) => {
+      const category = item.category || 'Uncategorized'
+      acc[category] = (acc[category] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 }
 
 function getPriorityBreakdown(items: any[]) {
-  return items.reduce((acc, item) => {
-    const priority = item.priority || 'medium'
-    acc[priority] = (acc[priority] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  return items.reduce(
+    (acc, item) => {
+      const priority = item.priority || 'medium'
+      acc[priority] = (acc[priority] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 }

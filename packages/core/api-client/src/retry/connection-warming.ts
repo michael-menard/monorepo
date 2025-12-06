@@ -3,9 +3,9 @@
  * Proactive connection warming to reduce cold start impact
  */
 
+import { createLogger } from '@repo/logger'
 import { ServerlessApiClient } from '../client/serverless-client'
 import { getServerlessApiConfig } from '../config/environments'
-import { createLogger } from '@repo/logger'
 
 const logger = createLogger('api-client:connection-warming')
 
@@ -32,13 +32,16 @@ export interface WarmingStats {
   // Enhanced metrics
   consecutiveFailures: number
   adaptiveInterval: number
-  endpointStats: Record<string, {
-    requests: number
-    successes: number
-    failures: number
-    avgResponseTime: number
-    lastSuccess: string
-  }>
+  endpointStats: Record<
+    string,
+    {
+      requests: number
+      successes: number
+      failures: number
+      avgResponseTime: number
+      lastSuccess: string
+    }
+  >
 }
 
 /**
@@ -100,20 +103,20 @@ export class ConnectionWarmer {
    */
   start(): void {
     if (!this.config.enabled) {
-      console.log('🔥 Connection warming is disabled')
+      logger.info('Connection warming is disabled')
       return
     }
 
     if (this.intervalId) {
-      console.warn('🔥 Connection warming is already running')
+      logger.warn('Connection warming is already running')
       return
     }
 
-    console.log(`🔥 Starting connection warming every ${this.config.interval / 1000}s`)
-    
+    logger.info(`Starting connection warming every ${this.config.interval / 1000}s`)
+
     // Warm immediately
     this.warmConnections()
-    
+
     // Set up adaptive interval
     this.scheduleNextWarming()
   }
@@ -125,7 +128,7 @@ export class ConnectionWarmer {
     if (this.intervalId) {
       clearTimeout(this.intervalId)
       this.intervalId = undefined
-      console.log('🔥 Connection warming stopped')
+      logger.info('Connection warming stopped')
     }
   }
 
@@ -147,18 +150,20 @@ export class ConnectionWarmer {
       : this.config.interval
 
     this.intervalId = setTimeout(() => {
-      this.warmConnections().then(() => {
-        // Only reschedule if still enabled and not stopped
-        if (this.config.enabled && this.intervalId) {
-          this.scheduleNextWarming()
-        }
-      }).catch((error) => {
-        console.error('🔥 Error in warming cycle:', error)
-        // Still reschedule on error if enabled
-        if (this.config.enabled && this.intervalId) {
-          this.scheduleNextWarming()
-        }
-      })
+      this.warmConnections()
+        .then(() => {
+          // Only reschedule if still enabled and not stopped
+          if (this.config.enabled && this.intervalId) {
+            this.scheduleNextWarming()
+          }
+        })
+        .catch(error => {
+          logger.error('Error in warming cycle', error as Error)
+          // Still reschedule on error if enabled
+          if (this.config.enabled && this.intervalId) {
+            this.scheduleNextWarming()
+          }
+        })
     }, interval)
   }
 
@@ -168,22 +173,21 @@ export class ConnectionWarmer {
   private adjustWarmingInterval(): void {
     if (!this.config.adaptiveWarming) return
 
-    const successRate = this.stats.totalRequests > 0
-      ? this.stats.successfulRequests / this.stats.totalRequests
-      : 1
+    const successRate =
+      this.stats.totalRequests > 0 ? this.stats.successfulRequests / this.stats.totalRequests : 1
 
     if (this.stats.consecutiveFailures >= this.config.failureThreshold) {
       // Increase interval on consecutive failures (back off)
       this.stats.adaptiveInterval = Math.min(
         this.stats.adaptiveInterval * this.config.backoffMultiplier,
-        this.config.interval * 3 // Max 3x original interval
+        this.config.interval * 3, // Max 3x original interval
       )
-      console.log(`🔥 Backing off warming interval to ${this.stats.adaptiveInterval / 1000}s`)
+      logger.info(`Backing off warming interval to ${this.stats.adaptiveInterval / 1000}s`)
     } else if (successRate > 0.9 && this.stats.consecutiveFailures === 0) {
       // Decrease interval on high success rate (more aggressive warming)
       this.stats.adaptiveInterval = Math.max(
         this.stats.adaptiveInterval / this.config.backoffMultiplier,
-        this.config.interval / 2 // Min 0.5x original interval
+        this.config.interval / 2, // Min 0.5x original interval
       )
     }
   }
@@ -193,7 +197,7 @@ export class ConnectionWarmer {
    */
   private async warmConnections(): Promise<void> {
     if (this.isWarming) {
-      console.log('🔥 Warming already in progress, skipping...')
+      logger.debug('Warming already in progress, skipping...')
       return
     }
 
@@ -202,21 +206,21 @@ export class ConnectionWarmer {
     let batchSuccessCount = 0
 
     try {
-      console.log(`🔥 Warming ${this.config.endpoints.length} endpoints...`)
+      logger.debug(`Warming ${this.config.endpoints.length} endpoints...`)
 
       // Separate priority and regular endpoints
       const priorityEndpoints = this.config.endpoints.filter(ep =>
-        this.config.priorityEndpoints.includes(ep)
+        this.config.priorityEndpoints.includes(ep),
       )
-      const regularEndpoints = this.config.endpoints.filter(ep =>
-        !this.config.priorityEndpoints.includes(ep)
+      const regularEndpoints = this.config.endpoints.filter(
+        ep => !this.config.priorityEndpoints.includes(ep),
       )
 
       // Warm priority endpoints first
       if (priorityEndpoints.length > 0) {
-        console.log(`🔥 Warming ${priorityEndpoints.length} priority endpoints first...`)
+        logger.debug(`Warming ${priorityEndpoints.length} priority endpoints first...`)
         const priorityResults = await Promise.allSettled(
-          priorityEndpoints.map(endpoint => this.warmEndpoint(endpoint))
+          priorityEndpoints.map(endpoint => this.warmEndpoint(endpoint)),
         )
         batchSuccessCount += priorityResults.filter(r => r.status === 'fulfilled').length
       }
@@ -235,9 +239,11 @@ export class ConnectionWarmer {
       const duration = Date.now() - startTime
       this.updateStats(duration, batchSuccessCount)
 
-      console.log(`🔥 Warming completed in ${duration}ms (${batchSuccessCount}/${this.config.endpoints.length} successful)`)
+      logger.info(
+        `Warming completed in ${duration}ms (${batchSuccessCount}/${this.config.endpoints.length} successful)`,
+      )
     } catch (error) {
-      console.error('🔥 Connection warming failed:', error)
+      logger.error('Connection warming failed', error as Error)
       this.stats.consecutiveFailures++
     } finally {
       this.isWarming = false
@@ -293,7 +299,11 @@ export class ConnectionWarmer {
       endpointStats.requests++
       endpointStats.failures++
 
-      logger.warn(`🔥 Failed to warm ${endpoint}`, error instanceof Error ? error : new Error(String(error)), { endpoint })
+      logger.warn(
+        `🔥 Failed to warm ${endpoint}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { endpoint },
+      )
     } finally {
       this.stats.totalRequests++
     }
@@ -341,7 +351,7 @@ export class ConnectionWarmer {
       return {
         healthy: false,
         responseTime,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       }
     }
   }
@@ -358,7 +368,7 @@ export class ConnectionWarmer {
    */
   updateConfig(config: Partial<WarmingConfig>): void {
     this.config = { ...this.config, ...config }
-    
+
     // Restart if interval changed
     if (this.intervalId && config.interval) {
       this.stop()
@@ -388,9 +398,9 @@ let globalWarmer: ConnectionWarmer | null = null
  */
 export function initializeConnectionWarming(config: Partial<WarmingConfig> = {}): ConnectionWarmer {
   const apiConfig = getServerlessApiConfig()
-  
+
   if (!apiConfig.connectionWarmingEnabled) {
-    console.log('🔥 Connection warming disabled by configuration')
+    logger.info('Connection warming disabled by configuration')
     return new ConnectionWarmer({ enabled: false })
   }
 
@@ -401,7 +411,7 @@ export function initializeConnectionWarming(config: Partial<WarmingConfig> = {})
 
   globalWarmer = new ConnectionWarmer(config)
   globalWarmer.start()
-  
+
   return globalWarmer
 }
 

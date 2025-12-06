@@ -4,19 +4,30 @@
  */
 
 import { useEffect, useCallback, useMemo } from 'react'
-import { useDispatch } from 'react-redux'
-import type { 
-  UseQueryHookResult, 
-  UseMutationHookResult,
-  QueryDefinition,
-  MutationDefinition,
-  BaseQueryFn,
-} from '@reduxjs/toolkit/query/react'
-import { skipToken } from '@reduxjs/toolkit/query/react'
+import { createLogger } from '@repo/logger'
 import { performanceMonitor } from '../lib/performance'
 import { getConnectionWarmer } from '../retry/connection-warming'
 import { getCircuitBreakerStates } from '../retry/retry-logic'
-import { createLogger } from '@repo/logger'
+
+type QueryHookResult<T> = {
+  data?: T
+  isLoading: boolean
+  isSuccess: boolean
+  isError: boolean
+  error?: unknown
+  refetch: () => void
+}
+
+type MutationHookResult<T, A> = [
+  (arg: A) => { unwrap: () => Promise<T> },
+  {
+    isLoading: boolean
+    isSuccess: boolean
+    isError: boolean
+    error?: unknown
+    data?: T
+  },
+]
 
 const logger = createLogger('api-client:rtk-hooks')
 
@@ -24,22 +35,22 @@ export interface ServerlessQueryOptions {
   // Performance monitoring
   enablePerformanceTracking?: boolean
   slowQueryThreshold?: number
-  
+
   // Connection warming
   enableConnectionWarming?: boolean
   warmOnMount?: boolean
-  
+
   // Circuit breaker integration
   respectCircuitBreaker?: boolean
   fallbackData?: any
-  
+
   // Priority and retry
   priority?: 'low' | 'medium' | 'high' | 'critical'
   maxRetries?: number
-  
+
   // Caching strategy
   cacheStrategy?: 'none' | 'short' | 'medium' | 'long' | 'persistent'
-  
+
   // Error handling
   onError?: (error: any) => void
   onSuccess?: (data: any) => void
@@ -49,7 +60,7 @@ export interface ServerlessMutationOptions extends Omit<ServerlessQueryOptions, 
   // Optimistic updates
   enableOptimisticUpdates?: boolean
   optimisticUpdateFn?: (data: any) => any
-  
+
   // Batch mutations
   enableBatching?: boolean
   batchDelay?: number
@@ -59,9 +70,9 @@ export interface ServerlessMutationOptions extends Omit<ServerlessQueryOptions, 
  * Enhanced useQuery hook with serverless optimizations
  */
 export function useServerlessQuery<T = any>(
-  queryHook: () => UseQueryHookResult<T>,
-  options: ServerlessQueryOptions = {}
-): UseQueryHookResult<T> & {
+  queryHook: () => QueryHookResult<T>,
+  options: ServerlessQueryOptions = {},
+): QueryHookResult<T> & {
   performanceMetrics?: {
     queryTime: number
     cacheStatus: 'hit' | 'miss' | 'stale'
@@ -76,22 +87,27 @@ export function useServerlessQuery<T = any>(
     warmOnMount = true,
     respectCircuitBreaker = true,
     fallbackData,
-    priority = 'medium',
     onError,
     onSuccess,
   } = options
 
   const startTime = useMemo(() => performance.now(), [])
   const result = queryHook()
-  
+
   // Performance tracking
-  const performanceMetrics = useMemo(() => {
+  const performanceMetrics = useMemo(():
+    | {
+        queryTime: number
+        cacheStatus: 'hit' | 'miss' | 'stale'
+        retryCount: number
+      }
+    | undefined => {
     if (!enablePerformanceTracking) return undefined
-    
+
     const queryTime = performance.now() - startTime
     return {
       queryTime,
-      cacheStatus: result.isLoading ? 'miss' : 'hit' as const,
+      cacheStatus: result.isLoading ? 'miss' : 'hit',
       retryCount: 0, // This would need to be tracked in the base query
     }
   }, [result.isLoading, startTime, enablePerformanceTracking])
@@ -99,8 +115,9 @@ export function useServerlessQuery<T = any>(
   // Circuit breaker status
   const circuitBreakerStatus = useMemo(() => {
     if (!respectCircuitBreaker) return undefined
-    
-    const states = getCircuitBreakerStates()
+
+    // Get circuit breaker states - could be used for endpoint-specific status
+    getCircuitBreakerStates()
     // This would need endpoint identification to get specific state
     return 'closed' as const
   }, [respectCircuitBreaker])
@@ -120,11 +137,14 @@ export function useServerlessQuery<T = any>(
   useEffect(() => {
     if (enablePerformanceTracking && performanceMetrics) {
       const { queryTime } = performanceMetrics
-      
+
       if (queryTime > slowQueryThreshold) {
-        logger.warn(`🐌 Slow query detected: ${queryTime.toFixed(2)}ms`, undefined, { queryTime, slowQueryThreshold })
+        logger.warn(`🐌 Slow query detected: ${queryTime.toFixed(2)}ms`, undefined, {
+          queryTime,
+          slowQueryThreshold,
+        })
       }
-      
+
       // Track in performance monitor
       performanceMonitor.trackComponentRender(`query-${Date.now()}`, queryTime)
     }
@@ -143,9 +163,9 @@ export function useServerlessQuery<T = any>(
     }
   }, [result.isError, result.error, onError])
 
-  // Circuit breaker fallback
+  // Circuit breaker fallback - currently always 'closed' so this won't trigger
   const enhancedResult = useMemo(() => {
-    if (respectCircuitBreaker && circuitBreakerStatus === 'open' && fallbackData) {
+    if (respectCircuitBreaker && fallbackData && circuitBreakerStatus !== 'closed') {
       return {
         ...result,
         data: fallbackData,
@@ -168,83 +188,88 @@ export function useServerlessQuery<T = any>(
  * Enhanced useMutation hook with serverless optimizations
  */
 export function useServerlessMutation<T = any, A = any>(
-  mutationHook: () => UseMutationHookResult<T, A>,
-  options: ServerlessMutationOptions = {}
-): UseMutationHookResult<T, A> & {
+  mutationHook: () => MutationHookResult<T, A>,
+  options: ServerlessMutationOptions = {},
+): {
+  trigger: (arg: A) => Promise<T>
+  result: {
+    isLoading: boolean
+    isSuccess: boolean
+    isError: boolean
+    error?: unknown
+    data?: T
+  }
   performanceMetrics?: {
     mutationTime: number
     retryCount: number
   }
 } {
-  const {
-    enablePerformanceTracking = true,
-    priority = 'medium',
-    onError,
-    onSuccess,
-  } = options
+  const { enablePerformanceTracking = true, onError, onSuccess } = options
 
   const result = mutationHook()
   const [mutate, mutationResult] = result
 
   // Enhanced mutate function with performance tracking
-  const enhancedMutate = useCallback(async (arg: A) => {
-    const startTime = performance.now()
-    
-    try {
-      const mutationResult = await mutate(arg).unwrap()
-      
-      if (enablePerformanceTracking) {
-        const mutationTime = performance.now() - startTime
-        performanceMonitor.trackComponentRender(`mutation-${Date.now()}`, mutationTime)
+  const trigger = useCallback(
+    async (arg: A): Promise<T> => {
+      const startTime = performance.now()
+
+      try {
+        const res = await mutate(arg).unwrap()
+
+        if (enablePerformanceTracking) {
+          const mutationTime = performance.now() - startTime
+          performanceMonitor.trackComponentRender(`mutation-${Date.now()}`, mutationTime)
+        }
+
+        if (onSuccess) {
+          onSuccess(res)
+        }
+
+        return res
+      } catch (error) {
+        if (enablePerformanceTracking) {
+          const mutationTime = performance.now() - startTime
+          performanceMonitor.trackComponentRender(`mutation-failed-${Date.now()}`, mutationTime)
+        }
+
+        if (onError) {
+          onError(error)
+        }
+
+        throw error
       }
-      
-      if (onSuccess) {
-        onSuccess(mutationResult)
-      }
-      
-      return mutationResult
-    } catch (error) {
-      if (enablePerformanceTracking) {
-        const mutationTime = performance.now() - startTime
-        performanceMonitor.trackComponentRender(`mutation-failed-${Date.now()}`, mutationTime)
-      }
-      
-      if (onError) {
-        onError(error)
-      }
-      
-      throw error
-    }
-  }, [mutate, enablePerformanceTracking, onSuccess, onError])
+    },
+    [mutate, enablePerformanceTracking, onSuccess, onError],
+  )
 
   const performanceMetrics = useMemo(() => {
     if (!enablePerformanceTracking) return undefined
-    
+
     return {
       mutationTime: 0, // This would be tracked in the enhanced mutate function
       retryCount: 0,
     }
   }, [enablePerformanceTracking])
 
-  return [
-    enhancedMutate,
-    {
-      ...mutationResult,
-      performanceMetrics,
-    }
-  ]
+  return {
+    trigger,
+    result: mutationResult,
+    performanceMetrics,
+  }
 }
 
 /**
  * Hook for monitoring RTK Query performance
  */
 export function useRTKQueryPerformance() {
-  const dispatch = useDispatch()
-  
-  return useMemo(() => ({
-    // This would integrate with the performance monitoring middleware
-    getMetrics: () => ({}),
-    resetMetrics: () => {},
-    getRecentQueries: () => [],
-  }), [dispatch])
+  return useMemo(
+    () => ({
+      // This would integrate with the performance monitoring middleware
+      getMetrics: () => ({}),
+      resetMetrics: () => {},
+      getRecentQueries: () => [],
+    }),
+    [],
+  )
 }

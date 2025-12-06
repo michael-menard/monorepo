@@ -87,6 +87,8 @@ export default [
         Response: 'readonly',
         Headers: 'readonly',
         RequestInit: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
 
         // Browser globals - Files
         File: 'readonly',

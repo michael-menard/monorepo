@@ -1,11 +1,10 @@
-import React from 'react'
 import { ThemeProvider } from '@repo/app-component-library'
-import { Module } from './Module'
+import { AppDashboardModule } from './Module'
 
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="app-dashboard-theme">
-      <Module />
+      <AppDashboardModule />
     </ThemeProvider>
   )
 }

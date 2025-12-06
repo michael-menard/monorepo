@@ -44,7 +44,7 @@ export class ServerlessApiError extends Error {
       isColdStart?: boolean
       isTimeout?: boolean
       isRetryable?: boolean
-    } = {}
+    } = {},
   ) {
     super(message)
     this.name = 'ServerlessApiError'
@@ -63,7 +63,7 @@ export class ServerlessApiError extends Error {
    */
   static async fromResponse(response: Response): Promise<ServerlessApiError> {
     let errorData: any = {}
-    
+
     try {
       const text = await response.text()
       if (text) {
@@ -75,22 +75,17 @@ export class ServerlessApiError extends Error {
 
     // Try to parse as standard serverless error
     const parsedError = ServerlessErrorSchema.safeParse(errorData)
-    
+
     if (parsedError.success) {
       const { error } = parsedError.data
-      return new ServerlessApiError(
-        error.message,
-        response.status,
-        error.code,
-        {
-          details: error.details,
-          requestId: error.requestId,
-          timestamp: error.timestamp,
-          isColdStart: response.status === 502 || response.status === 503,
-          isTimeout: response.status === 504 || response.status === 408,
-          isRetryable: [429, 500, 502, 503, 504].includes(response.status),
-        }
-      )
+      return new ServerlessApiError(error.message, response.status, error.code, {
+        details: error.details,
+        requestId: error.requestId,
+        timestamp: error.timestamp,
+        isColdStart: response.status === 502 || response.status === 503,
+        isTimeout: response.status === 504 || response.status === 408,
+        isRetryable: [429, 500, 502, 503, 504].includes(response.status),
+      })
     }
 
     // Fallback for non-standard error responses
@@ -103,7 +98,7 @@ export class ServerlessApiError extends Error {
         isColdStart: response.status === 502 || response.status === 503,
         isTimeout: response.status === 504 || response.status === 408,
         isRetryable: [429, 500, 502, 503, 504].includes(response.status),
-      }
+      },
     )
   }
 
@@ -136,29 +131,19 @@ export function handleServerlessError(error: any): ServerlessApiError {
 
   // Handle fetch/network errors
   if (error instanceof TypeError && error.message.includes('fetch')) {
-    return new ServerlessApiError(
-      'Network error occurred',
-      0,
-      'NETWORK_ERROR',
-      {
-        details: { originalError: error.message },
-        isRetryable: true,
-      }
-    )
+    return new ServerlessApiError('Network error occurred', 0, 'NETWORK_ERROR', {
+      details: { originalError: error.message },
+      isRetryable: true,
+    })
   }
 
   // Handle timeout errors
   if (error.name === 'AbortError' || error.message.includes('timeout')) {
-    return new ServerlessApiError(
-      'Request timeout',
-      408,
-      'TIMEOUT_ERROR',
-      {
-        details: { originalError: error.message },
-        isTimeout: true,
-        isRetryable: true,
-      }
-    )
+    return new ServerlessApiError('Request timeout', 408, 'TIMEOUT_ERROR', {
+      details: { originalError: error.message },
+      isTimeout: true,
+      isRetryable: true,
+    })
   }
 
   // Generic error fallback
@@ -169,6 +154,6 @@ export function handleServerlessError(error: any): ServerlessApiError {
     {
       details: { originalError: error },
       isRetryable: false,
-    }
+    },
   )
 }

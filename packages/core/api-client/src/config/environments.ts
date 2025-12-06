@@ -31,7 +31,7 @@ export function getServerlessApiConfig(): ServerlessApiConfig {
   if (!baseUrl) {
     throw new Error(
       'VITE_SERVERLESS_API_BASE_URL environment variable is required. ' +
-      'Please set it in your .env file (e.g., .env.development, .env.production)'
+        'Please set it in your .env file (e.g., .env.development, .env.production)',
     )
   }
 
@@ -39,9 +39,7 @@ export function getServerlessApiConfig(): ServerlessApiConfig {
   try {
     new URL(baseUrl)
   } catch {
-    throw new Error(
-      `Invalid VITE_SERVERLESS_API_BASE_URL: "${baseUrl}". Must be a valid URL.`
-    )
+    throw new Error(`Invalid VITE_SERVERLESS_API_BASE_URL: "${baseUrl}". Must be a valid URL.`)
   }
 
   return {
@@ -74,7 +72,10 @@ export function validateEnvironmentConfig(): void {
     getServerlessApiConfig()
     logger.info('✅ Serverless API configuration validated successfully')
   } catch (error) {
-    logger.error('❌ Serverless API Configuration Error', error instanceof Error ? error : new Error(String(error)))
+    logger.error(
+      '❌ Serverless API Configuration Error',
+      error instanceof Error ? error : new Error(String(error)),
+    )
     logger.info('📋 Required Environment Variables:')
     Object.entries(ENV_VARS).forEach(([key, description]) => {
       logger.info(`  ${key}: ${description}`)

@@ -65,7 +65,7 @@ export class ServerlessApiClient {
   private buildHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       ...this.customHeaders,
       ...customHeaders,
     }
@@ -81,10 +81,7 @@ export class ServerlessApiClient {
   /**
    * Make HTTP request with retry logic
    */
-  async request<T = any>(
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<T> {
+  async request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const {
       method = 'GET',
       headers = {},
@@ -146,28 +143,43 @@ export class ServerlessApiClient {
   /**
    * POST request
    */
-  async post<T = any>(endpoint: string, body?: any, options: Omit<RequestOptions, 'method' | 'body'> = {}): Promise<T> {
+  async post<T = any>(
+    endpoint: string,
+    body?: any,
+    options: Omit<RequestOptions, 'method' | 'body'> = {},
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'POST', body })
   }
 
   /**
    * PUT request
    */
-  async put<T = any>(endpoint: string, body?: any, options: Omit<RequestOptions, 'method' | 'body'> = {}): Promise<T> {
+  async put<T = any>(
+    endpoint: string,
+    body?: any,
+    options: Omit<RequestOptions, 'method' | 'body'> = {},
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'PUT', body })
   }
 
   /**
    * DELETE request
    */
-  async delete<T = any>(endpoint: string, options: Omit<RequestOptions, 'method'> = {}): Promise<T> {
+  async delete<T = any>(
+    endpoint: string,
+    options: Omit<RequestOptions, 'method'> = {},
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' })
   }
 
   /**
    * PATCH request
    */
-  async patch<T = any>(endpoint: string, body?: any, options: Omit<RequestOptions, 'method' | 'body'> = {}): Promise<T> {
+  async patch<T = any>(
+    endpoint: string,
+    body?: any,
+    options: Omit<RequestOptions, 'method' | 'body'> = {},
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'PATCH', body })
   }
 

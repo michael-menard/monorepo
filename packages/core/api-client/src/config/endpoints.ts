@@ -55,13 +55,16 @@ export const SERVERLESS_ENDPOINTS = {
  * @param params - Object with parameter values (e.g., { id: '123' })
  * @returns The endpoint with parameters replaced
  */
-export function buildEndpoint(endpoint: string, params: Record<string, string | number> = {}): string {
+export function buildEndpoint(
+  endpoint: string,
+  params: Record<string, string | number> = {},
+): string {
   let url = endpoint
-  
+
   Object.entries(params).forEach(([key, value]) => {
     url = url.replace(`{${key}}`, String(value))
   })
-  
+
   return url
 }
 
@@ -70,13 +73,13 @@ export function buildEndpoint(endpoint: string, params: Record<string, string | 
  */
 export const ENDPOINT_CATEGORIES = {
   GALLERY: 'gallery',
-  WISHLIST: 'wishlist', 
+  WISHLIST: 'wishlist',
   MOC: 'moc',
   USER: 'user',
   HEALTH: 'health',
 } as const
 
-export type EndpointCategory = typeof ENDPOINT_CATEGORIES[keyof typeof ENDPOINT_CATEGORIES]
+export type EndpointCategory = (typeof ENDPOINT_CATEGORIES)[keyof typeof ENDPOINT_CATEGORIES]
 
 /**
  * Get all endpoints for a specific category

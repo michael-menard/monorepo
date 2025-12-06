@@ -4,10 +4,14 @@
  */
 
 import { createLogger } from '@repo/logger'
-import { getValidCognitoAuthToken, getCognitoTokenMetrics, isCognitoAuthenticationValid } from './cognito-integration'
+import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
 import { withRetry } from '../retry/retry-logic'
 import { performanceMonitor } from '../lib/performance'
-import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
+import {
+  getValidCognitoAuthToken,
+  getCognitoTokenMetrics,
+  isCognitoAuthenticationValid,
+} from './cognito-integration'
 
 const logger = createLogger('api-client:auth-middleware')
 
@@ -85,15 +89,18 @@ export class AuthMiddleware {
       if (this.config.enablePerformanceMonitoring) {
         const duration = performance.now() - startTime
         performanceMonitor.trackComponentRender(`auth-context-${Date.now()}`, duration)
-        logger.debug('Authentication context retrieved', undefined, { 
-          duration, 
-          isAuthenticated: authContext.isAuthenticated 
+        logger.debug('Authentication context retrieved', undefined, {
+          duration,
+          isAuthenticated: authContext.isAuthenticated,
         })
       }
 
       return authContext
     } catch (error) {
-      logger.error('Failed to get authentication context', error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        'Failed to get authentication context',
+        error instanceof Error ? error : new Error(String(error)),
+      )
       return { isAuthenticated: false }
     }
   }
@@ -117,12 +124,12 @@ export class AuthMiddleware {
       // Get token with retry logic
       const getTokenOperation = async (): Promise<string | undefined> => {
         const token = await getValidCognitoAuthToken()
-        
+
         // Cache the token if successful
         if (token && this.config.enableCaching) {
           await this.cacheManager.set(cacheKey, token, this.config.cacheTTL)
         }
-        
+
         return token
       }
 
@@ -133,13 +140,16 @@ export class AuthMiddleware {
             maxAttempts: 3,
             baseDelay: 1000,
           },
-          'auth-token-retrieval'
+          'auth-token-retrieval',
         )
       } else {
         return await getTokenOperation()
       }
     } catch (error) {
-      logger.error('Failed to get authentication token', error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        'Failed to get authentication token',
+        error instanceof Error ? error : new Error(String(error)),
+      )
       return undefined
     }
   }
@@ -149,7 +159,7 @@ export class AuthMiddleware {
    */
   async validateAuth(requestPath?: string): Promise<{ isValid: boolean; context: AuthContext }> {
     const context = await this.getAuthContext(requestPath)
-    
+
     // If path doesn't require auth, consider it valid
     if (requestPath && this.shouldSkipAuth(requestPath)) {
       return { isValid: true, context }
@@ -157,12 +167,12 @@ export class AuthMiddleware {
 
     // Check if authentication is required and valid
     const isValid = context.isAuthenticated && !!context.token
-    
+
     if (!isValid && requestPath && this.requiresAuth(requestPath)) {
-      logger.warn('Authentication required but not valid', undefined, { 
+      logger.warn('Authentication required but not valid', undefined, {
         path: requestPath,
         isAuthenticated: context.isAuthenticated,
-        hasToken: !!context.token
+        hasToken: !!context.token,
       })
     }
 
@@ -175,10 +185,10 @@ export class AuthMiddleware {
   async clearAuthCache(): Promise<void> {
     const contextKey = `${this.config.cacheKeyPrefix}context`
     const tokenKey = `${this.config.cacheKeyPrefix}token`
-    
+
     this.cacheManager.delete(contextKey)
     this.cacheManager.delete(tokenKey)
-    
+
     logger.debug('Authentication cache cleared')
   }
 
@@ -206,7 +216,10 @@ export class AuthMiddleware {
           userId = payload.sub
           userRoles = payload['cognito:groups'] || []
         } catch (error) {
-          logger.warn('Failed to decode token for user info', error instanceof Error ? error : new Error(String(error)))
+          logger.warn(
+            'Failed to decode token for user info',
+            error instanceof Error ? error : new Error(String(error)),
+          )
         }
       }
 
@@ -218,7 +231,10 @@ export class AuthMiddleware {
         tokenMetrics,
       }
     } catch (error) {
-      logger.error('Failed to build authentication context', error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        'Failed to build authentication context',
+        error instanceof Error ? error : new Error(String(error)),
+      )
       return { isAuthenticated: false }
     }
   }
@@ -227,18 +243,16 @@ export class AuthMiddleware {
    * Check if authentication should be skipped for a path
    */
   private shouldSkipAuth(path: string): boolean {
-    return this.config.skipAuthForPaths?.some(skipPath =>
-      path.startsWith(skipPath)
-    ) || false
+    return this.config.skipAuthForPaths?.some(skipPath => path.startsWith(skipPath)) || false
   }
 
   /**
    * Check if authentication is required for a path
    */
   private requiresAuth(path: string): boolean {
-    return this.config.requireAuthForPaths?.some(requirePath =>
-      path.startsWith(requirePath)
-    ) || false
+    return (
+      this.config.requireAuthForPaths?.some(requirePath => path.startsWith(requirePath)) || false
+    )
   }
 
   /**
@@ -293,7 +307,9 @@ export async function getAuthToken(forceRefresh = false): Promise<string | undef
 /**
  * Convenience function to validate authentication
  */
-export async function validateAuthentication(requestPath?: string): Promise<{ isValid: boolean; context: AuthContext }> {
+export async function validateAuthentication(
+  requestPath?: string,
+): Promise<{ isValid: boolean; context: AuthContext }> {
   const middleware = getAuthMiddleware()
   return middleware.validateAuth(requestPath)
 }

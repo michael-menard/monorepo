@@ -154,7 +154,9 @@ class PerformanceMonitor {
     // Clean up old metrics if we exceed the limit
     if (this.metrics.size > this.maxMetrics) {
       const oldestKey = this.metrics.keys().next().value
-      this.metrics.delete(oldestKey)
+      if (oldestKey) {
+        this.metrics.delete(oldestKey)
+      }
     }
   }
 }
@@ -170,26 +172,28 @@ export const performanceMonitor = new PerformanceMonitor()
 export function withPerformanceTracking<T extends (...args: any[]) => any>(
   fn: T,
   id: string,
-  type: PerformanceMetric['type'] = 'component'
+  type: PerformanceMetric['type'] = 'component',
 ): T {
   return ((...args: any[]) => {
     const trackingId = `${id}-${Date.now()}`
     performanceMonitor.startTracking(trackingId, type)
-    
+
     try {
       const result = fn(...args)
-      
+
       // Handle promises
       if (result && typeof result.then === 'function') {
         return result.finally(() => {
           performanceMonitor.endTracking(trackingId)
         })
       }
-      
+
       performanceMonitor.endTracking(trackingId)
       return result
     } catch (error) {
-      performanceMonitor.endTracking(trackingId, { error: error.message })
+      performanceMonitor.endTracking(trackingId, {
+        error: error instanceof Error ? error.message : String(error),
+      })
       throw error
     }
   }) as T

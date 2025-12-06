@@ -5,17 +5,11 @@
 
 import { fetchBaseQuery, type BaseQueryFn } from '@reduxjs/toolkit/query/react'
 import type { FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import { createLogger } from '@repo/logger'
 import { getServerlessApiConfig } from '../config/environments'
-import {
-  withRetry,
-  withPriorityRetry,
-  getRetryMetrics,
-  getCircuitBreakerStates,
-  type RetryConfig
-} from '../retry/retry-logic'
+import { withRetry, withPriorityRetry, type RetryConfig } from '../retry/retry-logic'
 import { handleServerlessError } from '../retry/error-handling'
 import { performanceMonitor } from '../lib/performance'
-import { createLogger } from '@repo/logger'
 
 const logger = createLogger('api-client:base-query')
 
@@ -36,7 +30,7 @@ export interface ServerlessBaseQueryOptions {
  * Create serverless-optimized base query for RTK Query
  */
 export function createServerlessBaseQuery(
-  options: ServerlessBaseQueryOptions = {}
+  options: ServerlessBaseQueryOptions = {},
 ): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> {
   const config = getServerlessApiConfig()
   const {
@@ -54,7 +48,7 @@ export function createServerlessBaseQuery(
   const baseQuery = fetchBaseQuery({
     baseUrl: config.baseUrl,
     timeout: config.timeout,
-    prepareHeaders: (headers) => {
+    prepareHeaders: headers => {
       // Set default headers
       headers.set('Content-Type', 'application/json')
       headers.set('Accept', 'application/json')
@@ -75,11 +69,11 @@ export function createServerlessBaseQuery(
   })
 
   // Enhanced base query with retry logic and performance monitoring
-  const enhancedBaseQuery: BaseQueryFn<
-    string | FetchArgs,
-    unknown,
-    FetchBaseQueryError
-  > = async (args, api, extraOptions) => {
+  const enhancedBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+    args,
+    api,
+    extraOptions,
+  ) => {
     const startTime = performance.now()
     const endpoint = options.endpoint || (typeof args === 'string' ? args : args.url)
     const priority = options.priority || 'medium'
@@ -124,10 +118,14 @@ export function createServerlessBaseQuery(
 
         // Log slow requests
         if (duration > 1000) {
-          logger.warn(`🐌 Slow RTK Query request: ${endpoint} took ${duration.toFixed(2)}ms`, undefined, {
-            endpoint,
-            duration
-          })
+          logger.warn(
+            `🐌 Slow RTK Query request: ${endpoint} took ${duration.toFixed(2)}ms`,
+            undefined,
+            {
+              endpoint,
+              duration,
+            },
+          )
         }
       }
 
@@ -167,7 +165,7 @@ export function createServerlessBaseQuery(
  */
 export function createAuthenticatedServerlessBaseQuery(
   getAuthToken: () => string | undefined,
-  options: Omit<ServerlessBaseQueryOptions, 'getAuthToken'> = {}
+  options: Omit<ServerlessBaseQueryOptions, 'getAuthToken'> = {},
 ): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> {
   return createServerlessBaseQuery({
     ...options,

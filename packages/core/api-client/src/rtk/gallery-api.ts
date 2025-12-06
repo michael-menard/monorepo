@@ -3,20 +3,19 @@
  * RTK Query endpoints for gallery operations with advanced filtering, pagination, and serverless optimizations
  */
 
-import { createApi } from '@reduxjs/toolkit/query/react'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import { createApi } from '@reduxjs/toolkit/query/react'
 import { createLogger } from '@repo/logger'
-import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
+import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
 import { createAuthenticatedBaseQuery } from '../auth/rtk-auth-integration'
 import { SERVERLESS_ENDPOINTS, buildEndpoint } from '../config/endpoints'
 import { performanceMonitor } from '../lib/performance'
-import { getServerlessCacheManager } from '@repo/cache/utils/serverlessCacheManager'
-import { createIntelligentApi } from '@repo/cache/rtk/IntelligentRTKCacheEnhancer'
 import type {
   GallerySearchResponse,
   GalleryImage,
   ServerlessResponse,
 } from '../types/api-responses'
+import { getServerlessCacheConfig } from './base-query'
 
 const logger = createLogger('api-client:gallery')
 const cacheManager = getServerlessCacheManager()
@@ -115,9 +114,9 @@ export interface GalleryApiConfig {
 export function createGalleryApi(config?: GalleryApiConfig) {
   logger.info('Creating enhanced Gallery API with serverless optimizations')
 
-  const { getAuthToken, onAuthFailure, onTokenRefresh } = config || {}
+  const { onAuthFailure, onTokenRefresh } = config || {}
 
-  return createIntelligentApi({
+  return createApi({
     reducerPath: 'enhancedGalleryApi',
     baseQuery: createAuthenticatedBaseQuery({
       baseUrl:
@@ -128,12 +127,16 @@ export function createGalleryApi(config?: GalleryApiConfig) {
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
       requireAuthForEndpoints: ['/api/v2/gallery'],
-      onAuthFailure: onAuthFailure || (error => {
-        logger.warn('Gallery API authentication failed', undefined, { error })
-      }),
-      onTokenRefresh: onTokenRefresh || (token => {
-        logger.debug('Gallery API token refreshed')
-      }),
+      onAuthFailure:
+        onAuthFailure ||
+        (error => {
+          logger.warn('Gallery API authentication failed', undefined, { error })
+        }),
+      onTokenRefresh:
+        onTokenRefresh ||
+        (() => {
+          logger.debug('Gallery API token refreshed')
+        }),
     }),
     tagTypes: ['Gallery', 'GalleryImage', 'GalleryStats', 'GalleryBatch'],
     endpoints: builder => ({
@@ -154,13 +157,12 @@ export function createGalleryApi(config?: GalleryApiConfig) {
               partCountRange: params.partCountRange
                 ? JSON.stringify(params.partCountRange)
                 : undefined,
-              pieceCount: params.pieceCount ? JSON.stringify(params.pieceCount) : undefined,
               // Add performance tracking
               _requestId: `gallery_search_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             },
           }
         },
-        transformResponse: (response: GallerySearchResponse, meta, arg) => {
+        transformResponse: (response: GallerySearchResponse) => {
           const duration = performance.now() - (performance.now() - 100) // Approximate duration
 
           performanceMonitor.trackComponentRender(`gallery-search-${Date.now()}`, duration)
@@ -168,14 +170,16 @@ export function createGalleryApi(config?: GalleryApiConfig) {
           logger.info('Enhanced gallery search completed', undefined, {
             resultCount: response.data.images.length,
             duration,
-            hasMore: response.pagination?.hasMore,
+            totalPages: response.pagination?.totalPages,
           })
 
           return response
         },
         providesTags: (result, error, params) => {
-          const tags = [
-            'Gallery',
+          const tags: Array<
+            { type: 'Gallery'; id?: string } | { type: 'GalleryImage'; id: string }
+          > = [
+            { type: 'Gallery' as const },
             ...(result?.data.images.map(({ id }) => ({ type: 'GalleryImage' as const, id })) || []),
           ]
 
@@ -184,8 +188,8 @@ export function createGalleryApi(config?: GalleryApiConfig) {
             tags.push({ type: 'Gallery' as const, id: `category:${params.category}` })
           if (params.tags?.length)
             tags.push({ type: 'Gallery' as const, id: `tags:${params.tags.join(',')}` })
-          if (params.difficulty?.length)
-            tags.push({ type: 'Gallery' as const, id: `difficulty:${params.difficulty.join(',')}` })
+          if (params.difficulty)
+            tags.push({ type: 'Gallery' as const, id: `difficulty:${params.difficulty}` })
 
           return tags
         },
@@ -218,7 +222,7 @@ export function createGalleryApi(config?: GalleryApiConfig) {
             body: { imageIds, operation: 'get' },
           }
         },
-        transformResponse: (response: ServerlessResponse<GalleryImage[]>, meta, imageIds) => {
+        transformResponse: (response: ServerlessResponse<GalleryImage[]>, _meta, imageIds) => {
           const duration = performance.now() - (performance.now() - 100)
 
           performanceMonitor.trackComponentRender(`gallery-batch-load-${Date.now()}`, duration)
@@ -231,7 +235,7 @@ export function createGalleryApi(config?: GalleryApiConfig) {
 
           return response
         },
-        providesTags: (result, error, imageIds) => [
+        providesTags: result => [
           'GalleryBatch',
           ...(result?.data.map(({ id }) => ({ type: 'GalleryImage' as const, id })) || []),
         ],
@@ -329,7 +333,7 @@ export function createGalleryApi(config?: GalleryApiConfig) {
             },
           }
         },
-        transformResponse: (response: ServerlessResponse<any>, meta, params) => {
+        transformResponse: (response: ServerlessResponse<any>, _meta, params) => {
           const duration = performance.now() - (performance.now() - 100)
 
           performanceMonitor.trackComponentRender(
@@ -340,22 +344,24 @@ export function createGalleryApi(config?: GalleryApiConfig) {
           logger.info('Enhanced batch gallery operation completed', undefined, {
             operation: params.operation,
             imageCount: params.imageIds.length,
-            success: response.success,
             duration,
           })
 
           // Use serverless cache manager for batch invalidation
-          if (response.success) {
-            cacheManager.delete(`gallery_batch_${params.operation}`)
-          }
+          cacheManager.delete(`gallery_batch_${params.operation}`)
 
           return response
         },
-        invalidatesTags: (result, error, { imageIds, operation }) => {
-          const tags = [
-            'Gallery',
-            'GalleryStats',
-            'GalleryBatch',
+        invalidatesTags: (_result, _error, { imageIds, operation }) => {
+          const tags: Array<
+            | { type: 'Gallery'; id?: string }
+            | { type: 'GalleryImage'; id: string }
+            | { type: 'GalleryStats' }
+            | { type: 'GalleryBatch' }
+          > = [
+            { type: 'Gallery' as const },
+            { type: 'GalleryStats' as const },
+            { type: 'GalleryBatch' as const },
             ...imageIds.map(id => ({ type: 'GalleryImage' as const, id })),
           ]
 
@@ -425,29 +431,6 @@ export function createGalleryApi(config?: GalleryApiConfig) {
         ...getServerlessCacheConfig('long'),
       }),
     }),
-    cacheConfig: {
-      enableIntelligentCaching: true,
-      enablePredictivePrefetching: true,
-      enableSmartInvalidation: true,
-      enablePerformanceMonitoring: true,
-      customStrategies: {
-        'gallery-search': {
-          ttl: 5 * 60 * 1000, // 5 minutes for search results
-          prefetchTrigger: 0.6,
-          dependencies: ['gallery-content'],
-        },
-        'gallery-image': {
-          ttl: 30 * 60 * 1000, // 30 minutes for individual images
-          prefetchTrigger: 0.8,
-          dependencies: ['gallery-content'],
-        },
-        'gallery-stats': {
-          ttl: 15 * 60 * 1000, // 15 minutes for statistics
-          prefetchTrigger: 0.5,
-          dependencies: ['gallery-content', 'user-activity'],
-        },
-      },
-    },
   })
 }
 

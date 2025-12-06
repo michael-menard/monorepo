@@ -3,11 +3,9 @@
  * Enhanced monitoring for serverless API performance
  */
 
-import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
-import type { AnyAction, Middleware } from '@reduxjs/toolkit'
-import { performanceMonitor } from '../lib/performance'
-import { getRetryMetrics, getCircuitBreakerStates } from '../retry/retry-logic'
+import type { Middleware } from '@reduxjs/toolkit'
 import { createLogger } from '@repo/logger'
+import { getRetryMetrics } from '../retry/retry-logic'
 
 const logger = createLogger('api-client:rtk-performance')
 
@@ -55,14 +53,15 @@ const queryPerformanceData = new Map<string, QueryPerformanceData>()
 /**
  * RTK Query performance monitoring middleware
  */
-export const rtkQueryPerformanceMiddleware: Middleware = (store) => (next) => (action: AnyAction) => {
+export const rtkQueryPerformanceMiddleware: Middleware = () => next => (action: unknown) => {
+  const typedAction = action as { type: string; meta?: { requestId?: string } }
   const startTime = performance.now()
-  
+
   // Track query start
-  if (action.type.endsWith('/pending')) {
-    const endpoint = extractEndpointFromAction(action)
-    if (endpoint) {
-      queryPerformanceData.set(action.meta.requestId, {
+  if (typedAction.type.endsWith('/pending')) {
+    const endpoint = extractEndpointFromAction(typedAction)
+    if (endpoint && typedAction.meta?.requestId) {
+      queryPerformanceData.set(typedAction.meta.requestId, {
         endpoint,
         queryTime: 0,
         cacheStatus: 'miss',
@@ -70,75 +69,82 @@ export const rtkQueryPerformanceMiddleware: Middleware = (store) => (next) => (a
         timestamp: Date.now(),
         success: false,
       })
-      
+
       rtkQueryMetrics.totalQueries++
     }
   }
-  
+
   const result = next(action)
   const endTime = performance.now()
   const duration = endTime - startTime
-  
+
   // Track query completion
-  if (action.type.endsWith('/fulfilled') || action.type.endsWith('/rejected')) {
-    const requestId = action.meta?.requestId
-    const queryData = queryPerformanceData.get(requestId)
-    
+  if (typedAction.type.endsWith('/fulfilled') || typedAction.type.endsWith('/rejected')) {
+    const requestId = typedAction.meta?.requestId
+    const queryData = requestId ? queryPerformanceData.get(requestId) : undefined
+
     if (queryData) {
       queryData.queryTime = duration
-      queryData.success = action.type.endsWith('/fulfilled')
-      
+      queryData.success = typedAction.type.endsWith('/fulfilled')
+
       // Update global metrics
       if (queryData.success) {
         rtkQueryMetrics.successfulQueries++
       } else {
         rtkQueryMetrics.failedQueries++
       }
-      
+
       // Track slow queries (>1s)
       if (duration > 1000) {
         rtkQueryMetrics.slowQueries++
-        logger.warn(`🐌 Slow RTK Query: ${queryData.endpoint} took ${duration.toFixed(2)}ms`, undefined, {
-          endpoint: queryData.endpoint,
-          duration
-        })
+        logger.warn(
+          `🐌 Slow RTK Query: ${queryData.endpoint} took ${duration.toFixed(2)}ms`,
+          undefined,
+          {
+            endpoint: queryData.endpoint,
+            duration,
+          },
+        )
       }
-      
+
       // Update average query time
       const totalSuccessful = rtkQueryMetrics.successfulQueries + rtkQueryMetrics.failedQueries
-      rtkQueryMetrics.averageQueryTime = 
+      rtkQueryMetrics.averageQueryTime =
         (rtkQueryMetrics.averageQueryTime * (totalSuccessful - 1) + duration) / totalSuccessful
-      
+
       // Track cache status
-      if (action.meta?.condition === false) {
+      const actionMeta = typedAction as { meta?: { condition?: boolean } }
+      if (actionMeta.meta?.condition === false) {
         queryData.cacheStatus = 'hit'
         rtkQueryMetrics.cacheHits++
       } else {
         rtkQueryMetrics.cacheMisses++
       }
-      
+
       // Clean up old data (keep last 100 queries)
       if (queryPerformanceData.size > 100) {
         const oldestKey = queryPerformanceData.keys().next().value
-        queryPerformanceData.delete(oldestKey)
+        if (oldestKey) {
+          queryPerformanceData.delete(oldestKey)
+        }
       }
     }
   }
-  
+
   return result
 }
 
 /**
  * Extract endpoint name from RTK Query action
  */
-function extractEndpointFromAction(action: AnyAction): string | null {
+function extractEndpointFromAction(action: { type: string }): string | null {
   const type = action.type
   const parts = type.split('/')
-  
+
   if (parts.length >= 2) {
     return parts[1] // e.g., "api/getUser/pending" -> "getUser"
   }
-  
+
   return null
 }
 
@@ -148,8 +154,7 @@ function extractEndpointFromAction(action: AnyAction): string | null {
 export function getRTKQueryMetrics(): RTKQueryPerformanceMetrics {
   // Include retry system metrics
   const retryMetrics = getRetryMetrics()
-  const circuitBreakerStates = getCircuitBreakerStates()
-  
+
   return {
     ...rtkQueryMetrics,
     retryCount: retryMetrics.totalAttempts - retryMetrics.successfulAttempts,
@@ -164,7 +169,7 @@ export function getRecentQueryPerformance(limit = 20): QueryPerformanceData[] {
   const recentQueries = Array.from(queryPerformanceData.values())
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, limit)
-  
+
   return recentQueries
 }
 
@@ -192,15 +197,15 @@ export function resetRTKQueryMetrics(): void {
 export function getRTKQueryPerformanceSummary() {
   const metrics = getRTKQueryMetrics()
   const recentQueries = getRecentQueryPerformance(10)
-  
-  const successRate = metrics.totalQueries > 0 
-    ? (metrics.successfulQueries / metrics.totalQueries) * 100 
-    : 100
-  
-  const cacheHitRate = (metrics.cacheHits + metrics.cacheMisses) > 0
-    ? (metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)) * 100
-    : 0
-  
+
+  const successRate =
+    metrics.totalQueries > 0 ? (metrics.successfulQueries / metrics.totalQueries) * 100 : 100
+
+  const cacheHitRate =
+    metrics.cacheHits + metrics.cacheMisses > 0
+      ? (metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)) * 100
+      : 0
+
   return {
     summary: {
       totalQueries: metrics.totalQueries,
@@ -223,34 +228,34 @@ export function getRTKQueryPerformanceSummary() {
  */
 function generatePerformanceRecommendations(metrics: RTKQueryPerformanceMetrics): string[] {
   const recommendations: string[] = []
-  
-  const successRate = metrics.totalQueries > 0 
-    ? (metrics.successfulQueries / metrics.totalQueries) * 100 
-    : 100
-  
+
+  const successRate =
+    metrics.totalQueries > 0 ? (metrics.successfulQueries / metrics.totalQueries) * 100 : 100
+
   if (successRate < 95) {
     recommendations.push('Consider implementing circuit breakers for failing endpoints')
   }
-  
+
   if (metrics.averageQueryTime > 500) {
     recommendations.push('Average query time is high - consider optimizing slow endpoints')
   }
-  
+
   if (metrics.slowQueries > metrics.totalQueries * 0.1) {
     recommendations.push('High number of slow queries detected - review endpoint performance')
   }
-  
-  const cacheHitRate = (metrics.cacheHits + metrics.cacheMisses) > 0
-    ? (metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)) * 100
-    : 0
-  
+
+  const cacheHitRate =
+    metrics.cacheHits + metrics.cacheMisses > 0
+      ? (metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)) * 100
+      : 0
+
   if (cacheHitRate < 50) {
     recommendations.push('Low cache hit rate - consider adjusting cache strategies')
   }
-  
+
   if (metrics.retryCount > metrics.totalQueries * 0.2) {
     recommendations.push('High retry rate detected - investigate network or server issues')
   }
-  
+
   return recommendations
 }
