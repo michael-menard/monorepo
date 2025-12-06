@@ -25,9 +25,7 @@ describe('App Inspiration Gallery Module', () => {
 
   it('displays the welcome message', () => {
     render(<App />)
-    expect(
-      screen.getByText(/Welcome to the App Inspiration Gallery module/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Welcome to the App Inspiration Gallery module/i)).toBeInTheDocument()
   })
 
   it('shows the Getting Started card', () => {

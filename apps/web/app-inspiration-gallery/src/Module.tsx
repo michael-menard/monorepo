@@ -5,7 +5,6 @@
  * This module is designed to be lazy-loaded by the shell app.
  */
 import { z } from 'zod'
-
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 

@@ -6,11 +6,11 @@ module.exports = {
       colors: {
         // Primary Brand - Teal Family
         teal: {
-          100: 'var(--color-teal-100)',  // #D1E3E8 - Disabled states
-          400: 'var(--color-teal-400)',  // #5FA3B8 - Secondary interactive
-          600: 'var(--color-teal-600)',  // #1B5E6D - Primary (DEFAULT)
-          800: 'var(--color-teal-800)',  // #0F4654 - Hover states
-          950: 'var(--color-teal-950)',  // #082B34 - Dark mode bg
+          100: 'var(--color-teal-100)', // #D1E3E8 - Disabled states
+          400: 'var(--color-teal-400)', // #5FA3B8 - Secondary interactive
+          600: 'var(--color-teal-600)', // #1B5E6D - Primary (DEFAULT)
+          800: 'var(--color-teal-800)', // #0F4654 - Hover states
+          950: 'var(--color-teal-950)', // #082B34 - Dark mode bg
           DEFAULT: 'var(--color-teal-600)',
         },
         // Accent - Green/Sage Family
@@ -24,7 +24,7 @@ module.exports = {
         },
         // Neutral - Taupe/Earth Family
         neutral: {
-          50: 'var(--color-neutral-50)',   // #F9F7F5 - Light backgrounds
+          50: 'var(--color-neutral-50)', // #F9F7F5 - Light backgrounds
           100: 'var(--color-neutral-100)', // #F5F1ED - Primary background
           300: 'var(--color-neutral-300)', // #D9CFC5 - Borders
           500: 'var(--color-neutral-500)', // #9B8B7E - Secondary text
@@ -33,22 +33,22 @@ module.exports = {
           DEFAULT: 'var(--color-neutral-500)',
         },
         // Semantic Colors
-        success: 'var(--color-success)',   // #2D5F4F - Forest Green
-        warning: 'var(--color-warning)',   // #D4A574 - Warm Ochre
-        error: 'var(--color-error)',       // #A85B4B - Terracotta Red
-        info: 'var(--color-info)',         // #5FA3B8 - Soft Teal
+        success: 'var(--color-success)', // #2D5F4F - Forest Green
+        warning: 'var(--color-warning)', // #D4A574 - Warm Ochre
+        error: 'var(--color-error)', // #A85B4B - Terracotta Red
+        info: 'var(--color-info)', // #5FA3B8 - Soft Teal
         // Additional Accents
-        clay: 'var(--color-clay)',         // #B89968 - MOC highlights
+        clay: 'var(--color-clay)', // #B89968 - MOC highlights
         'dusty-blue': 'var(--color-dusty-blue)', // #7B8FA3 - Secondary accent
-        gold: 'var(--color-gold)',         // #B8A876 - Premium/featured
+        gold: 'var(--color-gold)', // #B8A876 - Premium/featured
       },
-      
+
       // Typography
       fontFamily: {
         primary: ['var(--font-primary)'],
         mono: ['var(--font-mono)'],
       },
-      
+
       fontSize: {
         xs: ['var(--text-xs)', { lineHeight: 'var(--leading-normal)' }],
         sm: ['var(--text-sm)', { lineHeight: 'var(--leading-normal)' }],
@@ -59,7 +59,7 @@ module.exports = {
         '3xl': ['var(--text-3xl)', { lineHeight: 'var(--leading-tight)' }],
         '4xl': ['var(--text-4xl)', { lineHeight: 'var(--leading-tight)' }],
       },
-      
+
       fontWeight: {
         light: 'var(--font-light)',
         normal: 'var(--font-normal)',
@@ -67,7 +67,7 @@ module.exports = {
         semibold: 'var(--font-semibold)',
         bold: 'var(--font-bold)',
       },
-      
+
       // Spacing
       spacing: {
         1: 'var(--space-1)',
@@ -83,7 +83,7 @@ module.exports = {
         20: 'var(--space-20)',
         24: 'var(--space-24)',
       },
-      
+
       // Border Radius
       borderRadius: {
         sm: 'var(--radius-sm)',
@@ -94,7 +94,7 @@ module.exports = {
         '2xl': 'var(--radius-2xl)',
         full: 'var(--radius-full)',
       },
-      
+
       // Box Shadow
       boxShadow: {
         sm: 'var(--shadow-sm)',
@@ -103,7 +103,7 @@ module.exports = {
         lg: 'var(--shadow-lg)',
         xl: 'var(--shadow-xl)',
       },
-      
+
       // Z-Index
       zIndex: {
         dropdown: 'var(--z-dropdown)',
@@ -115,7 +115,7 @@ module.exports = {
         tooltip: 'var(--z-tooltip)',
         toast: 'var(--z-toast)',
       },
-      
+
       // Animation
       animation: {
         'fade-in': 'fadeIn 0.2s ease-in-out',
@@ -125,7 +125,7 @@ module.exports = {
         'scale-in': 'scaleIn 0.2s ease-out',
         'scale-out': 'scaleOut 0.2s ease-out',
       },
-      
+
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
