@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { App } from '../App'
+import { App } from './App'
 
 // Mock the logger to avoid console output in tests
 vi.mock('@repo/logger', () => ({
@@ -28,7 +27,6 @@ describe('App Dashboard Module', () => {
   })
 
   it('handles user interactions', async () => {
-    const user = userEvent.setup()
     render(<App />)
 
     // Add interaction tests here
