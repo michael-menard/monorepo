@@ -5,7 +5,6 @@
  * Story 3.1.1: Instructions Gallery Page Scaffolding
  */
 import { BookOpen } from 'lucide-react'
-
 import {
   Card,
   CardContent,

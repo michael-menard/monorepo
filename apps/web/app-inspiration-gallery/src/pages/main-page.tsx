@@ -4,7 +4,6 @@
  * The primary page component for the App Inspiration Gallery module.
  */
 import { z } from 'zod'
-
 import {
   Card,
   CardContent,
@@ -12,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@repo/app-component-library'
-import { LoadingSpinner } from '@repo/app-component-library'
 
 /**
  * Main page props schema

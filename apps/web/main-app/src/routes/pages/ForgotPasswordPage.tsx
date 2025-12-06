@@ -4,19 +4,20 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
-import { Button } from '@repo/app-component-library'
-import { Input } from '@repo/app-component-library'
-import { Label } from '@repo/app-component-library'
 import {
+  Button,
+  Input,
+  Label,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Alert,
+  AlertDescription,
+  cn,
 } from '@repo/app-component-library'
-import { Alert, AlertDescription } from '@repo/app-component-library'
 import { Mail, ArrowLeft, AlertCircle, CheckCircle, KeyRound } from 'lucide-react'
-import { cn } from '@repo/app-component-library'
 import { AuthLayout } from '@/components/Layout/RootLayout'
 import { useAuth } from '@/services/auth/AuthProvider'
 import { useNavigation } from '@/components/Navigation/NavigationProvider'
