@@ -169,9 +169,8 @@ export function Header() {
                   <AppDropdownMenuTrigger asChild>
                     <CustomButton variant="ghost" className="relative h-9 w-9 rounded-full">
                       <AppAvatar
-                        src={auth.user?.avatar}
-                        alt={auth.user?.name}
-                        fallback={auth.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        avatarUrl={auth.user?.avatar}
+                        userName={auth.user?.name || 'User'}
                         size="sm"
                       />
                     </CustomButton>

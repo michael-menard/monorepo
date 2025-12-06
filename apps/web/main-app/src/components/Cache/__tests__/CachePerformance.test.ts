@@ -9,7 +9,7 @@
  * - Cache invalidation efficiency
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { IntelligentCacheManager } from '@repo/cache/managers/IntelligentCacheManager'
 import { CacheAnalytics } from '@repo/cache/analytics/CacheAnalytics'
 import { PerformanceMonitor } from '@repo/cache/utils/performanceMonitor'

@@ -1,67 +1,47 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { InstructionsModule } from '../InstructionsModule'
+import { render, screen, waitFor } from '@testing-library/react'
+import * as React from 'react'
 
-// Mock Redux for this component test
-vi.mock('react-redux', () => ({
-  useSelector: vi.fn(),
-  useDispatch: () => vi.fn(),
-  Provider: ({ children }: any) => children,
+// Mock @repo/app-component-library with cn for LoadingPage
+vi.mock('@repo/app-component-library', async () => {
+  const actual = await vi.importActual('@repo/app-component-library')
+  return {
+    ...actual,
+    cn: (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' '),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+    useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
+  }
+})
+
+// Mock the lazy-loaded module
+vi.mock('@repo/app-instructions-gallery', () => ({
+  default: () =>
+    React.createElement('div', null, [
+      React.createElement('h1', { key: 'h1' }, 'My Instructions'),
+      React.createElement('p', { key: 'p' }, 'Browse your MOC instruction collection'),
+    ]),
 }))
 
+// Import after mocks
+import { InstructionsModule } from '../InstructionsModule'
+
 describe('InstructionsModule', () => {
-  it('renders the instructions module title and description', () => {
+  it('renders the instructions gallery page after loading', async () => {
     render(<InstructionsModule />)
 
-    expect(screen.getByRole('heading', { level: 1, name: /moc instructions/i })).toBeInTheDocument()
-    expect(screen.getByText(/step-by-step building guides for lego mocs/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { level: 1, name: /my instructions/i }),
+      ).toBeInTheDocument()
+      expect(screen.getByText(/browse your moc instruction collection/i)).toBeInTheDocument()
+    })
   })
 
-  it('displays the book icon in the title', () => {
+  it('has proper semantic structure', async () => {
     render(<InstructionsModule />)
 
-    const title = screen.getByRole('heading', { level: 1, name: /moc instructions/i })
-    expect(title).toBeInTheDocument()
-    // The BookOpen icon should be present in the title
-    expect(title.querySelector('svg')).toBeInTheDocument()
-  })
-
-  it('shows the module loading placeholder', () => {
-    render(<InstructionsModule />)
-
-    expect(screen.getByText(/instructions module loading/i)).toBeInTheDocument()
-    expect(
-      screen.getByText(/this will load the existing moc instructions functionality/i),
-    ).toBeInTheDocument()
-  })
-
-  it('displays feature cards for instructions functionality', () => {
-    render(<InstructionsModule />)
-
-    // Use text selectors since CardTitle renders as div with data-testid
-    expect(screen.getByText(/pdf instructions/i)).toBeInTheDocument()
-    expect(screen.getByText(/video guides/i)).toBeInTheDocument()
-    expect(screen.getByText(/parts lists/i)).toBeInTheDocument()
-  })
-
-  it('has proper semantic structure', () => {
-    render(<InstructionsModule />)
-
-    // Should have main heading
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-
-    // Should have feature card titles (using text selectors)
-    expect(screen.getByText(/pdf instructions/i)).toBeInTheDocument()
-    expect(screen.getByText(/video guides/i)).toBeInTheDocument()
-    expect(screen.getByText(/parts lists/i)).toBeInTheDocument()
-  })
-
-  it('displays the large book icon in the placeholder area', () => {
-    render(<InstructionsModule />)
-
-    // The placeholder area should contain a large BookOpen icon
-    const placeholderArea = screen.getByText(/instructions module loading/i).closest('div')
-    expect(placeholderArea).toBeInTheDocument()
-    expect(placeholderArea?.querySelector('svg')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    })
   })
 })

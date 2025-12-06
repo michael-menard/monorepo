@@ -22,7 +22,7 @@ export function OTPVerificationPage() {
   // Redirect if no active challenge
   useEffect(() => {
     if (!currentChallenge) {
-      router.navigate({ to: '/auth/login' })
+      router.navigate({ to: '/login' })
     }
   }, [currentChallenge, router])
 
@@ -61,7 +61,7 @@ export function OTPVerificationPage() {
 
   const handleBackToLogin = () => {
     clearChallenge()
-    router.navigate({ to: '/auth/login' })
+    router.navigate({ to: '/login' })
   }
 
   const getChallengeTitle = () => {

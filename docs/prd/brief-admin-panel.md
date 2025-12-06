@@ -139,34 +139,34 @@ A comprehensive administrative command center where authorized admins can effici
 ### Core Features (Must Have)
 
 - **Admin Authentication & Authorization:** Secure login requiring JWT with admin scope; redirect unauthorized users; session management
-  - *Rationale:* Foundation for all security - must validate admin scope before allowing any access
+  - _Rationale:_ Foundation for all security - must validate admin scope before allowing any access
 
 - **User List View:** Paginated table displaying all users with columns for email, last login time, account status (active/blocked), and actions
-  - *Rationale:* Primary interface for user discovery and management; must handle large user bases efficiently
+  - _Rationale:_ Primary interface for user discovery and management; must handle large user bases efficiently
 
 - **User Search & Filtering:** Real-time search by email with debouncing; filters for account status (active/blocked), last login date range
-  - *Rationale:* Critical for quickly finding specific users among thousands; search is the most common admin workflow
+  - _Rationale:_ Critical for quickly finding specific users among thousands; search is the most common admin workflow
 
 - **User Detail View:** Dedicated page/modal showing comprehensive user information including email, user ID, creation date, last login timestamp, account status, and action history
-  - *Rationale:* Provides context needed for informed administrative decisions
+  - _Rationale:_ Provides context needed for informed administrative decisions
 
 - **Revoke Refresh Token:** Button to call Cognito `AdminUserGlobalSignOut` API to invalidate all refresh tokens for selected user
-  - *Rationale:* Core security feature for immediate session termination
+  - _Rationale:_ Core security feature for immediate session termination
 
 - **Block/Unblock User:** Toggle to set application-level block flag preventing authentication; visual indicator of blocked status
-  - *Rationale:* Prevents blocked users from obtaining new tokens even if Cognito allows it; fail-safe mechanism
+  - _Rationale:_ Prevents blocked users from obtaining new tokens even if Cognito allows it; fail-safe mechanism
 
 - **User Impersonation:** "Impersonate User" action that generates time-limited impersonation token and opens application in new tab/window as that user
-  - *Rationale:* Essential troubleshooting tool; must be secure with clear visual indicators and automatic expiration
+  - _Rationale:_ Essential troubleshooting tool; must be secure with clear visual indicators and automatic expiration
 
 - **Impersonation Banner:** Prominent visual indicator when admin is impersonating a user, showing impersonated user email and "Exit Impersonation" button
-  - *Rationale:* Prevents confusion and accidental actions while impersonating; security best practice
+  - _Rationale:_ Prevents confusion and accidental actions while impersonating; security best practice
 
 - **Admin Audit Log:** Automatic logging of all admin actions (searches, views, token revocations, blocks/unblocks, impersonations) with timestamp, admin identity, action type, and target user
-  - *Rationale:* Non-negotiable for security, compliance, and troubleshooting admin issues
+  - _Rationale:_ Non-negotiable for security, compliance, and troubleshooting admin issues
 
 - **Responsive Layout:** Mobile-friendly design using Tailwind responsive utilities, though primary use case is desktop
-  - *Rationale:* Admins may need to respond to issues from mobile devices; shadcn components support responsive design
+  - _Rationale:_ Admins may need to respond to issues from mobile devices; shadcn components support responsive design
 
 ### Out of Scope for MVP
 
@@ -184,6 +184,7 @@ A comprehensive administrative command center where authorized admins can effici
 ### MVP Success Criteria
 
 The MVP is successful when:
+
 1. Admins can find any user by email in under 10 seconds
 2. All core user management actions (revoke, block, unblock, impersonate) work reliably with 100% success rate
 3. Impersonation sessions are properly isolated, audited, and time-limited
@@ -232,6 +233,7 @@ Over the next 1-2 years, evolve this into a comprehensive administrative platfor
 ### Architecture & Technology Stack
 
 **Frontend:**
+
 - **Framework:** React 18+ with TypeScript for type safety and developer experience
 - **Styling:** Tailwind CSS v3+ for utility-first styling and rapid development
 - **Component Library:** shadcn/ui for accessible, customizable components (built on Radix UI primitives)
@@ -241,6 +243,7 @@ Over the next 1-2 years, evolve this into a comprehensive administrative platfor
 - **Hosting:** AWS S3 + CloudFront for static site hosting with global CDN
 
 **Backend:**
+
 - **Compute:** AWS Lambda functions (Node.js or Python runtime)
 - **API Gateway:** AWS API Gateway for RESTful API endpoints with request validation
 - **Authentication:** JWT validation middleware checking for admin scope in access tokens
@@ -251,30 +254,35 @@ Over the next 1-2 years, evolve this into a comprehensive administrative platfor
 ### Key Technical Components
 
 **1. Admin Authentication Flow:**
+
 - Admin logs in through existing auth system, receives JWT with admin scope
 - Frontend validates JWT and checks for admin scope before rendering admin panel
 - API Gateway validates JWT on every request; Lambda functions double-check admin scope
 - Session management with automatic token refresh
 
 **2. User Search & Listing:**
+
 - Backend API endpoint with pagination, filtering, and search parameters
 - Database indexes on email and last_login fields for performance
 - Consider ElasticSearch/OpenSearch for advanced search if user base exceeds 100k users
 - Frontend implements debounced search (300ms delay) to reduce API calls
 
 **3. Cognito Token Revocation:**
+
 - Lambda function calls `AdminUserGlobalSignOut` API with appropriate IAM permissions
 - Error handling for API failures with retry logic
 - Application-level block flag as fail-safe (checked in auth middleware)
 - Async operation with loading states and success/error notifications
 
 **4. User Blocking System:**
+
 - Database field: `access_revoked` (boolean) or `account_status` (enum: active/blocked/suspended)
 - Authentication middleware checks block status on every request
 - Atomic database operations to prevent race conditions
 - Clear error messages returned to blocked users
 
 **5. User Impersonation:**
+
 - Backend generates special impersonation JWT with claims: `{ sub: targetUserId, impersonatedBy: adminUserId, exp: shortExpiration }`
 - Impersonation tokens expire after 1-4 hours (configurable)
 - Frontend stores impersonation token in sessionStorage (not localStorage) for automatic cleanup
@@ -282,6 +290,7 @@ Over the next 1-2 years, evolve this into a comprehensive administrative platfor
 - Visual banner component checks for impersonation token and displays warning
 
 **6. Audit Logging:**
+
 - Structured logs with fields: `admin_id`, `action_type`, `target_user_id`, `timestamp`, `ip_address`, `request_details`, `result`
 - Stored in dedicated audit table or CloudWatch Logs with retention policy
 - Indexed for efficient querying and compliance reporting
@@ -298,6 +307,7 @@ Over the next 1-2 years, evolve this into a comprehensive administrative platfor
 ### Database Schema Changes
 
 New tables/fields required:
+
 ```
 users table additions:
 - access_revoked: boolean (default: false)
@@ -400,36 +410,36 @@ admin_audit_log table:
 ### Key Risks
 
 - **Impersonation Security Breach:** If impersonation tokens are compromised or the mechanism is flawed, attackers could gain unauthorized access to user accounts
-  - *Impact:* Critical - complete security failure, potential data breach, loss of user trust
-  - *Mitigation:* Short token expiration (1-4 hours), comprehensive audit logging, visual indicators, security review before deployment, consider requiring re-authentication for impersonation
+  - _Impact:_ Critical - complete security failure, potential data breach, loss of user trust
+  - _Mitigation:_ Short token expiration (1-4 hours), comprehensive audit logging, visual indicators, security review before deployment, consider requiring re-authentication for impersonation
 
 - **Admin Scope Bypass:** If admin scope validation has gaps, unauthorized users could access admin panel or perform admin actions
-  - *Impact:* Critical - unauthorized access to sensitive user data and admin capabilities
-  - *Mitigation:* Defense in depth (validate on frontend, API Gateway, and Lambda), comprehensive testing of all endpoints, security audit, penetration testing
+  - _Impact:_ Critical - unauthorized access to sensitive user data and admin capabilities
+  - _Mitigation:_ Defense in depth (validate on frontend, API Gateway, and Lambda), comprehensive testing of all endpoints, security audit, penetration testing
 
 - **Cognito API Failures:** AWS Cognito `AdminUserGlobalSignOut` could fail or timeout, leaving tokens active despite admin action
-  - *Impact:* High - user maintains access despite revocation attempt, security gap
-  - *Mitigation:* Application-level block flag serves as fail-safe, retry logic with exponential backoff, alerting for API failures, clear error messages to admins
+  - _Impact:_ High - user maintains access despite revocation attempt, security gap
+  - _Mitigation:_ Application-level block flag serves as fail-safe, retry logic with exponential backoff, alerting for API failures, clear error messages to admins
 
 - **Performance Degradation:** User search and listing could be slow with large user bases, degrading admin experience
-  - *Impact:* Medium - admin frustration, reduced productivity, potential timeout errors
-  - *Mitigation:* Database indexes on search fields, pagination, consider ElasticSearch for >100k users, performance testing with realistic data volumes
+  - _Impact:_ Medium - admin frustration, reduced productivity, potential timeout errors
+  - _Mitigation:_ Database indexes on search fields, pagination, consider ElasticSearch for >100k users, performance testing with realistic data volumes
 
 - **Audit Log Tampering:** If audit logs can be modified or deleted, compliance and security investigations are compromised
-  - *Impact:* High - inability to investigate security incidents, compliance violations
-  - *Mitigation:* Write-only permissions for audit logs, separate audit storage (CloudWatch Logs), immutable log entries, regular audit log reviews
+  - _Impact:_ High - inability to investigate security incidents, compliance violations
+  - _Mitigation:_ Write-only permissions for audit logs, separate audit storage (CloudWatch Logs), immutable log entries, regular audit log reviews
 
 - **Accidental User Blocking:** Admins could accidentally block legitimate users, causing support issues and user frustration
-  - *Impact:* Medium - user disruption, support overhead, potential revenue loss
-  - *Mitigation:* Confirmation dialogs for destructive actions, clear visual indicators, easy unblock process, audit trail for accountability
+  - _Impact:_ Medium - user disruption, support overhead, potential revenue loss
+  - _Mitigation:_ Confirmation dialogs for destructive actions, clear visual indicators, easy unblock process, audit trail for accountability
 
 - **Impersonation Confusion:** Admins might forget they're impersonating and take actions as the user, causing unintended consequences
-  - *Impact:* Medium - incorrect data modifications, user confusion, support issues
-  - *Mitigation:* Prominent visual banner, different color scheme during impersonation, automatic session expiration, "Exit Impersonation" always visible
+  - _Impact:_ Medium - incorrect data modifications, user confusion, support issues
+  - _Mitigation:_ Prominent visual banner, different color scheme during impersonation, automatic session expiration, "Exit Impersonation" always visible
 
 - **Scope Creep:** Project expands beyond MVP scope, delaying delivery and increasing complexity
-  - *Impact:* Medium - missed deadlines, budget overruns, reduced focus on core features
-  - *Mitigation:* Strict adherence to MVP scope, defer nice-to-have features to Phase 2, regular stakeholder alignment
+  - _Impact:_ Medium - missed deadlines, budget overruns, reduced focus on core features
+  - _Mitigation:_ Strict adherence to MVP scope, defer nice-to-have features to Phase 2, regular stakeholder alignment
 
 ### Open Questions
 
@@ -580,6 +590,7 @@ admin_audit_log table:
 ### Success Criteria for Launch
 
 The admin panel is ready for production when:
+
 1. All MVP features are implemented and tested
 2. Security review is complete with all critical/high findings resolved
 3. Performance meets targets (search < 500ms, 99.9% uptime)
@@ -588,4 +599,3 @@ The admin panel is ready for production when:
 6. Rollback plan is documented and tested
 7. Monitoring and alerting are configured
 8. Documentation is complete and accessible
-

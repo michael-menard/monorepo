@@ -5,7 +5,7 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { MemoryRouter } from 'react-router-dom'
 import { NavigationProvider, useNavigation } from '../NavigationProvider'
-import { navigationSlice } from '@/store/slices/navigationSlice'
+import { navigationSlice, type NavigationItem } from '@/store/slices/navigationSlice'
 
 // Mock react-router-dom
 vi.mock('react-router-dom', async () => {
@@ -53,15 +53,19 @@ function TestComponent() {
 }
 
 describe('NavigationProvider', () => {
-  let store: ReturnType<typeof configureStore>
-  let consoleSpy: ReturnType<typeof vi.spyOn>
-
-  beforeEach(() => {
-    store = configureStore({
+  const createStore = () =>
+    configureStore({
       reducer: {
         navigation: navigationSlice.reducer,
       },
     })
+
+  type TestStore = ReturnType<typeof createStore>
+  let store: TestStore
+  let consoleSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    store = createStore()
 
     // Mock console.log for analytics tracking
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -171,7 +175,7 @@ describe('NavigationProvider', () => {
 
       // Should have gallery-specific contextual items
       const uploadItem = state.navigation.contextualNavigation.find(
-        item => item.id === 'gallery-upload',
+        (item: NavigationItem) => item.id === 'gallery-upload',
       )
       expect(uploadItem).toBeDefined()
       expect(uploadItem?.label).toBe('Upload MOC')

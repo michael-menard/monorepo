@@ -127,25 +127,25 @@ A secure, reliable, and auditable user access control system where administrator
 ### Core Features (Must Have)
 
 - **Revoke User Access Button/Action:** Admin interface element (button, menu item, or action) on user detail/management page that triggers immediate access revocation for the selected user
-  - *Rationale:* Core functionality - the primary user interaction point
+  - _Rationale:_ Core functionality - the primary user interaction point
 
 - **Cognito Global Sign-Out Integration:** Backend implementation calling AWS Cognito `AdminUserGlobalSignOut` API to invalidate all refresh tokens for the target user
-  - *Rationale:* Primary mechanism for token invalidation; leverages AWS native capability
+  - _Rationale:_ Primary mechanism for token invalidation; leverages AWS native capability
 
 - **Application-Level Block Flag:** Database field/flag marking user as "access revoked" that is checked during authentication/authorization flows to prevent any access even if token validation passes
-  - *Rationale:* Fail-safe mechanism ensuring defense in depth
+  - _Rationale:_ Fail-safe mechanism ensuring defense in depth
 
 - **Revocation Reason Capture:** Required text field or dropdown allowing admin to specify reason for revocation (e.g., "Security incident", "Policy violation", "Account compromise", "Employee termination")
-  - *Rationale:* Essential for audit trail and compliance; helps with future analysis
+  - _Rationale:_ Essential for audit trail and compliance; helps with future analysis
 
 - **Audit Logging:** Automatic logging of all revocation events including timestamp, admin user ID, target user ID, reason, and action result (success/failure)
-  - *Rationale:* Non-negotiable for security and compliance requirements
+  - _Rationale:_ Non-negotiable for security and compliance requirements
 
 - **Confirmation Dialog:** Modal/dialog requiring admin to confirm the revocation action before execution to prevent accidental clicks
-  - *Rationale:* Prevents false positives; critical given the immediate and disruptive nature of the action
+  - _Rationale:_ Prevents false positives; critical given the immediate and disruptive nature of the action
 
 - **Restore Access Capability:** Ability for admins to reverse a revocation (remove block flag and allow user to re-authenticate)
-  - *Rationale:* Handles error cases and temporary suspensions; reduces risk of implementing the feature
+  - _Rationale:_ Handles error cases and temporary suspensions; reduces risk of implementing the feature
 
 ### Out of Scope for MVP
 
@@ -161,6 +161,7 @@ A secure, reliable, and auditable user access control system where administrator
 ### MVP Success Criteria
 
 The MVP is successful when:
+
 1. Admins can revoke user access through the application interface in under 60 seconds
 2. Revoked users are immediately blocked from all system access (verified through testing)
 3. All revocation actions are logged with complete audit information
@@ -276,28 +277,28 @@ Over the next 1-2 years, evolve this into a comprehensive access control and sec
 ### Key Risks
 
 - **Cognito API Reliability:** AWS Cognito `AdminUserGlobalSignOut` API could fail or timeout, leaving tokens active despite database flag being set
-  - *Impact:* High - user maintains access despite revocation attempt
-  - *Mitigation:* Application-level block flag serves as fail-safe; implement retry logic and alerting for API failures
+  - _Impact:_ High - user maintains access despite revocation attempt
+  - _Mitigation:_ Application-level block flag serves as fail-safe; implement retry logic and alerting for API failures
 
 - **Authentication Middleware Bypass:** If any authentication paths don't check the `access_revoked` flag, users could maintain access through those routes
-  - *Impact:* Critical - complete failure of revocation capability
-  - *Mitigation:* Comprehensive code review and testing of all authentication flows; security audit before deployment
+  - _Impact:_ Critical - complete failure of revocation capability
+  - _Mitigation:_ Comprehensive code review and testing of all authentication flows; security audit before deployment
 
 - **Race Conditions:** User could be making requests while revocation is in progress, potentially completing actions after revocation initiated
-  - *Impact:* Medium - brief window of unauthorized activity
-  - *Mitigation:* Acceptable risk given short window; database transaction ensures flag is set before Cognito call completes
+  - _Impact:_ Medium - brief window of unauthorized activity
+  - _Mitigation:_ Acceptable risk given short window; database transaction ensures flag is set before Cognito call completes
 
 - **Accidental Revocations:** Admins could accidentally revoke legitimate users, causing business disruption
-  - *Impact:* Medium - user frustration, support burden, potential business impact
-  - *Mitigation:* Confirmation dialog, restore capability, audit trail for accountability
+  - _Impact:_ Medium - user frustration, support burden, potential business impact
+  - _Mitigation:_ Confirmation dialog, restore capability, audit trail for accountability
 
 - **IAM Permission Issues:** Backend may lack necessary IAM permissions to call Cognito admin APIs
-  - *Impact:* High - feature cannot function
-  - *Mitigation:* Validate permissions early in development; document required IAM policies
+  - _Impact:_ High - feature cannot function
+  - _Mitigation:_ Validate permissions early in development; document required IAM policies
 
 - **Performance Impact:** Checking `access_revoked` flag on every request could impact authentication performance
-  - *Impact:* Low-Medium - slower request processing
-  - *Mitigation:* Database indexing on flag field; consider caching strategies if needed
+  - _Impact:_ Low-Medium - slower request processing
+  - _Mitigation:_ Database indexing on flag field; consider caching strategies if needed
 
 ### Open Questions
 
@@ -319,4 +320,3 @@ Over the next 1-2 years, evolve this into a comprehensive access control and sec
 - **Multi-Region Considerations:** If application runs in multiple AWS regions, understand token/session replication behavior
 - **Compliance Requirements:** Consult with legal/compliance team on specific audit trail and notification requirements
 - **Existing Workarounds:** Document current manual processes for access revocation to ensure feature addresses all use cases
-

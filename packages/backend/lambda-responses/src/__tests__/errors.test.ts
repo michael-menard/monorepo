@@ -114,6 +114,7 @@ describe('Error Classes', () => {
         errorType: 'NOT_FOUND',
         message: 'Resource not found',
         statusCode: 404,
+        isRetryable: false,
         details: { id: '123' },
       })
     })
@@ -127,6 +128,7 @@ describe('Error Classes', () => {
         errorType: 'BAD_REQUEST',
         message: 'Bad request',
         statusCode: 400,
+        isRetryable: false,
         details: undefined,
       })
     })

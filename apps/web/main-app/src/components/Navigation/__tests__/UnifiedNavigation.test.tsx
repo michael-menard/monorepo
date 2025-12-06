@@ -2,7 +2,6 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import { createMemoryHistory } from '@tanstack/react-router'
 import { UnifiedNavigation } from '../UnifiedNavigation'
 import { NavigationProvider } from '../NavigationProvider'
 import { authSlice } from '@/store/slices/authSlice'
@@ -21,11 +20,16 @@ jest.mock('@tanstack/react-router', () => ({
 }))
 
 // Test store setup
-const createTestStore = (initialState = {}) => {
+interface TestStoreState {
+  auth?: Partial<ReturnType<typeof authSlice.getInitialState>>
+  navigation?: Partial<ReturnType<typeof navigationSlice.getInitialState>>
+}
+
+const createTestStore = (initialState: TestStoreState = {}) => {
   return configureStore({
     reducer: {
       auth: authSlice.reducer,
-      navigation: navigationSlice.reducer,
+      navigation: navigationSlice.reducer as any,
     },
     preloadedState: {
       auth: {
@@ -68,7 +72,7 @@ const createTestStore = (initialState = {}) => {
   })
 }
 
-const renderWithProviders = (component: React.ReactElement, initialState = {}) => {
+const renderWithProviders = (component: React.ReactElement, initialState: TestStoreState = {}) => {
   const store = createTestStore(initialState)
   return render(
     <Provider store={store}>
@@ -179,7 +183,7 @@ describe('UnifiedNavigation', () => {
       fireEvent.click(mobileMenuButton)
 
       // Check if the store state was updated
-      const state = store.getState()
+      const state = store.getState() as any
       expect(state.navigation.isMobileMenuOpen).toBe(true)
     })
   })

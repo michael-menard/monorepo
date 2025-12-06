@@ -71,6 +71,12 @@ When('I trigger a slow page navigation', async ({ page }) => {
   await page.goto('/instructions')
 })
 
+When('the loading indicator appears', async ({ page }) => {
+  await expect(
+    page.getByTestId('page-transition-bar').or(page.getByTestId('page-transition-overlay')),
+  ).toBeVisible({ timeout: 1000 })
+})
+
 // ============================================================================
 // Loading Indicator Assertions
 // ============================================================================

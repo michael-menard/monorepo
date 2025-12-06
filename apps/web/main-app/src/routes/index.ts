@@ -10,6 +10,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { LoadingPage } from './pages/LoadingPage'
+import { PlaceholderPage } from './pages/PlaceholderPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
 import { RouteGuards } from '@/lib/route-guards'
@@ -115,6 +116,23 @@ const instructionsRoute = createRoute({
   },
 })
 
+// Story 3.1.4: Instructions Detail Page
+const instructionDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/instructions/$instructionId',
+  component: () => {
+    // Lazy load instructions detail module
+    return import('./modules/InstructionsDetailModule').then(module => module.InstructionsDetail)
+  },
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    // Check authentication
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
@@ -172,6 +190,94 @@ const dashboardRoute = createRoute({
 //   beforeLoad: RouteGuards.protected,
 // })
 
+// Stub routes for planned features
+const galleryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/gallery',
+  component: PlaceholderPage,
+})
+
+const galleryDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/gallery/$mocId',
+  component: PlaceholderPage,
+})
+
+const inspirationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/inspiration',
+  component: PlaceholderPage,
+})
+
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/profile',
+  component: PlaceholderPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: PlaceholderPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
+const helpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/help',
+  component: PlaceholderPage,
+})
+
+const contactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/contact',
+  component: PlaceholderPage,
+})
+
+const feedbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/feedback',
+  component: PlaceholderPage,
+})
+
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/privacy',
+  component: PlaceholderPage,
+})
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/terms',
+  component: PlaceholderPage,
+})
+
+const cookiesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cookies',
+  component: PlaceholderPage,
+})
+
+const instructionsNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/instructions/new',
+  component: PlaceholderPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
 // 403 Unauthorized route
 const unauthorizedRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -198,7 +304,21 @@ const routeTree = rootRoute.addChildren([
   newPasswordRoute,
   wishlistRoute,
   instructionsRoute,
+  instructionDetailRoute,
+  instructionsNewRoute,
   dashboardRoute,
+  // Stub routes for planned features
+  galleryRoute,
+  galleryDetailRoute,
+  inspirationRoute,
+  profileRoute,
+  settingsRoute,
+  helpRoute,
+  contactRoute,
+  feedbackRoute,
+  privacyRoute,
+  termsRoute,
+  cookiesRoute,
   unauthorizedRoute,
   notFoundRoute,
 ])

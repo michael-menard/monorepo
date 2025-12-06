@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -52,8 +51,7 @@ describe('QuickActions', () => {
   })
 
   it('should render recently visited when enabled', () => {
-    // Add some recently visited items
-    const state = store.getState()
+    // Dispatch an action to populate recently visited items
     store.dispatch({
       type: 'navigation/setActiveRoute',
       payload: '/gallery',

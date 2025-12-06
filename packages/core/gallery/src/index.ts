@@ -82,7 +82,7 @@ export type {
   GallerySortState,
   GalleryPaginationState,
   GalleryState,
-  GallerySortOption,
+  // GallerySortOption - already exported from ./components/GallerySort
   GalleryQueryParams,
   GalleryResponse,
   GallerySearchParams,

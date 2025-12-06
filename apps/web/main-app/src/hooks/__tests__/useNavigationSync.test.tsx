@@ -44,7 +44,7 @@ describe('useNavigationSync', () => {
 
   describe('router state subscription', () => {
     it('subscribes to isLoading state', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -58,7 +58,7 @@ describe('useNavigationSync', () => {
     })
 
     it('subscribes to isTransitioning state', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -72,7 +72,7 @@ describe('useNavigationSync', () => {
     })
 
     it('subscribes to status state', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -87,7 +87,7 @@ describe('useNavigationSync', () => {
 
   describe('loading state detection', () => {
     it('sets navigating true when isLoading is true', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: true, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -100,7 +100,7 @@ describe('useNavigationSync', () => {
     })
 
     it('sets navigating true when isTransitioning is true', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: true, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -113,7 +113,7 @@ describe('useNavigationSync', () => {
     })
 
     it('sets navigating true when status is pending', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'pending' }
         return select?.(mockState as never) ?? mockState
       })
@@ -126,7 +126,7 @@ describe('useNavigationSync', () => {
     })
 
     it('sets navigating false when all states are idle', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -139,7 +139,7 @@ describe('useNavigationSync', () => {
     })
 
     it('sets navigating true when multiple states are active', () => {
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: true, isTransitioning: true, status: 'pending' }
         return select?.(mockState as never) ?? mockState
       })
@@ -155,7 +155,7 @@ describe('useNavigationSync', () => {
   describe('state transitions', () => {
     it('updates Redux when router state changes', () => {
       // Start with idle state
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -167,7 +167,7 @@ describe('useNavigationSync', () => {
       expect(selectIsNavigating(store.getState())).toBe(false)
 
       // Simulate navigation start
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: true, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -179,7 +179,7 @@ describe('useNavigationSync', () => {
 
     it('clears navigating when navigation completes', () => {
       // Start with loading state
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: true, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })
@@ -191,7 +191,7 @@ describe('useNavigationSync', () => {
       expect(selectIsNavigating(store.getState())).toBe(true)
 
       // Simulate navigation complete
-      mockedUseRouterState.mockImplementation(({ select }) => {
+      mockedUseRouterState.mockImplementation(({ select }: any) => {
         const mockState = { isLoading: false, isTransitioning: false, status: 'idle' }
         return select?.(mockState as never) ?? mockState
       })

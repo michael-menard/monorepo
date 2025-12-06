@@ -1,5 +1,4 @@
-import { Skeleton } from '@repo/app-component-library'
-import { cn } from '@repo/app-component-library'
+import { Skeleton, cn } from '@repo/app-component-library'
 import { motion, AnimatePresence } from 'framer-motion'
 
 /**
@@ -26,7 +25,7 @@ const brickVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 300,
       damping: 15,
       delay: i * 0.15,
@@ -39,7 +38,7 @@ const brickVariants = {
       repeat: Infinity,
       repeatDelay: 1.2,
       delay: i * 0.1,
-      ease: 'easeInOut',
+      ease: 'easeInOut' as const,
     },
   }),
 }

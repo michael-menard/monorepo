@@ -54,7 +54,7 @@ describe('Module Loading Integration', () => {
         { Component: DashboardModule, name: 'Dashboard' },
       ]
 
-      for (const { Component, name } of modules) {
+      for (const { Component } of modules) {
         const { unmount } = render(<Component />)
 
         // Each module should render without throwing

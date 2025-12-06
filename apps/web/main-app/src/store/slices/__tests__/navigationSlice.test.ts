@@ -17,42 +17,39 @@ import {
   clearSearchResults,
   toggleFavoriteItem,
   toggleHiddenItem,
-  updateCustomOrder,
   toggleCompactMode,
   setContextualNavigation,
   addContextualItem,
-  removeContextualItem,
   clearContextualNavigation,
   selectNavigation,
   selectPrimaryNavigation,
-  selectSecondaryNavigation,
   selectContextualNavigation,
   selectActiveRoute,
   selectIsMobileMenuOpen,
   selectBreadcrumbs,
   selectNavigationLoading,
   selectNavigationSearch,
-  selectNavigationAnalytics,
   selectUserPreferences,
-  selectQuickActions,
-  selectRecentlyVisited,
   selectNavigationNotifications,
   selectVisiblePrimaryNavigation,
   selectFavoriteNavigation,
-  selectActiveNavigationItem,
-  NavigationItem,
-  BreadcrumbItem,
+  type NavigationItem,
 } from '../navigationSlice'
 
 describe('navigationSlice', () => {
-  let store: ReturnType<typeof configureStore>
-
-  beforeEach(() => {
-    store = configureStore({
+  const createStore = () =>
+    configureStore({
       reducer: {
         navigation: navigationSlice.reducer,
       },
     })
+
+  type TestStore = ReturnType<typeof createStore>
+
+  let store: TestStore
+
+  beforeEach(() => {
+    store = createStore()
   })
 
   describe('initial state', () => {

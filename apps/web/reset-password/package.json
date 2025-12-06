@@ -26,8 +26,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",
-    "@repo/logger": "workspace:*",
     "@repo/app-component-library": "workspace:*",
+    "@repo/logger": "workspace:*",
     "aws-amplify": "6.15.7",
     "framer-motion": "12.23.24",
     "lucide-react": "^0.476.0",
@@ -39,6 +39,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.11",
     "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "24.10.1",

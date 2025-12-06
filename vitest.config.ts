@@ -8,6 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
   test: {
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 8,
+      },
+    },
+    fileParallelism: true,
     environment: 'jsdom',
     environmentMatchGlobs: [
       ['**/*.{test,spec}.tsx', 'jsdom'],

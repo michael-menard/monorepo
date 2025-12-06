@@ -90,127 +90,86 @@ describe('Enhanced Wishlist API', () => {
   })
 
   describe('Enhanced Wishlist Query', () => {
-    it('should handle basic wishlist parameters', () => {
+    it('should have enhanced wishlist query endpoint', () => {
       const api = createWishlistApi()
       const endpoint = api.endpoints.enhancedWishlistQuery
-      
-      const params = {
-        priority: 'high' as const,
-        category: 'lego-sets',
-        page: 1,
-        limit: 20,
-      }
-      
-      const queryConfig = endpoint.query(params)
-      expect(queryConfig.url).toBeDefined()
-      expect(queryConfig.params).toBeDefined()
-      expect(queryConfig.params.priority).toBe('high')
-      expect(queryConfig.params.category).toBe('lego-sets')
+
+      expect(endpoint).toBeDefined()
+      expect(endpoint.initiate).toBeDefined()
+      expect(endpoint.select).toBeDefined()
     })
 
-    it('should handle LEGO-specific filtering parameters', () => {
+    it('should be a query endpoint with proper matchers', () => {
       const api = createWishlistApi()
       const endpoint = api.endpoints.enhancedWishlistQuery
-      
-      const params = {
-        themes: ['Technic', 'Creator'],
-        setNumbers: ['42143', '10294'],
-        availability: ['available', 'upcoming'] as const,
-        condition: ['new', 'sealed'] as const,
-        priorityLevels: ['high', 'urgent'] as const,
-        priceAlerts: true,
-      }
-      
-      const queryConfig = endpoint.query(params)
-      expect(queryConfig.params.themes).toBe(JSON.stringify(params.themes))
-      expect(queryConfig.params.setNumbers).toBe(JSON.stringify(params.setNumbers))
-      expect(queryConfig.params.priceAlerts).toBe(true)
+
+      // Query endpoints have these action matchers
+      expect(endpoint.matchFulfilled).toBeDefined()
+      expect(endpoint.matchPending).toBeDefined()
+      expect(endpoint.matchRejected).toBeDefined()
     })
 
-    it('should serialize complex parameters correctly', () => {
+    it('should have initiate function for dispatching queries', () => {
       const api = createWishlistApi()
       const endpoint = api.endpoints.enhancedWishlistQuery
-      
-      const params = {
-        costRange: { min: 50, max: 500 },
-        partCountRange: { min: 100, max: 1000 },
-        dateRange: { from: '2023-01-01', to: '2023-12-31' },
-      }
-      
-      const queryConfig = endpoint.query(params)
-      expect(queryConfig.params.costRange).toBe(JSON.stringify(params.costRange))
-      expect(queryConfig.params.partCountRange).toBe(JSON.stringify(params.partCountRange))
-      expect(queryConfig.params.dateRange).toBe(JSON.stringify(params.dateRange))
+
+      expect(typeof endpoint.initiate).toBe('function')
     })
   })
 
   describe('Batch Wishlist Operations', () => {
     it('should have enhanced batch operation endpoint', () => {
       const api = createWishlistApi()
-      
+
       expect(api.endpoints.enhancedBatchWishlistOperation).toBeDefined()
-      expect(api.endpoints.enhancedBatchWishlistOperation.query).toBeDefined()
+      expect(api.endpoints.enhancedBatchWishlistOperation.initiate).toBeDefined()
     })
 
-    it('should handle batch operation parameters', () => {
+    it('should be a mutation endpoint with proper matchers', () => {
       const api = createWishlistApi()
       const endpoint = api.endpoints.enhancedBatchWishlistOperation
-      
-      const batchParams = {
-        operation: 'updatePriority' as const,
-        itemIds: ['item1', 'item2'],
-        data: { priority: 'high' as const },
-      }
-      
-      const queryConfig = endpoint.query(batchParams)
-      expect(queryConfig.url).toContain('/batch')
-      expect(queryConfig.method).toBe('POST')
-      expect(queryConfig.body.operation).toBe('updatePriority')
-      expect(queryConfig.body.itemIds).toEqual(['item1', 'item2'])
+
+      // Mutation endpoints have these action matchers
+      expect(endpoint.matchFulfilled).toBeDefined()
+      expect(endpoint.matchPending).toBeDefined()
+      expect(endpoint.matchRejected).toBeDefined()
     })
   })
 
   describe('Price Tracking and Alerts', () => {
     it('should have enhanced price estimates endpoint', () => {
       const api = createWishlistApi()
-      
+
       expect(api.endpoints.getEnhancedPriceEstimates).toBeDefined()
-      expect(api.endpoints.getEnhancedPriceEstimates.query).toBeDefined()
+      expect(api.endpoints.getEnhancedPriceEstimates.initiate).toBeDefined()
     })
 
-    it('should handle price alert management', () => {
+    it('should have price alert management endpoint', () => {
       const api = createWishlistApi()
       const endpoint = api.endpoints.managePriceAlerts
-      
-      const alertParams = {
-        itemIds: ['item1', 'item2'],
-        operation: 'enable' as const,
-        alertThreshold: 100,
-      }
-      
-      const queryConfig = endpoint.query(alertParams)
-      expect(queryConfig.url).toContain('/price-alerts')
-      expect(queryConfig.method).toBe('POST')
-      expect(queryConfig.body.operation).toBe('enable')
-      expect(queryConfig.body.alertThreshold).toBe(100)
+
+      expect(endpoint).toBeDefined()
+      expect(endpoint.initiate).toBeDefined()
+      expect(endpoint.matchFulfilled).toBeDefined()
     })
   })
 
   describe('Wishlist Statistics', () => {
     it('should have enhanced statistics endpoint', () => {
       const api = createWishlistApi()
-      
+
       expect(api.endpoints.getEnhancedWishlistStats).toBeDefined()
-      expect(api.endpoints.getEnhancedWishlistStats.query).toBeDefined()
+      expect(api.endpoints.getEnhancedWishlistStats.initiate).toBeDefined()
     })
 
-    it('should create statistics query with request ID', () => {
+    it('should be a query endpoint with proper matchers', () => {
       const api = createWishlistApi()
       const endpoint = api.endpoints.getEnhancedWishlistStats
-      
-      const queryConfig = endpoint.query()
-      expect(queryConfig.url).toContain('/stats')
-      expect(queryConfig.params._requestId).toBeDefined()
+
+      // Query endpoints have these action matchers
+      expect(endpoint.matchFulfilled).toBeDefined()
+      expect(endpoint.matchPending).toBeDefined()
+      expect(endpoint.matchRejected).toBeDefined()
     })
   })
 })

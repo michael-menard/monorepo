@@ -59,7 +59,7 @@ export function NewPasswordPage() {
   // Redirect if no active challenge or wrong challenge type
   useEffect(() => {
     if (!currentChallenge) {
-      router.navigate({ to: '/auth/login' })
+      router.navigate({ to: '/login' })
     } else if (currentChallenge.challengeName !== 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
       // Wrong challenge type - redirect to appropriate page
       router.navigate({ to: '/auth/otp-verification' })
@@ -91,7 +91,7 @@ export function NewPasswordPage() {
 
   const handleBackToLogin = () => {
     clearChallenge()
-    router.navigate({ to: '/auth/login' })
+    router.navigate({ to: '/login' })
   }
 
   if (

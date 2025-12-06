@@ -18,14 +18,19 @@ import {
 import type { User } from '../authSlice'
 
 describe('authSlice', () => {
-  let store: ReturnType<typeof configureStore>
-
-  beforeEach(() => {
-    store = configureStore({
+  const createStore = () =>
+    configureStore({
       reducer: {
         auth: authSlice.reducer,
       },
     })
+
+  type TestStore = ReturnType<typeof createStore>
+
+  let store: TestStore
+
+  beforeEach(() => {
+    store = createStore()
   })
 
   describe('initial state', () => {

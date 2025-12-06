@@ -90,7 +90,7 @@ export function createTanStackRouteGuard(
       const isVerified = (auth.user as { emailVerified?: boolean })?.emailVerified ?? true
       if (!isVerified) {
         throw redirectFn({
-          to: '/verify-email',
+          to: '/auth/verify-email',
           search: { redirect: location.pathname },
         })
       }

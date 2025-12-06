@@ -190,6 +190,45 @@ export const UserProfileResponseSchema = ServerlessResponseSchema.extend({
 export type UserProfileResponse = z.infer<typeof UserProfileResponseSchema>
 
 /**
+ * Instructions Gallery API Response Types
+ * Story 3.1.3: Instructions Gallery API Endpoints
+ */
+export const InstructionSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().optional(),
+  thumbnail: z.string(),
+  images: z.array(z.string()).default([]),
+  pieceCount: z.number().int().nonnegative(),
+  theme: z.string(),
+  tags: z.array(z.string()),
+  pdfUrl: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  isFavorite: z.boolean().default(false),
+})
+
+export type Instruction = z.infer<typeof InstructionSchema>
+
+export const InstructionsListResponseSchema = ServerlessResponseSchema.extend({
+  data: z.object({
+    items: z.array(InstructionSchema),
+    filters: z.object({
+      availableTags: z.array(z.string()),
+      availableThemes: z.array(z.string()),
+    }),
+  }),
+})
+
+export type InstructionsListResponse = z.infer<typeof InstructionsListResponseSchema>
+
+export const InstructionDetailResponseSchema = ServerlessResponseSchema.extend({
+  data: InstructionSchema,
+})
+
+export type InstructionDetailResponse = z.infer<typeof InstructionDetailResponseSchema>
+
+/**
  * Health Check Response Types
  */
 export const HealthCheckResponseSchema = z.object({

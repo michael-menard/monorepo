@@ -31,8 +31,6 @@ vi.mock('../../../services/auth/AuthProvider', () => ({
 }))
 
 describe('Navigation Integration', () => {
-  let store: ReturnType<typeof configureStore>
-
   const createMockStore = (initialState = {}) => {
     const baseNavigationState = navigationSlice.getInitialState()
     const baseAuthState = authSlice.getInitialState()
@@ -57,7 +55,7 @@ describe('Navigation Integration', () => {
     return configureStore({
       reducer: {
         auth: authSlice.reducer,
-        theme: themeSlice.reducer,
+        theme: themeSlice.reducer as any,
         navigation: navigationSlice.reducer,
         globalUI: globalUISlice.reducer,
       },
@@ -107,6 +105,9 @@ describe('Navigation Integration', () => {
       },
     })
   }
+
+  type TestStore = ReturnType<typeof createMockStore>
+  let store: TestStore
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -190,7 +191,7 @@ describe('Navigation Integration', () => {
       renderNavigation()
 
       // Initially light theme
-      expect(store.getState().theme.resolvedTheme).toBe('light')
+      expect((store.getState() as any).theme.resolvedTheme).toBe('light')
 
       // Open theme dropdown
       const themeButton = screen.getByRole('button', { name: /toggle theme/i })
@@ -201,7 +202,7 @@ describe('Navigation Integration', () => {
       fireEvent.click(darkOption)
 
       // Theme should change to dark
-      expect(store.getState().theme.theme).toBe('dark')
+      expect((store.getState() as any).theme.theme).toBe('dark')
     })
   })
 

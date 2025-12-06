@@ -5,10 +5,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Badge,
+  LoadingSpinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@repo/app-component-library'
-import { Badge } from '@repo/app-component-library'
-import { LoadingSpinner } from '@repo/app-component-library'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/app-component-library'
 import { Heart, Star, DollarSign, Bell, Calendar, TrendingUp, Clock, Gift } from 'lucide-react'
 import { useEnhancedWishlistQueryQuery, useGetEnhancedPriceEstimatesQuery } from '@/store'
 

@@ -180,7 +180,7 @@ vi.mock('@repo/app-component-library', () => ({
         'aria-label': ariaLabel || 'Statistics',
         className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
       },
-      items?.map((item: { label: string; value: number }, index: number) =>
+      items?.map((item: { label: string; value: number }) =>
         React.createElement(
           'article',
           {

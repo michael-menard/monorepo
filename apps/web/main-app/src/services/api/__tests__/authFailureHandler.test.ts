@@ -9,7 +9,6 @@ import {
   initializeAuthFailureHandler,
   getAuthFailureHandler,
 } from '../authFailureHandler'
-import { setUnauthenticated } from '@/store/slices/authSlice'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import type { AppDispatch, RootState } from '@/store'
 
@@ -40,11 +39,11 @@ describe('authFailureHandler', () => {
 
     // Mock window.location
     delete (window as any).location
-    window.location = {
+    ;(window as any).location = {
       ...originalLocation,
       href: '',
       pathname: '/dashboard',
-    } as Location
+    }
 
     // Create mock store
     mockDispatch = vi.fn()
@@ -57,7 +56,7 @@ describe('authFailureHandler', () => {
 
   afterEach(() => {
     // Restore original location
-    window.location = originalLocation
+    ;(window as any).location = originalLocation
   })
 
   describe('createAuthFailureHandler', () => {
@@ -65,7 +64,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'auth/setUnauthenticated' })
@@ -76,7 +75,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 500 }
+      const error: FetchBaseQueryError = { status: 500, data: undefined }
       handler(error)
 
       expect(mockDispatch).not.toHaveBeenCalled()
@@ -88,7 +87,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).not.toHaveBeenCalled()
@@ -100,7 +99,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).not.toHaveBeenCalled()
@@ -112,7 +111,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).not.toHaveBeenCalled()
@@ -124,7 +123,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).not.toHaveBeenCalled()
@@ -136,7 +135,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(window.location.href).toBe('/login?redirect=%2Fgallery%2Fimage%2F123&expired=true')
@@ -146,7 +145,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = createAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'auth/setUnauthenticated' })
@@ -166,7 +165,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = getAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).toHaveBeenCalled()
@@ -178,7 +177,7 @@ describe('authFailureHandler', () => {
       initializeAuthFailureHandler(mockStore)
       const handler = getAuthFailureHandler()
 
-      const error: FetchBaseQueryError = { status: 401 }
+      const error: FetchBaseQueryError = { status: 401, data: undefined }
       handler(error)
 
       expect(mockDispatch).toHaveBeenCalled()
@@ -211,7 +210,7 @@ describe('authFailureHandler', () => {
         initializeAuthFailureHandler(mockStore)
         const handler = createAuthFailureHandler()
 
-        const error: FetchBaseQueryError = { status: 401 }
+        const error: FetchBaseQueryError = { status: 401, data: undefined }
         handler(error)
 
         expect(mockDispatch).not.toHaveBeenCalled()
@@ -230,7 +229,7 @@ describe('authFailureHandler', () => {
         initializeAuthFailureHandler(mockStore)
         const handler = createAuthFailureHandler()
 
-        const error: FetchBaseQueryError = { status: 401 }
+        const error: FetchBaseQueryError = { status: 401, data: undefined }
         handler(error)
 
         expect(mockDispatch).toHaveBeenCalled()

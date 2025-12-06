@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -9,7 +8,7 @@ import { NavigationProvider } from '../NavigationProvider'
 import { NavigationSearch } from '../NavigationSearch'
 import { EnhancedBreadcrumb } from '../EnhancedBreadcrumb'
 import { QuickActions } from '../QuickActions'
-import { navigationSlice } from '@/store/slices/navigationSlice'
+import { navigationSlice, type NavigationItem } from '@/store/slices/navigationSlice'
 
 // Mock react-router-dom
 vi.mock('react-router-dom', async () => {
@@ -37,15 +36,19 @@ function NavigationSystemTestApp() {
 }
 
 describe('Navigation System Integration', () => {
-  let store: ReturnType<typeof configureStore>
-  let user: ReturnType<typeof userEvent.setup>
-
-  beforeEach(() => {
-    store = configureStore({
+  const createStore = () =>
+    configureStore({
       reducer: {
         navigation: navigationSlice.reducer,
       },
     })
+
+  type TestStore = ReturnType<typeof createStore>
+  let store: TestStore
+  let user: ReturnType<typeof userEvent.setup>
+
+  beforeEach(() => {
+    store = createStore()
 
     user = userEvent.setup()
 
@@ -233,7 +236,7 @@ describe('Navigation System Integration', () => {
 
       // Should have gallery-specific contextual items
       const uploadItem = state.navigation.contextualNavigation.find(
-        item => item.id === 'gallery-upload',
+        (item: NavigationItem) => item.id === 'gallery-upload',
       )
       expect(uploadItem).toBeDefined()
     })

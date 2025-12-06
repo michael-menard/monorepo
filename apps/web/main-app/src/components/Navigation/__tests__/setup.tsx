@@ -71,7 +71,7 @@ export const mockConsole = () => {
 export const createTestStore = (initialState?: any) => {
   return configureStore({
     reducer: {
-      navigation: navigationSlice.reducer,
+      navigation: navigationSlice.reducer as any,
     },
     preloadedState: initialState,
   })

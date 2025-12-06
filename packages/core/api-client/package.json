@@ -24,6 +24,10 @@
       "import": "./src/rtk/dashboard-api.ts",
       "types": "./src/rtk/dashboard-api.ts"
     },
+    "./rtk/instructions-api": {
+      "import": "./src/rtk/instructions-api.ts",
+      "types": "./src/rtk/instructions-api.ts"
+    },
     "./auth/cognito-integration": {
       "import": "./src/auth/cognito-integration.ts",
       "types": "./src/auth/cognito-integration.ts"

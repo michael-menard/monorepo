@@ -978,7 +978,7 @@ describe('composeMiddleware (Story 1.26 - AC 5)', () => {
 
   it('should propagate return value from guard', () => {
     const guard1 = vi.fn(() => undefined)
-    const guard2 = vi.fn(() => ({ some: 'value' }))
+    const guard2 = vi.fn(() => ({ some: 'value' })) as any
     const guard3 = vi.fn(() => undefined)
 
     const composed = composeMiddleware(guard1, guard2, guard3)

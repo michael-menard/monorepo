@@ -1,5 +1,4 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { OTPVerificationPage } from '../OTPVerificationPage'
@@ -90,7 +89,7 @@ describe('OTPVerificationPage', () => {
 
     render(<OTPVerificationPage />)
 
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' })
   })
 
   it('submits OTP code successfully', async () => {
@@ -99,8 +98,7 @@ describe('OTPVerificationPage', () => {
 
     render(<OTPVerificationPage />)
 
-    // Enter OTP code
-    const otpInput = screen.getByTestId('otp-input')
+    // Enter OTP code - get individual inputs for typing
     const inputs = screen.getAllByRole('textbox')
 
     for (let i = 0; i < 6; i++) {
@@ -187,7 +185,7 @@ describe('OTPVerificationPage', () => {
     await user.click(backButton)
 
     expect(mockClearChallenge).toHaveBeenCalled()
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' })
   })
 
   it('handles additional challenge step without showing error', async () => {

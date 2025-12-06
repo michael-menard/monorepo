@@ -271,8 +271,7 @@ describe('ErrorBoundary', () => {
       fireEvent.click(screen.getByText('Go Home'))
 
       expect(window.location.href).toBe('/')
-
-      window.location = originalLocation
+      ;(window as any).location = originalLocation
     })
 
     it('should display button icons', () => {

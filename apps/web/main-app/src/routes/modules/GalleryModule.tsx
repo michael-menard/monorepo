@@ -5,12 +5,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@repo/app-component-library'
-import { Button } from '@repo/app-component-library'
-import { Input } from '@repo/app-component-library'
-import { Badge } from '@repo/app-component-library'
-import { LoadingSpinner } from '@repo/app-component-library'
-import {
+  Button,
+  Input,
+  Badge,
+  LoadingSpinner,
   Select,
   SelectContent,
   SelectItem,
@@ -39,15 +37,7 @@ export function GalleryModule() {
     isLoading: isGalleryLoading,
     isFetching,
     error: galleryError,
-  } = useEnhancedGallerySearchQuery({
-    ...searchParams,
-    // Enhanced features
-    cacheStrategy: 'medium',
-    prefetchNext: true,
-    enableBatchLoading: true,
-    includeMetadata: true,
-    includeThumbnails: true,
-  })
+  } = useEnhancedGallerySearchQuery(searchParams as any)
 
   // Get enhanced gallery statistics
   const { data: statsData, isLoading: isStatsLoading } = useGetEnhancedGalleryStatsQuery()
@@ -82,11 +72,11 @@ export function GalleryModule() {
           </div>
 
           {/* Performance indicator */}
-          {galleryData?.performance ? (
+          {(galleryData as any)?.performance ? (
             <div className="text-right text-sm text-muted-foreground">
-              <div>Loaded in {galleryData.performance.duration.toFixed(0)}ms</div>
+              <div>Loaded in {(galleryData as any).performance.duration.toFixed(0)}ms</div>
               <div className="flex items-center gap-1">
-                {galleryData.performance.cacheHit ? (
+                {(galleryData as any).performance.cacheHit ? (
                   <>
                     <TrendingUp className="h-3 w-3 text-green-500" />
                     Cached
@@ -158,7 +148,11 @@ export function GalleryModule() {
                 {isGalleryLoading ? (
                   <LoadingSpinner size="sm" />
                 ) : (
-                  galleryData?.data?.totalCount?.toLocaleString() || '0'
+                  (
+                    (galleryData?.data as any)?.totalCount ??
+                    galleryData?.pagination?.total ??
+                    0
+                  ).toLocaleString()
                 )}
               </div>
             </CardContent>
@@ -235,8 +229,12 @@ export function GalleryModule() {
 
             {galleryData?.pagination ? (
               <div className="text-sm text-muted-foreground">
-                Page {galleryData.pagination.page} • {galleryData.data.totalCount} total
-                {galleryData.pagination.hasMore ? ' • More available' : null}
+                Page {galleryData.pagination.page} •{' '}
+                {(galleryData.data as any)?.totalCount ?? galleryData.pagination?.total ?? 0} total
+                {(galleryData.pagination as any)?.hasMore ||
+                galleryData.pagination.page < galleryData.pagination.totalPages
+                  ? ' • More available'
+                  : null}
               </div>
             ) : null}
           </div>
@@ -253,7 +251,7 @@ export function GalleryModule() {
             <div className="text-center py-12">
               <div className="text-red-500 mb-2">Error loading gallery</div>
               <p className="text-muted-foreground text-sm">
-                {galleryError.message || 'Failed to load gallery images'}
+                {(galleryError as any)?.message || 'Failed to load gallery images'}
               </p>
             </div>
           ) : galleryData?.data?.images?.length ? (
@@ -362,7 +360,9 @@ export function GalleryModule() {
               </div>
 
               {/* Pagination */}
-              {galleryData.pagination?.hasMore ? (
+              {(galleryData.pagination as any)?.hasMore ||
+              (galleryData.pagination &&
+                galleryData.pagination.page < galleryData.pagination.totalPages) ? (
                 <div className="text-center pt-4">
                   <Button
                     onClick={() => setSearchParams(prev => ({ ...prev, page: prev.page + 1 }))}

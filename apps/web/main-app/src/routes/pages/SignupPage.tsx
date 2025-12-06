@@ -142,7 +142,7 @@ export function SignupPage() {
         // Navigate to email verification page after a short delay
         setTimeout(() => {
           navigate({
-            to: '/verify-email',
+            to: '/auth/verify-email',
             search: { email: data.email },
           })
         }, 2000)

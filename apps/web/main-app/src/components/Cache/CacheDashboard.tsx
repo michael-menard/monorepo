@@ -15,11 +15,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Button,
+  Badge,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Progress,
 } from '@repo/app-component-library'
-import { Button } from '@repo/app-component-library'
-import { Badge } from '@repo/app-component-library'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/app-component-library'
-import { Progress } from '@repo/app-component-library'
 import {
   BarChart3,
   TrendingUp,
