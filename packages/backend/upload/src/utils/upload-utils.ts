@@ -49,6 +49,9 @@ export const uploadSingleFile = async (
     })
 
     xhr.open('POST', config.endpoint!)
+    // Include cookies for auth and accept JSON response
+    xhr.withCredentials = true
+    xhr.setRequestHeader('Accept', 'application/json')
 
     // Add custom headers
     if (config.headers) {

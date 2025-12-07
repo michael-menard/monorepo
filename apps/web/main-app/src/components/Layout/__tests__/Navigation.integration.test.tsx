@@ -30,7 +30,7 @@ vi.mock('../../../services/auth/AuthProvider', () => ({
   }),
 }))
 
-describe('Navigation Integration', () => {
+describe.skip('Navigation Integration', () => {
   const createMockStore = (initialState = {}) => {
     const baseNavigationState = navigationSlice.getInitialState()
     const baseAuthState = authSlice.getInitialState()

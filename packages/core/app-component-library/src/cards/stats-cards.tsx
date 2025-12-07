@@ -89,8 +89,13 @@ function StatCard({ config, index }: { config: StatCardConfig; index: number }) 
       <Card
         className={cn(
           'flex h-full flex-col gap-4 p-6 transition-all duration-200 ease-in-out',
-          'hover:scale-[1.02] hover:shadow-lg cursor-default',
-          'border border-border',
+          // Cyberpunk translucent surface
+          'bg-card/80 dark:bg-surface backdrop-blur-sm',
+          'border border-border dark:border-surface-border',
+          // Hover effects - glow border, NO scale transform
+          'hover:border-primary/50 dark:hover:border-glow-primary',
+          'hover:shadow-md dark:hover:shadow-glow-primary',
+          'cursor-default',
         )}
       >
         <div
@@ -99,10 +104,7 @@ function StatCard({ config, index }: { config: StatCardConfig; index: number }) 
             config.bgClass || 'bg-primary/10',
           )}
         >
-          <Icon
-            className={cn('h-6 w-6', config.colorClass || 'text-primary')}
-            aria-hidden="true"
-          />
+          <Icon className={cn('h-6 w-6', config.colorClass || 'text-primary')} aria-hidden="true" />
         </div>
 
         <div className="flex flex-col gap-1">
@@ -123,7 +125,14 @@ function LoadingSkeleton({ count = 3 }: { count?: number }) {
   return (
     <>
       {Array.from({ length: count }).map((_, index) => (
-        <Card key={index} className="flex h-full flex-col gap-4 p-6 animate-pulse">
+        <Card
+          key={index}
+          className={cn(
+            'flex h-full flex-col gap-4 p-6 animate-pulse',
+            'bg-card/80 dark:bg-surface backdrop-blur-sm',
+            'border border-border dark:border-surface-border',
+          )}
+        >
           <div className="h-10 w-10 rounded-lg bg-muted" />
           <div className="flex flex-col gap-2">
             <div className="h-8 w-20 rounded bg-muted" />

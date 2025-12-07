@@ -2,7 +2,7 @@
 module.exports = {
   theme: {
     extend: {
-      // LEGO MOC Color Palette - Teal/Sage/Taupe
+      // LEGO MOC Color Palette - Teal/Sage/Taupe + Cyberpunk Glow
       colors: {
         // Primary Brand - Teal Family
         teal: {
@@ -41,6 +41,34 @@ module.exports = {
         clay: 'var(--color-clay)', // #B89968 - MOC highlights
         'dusty-blue': 'var(--color-dusty-blue)', // #7B8FA3 - Secondary accent
         gold: 'var(--color-gold)', // #B8A876 - Premium/featured
+
+        // Cyberpunk Glow Colors (for border/ring accents)
+        glow: {
+          primary: 'var(--glow-primary)', // sky-500/30
+          accent: 'var(--glow-accent)', // amber-500/30
+          success: 'var(--glow-success)', // emerald-500/30
+          error: 'var(--glow-error)', // red-500/30
+          info: 'var(--glow-info)', // blue-500/30
+          violet: 'var(--glow-violet)', // violet-500/30
+        },
+
+        // Translucent Surface Colors
+        surface: {
+          DEFAULT: 'var(--surface-translucent)', // slate-900/50
+          light: 'var(--surface-translucent-light)', // slate-800/50
+          border: 'var(--surface-border)', // slate-700/50
+          'border-glow': 'var(--surface-border-glow)', // sky-500/30
+        },
+      },
+
+      // Gradient color stops for use with bg-gradient-to-r
+      gradientColorStops: {
+        'primary-from': 'var(--gradient-primary-from)', // sky-400
+        'primary-to': 'var(--gradient-primary-to)', // teal-600
+        'accent-from': 'var(--gradient-accent-from)', // amber-400
+        'accent-to': 'var(--gradient-accent-to)', // orange-500
+        'success-from': 'var(--gradient-success-from)', // emerald-400
+        'success-to': 'var(--gradient-success-to)', // green-600
       },
 
       // Typography
@@ -95,15 +123,6 @@ module.exports = {
         full: 'var(--radius-full)',
       },
 
-      // Box Shadow
-      boxShadow: {
-        sm: 'var(--shadow-sm)',
-        DEFAULT: 'var(--shadow-base)',
-        md: 'var(--shadow-md)',
-        lg: 'var(--shadow-lg)',
-        xl: 'var(--shadow-xl)',
-      },
-
       // Z-Index
       zIndex: {
         dropdown: 'var(--z-dropdown)',
@@ -124,6 +143,11 @@ module.exports = {
         'slide-out': 'slideOut 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'scale-out': 'scaleOut 0.2s ease-out',
+        // Cyberpunk spinner animations
+        'spin-slow': 'spinSlow 3s linear infinite',
+        'spin-slower': 'spinSlower 6s linear infinite',
+        // Glow pulse for status indicators
+        'glow-pulse': 'glowPulse 2s ease-in-out infinite',
       },
 
       keyframes: {
@@ -151,6 +175,32 @@ module.exports = {
           '0%': { transform: 'scale(1)', opacity: '1' },
           '100%': { transform: 'scale(0.95)', opacity: '0' },
         },
+        // Cyberpunk spinner keyframes
+        spinSlow: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        spinSlower: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(-360deg)' },
+        },
+        // Glow pulse for live indicators
+        glowPulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
+      },
+
+      // Box shadows including glow effects
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow-base)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        // Cyberpunk glow shadows
+        'glow-primary': 'var(--shadow-glow-primary)',
+        'glow-accent': 'var(--shadow-glow-accent)',
       },
     },
   },

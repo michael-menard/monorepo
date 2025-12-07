@@ -11,6 +11,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { InstructionsNewPage } from './pages/InstructionsNewPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
 import { RouteGuards } from '@/lib/route-guards'
@@ -267,14 +268,35 @@ const cookiesRoute = createRoute({
   component: PlaceholderPage,
 })
 
+// Story 3.1.9: Instructions uploader with session persistence
 const instructionsNewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions/new',
-  component: PlaceholderPage,
-  beforeLoad: ({ context }: { context: RouteContext }) => {
+  component: InstructionsNewPage,
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
+    // Story 3.1.9: Redirect unauthenticated users with redirect param for return
     if (!context.auth?.isAuthenticated) {
-      throw redirect({ to: '/login' })
+      throw redirect({
+        to: '/login',
+        search: { redirect: location.pathname },
+      })
     }
+  },
+})
+
+// Story 3.1.9: Alias route for /dashboard/mocs/upload
+const dashboardMocsUploadRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/mocs/upload',
+  beforeLoad: () => {
+    // Redirect to canonical path
+    throw redirect({ to: '/instructions/new' })
   },
 })
 
@@ -306,6 +328,7 @@ const routeTree = rootRoute.addChildren([
   instructionsRoute,
   instructionDetailRoute,
   instructionsNewRoute,
+  dashboardMocsUploadRoute, // Story 3.1.9: Alias route
   dashboardRoute,
   // Stub routes for planned features
   galleryRoute,

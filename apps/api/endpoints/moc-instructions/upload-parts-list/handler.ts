@@ -25,13 +25,14 @@ import {
   BadRequestError,
   UnauthorizedError,
   NotFoundError,
+  ForbiddenError,
   ValidationError,
 } from '@/core/utils/responses'
 import { parsePartsListFile } from '@/endpoints/moc-instructions/_shared/parts-list-parser'
 import { logger } from '@/core/observability/logger'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles, mocPartsLists } from '@/core/database/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 /**
  * API Gateway Event Interface for Parts List Upload
@@ -103,11 +104,14 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
     const [moc] = await db
       .select()
       .from(mocInstructions)
-      .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+      .where(eq(mocInstructions.id, mocId))
       .limit(1)
 
     if (!moc) {
-      throw new NotFoundError('MOC not found or access denied')
+      throw new NotFoundError('MOC not found')
+    }
+    if (moc.userId !== userId) {
+      throw new ForbiddenError('You do not own this MOC')
     }
 
     // Parse the parts list file

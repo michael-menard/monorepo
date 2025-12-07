@@ -219,29 +219,176 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
  */
 export async function createMoc(
   userId: string,
-  data: { title: string; description?: string; tags?: string[]; thumbnailUrl?: string },
+  data: {
+    title: string
+    description?: string
+    tags?: string[]
+    thumbnailUrl?: string
+    // New optional fields for extended creation
+    type?: 'moc' | 'set'
+    mocId?: string
+    slug?: string
+    author?: string
+    theme?: string
+    themeId?: number
+    subtheme?: string
+    partsCount?: number
+    minifigCount?: number
+    brand?: string
+    setNumber?: string
+    releaseYear?: number
+    retired?: boolean
+    designer?: {
+      username: string
+      displayName?: string | null
+      profileUrl?: string | null
+      avatarUrl?: string | null
+      socialLinks?: {
+        instagram?: string | null
+        twitter?: string | null
+        youtube?: string | null
+        website?: string | null
+      } | null
+    }
+    dimensions?: {
+      height?: { cm?: number | null; inches?: number | null } | null
+      width?: {
+        cm?: number | null
+        inches?: number | null
+        openCm?: number | null
+        openInches?: number | null
+      } | null
+      depth?: {
+        cm?: number | null
+        inches?: number | null
+        openCm?: number | null
+        openInches?: number | null
+      } | null
+      weight?: { kg?: number | null; lbs?: number | null } | null
+      studsWidth?: number | null
+      studsDepth?: number | null
+    }
+    instructionsMetadata?: {
+      instructionType?: 'pdf' | 'xml' | 'studio' | 'ldraw' | 'lxf' | 'other' | null
+      hasInstructions: boolean
+      pageCount?: number | null
+      fileSize?: number | null
+      previewImages: string[]
+    }
+    alternateBuild?: {
+      isAlternateBuild: boolean
+      sourceSetNumbers: string[]
+      sourceSetNames: string[]
+      setsRequired?: number | null
+      additionalPartsNeeded: number
+    }
+    features?: Array<{
+      title: string
+      description?: string | null
+      icon?: string | null
+    }>
+    descriptionHtml?: string
+    shortDescription?: string
+    difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+    buildTimeHours?: number
+    ageRecommendation?: string
+    status?: 'draft' | 'published' | 'archived' | 'pending_review'
+    visibility?: 'public' | 'private' | 'unlisted'
+    uploadedDate?: string | Date
+    // BrickLink-specific fields
+    sourcePlatform?: {
+      platform: 'rebrickable' | 'bricklink' | 'brickowl' | 'mecabricks' | 'studio' | 'other'
+      externalId?: string | null
+      sourceUrl?: string | null
+      uploadSource?: 'web' | 'desktop_app' | 'mobile_app' | 'api' | 'unknown' | null
+      forkedFromId?: string | null
+      importedAt?: Date | null
+    }
+    eventBadges?: Array<{
+      eventId: string
+      eventName: string
+      badgeType?: string | null
+      badgeImageUrl?: string | null
+      awardedAt?: Date | null
+    }>
+    moderation?: {
+      action: 'none' | 'approved' | 'flagged' | 'removed' | 'pending'
+      moderatedAt?: Date | null
+      reason?: string | null
+      forcedPrivate?: boolean
+    }
+    platformCategoryId?: number
+  },
 ): Promise<MocInstruction> {
   try {
     logger.info('Creating MOC', { userId, title: data.title })
 
     const now = new Date()
 
-    // Insert into database with transaction
-    // Note: Drizzle doesn't have explicit transaction API in this context,
-    // but insert is atomic. For multi-step transactions, we'd use db.transaction()
-    const [moc] = await db
-      .insert(mocInstructions)
-      .values({
-        userId,
-        type: 'moc', // Default to 'moc' type for simple creation
-        title: data.title,
-        description: data.description || null,
-        tags: data.tags || null,
-        thumbnailUrl: data.thumbnailUrl || null,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning()
+    // Build insert values with all available fields
+    const insertValues: any = {
+      userId,
+      type: data.type || 'moc',
+      title: data.title,
+      description: data.description || null,
+      tags: data.tags || null,
+      thumbnailUrl: data.thumbnailUrl || null,
+      // Default status and visibility
+      status: data.status || 'draft',
+      visibility: data.visibility || 'private',
+      // Audit trail
+      addedByUserId: userId,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    // Add optional fields if provided
+    if (data.mocId) insertValues.mocId = data.mocId
+    if (data.slug) insertValues.slug = data.slug
+    if (data.author) insertValues.author = data.author
+    if (data.theme) insertValues.theme = data.theme
+    if (data.themeId) insertValues.themeId = data.themeId
+    if (data.subtheme) insertValues.subtheme = data.subtheme
+    if (data.partsCount) insertValues.partsCount = data.partsCount
+    if (data.minifigCount) insertValues.minifigCount = data.minifigCount
+    if (data.brand) insertValues.brand = data.brand
+    if (data.setNumber) insertValues.setNumber = data.setNumber
+    if (data.releaseYear) insertValues.releaseYear = data.releaseYear
+    if (data.retired !== undefined) insertValues.retired = data.retired
+
+    // JSONB fields
+    if (data.designer) insertValues.designer = data.designer
+    if (data.dimensions) insertValues.dimensions = data.dimensions
+    if (data.instructionsMetadata) insertValues.instructionsMetadata = data.instructionsMetadata
+    if (data.alternateBuild) insertValues.alternateBuild = data.alternateBuild
+    if (data.features) insertValues.features = data.features
+
+    // BrickLink-specific JSONB fields
+    if (data.sourcePlatform) insertValues.sourcePlatform = data.sourcePlatform
+    if (data.eventBadges) insertValues.eventBadges = data.eventBadges
+    if (data.moderation) insertValues.moderation = data.moderation
+    if (data.platformCategoryId) insertValues.platformCategoryId = data.platformCategoryId
+
+    // Rich description
+    if (data.descriptionHtml) insertValues.descriptionHtml = data.descriptionHtml
+    if (data.shortDescription) insertValues.shortDescription = data.shortDescription
+
+    // Build info
+    if (data.difficulty) insertValues.difficulty = data.difficulty
+    if (data.buildTimeHours) insertValues.buildTimeHours = data.buildTimeHours.toString()
+    if (data.ageRecommendation) insertValues.ageRecommendation = data.ageRecommendation
+
+    // Dates
+    if (data.uploadedDate) {
+      insertValues.uploadedDate =
+        typeof data.uploadedDate === 'string' ? new Date(data.uploadedDate) : data.uploadedDate
+    }
+    if (data.status === 'published') {
+      insertValues.publishedAt = now
+    }
+
+    // Insert into database
+    const [moc] = await db.insert(mocInstructions).values(insertValues).returning()
 
     if (!moc) {
       throw new DatabaseError('Failed to create MOC - no record returned')
@@ -306,14 +453,102 @@ export async function updateMoc(
   mocId: string,
   userId: string,
   data: {
+    // Basic fields
     title?: string
     description?: string
+    descriptionHtml?: string
+    shortDescription?: string
     author?: string
     theme?: string
+    themeId?: number
     subtheme?: string
     partsCount?: number
+    minifigCount?: number
     tags?: string[]
     thumbnailUrl?: string
+    // Extended metadata
+    mocId?: string
+    slug?: string
+    designer?: {
+      username: string
+      displayName?: string | null
+      profileUrl?: string | null
+      avatarUrl?: string | null
+      socialLinks?: {
+        instagram?: string | null
+        twitter?: string | null
+        youtube?: string | null
+        website?: string | null
+      } | null
+    }
+    dimensions?: {
+      height?: { cm?: number | null; inches?: number | null } | null
+      width?: {
+        cm?: number | null
+        inches?: number | null
+        openCm?: number | null
+        openInches?: number | null
+      } | null
+      depth?: {
+        cm?: number | null
+        inches?: number | null
+        openCm?: number | null
+        openInches?: number | null
+      } | null
+      weight?: { kg?: number | null; lbs?: number | null } | null
+      studsWidth?: number | null
+      studsDepth?: number | null
+    }
+    instructionsMetadata?: {
+      instructionType?: 'pdf' | 'xml' | 'studio' | 'ldraw' | 'lxf' | 'other' | null
+      hasInstructions: boolean
+      pageCount?: number | null
+      fileSize?: number | null
+      previewImages: string[]
+    }
+    alternateBuild?: {
+      isAlternateBuild: boolean
+      sourceSetNumbers: string[]
+      sourceSetNames: string[]
+      setsRequired?: number | null
+      additionalPartsNeeded: number
+    }
+    features?: Array<{
+      title: string
+      description?: string | null
+      icon?: string | null
+    }>
+    // Build info
+    difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+    buildTimeHours?: number
+    ageRecommendation?: string
+    // Status
+    status?: 'draft' | 'published' | 'archived' | 'pending_review'
+    visibility?: 'public' | 'private' | 'unlisted'
+    isFeatured?: boolean
+    // BrickLink-specific fields
+    sourcePlatform?: {
+      platform: 'rebrickable' | 'bricklink' | 'brickowl' | 'mecabricks' | 'studio' | 'other'
+      externalId?: string | null
+      sourceUrl?: string | null
+      uploadSource?: 'web' | 'desktop_app' | 'mobile_app' | 'api' | 'unknown' | null
+      forkedFromId?: string | null
+      importedAt?: Date | null
+    }
+    eventBadges?: Array<{
+      eventId: string
+      eventName: string
+      badgeType?: string | null
+      badgeImageUrl?: string | null
+      awardedAt?: Date | null
+    }>
+    moderation?: {
+      action: 'none' | 'approved' | 'flagged' | 'removed' | 'pending'
+      moderatedAt?: Date | null
+      reason?: string | null
+      forcedPrivate?: boolean
+    }
+    platformCategoryId?: number
   },
 ): Promise<MocInstruction> {
   try {
@@ -338,16 +573,56 @@ export async function updateMoc(
     // Build update object with only provided fields
     const updateData: any = {
       updatedAt: new Date(), // Always update timestamp
+      lastUpdatedByUserId: userId, // Track who made the update
     }
 
+    // Basic fields
     if (data.title !== undefined) updateData.title = data.title
     if (data.description !== undefined) updateData.description = data.description
+    if (data.descriptionHtml !== undefined) updateData.descriptionHtml = data.descriptionHtml
+    if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription
     if (data.author !== undefined) updateData.author = data.author
     if (data.theme !== undefined) updateData.theme = data.theme
+    if (data.themeId !== undefined) updateData.themeId = data.themeId
     if (data.subtheme !== undefined) updateData.subtheme = data.subtheme
     if (data.partsCount !== undefined) updateData.partsCount = data.partsCount
+    if (data.minifigCount !== undefined) updateData.minifigCount = data.minifigCount
     if (data.tags !== undefined) updateData.tags = data.tags
     if (data.thumbnailUrl !== undefined) updateData.thumbnailUrl = data.thumbnailUrl
+
+    // Extended metadata (stored as data.mocId to avoid conflict with function param)
+    if (data.mocId !== undefined) updateData.mocId = data.mocId
+    if (data.slug !== undefined) updateData.slug = data.slug
+    if (data.designer !== undefined) updateData.designer = data.designer
+    if (data.dimensions !== undefined) updateData.dimensions = data.dimensions
+    if (data.instructionsMetadata !== undefined)
+      updateData.instructionsMetadata = data.instructionsMetadata
+    if (data.alternateBuild !== undefined) updateData.alternateBuild = data.alternateBuild
+    if (data.features !== undefined) updateData.features = data.features
+
+    // Build info
+    if (data.difficulty !== undefined) updateData.difficulty = data.difficulty
+    if (data.buildTimeHours !== undefined)
+      updateData.buildTimeHours = data.buildTimeHours?.toString()
+    if (data.ageRecommendation !== undefined) updateData.ageRecommendation = data.ageRecommendation
+
+    // Status fields
+    if (data.status !== undefined) {
+      updateData.status = data.status
+      // Set publishedAt when status changes to 'published' for the first time
+      if (data.status === 'published' && !existingMoc.publishedAt) {
+        updateData.publishedAt = new Date()
+      }
+    }
+    if (data.visibility !== undefined) updateData.visibility = data.visibility
+    if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured
+
+    // BrickLink-specific fields
+    if (data.sourcePlatform !== undefined) updateData.sourcePlatform = data.sourcePlatform
+    if (data.eventBadges !== undefined) updateData.eventBadges = data.eventBadges
+    if (data.moderation !== undefined) updateData.moderation = data.moderation
+    if (data.platformCategoryId !== undefined)
+      updateData.platformCategoryId = data.platformCategoryId
 
     // Perform update with optimistic locking
     const [updatedMoc] = await db

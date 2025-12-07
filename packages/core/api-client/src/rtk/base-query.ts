@@ -16,6 +16,7 @@ const logger = createLogger('api-client:base-query')
 export interface ServerlessBaseQueryOptions {
   retryConfig?: Partial<RetryConfig>
   skipRetry?: boolean
+  /** @deprecated No longer used; cookie-based auth does not expose tokens to JS */
   getAuthToken?: () => string | undefined
   customHeaders?: Record<string, string>
   // Enhanced serverless features
@@ -24,10 +25,16 @@ export interface ServerlessBaseQueryOptions {
   enableConnectionWarming?: boolean
   priority?: 'low' | 'medium' | 'high' | 'critical'
   endpoint?: string
+  /** Story 3.1.4: Enable CSRF token propagation for unsafe methods */
+  enableCsrf?: boolean
+  /** Story 3.1.4: Function to retrieve CSRF token (e.g., from meta tag or cookie) */
+  getCsrfToken?: () => string | undefined
 }
 
 /**
  * Create serverless-optimized base query for RTK Query
+ *
+ * Story 3.1.4: Cookie-based auth with credentials: 'include'
  */
 export function createServerlessBaseQuery(
   options: ServerlessBaseQueryOptions = {},
@@ -40,17 +47,19 @@ export function createServerlessBaseQuery(
       maxDelay: config.maxRetryDelay,
     },
     skipRetry = false,
-    getAuthToken,
     customHeaders = {},
+    enableCsrf = false,
+    getCsrfToken,
   } = options
 
   // Create base query with serverless configuration
+  // Story 3.1.4: Cookie-based auth with credentials: 'include'
   const baseQuery = fetchBaseQuery({
     baseUrl: config.baseUrl,
     timeout: config.timeout,
+    credentials: 'include', // Story 3.1.4: Always send cookies
     prepareHeaders: headers => {
-      // Set default headers
-      headers.set('Content-Type', 'application/json')
+      // Story 3.1.4: Default headers - Accept: application/json
       headers.set('Accept', 'application/json')
 
       // Add custom headers
@@ -58,12 +67,16 @@ export function createServerlessBaseQuery(
         headers.set(key, value)
       })
 
-      // Add authentication token
-      const authToken = getAuthToken?.()
-      if (authToken) {
-        headers.set('Authorization', `Bearer ${authToken}`)
+      // Story 3.1.4: CSRF token for unsafe methods (feature-flagged)
+      if (enableCsrf && getCsrfToken) {
+        const csrfToken = getCsrfToken()
+        if (csrfToken) {
+          headers.set('X-CSRF-Token', csrfToken)
+          logger.debug('CSRF token added to request')
+        }
       }
 
+      // Story 3.1.4: Cookie-based auth only; do not inject Authorization headers
       return headers
     },
   })

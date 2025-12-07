@@ -31,16 +31,20 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       return errorResponse(400, 'VALIDATION_ERROR', 'MOC ID and File ID are required')
     }
 
-    // Verify MOC exists and user owns it
+    // Verify MOC exists and ownership
     const [moc] = await db
       .select()
       .from(mocInstructions)
-      .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+      .where(eq(mocInstructions.id, mocId))
       .limit(1)
 
     if (!moc) {
-      logger.warn(`MOC not found or unauthorized: ${mocId}`, { userId, mocId })
-      return errorResponse(404, 'NOT_FOUND', 'MOC not found or you do not have permission')
+      logger.warn(`MOC not found: ${mocId}`, { userId, mocId })
+      return errorResponse(404, 'NOT_FOUND', 'MOC not found')
+    }
+    if (moc.userId !== userId) {
+      logger.warn(`Access denied: not owner of MOC ${mocId}`, { userId, mocId })
+      return errorResponse(403, 'FORBIDDEN', 'You do not own this MOC')
     }
 
     // Verify file exists and belongs to the MOC

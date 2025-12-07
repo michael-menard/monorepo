@@ -72,11 +72,33 @@ export const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
 }
 
 /**
+ * Story 3.1.4: Non-retryable HTTP status codes
+ * These errors should be surfaced directly to the UI:
+ * - 401 Unauthorized: prompt re-auth (login)
+ * - 403 Forbidden: show permission error UI
+ * - 404 Not Found: show not-found UI
+ */
+const NON_RETRYABLE_STATUS_CODES = [401, 403, 404]
+
+/**
  * Determine if an error is retryable based on serverless patterns
+ *
+ * Story 3.1.4: 401/403/404 are NEVER retryable
  */
 export function isRetryableError(error: any): RetryableError {
   const statusCode = error?.status || error?.response?.status
   const message = error?.message || error?.response?.statusText || 'Unknown error'
+
+  // Story 3.1.4: Never retry 401/403/404
+  if (NON_RETRYABLE_STATUS_CODES.includes(statusCode)) {
+    return {
+      isRetryable: false,
+      isColdStart: false,
+      isTimeout: false,
+      statusCode,
+      message,
+    }
+  }
 
   // Cold start indicators
   const isColdStart =
@@ -94,7 +116,7 @@ export function isRetryableError(error: any): RetryableError {
     message.includes('timeout') ||
     error?.code === 'TIMEOUT'
 
-  // General retryable conditions
+  // General retryable conditions (only transient errors)
   const isRetryable =
     isColdStart ||
     isTimeout ||

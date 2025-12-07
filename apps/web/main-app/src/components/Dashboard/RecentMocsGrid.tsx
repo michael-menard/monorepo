@@ -51,15 +51,15 @@ export function RecentMocsGrid({ mocs }: RecentMocsGridProps) {
             params={{ mocId: moc.id }}
             className="flex-shrink-0"
           >
-            <Card className="w-40 md:w-auto hover:shadow-md transition-shadow cursor-pointer group">
+            <Card className="w-40 md:w-auto bg-card/80 dark:bg-surface backdrop-blur-sm border border-border dark:border-surface-border hover:border-primary/50 dark:hover:border-glow-primary hover:shadow-md dark:hover:shadow-glow-primary transition-all duration-200 cursor-pointer group">
               <CardContent className="p-3">
                 {/* Thumbnail */}
-                <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                <div className="aspect-square rounded-lg overflow-hidden bg-muted dark:bg-surface-light/30 mb-2">
                   {moc.thumbnail ? (
                     <img
                       src={moc.thumbnail}
                       alt={moc.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

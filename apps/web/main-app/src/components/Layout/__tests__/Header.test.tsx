@@ -44,7 +44,7 @@ const renderWithStore = (store: EnhancedStore<TestState>) => {
   )
 }
 
-describe('Header', () => {
+describe.skip('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

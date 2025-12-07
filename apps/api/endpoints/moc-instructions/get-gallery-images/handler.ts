@@ -6,7 +6,7 @@
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
 import { successResponse, errorResponse } from '@/core/utils/responses'
@@ -26,15 +26,18 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       return errorResponse(400, 'VALIDATION_ERROR', 'MOC ID is required')
     }
 
-    // Verify MOC ownership
+    // Verify MOC exists and ownership
     const [moc] = await db
       .select()
       .from(mocInstructions)
-      .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+      .where(eq(mocInstructions.id, mocId))
       .limit(1)
 
     if (!moc) {
-      return errorResponse(404, 'NOT_FOUND', 'MOC not found or unauthorized')
+      return errorResponse(404, 'NOT_FOUND', 'MOC not found')
+    }
+    if (moc.userId !== userId) {
+      return errorResponse(403, 'FORBIDDEN', 'You do not own this MOC')
     }
 
     // Get linked gallery images with full image data

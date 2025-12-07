@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "bdd:gen": "bddgen",
-    "test": "bddgen && playwright test",
+    "test:e2e": "bddgen && playwright test",
     "test:ui": "bddgen && playwright test --ui",
     "test:headed": "bddgen && playwright test --headed",
     "test:debug": "bddgen && playwright test --debug",
@@ -31,6 +31,7 @@
     "typescript": "5.8.3"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.848.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.3",

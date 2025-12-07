@@ -15,7 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/app-component-library'
-import { Images, Upload, Search, Grid, TrendingUp, Clock } from 'lucide-react'
+import { Images, Upload, Search, Grid, TrendingUp, Clock, Plus } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { logger } from '@repo/logger'
 import { useEnhancedGallerySearchQuery, useGetEnhancedGalleryStatsQuery } from '@/store'
 
 /**
@@ -69,6 +71,22 @@ export function GalleryModule() {
             <p className="text-muted-foreground">
               Browse and discover amazing LEGO MOC designs with advanced serverless features
             </p>
+            {/* Story 3.1.15: Upload CTA */}
+            <Button
+              asChild
+              variant="default"
+              size="sm"
+              className="mt-2"
+              onClick={() =>
+                logger.info('Gallery upload CTA clicked', { route: '/instructions/new' })
+              }
+              aria-label="Upload your own MOC instructions"
+            >
+              <Link to="/instructions/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Upload yours
+              </Link>
+            </Button>
           </div>
 
           {/* Performance indicator */}

@@ -1,125 +1,169 @@
-import type { Page, Locator } from '@playwright/test'
+import { type Page, type Locator } from '@playwright/test'
 
 /**
- * Page Object for Signup Page
- * Maps to /register route
+ * Page Object for the Signup/Registration page
+ * Provides methods to interact with the registration form
  */
 export class SignupPage {
   readonly page: Page
+
+  // Form fields
   readonly nameInput: Locator
   readonly emailInput: Locator
   readonly passwordInput: Locator
   readonly confirmPasswordInput: Locator
-  readonly acceptTermsCheckbox: Locator
-  readonly submitButton: Locator
-  readonly errorAlert: Locator
-  readonly successAlert: Locator
-  readonly signInLink: Locator
-  readonly backToHomeButton: Locator
-  readonly showPasswordButton: Locator
-  readonly showConfirmPasswordButton: Locator
-  readonly passwordStrengthIndicator: Locator
-  readonly googleButton: Locator
-  readonly facebookButton: Locator
-  readonly appleButton: Locator
+  readonly termsCheckbox: Locator
+  readonly signUpButton: Locator
+
+  // Password visibility toggles
+  readonly passwordToggle: Locator
+  readonly confirmPasswordToggle: Locator
+
+  // Navigation
+  readonly loginLink: Locator
 
   constructor(page: Page) {
     this.page = page
-    // Form inputs
+
+    // Form fields - using id selectors based on the SignupPage component
     this.nameInput = page.locator('#name')
     this.emailInput = page.locator('#email')
     this.passwordInput = page.locator('#password')
     this.confirmPasswordInput = page.locator('#confirmPassword')
-    this.acceptTermsCheckbox = page.locator('#acceptTerms')
-    this.submitButton = page.getByRole('button', { name: /create account/i })
+    this.termsCheckbox = page.locator('#acceptTerms')
+    this.signUpButton = page.locator('button[type="submit"]')
 
-    // Alerts
-    this.errorAlert = page.getByRole('alert').filter({ hasText: /failed|error/i })
-    this.successAlert = page.getByRole('alert').filter({ hasText: /success|created/i })
+    // Password visibility toggles - buttons with aria-label
+    this.passwordToggle = page.locator('button[aria-label*="password"]').first()
+    this.confirmPasswordToggle = page.locator('button[aria-label*="password"]').last()
 
-    // Navigation
-    this.signInLink = page.getByRole('link', { name: /sign in/i })
-    this.backToHomeButton = page.getByRole('link', { name: /back to home/i })
-
-    // Password toggles
-    this.showPasswordButton = page.locator('#password').locator('..').getByRole('button')
-    this.showConfirmPasswordButton = page.locator('#confirmPassword').locator('..').getByRole('button')
-
-    // Password strength
-    this.passwordStrengthIndicator = page.getByText(/password strength:/i)
-
-    // Social signup
-    this.googleButton = page.getByRole('button', { name: /google/i })
-    this.facebookButton = page.getByRole('button', { name: /facebook/i })
-    this.appleButton = page.getByRole('button', { name: /apple/i })
+    // Navigation link to login - use the one with "Sign in here" text
+    this.loginLink = page.getByRole('link', { name: 'Sign in here' })
   }
 
   async goto() {
     await this.page.goto('/register')
-    await this.page.waitForLoadState('networkidle')
   }
 
-  async fillName(name: string) {
+  async waitForPageLoad() {
+    await this.nameInput.waitFor({ state: 'visible', timeout: 10000 })
+  }
+
+  // Form input methods
+  async enterName(name: string) {
     await this.nameInput.fill(name)
   }
 
-  async fillEmail(email: string) {
+  async enterEmail(email: string) {
     await this.emailInput.fill(email)
   }
 
-  async fillPassword(password: string) {
+  async enterPassword(password: string) {
     await this.passwordInput.fill(password)
   }
 
-  async fillConfirmPassword(password: string) {
+  async enterConfirmPassword(password: string) {
     await this.confirmPasswordInput.fill(password)
   }
 
   async acceptTerms() {
-    await this.acceptTermsCheckbox.click()
+    await this.termsCheckbox.check()
   }
 
-  async signup(name: string, email: string, password: string, confirmPassword: string) {
-    await this.fillName(name)
-    await this.fillEmail(email)
-    await this.fillPassword(password)
-    await this.fillConfirmPassword(confirmPassword)
-    await this.acceptTerms()
-    await this.submitButton.click()
+  async clickSignUp() {
+    await this.signUpButton.click()
   }
 
-  async clickSubmit() {
-    await this.submitButton.click()
+  // Validation error checks - using exact error messages from Zod schema
+  async hasNameError(): Promise<boolean> {
+    await this.page.waitForTimeout(500) // Wait for validation
+    // Error: "Name must be at least 2 characters"
+    const error = this.page.locator('text=Name must be at least 2 characters')
+    return await error.isVisible().catch(() => false)
   }
 
-  async clickSignIn() {
-    await this.signInLink.click()
+  async hasEmailError(): Promise<boolean> {
+    await this.page.waitForTimeout(500)
+    // Error: "Please enter a valid email address"
+    const error = this.page.locator('text=Please enter a valid email address')
+    return await error.isVisible().catch(() => false)
   }
 
-  async getPasswordStrength(): Promise<string | null> {
-    if (await this.passwordStrengthIndicator.isVisible()) {
-      const text = await this.passwordStrengthIndicator.textContent()
-      // Extract strength value (Weak, Fair, Good, Strong)
-      const match = text?.match(/password strength:\s*(\w+)/i)
-      return match ? match[1] : null
-    }
-    return null
+  async hasPasswordError(): Promise<boolean> {
+    await this.page.waitForTimeout(500)
+    // Errors: "Password must be at least 8 characters" or "Password must contain uppercase, lowercase, and number"
+    const error1 = this.page.locator('text=Password must be at least 8 characters')
+    const error2 = this.page.locator('text=Password must contain uppercase, lowercase, and number')
+    return (
+      (await error1.isVisible().catch(() => false)) || (await error2.isVisible().catch(() => false))
+    )
   }
 
-  async getValidationError(field: 'name' | 'email' | 'password' | 'confirmPassword' | 'acceptTerms'): Promise<string | null> {
-    // Look for error messages near the field
-    const fieldContainer = this.page.locator(`#${field}`).locator('..')
-    const errorElement = fieldContainer.locator('.text-red-600')
-    if (await errorElement.isVisible()) {
-      return await errorElement.textContent()
-    }
-    return null
+  async hasConfirmPasswordError(): Promise<boolean> {
+    await this.page.waitForTimeout(500)
+    // Error: "Passwords don't match"
+    const error = this.page.locator("text=Passwords don't match")
+    return await error.isVisible().catch(() => false)
   }
-}
 
-/**
- * Factory function for creating SignupPage instances
- */
-export function createSignupPage(page: Page): SignupPage {
-  return new SignupPage(page)
+  async hasTermsError(): Promise<boolean> {
+    await this.page.waitForTimeout(500)
+    // Error: "You must accept the terms and conditions"
+    const error = this.page.locator('text=You must accept the terms and conditions')
+    return await error.isVisible().catch(() => false)
+  }
+
+  // Success/error message methods
+  async waitForSuccessMessage() {
+    // Look for the success message text from SignupPage component
+    // "Account created successfully! Please check your email for verification."
+    const successText = this.page.locator(
+      'text=/Account created successfully|check your email for verification/i',
+    )
+    await successText.waitFor({ state: 'visible', timeout: 10000 })
+  }
+
+  // Password visibility methods
+  async isPasswordMasked(): Promise<boolean> {
+    const type = await this.passwordInput.getAttribute('type')
+    return type === 'password'
+  }
+
+  async togglePasswordVisibility() {
+    await this.passwordToggle.click()
+  }
+
+  // Field visibility checks
+  async isNameFieldVisible(): Promise<boolean> {
+    return await this.nameInput.isVisible()
+  }
+
+  async isEmailFieldVisible(): Promise<boolean> {
+    return await this.emailInput.isVisible()
+  }
+
+  async isPasswordFieldVisible(): Promise<boolean> {
+    return await this.passwordInput.isVisible()
+  }
+
+  async isConfirmPasswordFieldVisible(): Promise<boolean> {
+    return await this.confirmPasswordInput.isVisible()
+  }
+
+  async isTermsCheckboxVisible(): Promise<boolean> {
+    return await this.termsCheckbox.isVisible()
+  }
+
+  async isSignUpButtonVisible(): Promise<boolean> {
+    return await this.signUpButton.isVisible()
+  }
+
+  async isLoginLinkVisible(): Promise<boolean> {
+    return await this.loginLink.isVisible()
+  }
+
+  // Navigation
+  async clickLoginLink() {
+    await this.loginLink.click()
+  }
 }

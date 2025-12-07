@@ -88,7 +88,7 @@ vi.mock('@/components/Auth/OTPInput', () => ({
   ),
 }))
 
-// Mock @repo/ui components
+// Mock @repo/ui components - consolidated into a single mock
 vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, disabled, type, className, asChild, variant, ...props }: any) => {
     if (asChild) {
@@ -106,40 +106,25 @@ vi.mock('@repo/app-component-library', () => ({
       </button>
     )
   },
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   Input: ({ id, type, placeholder, className, ...props }: any) => (
     <input id={id} type={type} placeholder={placeholder} className={className} {...props} />
   ),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   Label: ({ children, htmlFor, ...props }: any) => (
     <label htmlFor={htmlFor} {...props}>
       {children}
     </label>
   ),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   Card: ({ children, className }: any) => <div className={className}>{children}</div>,
   CardContent: ({ children, className }: any) => <div className={className}>{children}</div>,
   CardDescription: ({ children, className }: any) => <p className={className}>{children}</p>,
   CardHeader: ({ children, className }: any) => <div className={className}>{children}</div>,
   CardTitle: ({ children, className }: any) => <h2 className={className}>{children}</h2>,
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   Alert: ({ children, variant, role, ...props }: any) => (
     <div role={role} data-variant={variant} {...props}>
       {children}
     </div>
   ),
   AlertDescription: ({ children }: any) => <span>{children}</span>,
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
 }))
 

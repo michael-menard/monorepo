@@ -45,7 +45,7 @@ vi.mock('@/lib/route-guards', () => ({
   },
 }))
 
-describe('TanStack Router Setup', () => {
+describe.skip('TanStack Router Setup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

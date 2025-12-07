@@ -19,14 +19,14 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 
   /* Font Sizes - Type Scale */
-  --text-xs: 0.75rem;     /* 12px */
-  --text-sm: 0.875rem;    /* 14px */
-  --text-base: 1rem;      /* 16px */
-  --text-lg: 1.125rem;    /* 18px */
-  --text-xl: 1.25rem;     /* 20px */
-  --text-2xl: 1.5rem;     /* 24px */
-  --text-3xl: 1.875rem;   /* 30px */
-  --text-4xl: 2.25rem;    /* 36px */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
 
   /* Font Weights */
   --font-light: 300;
@@ -42,26 +42,26 @@
   --leading-relaxed: 1.625;
 
   /* Spacing Scale - 4px base unit */
-  --space-1: 0.25rem;     /* 4px */
-  --space-2: 0.5rem;      /* 8px */
-  --space-3: 0.75rem;     /* 12px */
-  --space-4: 1rem;        /* 16px */
-  --space-5: 1.25rem;     /* 20px */
-  --space-6: 1.5rem;      /* 24px */
-  --space-8: 2rem;        /* 32px */
-  --space-10: 2.5rem;     /* 40px */
-  --space-12: 3rem;       /* 48px */
-  --space-16: 4rem;       /* 64px */
-  --space-20: 5rem;       /* 80px */
-  --space-24: 6rem;       /* 96px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+  --space-20: 5rem; /* 80px */
+  --space-24: 6rem; /* 96px */
 
   /* Border Radius */
-  --radius-sm: 0.125rem;   /* 2px */
-  --radius-base: 0.25rem;  /* 4px */
-  --radius-md: 0.375rem;   /* 6px */
-  --radius-lg: 0.5rem;     /* 8px */
-  --radius-xl: 0.75rem;    /* 12px */
-  --radius-2xl: 1rem;      /* 16px */
+  --radius-sm: 0.125rem; /* 2px */
+  --radius-base: 0.25rem; /* 4px */
+  --radius-md: 0.375rem; /* 6px */
+  --radius-lg: 0.5rem; /* 8px */
+  --radius-xl: 0.75rem; /* 12px */
+  --radius-2xl: 1rem; /* 16px */
   --radius-full: 9999px;
 
   /* Shadows */
@@ -88,37 +88,67 @@
 
 :root {
   /* Primary Brand - Teal Family */
-  --color-teal-100: #D1E3E8;  /* Very Light Teal - Disabled states, secondary backgrounds */
-  --color-teal-400: #5FA3B8;  /* Soft Teal - Secondary interactive elements */
-  --color-teal-600: #1B5E6D;  /* Deep Teal - Primary buttons, headers, key elements */
-  --color-teal-800: #0F4654;  /* Dark Teal - Hover states, emphasis */
-  --color-teal-950: #082B34;  /* Very Dark Teal - Text, dark mode backgrounds */
+  --color-teal-100: #d1e3e8; /* Very Light Teal - Disabled states, secondary backgrounds */
+  --color-teal-400: #5fa3b8; /* Soft Teal - Secondary interactive elements */
+  --color-teal-600: #1b5e6d; /* Deep Teal - Primary buttons, headers, key elements */
+  --color-teal-800: #0f4654; /* Dark Teal - Hover states, emphasis */
+  --color-teal-950: #082b34; /* Very Dark Teal - Text, dark mode backgrounds */
 
   /* Accent - Green/Sage Family */
-  --color-green-100: #E9EDE8; /* Very Light Sage - Soft backgrounds */
-  --color-green-300: #C4D1C5; /* Light Sage - Borders, dividers */
-  --color-green-500: #A8B8A3; /* Sage Green - Accents, highlights */
-  --color-green-700: #6B7E68; /* Deep Sage - Secondary elements */
-  --color-green-900: #2D5F4F; /* Forest Green - Success states, confirmations */
+  --color-green-100: #e9ede8; /* Very Light Sage - Soft backgrounds */
+  --color-green-300: #c4d1c5; /* Light Sage - Borders, dividers */
+  --color-green-500: #a8b8a3; /* Sage Green - Accents, highlights */
+  --color-green-700: #6b7e68; /* Deep Sage - Secondary elements */
+  --color-green-900: #2d5f4f; /* Forest Green - Success states, confirmations */
 
   /* Neutral - Taupe/Earth Family */
-  --color-neutral-50: #F9F7F5;  /* Very Light Taupe - Light backgrounds */
-  --color-neutral-100: #F5F1ED; /* Light Taupe - Primary background */
-  --color-neutral-300: #D9CFC5; /* Soft Taupe - Borders, subtle dividers */
-  --color-neutral-500: #9B8B7E; /* Warm Taupe - Secondary text, secondary elements */
-  --color-neutral-700: #6B5D52; /* Dark Taupe - Emphasis text */
-  --color-neutral-900: #2C2C2C; /* Charcoal - Primary text, dark elements */
+  --color-neutral-50: #f9f7f5; /* Very Light Taupe - Light backgrounds */
+  --color-neutral-100: #f5f1ed; /* Light Taupe - Primary background */
+  --color-neutral-300: #d9cfc5; /* Soft Taupe - Borders, subtle dividers */
+  --color-neutral-500: #9b8b7e; /* Warm Taupe - Secondary text, secondary elements */
+  --color-neutral-700: #6b5d52; /* Dark Taupe - Emphasis text */
+  --color-neutral-900: #2c2c2c; /* Charcoal - Primary text, dark elements */
 
   /* Semantic - Action Colors */
-  --color-success: #2D5F4F;   /* Forest Green - Confirmations, completed tasks */
-  --color-warning: #D4A574;   /* Warm Ochre - Alerts, caution states */
-  --color-error: #A85B4B;     /* Terracotta Red - Destructive actions, errors */
-  --color-info: #5FA3B8;      /* Soft Teal - Information, help messages */
+  --color-success: #2d5f4f; /* Forest Green - Confirmations, completed tasks */
+  --color-warning: #d4a574; /* Warm Ochre - Alerts, caution states */
+  --color-error: #a85b4b; /* Terracotta Red - Destructive actions, errors */
+  --color-info: #5fa3b8; /* Soft Teal - Information, help messages */
 
   /* Additional Accents */
-  --color-clay: #B89968;      /* Warm Clay - Tertiary accent, MOC highlights */
-  --color-dusty-blue: #7B8FA3; /* Dusty Blue - Subtle secondary accent */
-  --color-gold: #B8A876;      /* Muted Gold - Premium/featured MOCs */
+  --color-clay: #b89968; /* Warm Clay - Tertiary accent, MOC highlights */
+  --color-dusty-blue: #7b8fa3; /* Dusty Blue - Subtle secondary accent */
+  --color-gold: #b8a876; /* Muted Gold - Premium/featured MOCs */
+
+  /* ===========================================
+     CYBERPUNK / GLOW COLORS
+     =========================================== */
+
+  /* Glow Border Colors (30% opacity for subtle glow effect) */
+  --glow-primary: rgba(14, 165, 233, 0.3); /* sky-500/30 */
+  --glow-accent: rgba(245, 158, 11, 0.3); /* amber-500/30 */
+  --glow-success: rgba(16, 185, 129, 0.3); /* emerald-500/30 */
+  --glow-error: rgba(239, 68, 68, 0.3); /* red-500/30 */
+  --glow-info: rgba(59, 130, 246, 0.3); /* blue-500/30 */
+  --glow-violet: rgba(139, 92, 246, 0.3); /* violet-500/30 */
+
+  /* Translucent Surface Colors */
+  --surface-translucent: rgba(15, 23, 42, 0.5); /* slate-900/50 */
+  --surface-translucent-light: rgba(30, 41, 59, 0.5); /* slate-800/50 */
+  --surface-border: rgba(51, 65, 85, 0.5); /* slate-700/50 */
+  --surface-border-glow: rgba(14, 165, 233, 0.3); /* sky-500/30 - active state */
+
+  /* Gradient Stops (for progress bars, buttons) */
+  --gradient-primary-from: #38bdf8; /* sky-400 */
+  --gradient-primary-to: #0d9488; /* teal-600 */
+  --gradient-accent-from: #fbbf24; /* amber-400 */
+  --gradient-accent-to: #f97316; /* orange-500 */
+  --gradient-success-from: #34d399; /* emerald-400 */
+  --gradient-success-to: #16a34a; /* green-600 */
+
+  /* Box Shadow Glows */
+  --shadow-glow-primary: 0 0 20px rgba(14, 165, 233, 0.15);
+  --shadow-glow-accent: 0 0 20px rgba(245, 158, 11, 0.15);
 }
 
 /* ===========================================
@@ -163,48 +193,48 @@
      */
 
     /* Core colors */
-    --background: 30 29% 95%;           /* Neutral 100 - #F5F1ED */
-    --foreground: 0 0% 17%;             /* Neutral 900 - #2C2C2C */
+    --background: 30 29% 95%; /* Neutral 100 - #F5F1ED */
+    --foreground: 0 0% 17%; /* Neutral 900 - #2C2C2C */
 
     /* Primary - Deep Teal */
-    --primary: 191 60% 27%;             /* Teal 600 - #1B5E6D */
-    --primary-foreground: 0 0% 100%;    /* White */
+    --primary: 191 60% 27%; /* Teal 600 - #1B5E6D */
+    --primary-foreground: 0 0% 100%; /* White */
 
     /* Secondary - Warm Taupe */
-    --secondary: 30 25% 97%;            /* Neutral 50 - #F9F7F5 */
+    --secondary: 30 25% 97%; /* Neutral 50 - #F9F7F5 */
     --secondary-foreground: 27 14% 55%; /* Neutral 500 - #9B8B7E */
 
     /* Accent - Sage Green */
-    --accent: 109 12% 68%;              /* Green 500 - #A8B8A3 */
-    --accent-foreground: 0 0% 17%;      /* Charcoal for contrast */
+    --accent: 109 12% 68%; /* Green 500 - #A8B8A3 */
+    --accent-foreground: 0 0% 17%; /* Charcoal for contrast */
 
     /* Muted - Very Light Taupe */
-    --muted: 30 25% 97%;                /* Neutral 50 - #F9F7F5 */
-    --muted-foreground: 27 14% 55%;     /* Neutral 500 - #9B8B7E */
+    --muted: 30 25% 97%; /* Neutral 50 - #F9F7F5 */
+    --muted-foreground: 27 14% 55%; /* Neutral 500 - #9B8B7E */
 
     /* Component colors */
-    --card: 0 0% 100%;                  /* White cards for contrast */
-    --card-foreground: 0 0% 17%;        /* Charcoal */
+    --card: 0 0% 100%; /* White cards for contrast */
+    --card-foreground: 0 0% 17%; /* Charcoal */
 
-    --popover: 0 0% 100%;               /* White */
-    --popover-foreground: 0 0% 17%;     /* Charcoal */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 0 0% 17%; /* Charcoal */
 
     /* Form colors */
-    --border: 30 24% 81%;               /* Neutral 300 - #D9CFC5 */
-    --input: 30 24% 81%;                /* Neutral 300 */
-    --ring: 191 60% 27%;                /* Teal 600 - focus ring */
+    --border: 30 24% 81%; /* Neutral 300 - #D9CFC5 */
+    --input: 30 24% 81%; /* Neutral 300 */
+    --ring: 191 60% 27%; /* Teal 600 - focus ring */
 
     /* Semantic - Feedback colors */
-    --destructive: 10 38% 48%;          /* Terracotta Red - #A85B4B */
+    --destructive: 10 38% 48%; /* Terracotta Red - #A85B4B */
     --destructive-foreground: 0 0% 100%;
 
-    --success: 161 35% 27%;             /* Forest Green - #2D5F4F */
+    --success: 161 35% 27%; /* Forest Green - #2D5F4F */
     --success-foreground: 0 0% 100%;
 
-    --warning: 29 52% 64%;              /* Warm Ochre - #D4A574 */
-    --warning-foreground: 0 0% 17%;     /* Dark text for contrast */
+    --warning: 29 52% 64%; /* Warm Ochre - #D4A574 */
+    --warning-foreground: 0 0% 17%; /* Dark text for contrast */
 
-    --info: 193 37% 55%;                /* Soft Teal - #5FA3B8 */
+    --info: 193 37% 55%; /* Soft Teal - #5FA3B8 */
     --info-foreground: 0 0% 100%;
 
     /* Radius */
@@ -212,53 +242,61 @@
   }
 
   /* ===========================================
-     DARK THEME
+     DARK THEME (Cyberpunk / LEGO Command Center)
      =========================================== */
 
   .dark {
-    /* Core colors - inverted */
-    --background: 193 76% 12%;          /* Teal 950 - #082B34 */
-    --foreground: 30 25% 97%;           /* Neutral 50 - #F9F7F5 */
+    /*
+     * LEGO Cyberpunk Dark Theme
+     * Background: Deep slate gradient base
+     * Primary: Sky/Cyan for that futuristic glow
+     * Accent: Warm amber to keep LEGO personality
+     * Cards: Translucent with glow borders
+     */
 
-    /* Primary - Soft Teal (brighter for dark mode) */
-    --primary: 193 37% 55%;             /* Teal 400 - #5FA3B8 */
-    --primary-foreground: 193 76% 12%;  /* Teal 950 */
+    /* Core colors - deep slate base */
+    --background: 222 47% 5%; /* slate-950 - #020617 */
+    --foreground: 210 40% 96%; /* slate-100 - #f1f5f9 */
 
-    /* Secondary */
-    --secondary: 193 69% 19%;           /* Teal 800 - #0F4654 */
-    --secondary-foreground: 30 25% 97%; /* Neutral 50 */
+    /* Primary - Sky/Cyan (cyberpunk accent) */
+    --primary: 199 89% 48%; /* sky-500 - #0ea5e9 */
+    --primary-foreground: 222 47% 5%; /* slate-950 */
 
-    /* Accent - Light Sage for dark mode */
-    --accent: 125 13% 79%;              /* Green 300 - #C4D1C5 */
-    --accent-foreground: 193 76% 12%;   /* Dark teal */
+    /* Secondary - Slate for supporting elements */
+    --secondary: 217 33% 17%; /* slate-800 - #1e293b */
+    --secondary-foreground: 210 40% 96%; /* slate-100 */
 
-    /* Muted */
-    --muted: 193 69% 19%;               /* Teal 800 - #0F4654 */
-    --muted-foreground: 30 24% 81%;     /* Neutral 300 */
+    /* Accent - Amber (warm LEGO feel) */
+    --accent: 38 92% 50%; /* amber-500 - #f59e0b */
+    --accent-foreground: 222 47% 5%; /* slate-950 */
 
-    /* Component colors */
-    --card: 193 69% 19%;                /* Teal 800 */
-    --card-foreground: 30 25% 97%;      /* Neutral 50 */
+    /* Muted - Subtle slate */
+    --muted: 217 33% 17%; /* slate-800 */
+    --muted-foreground: 215 20% 65%; /* slate-400 - #94a3b8 */
 
-    --popover: 193 69% 19%;             /* Teal 800 */
-    --popover-foreground: 30 25% 97%;   /* Neutral 50 */
+    /* Component colors - translucent surfaces */
+    --card: 222 47% 8%; /* ~slate-900 - for solid fallback */
+    --card-foreground: 210 40% 96%; /* slate-100 */
+
+    --popover: 222 47% 8%; /* ~slate-900 */
+    --popover-foreground: 210 40% 96%; /* slate-100 */
 
     /* Form colors */
-    --border: 191 60% 27%;              /* Teal 600 */
-    --input: 191 60% 27%;               /* Teal 600 */
-    --ring: 193 37% 55%;                /* Teal 400 */
+    --border: 217 19% 27%; /* slate-700 - #334155 */
+    --input: 217 19% 27%; /* slate-700 */
+    --ring: 199 89% 48%; /* sky-500 - matches primary */
 
-    /* Semantic - Feedback colors (brighter for dark mode) */
-    --destructive: 10 45% 58%;          /* Lighter Terracotta */
-    --destructive-foreground: 30 25% 97%;
+    /* Semantic - Feedback colors (vibrant for dark mode) */
+    --destructive: 0 72% 51%; /* red-500 - #ef4444 */
+    --destructive-foreground: 210 40% 96%;
 
-    --success: 161 40% 40%;             /* Lighter Forest Green */
-    --success-foreground: 30 25% 97%;
+    --success: 160 84% 39%; /* emerald-500 - #10b981 */
+    --success-foreground: 210 40% 96%;
 
-    --warning: 29 52% 70%;              /* Lighter Ochre */
-    --warning-foreground: 0 0% 17%;
+    --warning: 38 92% 50%; /* amber-500 - #f59e0b */
+    --warning-foreground: 222 47% 5%; /* dark text for contrast */
 
-    --info: 193 31% 86%;                /* Teal 100 - #D1E3E8 */
-    --info-foreground: 193 76% 12%;
+    --info: 217 91% 60%; /* blue-500 - #3b82f6 */
+    --info-foreground: 210 40% 96%;
   }
 }

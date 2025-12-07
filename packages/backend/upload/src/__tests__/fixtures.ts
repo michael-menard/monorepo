@@ -25,6 +25,17 @@ export const fileFixtures = {
     lastModified: Date.now() - 1000 * 60 * 15, // 15 minutes ago
   }),
 
+  // HEIC/HEIF images (cannot be previewed in browser)
+  heicImage: new File(['heic content'], 'iphone-photo.heic', {
+    type: 'image/heic',
+    lastModified: Date.now() - 1000 * 60 * 10, // 10 minutes ago
+  }),
+
+  heifImage: new File(['heif content'], 'iphone-photo.heif', {
+    type: 'image/heif',
+    lastModified: Date.now() - 1000 * 60 * 8, // 8 minutes ago
+  }),
+
   // Document files
   pdfDocument: new File(['pdf content'], 'document.pdf', {
     type: 'application/pdf',
@@ -93,6 +104,8 @@ export const fileFixtures = {
 Object.defineProperty(fileFixtures.jpegImage, 'size', { value: 2 * 1024 * 1024 }) // 2MB
 Object.defineProperty(fileFixtures.pngImage, 'size', { value: 3 * 1024 * 1024 }) // 3MB
 Object.defineProperty(fileFixtures.webpImage, 'size', { value: 1.5 * 1024 * 1024 }) // 1.5MB
+Object.defineProperty(fileFixtures.heicImage, 'size', { value: 4 * 1024 * 1024 }) // 4MB
+Object.defineProperty(fileFixtures.heifImage, 'size', { value: 3.5 * 1024 * 1024 }) // 3.5MB
 Object.defineProperty(fileFixtures.pdfDocument, 'size', { value: 5 * 1024 * 1024 }) // 5MB
 Object.defineProperty(fileFixtures.wordDocument, 'size', { value: 2.5 * 1024 * 1024 }) // 2.5MB
 Object.defineProperty(fileFixtures.mp4Video, 'size', { value: 25 * 1024 * 1024 }) // 25MB

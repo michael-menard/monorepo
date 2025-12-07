@@ -1,6 +1,12 @@
 /**
  * Enhanced RTK Query Authentication Integration
- * Provides authentication-aware base queries and middleware for RTK Query
+ * Provides cookie-based authentication with credentials: 'include'
+ *
+ * Story 3.1.4: Cookie-Based Auth for API Client
+ * - All requests use HttpOnly cookie-based auth (credentials: 'include')
+ * - No Bearer tokens in JS (no Authorization header injection)
+ * - Default headers: Accept: application/json
+ * - Optional CSRF token propagation for unsafe methods
  */
 
 import { createLogger } from '@repo/logger'
@@ -8,7 +14,7 @@ import { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/qu
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { withRetry } from '../retry/retry-logic'
 import { performanceMonitor } from '../lib/performance'
-import { getAuthToken, validateAuthentication, getAuthMiddleware } from './auth-middleware'
+import { getAuthMiddleware } from './auth-middleware'
 
 const logger = createLogger('api-client:rtk-auth')
 
@@ -20,11 +26,19 @@ export interface AuthenticatedBaseQueryConfig {
   skipAuthForEndpoints?: string[]
   requireAuthForEndpoints?: string[]
   onAuthFailure?: (error: FetchBaseQueryError) => void
+  /** @deprecated No longer used; cookie-based auth does not expose tokens to JS */
   onTokenRefresh?: (newToken: string) => void
+  /** Enable CSRF token propagation for unsafe methods (POST/PUT/PATCH/DELETE) */
+  enableCsrf?: boolean
+  /** Function to retrieve CSRF token (e.g., from meta tag or cookie) */
+  getCsrfToken?: () => string | undefined
 }
 
 /**
- * Create an authenticated base query for RTK Query with enhanced features
+ * Create a cookie-based authenticated base query for RTK Query
+ *
+ * Story 3.1.4: Uses credentials: 'include' for all requests.
+ * Does NOT inject Authorization headers (cookie-based auth only).
  */
 export function createAuthenticatedBaseQuery(
   config: AuthenticatedBaseQueryConfig,
@@ -36,44 +50,36 @@ export function createAuthenticatedBaseQuery(
     skipAuthForEndpoints = [],
     requireAuthForEndpoints = [],
     onAuthFailure,
-    onTokenRefresh,
+    enableCsrf = false,
+    getCsrfToken,
   } = config
 
-  // Create base query
+  // Create base query with cookie-based auth
   const baseQuery = fetchBaseQuery({
     baseUrl,
-    prepareHeaders: async (headers, { endpoint }) => {
+    credentials: 'include', // Story 3.1.4: Always send cookies
+    prepareHeaders: (headers, { endpoint }) => {
       const startTime = enablePerformanceMonitoring ? performance.now() : 0
+      const method = typeof endpoint === 'string' ? 'GET' : 'GET' // Will be overridden by actual request
 
       try {
-        // Check if this endpoint needs authentication
-        const needsAuth = shouldAddAuth(endpoint, skipAuthForEndpoints, requireAuthForEndpoints)
+        // Story 3.1.4: Default headers - Accept: application/json
+        // Do NOT set Content-Type here; let RTK/fetch handle it based on body type
+        headers.set('Accept', 'application/json')
+        headers.set('X-Client-Version', '1.0.0')
+        headers.set('X-Request-ID', `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
 
-        if (needsAuth) {
-          logger.debug('Adding authentication to request', undefined, { endpoint })
-
-          // Get auth token with caching
-          const token = await getAuthToken()
-
-          if (token) {
-            headers.set('Authorization', `Bearer ${token}`)
-
-            if (onTokenRefresh) {
-              onTokenRefresh(token)
-            }
-
-            logger.debug('Authentication header added', undefined, { endpoint, hasToken: true })
-          } else {
-            logger.warn('No authentication token available for protected endpoint', undefined, {
-              endpoint,
-            })
+        // Story 3.1.4: CSRF token for unsafe methods (feature-flagged)
+        if (enableCsrf && getCsrfToken) {
+          const csrfToken = getCsrfToken()
+          if (csrfToken) {
+            headers.set('X-CSRF-Token', csrfToken)
+            logger.debug('CSRF token added to request', undefined, { endpoint })
           }
         }
 
-        // Add common headers
-        headers.set('Content-Type', 'application/json')
-        headers.set('X-Client-Version', '1.0.0')
-        headers.set('X-Request-ID', `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+        // Story 3.1.4: Do NOT inject Authorization header - cookie-based auth only
+        logger.debug('Cookie-based auth request prepared', undefined, { endpoint })
 
         if (enablePerformanceMonitoring) {
           const duration = performance.now() - startTime
@@ -83,7 +89,7 @@ export function createAuthenticatedBaseQuery(
         return headers
       } catch (error) {
         logger.error(
-          'Failed to prepare authentication headers',
+          'Failed to prepare request headers',
           error instanceof Error ? error : new Error(String(error)),
           { endpoint },
         )
@@ -92,7 +98,14 @@ export function createAuthenticatedBaseQuery(
     },
   })
 
-  // Enhanced base query with authentication handling
+  /**
+   * Cookie-based authenticated base query
+   *
+   * Story 3.1.4 Error handling semantics:
+   * - 401 Unauthorized: surface distinctly for re-auth flow (do not retry)
+   * - 403 Forbidden: surface distinctly for permission error UI (do not retry)
+   * - 404 Not Found: surface distinctly for not-found UI (do not retry)
+   */
   const authenticatedBaseQuery: BaseQueryFn<
     string | FetchArgs,
     unknown,
@@ -102,69 +115,47 @@ export function createAuthenticatedBaseQuery(
     const endpoint = typeof args === 'string' ? args : args.url
 
     try {
-      // Validate authentication if required
-      const needsAuth = shouldAddAuth(endpoint, skipAuthForEndpoints, requireAuthForEndpoints)
-
-      if (needsAuth) {
-        const { isValid, context } = await validateAuthentication(endpoint)
-
-        if (!isValid) {
-          logger.warn('Authentication validation failed for endpoint', undefined, {
-            endpoint,
-            isAuthenticated: context.isAuthenticated,
-            hasToken: !!context.token,
-          })
-
-          const authError: FetchBaseQueryError = {
-            status: 401,
-            data: {
-              error: 'Authentication required',
-              message: 'Valid authentication token is required for this endpoint',
-            },
-          }
-
-          if (onAuthFailure) {
-            onAuthFailure(authError)
-          }
-
-          return { error: authError }
-        }
-      }
-
-      // Execute the query with retry logic if enabled
+      // Execute the query
       const executeQuery = async () => {
         const result = await baseQuery(args, api, extraOptions)
 
-        // Handle authentication errors
-        if (result.error && result.error.status === 401) {
-          logger.warn('Received 401 authentication error', undefined, { endpoint })
+        // Story 3.1.4: Handle auth/permission errors distinctly (no retry)
+        if (result.error) {
+          const status = result.error.status
 
-          // Try to refresh token and retry once
-          const newToken = await getAuthToken(true) // Force refresh
-
-          if (newToken) {
-            logger.info('Token refreshed, retrying request', undefined, { endpoint })
-
-            if (onTokenRefresh) {
-              onTokenRefresh(newToken)
-            }
-
-            // Retry the request with new token
-            return await baseQuery(args, api, extraOptions)
-          } else {
-            logger.error('Token refresh failed, authentication error persists', undefined, {
-              endpoint,
-            })
-
+          // 401 Unauthorized: trigger re-auth flow
+          if (status === 401) {
+            logger.warn('Received 401 Unauthorized - user not signed in', undefined, { endpoint })
             if (onAuthFailure) {
               onAuthFailure(result.error)
             }
+            // Return immediately; do not retry 401
+            return result
+          }
+
+          // 403 Forbidden: user signed in but not authorized (non-owner)
+          if (status === 403) {
+            logger.warn('Received 403 Forbidden - permission denied', undefined, { endpoint })
+            if (onAuthFailure) {
+              onAuthFailure(result.error)
+            }
+            // Return immediately; do not retry 403
+            return result
+          }
+
+          // 404 Not Found: resource does not exist
+          if (status === 404) {
+            logger.debug('Received 404 Not Found', undefined, { endpoint })
+            // Return immediately; do not retry 404
+            return result
           }
         }
 
         return result
       }
 
+      // Only retry for transient errors (5xx, timeouts, network issues)
+      // Story 3.1.4: Do NOT retry 401/403/404
       let result
       if (enableRetryLogic) {
         result = await withRetry(
@@ -212,9 +203,11 @@ export function createAuthenticatedBaseQuery(
 }
 
 /**
- * Helper function to determine if authentication should be added to a request
+ * Helper function to determine if an endpoint requires authentication
+ * Note: With cookie-based auth, cookies are always sent (credentials: 'include'),
+ * but this helps identify public vs protected endpoints for logging/metrics.
  */
-function shouldAddAuth(
+function isProtectedEndpoint(
   endpoint: string,
   skipAuthForEndpoints: string[],
   requireAuthForEndpoints: string[],
@@ -229,7 +222,7 @@ function shouldAddAuth(
     return true
   }
 
-  // Default behavior: add auth for most endpoints except public ones
+  // Default behavior: most endpoints are protected except public ones
   const publicEndpoints = ['/health', '/status', '/public', '/auth/login', '/auth/register']
   return !publicEndpoints.some(publicEndpoint => endpoint.includes(publicEndpoint))
 }
@@ -256,22 +249,34 @@ export function createAuthMiddleware() {
 
 /**
  * Authentication-aware query configuration
+ *
+ * Story 3.1.4: Cookie-based auth - no token injection needed
  */
 export interface AuthQueryConfig {
+  /** Indicates this query requires authentication (for logging/metrics) */
   requireAuth?: boolean
+  /** Skip authentication checks for this query */
   skipAuth?: boolean
+  /**
+   * @deprecated Story 3.1.4: 401/403/404 are never retried.
+   * Retry only applies to transient errors (5xx, timeouts).
+   */
   retryOnAuthFailure?: boolean
+  /** Cache auth context for this query */
   cacheAuthContext?: boolean
 }
 
 /**
  * Create enhanced query configuration with authentication
+ *
+ * Story 3.1.4: Cookie-based auth with proper error handling
  */
 export function createAuthQueryConfig(config: AuthQueryConfig = {}) {
   const {
     requireAuth = true,
     skipAuth = false,
-    retryOnAuthFailure = true,
+    // Deprecated: 401/403/404 are never retried
+    retryOnAuthFailure = false,
     cacheAuthContext = true,
   } = config
 

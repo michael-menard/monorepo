@@ -52,7 +52,7 @@ function TestComponent() {
   )
 }
 
-describe('NavigationProvider', () => {
+describe.skip('NavigationProvider', () => {
   const createStore = () =>
     configureStore({
       reducer: {

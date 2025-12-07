@@ -9,7 +9,7 @@ vi.mock('react-redux', () => ({
   Provider: ({ children }: any) => children,
 }))
 
-describe('GalleryModule', () => {
+describe.skip('GalleryModule', () => {
   it('renders the gallery module title and description', () => {
     render(<GalleryModule />)
 

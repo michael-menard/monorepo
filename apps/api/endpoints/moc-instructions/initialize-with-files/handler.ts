@@ -25,16 +25,27 @@
 import {
   successResponse,
   errorResponseFromError,
+  errorResponse,
   type APIGatewayProxyResult,
 } from '@/core/utils/responses'
-import { BadRequestError, UnauthorizedError, ValidationError } from '@/core/utils/responses'
-import { logger } from '@/core/observability/logger'
+import {
+  BadRequestError,
+  UnauthorizedError,
+  ValidationError,
+  ConflictError,
+} from '@/core/utils/responses'
+import { createLogger } from '@/core/observability/logger'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles } from '@/core/database/schema'
+import { eq, and } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { getUploadConfig, isMimeTypeAllowed, getAllowedMimeTypes } from '@/core/config/upload'
+import { checkAndIncrementDailyLimit } from '@/core/rate-limit/upload-rate-limit'
+
+const logger = createLogger('initialize-with-files')
 
 /**
  * File metadata schema for initialization
@@ -47,22 +58,196 @@ const FileMetadataSchema = z.object({
 })
 
 /**
+ * Designer schema for nested object
+ */
+const DesignerSchema = z.object({
+  username: z.string().min(1).max(100),
+  displayName: z.string().max(255).nullable().optional(),
+  profileUrl: z.string().url().nullable().optional(),
+  avatarUrl: z.string().url().nullable().optional(),
+  socialLinks: z
+    .object({
+      instagram: z.string().url().nullable().optional(),
+      twitter: z.string().url().nullable().optional(),
+      youtube: z.string().url().nullable().optional(),
+      website: z.string().url().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  stats: z
+    .object({
+      publicCreationsCount: z.number().int().nonnegative().nullable().optional(),
+      totalPublicViews: z.number().int().nonnegative().nullable().optional(),
+      totalPublicLikes: z.number().int().nonnegative().nullable().optional(),
+      staffPickedCount: z.number().int().nonnegative().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+})
+
+/**
+ * Dimensions schema for nested object
+ */
+const DimensionsSchema = z.object({
+  height: z
+    .object({
+      cm: z.number().positive().nullable().optional(),
+      inches: z.number().positive().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  width: z
+    .object({
+      cm: z.number().positive().nullable().optional(),
+      inches: z.number().positive().nullable().optional(),
+      openCm: z.number().positive().nullable().optional(),
+      openInches: z.number().positive().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  depth: z
+    .object({
+      cm: z.number().positive().nullable().optional(),
+      inches: z.number().positive().nullable().optional(),
+      openCm: z.number().positive().nullable().optional(),
+      openInches: z.number().positive().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  weight: z
+    .object({
+      kg: z.number().positive().nullable().optional(),
+      lbs: z.number().positive().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  studsWidth: z.number().int().positive().nullable().optional(),
+  studsDepth: z.number().int().positive().nullable().optional(),
+})
+
+/**
+ * Instructions metadata schema
+ */
+const InstructionsMetadataSchema = z.object({
+  instructionType: z.enum(['pdf', 'xml', 'studio', 'ldraw', 'lxf', 'other']).nullable().optional(),
+  hasInstructions: z.boolean().default(false),
+  pageCount: z.number().int().positive().nullable().optional(),
+  fileSize: z.number().int().positive().nullable().optional(),
+  previewImages: z.array(z.string().url()).default([]),
+})
+
+/**
+ * Alternate build schema
+ */
+const AlternateBuildSchema = z.object({
+  isAlternateBuild: z.boolean().default(false),
+  sourceSetNumbers: z.array(z.string()).default([]),
+  sourceSetNames: z.array(z.string()).default([]),
+  setsRequired: z.number().int().positive().nullable().optional(),
+  additionalPartsNeeded: z.number().int().nonnegative().default(0),
+})
+
+/**
+ * Feature schema
+ */
+const FeatureSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().max(1000).nullable().optional(),
+  icon: z.string().max(50).nullable().optional(),
+})
+
+/**
+ * Source platform schema (BrickLink-specific)
+ */
+const SourcePlatformSchema = z.object({
+  platform: z.enum(['rebrickable', 'bricklink', 'brickowl', 'mecabricks', 'studio', 'other']),
+  externalId: z.string().max(100).nullable().optional(),
+  sourceUrl: z.string().url().nullable().optional(),
+  uploadSource: z
+    .enum(['web', 'desktop_app', 'mobile_app', 'api', 'unknown'])
+    .nullable()
+    .optional(),
+  forkedFromId: z.string().max(100).nullable().optional(),
+  importedAt: z.string().datetime().nullable().optional(),
+})
+
+/**
+ * Event badge schema (BrickLink-specific)
+ */
+const EventBadgeSchema = z.object({
+  eventId: z.string().max(100),
+  eventName: z.string().max(255),
+  badgeType: z.string().max(50).nullable().optional(),
+  badgeImageUrl: z.string().url().nullable().optional(),
+  awardedAt: z.string().datetime().nullable().optional(),
+})
+
+/**
+ * Moderation schema (BrickLink-specific)
+ */
+const ModerationSchema = z.object({
+  action: z.enum(['none', 'approved', 'flagged', 'removed', 'pending']).default('none'),
+  moderatedAt: z.string().datetime().nullable().optional(),
+  reason: z.string().max(500).nullable().optional(),
+  forcedPrivate: z.boolean().default(false),
+})
+
+/**
  * MOC initialization schema
  */
 const InitializeMocWithFilesSchema = z.object({
+  // Basic fields
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   type: z.enum(['moc', 'set']),
   tags: z.array(z.string()).optional(),
+
+  // MOC-specific fields
   author: z.string().optional(),
   setNumber: z.string().optional(),
   partsCount: z.number().optional(),
+  minifigCount: z.number().int().nonnegative().optional(),
   theme: z.string().optional(),
+  themeId: z.number().int().optional(),
   subtheme: z.string().optional(),
   uploadedDate: z.string().datetime().optional(),
+
+  // Set-specific fields
   brand: z.string().optional(),
   releaseYear: z.number().optional(),
   retired: z.boolean().optional(),
+
+  // Core identification
+  mocId: z.string().max(50).optional(),
+  slug: z.string().max(255).optional(),
+
+  // Extended metadata (JSONB)
+  designer: DesignerSchema.optional(),
+  dimensions: DimensionsSchema.optional(),
+  instructionsMetadata: InstructionsMetadataSchema.optional(),
+  alternateBuild: AlternateBuildSchema.optional(),
+  features: z.array(FeatureSchema).optional(),
+
+  // Rich description
+  descriptionHtml: z.string().optional(),
+  shortDescription: z.string().max(500).optional(),
+
+  // Build info
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
+  buildTimeHours: z.number().positive().optional(),
+  ageRecommendation: z.string().max(20).optional(),
+
+  // Status
+  status: z.enum(['draft', 'published', 'archived', 'pending_review']).optional(),
+  visibility: z.enum(['public', 'private', 'unlisted']).optional(),
+
+  // BrickLink-specific fields
+  sourcePlatform: SourcePlatformSchema.optional(),
+  eventBadges: z.array(EventBadgeSchema).optional(),
+  moderation: ModerationSchema.optional(),
+  platformCategoryId: z.number().int().optional(),
+
+  // Files
   files: z.array(FileMetadataSchema).min(1, 'At least one file is required'),
 })
 
@@ -117,9 +302,11 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
     }
 
     const { files, ...mocData } = validation.data
+    const requestId = event.requestContext.requestId
 
     logger.info('Creating MOC with file uploads', {
-      userId,
+      requestId,
+      ownerId: userId,
       title: mocData.title,
       type: mocData.type,
       fileCount: files.length,
@@ -128,11 +315,58 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
     // Validate file requirements
     validateFileRequirements(files)
 
+    // Check rate limit BEFORE any DB writes (Story 3.1.6)
+    const uploadConfig = getUploadConfig()
+    const rateLimitResult = await checkAndIncrementDailyLimit(userId, uploadConfig.rateLimitPerDay)
+
+    if (!rateLimitResult.allowed) {
+      logger.warn('Rate limit exceeded for initialize', {
+        requestId,
+        ownerId: userId,
+        currentCount: rateLimitResult.currentCount,
+        maxPerDay: uploadConfig.rateLimitPerDay,
+        nextAllowedAt: rateLimitResult.nextAllowedAt.toISOString(),
+        retryAfterSeconds: rateLimitResult.retryAfterSeconds,
+      })
+
+      return errorResponse(429, 'TOO_MANY_REQUESTS', 'Daily upload limit exceeded', {
+        message: `You have reached your daily upload limit of ${uploadConfig.rateLimitPerDay}. Please try again tomorrow.`,
+        nextAllowedAt: rateLimitResult.nextAllowedAt.toISOString(),
+        retryAfterSeconds: rateLimitResult.retryAfterSeconds,
+      })
+    }
+
+    logger.info('Rate limit check passed', {
+      requestId,
+      ownerId: userId,
+      remaining: rateLimitResult.remaining,
+    })
+
+    // Story 3.1.7: Pre-check for duplicate title
+    const [existingMoc] = await db
+      .select({ id: mocInstructions.id })
+      .from(mocInstructions)
+      .where(and(eq(mocInstructions.userId, userId), eq(mocInstructions.title, mocData.title)))
+      .limit(1)
+
+    if (existingMoc) {
+      logger.warn('Duplicate title conflict', {
+        requestId,
+        ownerId: userId,
+        title: mocData.title,
+        existingMocId: existingMoc.id,
+      })
+      throw new ConflictError('A MOC with this title already exists', {
+        title: mocData.title,
+        existingMocId: existingMoc.id,
+      })
+    }
+
     // Generate MOC ID
     const mocId = uuidv4()
     const now = new Date()
 
-    // Prepare MOC values
+    // Prepare MOC values with all new fields
     const baseValues = {
       id: mocId,
       userId,
@@ -141,6 +375,43 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       type: mocData.type,
       tags: mocData.tags || null,
       thumbnailUrl: null, // Will be set in finalize step
+
+      // Core identification
+      mocId: mocData.mocId || null,
+      slug: mocData.slug || null,
+
+      // Extended metadata (JSONB)
+      designer: mocData.designer || null,
+      dimensions: mocData.dimensions || null,
+      instructionsMetadata: mocData.instructionsMetadata || null,
+      alternateBuild: mocData.alternateBuild || null,
+      features: mocData.features || null,
+
+      // BrickLink-specific fields
+      sourcePlatform: mocData.sourcePlatform || null,
+      eventBadges: mocData.eventBadges || null,
+      moderation: mocData.moderation || null,
+      platformCategoryId: mocData.platformCategoryId || null,
+
+      // Rich description
+      descriptionHtml: mocData.descriptionHtml || null,
+      shortDescription: mocData.shortDescription || null,
+
+      // Build info
+      difficulty: mocData.difficulty || null,
+      buildTimeHours: mocData.buildTimeHours?.toString() || null,
+      ageRecommendation: mocData.ageRecommendation || null,
+
+      // Status
+      status: mocData.status || 'draft',
+      visibility: mocData.visibility || 'private',
+      isFeatured: false,
+      isVerified: false,
+
+      // Audit trail
+      addedByUserId: userId,
+
+      // Timestamps
       createdAt: now,
       updatedAt: now,
     }
@@ -153,7 +424,9 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
             author: mocData.author || null,
             setNumber: mocData.setNumber || null,
             partsCount: mocData.partsCount || null,
+            minifigCount: mocData.minifigCount || null,
             theme: mocData.theme || null,
+            themeId: mocData.themeId || null,
             subtheme: mocData.subtheme || null,
             uploadedDate: mocData.uploadedDate ? new Date(mocData.uploadedDate) : now,
             brand: null,
@@ -165,33 +438,56 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
             author: null,
             brand: mocData.brand || null,
             theme: mocData.theme || null,
+            themeId: mocData.themeId || null,
             setNumber: mocData.setNumber || null,
             releaseYear: mocData.releaseYear || null,
             retired: mocData.retired || false,
-            partsCount: null,
+            partsCount: mocData.partsCount || null,
+            minifigCount: mocData.minifigCount || null,
             subtheme: null,
             uploadedDate: null,
           }
 
-    // Insert MOC into database
-    const [moc] = await db.insert(mocInstructions).values(values).returning()
+    // Insert MOC into database (with unique violation fallback for race conditions)
+    let moc
+    try {
+      const [insertedMoc] = await db.insert(mocInstructions).values(values).returning()
+      moc = insertedMoc
+    } catch (insertError) {
+      // Story 3.1.7: Handle Postgres unique violation (code 23505) for race conditions
+      if (isPostgresUniqueViolation(insertError)) {
+        logger.warn('Duplicate title conflict (race condition)', {
+          requestId,
+          ownerId: userId,
+          title: mocData.title,
+        })
+        throw new ConflictError('A MOC with this title already exists', {
+          title: mocData.title,
+        })
+      }
+      throw insertError
+    }
 
-    logger.info('MOC created', { mocId, title: moc.title })
+    logger.info('MOC created', { requestId, ownerId: userId, mocId, title: moc.title })
 
     // Generate presigned URLs for each file
     const uploadUrls = await generatePresignedUrls(mocId, userId, files)
 
     logger.info('Presigned URLs generated', {
+      requestId,
+      ownerId: userId,
       mocId,
       urlCount: uploadUrls.length,
     })
 
+    // Story 3.1.8: Use config-driven session TTL (reuse uploadConfig from rate limit check)
     return successResponse(201, {
       message: 'MOC initialized successfully. Upload files using the provided URLs.',
       data: {
         mocId,
         uploadUrls,
-        expiresIn: 3600, // URLs valid for 1 hour
+        expiresIn: uploadConfig.sessionTtlSeconds, // Session TTL from config
+        sessionTtlSeconds: uploadConfig.sessionTtlSeconds, // Explicit alias for clarity
       },
     })
   } catch (error) {
@@ -214,6 +510,17 @@ function getUserIdFromEvent(event: APIGatewayEvent): string {
 }
 
 /**
+ * Check if error is a Postgres unique violation (code 23505)
+ * Story 3.1.7: Used to catch race conditions on duplicate title
+ */
+function isPostgresUniqueViolation(error: unknown): boolean {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return (error as { code: string }).code === '23505'
+  }
+  return false
+}
+
+/**
  * Validate file requirements
  */
 function validateFileRequirements(files: z.infer<typeof FileMetadataSchema>[]): void {
@@ -228,29 +535,53 @@ function validateFileRequirements(files: z.infer<typeof FileMetadataSchema>[]): 
     throw new BadRequestError('Maximum 10 instruction files allowed')
   }
 
+  // Use config for file count limits
+  const uploadConfig = getUploadConfig()
+
   const partsListFiles = files.filter(f => f.fileType === 'parts-list')
-  if (partsListFiles.length > 10) {
-    throw new BadRequestError('Maximum 10 parts list files allowed')
+  if (partsListFiles.length > uploadConfig.partsListMaxCount) {
+    throw new BadRequestError(`Maximum ${uploadConfig.partsListMaxCount} parts list files allowed`)
   }
 
   const imageFiles = files.filter(f => f.fileType === 'gallery-image' || f.fileType === 'thumbnail')
-  if (imageFiles.length > 3) {
-    throw new BadRequestError('Maximum 3 images allowed')
+  if (imageFiles.length > uploadConfig.imageMaxCount) {
+    throw new BadRequestError(`Maximum ${uploadConfig.imageMaxCount} images allowed`)
   }
 
-  // Validate file sizes
-  const FILE_SIZE_LIMITS = {
-    instruction: 50 * 1024 * 1024, // 50 MB
-    'parts-list': 10 * 1024 * 1024, // 10 MB
-    thumbnail: 5 * 1024 * 1024, // 5 MB
-    'gallery-image': 10 * 1024 * 1024, // 10 MB
-  }
-
+  // Validate file sizes and MIME types using config
   for (const file of files) {
-    const maxSize = FILE_SIZE_LIMITS[file.fileType]
+    let maxSize: number
+    let maxSizeMb: number
+
+    switch (file.fileType) {
+      case 'instruction':
+        maxSize = uploadConfig.pdfMaxBytes
+        maxSizeMb = uploadConfig.pdfMaxMb
+        break
+      case 'parts-list':
+        maxSize = uploadConfig.partsListMaxBytes
+        maxSizeMb = uploadConfig.partsListMaxMb
+        break
+      case 'thumbnail':
+      case 'gallery-image':
+        maxSize = uploadConfig.imageMaxBytes
+        maxSizeMb = uploadConfig.imageMaxMb
+        break
+      default:
+        throw new BadRequestError(`Unknown file type: ${file.fileType}`)
+    }
+
     if (file.size > maxSize) {
       throw new BadRequestError(
-        `File ${file.filename} exceeds size limit for ${file.fileType} (max: ${maxSize / 1024 / 1024} MB)`,
+        `File ${file.filename} exceeds size limit for ${file.fileType} (max: ${maxSizeMb} MB)`,
+      )
+    }
+
+    // Story 3.1.8: Validate MIME type against allowlist
+    if (!isMimeTypeAllowed(file.fileType, file.mimeType)) {
+      const allowedTypes = getAllowedMimeTypes(file.fileType)
+      throw new BadRequestError(
+        `File ${file.filename} has invalid MIME type "${file.mimeType}" for ${file.fileType}. Allowed types: ${allowedTypes.join(', ')}`,
       )
     }
   }
@@ -318,7 +649,9 @@ async function generatePresignedUrls(
       },
     })
 
-    const expiresIn = 3600 // 1 hour
+    // Use TTL from upload config (in seconds)
+    const uploadConfig = getUploadConfig()
+    const expiresIn = uploadConfig.presignTtlSeconds
     const uploadUrl = await getSignedUrl(s3Client as any, command, { expiresIn })
 
     uploadUrls.push({

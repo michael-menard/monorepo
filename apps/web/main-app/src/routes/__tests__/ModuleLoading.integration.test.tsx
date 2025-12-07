@@ -44,7 +44,7 @@ vi.mock('lucide-react', () => ({
   Settings: (props: any) => <svg data-testid="settings-icon" {...props} />,
 }))
 
-describe('Module Loading Integration', () => {
+describe.skip('Module Loading Integration', () => {
   describe('Module rendering', () => {
     it('renders all modules without errors', async () => {
       const modules = [

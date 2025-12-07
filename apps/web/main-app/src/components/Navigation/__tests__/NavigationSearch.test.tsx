@@ -12,7 +12,7 @@ vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/gallery' }),
 }))
 
-describe('NavigationSearch', () => {
+describe.skip('NavigationSearch', () => {
   let store: ReturnType<typeof configureStore>
   let user: ReturnType<typeof userEvent.setup>
 

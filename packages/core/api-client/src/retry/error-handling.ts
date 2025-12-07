@@ -1,9 +1,29 @@
 /**
  * Serverless Error Handling
  * Standardized error handling for serverless API responses
+ *
+ * Story 3.1.4: Cookie-based auth error handling
+ * - 401/403/404 are NEVER retryable
+ * - Only transient errors (429, 5xx) should be retried
  */
 
 import { z } from 'zod'
+
+/**
+ * Story 3.1.4: Non-retryable HTTP status codes
+ * These errors should be surfaced directly to the UI for appropriate handling:
+ * - 401 Unauthorized: prompt re-auth (login)
+ * - 403 Forbidden: show permission error UI
+ * - 404 Not Found: show not-found UI
+ */
+export const NON_RETRYABLE_STATUS_CODES = [401, 403, 404] as const
+
+/**
+ * Check if a status code should never be retried
+ */
+export function isNonRetryableStatus(status: number): boolean {
+  return NON_RETRYABLE_STATUS_CODES.includes(status as 401 | 403 | 404)
+}
 
 /**
  * Standard serverless error response schema
@@ -76,6 +96,11 @@ export class ServerlessApiError extends Error {
     // Try to parse as standard serverless error
     const parsedError = ServerlessErrorSchema.safeParse(errorData)
 
+    // Story 3.1.4: 401/403/404 are NEVER retryable
+    // Only transient errors (429, 5xx) should be retried
+    const isRetryable =
+      !isNonRetryableStatus(response.status) && [429, 500, 502, 503, 504].includes(response.status)
+
     if (parsedError.success) {
       const { error } = parsedError.data
       return new ServerlessApiError(error.message, response.status, error.code, {
@@ -84,7 +109,7 @@ export class ServerlessApiError extends Error {
         timestamp: error.timestamp,
         isColdStart: response.status === 502 || response.status === 503,
         isTimeout: response.status === 504 || response.status === 408,
-        isRetryable: [429, 500, 502, 503, 504].includes(response.status),
+        isRetryable,
       })
     }
 
@@ -97,9 +122,19 @@ export class ServerlessApiError extends Error {
         details: errorData,
         isColdStart: response.status === 502 || response.status === 503,
         isTimeout: response.status === 504 || response.status === 408,
-        isRetryable: [429, 500, 502, 503, 504].includes(response.status),
+        isRetryable,
       },
     )
+  }
+
+  /**
+   * Story 3.1.4: Check if status code should never be retried
+   * - 401 Unauthorized: user not signed in
+   * - 403 Forbidden: resource exists but user not authorized
+   * - 404 Not Found: resource does not exist
+   */
+  static isNonRetryableStatus(status: number): boolean {
+    return isNonRetryableStatus(status)
   }
 
   /**
@@ -123,6 +158,8 @@ export class ServerlessApiError extends Error {
 
 /**
  * Error handler for common serverless error patterns
+ *
+ * Story 3.1.4: Ensures 401/403/404 are never marked as retryable
  */
 export function handleServerlessError(error: any): ServerlessApiError {
   if (error instanceof ServerlessApiError) {
@@ -146,14 +183,18 @@ export function handleServerlessError(error: any): ServerlessApiError {
     })
   }
 
+  // Story 3.1.4: Check if this is a non-retryable error
+  const status = error.status || error.statusCode || 500
+  const shouldRetry = !isNonRetryableStatus(status) && status >= 500
+
   // Generic error fallback
   return new ServerlessApiError(
     error.message || 'Unknown error occurred',
-    error.status || 500,
+    status,
     error.code || 'UNKNOWN_ERROR',
     {
       details: { originalError: error },
-      isRetryable: false,
+      isRetryable: shouldRetry,
     },
   )
 }

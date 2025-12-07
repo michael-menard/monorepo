@@ -136,20 +136,24 @@ export const GalleryCard = ({
       onClick={isInteractive ? handleClick : undefined}
       onKeyDown={isInteractive ? handleKeyDown : undefined}
       className={cn(
-        // Base card styles
-        'group relative flex flex-col overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm',
+        // Base card styles - Cyberpunk translucent surface
+        'group relative flex flex-col overflow-hidden rounded-lg',
+        'bg-card/80 dark:bg-surface backdrop-blur-sm',
+        'border border-border dark:border-surface-border',
+        'text-card-foreground shadow-sm',
         // Interactive states
         isInteractive && [
           'cursor-pointer',
           'outline-none',
           'ring-offset-background',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          // Hover effects
+          // Hover effects - glow border, NO scale transform
           'transition-all duration-200 ease-in-out',
-          'hover:shadow-lg hover:scale-[1.02]',
+          'hover:border-primary/50 dark:hover:border-glow-primary',
+          'hover:shadow-md dark:hover:shadow-glow-primary',
         ],
-        // Selected state
-        selected && 'ring-2 ring-primary ring-offset-2',
+        // Selected state - with glow
+        selected && 'ring-2 ring-primary ring-offset-2 dark:shadow-glow-primary',
         // Loading state
         loading && 'animate-pulse pointer-events-none',
         className,
@@ -285,7 +289,10 @@ export const GalleryCardSkeleton = ({
   return (
     <div
       className={cn(
-        'flex flex-col overflow-hidden rounded-lg border bg-card shadow-sm animate-pulse',
+        'flex flex-col overflow-hidden rounded-lg animate-pulse',
+        'bg-card/80 dark:bg-surface backdrop-blur-sm',
+        'border border-border dark:border-surface-border',
+        'shadow-sm',
         className,
       )}
       data-testid={testId}

@@ -80,6 +80,140 @@ Environment variables are validated at runtime using Zod schemas (see `src/lib/u
 
 See `.env.example` for complete list.
 
+### Upload Configuration (Story 3.1.5)
+
+Upload-related environment variables are validated at startup using Zod schemas. Invalid values cause Lambda initialization failure (fast-fail).
+
+| Variable                       | Description                              | Default              | Valid Range                     |
+| ------------------------------ | ---------------------------------------- | -------------------- | ------------------------------- |
+| `UPLOAD_PDF_MAX_MB`            | Max PDF file size in MB                  | `50`                 | Positive integer                |
+| `UPLOAD_IMAGE_MAX_MB`          | Max image file size in MB                | `20`                 | Positive integer                |
+| `UPLOAD_IMAGE_MAX_COUNT`       | Max images per upload                    | `10`                 | Positive integer                |
+| `UPLOAD_PARTSLIST_MAX_MB`      | Max parts list file size in MB           | `10`                 | Positive integer                |
+| `UPLOAD_PARTSLIST_MAX_COUNT`   | Max parts lists per upload               | `5`                  | Positive integer                |
+| `UPLOAD_ALLOWED_IMAGE_FORMATS` | Allowed image formats (CSV)              | `jpeg,png,webp,heic` | jpeg,jpg,png,webp,heic,heif,gif |
+| `UPLOAD_ALLOWED_PARTS_FORMATS` | Allowed parts list formats (CSV)         | `txt,csv,json,xml`   | txt,csv,json,xml,xlsx,xls       |
+| `UPLOAD_RATE_LIMIT_PER_DAY`    | Max uploads per user per day             | `100`                | Positive integer                |
+| `PRESIGN_TTL_MINUTES`          | Presigned URL and session TTL in minutes | `15`                 | 1-60                            |
+| `FINALIZE_LOCK_TTL_MINUTES`    | Finalize lock TTL for idempotency        | `5`                  | Positive integer                |
+
+**Example:**
+
+```bash
+# Custom upload limits
+UPLOAD_PDF_MAX_MB=100
+UPLOAD_IMAGE_MAX_MB=25
+UPLOAD_IMAGE_MAX_COUNT=20
+UPLOAD_ALLOWED_IMAGE_FORMATS=jpeg,png,webp
+PRESIGN_TTL_MINUTES=30
+```
+
+**Notes:**
+
+- CSV values are normalized: trimmed, lowercased, and deduplicated
+- Invalid formats cause startup failure with descriptive error
+- Config is cached after first access for performance
+- `PRESIGN_TTL_MINUTES` also controls the upload session TTL (Story 3.1.8)
+
+#### Session TTL and MIME Type Validation (Story 3.1.8)
+
+The initialize endpoint returns `sessionTtlSeconds` in the response, which equals `PRESIGN_TTL_MINUTES * 60`. Clients should complete file uploads within this window.
+
+**Allowed MIME Types by File Type:**
+
+| File Type                    | Allowed MIME Types                                                                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `instruction`                | `application/pdf`                                                                                                                                                                                            |
+| `parts-list`                 | `text/csv`, `application/csv`, `text/plain`, `application/json`, `text/json`, `application/xml`, `text/xml`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `application/vnd.ms-excel` |
+| `thumbnail`, `gallery-image` | `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`                                                                                                                                          |
+
+Invalid MIME types are rejected with HTTP 400:
+
+```json
+{
+  "success": false,
+  "error": {
+    "type": "BAD_REQUEST",
+    "message": "File example.txt has invalid MIME type \"text/plain\" for instruction. Allowed types: application/pdf"
+  }
+}
+```
+
+**Finalize Verification (Story 3.1.8):**
+
+During finalize, the API performs additional S3 verification:
+
+1. **HeadObject**: Verifies file exists and checks `ContentLength` against size limits
+2. **GetObject Range**: Fetches first 512 bytes for magic bytes validation (PDF, JPEG, PNG, WebP)
+
+Files that fail verification are rejected with descriptive error messages.
+
+#### Rate Limiting (429 Response)
+
+When a user exceeds their daily upload limit (`UPLOAD_RATE_LIMIT_PER_DAY`), the API returns HTTP 429 with the following response:
+
+```json
+{
+  "success": false,
+  "error": {
+    "type": "TOO_MANY_REQUESTS",
+    "message": "Daily upload limit exceeded",
+    "details": {
+      "message": "You have reached your daily upload limit of 100. Please try again tomorrow.",
+      "nextAllowedAt": "2025-12-07T00:00:00.000Z",
+      "retryAfterSeconds": 28800
+    }
+  },
+  "timestamp": "2025-12-06T16:00:00.000Z"
+}
+```
+
+**Fields:**
+
+- `nextAllowedAt`: ISO timestamp of next UTC midnight when limit resets
+- `retryAfterSeconds`: Seconds until limit resets (for `Retry-After` header)
+
+Rate limits are applied to both `/mocs/with-files/initialize` and `/mocs/{mocId}/finalize` endpoints.
+
+#### Duplicate Title Conflict (409 Response)
+
+When a user attempts to create a MOC with a title that already exists for their account, the API returns HTTP 409:
+
+```json
+{
+  "success": false,
+  "error": {
+    "type": "CONFLICT",
+    "message": "A MOC with this title already exists",
+    "details": {
+      "title": "My Duplicate Title",
+      "existingMocId": "abc123"
+    }
+  },
+  "timestamp": "2025-12-06T16:00:00.000Z"
+}
+```
+
+This is enforced by a unique constraint on `(user_id, title)` in the database.
+
+#### Two-Phase Finalize and Idempotency
+
+The finalize endpoint uses a two-phase locking pattern for safe concurrent access:
+
+1. **Lock Acquisition**: Sets `finalizing_at` timestamp atomically via `UPDATE ... WHERE finalized_at IS NULL AND (finalizing_at IS NULL OR finalizing_at < stale_cutoff)`
+2. **Side Effects**: Verifies S3 files, sets thumbnail, indexes in Elasticsearch
+3. **Completion**: Sets `finalized_at` on success, clears `finalizing_at` on failure
+
+**Idempotent Responses:**
+
+- If MOC is already finalized (`finalized_at IS NOT NULL`), returns `200 OK` with `idempotent: true` and the existing data
+- If another process holds the lock (`finalizing_at` is recent), returns `200 OK` with `idempotent: true, status: 'finalizing'`
+- Stale locks (older than `FINALIZE_LOCK_TTL_MINUTES`, default 5) are automatically rescued
+
+**Environment Variable:**
+
+- `FINALIZE_LOCK_TTL_MINUTES`: Lock timeout in minutes (default: 5)
+
 ### Local Development Setup
 
 1. **Copy environment template:**

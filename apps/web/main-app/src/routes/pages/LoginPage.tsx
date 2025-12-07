@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
@@ -108,10 +108,16 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(LoginSchema),
     mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+    },
   })
 
   const onSubmit = async (data: LoginFormData) => {
@@ -339,10 +345,17 @@ export function LoginPage() {
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="rememberMe"
-                    {...register('rememberMe')}
-                    className="border-slate-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500"
+                  <Controller
+                    name="rememberMe"
+                    control={control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="rememberMe"
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                        className="border-slate-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500"
+                      />
+                    )}
                   />
                   <Label htmlFor="rememberMe" className="text-sm text-slate-700 cursor-pointer">
                     Remember me

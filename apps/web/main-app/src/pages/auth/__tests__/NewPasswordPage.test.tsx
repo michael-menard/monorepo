@@ -59,7 +59,7 @@ describe('NewPasswordPage', () => {
 
     render(<NewPasswordPage />)
 
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' })
   })
 
   it('redirects to OTP page if wrong challenge type', () => {
@@ -202,7 +202,7 @@ describe('NewPasswordPage', () => {
     await user.click(backButton)
 
     expect(mockClearChallenge).toHaveBeenCalled()
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth/login' })
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' })
   })
 
   it('disables form during submission', async () => {

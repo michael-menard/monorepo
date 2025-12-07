@@ -226,18 +226,22 @@ export function createDocumentValidationConfig(maxSize = 50 * 1024 * 1024): File
   }
 }
 
-export function createLegoInstructionValidationConfig(): FileValidationConfig {
+export function createLegoInstructionValidationConfig(
+  maxSize = 50 * 1024 * 1024,
+): FileValidationConfig {
   return {
     allowedTypes: ['lego-instruction'],
-    maxSize: 50 * 1024 * 1024,
+    maxSize,
     allowMimeTypeFallback: true,
   }
 }
 
-export function createLegoPartsListValidationConfig(): FileValidationConfig {
+export function createLegoPartsListValidationConfig(
+  maxSize = 10 * 1024 * 1024,
+): FileValidationConfig {
   return {
     allowedTypes: ['lego-parts-list'],
-    maxSize: 10 * 1024 * 1024,
+    maxSize,
     allowMimeTypeFallback: true,
   }
 }

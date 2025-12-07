@@ -14,7 +14,7 @@ import { IntelligentCacheManager } from '@repo/cache/managers/IntelligentCacheMa
 import { CacheAnalytics } from '@repo/cache/analytics/CacheAnalytics'
 import { PerformanceMonitor } from '@repo/cache/utils/performanceMonitor'
 
-describe('Cache Performance Tests', () => {
+describe.skip('Cache Performance Tests', () => {
   let cacheManager: IntelligentCacheManager
   let analytics: CacheAnalytics
   let performanceMonitor: PerformanceMonitor

@@ -1,5 +1,12 @@
 import React from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/app-component-library'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@repo/app-component-library'
 import { AlertCircle, FileX, File } from 'lucide-react'
 import type { FileItem, FileListConfig, ResponsiveColumns } from '../schemas'
 import { formatFileSize, formatDate, getFileIcon } from '../utils'
@@ -61,10 +68,13 @@ export const FileList: React.FC<FileListProps> = ({
 }) => {
   const mergedConfig = { ...defaultConfig, ...config }
 
+  // Container classes - cyberpunk translucent styling
+  const containerClasses = `rounded-lg border border-border dark:border-surface-border bg-card/80 dark:bg-surface backdrop-blur-sm ${className}`
+
   // Loading state
   if (loading) {
     return (
-      <div className={`border rounded-lg ${className}`}>
+      <div className={containerClasses}>
         <div className="p-8 text-center text-muted-foreground">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           Loading files...
@@ -76,7 +86,7 @@ export const FileList: React.FC<FileListProps> = ({
   // Error state
   if (error) {
     return (
-      <div className={`border rounded-lg ${className}`}>
+      <div className={containerClasses}>
         <div className="p-8 text-center text-destructive">
           <AlertCircle className="h-8 w-8 mx-auto mb-4" />
           <p>{error}</p>
@@ -89,7 +99,7 @@ export const FileList: React.FC<FileListProps> = ({
   if (!files || files.length === 0) {
     const emptyMessage = mergedConfig.emptyMessage || 'No files available'
     return (
-      <div className={`border rounded-lg ${className}`}>
+      <div className={containerClasses}>
         <div className="p-8 text-center text-muted-foreground">
           <FileX className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>{emptyMessage}</p>
@@ -132,7 +142,7 @@ export const FileList: React.FC<FileListProps> = ({
   }
 
   return (
-    <div className={`border rounded-lg ${className}`}>
+    <div className={containerClasses}>
       <Table>
         {mergedConfig.showHeaders ? (
           <TableHeader className="hidden lg:table-header-group">
@@ -160,8 +170,8 @@ export const FileList: React.FC<FileListProps> = ({
                 key={file.id}
                 onClick={onFileClick ? () => onFileClick(file) : undefined}
                 className={`
-                  ${mergedConfig.striped && index % 2 === 1 ? 'bg-muted/25' : ''}
-                  ${onFileClick ? 'cursor-pointer hover:bg-muted/50' : ''}
+                  ${mergedConfig.striped && index % 2 === 1 ? 'bg-muted/25 dark:bg-surface-light/30' : ''}
+                  ${onFileClick ? 'cursor-pointer hover:bg-muted/50 dark:hover:bg-surface-light/50 transition-colors duration-150' : ''}
                 `.trim()}
               >
                 <TableCell className={getColumnClasses('icon')}>

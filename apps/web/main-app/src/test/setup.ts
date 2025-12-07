@@ -124,8 +124,9 @@ vi.mock('@repo/logger', () => ({
   })),
 }))
 
-// Mock @repo/ui barrel import
+// Mock @repo/app-component-library - SINGLE consolidated mock with all exports
 vi.mock('@repo/app-component-library', () => ({
+  // StatsCards
   StatsCards: vi.fn(({ items, isLoading, error, emptyTitle, emptyDescription, ariaLabel }) => {
     if (isLoading) {
       return React.createElement(
@@ -196,21 +197,14 @@ vi.mock('@repo/app-component-library', () => ({
       ),
     )
   }),
-  Card: vi.fn(({ children, className, ...props }) =>
-    React.createElement('div', { className, 'data-testid': 'card', ...props }, children),
-  ),
-  cn: vi.fn((...classes: (string | undefined)[]) => classes.filter(Boolean).join(' ')),
-}))
 
-// Mock UI Components with direct imports (no barrel files)
-vi.mock('@repo/app-component-library', () => ({
+  // Button
   Button: vi.fn(({ children, onClick, className, ...props }) =>
     React.createElement('button', { onClick, className, ...props }, children),
   ),
   buttonVariants: vi.fn(() => 'button-variants-class'),
-}))
 
-vi.mock('@repo/app-component-library', () => ({
+  // Card components
   Card: vi.fn(({ children, className, ...props }) =>
     React.createElement('div', { className, 'data-testid': 'card', ...props }, children),
   ),
@@ -226,9 +220,11 @@ vi.mock('@repo/app-component-library', () => ({
   CardTitle: vi.fn(({ children, className, ...props }) =>
     React.createElement('h4', { className, ...props }, children),
   ),
-}))
+  CardFooter: vi.fn(({ children, className, ...props }) =>
+    React.createElement('div', { className, ...props }, children),
+  ),
 
-vi.mock('@repo/app-component-library', () => ({
+  // Dropdown components
   DropdownMenu: vi.fn(({ children }) =>
     React.createElement('div', { 'data-testid': 'dropdown-menu' }, children),
   ),
@@ -249,14 +245,11 @@ vi.mock('@repo/app-component-library', () => ({
     React.createElement('hr', { className, ...props }),
   ),
   DropdownMenuTrigger: vi.fn(({ children, asChild, ...props }) => {
-    if (asChild && children) {
-      return children
-    }
+    if (asChild && children) return children
     return React.createElement('button', props, children)
   }),
-}))
 
-vi.mock('@repo/app-component-library', () => ({
+  // Avatar components
   Avatar: vi.fn(({ children, className, ...props }) =>
     React.createElement('span', { className, ...props }, children),
   ),
@@ -266,46 +259,198 @@ vi.mock('@repo/app-component-library', () => ({
   AvatarFallback: vi.fn(({ children, className, ...props }) =>
     React.createElement('span', { className, ...props }, children),
   ),
-}))
 
-vi.mock('@repo/app-component-library', () => ({
+  // Badge
   Badge: vi.fn(({ children, className, variant, ...props }) =>
     React.createElement('span', { className, 'data-variant': variant, ...props }, children),
   ),
-}))
 
-vi.mock('@repo/app-component-library', () => ({
+  // LoadingSpinner
   LoadingSpinner: vi.fn(({ className, ...props }) =>
     React.createElement('div', { className, 'data-testid': 'loading-spinner', ...props }),
   ),
-}))
 
-// Mock additional UI components needed for auth tests
-vi.mock('@repo/app-component-library', () => ({
+  // Form components
   Input: vi.fn(props => React.createElement('input', { 'data-testid': 'input', ...props })),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   Label: vi.fn(({ children, ...props }) =>
     React.createElement('label', { 'data-testid': 'label', ...props }, children),
   ),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
   Checkbox: vi.fn(props =>
     React.createElement('input', { type: 'checkbox', 'data-testid': 'checkbox', ...props }),
   ),
-}))
 
-vi.mock('@repo/app-component-library', () => ({
+  // Alert components
   Alert: vi.fn(({ children, ...props }) =>
-    React.createElement('div', { 'data-testid': 'alert', ...props }, children),
+    React.createElement('div', { 'data-testid': 'alert', role: 'alert', ...props }, children),
   ),
   AlertTitle: vi.fn(({ children, ...props }) =>
     React.createElement('div', { 'data-testid': 'alert-title', ...props }, children),
   ),
   AlertDescription: vi.fn(({ children, ...props }) =>
     React.createElement('div', { 'data-testid': 'alert-description', ...props }, children),
+  ),
+
+  // Progress
+  Progress: vi.fn(({ className, value, ...props }) =>
+    React.createElement('div', {
+      className,
+      'data-value': value,
+      'data-testid': 'progress',
+      ...props,
+    }),
+  ),
+
+  // Select components
+  Select: vi.fn(({ children }) =>
+    React.createElement('div', { 'data-testid': 'select' }, children),
+  ),
+  SelectContent: vi.fn(({ children }) => React.createElement('div', {}, children)),
+  SelectItem: vi.fn(({ children, value }) => React.createElement('option', { value }, children)),
+  SelectTrigger: vi.fn(({ children }) => React.createElement('button', {}, children)),
+  SelectValue: vi.fn(() => React.createElement('span', {})),
+
+  // Tabs components
+  Tabs: vi.fn(({ children }) => React.createElement('div', { 'data-testid': 'tabs' }, children)),
+  TabsContent: vi.fn(({ children }) => React.createElement('div', {}, children)),
+  TabsList: vi.fn(({ children }) => React.createElement('div', {}, children)),
+  TabsTrigger: vi.fn(({ children }) => React.createElement('button', {}, children)),
+
+  // Theme
+  ThemeProvider: vi.fn(({ children }) => children),
+  useTheme: vi.fn(() => ({ theme: 'light', setTheme: vi.fn() })),
+
+  // Toast
+  useToast: vi.fn(() => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] })),
+  toast: vi.fn(),
+  Toaster: vi.fn(() => null),
+
+  // Utility
+  cn: vi.fn((...classes: (string | undefined)[]) => classes.filter(Boolean).join(' ')),
+
+  // Dialog components
+  Dialog: vi.fn(({ children }) =>
+    React.createElement('div', { 'data-testid': 'dialog' }, children),
+  ),
+  DialogContent: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { 'data-testid': 'dialog-content', ...props }, children),
+  ),
+  DialogHeader: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { ...props }, children),
+  ),
+  DialogTitle: vi.fn(({ children, ...props }) => React.createElement('h2', { ...props }, children)),
+  DialogDescription: vi.fn(({ children, ...props }) =>
+    React.createElement('p', { ...props }, children),
+  ),
+  DialogFooter: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { ...props }, children),
+  ),
+  DialogTrigger: vi.fn(({ children }) => children),
+  DialogClose: vi.fn(({ children }) => children),
+
+  // Separator
+  Separator: vi.fn(({ className, ...props }) => React.createElement('hr', { className, ...props })),
+
+  // ScrollArea
+  ScrollArea: vi.fn(({ children, className, ...props }) =>
+    React.createElement('div', { className, ...props }, children),
+  ),
+
+  // Skeleton
+  Skeleton: vi.fn(({ className, ...props }) =>
+    React.createElement('div', { className, 'data-testid': 'skeleton', ...props }),
+  ),
+
+  // Tooltip
+  Tooltip: vi.fn(({ children }) => children),
+  TooltipContent: vi.fn(({ children }) =>
+    React.createElement('div', { 'data-testid': 'tooltip-content' }, children),
+  ),
+  TooltipProvider: vi.fn(({ children }) => children),
+  TooltipTrigger: vi.fn(({ children }) => children),
+
+  // Form (react-hook-form integration)
+  Form: vi.fn(({ children }) => React.createElement('form', {}, children)),
+  FormControl: vi.fn(({ children }) => children),
+  FormDescription: vi.fn(({ children }) =>
+    React.createElement('p', { 'data-testid': 'form-description' }, children),
+  ),
+  FormField: vi.fn(({ render }) => render({ field: {}, fieldState: {}, formState: {} })),
+  FormItem: vi.fn(({ children }) => React.createElement('div', {}, children)),
+  FormLabel: vi.fn(({ children, ...props }) => React.createElement('label', props, children)),
+  FormMessage: vi.fn(({ children }) =>
+    React.createElement('p', { 'data-testid': 'form-message' }, children),
+  ),
+
+  // InputOTP
+  InputOTP: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { 'data-testid': 'input-otp', ...props }, children),
+  ),
+  InputOTPGroup: vi.fn(({ children }) =>
+    React.createElement('div', { 'data-testid': 'input-otp-group' }, children),
+  ),
+  InputOTPSlot: vi.fn(({ index, ...props }) =>
+    React.createElement('input', { 'data-testid': `input-otp-slot-${index}`, ...props }),
+  ),
+  InputOTPSeparator: vi.fn(() =>
+    React.createElement('span', { 'data-testid': 'input-otp-separator' }, '-'),
+  ),
+
+  // App-prefixed components (aliases used in some components)
+  CustomButton: vi.fn(({ children, onClick, className, ...props }) =>
+    React.createElement('button', { onClick, className, ...props }, children),
+  ),
+  AppDropdownMenu: vi.fn(({ children }) =>
+    React.createElement('div', { 'data-testid': 'dropdown-menu' }, children),
+  ),
+  AppDropdownMenuContent: vi.fn(({ children, className, ...props }) =>
+    React.createElement(
+      'div',
+      { className, 'data-testid': 'dropdown-content', ...props },
+      children,
+    ),
+  ),
+  AppDropdownMenuItem: vi.fn(({ children, onClick, className, ...props }) =>
+    React.createElement('div', { onClick, className, role: 'menuitem', ...props }, children),
+  ),
+  AppDropdownMenuLabel: vi.fn(({ children, className, ...props }) =>
+    React.createElement('div', { className, ...props }, children),
+  ),
+  AppDropdownMenuSeparator: vi.fn(({ className, ...props }) =>
+    React.createElement('hr', { className, ...props }),
+  ),
+  AppDropdownMenuTrigger: vi.fn(({ children, asChild, ...props }) => {
+    if (asChild && children) return children
+    return React.createElement('button', props, children)
+  }),
+  AppAvatar: vi.fn(({ children, className, ...props }) =>
+    React.createElement('span', { className, ...props }, children),
+  ),
+  AppBadge: vi.fn(({ children, className, variant, ...props }) =>
+    React.createElement('span', { className, 'data-variant': variant, ...props }, children),
+  ),
+  AppAlertDialog: vi.fn(({ children, open }) =>
+    open ? React.createElement('div', { 'data-testid': 'alert-dialog' }, children) : null,
+  ),
+  AppAlertDialogAction: vi.fn(({ children, onClick, ...props }) =>
+    React.createElement('button', { onClick, ...props }, children),
+  ),
+  AppAlertDialogCancel: vi.fn(({ children, onClick, ...props }) =>
+    React.createElement('button', { onClick, ...props }, children),
+  ),
+  AppAlertDialogContent: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { 'data-testid': 'alert-dialog-content', ...props }, children),
+  ),
+  AppAlertDialogDescription: vi.fn(({ children, ...props }) =>
+    React.createElement('p', { ...props }, children),
+  ),
+  AppAlertDialogFooter: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { ...props }, children),
+  ),
+  AppAlertDialogHeader: vi.fn(({ children, ...props }) =>
+    React.createElement('div', { ...props }, children),
+  ),
+  AppAlertDialogTitle: vi.fn(({ children, ...props }) =>
+    React.createElement('h2', { ...props }, children),
   ),
 }))
 
@@ -338,47 +483,6 @@ vi.mock('framer-motion', () => ({
     }
     return { stop: vi.fn() }
   }),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
-  Progress: vi.fn(({ className, value, ...props }) =>
-    React.createElement('div', {
-      className,
-      'data-value': value,
-      'data-testid': 'progress',
-      ...props,
-    }),
-  ),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
-  Select: vi.fn(({ children }) =>
-    React.createElement('div', { 'data-testid': 'select' }, children),
-  ),
-  SelectContent: vi.fn(({ children }) => React.createElement('div', {}, children)),
-  SelectItem: vi.fn(({ children, value }) => React.createElement('option', { value }, children)),
-  SelectTrigger: vi.fn(({ children }) => React.createElement('button', {}, children)),
-  SelectValue: vi.fn(() => React.createElement('span', {})),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
-  Tabs: vi.fn(({ children }) => React.createElement('div', { 'data-testid': 'tabs' }, children)),
-  TabsContent: vi.fn(({ children }) => React.createElement('div', {}, children)),
-  TabsList: vi.fn(({ children }) => React.createElement('div', {}, children)),
-  TabsTrigger: vi.fn(({ children }) => React.createElement('button', {}, children)),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
-  cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
-  cn: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
-}))
-
-vi.mock('@repo/app-component-library', () => ({
-  ThemeProvider: vi.fn(({ children }) => children),
-  useTheme: vi.fn(() => ({ theme: 'light', setTheme: vi.fn() })),
 }))
 
 // Mock AuthLayout component while preserving real RootLayout and ErrorLayout
@@ -472,6 +576,83 @@ vi.mock('react-hook-form', () => ({
 // Mock zod resolver
 vi.mock('@hookform/resolvers/zod', () => ({
   zodResolver: vi.fn(() => vi.fn()),
+}))
+
+// Mock @/store - RTK Query hooks and store
+vi.mock('@/store', () => ({
+  store: {
+    getState: vi.fn(() => ({
+      auth: { isAuthenticated: false, user: null },
+      theme: { mode: 'light' },
+      navigation: { activeRoute: '/' },
+      globalUI: {},
+    })),
+    dispatch: vi.fn(),
+    subscribe: vi.fn(),
+  },
+  // Enhanced Gallery API hooks
+  useEnhancedGallerySearchQuery: vi.fn(() => ({
+    data: { data: { images: [], totalCount: 0 }, pagination: { page: 1, totalPages: 1 } },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  })),
+  useLazyEnhancedGallerySearchQuery: vi.fn(() => [vi.fn(), { data: null, isLoading: false }]),
+  useGetGalleryImageQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useGetGalleryImageMetadataQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useBatchGetGalleryImagesQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useUploadGalleryImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useBatchUploadGalleryImagesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateGalleryImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeleteGalleryImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useEnhancedBatchGalleryOperationMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetEnhancedGalleryStatsQuery: vi.fn(() => ({
+    data: { data: { totalImages: 0, totalCategories: 0, recentUploads: 0 } },
+    isLoading: false,
+    error: null,
+  })),
+  // Enhanced Wishlist API hooks
+  useEnhancedWishlistQueryQuery: vi.fn(() => ({
+    data: { data: { items: [], totalCount: 0 }, pagination: { page: 1, totalPages: 1 } },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  })),
+  useLazyEnhancedWishlistQueryQuery: vi.fn(() => [vi.fn(), { data: null, isLoading: false }]),
+  useGetWishlistItemQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useAddWishlistItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateWishlistItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeleteWishlistItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useEnhancedBatchWishlistOperationMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useShareWishlistMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetSharedWishlistQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useImportWishlistItemsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useExportWishlistMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetEnhancedPriceEstimatesQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useGetEnhancedWishlistStatsQuery: vi.fn(() => ({
+    data: { data: { totalItems: 0, totalValue: 0 } },
+    isLoading: false,
+    error: null,
+  })),
+  useManagePriceAlertsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  // Dashboard API hooks
+  useGetStatsQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useGetRecentMocsQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useRefreshDashboardMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  // Legacy aliases
+  useSearchGalleryQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useGetWishlistQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useBatchGalleryOperationMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useBatchWishlistOperationMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetGalleryStatsQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useGetWishlistStatsQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useGetPriceEstimatesQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  // API instances (mocked)
+  enhancedGalleryApi: { reducerPath: 'galleryApi', reducer: vi.fn(), middleware: vi.fn() },
+  enhancedWishlistApi: { reducerPath: 'wishlistApi', reducer: vi.fn(), middleware: vi.fn() },
+  galleryApi: { reducerPath: 'galleryApi', reducer: vi.fn(), middleware: vi.fn() },
+  wishlistApi: { reducerPath: 'wishlistApi', reducer: vi.fn(), middleware: vi.fn() },
+  dashboardApi: { reducerPath: 'dashboardApi', reducer: vi.fn(), middleware: vi.fn() },
 }))
 
 // Note: Redux mocking is handled per test file as needed
@@ -587,6 +768,18 @@ vi.mock('lucide-react', () => ({
   ),
   Loader2: vi.fn(props => React.createElement('svg', { 'data-testid': 'loader-icon', ...props })),
   Package: vi.fn(props => React.createElement('svg', { 'data-testid': 'package-icon', ...props })),
+  // Story 3.1.10: Uploader icons
+  List: vi.fn(props => React.createElement('svg', { 'data-testid': 'list-icon', ...props })),
+  Image: vi.fn(props => React.createElement('svg', { 'data-testid': 'image-icon', ...props })),
+  ImageIcon: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'image-icon-icon', ...props }),
+  ),
+  RefreshCw: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'refresh-cw-icon', ...props }),
+  ),
+  Construction: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'construction-icon', ...props }),
+  ),
 }))
 
 // Global test utilities

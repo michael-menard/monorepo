@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
@@ -109,10 +109,18 @@ export function SignupPage() {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(SignupSchema),
     mode: 'onChange',
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      acceptTerms: false,
+    },
   })
 
   const watchedPassword = watch('password')
@@ -443,13 +451,22 @@ export function SignupPage() {
               </div>
 
               {/* Terms and Conditions */}
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="acceptTerms"
-                  {...register('acceptTerms')}
-                  className={cn(
-                    'mt-1 border-slate-300 dark:border-slate-600 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500',
-                    errors.acceptTerms && 'border-red-300',
+              <div className="flex items-start space-x-3">
+                <Controller
+                  name="acceptTerms"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="acceptTerms"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className={cn(
+                        'mt-0.5 h-5 w-5 border-2 border-slate-300 dark:border-slate-600',
+                        'data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500',
+                        'transition-all duration-200 rounded',
+                        errors.acceptTerms && 'border-red-400 dark:border-red-500',
+                      )}
+                    />
                   )}
                 />
                 <div className="space-y-1">

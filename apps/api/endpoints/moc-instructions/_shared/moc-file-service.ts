@@ -31,18 +31,9 @@ import {
   DatabaseError,
 } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
+import { getUploadConfig } from '@/core/config/upload'
 
 const logger = createLogger('moc-file-service')
-
-/**
- * File size limits (in bytes)
- */
-const FILE_SIZE_LIMITS = {
-  instruction: 50 * 1024 * 1024, // 50 MB for PDFs
-  'parts-list': 10 * 1024 * 1024, // 10 MB for Excel/CSV
-  thumbnail: 5 * 1024 * 1024, // 5 MB for images
-  'gallery-image': 10 * 1024 * 1024, // 10 MB for images
-}
 
 /**
  * Custom validator for magic bytes verification
@@ -77,6 +68,7 @@ const magicBytesValidator: FileValidator = {
 /**
  * Get validation configuration based on file type
  * Uses @monorepo/file-validator for magic bytes validation
+ * Uses environment-configured size limits from upload config
  *
  * @param fileType - Type of file being uploaded
  * @returns Validation configuration with magic bytes support
@@ -84,20 +76,21 @@ const magicBytesValidator: FileValidator = {
 function getValidationConfig(
   fileType: 'instruction' | 'parts-list' | 'thumbnail' | 'gallery-image',
 ): FileValidationConfig {
+  const uploadConfig = getUploadConfig()
   let config: FileValidationConfig
 
   switch (fileType) {
     case 'instruction':
-      config = createLegoInstructionValidationConfig()
+      config = createLegoInstructionValidationConfig(uploadConfig.pdfMaxBytes)
       break
 
     case 'parts-list':
-      config = createLegoPartsListValidationConfig()
+      config = createLegoPartsListValidationConfig(uploadConfig.partsListMaxBytes)
       break
 
     case 'thumbnail':
     case 'gallery-image':
-      config = createImageValidationConfig(FILE_SIZE_LIMITS[fileType])
+      config = createImageValidationConfig(uploadConfig.imageMaxBytes)
       break
 
     default:

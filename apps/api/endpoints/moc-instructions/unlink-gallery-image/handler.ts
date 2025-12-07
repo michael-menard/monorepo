@@ -27,15 +27,18 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       return errorResponse(400, 'VALIDATION_ERROR', 'MOC ID and Gallery Image ID are required')
     }
 
-    // Verify MOC ownership
+    // Verify MOC exists and ownership
     const [moc] = await db
       .select()
       .from(mocInstructions)
-      .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+      .where(eq(mocInstructions.id, mocId))
       .limit(1)
 
     if (!moc) {
-      return errorResponse(404, 'NOT_FOUND', 'MOC not found or unauthorized')
+      return errorResponse(404, 'NOT_FOUND', 'MOC not found')
+    }
+    if (moc.userId !== userId) {
+      return errorResponse(403, 'FORBIDDEN', 'You do not own this MOC')
     }
 
     // Check if link exists
