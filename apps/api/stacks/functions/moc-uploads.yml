@@ -1,0 +1,253 @@
+# Functions Stack: MOC Uploads (Multipart Upload Sessions)
+# Deploys: Multipart upload session Lambda functions for large file uploads
+#
+# Deploy:
+#   pnpm serverless deploy --config stacks/functions/moc-uploads.yml --stage dev
+#
+# Dependencies: network, security, database, storage, auth
+# Dependents: monitoring
+
+service: lego-api-moc-uploads
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-esbuild
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: ${self:custom.stageConfig.memorySize}
+  timeout: 29
+  deploymentMethod: direct
+
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    NODE_OPTIONS: '--enable-source-maps'
+    LOG_LEVEL: ${self:custom.stageConfig.logLevel}
+    # Database
+    POSTGRES_HOST: ${cf:lego-database-${self:provider.stage}.ClusterEndpoint}
+    POSTGRES_PORT: ${cf:lego-database-${self:provider.stage}.ClusterPort}
+    POSTGRES_DATABASE: ${cf:lego-database-${self:provider.stage}.DatabaseName}
+    DB_SECRET_ARN: ${cf:lego-database-${self:provider.stage}.SecretArn}
+    # S3
+    S3_BUCKET: ${cf:lego-storage-${self:provider.stage}.BucketName}
+    # Cognito
+    COGNITO_USER_POOL_ID: ${cf:lego-auth-${self:provider.stage}.UserPoolId}
+    COGNITO_CLIENT_ID: ${cf:lego-auth-${self:provider.stage}.UserPoolClientId}
+
+  vpc:
+    securityGroupIds:
+      - ${cf:lego-security-${self:provider.stage}.LambdaSecurityGroupId}
+    subnetIds:
+      - ${cf:lego-network-${self:provider.stage}.PrivateSubnet1Id}
+      - ${cf:lego-network-${self:provider.stage}.PrivateSubnet2Id}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: 'arn:aws:logs:${self:provider.region}:*:*'
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+            - ec2:AssignPrivateIpAddresses
+            - ec2:UnassignPrivateIpAddresses
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: ${cf:lego-database-${self:provider.stage}.SecretArn}
+        # Standard S3 permissions
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+            - s3:GetObjectTagging
+            - s3:PutObjectTagging
+          Resource:
+            - ${cf:lego-storage-${self:provider.stage}.BucketArn}
+            - !Sub '${cf:lego-storage-${self:provider.stage}.BucketArn}/*'
+        # S3 Multipart Upload permissions (required for chunked uploads)
+        - Effect: Allow
+          Action:
+            - s3:CreateMultipartUpload
+            - s3:UploadPart
+            - s3:CompleteMultipartUpload
+            - s3:AbortMultipartUpload
+            - s3:ListMultipartUploadParts
+          Resource:
+            - ${cf:lego-storage-${self:provider.stage}.BucketArn}
+            - !Sub '${cf:lego-storage-${self:provider.stage}.BucketArn}/*'
+
+  httpApi:
+    name: lego-api-moc-uploads-${self:provider.stage}
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+        - http://localhost:5173
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+        - X-Request-Id
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
+    authorizers:
+      cognitoJwtAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: ${cf:lego-auth-${self:provider.stage}.IssuerUrl}
+        audience:
+          - ${cf:lego-auth-${self:provider.stage}.UserPoolClientId}
+
+  tags:
+    Project: lego-api
+    Environment: ${self:provider.stage}
+    ManagedBy: Serverless
+    Stack: functions-moc-uploads
+
+custom:
+  shared: ${file(../shared-config.yml)}
+  stage: ${self:provider.stage}
+  stageConfig: ${self:custom.shared.stages.${self:custom.stage}, self:custom.shared.stages.dev}
+  # Upload functions need more memory for handling large file chunks
+  uploadMemorySize:
+    dev: 512
+    staging: 1024
+    production: 1024
+
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    concurrency: 10
+    exclude:
+      - '@aws-sdk/*'
+    plugins: ../../esbuild-plugins.js
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.sst/**'
+    - '!.turbo/**'
+    - '!docs/**'
+    - '!**/*.test.ts'
+    - '!**/*.spec.ts'
+    - '!**/__tests__/**'
+    - '!coverage/**'
+
+functions:
+  # Create upload session
+  # POST /api/mocs/uploads/sessions
+  # Creates a new multipart upload session, validates file metadata, enforces rate limiting
+  createSession:
+    handler: ../../endpoints/moc-uploads/sessions/create/handler.handler
+    description: Create multipart upload session
+    memorySize: ${self:custom.uploadMemorySize.${self:custom.stage}, 512}
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Register file in session
+  # POST /api/mocs/uploads/sessions/{sessionId}/files
+  # Registers a file for upload, initiates S3 multipart upload
+  registerFile:
+    handler: ../../endpoints/moc-uploads/sessions/register-file/handler.handler
+    description: Register file in upload session
+    memorySize: ${self:custom.uploadMemorySize.${self:custom.stage}, 512}
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/files
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Upload file part
+  # PUT /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/parts/{partNumber}
+  # Uploads a single chunk (5MB) of the file
+  uploadPart:
+    handler: ../../endpoints/moc-uploads/sessions/upload-part/handler.handler
+    description: Upload file part (chunk)
+    memorySize: ${self:custom.uploadMemorySize.${self:custom.stage}, 512}
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/parts/{partNumber}
+          method: PUT
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Complete file upload
+  # POST /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/complete
+  # Completes S3 multipart upload, verifies all parts present
+  completeFile:
+    handler: ../../endpoints/moc-uploads/sessions/complete-file/handler.handler
+    description: Complete file multipart upload
+    memorySize: ${self:custom.uploadMemorySize.${self:custom.stage}, 512}
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/complete
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Finalize session
+  # POST /api/mocs/uploads/sessions/{sessionId}/finalize
+  # Verifies files in S3, validates magic bytes, creates MOC record
+  finalizeSession:
+    handler: ../../endpoints/moc-uploads/sessions/finalize/handler.handler
+    description: Finalize upload session and create MOC
+    memorySize: ${self:custom.uploadMemorySize.${self:custom.stage}, 512}
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/finalize
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+resources:
+  Outputs:
+    HttpApiUrl:
+      Description: MOC Uploads API URL
+      Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+      Export:
+        Name: lego-api-moc-uploads-${self:provider.stage}-ApiUrl
+
+    HttpApiId:
+      Description: MOC Uploads API Gateway ID
+      Value: !Ref HttpApi
+      Export:
+        Name: lego-api-moc-uploads-${self:provider.stage}-ApiId
