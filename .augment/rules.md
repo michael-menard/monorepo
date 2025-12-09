@@ -1,6 +1,6 @@
 ---
 ruleset: master
-version: 2
+version: 3
 description: Unified Auggie rules for AI-assisted development, testing, and collaboration.
 ---
 
@@ -38,20 +38,21 @@ description: Unified Auggie rules for AI-assisted development, testing, and coll
   - **Routing:** Use **TanStack Router** as the default. Introducing/using an alternative (e.g., React Router) requires an RFC and approval.
 - **Ports:** Service ports are defined in the root `.env` file and must never be changed. If a port is busy, kill the existing process - it means the service is already running and should be stopped before starting a new instance.
 - **Startup:** Use only `pnpm dev` or `pnpm start` from the root to run the stack. Do not add alternative entrypoints.
-- **Packages:** Use `pnpm add/remove` for dependency changes; never hand-edit lockfiles.
+- **Packages:** Use `pnpm add/remove` for dependency changes; never hand-edit lockfiles or package.json.
 - **Monorepo:** Respect workspace boundaries; prefer shared packages over duplication. Use TS project references and `paths` aliases.
 - **TypeScript:** `strict` on; avoid `any`. Do not suppress errors with `@ts-ignore` unless justified in a comment.
 - **Imports:** external → internal → relative; prefer absolute imports via `tsconfig` paths.
 - **Security:** Never hardcode secrets; use env vars; validate inputs with Zod; prefer HTTPS; avoid risky IAM/infra edits without human review.
 - **Change process for shared code:** Discuss with human **before** modifying shared packages. Prefer **composition over inheritance** and keep modules **closed for modification, open for extension** (OCP).
 - **Error handling:** Never use `throw new Error()` - create custom error types in `packages/` dir. Never expose 500 errors to users; throw errors with details on what went wrong.
-- **Logging:** Use Winston for all logging; never use `console.log` so logs can be controlled in production.
+- **Logging:** Use `@repo/logger` for all logging; never use `console.log`. The only exception is within `@repo/logger` itself (the ConsoleTransport).
 - **Imports:** Use specific imports (`import { foo } from 'lib'`) over barrel imports. Never use barrel exports - they make debugging harder and slow down builds.
 - **Performance:** New routes should be lazy-loaded by default. Run bundle analyzer before adding heavy dependencies.
 - **Environment:** All environment variables must be validated with Zod schemas at startup.
 - **Database:** Never modify existing migrations; create new ones for schema changes. Include indexes for new query patterns.
 - **File naming:** Use kebab-case for files, PascalCase for components, camelCase for functions/variables.
 - **Dependencies:** Avoid circular imports; use dependency injection or event patterns instead.
+- **Unused variables:** Prefix intentionally unused variables with underscore (e.g., `_unusedVar`) to satisfy TypeScript's `noUnusedLocals`.
 
 ## testing
 
@@ -65,14 +66,19 @@ description: Unified Auggie rules for AI-assisted development, testing, and coll
   - Prefer `waitFor` over timeouts for async.
   - Keep tests hermetic; no network except controlled mocks.
   - Run E2E in CI with retries and artifacts (traces, screenshots) on failure.
+  - Use semantic queries: `getByRole`, `getByLabelText` over `getByTestId`.
+  - Minimum coverage: 45% global.
+- **Test location:** Tests go in `__tests__/` directories adjacent to the code being tested.
 - **Commands** (examples): `pnpm test`, `pnpm test:watch`, `pnpm test:coverage`, `pnpm test:e2e`, package filters via `pnpm --filter`.
 
 ## code_quality
 
-- Enforce ESLint + Prettier (Airbnb style). Keep consistent formatting.
+- Enforce ESLint + Prettier. Keep consistent formatting.
 - Require Zod schemas for runtime validation at boundaries (API, forms, env).
 - Ensure accessibility (ARIA, keyboard) and meaningful error handling.
 - Document complex logic inline (JSDoc/TypeDoc) where it clarifies intent.
+- **ALWAYS use Zod schemas for types** - never use plain TypeScript interfaces. Use `z.infer<typeof Schema>` for type inference.
+- All code must pass before commit: TypeScript compilation, ESLint (no errors, warnings addressed), Tests pass, Prettier formatting.
 
 ## security
 
@@ -109,21 +115,87 @@ description: Unified Auggie rules for AI-assisted development, testing, and coll
 - No TODO/FIXME left in changed lines; logs and debug flags removed.
 - Task marked **COMPLETE** with summary of changes made.
 
+## formatting
+
+Prettier enforces these rules automatically:
+
+- **No semicolons** - omit semicolons at end of statements
+- **Single quotes** - use `'string'` not `"string"`
+- **Trailing commas** - always include trailing commas in arrays/objects
+- **Print width:** 100 characters
+- **Tab width:** 2 spaces (no tabs)
+- **Arrow parens:** avoid when possible (`x => x` not `(x) => x`)
+- **Bracket spacing:** `{ foo }` not `{foo}`
+- **End of line:** LF (Unix-style)
+
+## component_structure
+
+Required directory structure for React components:
+
+```
+MyComponent/
+  index.tsx              # Main component file
+  __tests__/
+    MyComponent.test.tsx # Component tests
+  __types__/
+    index.ts             # Zod schemas for this component
+  utils/
+    index.ts             # Component-specific utilities
+```
+
+- **Functional components only** - use function declarations, not classes
+- **Named exports preferred** - `export function MyComponent()` not `export default`
+- **NO BARREL FILES** - import directly from source files, never create index.ts re-exports
+- **UI imports:** Always use `import { Button, Card } from '@repo/ui'` - never import from individual paths
+
 ## tech_stack
 
 - **Language:** TypeScript (strict mode only)
-- **Frameworks:** React (web), Express (API), Tailwind CSS (UI)
+- **Frameworks:** React 19 (web), AWS Lambda + Serverless Framework (API), Tailwind CSS (UI)
 - **Monorepo Tooling:** pnpm workspaces + Turborepo
 - **State Management:** Redux Toolkit + RTK Query (client), Prisma (server ORM)
-- **Database:** PostgreSQL (primary), MongoDb(users only) Redis (cache), elasticsearch
-- **Infra & DevOps:** AWS (CloudFormation/SAM/CDK), CodePipeline, S3, CloudFront, DynamoDB (for event-driven services)
+- **Database:** PostgreSQL (primary), MongoDB (users only), Redis (cache), Elasticsearch
+- **Infra & DevOps:** AWS (Serverless Framework, Lambda, S3, CloudFront, DynamoDB)
 - **Testing:** Vitest (unit/integration), Playwright (E2E), MSW (mocking), Testing Library (React), Zod (validation)
 - **CI/CD:** GitHub Actions + CodeBuild, integrated with CodeRabbit review
 - **AI Assistant:** Auggie with built-in task management
-- **Linting & Formatting:** ESLint (Airbnb) + Prettier
+- **Linting & Formatting:** ESLint + Prettier
 - **Design System:** Tailwind + shadcn/ui + internal `@repo/ui` library
+
+## commands
+
+Common commands (run from root):
+
+```bash
+pnpm dev                  # Start full dev environment
+pnpm build                # Build all packages
+pnpm lint                 # Lint changed files (vs HEAD^1)
+pnpm lint:all             # Lint everything
+pnpm lint:changed         # Lint only changed files
+pnpm check-types          # Type check changed files
+pnpm check-types:all      # Type check everything
+pnpm test                 # Test changed files
+pnpm test:all             # Test everything
+pnpm test:e2e             # Run Playwright E2E tests
+```
+
+Package-specific commands:
+
+```bash
+pnpm --filter @repo/main-app test     # Run tests for main-app only
+pnpm turbo run build --filter="...[HEAD]"  # Build affected packages
+```
+
+## git
+
+- **Conventional commits:** `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
+- **Pre-commit hook:** Runs formatting, affected project builds
+- **Pre-push hook:** CodeRabbit-style analysis - security audit, TypeScript checks, linting, tests, build verification
+- **Branch protection:** main branch requires passing checks
+- Never use `git push --no-verify` unless explicitly approved by human
 
 ## context
 
 - **Services/Ports:** Web 3002; Auth API 9300; LEGO Projects API 9000; Postgres 5432; Redis 6379; Elasticsearch 9200.
 - **Repo norms:** prefer shared packages, project references, consistent test locations, human-in-the-loop for major changes.
+- **AWS Backend:** Serverless Framework v3 with standalone stacks in `apps/api/stacks/functions/*.yml`
