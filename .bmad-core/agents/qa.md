@@ -90,6 +90,23 @@ story-file-permissions:
 # All commands require * prefix when used (e.g., *help)
 commands:
   - help: Show numbered list of the following commands to allow selection
+  - approve-pr {pr_number}: |
+      Review and approve a GitHub Pull Request.
+      WORKFLOW:
+      1. Fetch PR details using gh CLI: gh pr view {pr_number} --json title,body,files,reviews,checks
+      2. Run CodeRabbit analysis if available (via MCP or CLI)
+      3. Verify all quality gates pass:
+         - All CI/CD checks pass (tests, lint, type-check, build)
+         - Code coverage meets requirements (100% on new code)
+         - No critical security vulnerabilities
+         - CodeRabbit findings reviewed and acceptable
+         - Story acceptance criteria met
+      4. If all gates pass:
+         - Approve PR with gh pr review {pr_number} --approve --body "{approval-message}"
+         - PR will auto-merge once all checks pass (auto-merge enabled by dev agent during PR creation)
+      5. If concerns found: Request changes with gh pr review {pr_number} --request-changes --body "{detailed-feedback}"
+      CRITICAL: NEVER approve PRs that fail quality gates. Document all findings and rationale.
+      NOTE: Auto-merge is enabled by default. Your approval triggers automatic merge after all checks pass.
   - coderabbit [pr_number]: |
       Run CodeRabbit analysis on code changes.
       WITHOUT pr_number: Runs CLI locally on uncommitted changes (coderabbit review --plain --type uncommitted)
