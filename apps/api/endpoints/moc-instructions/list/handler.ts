@@ -20,11 +20,7 @@ import {
   errorResponseFromError,
   type APIGatewayProxyResult,
 } from '@/core/utils/responses'
-import {
-  CreateMocSchema,
-  UpdateMocSchema,
-  MocListQuerySchema,
-} from '@/endpoints/moc-instructions/_shared/types'
+import { CreateMocSchema, UpdateMocSchema, MocListQuerySchema } from '@repo/api-types/moc'
 import { BadRequestError, UnauthorizedError, ValidationError } from '@/core/utils/responses'
 import {
   listMocs as listMocsService,

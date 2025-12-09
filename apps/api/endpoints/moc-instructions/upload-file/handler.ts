@@ -20,7 +20,7 @@
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { successResponse, errorResponseFromError } from '@/core/utils/responses'
-import { FileUploadSchema } from '@/endpoints/moc-instructions/_shared/types'
+import { FileUploadSchema } from '@repo/api-types/common'
 import { BadRequestError, UnauthorizedError, ValidationError } from '@/core/utils/responses'
 import {
   uploadMocFile,

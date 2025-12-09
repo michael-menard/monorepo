@@ -21,9 +21,10 @@ import {
 } from '@repo/file-validator'
 import type { FileValidationConfig, FileValidator } from '@repo/file-validator'
 import { invalidateMocDetailCache } from './moc-service'
+import { sanitizeFilenameForS3 } from '@/core/utils/filename-sanitizer'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles } from '@/core/database/schema'
-import type { MocFile } from '@/endpoints/moc-instructions/_shared/types'
+import type { MocFile } from '@repo/api-types/moc'
 import {
   NotFoundError,
   ForbiddenError,
@@ -162,9 +163,9 @@ export async function uploadMocFile(
     throw new BadRequestError(`File validation failed: ${errorMessages}`)
   }
 
-  // Generate unique S3 key
+  // Generate unique S3 key with sanitized filename (Story 3.1.22)
   const timestamp = Date.now()
-  const sanitizedFilename = sanitizeFilename(file.filename)
+  const sanitizedFilename = sanitizeFilenameForS3(file.filename)
   const s3Key = `mocs/${mocId}/${metadata.fileType}/${timestamp}-${sanitizedFilename}`
 
   // Upload to S3
@@ -320,17 +321,6 @@ function extractS3KeyFromUrl(fileUrl: string): string {
 }
 
 /**
- * Sanitize filename for S3 key
- * Removes special characters and spaces
- */
-function sanitizeFilename(filename: string): string {
-  return filename
-    .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
-    .replace(/_{2,}/g, '_') // Replace multiple underscores with single
-    .toLowerCase()
-}
-
-/**
  * File upload result for individual file in parallel upload
  */
 export interface FileUploadResult {
@@ -429,10 +419,10 @@ export async function uploadMocFilesParallel(
         }
       }
 
-      // Generate unique S3 key
+      // Generate unique S3 key with sanitized filename (Story 3.1.22)
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(7)
-      const sanitizedFilename = sanitizeFilename(file.filename)
+      const sanitizedFilename = sanitizeFilenameForS3(file.filename)
       const s3Key = `mocs/${mocId}/${fileType}/${timestamp}-${randomSuffix}-${sanitizedFilename}`
 
       // Upload to S3

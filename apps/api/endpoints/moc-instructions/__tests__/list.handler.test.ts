@@ -124,7 +124,7 @@ describe('MOC Instructions List Handler', () => {
       expect(res.statusCode).toBe(422)
       const body = JSON.parse(res.body)
       expect(body.success).toBe(false)
-      expect(body.error.type).toBe('VALIDATION_ERROR')
+      expect(body.error.code).toBe('VALIDATION_ERROR')
     })
   })
 
@@ -164,7 +164,7 @@ describe('MOC Instructions List Handler', () => {
       expect(res.statusCode).toBe(403)
       const body = JSON.parse(res.body)
       expect(body.success).toBe(false)
-      expect(body.error.type).toBe('FORBIDDEN')
+      expect(body.error.code).toBe('FORBIDDEN')
       expect(body.error.message).toBe('You do not own this MOC')
     })
 

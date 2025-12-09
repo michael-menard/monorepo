@@ -30,58 +30,31 @@ const variantStyles: Record<TableVariant, string> = {
   bordered: '[&_th]:border [&_td]:border',
 }
 
-export function AppTable({
-  variant = 'default',
-  className,
-  ...props
-}: AppTableProps) {
-  return (
-    <Table
-      className={cn(variantStyles[variant], className)}
-      {...props}
-    />
-  )
+export function AppTable({ variant = 'default', className, ...props }: AppTableProps) {
+  return <Table className={cn(variantStyles[variant], className)} {...props} />
 }
 
-export function AppTableHeader({
-  className,
-  ...props
-}: React.ComponentProps<typeof TableHeader>) {
+export function AppTableHeader({ className, ...props }: React.ComponentProps<typeof TableHeader>) {
   return <TableHeader className={className} {...props} />
 }
 
-export function AppTableBody({
-  className,
-  ...props
-}: React.ComponentProps<typeof TableBody>) {
+export function AppTableBody({ className, ...props }: React.ComponentProps<typeof TableBody>) {
   return <TableBody className={className} {...props} />
 }
 
-export function AppTableFooter({
-  className,
-  ...props
-}: React.ComponentProps<typeof TableFooter>) {
+export function AppTableFooter({ className, ...props }: React.ComponentProps<typeof TableFooter>) {
   return <TableFooter className={className} {...props} />
 }
 
-export function AppTableHead({
-  className,
-  ...props
-}: React.ComponentProps<typeof TableHead>) {
+export function AppTableHead({ className, ...props }: React.ComponentProps<typeof TableHead>) {
   return <TableHead className={className} {...props} />
 }
 
-export function AppTableRow({
-  className,
-  ...props
-}: React.ComponentProps<typeof TableRow>) {
+export function AppTableRow({ className, ...props }: React.ComponentProps<typeof TableRow>) {
   return <TableRow className={className} {...props} />
 }
 
-export function AppTableCell({
-  className,
-  ...props
-}: React.ComponentProps<typeof TableCell>) {
+export function AppTableCell({ className, ...props }: React.ComponentProps<typeof TableCell>) {
   return <TableCell className={className} {...props} />
 }
 
@@ -93,15 +66,5 @@ export function AppTableCaption({
 }
 
 // Re-export primitives for advanced usage
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-}
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption }
 export type { TableProps }
-

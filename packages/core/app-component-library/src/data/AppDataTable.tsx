@@ -8,14 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../_primitives/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../_primitives/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../_primitives/table'
 
 export interface AppDataTableColumn<T> {
   key: string

@@ -77,10 +77,7 @@ export {
   skeletonVariants,
 } from './feedback/skeleton'
 
-export type {
-  GalleryGridSkeletonProps,
-  GalleryGridSkeletonColumns,
-} from './feedback/skeleton'
+export type { GalleryGridSkeletonProps, GalleryGridSkeletonColumns } from './feedback/skeleton'
 
 export {
   ProgressIndicator,
@@ -173,7 +170,11 @@ export {
   AppAlertDialogAction,
   AppAlertDialogCancel,
 } from './dialogs/AppAlertDialog'
-export type { AppAlertDialogProps, AppAlertDialogContentProps, AlertDialogVariant } from './dialogs/AppAlertDialog'
+export type {
+  AppAlertDialogProps,
+  AppAlertDialogContentProps,
+  AlertDialogVariant,
+} from './dialogs/AppAlertDialog'
 
 // Menus
 export {
@@ -195,13 +196,13 @@ export {
 export type { AppDropdownMenuProps } from './menus/AppDropdownMenu'
 
 // Navigation
-export {
-  AppTabs,
-  AppTabsList,
-  AppTabsTrigger,
-  AppTabsContent,
+export { AppTabs, AppTabsList, AppTabsTrigger, AppTabsContent } from './navigation/AppTabs'
+export type {
+  AppTabsProps,
+  AppTabsListProps,
+  AppTabsTriggerProps,
+  TabsVariant,
 } from './navigation/AppTabs'
-export type { AppTabsProps, AppTabsListProps, AppTabsTriggerProps, TabsVariant } from './navigation/AppTabs'
 
 export {
   AppAccordion,
@@ -209,7 +210,11 @@ export {
   AppAccordionTrigger,
   AppAccordionContent,
 } from './navigation/AppAccordion'
-export type { AppAccordionProps, AppAccordionItemProps, AccordionVariant } from './navigation/AppAccordion'
+export type {
+  AppAccordionProps,
+  AppAccordionItemProps,
+  AccordionVariant,
+} from './navigation/AppAccordion'
 
 // Data
 export { AppDataTable } from './data/AppDataTable'
@@ -407,4 +412,3 @@ export {
   FormMessage,
   FormField,
 } from './_primitives/form'
-

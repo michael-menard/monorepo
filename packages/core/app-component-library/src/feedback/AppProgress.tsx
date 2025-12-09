@@ -44,7 +44,7 @@ export function AppProgress({
         sizeStyles[size],
         variantStyles[variant],
         animated && '[&_[data-slot=progress-indicator]]:animate-pulse',
-        className
+        className,
       )}
     >
       <Progress {...props} />
@@ -55,4 +55,3 @@ export function AppProgress({
 // Re-export the primitive for advanced usage
 export { Progress } from '../_primitives/progress'
 export type { ProgressProps }
-

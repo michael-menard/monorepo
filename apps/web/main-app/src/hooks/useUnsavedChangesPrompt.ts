@@ -67,11 +67,11 @@ export function useUnsavedChangesPrompt(
   useEffect(() => {
     if (!isDirty) return
 
-    const handleBeforeUnload = (event: Event) => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       // Standard way to trigger browser prompt
       event.preventDefault()
-      // Chrome requires returnValue to be set (cast to BeforeUnloadEvent)
-      ;(event as { returnValue: string }).returnValue = ''
+      // Chrome requires returnValue to be set
+      event.returnValue = ''
 
       logger.warn('Browser unload blocked - unsaved changes', {
         route,

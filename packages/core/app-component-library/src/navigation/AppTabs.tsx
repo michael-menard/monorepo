@@ -4,13 +4,7 @@
  */
 
 import * as React from 'react'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  type TabsProps,
-} from '../_primitives/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsContent, type TabsProps } from '../_primitives/tabs'
 import { cn } from '../_lib/utils'
 
 export type TabsVariant = 'default' | 'pills' | 'underline'
@@ -39,51 +33,26 @@ const listVariantStyles: Record<TabsVariant, string> = {
 const triggerVariantStyles: Record<TabsVariant, string> = {
   default: '',
   pills: 'rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
-  underline: 'rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3',
+  underline:
+    'rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3',
 }
 
-export function AppTabs({
-  variant = 'default',
-  className,
-  ...props
-}: AppTabsProps) {
+export function AppTabs({ variant = 'default', className, ...props }: AppTabsProps) {
   return <Tabs className={className} {...props} />
 }
 
-export function AppTabsList({
-  variant = 'default',
-  className,
-  ...props
-}: AppTabsListProps) {
-  return (
-    <TabsList
-      className={cn(listVariantStyles[variant], className)}
-      {...props}
-    />
-  )
+export function AppTabsList({ variant = 'default', className, ...props }: AppTabsListProps) {
+  return <TabsList className={cn(listVariantStyles[variant], className)} {...props} />
 }
 
-export function AppTabsTrigger({
-  variant = 'default',
-  className,
-  ...props
-}: AppTabsTriggerProps) {
-  return (
-    <TabsTrigger
-      className={cn(triggerVariantStyles[variant], className)}
-      {...props}
-    />
-  )
+export function AppTabsTrigger({ variant = 'default', className, ...props }: AppTabsTriggerProps) {
+  return <TabsTrigger className={cn(triggerVariantStyles[variant], className)} {...props} />
 }
 
-export function AppTabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsContent>) {
+export function AppTabsContent({ className, ...props }: React.ComponentProps<typeof TabsContent>) {
   return <TabsContent className={className} {...props} />
 }
 
 // Re-export primitives for advanced usage
 export { Tabs, TabsList, TabsTrigger, TabsContent }
 export type { TabsProps }
-

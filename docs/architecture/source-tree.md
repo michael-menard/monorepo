@@ -36,12 +36,13 @@ Monorepo/
 │       ├── main-app/        # Main React application
 │       └── playwright/      # E2E tests
 ├── packages/                # Shared packages and libraries
-│   ├── core/                # Core infrastructure packages
-│   ├── tools/               # Development and utility tools
-│   └── dev/                 # Development utilities
+│   ├── core/                # Core frontend/shared packages
+│   ├── backend/             # Backend/Lambda utilities
+│   ├── dev/                 # Development utilities
+│   └── shared/              # Shared types (api-types)
 ├── docs/                    # Documentation, PRDs, stories, architecture
 ├── scripts/                 # Build, deployment, and automation scripts
-├── shared/                  # Shared configuration (env-loader)
+├── shared/                  # Root shared config and infrastructure
 ├── infrastructure/          # Infrastructure as Code (IAM policies)
 ├── .bmad-core/              # BMad Method agent definitions
 ├── __http__/                # HTTP request files for API testing
@@ -204,18 +205,19 @@ apps/web/playwright/
 
 ```
 packages/
-├── core/                    # Core infrastructure packages
-│   ├── ui/                  # Radix UI components (@repo/ui)
+├── core/                    # Core frontend/shared packages
+│   ├── app-component-library/  # Radix UI components (@repo/ui)
 │   ├── api-client/          # API client with RTK Query (@repo/api-client)
 │   ├── logger/              # Logging utilities (@repo/logger)
 │   ├── cache/               # Client-side caching (@repo/cache)
+│   ├── upload/              # File upload components (@repo/upload)
 │   ├── accessibility/       # Accessibility utilities
 │   ├── charts/              # Chart components
 │   ├── design-system/       # Design tokens
-│   └── file-list/           # File display component
-├── tools/                   # Development and backend tools
+│   ├── file-list/           # File display component
+│   └── gallery/             # Gallery components
+├── backend/                 # Backend/Lambda utilities
 │   ├── db/                  # Database utilities (@repo/db)
-│   ├── upload/              # File upload utilities (@repo/upload)
 │   ├── file-validator/      # Universal file validation (@monorepo/file-validator)
 │   ├── lambda-auth/         # Lambda authentication (@repo/lambda-auth)
 │   ├── lambda-utils/        # Lambda utilities (@repo/lambda-utils)
@@ -227,8 +229,10 @@ packages/
 │   ├── pii-sanitizer/       # PII data sanitization
 │   ├── image-processing/    # Image processing utilities
 │   └── mock-data/           # Mock data generators
-└── dev/                     # Development utilities
-    └── tech-radar/          # Technology radar
+├── dev/                     # Development utilities
+│   └── tech-radar/          # Technology radar
+└── shared/                  # Shared types and contracts
+    └── api-types/           # Shared API type definitions
 ```
 
 ### Core Packages
@@ -275,15 +279,21 @@ logger.error('API failed', { error, endpoint })
 
 Client-side caching utilities with IndexedDB and memory cache.
 
-### Tool Packages
+#### @repo/upload
+
+File and image upload components with drag-and-drop, progress tracking, validation, and image processing.
+
+**Location**: `packages/core/upload/`
+
+**Components**: Upload, UploadArea, UploadModal, FilePreview, ProgressIndicator
+
+**Hooks**: useUpload, useUploadProgress, useImageProcessing, useFileValidation, useDragAndDrop
+
+### Backend Packages
 
 #### @repo/db
 
 Drizzle ORM database utilities and schema definitions.
-
-#### @repo/upload
-
-File and image upload components with drag-and-drop, validation, and compression.
 
 #### @monorepo/file-validator
 
@@ -351,10 +361,12 @@ docs/
 ```yaml
 packages:
   - 'apps/*'
-  - 'apps/api'
+  - 'apps/api/*'
   - 'apps/web/*'
+  - 'packages/shared/*'
   - 'packages/core/*'
-  - 'packages/tools/*'
+  - 'packages/features/*'
+  - 'packages/backend/*'
   - 'packages/dev/*'
 ```
 
@@ -480,5 +492,5 @@ class UserService {} // Use factory functions instead
 
 ---
 
-**Last Updated**: 2025-11-29
-**Version**: 2.0
+**Last Updated**: 2025-12-08
+**Version**: 2.1

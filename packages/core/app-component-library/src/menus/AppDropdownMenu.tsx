@@ -44,9 +44,7 @@ export function AppDropdownMenuContent({
   return <DropdownMenuContent className={className} {...props} />
 }
 
-export function AppDropdownMenuGroup({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuGroup>) {
+export function AppDropdownMenuGroup({ ...props }: React.ComponentProps<typeof DropdownMenuGroup>) {
   return <DropdownMenuGroup {...props} />
 }
 
@@ -98,9 +96,7 @@ export function AppDropdownMenuShortcut({
   return <DropdownMenuShortcut className={className} {...props} />
 }
 
-export function AppDropdownMenuSub({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuSub>) {
+export function AppDropdownMenuSub({ ...props }: React.ComponentProps<typeof DropdownMenuSub>) {
   return <DropdownMenuSub {...props} />
 }
 
@@ -136,4 +132,3 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 }
-

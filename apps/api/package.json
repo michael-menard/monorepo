@@ -84,6 +84,7 @@
     "@aws-sdk/client-sts": "^3.932.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
     "@opensearch-project/opensearch": "^2.12.0",
+    "@repo/api-types": "workspace:*",
     "@repo/cognito-client": "workspace:*",
     "@repo/image-processing": "workspace:*",
     "@repo/lambda-auth": "workspace:*",

@@ -7,7 +7,14 @@ import * as React from 'react'
 import { Badge, type BadgeProps } from '../_primitives/badge'
 import { cn } from '../_lib/utils'
 
-export type AppBadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info'
+export type AppBadgeVariant =
+  | 'default'
+  | 'secondary'
+  | 'destructive'
+  | 'outline'
+  | 'success'
+  | 'warning'
+  | 'info'
 
 export interface AppBadgeProps extends Omit<BadgeProps, 'variant'> {
   /** Visual variant of the badge */
@@ -43,34 +50,26 @@ export function AppBadge({
   ...props
 }: AppBadgeProps) {
   // Map custom variants to base variants
-  const baseVariant = ['success', 'warning', 'info'].includes(variant) ? 'default' : variant as BadgeProps['variant']
+  const baseVariant = ['success', 'warning', 'info'].includes(variant)
+    ? 'default'
+    : (variant as BadgeProps['variant'])
   const customStyle = customVariantStyles[variant] || ''
 
   return (
     <Badge
       variant={baseVariant}
-      className={cn(
-        sizeStyles[size],
-        customStyle,
-        removable && 'pr-1',
-        className
-      )}
+      className={cn(sizeStyles[size], customStyle, removable && 'pr-1', className)}
       {...props}
     >
       {children}
-      {removable && (
+      {removable ? (
         <button
           type="button"
           onClick={onRemove}
           className="ml-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 p-0.5"
           aria-label="Remove"
         >
-          <svg
-            className="h-3 w-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -79,11 +78,10 @@ export function AppBadge({
             />
           </svg>
         </button>
-      )}
+      ) : null}
     </Badge>
   )
 }
 
 // Re-export for advanced usage
 export { Badge, badgeVariants } from '../_primitives/badge'
-

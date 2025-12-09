@@ -37,17 +37,8 @@ const itemVariantStyles: Record<AccordionVariant, string> = {
   separated: 'border rounded-lg px-4',
 }
 
-export function AppAccordion({
-  variant = 'default',
-  className,
-  ...props
-}: AppAccordionProps) {
-  return (
-    <Accordion
-      className={cn(accordionVariantStyles[variant], className)}
-      {...props}
-    />
-  )
+export function AppAccordion({ variant = 'default', className, ...props }: AppAccordionProps) {
+  return <Accordion className={cn(accordionVariantStyles[variant], className)} {...props} />
 }
 
 export function AppAccordionItem({
@@ -55,12 +46,7 @@ export function AppAccordionItem({
   className,
   ...props
 }: AppAccordionItemProps) {
-  return (
-    <AccordionItem
-      className={cn(itemVariantStyles[variant], className)}
-      {...props}
-    />
-  )
+  return <AccordionItem className={cn(itemVariantStyles[variant], className)} {...props} />
 }
 
 export function AppAccordionTrigger({
@@ -80,4 +66,3 @@ export function AppAccordionContent({
 // Re-export primitives for advanced usage
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
 export type { AccordionProps }
-

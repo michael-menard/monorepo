@@ -1,9 +1,10 @@
 /**
- * Story 3.1.9 + 3.1.10 + 3.1.16: Instructions New Page
+ * Story 3.1.9 + 3.1.10 + 3.1.16 + 3.1.19: Instructions New Page
  *
  * Uploader page for creating new MOC instructions.
  * Wraps content with UploaderSessionProvider for state persistence.
- * Includes upload progress, retries, error handling, and Zod form validation.
+ * Includes upload progress, retries, error handling, Zod form validation,
+ * and finalize flow with 409/429/per-file error handling.
  */
 
 import { useCallback, useState, useRef, useEffect } from 'react'
@@ -37,6 +38,7 @@ import { ConflictModal } from '@/components/Uploader/ConflictModal'
 import { RateLimitBanner } from '@/components/Uploader/RateLimitBanner'
 import { SessionExpiredBanner } from '@/components/Uploader/SessionExpiredBanner'
 import { useUploadManager, type FileWithUploadUrl } from '@/hooks/useUploadManager'
+import { finalizeSession, type FileValidationError } from '@/services/api/finalizeClient'
 import type { UploaderSession } from '@/types/uploader-session'
 import type { FileCategory } from '@/types/uploader-upload'
 import {
@@ -119,13 +121,15 @@ function InstructionsNewContent() {
     },
   })
 
-  // Error state
+  // Error state (Story 3.1.19)
   const [showConflictModal, setShowConflictModal] = useState(false)
   const [conflictTitle, setConflictTitle] = useState('')
-  // Note: setConflictTitle will be used when finalize API returns 409
+  const [suggestedSlug, setSuggestedSlug] = useState<string | undefined>()
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0)
   const [isRefreshingSession, setIsRefreshingSession] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
+  const [fileValidationErrors, setFileValidationErrors] = useState<FileValidationError[]>([])
+  const finalizingRef = useRef(false) // Idempotent double-click protection (3.1.7)
 
   // File input refs
   const instructionInputRef = useRef<HTMLInputElement>(null)
@@ -169,42 +173,101 @@ function InstructionsNewContent() {
     [uploadManager],
   )
 
-  // Finalize handler
-  const handleFinalize = useCallback(async () => {
-    if (!uploadManager.isComplete) return
-
-    setIsFinalizing(true)
-    logger.info('Starting finalize', { title: session.title })
-
-    try {
-      // TODO: Call finalize API
-      // For now, simulate success
-      logger.info('Finalize complete')
-    } catch (error) {
-      // Handle 409 conflict
-      if (error instanceof Error && error.message.includes('409')) {
-        setConflictTitle(session.title)
-        setShowConflictModal(true)
+  // Finalize handler (Story 3.1.19)
+  const handleFinalize = useCallback(
+    async (overrideTitle?: string) => {
+      // Idempotent double-click protection (3.1.7)
+      if (finalizingRef.current || !uploadManager.isComplete || rateLimitSeconds > 0) {
+        return
       }
-      // Handle 429 rate limit
-      if (error instanceof Error && error.message.includes('429')) {
-        setRateLimitSeconds(60) // Default to 60 seconds
+
+      finalizingRef.current = true
+      setIsFinalizing(true)
+      setFileValidationErrors([]) // Clear previous errors
+
+      const titleToUse = overrideTitle || session.title
+
+      logger.info('Starting finalize', { title: titleToUse })
+
+      try {
+        const result = await finalizeSession({
+          uploadSessionId: session.uploadToken || '',
+          title: titleToUse,
+          description: session.description,
+          tags: session.tags,
+          theme: session.theme,
+        })
+
+        if (result.success) {
+          logger.info('Finalize complete', {
+            mocId: result.data.id,
+            slug: result.data.slug,
+            idempotent: result.idempotent,
+          })
+
+          // Clear session on success
+          reset()
+          uploadManager.clear()
+
+          // Navigate to the new MOC page
+          navigate({ to: `/instructions/${result.data.slug}` })
+        } else {
+          const { error } = result
+
+          // Handle 409 conflict (Story 3.1.19)
+          if (error.isConflict) {
+            setConflictTitle(titleToUse)
+            setSuggestedSlug(error.suggestedSlug)
+            setShowConflictModal(true)
+          }
+          // Handle 429 rate limit (Story 3.1.19)
+          else if (error.isRateLimit) {
+            setRateLimitSeconds(error.retryAfterSeconds || 60)
+          }
+          // Handle per-file validation errors (Story 3.1.19)
+          else if (error.hasFileErrors && error.fileErrors) {
+            setFileValidationErrors(error.fileErrors)
+          }
+          // Handle other errors
+          else {
+            logger.warn('Finalize failed', { errorCode: error.code, message: error.message })
+          }
+        }
+      } catch (err) {
+        logger.error('Unexpected finalize error', { error: err })
+      } finally {
+        finalizingRef.current = false
+        setIsFinalizing(false)
       }
-    }
+    },
+    [uploadManager, session, reset, navigate, rateLimitSeconds],
+  )
 
-    setIsFinalizing(false)
-  }, [uploadManager.isComplete, session.title])
-
-  // Conflict resolution
+  // Conflict resolution (Story 3.1.19)
   const handleConflictConfirm = useCallback(
     (newTitle: string) => {
       updateSession({ title: newTitle })
       setShowConflictModal(false)
+      setSuggestedSlug(undefined)
       // Retry finalize with new title
-      handleFinalize()
+      handleFinalize(newTitle)
     },
     [updateSession, handleFinalize],
   )
+
+  // Use suggested slug (Story 3.1.19)
+  const handleUseSuggestedSlug = useCallback(() => {
+    setShowConflictModal(false)
+    setSuggestedSlug(undefined)
+    // Retry finalize with same title (backend will use suggested slug)
+    handleFinalize()
+  }, [handleFinalize])
+
+  // Handle conflict modal cancel
+  const handleConflictCancel = useCallback(() => {
+    setShowConflictModal(false)
+    setSuggestedSlug(undefined)
+  }, [])
 
   // Session refresh
   const handleRefreshSession = useCallback(async () => {
@@ -218,11 +281,13 @@ function InstructionsNewContent() {
     uploadManager.retryAll()
   }, [uploadManager])
 
-  // Check if finalize is allowed (Story 3.1.16: include form validation)
+  // Check if finalize is allowed (Story 3.1.16 + 3.1.19)
   const hasInstruction = uploadManager.state.files.some(
     f => f.category === 'instruction' && f.status === 'success',
   )
-  const canFinalize = hasInstruction && uploadManager.isComplete && isValid
+  // Disable during rate limit countdown (Story 3.1.19)
+  const canFinalize =
+    hasInstruction && uploadManager.isComplete && isValid && rateLimitSeconds === 0
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -245,7 +310,10 @@ function InstructionsNewContent() {
         <RateLimitBanner
           visible={rateLimitSeconds > 0}
           retryAfterSeconds={rateLimitSeconds}
-          onRetry={handleFinalize}
+          onRetry={() => {
+            setRateLimitSeconds(0)
+            handleFinalize()
+          }}
           onDismiss={() => setRateLimitSeconds(0)}
         />
 
@@ -259,7 +327,7 @@ function InstructionsNewContent() {
 
       {/* Error Summary (Story 3.1.16) */}
       {Object.keys(errors).length > 0 && (
-        <Alert variant="destructive" role="alert" aria-live="polite">
+        <Alert variant="destructive" role="alert" aria-live="polite" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             <p className="font-medium mb-2">Please fix the following errors:</p>
@@ -279,6 +347,31 @@ function InstructionsNewContent() {
                 </li>
               ))}
             </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Per-file validation errors (Story 3.1.19) */}
+      {fileValidationErrors.length > 0 && (
+        <Alert variant="destructive" role="alert" aria-live="polite" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium mb-2">File validation failed:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {fileValidationErrors.map(err => (
+                <li key={err.fileId}>
+                  <span className="font-medium">{err.filename}</span>: {err.message}
+                  {err.reason === 'magic-bytes' && (
+                    <span className="text-xs ml-1">(file content mismatch)</span>
+                  )}
+                  {err.reason === 'type' && (
+                    <span className="text-xs ml-1">(unsupported file type)</span>
+                  )}
+                  {err.reason === 'size' && <span className="text-xs ml-1">(file too large)</span>}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm mt-2">Please re-upload the affected files to continue.</p>
           </AlertDescription>
         </Alert>
       )}
@@ -566,9 +659,10 @@ function InstructionsNewContent() {
               Reset
             </Button>
             <Button
-              onClick={handleFinalize}
+              onClick={() => handleFinalize()}
               disabled={!canFinalize || isFinalizing}
               className="ml-auto"
+              aria-busy={isFinalizing}
             >
               {isFinalizing ? 'Finalizing...' : 'Finalize & Publish'}
             </Button>
@@ -576,12 +670,14 @@ function InstructionsNewContent() {
         </CardContent>
       </Card>
 
-      {/* Conflict modal */}
+      {/* Conflict modal (Story 3.1.19) */}
       <ConflictModal
         open={showConflictModal}
         currentTitle={conflictTitle}
+        suggestedSlug={suggestedSlug}
         onConfirm={handleConflictConfirm}
-        onCancel={() => setShowConflictModal(false)}
+        onUseSuggested={handleUseSuggestedSlug}
+        onCancel={handleConflictCancel}
         isLoading={isFinalizing}
       />
     </div>

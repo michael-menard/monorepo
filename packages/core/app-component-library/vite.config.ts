@@ -54,12 +54,21 @@ export default defineConfig(({ mode }) => {
 
           // App components - feedback
           'feedback/skeleton': path.resolve(__dirname, 'src/feedback/skeleton.tsx'),
-          'feedback/loading-spinner': path.resolve(__dirname, 'src/feedback/loading-spinner/index.tsx'),
-          'feedback/progress-indicator': path.resolve(__dirname, 'src/feedback/progress-indicator.tsx'),
+          'feedback/loading-spinner': path.resolve(
+            __dirname,
+            'src/feedback/loading-spinner/index.tsx',
+          ),
+          'feedback/progress-indicator': path.resolve(
+            __dirname,
+            'src/feedback/progress-indicator.tsx',
+          ),
 
           // App components - errors
           'errors/error-boundary': path.resolve(__dirname, 'src/errors/error-boundary.tsx'),
-          'errors/error-boundary-specialized': path.resolve(__dirname, 'src/errors/error-boundary-specialized.tsx'),
+          'errors/error-boundary-specialized': path.resolve(
+            __dirname,
+            'src/errors/error-boundary-specialized.tsx',
+          ),
 
           // App components - notifications
           'notifications/sonner': path.resolve(__dirname, 'src/notifications/sonner.tsx'),
@@ -69,7 +78,10 @@ export default defineConfig(({ mode }) => {
           'selects/multi-select': path.resolve(__dirname, 'src/selects/multi-select.tsx'),
 
           // App components - dialogs
-          'dialogs/ConfirmationDialog': path.resolve(__dirname, 'src/dialogs/ConfirmationDialog.tsx'),
+          'dialogs/ConfirmationDialog': path.resolve(
+            __dirname,
+            'src/dialogs/ConfirmationDialog.tsx',
+          ),
 
           // App components - data
           'data/AppDataTable': path.resolve(__dirname, 'src/data/AppDataTable.tsx'),
@@ -138,4 +150,3 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
-

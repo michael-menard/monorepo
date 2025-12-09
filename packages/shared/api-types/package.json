@@ -1,0 +1,49 @@
+{
+  "name": "@repo/api-types",
+  "version": "1.0.0",
+  "description": "Shared Zod schemas and TypeScript types for API contracts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./moc": {
+      "types": "./dist/moc/index.d.ts",
+      "default": "./dist/moc/index.js"
+    },
+    "./gallery": {
+      "types": "./dist/gallery/index.d.ts",
+      "default": "./dist/gallery/index.js"
+    },
+    "./wishlist": {
+      "types": "./dist/wishlist/index.d.ts",
+      "default": "./dist/wishlist/index.js"
+    },
+    "./common": {
+      "types": "./dist/common/index.d.ts",
+      "default": "./dist/common/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "types",
+    "zod",
+    "api",
+    "schemas",
+    "validation"
+  ]
+}

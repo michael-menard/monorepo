@@ -1,6 +1,8 @@
 /**
  * Standardized Response Builders for Lambda Functions
  *
+ * Story 3.1.21: Unified error contract with correlationId.
+ *
  * These functions create consistent API Gateway responses across all endpoints.
  * All responses follow the standard schema defined in types.ts
  *
@@ -9,16 +11,17 @@
  * // Success response
  * return successResponse(200, { id: '123', title: 'My MOC' });
  *
- * // Error response
- * return errorResponse(404, 'NOT_FOUND', 'MOC not found');
+ * // Error response (with correlationId)
+ * return errorResponse(404, 'NOT_FOUND', 'MOC not found', correlationId);
  *
  * // From error object
- * return errorResponseFromError(error);
+ * return errorResponseFromError(error, correlationId);
  * ```
  */
 
-import type { ApiSuccessResponse, ApiErrorResponse, ApiErrorType } from './types.js'
+import type { ApiSuccessResponse, ApiErrorType } from './types.js'
 import { toApiError } from './errors.js'
+import { randomUUID } from 'crypto'
 
 /**
  * API Gateway Response Type
@@ -59,27 +62,37 @@ export function successResponse<T>(
 }
 
 /**
- * Error Response Builder
- * - Returns standardized error response
- * - Automatically adds timestamp
- * - Strips sensitive details in production
+ * Story 3.1.21: Error Response Builder
+ *
+ * Returns standardized error response with correlationId for support tracking.
+ *
+ * Contract: { code, message, details?, correlationId }
+ *
+ * @param statusCode - HTTP status code
+ * @param errorCode - One of ApiErrorType values (use 'code' field in response)
+ * @param message - User-friendly error message
+ * @param correlationId - Request tracking ID (generated if not provided)
+ * @param details - Optional debugging info (stripped in production)
  */
 export function errorResponse(
   statusCode: number,
-  errorType: ApiErrorType,
+  errorCode: ApiErrorType,
   message: string,
+  correlationId?: string,
   details?: Record<string, unknown>,
 ): APIGatewayProxyResult {
   const isProduction = process.env.NODE_ENV === 'production'
+  const corrId = correlationId || randomUUID()
 
-  const response: ApiErrorResponse = {
+  const response = {
     success: false,
     error: {
-      type: errorType,
+      code: errorCode,
       message,
       // Only include details in non-production environments
       details: isProduction ? undefined : details,
     },
+    correlationId: corrId,
     timestamp: new Date().toISOString(),
   }
 
@@ -89,21 +102,35 @@ export function errorResponse(
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Credentials': true,
+      'X-Correlation-Id': corrId,
     },
     body: JSON.stringify(response),
   }
 }
 
 /**
- * Error Response from Error Object
- * - Converts any error to standardized error response
- * - Handles ApiError instances with proper status codes
- * - Falls back to 500 for unknown errors
+ * Story 3.1.21: Error Response from Error Object
+ *
+ * Converts any error to standardized error response with correlationId.
+ * Handles ApiError instances with proper status codes.
+ * Falls back to 500 for unknown errors.
+ *
+ * @param error - Any error object
+ * @param correlationId - Request tracking ID (generated if not provided)
  */
-export function errorResponseFromError(error: unknown): APIGatewayProxyResult {
+export function errorResponseFromError(
+  error: unknown,
+  correlationId?: string,
+): APIGatewayProxyResult {
   const apiError = toApiError(error)
 
-  return errorResponse(apiError.statusCode, apiError.errorType, apiError.message, apiError.details)
+  return errorResponse(
+    apiError.statusCode,
+    apiError.errorType,
+    apiError.message,
+    correlationId,
+    apiError.details,
+  )
 }
 
 /**

@@ -1,9 +1,9 @@
 packages:
-  - "apps/*"
-  - "apps/api/*"
-  - "apps/web/*"
-  - "packages/shared"
-  - "packages/core/*"
-  - "packages/features/*"
-  - "packages/backend/*"
-  - "packages/dev/*"
+  - 'apps/*'
+  - 'apps/api/*'
+  - 'apps/web/*'
+  - 'packages/shared/*'
+  - 'packages/core/*'
+  - 'packages/features/*'
+  - 'packages/backend/*'
+  - 'packages/dev/*'

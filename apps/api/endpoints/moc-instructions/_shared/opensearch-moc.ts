@@ -9,7 +9,7 @@
  */
 
 import { getOpenSearchClient } from '@/core/search/opensearch'
-import type { MocInstruction } from '@/endpoints/moc-instructions/_shared/types'
+import type { MocInstruction } from '@repo/api-types/moc'
 import { SearchError } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
 

@@ -17,11 +17,7 @@ const sizeStyles = {
   lg: '[&_[data-slot=checkbox]]:size-5 [&_[data-slot=checkbox-indicator]_svg]:size-4',
 }
 
-export function AppCheckbox({
-  size = 'default',
-  className,
-  ...props
-}: AppCheckboxProps) {
+export function AppCheckbox({ size = 'default', className, ...props }: AppCheckboxProps) {
   return (
     <div className={cn(sizeStyles[size], className)}>
       <Checkbox {...props} />
@@ -32,4 +28,3 @@ export function AppCheckbox({
 // Re-export the primitive for advanced usage
 export { Checkbox } from '../_primitives/checkbox'
 export type { CheckboxProps }
-

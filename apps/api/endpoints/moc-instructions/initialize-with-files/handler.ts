@@ -44,6 +44,7 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { getUploadConfig, isMimeTypeAllowed, getAllowedMimeTypes } from '@/core/config/upload'
 import { checkAndIncrementDailyLimit } from '@/core/rate-limit/upload-rate-limit'
+import { sanitizeFilenameForS3 } from '@/core/utils/filename-sanitizer'
 
 const logger = createLogger('initialize-with-files')
 
@@ -399,7 +400,7 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
       // Build info
       difficulty: mocData.difficulty || null,
-      buildTimeHours: mocData.buildTimeHours?.toString() || null,
+      buildTimeHours: mocData.buildTimeHours ?? null,
       ageRecommendation: mocData.ageRecommendation || null,
 
       // Status
@@ -621,7 +622,8 @@ async function generatePresignedUrls(
   for (const file of files) {
     const fileId = uuidv4()
     const timestamp = Date.now()
-    const sanitizedFilename = sanitizeFilename(file.filename)
+    // Story 3.1.22: Secure filename sanitization
+    const sanitizedFilename = sanitizeFilenameForS3(file.filename)
     const s3Key = `mocs/${mocId}/${file.fileType}/${timestamp}-${sanitizedFilename}`
 
     // Create placeholder file record
@@ -671,14 +673,4 @@ async function generatePresignedUrls(
   }
 
   return uploadUrls
-}
-
-/**
- * Sanitize filename for S3 key
- */
-function sanitizeFilename(filename: string): string {
-  return filename
-    .replace(/[^a-zA-Z0-9.-]/g, '_')
-    .replace(/_{2,}/g, '_')
-    .toLowerCase()
 }

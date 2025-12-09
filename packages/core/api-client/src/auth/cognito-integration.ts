@@ -282,7 +282,7 @@ export class CognitoTokenManager {
   /**
    * Basic JWT expiration check (legacy method for backward compatibility)
    */
-  private isTokenExpired(token: string): boolean {
+  private _isTokenExpired(token: string): boolean {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
       const currentTime = Math.floor(Date.now() / 1000)

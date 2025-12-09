@@ -271,6 +271,133 @@ export class ThrottlingError extends ApiError {
   }
 }
 
+// =============================================================================
+// Story 3.1.21: New Error Classes for Unified Error Contract
+// =============================================================================
+
+/**
+ * 403 Access Denied - Authenticated but no permission for this specific resource
+ * Use when user is authenticated but not authorized for the specific action/resource
+ * NOT retryable - client needs different permissions
+ */
+export class AccessDeniedError extends ApiError {
+  readonly statusCode = 403
+  readonly errorType: ApiErrorType = 'ACCESS_DENIED'
+  readonly isRetryable = false
+
+  constructor(message = 'Access denied', details?: Record<string, unknown>) {
+    super(message, details)
+  }
+}
+
+/**
+ * 409 Duplicate Slug - Resource with same slug already exists
+ * Use when attempting to create a resource with a slug that's already taken
+ * NOT retryable - client must provide a different slug
+ */
+export class DuplicateSlugError extends ApiError {
+  readonly statusCode = 409
+  readonly errorType: ApiErrorType = 'DUPLICATE_SLUG'
+  readonly isRetryable = false
+  readonly suggestedSlug?: string
+
+  constructor(
+    message = 'Resource with this slug already exists',
+    suggestedSlug?: string,
+    details?: Record<string, unknown>,
+  ) {
+    super(message, { ...details, suggestedSlug })
+    this.suggestedSlug = suggestedSlug
+  }
+}
+
+/**
+ * 400 Invalid Type - File type not allowed
+ * Use when uploaded file type is not in the allowed list
+ * NOT retryable - client must upload a different file type
+ */
+export class InvalidTypeError extends ApiError {
+  readonly statusCode = 400
+  readonly errorType: ApiErrorType = 'INVALID_TYPE'
+  readonly isRetryable = false
+  readonly allowedTypes?: string[]
+
+  constructor(
+    message = 'File type not allowed',
+    allowedTypes?: string[],
+    details?: Record<string, unknown>,
+  ) {
+    super(message, { ...details, allowedTypes })
+    this.allowedTypes = allowedTypes
+  }
+}
+
+/**
+ * 400 Size Too Large - File exceeds size limit
+ * Use when uploaded file exceeds maximum allowed size
+ * NOT retryable - client must upload a smaller file
+ */
+export class SizeTooLargeError extends ApiError {
+  readonly statusCode = 400
+  readonly errorType: ApiErrorType = 'SIZE_TOO_LARGE'
+  readonly isRetryable = false
+  readonly maxSize?: number
+  readonly actualSize?: number
+
+  constructor(
+    message = 'File exceeds size limit',
+    maxSize?: number,
+    actualSize?: number,
+    details?: Record<string, unknown>,
+  ) {
+    super(message, { ...details, maxSize, actualSize })
+    this.maxSize = maxSize
+    this.actualSize = actualSize
+  }
+}
+
+/**
+ * 401 Expired Session - Session or token has expired
+ * Use when JWT token or session has expired
+ * NOT retryable - client must re-authenticate
+ */
+export class ExpiredSessionError extends ApiError {
+  readonly statusCode = 401
+  readonly errorType: ApiErrorType = 'EXPIRED_SESSION'
+  readonly isRetryable = false
+
+  constructor(message = 'Session has expired', details?: Record<string, unknown>) {
+    super(message, details)
+  }
+}
+
+/**
+ * 422 Parts Validation Error - Parts list file validation failed
+ * Story 3.1.23: Per-file validation errors for parts lists
+ * Use when CSV/XML parts list fails schema validation
+ * NOT retryable - client must fix the file
+ */
+export class PartsValidationError extends ApiError {
+  readonly statusCode = 422
+  readonly errorType: ApiErrorType = 'PARTS_VALIDATION_ERROR'
+  readonly isRetryable = false
+  readonly fileErrors?: Array<{
+    code: string
+    message: string
+    line?: number
+    field?: string
+  }>
+
+  constructor(
+    message = 'Parts list validation failed',
+    fileErrors?: Array<{ code: string; message: string; line?: number; field?: string }>,
+    details?: Record<string, unknown>,
+  ) {
+    super(message, { ...details, fileErrors })
+    this.fileErrors = fileErrors
+  }
+}
+
 /**
  * Check if error is an instance of ApiError
  */

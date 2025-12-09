@@ -41,23 +41,12 @@ export function AppDialog({ ...props }: AppDialogProps) {
   return <Dialog {...props} />
 }
 
-export function AppDialogTrigger({
-  ...props
-}: React.ComponentProps<typeof DialogTrigger>) {
+export function AppDialogTrigger({ ...props }: React.ComponentProps<typeof DialogTrigger>) {
   return <DialogTrigger {...props} />
 }
 
-export function AppDialogContent({
-  size = 'default',
-  className,
-  ...props
-}: AppDialogContentProps) {
-  return (
-    <DialogContent
-      className={cn(sizeStyles[size], className)}
-      {...props}
-    />
-  )
+export function AppDialogContent({ size = 'default', className, ...props }: AppDialogContentProps) {
+  return <DialogContent className={cn(sizeStyles[size], className)} {...props} />
 }
 
 export function AppDialogHeader({
@@ -74,10 +63,7 @@ export function AppDialogFooter({
   return <DialogFooter className={className} {...props} />
 }
 
-export function AppDialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogTitle>) {
+export function AppDialogTitle({ className, ...props }: React.ComponentProps<typeof DialogTitle>) {
   return <DialogTitle className={className} {...props} />
 }
 
@@ -88,9 +74,7 @@ export function AppDialogDescription({
   return <DialogDescription className={className} {...props} />
 }
 
-export function AppDialogClose({
-  ...props
-}: React.ComponentProps<typeof DialogClose>) {
+export function AppDialogClose({ ...props }: React.ComponentProps<typeof DialogClose>) {
   return <DialogClose {...props} />
 }
 
@@ -107,4 +91,3 @@ export {
   DialogTitle,
   DialogDescription,
 }
-

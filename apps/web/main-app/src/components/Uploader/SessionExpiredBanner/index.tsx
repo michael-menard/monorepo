@@ -1,12 +1,13 @@
 /**
- * Story 3.1.10: Session Expired Banner Component
+ * Story 3.1.10 + 3.1.20: Session Expired Banner Component
  *
  * Banner for handling expired upload sessions.
  * Provides action to refresh session for affected files.
+ * Respects prefers-reduced-motion for animations.
  */
 
 import { AlertCircle, RefreshCw } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle, Button } from '@repo/app-component-library'
+import { Alert, AlertDescription, AlertTitle, Button, cn } from '@repo/app-component-library'
 
 export interface SessionExpiredBannerProps {
   /** Whether the banner is visible */
@@ -48,9 +49,13 @@ export function SessionExpiredBanner({
           size="sm"
           onClick={onRefreshSession}
           disabled={isRefreshing}
+          aria-busy={isRefreshing}
           className="gap-1 border-yellow-500 text-yellow-700 hover:bg-yellow-500/20"
         >
-          <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={cn('h-3 w-3', isRefreshing && 'animate-spin motion-reduce:animate-none')}
+            aria-hidden="true"
+          />
           {isRefreshing ? 'Refreshing...' : 'Refresh Session'}
         </Button>
       </AlertDescription>

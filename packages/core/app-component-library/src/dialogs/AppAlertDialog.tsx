@@ -25,7 +25,8 @@ export interface AppAlertDialogProps extends React.ComponentProps<typeof AlertDi
   children?: React.ReactNode
 }
 
-export interface AppAlertDialogContentProps extends React.ComponentProps<typeof AlertDialogContent> {
+export interface AppAlertDialogContentProps
+  extends React.ComponentProps<typeof AlertDialogContent> {
   /** Visual variant of the alert dialog */
   variant?: AlertDialogVariant
 }
@@ -50,12 +51,7 @@ export function AppAlertDialogContent({
   className,
   ...props
 }: AppAlertDialogContentProps) {
-  return (
-    <AlertDialogContent
-      className={cn(variantStyles[variant], className)}
-      {...props}
-    />
-  )
+  return <AlertDialogContent className={cn(variantStyles[variant], className)} {...props} />
 }
 
 export function AppAlertDialogHeader({
@@ -114,4 +110,3 @@ export {
   AlertDialogAction,
   AlertDialogCancel,
 }
-

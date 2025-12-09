@@ -19,13 +19,6 @@
     "rootDir": "./src",
     "allowImportingTsExtensions": false
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "**/*.test.*",
-    "**/*.spec.*",
-    "__tests__",
-    "stories"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["**/*.test.*", "**/*.spec.*", "__tests__", "stories"]
 }

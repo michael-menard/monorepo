@@ -47,8 +47,8 @@ export function createAuthenticatedBaseQuery(
     baseUrl,
     enableRetryLogic = true,
     enablePerformanceMonitoring = true,
-    skipAuthForEndpoints = [],
-    requireAuthForEndpoints = [],
+    skipAuthForEndpoints: _skipAuthForEndpoints = [],
+    requireAuthForEndpoints: _requireAuthForEndpoints = [],
     onAuthFailure,
     enableCsrf = false,
     getCsrfToken,
@@ -60,7 +60,7 @@ export function createAuthenticatedBaseQuery(
     credentials: 'include', // Story 3.1.4: Always send cookies
     prepareHeaders: (headers, { endpoint }) => {
       const startTime = enablePerformanceMonitoring ? performance.now() : 0
-      const method = typeof endpoint === 'string' ? 'GET' : 'GET' // Will be overridden by actual request
+      const _method = typeof endpoint === 'string' ? 'GET' : 'GET' // Will be overridden by actual request
 
       try {
         // Story 3.1.4: Default headers - Accept: application/json
@@ -207,7 +207,7 @@ export function createAuthenticatedBaseQuery(
  * Note: With cookie-based auth, cookies are always sent (credentials: 'include'),
  * but this helps identify public vs protected endpoints for logging/metrics.
  */
-function isProtectedEndpoint(
+function _isProtectedEndpoint(
   endpoint: string,
   skipAuthForEndpoints: string[],
   requireAuthForEndpoints: string[],

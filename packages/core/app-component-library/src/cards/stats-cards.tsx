@@ -223,9 +223,9 @@ export function StatsCards({
       role="region"
       aria-label={ariaLabel}
     >
-      {isLoading && <LoadingSkeleton count={items.length || 3} />}
-      {!isLoading && error && <ErrorState error={error} title={errorTitle} />}
-      {isEmpty && <EmptyState title={emptyTitle} description={emptyDescription} />}
+      {isLoading ? <LoadingSkeleton count={items.length || 3} /> : null}
+      {!isLoading && error ? <ErrorState error={error} title={errorTitle} /> : null}
+      {isEmpty ? <EmptyState title={emptyTitle} description={emptyDescription} /> : null}
       {!isLoading &&
         !error &&
         !isEmpty &&

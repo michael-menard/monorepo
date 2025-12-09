@@ -32,6 +32,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@repo/api-types": "workspace:*",
     "zod": "^4.0.5"
   },
   "devDependencies": {

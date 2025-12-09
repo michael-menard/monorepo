@@ -39,6 +39,8 @@ import {
   NotFoundError,
   ForbiddenError,
   ValidationError,
+  SizeTooLargeError,
+  InvalidTypeError,
 } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
 import { db } from '@/core/database/client'
@@ -49,8 +51,32 @@ import { HeadObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s
 import { getUploadConfig, getFileSizeLimit } from '@/core/config/upload'
 import { validateMagicBytes } from '@repo/file-validator'
 import { checkAndIncrementDailyLimit } from '@/core/rate-limit/upload-rate-limit'
+import { validatePartsFile } from '../_shared/parts-validators/validator-registry'
 
 const logger = createLogger('finalize-with-files')
+
+/**
+ * Story 3.1.23: Per-file validation result
+ */
+interface FileValidationResult {
+  fileId: string
+  filename: string
+  success: boolean
+  errors?: Array<{
+    code: string
+    message: string
+    line?: number
+    field?: string
+  }>
+  warnings?: Array<{
+    code: string
+    message: string
+    line?: number
+    field?: string
+  }>
+  /** Total piece count from parts list (if applicable) */
+  pieceCount?: number
+}
 
 /**
  * File upload confirmation schema
@@ -280,11 +306,40 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
         throw new BadRequestError('No files were successfully uploaded')
       }
 
-      // Verify files exist in S3
-      await verifyFilesInS3(
+      // Verify files exist in S3 and validate parts lists
+      // Story 3.1.23: Per-file validation with non-blocking parts errors
+      const { validatedFiles, hasBlockingErrors } = await verifyFilesInS3(
         successfulFiles.map(f => f.fileId),
         mocId,
       )
+
+      // Story 3.1.23: If parts list validation failed, return 422 with per-file errors
+      // This allows the UI to show targeted retry options for each failed file
+      if (hasBlockingErrors) {
+        const failedFiles = validatedFiles.filter(f => !f.success)
+        logger.warn('Parts list validation failed - blocking finalization', {
+          requestId,
+          mocId,
+          failedFileCount: failedFiles.length,
+        })
+
+        // Clear the lock since we're returning an error
+        await db
+          .update(mocInstructions)
+          .set({ finalizingAt: null })
+          .where(eq(mocInstructions.id, mocId))
+
+        return errorResponse(422, 'PARTS_VALIDATION_ERROR', 'Parts list validation failed', {
+          message:
+            'One or more parts list files have validation errors. Please fix the files and retry.',
+          fileValidation: validatedFiles,
+          failedFiles: failedFiles.map(f => ({
+            fileId: f.fileId,
+            filename: f.filename,
+            errors: f.errors,
+          })),
+        })
+      }
 
       // Get all file records
       const fileRecords = await db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId))
@@ -362,6 +417,12 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
       // Create images array for frontend consistency
       const images = buildImagesArray(fileRecords)
 
+      // Story 3.1.23: Calculate total piece count from validated parts lists
+      const totalPieceCount = validatedFiles.reduce((sum, f) => sum + (f.pieceCount || 0), 0)
+
+      // Collect any warnings from parts validation
+      const validationWarnings = validatedFiles.filter(f => f.warnings && f.warnings.length > 0)
+
       logger.info('MOC finalized successfully', {
         requestId,
         ownerId: userId,
@@ -369,6 +430,8 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
         totalFiles: fileRecords.length,
         imageCount: images.length,
         hasThumbnail: !!thumbnailUrl,
+        totalPieceCount,
+        validationWarningsCount: validationWarnings.length,
       })
 
       return successResponse(200, {
@@ -378,7 +441,11 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
             ...updatedMoc,
             files: fileRecords,
             images,
+            // Story 3.1.23: Include piece count and validation info
+            totalPieceCount: totalPieceCount > 0 ? totalPieceCount : undefined,
           },
+          // Include validation results for UI (warnings, piece counts per file)
+          fileValidation: validatedFiles.length > 0 ? validatedFiles : undefined,
         },
       })
     } catch (error) {
@@ -457,16 +524,26 @@ function getExpectedMimeType(fileType: string, mimeType: string | null): string 
 }
 
 /**
- * Verify files exist in S3 with size and magic bytes validation
+ * Verify files exist in S3 with size, magic bytes, and parts list validation
  * Story 3.1.8: Enhanced verification
+ * Story 3.1.23: Per-file parts list validation (non-blocking)
+ *
+ * Returns per-file validation results instead of throwing.
+ * Critical errors (size, type) still throw to block finalization.
+ * Parts validation errors are collected per-file for UI display.
  */
-async function verifyFilesInS3(fileIds: string[], mocId: string): Promise<void> {
+async function verifyFilesInS3(
+  fileIds: string[],
+  mocId: string,
+): Promise<{ validatedFiles: FileValidationResult[]; hasBlockingErrors: boolean }> {
   const bucketName = process.env.LEGO_API_BUCKET_NAME
   if (!bucketName) {
     throw new Error('S3 bucket not configured')
   }
 
   const s3Client = new S3Client({})
+  const validatedFiles: FileValidationResult[] = []
+  let hasBlockingErrors = false
 
   // Get file records
   const fileRecords = await db
@@ -489,6 +566,11 @@ async function verifyFilesInS3(fileIds: string[], mocId: string): Promise<void> 
 
   for (const file of recordsToVerify) {
     const s3Key = extractS3KeyFromUrl(file.fileUrl)
+    const result: FileValidationResult = {
+      fileId: file.id,
+      filename: file.originalFilename || 'unknown',
+      success: true,
+    }
 
     try {
       // Story 3.1.8: HeadObject for existence and size check
@@ -513,22 +595,28 @@ async function verifyFilesInS3(fileIds: string[], mocId: string): Promise<void> 
           fileType,
         })
 
-        throw new BadRequestError(
+        // Story 3.1.21: Use SIZE_TOO_LARGE error code for client mapping
+        throw new SizeTooLargeError(
           `File ${file.originalFilename} exceeds size limit (${Math.round(contentLength / 1024 / 1024)}MB > ${Math.round(maxSize / 1024 / 1024)}MB)`,
+          maxSize,
+          contentLength,
+          { filename: file.originalFilename, fileType },
         )
       }
 
-      // Story 3.1.8: GetObject Range for magic bytes validation
-      // Only validate magic bytes for file types that have defined signatures
+      // Story 3.1.8: GetObject for magic bytes validation and parts list validation
+      // Parts lists need full content; other files only need first 512 bytes
+      const isPartsList = fileType === 'parts-list'
       const shouldValidateMagicBytes = ['instruction', 'thumbnail', 'gallery-image'].includes(
         fileType,
       )
 
-      if (shouldValidateMagicBytes && contentLength > 0) {
+      if ((shouldValidateMagicBytes || isPartsList) && contentLength > 0) {
         const getCommand = new GetObjectCommand({
           Bucket: bucketName,
           Key: s3Key,
-          Range: 'bytes=0-511', // First 512 bytes for magic bytes
+          // For parts lists, get full file; for others, just magic bytes
+          Range: isPartsList ? undefined : 'bytes=0-511',
         })
 
         const getResponse = await s3Client.send(getCommand)
@@ -536,35 +624,86 @@ async function verifyFilesInS3(fileIds: string[], mocId: string): Promise<void> 
 
         if (bodyBytes) {
           const buffer = Buffer.from(bodyBytes)
-          const expectedMime = getExpectedMimeType(fileType, file.mimeType)
 
-          // Validate magic bytes
-          const isValidMagicBytes = validateMagicBytes(buffer, expectedMime)
+          // Magic bytes validation for non-parts-list files
+          if (shouldValidateMagicBytes) {
+            const expectedMime = getExpectedMimeType(fileType, file.mimeType)
+            const isValidMagicBytes = validateMagicBytes(buffer, expectedMime)
 
-          if (!isValidMagicBytes) {
-            logger.error('File magic bytes validation failed', {
-              fileId: file.id,
-              filename: file.originalFilename,
-              expectedMime,
-              fileType,
-            })
+            if (!isValidMagicBytes) {
+              logger.error('File magic bytes validation failed', {
+                fileId: file.id,
+                filename: file.originalFilename,
+                expectedMime,
+                fileType,
+              })
 
-            throw new BadRequestError(
-              `File ${file.originalFilename} content does not match expected type "${expectedMime}". The file may be corrupted or have an incorrect extension.`,
+              // Story 3.1.21: Use INVALID_TYPE error code for client mapping
+              throw new InvalidTypeError(
+                `File ${file.originalFilename} content does not match expected type "${expectedMime}". The file may be corrupted or have an incorrect extension.`,
+                [expectedMime],
+                { filename: file.originalFilename, fileType, expectedMime },
+              )
+            }
+          }
+
+          // Story 3.1.23: Parts list validation (non-blocking)
+          if (isPartsList) {
+            const partsResult = await validatePartsFile(
+              buffer,
+              file.originalFilename || 'parts-list',
+              file.mimeType || 'application/octet-stream',
             )
+
+            if (!partsResult.success) {
+              result.success = false
+              result.errors = partsResult.errors.map(e => ({
+                code: e.code,
+                message: e.message,
+                line: e.line,
+                field: e.field,
+              }))
+              hasBlockingErrors = true
+
+              logger.warn('Parts list validation failed', {
+                fileId: file.id,
+                filename: file.originalFilename,
+                errorCount: partsResult.errors.length,
+              })
+            } else {
+              // Store piece count from successful validation
+              result.pieceCount = partsResult.data?.totalPieceCount
+            }
+
+            // Always include warnings
+            if (partsResult.warnings.length > 0) {
+              result.warnings = partsResult.warnings.map(w => ({
+                code: w.code,
+                message: w.message,
+                line: w.line,
+                field: w.field,
+              }))
+            }
           }
         }
       }
+
+      validatedFiles.push(result)
 
       logger.info('File verified in S3', {
         fileId: file.id,
         s3Key,
         contentLength,
         fileType,
+        partsValidationSuccess: result.success,
       })
     } catch (error) {
-      // Re-throw BadRequestError as-is
-      if (error instanceof BadRequestError) {
+      // Re-throw critical errors (size, type) to block finalization
+      if (
+        error instanceof SizeTooLargeError ||
+        error instanceof InvalidTypeError ||
+        error instanceof BadRequestError
+      ) {
         throw error
       }
 
@@ -580,7 +719,13 @@ async function verifyFilesInS3(fileIds: string[], mocId: string): Promise<void> 
     }
   }
 
-  logger.info('All files verified in S3', { mocId, fileCount: recordsToVerify.length })
+  logger.info('All files verified in S3', {
+    mocId,
+    fileCount: recordsToVerify.length,
+    hasBlockingErrors,
+  })
+
+  return { validatedFiles, hasBlockingErrors }
 }
 
 /**

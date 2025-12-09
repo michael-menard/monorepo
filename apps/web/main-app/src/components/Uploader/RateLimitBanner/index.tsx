@@ -1,13 +1,14 @@
 /**
- * Story 3.1.10: Rate Limit Banner Component
+ * Story 3.1.10 + 3.1.20: Rate Limit Banner Component
  *
  * Banner for handling 429 Too Many Requests errors.
  * Shows countdown timer until retry is allowed.
+ * Respects prefers-reduced-motion for animations.
  */
 
 import { useState, useEffect, useCallback } from 'react'
 import { Clock, RefreshCw } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle, Button } from '@repo/app-component-library'
+import { Alert, AlertDescription, AlertTitle, Button, cn } from '@repo/app-component-library'
 
 export interface RateLimitBannerProps {
   /** Whether the banner is visible */
@@ -108,14 +109,25 @@ export function RateLimitBanner({
         </div>
       </AlertDescription>
 
-      {/* Progress indicator */}
+      {/* Progress indicator (Story 3.1.20: respects reduced motion) */}
       {!canRetry && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-destructive/20 overflow-hidden">
           <div
-            className="h-full bg-destructive transition-all duration-1000 ease-linear"
+            className={cn(
+              'h-full bg-destructive',
+              'transition-all duration-1000 ease-linear',
+              'motion-reduce:transition-none',
+            )}
             style={{
               width: `${((retryAfterSeconds - remainingSeconds) / retryAfterSeconds) * 100}%`,
             }}
+            role="progressbar"
+            aria-valuenow={Math.round(
+              ((retryAfterSeconds - remainingSeconds) / retryAfterSeconds) * 100,
+            )}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Rate limit countdown progress"
           />
         </div>
       )}

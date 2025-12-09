@@ -17,12 +17,13 @@ import {
   mocPartsLists,
 } from '@/core/database/schema'
 import { searchMocs as searchMocsOpenSearch } from '@/endpoints/moc-instructions/_shared/opensearch-moc'
-import type {
-  MocInstruction,
-  MocListQuery,
-  MocDetailResponse,
-} from '@/endpoints/moc-instructions/_shared/types'
-import { DatabaseError, NotFoundError, ForbiddenError, ConflictError } from '@/core/utils/responses'
+import type { MocInstruction, MocListQuery, MocDetailResponse } from '@repo/api-types/moc'
+import {
+  DatabaseError,
+  NotFoundError,
+  ForbiddenError,
+  DuplicateSlugError,
+} from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
 
 const logger = createLogger('moc-service')
@@ -295,25 +296,25 @@ export async function createMoc(
     status?: 'draft' | 'published' | 'archived' | 'pending_review'
     visibility?: 'public' | 'private' | 'unlisted'
     uploadedDate?: string | Date
-    // BrickLink-specific fields
+    // BrickLink-specific fields (dates as ISO strings for JSON storage)
     sourcePlatform?: {
       platform: 'rebrickable' | 'bricklink' | 'brickowl' | 'mecabricks' | 'studio' | 'other'
       externalId?: string | null
       sourceUrl?: string | null
       uploadSource?: 'web' | 'desktop_app' | 'mobile_app' | 'api' | 'unknown' | null
       forkedFromId?: string | null
-      importedAt?: Date | null
+      importedAt?: string | null
     }
     eventBadges?: Array<{
       eventId: string
       eventName: string
       badgeType?: string | null
       badgeImageUrl?: string | null
-      awardedAt?: Date | null
+      awardedAt?: string | null
     }>
     moderation?: {
       action: 'none' | 'approved' | 'flagged' | 'removed' | 'pending'
-      moderatedAt?: Date | null
+      moderatedAt?: string | null
       reason?: string | null
       forcedPrivate?: boolean
     }
@@ -375,7 +376,7 @@ export async function createMoc(
 
     // Build info
     if (data.difficulty) insertValues.difficulty = data.difficulty
-    if (data.buildTimeHours) insertValues.buildTimeHours = data.buildTimeHours.toString()
+    if (data.buildTimeHours) insertValues.buildTimeHours = data.buildTimeHours
     if (data.ageRecommendation) insertValues.ageRecommendation = data.ageRecommendation
 
     // Dates
@@ -406,8 +407,9 @@ export async function createMoc(
     return mocInstruction
   } catch (error) {
     // Check for unique constraint violation (duplicate title)
+    // Story 3.1.21: Use DUPLICATE_SLUG error code for client mapping
     if ((error as any).code === '23505' && (error as any).constraint?.includes('user_title')) {
-      throw new ConflictError('A MOC with this title already exists', {
+      throw new DuplicateSlugError('A MOC with this title already exists', undefined, {
         userId,
         title: data.title,
       })
@@ -526,25 +528,25 @@ export async function updateMoc(
     status?: 'draft' | 'published' | 'archived' | 'pending_review'
     visibility?: 'public' | 'private' | 'unlisted'
     isFeatured?: boolean
-    // BrickLink-specific fields
+    // BrickLink-specific fields (dates as ISO strings for JSON storage)
     sourcePlatform?: {
       platform: 'rebrickable' | 'bricklink' | 'brickowl' | 'mecabricks' | 'studio' | 'other'
       externalId?: string | null
       sourceUrl?: string | null
       uploadSource?: 'web' | 'desktop_app' | 'mobile_app' | 'api' | 'unknown' | null
       forkedFromId?: string | null
-      importedAt?: Date | null
+      importedAt?: string | null
     }
     eventBadges?: Array<{
       eventId: string
       eventName: string
       badgeType?: string | null
       badgeImageUrl?: string | null
-      awardedAt?: Date | null
+      awardedAt?: string | null
     }>
     moderation?: {
       action: 'none' | 'approved' | 'flagged' | 'removed' | 'pending'
-      moderatedAt?: Date | null
+      moderatedAt?: string | null
       reason?: string | null
       forcedPrivate?: boolean
     }
@@ -602,8 +604,7 @@ export async function updateMoc(
 
     // Build info
     if (data.difficulty !== undefined) updateData.difficulty = data.difficulty
-    if (data.buildTimeHours !== undefined)
-      updateData.buildTimeHours = data.buildTimeHours?.toString()
+    if (data.buildTimeHours !== undefined) updateData.buildTimeHours = data.buildTimeHours
     if (data.ageRecommendation !== undefined) updateData.ageRecommendation = data.ageRecommendation
 
     // Status fields
@@ -651,8 +652,9 @@ export async function updateMoc(
     }
 
     // Check for unique constraint violation (duplicate title)
+    // Story 3.1.21: Use DUPLICATE_SLUG error code for client mapping
     if ((error as any).code === '23505' && (error as any).constraint?.includes('user_title')) {
-      throw new ConflictError('A MOC with this title already exists', {
+      throw new DuplicateSlugError('A MOC with this title already exists', undefined, {
         userId,
         mocId,
         title: data.title,

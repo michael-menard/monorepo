@@ -1,8 +1,8 @@
 /**
  * Unit Tests for Response Builders
  *
- * Tests the response builder functions that create standardized API Gateway responses.
- * Focus: API contract, CORS headers, production vs dev behavior, JSON serialization.
+ * Story 3.1.21: Tests the response builder functions that create standardized API Gateway responses.
+ * Focus: API contract (code, message, details, correlationId), CORS headers, production vs dev behavior.
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
@@ -73,23 +73,30 @@ describe('Response Builders', () => {
   describe('Error Responses - errorResponse()', () => {
     it('should create error response with all parameters', () => {
       process.env.NODE_ENV = 'development'
+      const correlationId = 'test-corr-123'
 
-      const result = errorResponse(404, 'NOT_FOUND', 'Resource not found', { id: '123' })
+      const result = errorResponse(404, 'NOT_FOUND', 'Resource not found', correlationId, {
+        id: '123',
+      })
 
       expect(result.statusCode).toBe(404)
+      expect(result.headers['X-Correlation-Id']).toBe(correlationId)
 
       const body = JSON.parse(result.body)
       expect(body.success).toBe(false)
-      expect(body.error.type).toBe('NOT_FOUND')
+      expect(body.error.code).toBe('NOT_FOUND')
       expect(body.error.message).toBe('Resource not found')
       expect(body.error.details).toEqual({ id: '123' })
+      expect(body.correlationId).toBe(correlationId)
       expect(body.timestamp).toBeDefined()
     })
 
     it('should strip details in production', () => {
       process.env.NODE_ENV = 'production'
 
-      const result = errorResponse(500, 'INTERNAL_ERROR', 'Error', { stack: 'sensitive data' })
+      const result = errorResponse(500, 'INTERNAL_ERROR', 'Error', undefined, {
+        stack: 'sensitive data',
+      })
 
       const body = JSON.parse(result.body)
       expect(body.error.details).toBeUndefined()
@@ -98,10 +105,19 @@ describe('Response Builders', () => {
     it('should include details in development', () => {
       process.env.NODE_ENV = 'development'
 
-      const result = errorResponse(400, 'BAD_REQUEST', 'Invalid', { field: 'email' })
+      const result = errorResponse(400, 'BAD_REQUEST', 'Invalid', undefined, { field: 'email' })
 
       const body = JSON.parse(result.body)
       expect(body.error.details).toEqual({ field: 'email' })
+    })
+
+    it('should generate correlationId if not provided', () => {
+      const result = errorResponse(400, 'BAD_REQUEST', 'Invalid')
+
+      const body = JSON.parse(result.body)
+      expect(body.correlationId).toBeDefined()
+      expect(typeof body.correlationId).toBe('string')
+      expect(result.headers['X-Correlation-Id']).toBe(body.correlationId)
     })
   })
 
@@ -109,15 +125,17 @@ describe('Response Builders', () => {
     it('should create response from ApiError', () => {
       process.env.NODE_ENV = 'development'
       const error = new NotFoundError('MOC not found', { mocId: '123' })
+      const correlationId = 'test-corr-456'
 
-      const result = errorResponseFromError(error)
+      const result = errorResponseFromError(error, correlationId)
 
       expect(result.statusCode).toBe(404)
 
       const body = JSON.parse(result.body)
-      expect(body.error.type).toBe('NOT_FOUND')
+      expect(body.error.code).toBe('NOT_FOUND')
       expect(body.error.message).toBe('MOC not found')
       expect(body.error.details).toEqual({ mocId: '123' })
+      expect(body.correlationId).toBe(correlationId)
     })
 
     it('should wrap standard Error', () => {
@@ -128,8 +146,9 @@ describe('Response Builders', () => {
       expect(result.statusCode).toBe(500)
 
       const body = JSON.parse(result.body)
-      expect(body.error.type).toBe('INTERNAL_ERROR')
+      expect(body.error.code).toBe('INTERNAL_ERROR')
       expect(body.error.message).toBe('Unexpected failure')
+      expect(body.correlationId).toBeDefined()
     })
 
     it('should wrap unknown error', () => {
@@ -140,8 +159,9 @@ describe('Response Builders', () => {
       expect(result.statusCode).toBe(500)
 
       const body = JSON.parse(result.body)
-      expect(body.error.type).toBe('INTERNAL_ERROR')
+      expect(body.error.code).toBe('INTERNAL_ERROR')
       expect(body.error.message).toBe('An unexpected error occurred')
+      expect(body.correlationId).toBeDefined()
     })
   })
 
@@ -278,8 +298,9 @@ describe('Response Builders', () => {
       expect(body).toHaveProperty('success')
       expect(body).toHaveProperty('error')
       expect(body).toHaveProperty('timestamp')
+      expect(body).toHaveProperty('correlationId')
       expect(body.success).toBe(false)
-      expect(body.error).toHaveProperty('type')
+      expect(body.error).toHaveProperty('code')
       expect(body.error).toHaveProperty('message')
     })
   })

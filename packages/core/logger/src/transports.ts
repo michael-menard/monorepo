@@ -208,6 +208,7 @@ export class BrowserConsoleTransport implements ILogTransport {
 
     const hasData = Object.keys(logData).length > 0
 
+    /* eslint-disable no-console */
     switch (level) {
       case LogLevel.DEBUG:
         if (hasData) {
@@ -238,6 +239,7 @@ export class BrowserConsoleTransport implements ILogTransport {
         }
         break
     }
+    /* eslint-enable no-console */
   }
 
   async flush(): Promise<void> {

@@ -2,7 +2,7 @@
  * MOC Instructions Type Definitions
  *
  * Zod schemas and TypeScript types for MOC Instructions API.
- * Maintains backward compatibility with existing Express API contracts.
+ * Shared between frontend and backend for consistent validation.
  *
  * Extended with comprehensive metadata fields inspired by Rebrickable's MOC data model.
  */
@@ -263,8 +263,8 @@ export const MocEventBadgeSchema = z.object({
   /** URL to badge image */
   badgeImageUrl: z.string().url().nullable().optional(),
 
-  /** Date badge was awarded */
-  awardedAt: z.date().nullable().optional(),
+  /** Date badge was awarded (ISO string for JSON storage) */
+  awardedAt: z.string().datetime().nullable().optional(),
 })
 
 export type MocEventBadge = z.infer<typeof MocEventBadgeSchema>
@@ -292,8 +292,8 @@ export const MocSourcePlatformSchema = z.object({
   /** If this MOC is a fork/remix, the ID of the original model (BrickLink: idModelFrom) */
   forkedFromId: z.string().max(100).nullable().optional(),
 
-  /** When the MOC was imported to our platform */
-  importedAt: z.date().nullable().optional(),
+  /** When the MOC was imported to our platform (ISO string for JSON storage) */
+  importedAt: z.string().datetime().nullable().optional(),
 })
 
 export type MocSourcePlatform = z.infer<typeof MocSourcePlatformSchema>
@@ -306,8 +306,8 @@ export const MocModerationSchema = z.object({
   /** Moderation action taken: none, approved, flagged, removed (BrickLink: nModerateAction) */
   action: z.enum(['none', 'approved', 'flagged', 'removed', 'pending']).default('none'),
 
-  /** When moderation action was taken (BrickLink: udtModerated) */
-  moderatedAt: z.date().nullable().optional(),
+  /** When moderation action was taken (ISO string for JSON storage) */
+  moderatedAt: z.string().datetime().nullable().optional(),
 
   /** Reason for moderation action */
   reason: z.string().max(500).nullable().optional(),
@@ -959,75 +959,3 @@ export interface MocListResponse {
   /** Results per page */
   limit: number
 }
-
-/**
- * File Upload Validation
- */
-export const FileUploadSchema = z.object({
-  /** Type of file being uploaded */
-  fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
-})
-
-export type FileUpload = z.infer<typeof FileUploadSchema>
-
-// ============================================================================
-// Multi-File Upload Response Types
-// ============================================================================
-
-/**
- * Successfully uploaded file record
- */
-export const UploadedFileSchema = z.object({
-  /** New file record ID */
-  id: z.string().uuid(),
-
-  /** Original filename */
-  filename: z.string(),
-
-  /** CDN URL to uploaded file */
-  fileUrl: z.string(),
-
-  /** File size in bytes */
-  fileSize: z.number().int(),
-
-  /** Type of file uploaded */
-  fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
-})
-
-/**
- * Failed file upload record
- */
-export const FailedFileSchema = z.object({
-  /** Original filename that failed */
-  filename: z.string(),
-
-  /** Error message describing failure */
-  error: z.string(),
-})
-
-/**
- * Multi-file upload response
- */
-export const MultiFileUploadResponseSchema = z.object({
-  /** Successfully uploaded files */
-  uploaded: z.array(UploadedFileSchema),
-
-  /** Files that failed to upload */
-  failed: z.array(FailedFileSchema),
-
-  /** Upload summary counts */
-  summary: z.object({
-    /** Total files attempted */
-    total: z.number().int(),
-
-    /** Number successfully uploaded */
-    succeeded: z.number().int(),
-
-    /** Number that failed */
-    failed: z.number().int(),
-  }),
-})
-
-export type UploadedFile = z.infer<typeof UploadedFileSchema>
-export type FailedFile = z.infer<typeof FailedFileSchema>
-export type MultiFileUploadResponse = z.infer<typeof MultiFileUploadResponseSchema>

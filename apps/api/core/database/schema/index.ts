@@ -172,6 +172,34 @@ export const mocInstructions = pgTable(
     >(), // List of notable features/highlights
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Platform & Source Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    sourcePlatform: jsonb('source_platform').$type<{
+      platform: 'rebrickable' | 'bricklink' | 'brickowl' | 'mecabricks' | 'studio' | 'other'
+      externalId?: string | null
+      sourceUrl?: string | null
+      uploadSource?: 'web' | 'desktop_app' | 'mobile_app' | 'api' | 'unknown' | null
+      forkedFromId?: string | null
+      importedAt?: string | null // ISO date string in JSON
+    }>(), // Source platform info (where MOC was imported from)
+    eventBadges: jsonb('event_badges').$type<
+      Array<{
+        eventId: string
+        eventName: string
+        badgeType?: string | null
+        badgeImageUrl?: string | null
+        awardedAt?: string | null // ISO date string in JSON
+      }>
+    >(), // Competition/event badges earned by this MOC
+    moderation: jsonb('moderation').$type<{
+      action: 'none' | 'approved' | 'flagged' | 'removed' | 'pending'
+      moderatedAt?: string | null // ISO date string in JSON
+      reason?: string | null
+      forcedPrivate: boolean
+    }>(), // Moderation status and actions
+    platformCategoryId: integer('platform_category_id'), // Platform-specific category ID (BrickLink: idModelCategory)
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Rich Description Content
     // ─────────────────────────────────────────────────────────────────────────
     descriptionHtml: text('description_html'), // HTML-formatted description with rich text
@@ -181,7 +209,7 @@ export const mocInstructions = pgTable(
     // Difficulty & Build Info
     // ─────────────────────────────────────────────────────────────────────────
     difficulty: text('difficulty'), // 'beginner' | 'intermediate' | 'advanced' | 'expert'
-    buildTimeHours: text('build_time_hours'), // Estimated time to build (stored as text for precision)
+    buildTimeHours: integer('build_time_hours'), // Estimated time to build in hours
     ageRecommendation: text('age_recommendation'), // Recommended minimum age (e.g., "16+", "12+")
 
     // ─────────────────────────────────────────────────────────────────────────

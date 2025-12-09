@@ -1,29 +1,41 @@
 /**
  * Response Type Definitions
  *
- * Shared types for API responses used across all Lambda functions.
+ * Story 3.1.21: Unified error contract types.
+ * Re-exports shared types from @repo/api-types for Lambda functions.
  */
 
 import { z } from 'zod'
 
+// Re-export unified error codes from shared package
+export { ApiErrorCodeSchema, type ApiErrorCode } from '@repo/api-types'
+
 /**
- * Standard API Error Types
- * - Consistent error codes across all endpoints
- * - Used for client-side error handling and logging
+ * @deprecated Use ApiErrorCodeSchema/ApiErrorCode from @repo/api-types instead
+ * Kept for backward compatibility during migration.
  */
 export const ApiErrorTypeSchema = z.enum([
+  // Client errors (4xx)
   'BAD_REQUEST',
   'UNAUTHORIZED',
   'FORBIDDEN',
+  'ACCESS_DENIED',
   'NOT_FOUND',
   'CONFLICT',
+  'DUPLICATE_SLUG',
   'VALIDATION_ERROR',
+  'INVALID_TYPE',
+  'SIZE_TOO_LARGE',
   'TOO_MANY_REQUESTS',
+  'RATE_LIMITED',
+  'EXPIRED_SESSION',
+  'FILE_ERROR',
+  'PARTS_VALIDATION_ERROR',
+  // Server errors (5xx)
   'INTERNAL_ERROR',
   'SERVICE_UNAVAILABLE',
-  'FILE_ERROR',
-  'SEARCH_ERROR',
   'DATABASE_ERROR',
+  'SEARCH_ERROR',
   'EXTERNAL_SERVICE_ERROR',
   'THROTTLING_ERROR',
 ])
@@ -51,11 +63,32 @@ export type ApiSuccessResponse<T> = {
 }
 
 /**
- * API Error Response Schema
- * - Used for all error responses
- * - Details field provides debugging information (never exposed in production)
+ * Story 3.1.21: API Error Response Schema
+ *
+ * Contract: { code, message, details?, correlationId }
+ * - code: One of ApiErrorType values
+ * - message: User-friendly error message
+ * - details: Optional debugging info (stripped in production)
+ * - correlationId: Request tracking ID for support
  */
 export const ApiErrorResponseSchema = z.object({
+  success: z.literal(false),
+  error: z.object({
+    code: ApiErrorTypeSchema,
+    message: z.string(),
+    details: z.record(z.string(), z.unknown()).optional(),
+  }),
+  correlationId: z.string(),
+  timestamp: z.string().datetime(),
+})
+
+export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>
+
+/**
+ * @deprecated Use ApiErrorResponseSchema instead
+ * Legacy error response with 'type' field instead of 'code'
+ */
+export const ApiErrorResponseSchemaLegacy = z.object({
   success: z.literal(false),
   error: z.object({
     type: ApiErrorTypeSchema,
@@ -65,7 +98,7 @@ export const ApiErrorResponseSchema = z.object({
   timestamp: z.string().datetime(),
 })
 
-export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>
+export type ApiErrorResponseLegacy = z.infer<typeof ApiErrorResponseSchemaLegacy>
 
 /**
  * Union of success and error responses

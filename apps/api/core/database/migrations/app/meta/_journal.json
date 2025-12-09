@@ -22,6 +22,13 @@
       "when": 1765060233470,
       "tag": "0002_outgoing_plazm",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765242687684,
+      "tag": "0003_cheerful_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

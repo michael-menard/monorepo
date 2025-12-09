@@ -219,9 +219,14 @@ export interface MocCardSkeletonProps extends React.HTMLAttributes<HTMLDivElemen
 
 const MocCardSkeleton = React.forwardRef<HTMLDivElement, MocCardSkeletonProps>(
   ({ className, showImage = true, showMetadata = true, showActions = true, ...props }, ref) => (
-    <div ref={ref} className={cn('space-y-3', className)} data-testid="moc-card-skeleton" {...props}>
+    <div
+      ref={ref}
+      className={cn('space-y-3', className)}
+      data-testid="moc-card-skeleton"
+      {...props}
+    >
       {/* Image skeleton */}
-      {showImage && <Skeleton className="h-48 w-full rounded-t-xl" />}
+      {showImage ? <Skeleton className="h-48 w-full rounded-t-xl" /> : null}
 
       {/* Content skeleton */}
       <div className="p-6 space-y-3">
@@ -235,21 +240,21 @@ const MocCardSkeleton = React.forwardRef<HTMLDivElement, MocCardSkeletonProps>(
         </div>
 
         {/* Metadata skeleton */}
-        {showMetadata && (
+        {showMetadata ? (
           <div className="flex gap-2 pt-2">
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-24" />
           </div>
-        )}
+        ) : null}
 
         {/* Actions skeleton */}
-        {showActions && (
+        {showActions ? (
           <div className="flex gap-2 pt-3">
             <Skeleton className="h-9 w-20" />
             <Skeleton className="h-9 w-24" />
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   ),

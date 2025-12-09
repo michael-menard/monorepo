@@ -22,6 +22,41 @@ required:
 
 ## Review Process - Adaptive Test Architecture
 
+### 0. CodeRabbit Integration
+
+**Run CodeRabbit AI code review to gather automated findings:**
+
+**Primary Method - CLI (Local Review):**
+
+1. Run CodeRabbit CLI on the story's changes:
+   ```bash
+   coderabbit review --plain --type uncommitted
+   ```
+   Or for staged changes only:
+   ```bash
+   coderabbit review --plain --type staged
+   ```
+2. Parse the CLI output for findings
+
+**Fallback Method - MCP (PR Review):**
+If a PR already exists and has been reviewed:
+
+1. Use CodeRabbit MCP tools to fetch existing review findings:
+   - Use `get_reviews` to retrieve all CodeRabbit reviews for the PR
+   - Use `get_comments` to extract line-by-line suggestions
+   - Use `get_comment_details` for critical findings needing deeper context
+
+**Categorize all CodeRabbit findings by:**
+
+- **Security** (highest priority)
+- **Performance**
+- **Maintainability**
+- **Best Practices**
+- **Accessibility**
+- **Testing**
+
+**CodeRabbit findings influence review depth and gate decision.**
+
 ### 1. Risk Assessment (Determines Review Depth)
 
 **Auto-escalate to deep review when:**
@@ -31,6 +66,7 @@ required:
 - Diff > 500 lines
 - Previous gate was FAIL/CONCERNS
 - Story has > 5 acceptance criteria
+- CodeRabbit flagged security or critical issues
 
 ### 2. Comprehensive Analysis
 
@@ -124,6 +160,23 @@ After review and any refactoring, append your results to the story file in the Q
 ### Review Date: [Date]
 
 ### Reviewed By: Quinn (Test Architect)
+
+### CodeRabbit Analysis
+
+**Source:** [CLI (local) / MCP (PR #{pr_number})] | **Status:** [Reviewed/Skipped]
+
+| Category        | Findings | Status               |
+| --------------- | -------- | -------------------- |
+| Security        | [count]  | [Addressed/Open/N/A] |
+| Performance     | [count]  | [Addressed/Open/N/A] |
+| Maintainability | [count]  | [Addressed/Open/N/A] |
+| Best Practices  | [count]  | [Addressed/Open/N/A] |
+| Accessibility   | [count]  | [Addressed/Open/N/A] |
+| Testing         | [count]  | [Addressed/Open/N/A] |
+
+**Key CodeRabbit Findings:**
+
+- [List critical findings that influenced review/gate decision]
 
 ### Code Quality Assessment
 
@@ -241,21 +294,26 @@ recommendations:
 
 **Deterministic rule (apply in order):**
 
-If risk_summary exists, apply its thresholds first (≥9 → FAIL, ≥6 → CONCERNS), then NFR statuses, then top_issues severity.
+If risk_summary exists, apply its thresholds first (≥9 → FAIL, ≥6 → CONCERNS), then CodeRabbit findings, then NFR statuses, then top_issues severity.
 
 1. **Risk thresholds (if risk_summary present):**
    - If any risk score ≥ 9 → Gate = FAIL (unless waived)
    - Else if any score ≥ 6 → Gate = CONCERNS
 
-2. **Test coverage gaps (if trace available):**
+2. **CodeRabbit findings (if PR reviewed):**
+   - If any unaddressed security findings → Gate = FAIL
+   - If any unaddressed performance/accessibility findings → Gate = CONCERNS
+   - Other unaddressed findings → Consider in overall assessment
+
+3. **Test coverage gaps (if trace available):**
    - If any P0 test from test-design is missing → Gate = CONCERNS
    - If security/data-loss P0 test missing → Gate = FAIL
 
-3. **Issue severity:**
+4. **Issue severity:**
    - If any `top_issues.severity == high` → Gate = FAIL (unless waived)
    - Else if any `severity == medium` → Gate = CONCERNS
 
-4. **NFR statuses:**
+5. **NFR statuses:**
    - If any NFR status is FAIL → Gate = FAIL
    - Else if any NFR status is CONCERNS → Gate = CONCERNS
    - Else → Gate = PASS

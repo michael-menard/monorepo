@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // Multer integration for Node.js/Express applications
 import type { MulterValidationOptions, FileValidationConfig, ValidationContext } from './types.js'
 import { validateFile } from './validators.js'

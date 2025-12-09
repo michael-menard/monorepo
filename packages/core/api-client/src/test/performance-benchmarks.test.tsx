@@ -114,7 +114,7 @@ describe('Performance Benchmarking Tests', () => {
       const { result: firstCall } = renderHook(
         () => useEnhancedGallerySearchQuery({
           query: 'performance-test',
-          cacheStrategy: 'medium',
+          includeMetadata: true,
         }),
         { wrapper }
       )
@@ -130,7 +130,7 @@ describe('Performance Benchmarking Tests', () => {
       const { result: secondCall } = renderHook(
         () => useEnhancedGallerySearchQuery({
           query: 'performance-test',
-          cacheStrategy: 'medium',
+          includeMetadata: true,
         }),
         { wrapper }
       )
