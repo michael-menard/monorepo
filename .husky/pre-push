@@ -35,10 +35,12 @@ fi
 echo -e "${BLUE}🔒 Security Analysis${NC}"
 echo "-------------------"
 
-# Check for hardcoded secrets
+# Check for hardcoded secrets in commits being pushed (exclude this hook file and common false positives)
 echo "🔍 Scanning for hardcoded secrets..."
-if git diff --cached --name-only | xargs grep -l "api[_-]key\|secret\|password\|token" 2>/dev/null; then
-    echo -e "${RED}❌ Potential secrets found in staged files${NC}"
+SECRET_FILES=$(git diff origin/main..HEAD --name-only 2>/dev/null | grep -v "\.husky/\|\.md$\|package\.json$\|\.lock$" | xargs grep -l "api[_-]key\s*=\|secret\s*=\|password\s*=\|token\s*=" 2>/dev/null || true)
+if [ -n "$SECRET_FILES" ]; then
+    echo -e "${RED}❌ Potential secrets found in:${NC}"
+    echo "$SECRET_FILES"
     echo "💡 Consider using environment variables instead"
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 else
@@ -63,11 +65,11 @@ echo "------------------------"
 
 # TypeScript strict checks
 echo "🔍 Running TypeScript strict checks..."
-if pnpm turbo type-check --filter="...[HEAD]" > /dev/null 2>&1; then
+if pnpm turbo check-types --filter="...[HEAD^1]" > /dev/null 2>&1; then
     echo -e "${GREEN}✅ TypeScript checks passed${NC}"
 else
     echo -e "${RED}❌ TypeScript errors found${NC}"
-    echo "💡 Run 'pnpm turbo type-check --filter=\"...[HEAD]\"' for details"
+    echo "💡 Run 'pnpm check-types' for details"
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 fi
 
@@ -91,16 +93,19 @@ echo "-----------------------"
 echo "🔍 Scanning for React performance issues..."
 PERF_ISSUES=0
 
-# Check for missing useCallback/useMemo
-if git diff --cached --name-only | grep -E '\.(tsx?|jsx?)$' | xargs grep -l "useState\|useEffect" 2>/dev/null | xargs grep -L "useCallback\|useMemo" 2>/dev/null | head -1 > /dev/null; then
-    echo -e "${YELLOW}⚠️  Consider using useCallback/useMemo for performance optimization${NC}"
-    PERF_ISSUES=$((PERF_ISSUES + 1))
-fi
+# Check for missing useCallback/useMemo in changed files
+CHANGED_FILES=$(git diff origin/main..HEAD --name-only 2>/dev/null | grep -E '\.(tsx?|jsx?)$' || true)
+if [ -n "$CHANGED_FILES" ]; then
+    if echo "$CHANGED_FILES" | xargs grep -l "useState\|useEffect" 2>/dev/null | xargs grep -L "useCallback\|useMemo" 2>/dev/null | head -1 > /dev/null; then
+        echo -e "${YELLOW}⚠️  Consider using useCallback/useMemo for performance optimization${NC}"
+        PERF_ISSUES=$((PERF_ISSUES + 1))
+    fi
 
-# Check for expensive operations in render
-if git diff --cached --name-only | grep -E '\.(tsx?|jsx?)$' | xargs grep -l "\.map\|\.filter\|\.reduce" 2>/dev/null | head -1 > /dev/null; then
-    echo -e "${YELLOW}⚠️  Consider memoizing expensive array operations${NC}"
-    PERF_ISSUES=$((PERF_ISSUES + 1))
+    # Check for expensive operations in render
+    if echo "$CHANGED_FILES" | xargs grep -l "\.map\|\.filter\|\.reduce" 2>/dev/null | head -1 > /dev/null; then
+        echo -e "${YELLOW}⚠️  Consider memoizing expensive array operations${NC}"
+        PERF_ISSUES=$((PERF_ISSUES + 1))
+    fi
 fi
 
 if [ $PERF_ISSUES -eq 0 ]; then
@@ -160,8 +165,25 @@ else
     echo "3. Consider running 'pnpm lint:changed --fix' to auto-fix some issues"
     echo ""
     echo -e "${BLUE}🤖 This analysis mimics CodeRabbit's review process${NC}"
-    echo "Push anyway? (y/N)"
-    read -r response
+
+    # Allow bypassing with environment variable
+    if [ "$SKIP_PUSH_CHECKS" = "1" ]; then
+        echo -e "${YELLOW}⚠️  SKIP_PUSH_CHECKS=1 set, pushing with known issues...${NC}"
+        exit 0
+    fi
+
+    # Try to get interactive confirmation
+    echo "Push anyway? (y/N) [Set SKIP_PUSH_CHECKS=1 to bypass]"
+    if [ -t 0 ]; then
+        read -r response
+    elif [ -e /dev/tty ]; then
+        read -r response < /dev/tty 2>/dev/null || response="n"
+    else
+        # Non-interactive environment, default to blocking
+        echo "Non-interactive environment detected, blocking push."
+        response="n"
+    fi
+
     if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
         echo -e "${YELLOW}⚠️  Pushing with known issues...${NC}"
         exit 0
