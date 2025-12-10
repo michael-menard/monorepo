@@ -23,7 +23,8 @@ import { getDbAsync } from '@/core/database/client'
 import { uploadSessions } from '@/core/database/schema'
 import { v4 as uuidv4 } from 'uuid'
 import { getUploadConfig, isMimeTypeAllowed, getAllowedMimeTypes } from '@/core/config/upload'
-import { checkAndIncrementDailyLimit } from '@/core/rate-limit/upload-rate-limit'
+import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
+import { createPostgresRateLimitStore } from '@/core/rate-limit/postgres-store'
 import {
   CreateSessionRequestSchema,
   type CreateSessionResponse,
@@ -173,7 +174,13 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
     const uploadConfig = getUploadConfig()
 
     // Check rate limit BEFORE any DB writes (Story 3.1.6)
-    const rateLimitResult = await checkAndIncrementDailyLimit(userId, uploadConfig.rateLimitPerDay)
+    const store = createPostgresRateLimitStore()
+    const rateLimiter = createRateLimiter(store)
+    const rateLimitKey = generateDailyKey('moc-upload', userId)
+    const rateLimitResult = await rateLimiter.checkLimit(rateLimitKey, {
+      maxRequests: uploadConfig.rateLimitPerDay,
+      windowMs: RATE_LIMIT_WINDOWS.DAY,
+    })
     if (!rateLimitResult.allowed) {
       logger.warn('Rate limit exceeded for session creation', {
         requestId,

@@ -41,7 +41,7 @@ type PublicUploadConfig = Pick<
  * - Wrapped with withErrorHandling for consistent error handling
  */
 export const handler = withErrorHandling(
-  async (event: any): Promise<APIGatewayProxyResult> => {
+  async (event: { requestContext?: { requestId?: string } }): Promise<APIGatewayProxyResult> => {
     logger.info('Upload config requested', {
       requestId: event.requestContext?.requestId,
       stage: process.env.STAGE,

@@ -92,6 +92,7 @@
     "@repo/lambda-utils": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/pii-sanitizer": "workspace:*",
+    "@repo/rate-limit": "workspace:*",
     "@repo/rate-limiter": "workspace:*",
     "@repo/s3-client": "workspace:*",
     "@repo/search": "workspace:*",

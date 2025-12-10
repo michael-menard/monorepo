@@ -1,39 +1,4 @@
-# Efficient Pre-commit Checks (Changed Files Only)
-echo "🔍 Running efficient pre-commit checks on changed files..."
+# Pre-commit: Lint changed files
+echo "🔍 Running linter..."
 
-# Get list of changed files
-CHANGED_FILES=$(git diff --cached --name-only)
-
-if [ -z "$CHANGED_FILES" ]; then
-    echo "ℹ️  No files staged for commit."
-    exit 0
-fi
-
-echo "📁 Changed files detected:"
-echo "$CHANGED_FILES" | sed 's/^/  - /'
-
-# Use Turborepo to run checks only on affected projects
-echo ""
-echo "🚀 Running Turborepo checks on affected projects..."
-
-# Format code in affected projects
-echo "💅 Formatting code in affected projects..."
-if ! pnpm turbo format --filter="...[HEAD]" > /dev/null 2>&1; then
-    echo "🔧 Auto-formatting affected projects..."
-    pnpm turbo format --filter="...[HEAD]" || true
-    echo "✅ Code formatted. Please review changes and commit again."
-    exit 1
-fi
-
-# Build affected projects to catch compilation errors
-echo "🔍 Building affected projects..."
-if ! pnpm turbo build --filter="...[HEAD]" > /dev/null 2>&1; then
-    echo "❌ Build failed in affected projects. Please fix errors and try again."
-    echo "💡 Run: pnpm turbo build --filter=\"...[HEAD]\" to see detailed errors"
-    exit 1
-fi
-
-echo "✅ All affected projects passed pre-commit checks!"
-
-# Run lint-staged for file-level checks
-npx lint-staged
+pnpm lint

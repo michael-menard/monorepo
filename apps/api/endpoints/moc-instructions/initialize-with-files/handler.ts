@@ -43,7 +43,8 @@ import { z } from 'zod'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { getUploadConfig, isMimeTypeAllowed, getAllowedMimeTypes } from '@/core/config/upload'
-import { checkAndIncrementDailyLimit } from '@/core/rate-limit/upload-rate-limit'
+import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
+import { createPostgresRateLimitStore } from '@/core/rate-limit/postgres-store'
 import { sanitizeFilenameForS3 } from '@/core/utils/filename-sanitizer'
 
 const logger = createLogger('initialize-with-files')
@@ -318,7 +319,13 @@ export async function handler(event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     // Check rate limit BEFORE any DB writes (Story 3.1.6)
     const uploadConfig = getUploadConfig()
-    const rateLimitResult = await checkAndIncrementDailyLimit(userId, uploadConfig.rateLimitPerDay)
+    const store = createPostgresRateLimitStore()
+    const rateLimiter = createRateLimiter(store)
+    const rateLimitKey = generateDailyKey('moc-upload', userId)
+    const rateLimitResult = await rateLimiter.checkLimit(rateLimitKey, {
+      maxRequests: uploadConfig.rateLimitPerDay,
+      windowMs: RATE_LIMIT_WINDOWS.DAY,
+    })
 
     if (!rateLimitResult.allowed) {
       logger.warn('Rate limit exceeded for initialize', {

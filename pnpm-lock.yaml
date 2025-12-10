@@ -184,6 +184,9 @@ importers:
       '@repo/pii-sanitizer':
         specifier: workspace:*
         version: link:../../packages/backend/pii-sanitizer
+      '@repo/rate-limit':
+        specifier: workspace:*
+        version: link:../../packages/tools/rate-limit
       '@repo/rate-limiter':
         specifier: workspace:*
         version: link:../../packages/backend/rate-limiter
@@ -2168,6 +2171,22 @@ importers:
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
+
+  packages/tools/rate-limit:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.25
+      typescript:
+        specifier: ^5.8.0
+        version: 5.8.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@20.19.25)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.0))(lightningcss@1.30.2)(msw@2.12.3(@types/node@20.19.25)(typescript@5.8.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
 
   packages/tools/upload-config:
     dependencies:
