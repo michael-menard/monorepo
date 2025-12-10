@@ -5,7 +5,7 @@
  * Handles database queries, caching, and search integration.
  */
 
-import { eq, and, sql, desc, ilike, or } from 'drizzle-orm'
+import { eq, and, sql, desc, ilike, or, isNull } from 'drizzle-orm'
 import { db } from '@/core/database/client'
 import {
   mocInstructions,
@@ -150,8 +150,11 @@ export async function getMocDetail(mocId: string, userId: string): Promise<MocDe
 
     // Eager load related entities in parallel
     const [files, galleryImagesData, partsLists] = await Promise.all([
-      // Load MOC files (instructions, parts lists, thumbnails, images)
-      db.select().from(mocFiles).where(eq(mocFiles.mocId, mocId)),
+      // Load MOC files (instructions, parts lists, thumbnails, images) - exclude soft-deleted
+      db
+        .select()
+        .from(mocFiles)
+        .where(and(eq(mocFiles.mocId, mocId), isNull(mocFiles.deletedAt))),
 
       // Load linked gallery images with full image data
       db

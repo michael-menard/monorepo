@@ -286,11 +286,15 @@ export const mocFiles = pgTable(
     originalFilename: text('original_filename'),
     mimeType: text('mime_type'), // Optional: for clarity on file format
     createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }), // Soft-delete support (nullable)
   },
   table => ({
     // Indexes for lazy fetching and performance
     mocIdx: index('idx_moc_files_moc_id_lazy').on(table.mocId),
     mocTypeIdx: index('idx_moc_files_moc_type').on(table.mocId, table.fileType),
+    // Partial index for soft-deleted files (created in migration 0004)
+    // deletedAtIdx: index('idx_moc_files_deleted_at').on(table.deletedAt).where(sql`deleted_at IS NOT NULL`),
     // Business constraints
     // Note: Removed uniqueMocFileType constraint - MOCs can have multiple files of the same type
     uniqueMocFilename: uniqueIndex('moc_files_moc_filename_unique').on(

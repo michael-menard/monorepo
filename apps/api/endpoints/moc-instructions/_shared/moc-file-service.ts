@@ -8,7 +8,7 @@
  * - Invalidates caches
  */
 
-import { eq, and } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { PutObjectCommand, S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
@@ -253,11 +253,11 @@ export async function generateFileDownloadUrl(
     throw new ForbiddenError('You do not own this MOC')
   }
 
-  // Fetch file record
+  // Fetch file record - exclude soft-deleted files
   const [file] = await db
     .select()
     .from(mocFiles)
-    .where(and(eq(mocFiles.id, fileId), eq(mocFiles.mocId, mocId)))
+    .where(and(eq(mocFiles.id, fileId), eq(mocFiles.mocId, mocId), isNull(mocFiles.deletedAt)))
     .limit(1)
 
   if (!file) {
