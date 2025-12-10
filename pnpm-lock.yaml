@@ -193,6 +193,9 @@ importers:
       '@repo/search':
         specifier: workspace:*
         version: link:../../packages/backend/search
+      '@repo/upload-config':
+        specifier: workspace:*
+        version: link:../../packages/tools/upload-config
       aws-cdk-lib:
         specifier: 2.227.0
         version: 2.227.0(constructs@10.4.3)
@@ -2165,6 +2168,22 @@ importers:
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
+
+  packages/tools/upload-config:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.25
+      typescript:
+        specifier: ^5.8.0
+        version: 5.8.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@20.19.25)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.0))(lightningcss@1.30.2)(msw@2.12.3(@types/node@20.19.25)(typescript@5.8.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
 
 packages:
 

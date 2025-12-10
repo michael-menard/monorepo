@@ -6,4 +6,5 @@ packages:
   - 'packages/core/*'
   - 'packages/features/*'
   - 'packages/backend/*'
+  - 'packages/tools/*'
   - 'packages/dev/*'

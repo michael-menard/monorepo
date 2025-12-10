@@ -135,6 +135,14 @@ functions:
           path: /health
           method: GET
 
+  uploadConfig:
+    handler: ../../endpoints/config/upload/handler.handler
+    description: Public upload configuration endpoint for browser clients
+    events:
+      - httpApi:
+          path: /api/config/upload
+          method: GET
+
   Outputs:
     HttpApiUrl:
       Description: Health API URL
