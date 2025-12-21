@@ -1,0 +1,101 @@
+name: Archive Done Items
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  archive-done-items:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Archive items done for 2+ weeks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_ID: "PVT_kwHOABuWLs4BJVcx"
+          WORKFLOW_STATUS_FIELD_ID: "PVTSSF_lAHOABuWLs4BJVcxzg6xJ64"
+          DONE_STATUS_ID: "d5c27e2f"
+        run: |
+          echo "🔍 Finding items in Done status for 2+ weeks..."
+          
+          # Calculate date 2 weeks ago
+          TWO_WEEKS_AGO=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-14d +%Y-%m-%dT%H:%M:%SZ)
+          echo "Looking for items done before: $TWO_WEEKS_AGO"
+          
+          # Query all items in the project with Done status
+          ITEMS=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      fieldValues(first: 20) {
+                        nodes {
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            field {
+                              ... on ProjectV2FieldCommon {
+                                id
+                                name
+                              }
+                            }
+                            optionId
+                            name
+                          }
+                        }
+                      }
+                      content {
+                        ... on Issue {
+                          number
+                          title
+                          closedAt
+                          state
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID")
+          
+          echo "$ITEMS" | jq -r '
+            .data.node.items.nodes[] |
+            select(
+              .fieldValues.nodes[] |
+              select(.field.id == "'"$WORKFLOW_STATUS_FIELD_ID"'" and .optionId == "'"$DONE_STATUS_ID"'")
+            ) |
+            select(.content.closedAt != null) |
+            select(.content.closedAt < "'"$TWO_WEEKS_AGO"'") |
+            @json
+          ' | while IFS= read -r item; do
+            ITEM_ID=$(echo "$item" | jq -r '.id')
+            ISSUE_NUMBER=$(echo "$item" | jq -r '.content.number')
+            ISSUE_TITLE=$(echo "$item" | jq -r '.content.title')
+            CLOSED_AT=$(echo "$item" | jq -r '.content.closedAt')
+            
+            echo "📦 Archiving: #$ISSUE_NUMBER - $ISSUE_TITLE (closed: $CLOSED_AT)"
+            
+            # Archive the item from the project
+            gh api graphql -f query='
+              mutation($projectId: ID!, $itemId: ID!) {
+                archiveProjectV2Item(
+                  input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                  }
+                ) {
+                  item {
+                    id
+                  }
+                }
+              }
+            ' -f projectId="$PROJECT_ID" -f itemId="$ITEM_ID"
+            
+            echo "✅ Archived item #$ISSUE_NUMBER"
+          done
+          
+          echo "🎉 Archive process complete!"
+
