@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { logger } from '@repo/logger'
 import {
   SANITIZATION_PROFILES,
   SanitizationConfig,
@@ -79,7 +80,7 @@ export const AppSafeContent: React.FC<AppSafeContentProps> = ({
       const validation = validateSanitizedInput(content, sanitized)
       if (validation.warnings.length > 0) {
         if (showSanitizationWarnings) {
-          console.warn('AppSafeContent sanitization warnings:', validation.warnings)
+          logger.warn('AppSafeContent sanitization warnings:', validation.warnings)
         }
         onSanitizationWarning?.(validation.warnings)
       }

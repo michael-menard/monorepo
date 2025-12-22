@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { logger } from '@repo/logger'
 import {
   Select,
   SelectContent,
@@ -93,6 +94,7 @@ export const AppSelect = React.forwardRef<React.ElementRef<typeof SelectTrigger>
 
           if (warnings.length > 0) {
             if (showSanitizationWarnings) {
+              logger.warn('AppSelect sanitization warnings:', warnings)
             }
             onSanitizationWarning?.(warnings)
           }

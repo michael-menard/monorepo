@@ -1,3 +1,4 @@
+/* global BeforeUnloadEvent */
 /**
  * Story 3.1.9: Unsaved Changes Prompt Hook
  *

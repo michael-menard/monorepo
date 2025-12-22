@@ -287,8 +287,15 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                 <div
                   className="flex items-center w-full px-3 py-2 text-sm cursor-pointer hover:bg-accent rounded-md"
                   onClick={handleSelectAll}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleSelectAll()
+                    }
+                  }}
                   role="option"
                   aria-selected={allFilteredSelected}
+                  tabIndex={0}
                 >
                   <Checkbox checked={allFilteredSelected} className="mr-2" />
                   {allFilteredSelected ? 'Deselect All' : 'Select All'}
@@ -327,6 +334,14 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                       focusedIndex === index && 'bg-accent',
                     )}
                     onClick={() => !option.disabled && handleOptionToggle(option.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        if (!option.disabled) {
+                          handleOptionToggle(option.value)
+                        }
+                      }
+                    }}
                     role="option"
                     aria-selected={selectedValues.includes(option.value)}
                     aria-disabled={option.disabled}

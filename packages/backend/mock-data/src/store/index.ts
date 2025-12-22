@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux'
+import { logger } from '@repo/logger'
 // Import reducers
 import wishlistReducer from './wishlistSlice'
 import mocInstructionsReducer from './mocInstructionsSlice'
@@ -162,7 +163,7 @@ export const initializeStore = async (dispatch: AppDispatch) => {
       dispatch(fetchProfileData()),
     ])
   } catch (error) {
-    console.error('Failed to initialize store:', error)
+    logger.error('Failed to initialize store:', error)
   }
 }
 

@@ -85,16 +85,18 @@ function AccordionTrigger({
     const currentIndex = triggers.indexOf(target)
 
     switch (event.key) {
-      case KEYBOARD_KEYS.ARROW_DOWN:
+      case KEYBOARD_KEYS.ARROW_DOWN: {
         event.preventDefault()
         const nextIndex = currentIndex < triggers.length - 1 ? currentIndex + 1 : 0
         triggers[nextIndex]?.focus()
         break
-      case KEYBOARD_KEYS.ARROW_UP:
+      }
+      case KEYBOARD_KEYS.ARROW_UP: {
         event.preventDefault()
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : triggers.length - 1
         triggers[prevIndex]?.focus()
         break
+      }
       case KEYBOARD_KEYS.HOME:
         event.preventDefault()
         triggers[0]?.focus()

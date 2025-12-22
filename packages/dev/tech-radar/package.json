@@ -19,7 +19,7 @@
     "generate": "tsx generate-radar.ts",
     "check-types": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "lint": "eslint --fix src/ --ext .ts,.tsx --max-warnings 20",
+    "lint": "eslint --fix src/ --max-warnings 20",
     "test": "vitest run",
     "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
     "clean": "rm -rf dist node_modules"

@@ -175,7 +175,7 @@ export function createGalleryApi(config?: GalleryApiConfig) {
 
           return response
         },
-        providesTags: (result, error, params) => {
+        providesTags: (result, _error, params) => {
           const tags: Array<
             { type: 'Gallery'; id?: string } | { type: 'GalleryImage'; id: string }
           > = [
