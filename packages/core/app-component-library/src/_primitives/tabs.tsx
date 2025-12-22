@@ -72,17 +72,19 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
 
     switch (event.key) {
       case KEYBOARD_KEYS.ARROW_LEFT:
-      case KEYBOARD_KEYS.ARROW_UP:
+      case KEYBOARD_KEYS.ARROW_UP: {
         event.preventDefault()
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1
         tabs[prevIndex]?.focus()
         break
+      }
       case KEYBOARD_KEYS.ARROW_RIGHT:
-      case KEYBOARD_KEYS.ARROW_DOWN:
+      case KEYBOARD_KEYS.ARROW_DOWN: {
         event.preventDefault()
         const nextIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0
         tabs[nextIndex]?.focus()
         break
+      }
       case KEYBOARD_KEYS.HOME:
         event.preventDefault()
         tabs[0]?.focus()

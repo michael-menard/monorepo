@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react'
 import { z } from 'zod'
 import { AlertTriangle, RefreshCw, Bug, Home } from 'lucide-react'
+import { logger } from '@repo/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../_primitives/card'
 import { Button } from '../_primitives/button'
 
@@ -227,12 +228,14 @@ export const sendErrorReport = async (errorInfo: ErrorInfo): Promise<void> => {
   try {
     // In a real application, this would send to your error reporting service
     // Example: Sentry, LogRocket, Bugsnag, etc.
-    console.log('Sending error report:', errorInfo)
+    logger.info('Sending error report:', errorInfo)
     // Placeholder for actual error reporting service call
     // await fetch('/api/error-reporting', {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
     //   body: JSON.stringify(errorInfo),
     // });
-  } catch (reportingError) {}
+  } catch (reportingError) {
+    // Intentionally empty - we don't want error reporting to throw
+  }
 }

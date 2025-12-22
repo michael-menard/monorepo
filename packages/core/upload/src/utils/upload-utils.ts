@@ -1,3 +1,4 @@
+/* global XMLHttpRequest */
 import type { UploadFile, UploadConfig, UploadProgress } from '../types/index.js'
 
 export const uploadSingleFile = async (

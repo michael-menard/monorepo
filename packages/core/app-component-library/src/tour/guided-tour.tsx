@@ -15,7 +15,7 @@ const useDisableMouseScroll = (isDisabled: boolean) => {
   useEffect(() => {
     if (isDisabled) {
       const preventMouseScroll = (e: WheelEvent) => {
-        e.preventDefault()
+        e?.preventDefault()
       }
       window.addEventListener('wheel', preventMouseScroll, { passive: false })
 
@@ -475,22 +475,35 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     }
   }
 
+  const contextValue = React.useMemo(
+    () => ({
+      registerStep,
+      unregisterStep,
+      startTour,
+      stopTour: () => stopTour(false),
+      nextStep,
+      prevStep,
+      resetTourCompletion,
+      isActive,
+      currentStepId: activeSteps[currentStep]?.id || null,
+      currentStepIndex: currentStep,
+      totalSteps: activeSteps.length,
+    }),
+    [
+      registerStep,
+      unregisterStep,
+      startTour,
+      nextStep,
+      prevStep,
+      resetTourCompletion,
+      isActive,
+      activeSteps,
+      currentStep,
+    ],
+  )
+
   return (
-    <TourContext.Provider
-      value={{
-        registerStep,
-        unregisterStep,
-        startTour,
-        stopTour: () => stopTour(false),
-        nextStep,
-        prevStep,
-        resetTourCompletion,
-        isActive,
-        currentStepId: activeSteps[currentStep]?.id || null,
-        currentStepIndex: currentStep,
-        totalSteps: activeSteps.length,
-      }}
-    >
+    <TourContext.Provider value={contextValue}>
       {children}
       <TourOverlay />
       <GlobalTourPopover />
@@ -580,8 +593,8 @@ export const TourTrigger: React.FC<{
     }
   }, [hideAfterComplete, storageKey])
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault()
+  const handleClick = (e?: React.MouseEvent) => {
+    e?.preventDefault()
     startTour()
   }
 
@@ -590,7 +603,18 @@ export const TourTrigger: React.FC<{
   }
 
   return (
-    <div onClick={handleClick} className={className}>
+    <div
+      onClick={handleClick}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e?.preventDefault()
+          handleClick()
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      className={className}
+    >
       {children}
     </div>
   )

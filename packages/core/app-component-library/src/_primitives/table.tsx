@@ -8,7 +8,7 @@ export interface TableProps extends React.ComponentProps<'table'> {
   role?: string
 }
 
-function Table({ className, caption, summary, role = 'table', ...props }: TableProps) {
+function Table({ className, caption, role = 'table', ...props }: TableProps) {
   const uniqueId = useUniqueId('table')
   const tableId = uniqueId
   const captionId = `${tableId}-caption`

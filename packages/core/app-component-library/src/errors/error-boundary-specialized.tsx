@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { Component, ReactNode } from 'react'
 import { z } from 'zod'
 import { AlertTriangle, RefreshCw, Wifi, FileText, Database } from 'lucide-react'

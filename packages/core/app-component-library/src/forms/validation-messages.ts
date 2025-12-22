@@ -87,7 +87,7 @@ export const createEnhancedSchemas = {
       .max(maxLength, validationMessages.maxLength(fieldName, maxLength))
       .regex(/^[a-zA-Z\s]+$/, `${fieldName} can only contain letters and spaces`),
 
-  username: (_fieldName = 'Username') =>
+  username: () =>
     z
       .string()
       .min(3, validationMessages.username.minLength(3))
@@ -98,9 +98,9 @@ export const createEnhancedSchemas = {
     z
       .string()
       .min(1, validationMessages.required(fieldName))
-      .regex(/^[\+]?[1-9][\d]{0,15}$/, validationMessages.phone),
+      .regex(/^[+]?[1-9][\d]{0,15}$/, validationMessages.phone),
 
-  url: (_fieldName = 'URL') => z.string().url(validationMessages.url()).optional(),
+  url: () => z.string().url(validationMessages.url()).optional(),
 
   number: (fieldName = 'Number', min?: number, max?: number) => {
     let schema = z.number().positive(validationMessages.number.positive(fieldName))

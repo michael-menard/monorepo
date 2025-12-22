@@ -36,7 +36,6 @@ export const UploadArea = React.forwardRef<HTMLDivElement, UploadAreaProps>(
     {
       upload,
       config,
-      preset,
       disabled = false,
       variant = 'default',
       className,

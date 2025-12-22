@@ -4,9 +4,9 @@
  */
 
 import { createLogger } from '@repo/logger'
+import type { RTKQueryCacheConfig, CacheConfig, CacheStats } from '../schemas/cache.js'
 import { MemoryCache } from './memoryCache'
 import { StorageCache } from './storageCache'
-import type { RTKQueryCacheConfig, CacheConfig, CacheStats } from '../schemas/cache.js'
 
 const logger = createLogger('cache:serverless')
 

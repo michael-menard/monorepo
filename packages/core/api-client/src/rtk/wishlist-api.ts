@@ -216,7 +216,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
 
           return response
         },
-        providesTags: (result, error, params) => {
+        providesTags: (result, _error, params) => {
           const tags: Array<
             | { type: 'Wishlist'; id?: string }
             | { type: 'WishlistItem'; id: string }
@@ -304,7 +304,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
             },
           }
         },
-        transformResponse: (response: ServerlessResponse<any>, meta, params) => {
+        transformResponse: (response: ServerlessResponse<any>, _meta, params) => {
           const duration = performance.now() - (performance.now() - 100)
 
           performanceMonitor.trackComponentRender(
@@ -323,7 +323,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
 
           return response
         },
-        invalidatesTags: (result, error, { itemIds, operation }) => {
+        invalidatesTags: (_result, _error, { itemIds, operation }) => {
           const tags: Array<
             | { type: 'Wishlist'; id?: string }
             | { type: 'WishlistItem'; id: string }
@@ -442,7 +442,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
             },
           }
         },
-        transformResponse: (response: ServerlessResponse<any>, meta, itemIds) => {
+        transformResponse: (response: ServerlessResponse<any>, _meta, itemIds) => {
           const duration = performance.now() - (performance.now() - 50)
 
           performanceMonitor.trackComponentRender(
@@ -458,7 +458,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
 
           return response
         },
-        providesTags: (result, error, itemIds) => [
+        providesTags: (_result, _error, itemIds) => [
           { type: 'PriceAlert' as const, id: 'LIST' },
           ...itemIds.map(id => ({ type: 'WishlistItem' as const, id: `${id}-price` })),
         ],
@@ -517,7 +517,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
             },
           }
         },
-        transformResponse: (response: ServerlessResponse<any>, meta, params) => {
+        transformResponse: (response: ServerlessResponse<any>, _meta, params) => {
           const duration = performance.now() - (performance.now() - 100)
 
           performanceMonitor.trackComponentRender(
@@ -533,7 +533,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
 
           return response
         },
-        invalidatesTags: (result, error, { itemIds }) => [
+        invalidatesTags: (_result, _error, { itemIds }) => [
           { type: 'PriceAlert' as const, id: 'LIST' },
           { type: 'WishlistStats' as const },
           ...itemIds.map(id => ({ type: 'WishlistItem' as const, id })),

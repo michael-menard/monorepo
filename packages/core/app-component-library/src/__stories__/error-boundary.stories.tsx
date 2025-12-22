@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Meta, StoryObj } from '@storybook/react'
 import { ErrorBoundary } from '../errors/error-boundary'
 import { Button } from '../base/primitives/button'

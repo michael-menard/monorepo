@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { logger } from '@repo/logger'
 import { Label, LabelProps } from '../_primitives/label'
 import {
   SANITIZATION_PROFILES,
@@ -64,6 +65,7 @@ export const AppLabel = React.forwardRef<React.ElementRef<typeof Label>, AppLabe
           const validation = validateSanitizedInput(children, sanitized)
           if (validation.warnings.length > 0) {
             if (showSanitizationWarnings) {
+              logger.warn('AppLabel sanitization warnings:', validation.warnings)
             }
             onSanitizationWarning?.(validation.warnings)
           }

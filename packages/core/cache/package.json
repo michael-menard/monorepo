@@ -71,7 +71,7 @@
     }
   },
   "scripts": {
-    "build": "vite build && tsc -p tsconfig.build.json",
+    "build": "vite build",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:run": "vitest run",

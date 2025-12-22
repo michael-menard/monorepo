@@ -36,7 +36,7 @@ const CustomToast: React.FC<CustomToastProps> = ({
 }) => {
   const [progress, setProgress] = useState(100)
   const [isPaused, setIsPaused] = useState(false)
-  const [_timeLeft, setTimeLeft] = useState(duration)
+  const [, setTimeLeft] = useState(duration)
 
   useEffect(() => {
     if (isPaused) return
@@ -107,6 +107,8 @@ const CustomToast: React.FC<CustomToastProps> = ({
       className={cn('relative w-full max-w-sm p-4 border rounded-lg shadow-lg', getColorClasses())}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      role="alert"
+      aria-live="polite"
     >
       {/* Close button */}
       <button

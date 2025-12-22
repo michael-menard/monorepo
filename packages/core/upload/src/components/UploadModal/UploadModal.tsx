@@ -13,13 +13,20 @@ export interface UploadModalProps {
 }
 
 export const UploadModal = React.forwardRef<HTMLDivElement, UploadModalProps>(
-  ({ isOpen, onClose, upload, config, preset, disabled = false, className, ...props }, ref) => {
+  ({ isOpen, onClose, upload, className, ...props }, ref) => {
     if (!isOpen) return null
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
+        <div
+          className="absolute inset-0 bg-black bg-opacity-50"
+          onClick={onClose}
+          onKeyDown={e => e.key === 'Escape' && onClose()}
+          role="button"
+          tabIndex={0}
+          aria-label="Close modal"
+        />
 
         {/* Modal */}
         <div
