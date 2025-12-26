@@ -79,14 +79,15 @@ export const dashboardApi = createApi({
       ...getServerlessCacheConfig('medium'),
       transformResponse: (response: unknown) => {
         // Validate response with Zod schema
+        // Using .parse() for fail-fast validation (QA Note: ERROR-001 - intentional)
+        // Rationale: API contract violations should fail immediately rather than silently
+        // return malformed data. RTK Query handles errors gracefully in consuming components.
         const validatedStats = DashboardStatsSchema.parse(response)
         logger.debug('Dashboard stats fetched', undefined, { stats: validatedStats })
+        // Note: Performance metrics tracked by baseQuery performanceMonitor
+        // performance field omitted as we don't have access to real metrics here
         return {
           data: validatedStats,
-          performance: {
-            duration: 0,
-            cached: false,
-          },
         }
       },
     }),
@@ -101,14 +102,15 @@ export const dashboardApi = createApi({
       ...getServerlessCacheConfig('short'),
       transformResponse: (response: unknown) => {
         // Validate response with Zod schema
+        // Using .parse() for fail-fast validation (QA Note: ERROR-001 - intentional)
+        // Rationale: API contract violations should fail immediately rather than silently
+        // return malformed data. RTK Query handles errors gracefully in consuming components.
         const validatedMocs = z.array(RecentMocSchema).parse(response)
         logger.debug('Recent MOCs fetched', undefined, { count: validatedMocs.length })
+        // Note: Performance metrics tracked by baseQuery performanceMonitor
+        // performance field omitted as we don't have access to real metrics here
         return {
           data: validatedMocs,
-          performance: {
-            duration: 0,
-            cached: false,
-          },
         }
       },
     }),
