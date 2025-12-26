@@ -19,7 +19,7 @@
     "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint --fix . --ext .ts,.tsx",
+    "lint": "eslint --fix .",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

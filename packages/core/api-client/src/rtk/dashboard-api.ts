@@ -4,35 +4,53 @@
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
+import { z } from 'zod'
 import { createLogger } from '@repo/logger'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
 const logger = createLogger('api-client:dashboard')
 
 /**
- * Dashboard statistics response
+ * Dashboard statistics Zod schema
+ * Story 2.3: Stats Endpoint Integration
  */
-export interface DashboardStats {
-  totalMocs: number
-  wishlistCount: number
-  themeCount: number
-  lastUpdated: string
-}
+export const DashboardStatsSchema = z.object({
+  totalMocs: z.number().int().nonnegative(),
+  wishlistCount: z.number().int().nonnegative(),
+  themeCount: z.number().int().nonnegative(),
+  lastUpdated: z.string().datetime(),
+})
+
+export type DashboardStats = z.infer<typeof DashboardStatsSchema>
 
 /**
- * Recent MOC summary for dashboard display
+ * Recent MOC summary Zod schema
+ * Story 2.4: Recent MOCs Endpoint Integration
  */
-export interface RecentMoc {
-  id: string
-  title: string
-  thumbnail: string | null
-  createdAt: string
-}
+export const RecentMocSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1),
+  thumbnail: z.string().url().nullable(),
+  createdAt: z.string().datetime(),
+})
+
+export type RecentMoc = z.infer<typeof RecentMocSchema>
 
 /**
- * Dashboard API response wrapper
+ * Dashboard API response wrapper schema
  */
-export interface DashboardResponse<T> {
+export const DashboardResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
+  z.object({
+    data: dataSchema,
+    performance: z
+      .object({
+        duration: z.number().nonnegative(),
+        cached: z.boolean(),
+      })
+      .optional(),
+  })
+
+export type DashboardResponse<T> = {
   data: T
   performance?: {
     duration: number
@@ -59,10 +77,12 @@ export const dashboardApi = createApi({
       query: () => '/dashboard/stats',
       providesTags: ['DashboardStats'],
       ...getServerlessCacheConfig('medium'),
-      transformResponse: (response: DashboardStats) => {
-        logger.debug('Dashboard stats fetched', undefined, { stats: response })
+      transformResponse: (response: unknown) => {
+        // Validate response with Zod schema
+        const validatedStats = DashboardStatsSchema.parse(response)
+        logger.debug('Dashboard stats fetched', undefined, { stats: validatedStats })
         return {
-          data: response,
+          data: validatedStats,
           performance: {
             duration: 0,
             cached: false,
@@ -79,10 +99,12 @@ export const dashboardApi = createApi({
       query: (limit = 5) => `/dashboard/recent?limit=${limit}`,
       providesTags: ['RecentMocs'],
       ...getServerlessCacheConfig('short'),
-      transformResponse: (response: RecentMoc[]) => {
-        logger.debug('Recent MOCs fetched', undefined, { count: response.length })
+      transformResponse: (response: unknown) => {
+        // Validate response with Zod schema
+        const validatedMocs = z.array(RecentMocSchema).parse(response)
+        logger.debug('Recent MOCs fetched', undefined, { count: validatedMocs.length })
         return {
-          data: response,
+          data: validatedMocs,
           performance: {
             duration: 0,
             cached: false,
