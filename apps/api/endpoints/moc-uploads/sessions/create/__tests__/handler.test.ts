@@ -23,10 +23,18 @@ vi.mock('@/core/database/client', () => ({
   ),
 }))
 
-vi.mock('@/core/rate-limit/upload-rate-limit', () => ({
-  checkAndIncrementDailyLimit: vi.fn(() =>
-    Promise.resolve({ allowed: true, currentCount: 1, maxPerDay: 100 }),
-  ),
+vi.mock('@repo/rate-limit', () => ({
+  createRateLimiter: vi.fn(() => ({
+    checkLimit: vi.fn(() =>
+      Promise.resolve({ allowed: true, currentCount: 1, retryAfterSeconds: 0, nextAllowedAt: new Date() }),
+    ),
+  })),
+  generateDailyKey: vi.fn(() => 'mock-rate-limit-key'),
+  RATE_LIMIT_WINDOWS: { DAY: 86400000 },
+}))
+
+vi.mock('@/core/rate-limit/postgres-store', () => ({
+  createPostgresRateLimitStore: vi.fn(() => ({})),
 }))
 
 vi.mock('@/core/config/upload', () => ({
@@ -132,14 +140,17 @@ describe('create-upload-session handler', () => {
 
   describe('Rate Limiting', () => {
     it('returns 429 when rate limit exceeded', async () => {
-      const { checkAndIncrementDailyLimit } = await import('@/core/rate-limit/upload-rate-limit')
-      vi.mocked(checkAndIncrementDailyLimit).mockResolvedValueOnce({
-        allowed: false,
-        currentCount: 100,
-        maxPerDay: 100,
-        nextAllowedAt: new Date(Date.now() + 86400000),
-        retryAfterSeconds: 86400,
-      })
+      const { createRateLimiter } = await import('@repo/rate-limit')
+      vi.mocked(createRateLimiter).mockReturnValueOnce({
+        checkLimit: vi.fn(() =>
+          Promise.resolve({
+            allowed: false,
+            currentCount: 100,
+            nextAllowedAt: new Date(Date.now() + 86400000),
+            retryAfterSeconds: 86400,
+          }),
+        ),
+      } as any)
 
       const event = createMockEvent({
         method: 'POST',

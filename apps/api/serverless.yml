@@ -214,6 +214,17 @@ provider:
           Resource:
             - !GetAtt FilesBucket.Arn
             - !Sub '${FilesBucket.Arn}/*'
+        # S3 Multipart Upload permissions (required for chunked uploads)
+        - Effect: Allow
+          Action:
+            - s3:CreateMultipartUpload
+            - s3:UploadPart
+            - s3:CompleteMultipartUpload
+            - s3:AbortMultipartUpload
+            - s3:ListMultipartUploadParts
+          Resource:
+            - !GetAtt FilesBucket.Arn
+            - !Sub '${FilesBucket.Arn}/*'
 
   # API Gateway settings
   httpApi:
@@ -596,6 +607,85 @@ functions:
     events:
       - httpApi:
           path: /api/mocs/{id}/parts-list
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
+  # MOC Upload Session Functions (multipart upload for large files)
+  # ===========================================
+
+  # Create upload session
+  # POST /api/mocs/uploads/sessions
+  # Creates a new multipart upload session, validates file metadata, enforces rate limiting
+  mocCreateUploadSession:
+    handler: endpoints/moc-uploads/sessions/create/handler.handler
+    description: Create multipart upload session
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Register file in session
+  # POST /api/mocs/uploads/sessions/{sessionId}/files
+  # Registers a file for upload, initiates S3 multipart upload
+  mocRegisterUploadFile:
+    handler: endpoints/moc-uploads/sessions/register-file/handler.handler
+    description: Register file in upload session
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/files
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Upload file part
+  # PUT /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/parts/{partNumber}
+  # Uploads a single chunk (5MB) of the file
+  mocUploadPart:
+    handler: endpoints/moc-uploads/sessions/upload-part/handler.handler
+    description: Upload file part (chunk)
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/parts/{partNumber}
+          method: PUT
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Complete file upload
+  # POST /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/complete
+  # Completes S3 multipart upload, verifies all parts present
+  mocCompleteUploadFile:
+    handler: endpoints/moc-uploads/sessions/complete-file/handler.handler
+    description: Complete file multipart upload
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/complete
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Finalize session
+  # POST /api/mocs/uploads/sessions/{sessionId}/finalize
+  # Verifies files in S3, validates magic bytes, creates MOC record
+  mocFinalizeUploadSession:
+    handler: endpoints/moc-uploads/sessions/finalize/handler.handler
+    description: Finalize upload session and create MOC
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/uploads/sessions/{sessionId}/finalize
           method: POST
           authorizer:
             name: cognitoJwtAuthorizer
