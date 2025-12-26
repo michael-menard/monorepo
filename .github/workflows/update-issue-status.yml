@@ -1,0 +1,129 @@
+name: Update Issue Status on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  update-status:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Extract issue number from PR
+        id: extract-issue
+        run: |
+          # Extract issue number from PR title or body
+          # Expected format: "Story 3.1.47: Title" or "#123" in body
+          
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          # Try to extract from title (format: "Story X.Y.Z: Title")
+          STORY_NUM=$(echo "$PR_TITLE" | grep -oE 'Story [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+          
+          if [ -n "$STORY_NUM" ]; then
+            # Find the story file
+            STORY_FILE=$(find docs/stories -name "${STORY_NUM}*.md" -type f | head -1)
+            
+            if [ -n "$STORY_FILE" ]; then
+              # Extract issue number from story file
+              ISSUE_NUM=$(grep -A 3 "## GitHub Issue" "$STORY_FILE" | grep "Issue:" | grep -oE '#[0-9]+' | tr -d '#')
+              
+              if [ -n "$ISSUE_NUM" ]; then
+                echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+                echo "story_file=$STORY_FILE" >> $GITHUB_OUTPUT
+                echo "Found issue #$ISSUE_NUM from story $STORY_NUM"
+              else
+                echo "No issue number found in story file"
+                exit 0
+              fi
+            else
+              echo "Story file not found for $STORY_NUM"
+              exit 0
+            fi
+          else
+            # Try to extract issue number directly from PR body
+            ISSUE_NUM=$(echo "$PR_BODY" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+            
+            if [ -n "$ISSUE_NUM" ]; then
+              echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+              echo "Found issue #$ISSUE_NUM from PR body"
+            else
+              echo "No issue number found in PR title or body"
+              exit 0
+            fi
+          fi
+      
+      - name: Set issue status to Done
+        if: steps.extract-issue.outputs.issue_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ steps.extract-issue.outputs.issue_number }}
+          PROJECT_ID: "PVT_kwHOABuWLs4BJVcx"
+          STATUS_FIELD_ID: "PVTSSF_lAHOABuWLs4BJVcxzg6xJ64"
+          DONE_STATUS_ID: "d5c27e2f"
+        run: |
+          echo "Setting issue #$ISSUE_NUM status to Done..."
+          
+          # Get the issue's project item ID
+          ITEM_ID=$(gh api graphql -f query="
+            query {
+              repository(owner: \"${{ github.repository_owner }}\", name: \"${{ github.event.repository.name }}\") {
+                issue(number: $ISSUE_NUM) {
+                  projectItems(first: 10) {
+                    nodes {
+                      id
+                      project {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          " --jq ".data.repository.issue.projectItems.nodes[] | select(.project.id == \"$PROJECT_ID\") | .id")
+          
+          if [ -z "$ITEM_ID" ]; then
+            echo "Issue #$ISSUE_NUM not found in project"
+            exit 0
+          fi
+          
+          # Update the status field to Done
+          gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: \"$PROJECT_ID\"
+                  itemId: \"$ITEM_ID\"
+                  fieldId: \"$STATUS_FIELD_ID\"
+                  value: { 
+                    singleSelectOptionId: \"$DONE_STATUS_ID\"
+                  }
+                }
+              ) {
+                projectV2Item {
+                  id
+                }
+              }
+            }
+          "
+          
+          echo "✅ Issue #$ISSUE_NUM status set to Done"
+      
+      - name: Update story file status
+        if: steps.extract-issue.outputs.story_file != ''
+        run: |
+          STORY_FILE="${{ steps.extract-issue.outputs.story_file }}"
+          
+          if [ -f "$STORY_FILE" ]; then
+            # Update the Status line in the GitHub Issue section
+            sed -i.bak 's/- Status: .*/- Status: Done/' "$STORY_FILE"
+            rm "${STORY_FILE}.bak"
+            
+            echo "✅ Updated story file status to Done"
+          fi
+

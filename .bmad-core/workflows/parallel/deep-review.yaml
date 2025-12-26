@@ -1,0 +1,246 @@
+# <!-- Powered by BMAD™ Core -->
+workflow:
+  id: deep-review
+  name: Deep Review (Multi-Specialist Analysis)
+  description: >-
+    Coordinate multiple specialist sub-agents to perform comprehensive
+    multi-perspective code review covering security, performance, and accessibility.
+  type: parallel-execution
+  
+  use_cases:
+    - Pre-deployment quality gate
+    - Major feature review
+    - Security-critical code review
+    - Performance-sensitive components
+    - Public-facing UI review
+    
+  prerequisites:
+    - Code is committed to branch
+    - Tests are passing
+    - Lint and type-check pass
+    - Target scope is defined
+    
+  phases:
+    - phase: initialization
+      agent: qa-coordinator
+      steps:
+        - step: identify_target_scope
+          action: Determine what to review
+          inputs:
+            - Target component/system name
+            - File paths (optional)
+            - PR number (optional)
+          outputs:
+            - List of files to review
+            - Components affected
+            - Review scope
+            
+        - step: select_specialists
+          action: Choose appropriate specialists
+          default:
+            - security-specialist
+            - performance-specialist
+            - accessibility-specialist
+          optional:
+            - code-quality-specialist
+            - architecture-specialist
+            
+        - step: prepare_context
+          action: Gather context for specialists
+          collects:
+            - Source code files
+            - Test files
+            - Documentation
+            - Dependencies
+            - Configuration
+            
+    - phase: specialist_spawning
+      agent: qa-coordinator
+      steps:
+        - step: spawn_specialists
+          action: Create specialist sub-agent for each perspective
+          for_each: specialist in selected_specialists
+          executes: spawn-sub-agent task
+          creates:
+            - Specialist state file
+            - Task assignment with target scope
+            - Context package
+            
+        - step: initialize_specialists
+          action: Specialists load context and begin analysis
+          specialist_actions:
+            - Load task assignment
+            - Load target code
+            - Set analysis parameters
+            - Report initialization complete
+            
+    - phase: parallel_analysis
+      agent: qa-coordinator
+      steps:
+        - step: monitor_progress
+          action: Track specialist analysis progress
+          executes: coordinate-workers task
+          monitors:
+            - Progress reports
+            - Findings count
+            - Critical issues
+            - Completion status
+          frequency: every_2_minutes
+          
+        - step: escalate_critical_findings
+          action: Immediately notify on critical issues
+          triggers:
+            critical_security: alert_immediately
+            critical_performance: alert_immediately
+            critical_accessibility: alert_immediately
+            
+        - step: track_findings
+          action: Collect findings as they're discovered
+          stores:
+            - Finding ID
+            - Severity
+            - Category
+            - Specialist
+            - Timestamp
+            
+    - phase: aggregation
+      agent: qa-coordinator
+      steps:
+        - step: collect_findings
+          action: Gather all specialist findings
+          executes: aggregate-results task
+          collects:
+            - Security findings
+            - Performance findings
+            - Accessibility findings
+            - Code quality findings
+            
+        - step: deduplicate_findings
+          action: Remove duplicate findings across specialists
+          strategy: merge_similar_findings
+          
+        - step: categorize_by_severity
+          action: Organize findings by severity
+          categories:
+            - Critical (blocking)
+            - High (must fix before merge)
+            - Medium (should fix soon)
+            - Low (fix when convenient)
+            - Informational (best practices)
+            
+        - step: generate_comprehensive_report
+          action: Create unified review report
+          includes:
+            - Executive summary
+            - Findings by severity
+            - Findings by category
+            - Deployment recommendation
+            - Remediation priorities
+            - Estimated fix time
+            
+  success_criteria:
+    - All specialists complete analysis
+    - All findings categorized
+    - Report generated
+    - Deployment decision made
+    
+  deployment_decision:
+    criteria:
+      critical_findings: 0
+      high_findings: acceptable_threshold
+      tests_passing: true
+      coverage_adequate: true
+    outcomes:
+      - APPROVED: No critical, acceptable high findings
+      - APPROVED_WITH_CONCERNS: No critical, some high findings documented
+      - BLOCKED: Critical findings present, must fix before deployment
+      
+  metrics:
+    coverage:
+      files_analyzed: count
+      lines_analyzed: count
+      specialists_used: count
+      
+    findings:
+      total_findings: count
+      by_severity:
+        critical: count
+        high: count
+        medium: count
+        low: count
+        informational: count
+      by_category:
+        security: count
+        performance: count
+        accessibility: count
+        code_quality: count
+        
+    efficiency:
+      sequential_estimate: specialist_count * 30_minutes
+      parallel_actual: max(specialist_durations) + coordination_overhead
+      time_saved: sequential_estimate - parallel_actual
+      
+  example_usage: |
+    User: @qa *deep-review target=auth-system
+    
+    QA Agent transforms to qa-coordinator:
+    
+    === Deep Review Initiated ===
+    Target: auth-system
+    
+    [Phase 1: Initialization]
+    ✓ Identified scope: 25 files in src/auth/
+    ✓ Selected specialists:
+      - security-specialist
+      - performance-specialist
+      - accessibility-specialist
+    ✓ Prepared context package
+    
+    [Phase 2: Specialist Spawning]
+    ✓ Spawned security-specialist
+    ✓ Spawned performance-specialist
+    ✓ Spawned accessibility-specialist
+    ✓ All specialists initialized
+    
+    [Phase 3: Parallel Analysis]
+    Monitoring 3 specialists...
+    
+    [Dashboard shows real-time progress and findings]
+    
+    🚨 CRITICAL: security-specialist found SQL injection vulnerability
+    🚨 CRITICAL: accessibility-specialist found keyboard inaccessible login
+    
+    ✓ All specialists complete
+    
+    [Phase 4: Aggregation]
+    ✓ Collected 32 findings
+    ✓ Deduplicated 3 findings
+    ✓ Categorized by severity
+    ✓ Generated comprehensive report
+    
+    === Deep Review Complete ===
+    Time: 10 minutes (vs 90 minutes sequential)
+    Speedup: 9x faster
+    
+    FINDINGS SUMMARY:
+    Critical: 4 (BLOCKING)
+    High: 10
+    Medium: 18
+    Low: 0
+    
+    DEPLOYMENT DECISION: BLOCKED
+    
+    Critical Issues Must Be Fixed:
+    1. SEC-001: SQL injection in login
+    2. SEC-002: Weak password hashing
+    3. PERF-001: N+1 query in dashboard
+    4. A11Y-001: Login form not keyboard accessible
+    
+    Estimated Fix Time: 2-3 hours
+    
+    Next Steps:
+    1. Fix all critical issues
+    2. Re-run deep review
+    3. Address high-priority findings
+    4. Proceed to deployment
+

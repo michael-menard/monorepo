@@ -1,0 +1,158 @@
+name: Setup Branch Protection
+
+# This workflow helps set up branch protection rules
+# Run manually from GitHub Actions tab
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to protect'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - develop
+      required_approvals:
+        description: 'Number of required approvals'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+
+permissions:
+  contents: read
+  # Note: This workflow requires admin permissions to set branch protection
+  # It must be run by a repository administrator
+
+jobs:
+  setup-protection:
+    name: Configure Branch Protection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Branch Protection
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = '${{ inputs.branch }}';
+            const requiredApprovals = parseInt('${{ inputs.required_approvals }}');
+            
+            console.log(`🔒 Setting up branch protection for: ${branch}`);
+            console.log(`📋 Required approvals: ${requiredApprovals}`);
+            
+            try {
+              await github.rest.repos.updateBranchProtection({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: branch,
+                required_status_checks: {
+                  strict: true,
+                  checks: [
+                    { context: 'Lint & Type Check' },
+                    { context: 'Unit Tests' },
+                    { context: 'Build All Packages' },
+                    { context: 'Security Audit' }
+                  ]
+                },
+                enforce_admins: false,
+                required_pull_request_reviews: {
+                  dismiss_stale_reviews: true,
+                  require_code_owner_reviews: false,
+                  required_approving_review_count: requiredApprovals,
+                  require_last_push_approval: false
+                },
+                restrictions: null,
+                required_linear_history: true,
+                allow_force_pushes: false,
+                allow_deletions: false,
+                block_creations: false,
+                required_conversation_resolution: true
+              });
+              
+              console.log('✅ Branch protection rules applied successfully!');
+              console.log('');
+              console.log('📋 Protection Summary:');
+              console.log('   ✅ Pull requests required');
+              console.log(`   ✅ ${requiredApprovals} approval(s) required`);
+              console.log('   ✅ Status checks must pass');
+              console.log('   ✅ Branch must be up-to-date');
+              console.log('   ✅ Linear history enforced');
+              console.log('   ❌ Force pushes blocked');
+              console.log('   ❌ Branch deletion blocked');
+              console.log('');
+              console.log(`🔗 View settings: https://github.com/${context.repo.owner}/${context.repo.repo}/settings/branches`);
+              
+            } catch (error) {
+              console.error('❌ Failed to set up branch protection:', error.message);
+              console.log('');
+              console.log('This might happen if:');
+              console.log('  • You don\'t have admin access to the repository');
+              console.log('  • The status checks don\'t exist yet (push a commit first)');
+              console.log('  • The GITHUB_TOKEN doesn\'t have sufficient permissions');
+              console.log('');
+              console.log('Try setting up manually instead:');
+              console.log(`  https://github.com/${context.repo.owner}/${context.repo.repo}/settings/branches`);
+              throw error;
+            }
+
+      - name: Verify Protection
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = '${{ inputs.branch }}';
+            
+            try {
+              const { data } = await github.rest.repos.getBranchProtection({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: branch
+              });
+              
+              console.log('✅ Branch protection verified!');
+              console.log('');
+              console.log('Current settings:');
+              console.log(`  • Required reviews: ${data.required_pull_request_reviews?.required_approving_review_count || 0}`);
+              console.log(`  • Dismiss stale reviews: ${data.required_pull_request_reviews?.dismiss_stale_reviews || false}`);
+              console.log(`  • Required status checks: ${data.required_status_checks?.checks?.length || 0}`);
+              console.log(`  • Strict mode: ${data.required_status_checks?.strict || false}`);
+              console.log(`  • Linear history: ${data.required_linear_history?.enabled || false}`);
+              console.log(`  • Force pushes: ${data.allow_force_pushes?.enabled ? 'Allowed' : 'Blocked'}`);
+              console.log(`  • Deletions: ${data.allow_deletions?.enabled ? 'Allowed' : 'Blocked'}`);
+              
+            } catch (error) {
+              console.error('⚠️  Could not verify branch protection:', error.message);
+            }
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Branch Protection Setup Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Protected Branch: \`${{ inputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Protection Rules:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Pull requests required" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ ${{ inputs.required_approvals }} approval(s) required" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Status checks must pass" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Branch must be up-to-date" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Linear history enforced" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Force pushes blocked" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Branch deletion blocked" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test by trying to push to \`${{ inputs.branch }}\` (should fail)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Create a feature branch and make changes" >> $GITHUB_STEP_SUMMARY
+          echo "3. Create a Pull Request" >> $GITHUB_STEP_SUMMARY
+          echo "4. See [Workflow Guide](.github/WORKFLOW_GUIDE.md) for details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View Branch Settings](https://github.com/${{ github.repository }}/settings/branches)" >> $GITHUB_STEP_SUMMARY
+
