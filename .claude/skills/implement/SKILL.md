@@ -45,6 +45,9 @@ One-command story implementation from start to finish. Uses Claude Code's Task t
 
 # Resume interrupted work
 /implement 1.2 --resume
+
+# After PR is merged - archive story and clean up
+/implement 1.2 --complete
 ```
 
 ## Parameters
@@ -58,6 +61,7 @@ One-command story implementation from start to finish. Uses Claude Code's Task t
 - **--skip-review** - Skip QA review (not recommended)
 - **--dry-run** - Preview what would happen without making changes
 - **--resume** - Continue from existing worktree/branch if present
+- **--complete** - Run post-merge cleanup (archive story, close issue, clean worktree)
 
 ---
 
@@ -119,7 +123,8 @@ TodoWrite([
   { content: "Development setup", status: "pending", activeForm: "Setting up development" },
   { content: "Implementation", status: "pending", activeForm: "Implementing story" },
   { content: "Quality assurance", status: "pending", activeForm: "Running QA review" },
-  { content: "Create pull request", status: "pending", activeForm: "Creating PR" }
+  { content: "Create pull request", status: "pending", activeForm: "Creating PR" },
+  { content: "Merge and archive", status: "pending", activeForm: "Merging PR and archiving story" }
 ])
 ```
 
@@ -211,8 +216,29 @@ git branch -r --list "origin/{BRANCH_NAME}"
 
 **Update GitHub issue (if present):**
 ```bash
-gh issue edit {ISSUE_NUMBER} --add-label "in-progress"
-gh issue comment {ISSUE_NUMBER} --body "Implementation started by Claude Code"
+# Remove any previous status labels
+gh issue edit {ISSUE_NUMBER} \
+  --remove-label "ready" \
+  --remove-label "approved" \
+  --remove-label "blocked" \
+  --add-label "in-progress"
+
+# Add implementation started comment with branch link
+gh issue comment {ISSUE_NUMBER} --body "$(cat <<'EOF'
+## Implementation Started
+
+**Branch:** `{BRANCH_NAME}`
+**Started by:** Claude Code
+**Story file:** `docs/stories/{STORY_NUM}.*.md`
+
+Work is in progress. PR will be created when ready.
+EOF
+)"
+```
+
+**Update story file status:**
+```markdown
+status: In Progress
 ```
 
 ---
@@ -494,8 +520,31 @@ Generated with [Claude Code](https://claude.com/claude-code)"
 
 **Update GitHub issue:**
 ```bash
-gh issue edit {ISSUE_NUMBER} --remove-label "in-progress" --add-label "ready-for-review"
-gh issue comment {ISSUE_NUMBER} --body "PR created: {PR_URL}"
+gh issue edit {ISSUE_NUMBER} \
+  --remove-label "in-progress" \
+  --add-label "ready-for-review"
+
+gh issue comment {ISSUE_NUMBER} --body "$(cat <<'EOF'
+## Ready for Review
+
+**Pull Request:** {PR_URL}
+**QA Gate:** {GATE_STATUS}
+
+### Changes Summary
+{LIST_OF_CHANGES_BRIEF}
+
+### Test Plan
+{ACCEPTANCE_CRITERIA_AS_CHECKLIST}
+
+---
+Awaiting review and merge.
+EOF
+)"
+```
+
+**Update story file status:**
+```markdown
+status: Ready for Review
 ```
 
 ---
@@ -532,7 +581,105 @@ GitHub Issue: #{ISSUE_NUMBER} (labeled: ready-for-review)
 Next Steps:
   - Review PR at {PR_URL}
   - Merge when approved
+  - Run: /implement {STORY_NUM} --complete (to archive story)
   - Worktree at: tree/{BRANCH_NAME}
+═══════════════════════════════════════════════════════
+```
+
+**Note:** Do NOT clear todos yet - Phase 8 handles completion after merge.
+
+---
+
+## Phase 8: Post-Merge Completion (--complete flag)
+
+**This phase runs after the PR has been merged. Triggered by `/implement {STORY_NUM} --complete`.**
+
+### 8.1 Verify PR is Merged
+
+```bash
+# Check PR status
+PR_STATE=$(gh pr view {PR_URL} --json state -q '.state')
+
+if [ "$PR_STATE" != "MERGED" ]; then
+  echo "PR is not merged yet (state: $PR_STATE)"
+  echo "Merge the PR first, then run: /implement {STORY_NUM} --complete"
+  exit 1
+fi
+```
+
+### 8.2 Archive Story File
+
+```bash
+# Move story file to archive
+STORY_FILE="docs/stories/{STORY_NUM}.*.md"
+ARCHIVE_DIR="docs/_archive/completed-stories"
+
+# Ensure archive directory exists
+mkdir -p "$ARCHIVE_DIR"
+
+# Move file
+mv $STORY_FILE "$ARCHIVE_DIR/"
+
+# Update story status in archived file
+sed -i '' 's/^status:.*/status: Done/' "$ARCHIVE_DIR/{STORY_FILENAME}"
+
+# Commit the archive move
+git add docs/stories/ docs/_archive/completed-stories/
+git commit -m "chore: archive completed story {STORY_NUM}"
+```
+
+### 8.3 Close GitHub Issue
+
+```bash
+gh issue edit {ISSUE_NUMBER} \
+  --remove-label "ready-for-review" \
+  --remove-label "in-progress" \
+  --add-label "done"
+
+gh issue comment {ISSUE_NUMBER} --body "$(cat <<'EOF'
+## Story Complete
+
+**PR Merged:** {PR_URL}
+**Story Archived:** `docs/_archive/completed-stories/{STORY_FILENAME}`
+
+This story has been successfully implemented and merged.
+EOF
+)"
+
+# Close the issue
+gh issue close {ISSUE_NUMBER}
+```
+
+### 8.4 Clean Up Worktree
+
+```bash
+# Remove the worktree
+git worktree remove tree/{BRANCH_NAME} --force
+
+# Delete the local branch (remote already deleted by PR merge)
+git branch -D {BRANCH_NAME}
+
+# Prune any stale worktree references
+git worktree prune
+```
+
+### 8.5 Final Summary
+
+```
+═══════════════════════════════════════════════════════
+  Story Completed and Archived
+═══════════════════════════════════════════════════════
+
+Story:       {STORY_NUM} - {STORY_TITLE}
+Status:      Done
+
+Actions Completed:
+  ✓ PR merged:     {PR_URL}
+  ✓ Story archived: docs/_archive/completed-stories/{STORY_FILENAME}
+  ✓ Issue closed:  #{ISSUE_NUMBER}
+  ✓ Worktree removed: tree/{BRANCH_NAME}
+  ✓ Branch cleaned up
+
 ═══════════════════════════════════════════════════════
 ```
 
@@ -623,3 +770,9 @@ Work is preserved in worktree. User can:
 ### --resume
 - Continue interrupted work
 - Re-run after manual fixes
+
+### --complete
+- Run after PR is merged
+- Archives story to `docs/_archive/completed-stories/`
+- Closes GitHub issue with "done" label
+- Cleans up worktree and branch

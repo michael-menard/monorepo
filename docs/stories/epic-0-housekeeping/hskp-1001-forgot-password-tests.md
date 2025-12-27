@@ -7,7 +7,11 @@
 
 ## Status
 
-Draft
+Approved
+
+## Parent Story
+
+- **0.2.0**: Auth E2E Test Suite - Validation & Completion
 
 ## Story
 
