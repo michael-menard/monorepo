@@ -310,12 +310,24 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     // Validate response schema
     const validated = MocDetailResponseSchema.parse(response)
 
-    logger.info('MOC detail fetched', {
-      requestId,
-      mocId,
-      isOwner,
-      filesCount: filesWithUrls.length,
-    })
+    // Story 3.1.37: Log moc.edit.start when owner fetches their MOC (edit scenario)
+    if (isOwner) {
+      logger.info('moc.edit.start', {
+        correlationId: requestId,
+        requestId,
+        ownerId: userId,
+        mocId,
+        fileCount: filesWithUrls.length,
+        status: moc.status,
+      })
+    } else {
+      logger.info('MOC detail fetched', {
+        requestId,
+        mocId,
+        isOwner,
+        filesCount: filesWithUrls.length,
+      })
+    }
 
     return successResponse(200, {
       success: true,

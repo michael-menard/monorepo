@@ -14,7 +14,7 @@ const mockMoc = {
 
 // Track mock state
 let mockSelectResult: any = null
-let mockRateLimitResult: any = { allowed: true, remaining: 99, retryAfterSeconds: 0 }
+let mockRateLimitCount: number = 0 // Story 3.1.37: Use getCount instead of checkLimit
 
 vi.mock('@/core/database/client', () => {
   return {
@@ -38,7 +38,9 @@ vi.mock('@/core/rate-limit/postgres-store', () => ({
 
 vi.mock('@repo/rate-limit', () => ({
   createRateLimiter: vi.fn(() => ({
-    checkLimit: vi.fn(() => Promise.resolve(mockRateLimitResult)),
+    // Story 3.1.37: Presign uses getCount (doesn't increment), finalize uses checkLimit
+    getCount: vi.fn(() => Promise.resolve(mockRateLimitCount)),
+    checkLimit: vi.fn(() => Promise.resolve({ allowed: true, remaining: 99 })),
   })),
   generateDailyKey: vi.fn((feature: string, userId: string) => `${feature}:${userId}:2024-01-01`),
   RATE_LIMIT_WINDOWS: { DAY: 86400000 },
@@ -119,14 +121,7 @@ describe('Edit Presign Handler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSelectResult = null
-    mockRateLimitResult = {
-      allowed: true,
-      remaining: 99,
-      currentCount: 1,
-      resetAt: new Date(),
-      nextAllowedAt: new Date(),
-      retryAfterSeconds: 0,
-    }
+    mockRateLimitCount = 0 // Story 3.1.37: Reset to 0 (under limit)
     process.env.LEGO_API_BUCKET_NAME = 'test-bucket'
     process.env.STAGE = 'dev'
   })
@@ -354,14 +349,9 @@ describe('Edit Presign Handler', () => {
     })
 
     it('returns 429 when rate limit exceeded', async () => {
-      mockRateLimitResult = {
-        allowed: false,
-        remaining: 0,
-        currentCount: 100,
-        resetAt: new Date(Date.now() + 86400000),
-        nextAllowedAt: new Date(Date.now() + 86400000),
-        retryAfterSeconds: 3600,
-      }
+      // Story 3.1.37: Set count to be at or above limit
+      mockRateLimitCount = 100 // At limit (100/100)
+      mockSelectResult = mockMoc // Need MOC to exist for ownership check before rate limit
 
       const event = createMockEvent({
         method: 'POST',
@@ -382,9 +372,14 @@ describe('Edit Presign Handler', () => {
       expect(res.statusCode).toBe(429)
 
       const body = JSON.parse(res.body)
-      expect(body.code).toBe('TOO_MANY_REQUESTS')
-      expect(body.retryAfterSeconds).toBe(3600)
-      expect(res.headers['Retry-After']).toBe('3600')
+      // Story 3.1.37: Updated response code
+      expect(body.code).toBe('RATE_LIMIT_EXCEEDED')
+      expect(body).toHaveProperty('retryAfterSeconds')
+      expect(body).toHaveProperty('resetAt')
+      expect(body).toHaveProperty('usage')
+      expect(body.usage.current).toBe(100)
+      expect(body.usage.limit).toBe(100)
+      expect(res.headers['Retry-After']).toBeDefined()
     })
   })
 
