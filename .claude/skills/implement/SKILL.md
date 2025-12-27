@@ -46,6 +46,18 @@ One-command story implementation from start to finish. Automatically handles val
 - **--quick-review** - Use fast single-agent QA review
 - **--skip-review** - Skip QA review (not recommended)
 
+## Execution
+
+When this skill is invoked, load and execute the task file: `.bmad-core/tasks/implement-story.md`
+
+Follow all phases defined in that task exactly, including:
+- Phase 2: Development Setup (creates worktree via `start-worktree-from-story.md`)
+- All subsequent phases for implementation, QA, and PR creation
+
+The task file is the source of truth for this workflow.
+
+---
+
 ## What It Does
 
 This slash command activates the Dev agent and runs the complete `*implement` workflow:

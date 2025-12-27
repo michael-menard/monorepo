@@ -26,10 +26,12 @@ export type DashboardStats = z.infer<typeof DashboardStatsSchema>
 /**
  * Recent MOC summary Zod schema
  * Story 2.4: Recent MOCs Endpoint Integration
+ * Story 3.1.39: Added slug for edit navigation
  */
 export const RecentMocSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1),
+  slug: z.string().nullable(), // Story 3.1.39: For edit link navigation
   thumbnail: z.string().url().nullable(),
   createdAt: z.string().datetime(),
 })

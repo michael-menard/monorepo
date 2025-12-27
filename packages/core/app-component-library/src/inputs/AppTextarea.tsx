@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { logger } from '@repo/logger'
 import { Textarea, TextareaProps } from '../_primitives/textarea'
 import {
   SANITIZATION_PROFILES,
@@ -91,7 +92,6 @@ export const AppTextarea = React.forwardRef<HTMLTextAreaElement, AppTextareaProp
       value,
       defaultValue,
       debounceMs = 0,
-      debounceSanitization = true,
       ...props
     },
     ref,
@@ -112,6 +112,7 @@ export const AppTextarea = React.forwardRef<HTMLTextAreaElement, AppTextareaProp
           const validation = validateSanitizedInput(inputValue, sanitized)
           if (validation.warnings.length > 0) {
             if (showSanitizationWarnings) {
+              logger.warn('AppTextarea sanitization warnings:', validation.warnings)
             }
             onSanitizationWarning?.(validation.warnings)
           }
@@ -205,6 +206,7 @@ export const AppTextarea = React.forwardRef<HTMLTextAreaElement, AppTextareaProp
         if (sanitized !== value) {
           // If the parent provided an unsanitized value, we should warn
           if (showSanitizationWarnings) {
+            logger.warn('AppTextarea initial value was sanitized', { original: value, sanitized })
           }
         }
       }

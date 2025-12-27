@@ -1,12 +1,14 @@
 /**
  * Instructions Detail Module
  * Story 3.1.4: Instructions Detail Page
+ * Story 3.1.39: Edit button for owners
  *
  * Lazy-loads @repo/app-instructions-gallery detail page and integrates with RTK Query.
  */
 
 import { lazy, Suspense, useCallback } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { logger } from '@repo/logger'
 import { LoadingPage } from '../pages/LoadingPage'
 
 // Lazy-load the instructions detail module
@@ -17,9 +19,11 @@ const InstructionsDetailModule = lazy(() =>
 )
 
 // Mock instruction data for now - will be replaced with RTK Query
+// Story 3.1.39: Added slug and isOwner for edit functionality
 const MOCK_INSTRUCTION = {
   id: '123e4567-e89b-12d3-a456-426614174001',
   name: 'Technic Supercar',
+  slug: 'technic-supercar', // Story 3.1.39: For edit navigation
   description:
     'A detailed supercar model with working steering, suspension, and gearbox. Perfect for display and play.',
   thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
@@ -38,6 +42,7 @@ const MOCK_INSTRUCTION = {
   createdAt: '2025-01-10T10:30:00Z',
   updatedAt: '2025-01-15T14:20:00Z',
   isFavorite: true,
+  isOwner: true, // Story 3.1.39: Indicates current user owns this MOC
 }
 
 /**
@@ -57,17 +62,30 @@ export function InstructionsDetail() {
     navigate({ to: '/instructions' })
   }, [navigate])
 
-  const handleEdit = useCallback((id: string) => {
-    // TODO: Navigate to edit page when implemented
-    // eslint-disable-next-line no-console
-    console.log('Navigate to edit:', id)
-  }, [])
+  // Story 3.1.39: Navigate to edit page (AC: 2)
+  // Only called when isOwner is true (button hidden for non-owners)
+  const handleEdit = useCallback(
+    (id: string) => {
+      const slug = instruction?.slug
+      if (!slug) {
+        logger.warn('Cannot navigate to edit: no slug available', { id })
+        return
+      }
+      logger.info('Navigating to edit page', { id, slug })
+      navigate({ to: '/mocs/$slug/edit', params: { slug } })
+    },
+    [navigate, instruction?.slug],
+  )
 
   const handleFavorite = useCallback((id: string) => {
     // TODO: Implement with RTK Query mutation
-    // eslint-disable-next-line no-console
-    console.log('Toggle favorite:', id)
+    logger.debug('Toggle favorite:', { id })
   }, [])
+
+  // Story 3.1.39: Edit button visibility is controlled by whether onEdit is passed
+  // and the external component checks if the user is owner internally
+  // The onEdit callback will only navigate if the user is the owner
+  const editHandler = instruction?.isOwner ? handleEdit : undefined
 
   return (
     <Suspense fallback={<LoadingPage />}>
@@ -77,7 +95,7 @@ export function InstructionsDetail() {
         isLoading={isLoading}
         error={error}
         onBack={handleBack}
-        onEdit={handleEdit}
+        onEdit={editHandler}
         onFavorite={handleFavorite}
       />
     </Suspense>

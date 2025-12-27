@@ -28,7 +28,7 @@ const ApiErrorFallback: React.FC<{
   error: Error
   errorInfo: ErrorInfo
   onRetry?: () => void
-}> = ({ error, errorInfo: _errorInfo, onRetry }) => {
+}> = ({ error, onRetry }) => {
   const handleRetry = () => {
     if (onRetry) {
       onRetry()
@@ -74,7 +74,7 @@ export class ApiErrorBoundary extends Component<ApiErrorBoundaryProps> {
         fallback={(error, errorInfo) => (
           <ApiErrorFallback error={error} errorInfo={errorInfo} onRetry={this.props.onRetry} />
         )}
-        onError={(_error, _errorInfo) => {
+        onError={() => {
           // Log API-specific errors
         }}
       >
@@ -96,7 +96,7 @@ const FormErrorFallback: React.FC<{
   error: Error
   errorInfo: ErrorInfo
   onReset?: () => void
-}> = ({ error, errorInfo: _errorInfo, onReset }) => {
+}> = ({ error, onReset }) => {
   const handleReset = () => {
     if (onReset) {
       onReset()
@@ -140,7 +140,7 @@ export class FormErrorBoundary extends Component<FormErrorBoundaryProps> {
         fallback={(error, errorInfo) => (
           <FormErrorFallback error={error} errorInfo={errorInfo} onReset={this.props.onReset} />
         )}
-        onError={(_error, _errorInfo) => {
+        onError={() => {
           // Log form-specific errors
         }}
       >
@@ -162,7 +162,7 @@ const DataErrorFallback: React.FC<{
   error: Error
   errorInfo: ErrorInfo
   onRetry?: () => void
-}> = ({ error, errorInfo: _errorInfo, onRetry }) => {
+}> = ({ error, onRetry }) => {
   const handleRetry = () => {
     if (onRetry) {
       onRetry()
@@ -208,7 +208,7 @@ export class DataErrorBoundary extends Component<DataErrorBoundaryProps> {
         fallback={(error, errorInfo) => (
           <DataErrorFallback error={error} errorInfo={errorInfo} onRetry={this.props.onRetry} />
         )}
-        onError={(_error, _errorInfo) => {
+        onError={() => {
           // Log data-specific errors
         }}
       >
@@ -230,7 +230,7 @@ const ComponentErrorFallback: React.FC<{
   error: Error
   errorInfo: ErrorInfo
   componentName?: string
-}> = ({ error, errorInfo: _errorInfo, componentName }) => {
+}> = ({ error, componentName }) => {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
@@ -272,7 +272,7 @@ export class ComponentErrorBoundary extends Component<ComponentErrorBoundaryProp
             componentName={this.props.componentName}
           />
         )}
-        onError={(_error, _errorInfo) => {
+        onError={() => {
           // Log component-specific errors (removed for production)
         }}
       >

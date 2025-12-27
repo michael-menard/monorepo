@@ -124,10 +124,10 @@ export function createIntelligentApi<T extends Record<string, any>>(config: {
       cacheManager.invalidate(key, reason),
 
     // Prefetch related queries based on patterns
-    prefetchRelated: async (endpoint: string, args: any) => {
+    prefetchRelated: async (endpoint: string) => {
       if (!enhancedConfig.enablePredictivePrefetching) return
 
-      const relatedEndpoints = findRelatedEndpoints(endpoint, args)
+      const relatedEndpoints = findRelatedEndpoints(endpoint)
       for (const related of relatedEndpoints) {
         try {
           // Trigger prefetch (implementation depends on specific API structure)
@@ -222,19 +222,19 @@ function extractDependencies(args: any): string[] {
   const url = typeof args === 'string' ? args : args.url || ''
 
   // Extract user ID from URL or params
-  const userIdMatch = url.match(/\/users?\/([^\/]+)/)
+  const userIdMatch = url.match(/\/users?\/([^/]+)/)
   if (userIdMatch) {
     dependencies.push(`user:${userIdMatch[1]}`)
   }
 
   // Extract gallery ID from URL
-  const galleryIdMatch = url.match(/\/gallery\/([^\/]+)/)
+  const galleryIdMatch = url.match(/\/gallery\/([^/]+)/)
   if (galleryIdMatch) {
     dependencies.push(`gallery:${galleryIdMatch[1]}`)
   }
 
   // Extract wishlist ID from URL
-  const wishlistIdMatch = url.match(/\/wishlist\/([^\/]+)/)
+  const wishlistIdMatch = url.match(/\/wishlist\/([^/]+)/)
   if (wishlistIdMatch) {
     dependencies.push(`wishlist:${wishlistIdMatch[1]}`)
   }
@@ -245,7 +245,7 @@ function extractDependencies(args: any): string[] {
 /**
  * Find related endpoints for predictive prefetching
  */
-function findRelatedEndpoints(endpoint: string, _args: any): CacheableEndpoint[] {
+function findRelatedEndpoints(endpoint: string): CacheableEndpoint[] {
   const related: CacheableEndpoint[] = []
 
   // Gallery-related prefetching

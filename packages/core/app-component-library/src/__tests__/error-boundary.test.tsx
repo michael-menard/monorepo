@@ -17,6 +17,16 @@ import {
   useAsyncError,
 } from '../errors/error-boundary-specialized'
 
+// Mock @repo/logger
+vi.mock('@repo/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
 // Mock console.error to avoid noise in tests
 const originalConsoleError = console.error
 beforeEach(() => {
@@ -426,7 +436,7 @@ describe('generateErrorReport', () => {
 
 describe('sendErrorReport', () => {
   it('logs error report', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const { logger } = await import('@repo/logger')
     const errorInfo: ErrorInfo = {
       message: 'Test error',
       timestamp: new Date(),
@@ -435,9 +445,7 @@ describe('sendErrorReport', () => {
 
     await sendErrorReport(errorInfo)
 
-    expect(consoleSpy).toHaveBeenCalledWith('Sending error report:', errorInfo)
-
-    consoleSpy.mockRestore()
+    expect(logger.info).toHaveBeenCalledWith('Sending error report:', errorInfo)
   })
 })
 

@@ -284,7 +284,8 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
             {/* Select All/None Button */}
             {filteredOptions.length > 0 && (
               <div className="p-2 border-b border-gray-200">
-                <div
+                <button
+                  type="button"
                   className="flex items-center w-full px-3 py-2 text-sm cursor-pointer hover:bg-accent rounded-md"
                   onClick={handleSelectAll}
                   role="option"
@@ -292,7 +293,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                 >
                   <Checkbox checked={allFilteredSelected} className="mr-2" />
                   {allFilteredSelected ? 'Deselect All' : 'Select All'}
-                </div>
+                </button>
               </div>
             )}
 
@@ -319,10 +320,11 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                 </div>
               ) : (
                 filteredOptions.map((option, index) => (
-                  <div
+                  <button
+                    type="button"
                     key={option.value}
                     className={cn(
-                      'flex items-center px-3 py-2 text-sm cursor-pointer hover:bg-accent',
+                      'flex items-center w-full px-3 py-2 text-sm cursor-pointer hover:bg-accent text-left',
                       option.disabled && 'opacity-50 cursor-not-allowed',
                       focusedIndex === index && 'bg-accent',
                     )}
@@ -331,6 +333,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                     aria-selected={selectedValues.includes(option.value)}
                     aria-disabled={option.disabled}
                     tabIndex={focusedIndex === index ? 0 : -1}
+                    disabled={option.disabled}
                   >
                     <Checkbox
                       checked={selectedValues.includes(option.value)}
@@ -340,7 +343,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                     <span className={cn(option.disabled && 'text-muted-foreground')}>
                       {option.label}
                     </span>
-                  </div>
+                  </button>
                 ))
               )}
             </div>

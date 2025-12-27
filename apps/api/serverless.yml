@@ -611,6 +611,21 @@ functions:
           authorizer:
             name: cognitoJwtAuthorizer
 
+  # Edit Finalize MOC (Story 3.1.36)
+  # POST /api/mocs/{mocId}/edit/finalize
+  # Commits edit changes atomically: metadata updates, new files, removed files
+  mocEditFinalize:
+    handler: endpoints/moc-instructions/edit-finalize/handler.handler
+    description: Finalize MOC edit with atomic commit
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/mocs/{mocId}/edit/finalize
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
   # ===========================================
   # MOC Upload Session Functions (multipart upload for large files)
   # ===========================================
@@ -946,6 +961,22 @@ functions:
     events:
       - websocket:
           route: $default
+
+  # ===========================================
+  # Scheduled Cleanup Functions
+  # ===========================================
+
+  # Story 3.1.38: Cleanup orphaned edit files in S3
+  cleanupEditOrphans:
+    handler: endpoints/cleanup/edit-orphans/handler.handler
+    description: Cleanup orphaned edit files in S3 (daily)
+    memorySize: 256
+    timeout: 300
+    events:
+      - schedule:
+          rate: cron(0 3 * * ? *)
+          enabled: true
+          description: Daily cleanup of orphaned edit files at 03:00 UTC
 
 # CloudFormation Resources
 resources:

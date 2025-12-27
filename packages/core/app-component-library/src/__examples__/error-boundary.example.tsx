@@ -2,12 +2,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../base/layout/card'
 import { Button } from '../base/primitives/button'
 import { Badge } from '../base/data-display/badge'
-import {
-  ErrorBoundary,
-  useErrorHandler,
-  generateErrorReport,
-  sendErrorReport,
-} from '../errors/error-boundary'
+import { ErrorBoundary, generateErrorReport, sendErrorReport } from '../errors/error-boundary'
 import {
   ApiErrorBoundary,
   FormErrorBoundary,
@@ -106,7 +101,7 @@ export const ErrorBoundaryExample: React.FC = () => {
   const [hasError, setHasError] = useState(false)
   const [dataError, setDataError] = useState(false)
 
-  const handleError = (error: Error, errorInfo: any) => {
+  const handleError = (error: Error) => {
     // Generate and send error report
     const report = generateErrorReport(error, {
       component: 'ErrorBoundaryExample',

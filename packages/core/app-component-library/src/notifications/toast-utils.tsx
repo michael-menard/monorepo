@@ -36,22 +36,24 @@ const CustomToast: React.FC<CustomToastProps> = ({
 }) => {
   const [progress, setProgress] = useState(100)
   const [isPaused, setIsPaused] = useState(false)
-  const [_timeLeft, setTimeLeft] = useState(duration)
+  const remainingTimeRef = React.useRef(duration)
 
   useEffect(() => {
     if (isPaused) return
 
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        const newTime = prev - 100
-        setProgress((newTime / duration) * 100)
+    const startTime = Date.now()
+    const initialRemaining = remainingTimeRef.current
 
-        if (newTime <= 0) {
-          onClose?.()
-          return 0
-        }
-        return newTime
-      })
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const newRemaining = Math.max(0, initialRemaining - elapsed)
+      remainingTimeRef.current = newRemaining
+      setProgress((newRemaining / duration) * 100)
+
+      if (newRemaining <= 0) {
+        onClose?.()
+        clearInterval(interval)
+      }
     }, 100)
 
     return () => clearInterval(interval)
@@ -107,6 +109,10 @@ const CustomToast: React.FC<CustomToastProps> = ({
       className={cn('relative w-full max-w-sm p-4 border rounded-lg shadow-lg', getColorClasses())}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={() => setIsPaused(false)}
+      role="alert"
+      aria-live="polite"
     >
       {/* Close button */}
       <button

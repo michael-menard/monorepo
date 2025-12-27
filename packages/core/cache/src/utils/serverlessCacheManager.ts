@@ -4,13 +4,13 @@
  */
 
 import { createLogger } from '@repo/logger'
+import type { RTKQueryCacheConfig } from '../schemas/cache'
 import {
   ServerlessCache,
   type ServerlessCacheConfig,
   type BatchOperation,
   type BatchResult,
 } from './serverlessCache'
-import type { RTKQueryCacheConfig } from '../schemas/cache'
 
 const logger = createLogger('cache:serverless-manager')
 
@@ -104,7 +104,7 @@ export class ServerlessCacheManager {
         return this.storageCache?.get<T>(key) || null
 
       case 'hybrid':
-      default:
+      default: {
         // Try memory first, then storage
         const memoryResult = await this.memoryCache.get<T>(key)
         if (memoryResult !== null) {
@@ -121,6 +121,7 @@ export class ServerlessCacheManager {
         }
 
         return null
+      }
     }
   }
 

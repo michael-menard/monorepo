@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { logger } from '@repo/logger'
 import { SANITIZATION_PROFILES, SanitizationConfig, sanitizeFormData } from '../lib/sanitization'
 
 export interface AppFormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, 'onSubmit'> {
@@ -106,7 +107,7 @@ export const AppForm = React.forwardRef<HTMLFormElement, AppFormProps>(
 
           if (warnings.length > 0) {
             if (showSanitizationWarnings) {
-              console.warn('AppForm sanitization warnings:', warnings)
+              logger.warn('AppForm sanitization warnings:', warnings)
             }
             onSanitizationWarning?.(warnings)
           }

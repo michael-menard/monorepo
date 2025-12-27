@@ -20,7 +20,14 @@
 
 import { z } from 'zod'
 import { eq, and, inArray, isNull } from 'drizzle-orm'
-import { HeadObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+  HeadObjectCommand,
+  GetObjectCommand,
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 import { db } from '@/core/database/client'
@@ -372,6 +379,9 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       }
     }
 
+    // Track original edit keys for cleanup on failure
+    const originalEditKeys = newFiles.map(f => f.s3Key)
+
     // ─────────────────────────────────────────────────────────────────────────
     // Task 3: Verify Removed Files Belong to This MOC (AC: 3)
     // ─────────────────────────────────────────────────────────────────────────
@@ -415,92 +425,143 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     // ─────────────────────────────────────────────────────────────────────────
     // Task 4: Atomic Transaction Update (AC: 4)
+    // Story 3.1.38: Wrap in try-catch for cleanup on failure
     // ─────────────────────────────────────────────────────────────────────────
 
     const now = new Date()
+
+    // Compute permanent paths upfront (for database records)
+    const filesWithPermanentPaths = newFiles.map(f => ({
+      ...f,
+      permanentS3Key: editKeyToPermanentKey(f.s3Key),
+    }))
 
     logger.info('Starting atomic transaction', {
       requestId,
       mocId,
     })
 
-    const result = await db.transaction(async tx => {
-      // 1. Update MOC metadata with optimistic lock
-      const metadataUpdates: Record<string, unknown> = {
-        updatedAt: now,
-        lastUpdatedByUserId: userId,
-      }
-
-      if (title !== undefined) metadataUpdates.title = title
-      if (description !== undefined) metadataUpdates.description = description
-      if (tags !== undefined) metadataUpdates.tags = tags
-      if (theme !== undefined) metadataUpdates.theme = theme
-      if (slug !== undefined) metadataUpdates.slug = slug
-
-      const [updatedMoc] = await tx
-        .update(mocInstructions)
-        .set(metadataUpdates)
-        .where(
-          and(
-            eq(mocInstructions.id, mocId),
-            eq(mocInstructions.updatedAt, new Date(expectedUpdatedAt)),
-          ),
-        )
-        .returning()
-
-      if (!updatedMoc) {
-        // Another process updated the MOC since our check
-        throw new ConflictError('MOC was modified by another process. Please reload and try again.')
-      }
-
-      // 2. Insert new file records
-      if (newFiles.length > 0) {
-        const fileRecords = newFiles.map(f => ({
-          mocId,
-          fileType: f.category === 'image' ? 'gallery-image' : f.category,
-          fileUrl: `https://${bucketName}.s3.amazonaws.com/${f.s3Key}`,
-          originalFilename: f.filename,
-          mimeType: f.mimeType,
-          createdAt: now,
+    let result
+    try {
+      result = await db.transaction(async tx => {
+        // 1. Update MOC metadata with optimistic lock
+        const metadataUpdates: Record<string, unknown> = {
           updatedAt: now,
-        }))
+          lastUpdatedByUserId: userId,
+        }
 
-        await tx.insert(mocFiles).values(fileRecords)
+        if (title !== undefined) metadataUpdates.title = title
+        if (description !== undefined) metadataUpdates.description = description
+        if (tags !== undefined) metadataUpdates.tags = tags
+        if (theme !== undefined) metadataUpdates.theme = theme
+        if (slug !== undefined) metadataUpdates.slug = slug
 
-        logger.info('Inserted new file records', {
-          requestId,
-          mocId,
-          count: fileRecords.length,
-        })
-      }
-
-      // 3. Soft-delete removed files
-      if (removedFileIds.length > 0) {
-        await tx
-          .update(mocFiles)
-          .set({ deletedAt: now, updatedAt: now })
+        const [updatedMoc] = await tx
+          .update(mocInstructions)
+          .set(metadataUpdates)
           .where(
             and(
-              eq(mocFiles.mocId, mocId),
-              inArray(mocFiles.id, removedFileIds),
-              isNull(mocFiles.deletedAt),
+              eq(mocInstructions.id, mocId),
+              eq(mocInstructions.updatedAt, new Date(expectedUpdatedAt)),
             ),
           )
+          .returning()
 
-        logger.info('Soft-deleted file records', {
-          requestId,
-          mocId,
-          count: removedFileIds.length,
-        })
+        if (!updatedMoc) {
+          // Another process updated the MOC since our check
+          throw new ConflictError(
+            'MOC was modified by another process. Please reload and try again.',
+          )
+        }
+
+        // 2. Insert new file records with PERMANENT paths
+        if (filesWithPermanentPaths.length > 0) {
+          const fileRecords = filesWithPermanentPaths.map(f => ({
+            mocId,
+            fileType: f.category === 'image' ? 'gallery-image' : f.category,
+            fileUrl: `https://${bucketName}.s3.amazonaws.com/${f.permanentS3Key}`,
+            originalFilename: f.filename,
+            mimeType: f.mimeType,
+            createdAt: now,
+            updatedAt: now,
+          }))
+
+          await tx.insert(mocFiles).values(fileRecords)
+
+          logger.info('Inserted new file records', {
+            requestId,
+            mocId,
+            count: fileRecords.length,
+          })
+        }
+
+        // 3. Soft-delete removed files
+        if (removedFileIds.length > 0) {
+          await tx
+            .update(mocFiles)
+            .set({ deletedAt: now, updatedAt: now })
+            .where(
+              and(
+                eq(mocFiles.mocId, mocId),
+                inArray(mocFiles.id, removedFileIds),
+                isNull(mocFiles.deletedAt),
+              ),
+            )
+
+          logger.info('Soft-deleted file records', {
+            requestId,
+            mocId,
+            count: removedFileIds.length,
+          })
+        }
+
+        return updatedMoc
+      })
+    } catch (transactionError) {
+      // Story 3.1.38: Best-effort cleanup of edit files on transaction failure
+      if (bucketName && originalEditKeys.length > 0) {
+        await cleanupEditFilesOnFailure(bucketName, originalEditKeys, requestId, mocId)
       }
-
-      return updatedMoc
-    })
+      throw transactionError
+    }
 
     logger.info('Transaction completed successfully', {
       requestId,
       mocId,
     })
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Story 3.1.38: Move files from edit/ to permanent path
+    // ─────────────────────────────────────────────────────────────────────────
+
+    if (bucketName && originalEditKeys.length > 0) {
+      logger.info('Moving files from edit to permanent path', {
+        requestId,
+        mocId,
+        fileCount: originalEditKeys.length,
+      })
+
+      for (const editKey of originalEditKeys) {
+        try {
+          await moveFileFromEditToPermanent(bucketName, editKey, requestId)
+        } catch (moveError) {
+          // Log but don't fail - files will be accessible via presigned URLs once moved
+          // Orphan cleanup job will eventually clean up any stragglers
+          logger.warn('Failed to move file from edit to permanent path', {
+            requestId,
+            mocId,
+            editKey,
+            error: moveError instanceof Error ? moveError.message : 'Unknown',
+          })
+        }
+      }
+
+      logger.info('Files moved to permanent path', {
+        requestId,
+        mocId,
+        fileCount: originalEditKeys.length,
+      })
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Task 5: Re-index OpenSearch (AC: 6)
@@ -622,5 +683,99 @@ function extractS3KeyFromUrl(fileUrl: string): string {
     return url.pathname.substring(1) // Remove leading slash
   } catch {
     throw new BadRequestError(`Invalid S3 URL: ${fileUrl}`)
+  }
+}
+
+/**
+ * Story 3.1.38: Convert edit S3 key to permanent key
+ *
+ * Edit path:      {env}/moc-instructions/{ownerId}/{mocId}/edit/{category}/{uuid}.{ext}
+ * Permanent path: {env}/moc-instructions/{ownerId}/{mocId}/{category}/{uuid}.{ext}
+ */
+function editKeyToPermanentKey(editKey: string): string {
+  // Replace /edit/ with / in the path
+  return editKey.replace('/edit/', '/')
+}
+
+/**
+ * Story 3.1.38: Move file from edit path to permanent path in S3
+ * Returns the new permanent S3 key
+ */
+async function moveFileFromEditToPermanent(
+  bucket: string,
+  editKey: string,
+  requestId: string,
+): Promise<string> {
+  const permanentKey = editKeyToPermanentKey(editKey)
+
+  // Copy to new location
+  await s3Client.send(
+    new CopyObjectCommand({
+      Bucket: bucket,
+      CopySource: `${bucket}/${editKey}`,
+      Key: permanentKey,
+    }),
+  )
+
+  // Delete from old location
+  await s3Client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: editKey,
+    }),
+  )
+
+  logger.debug('Moved file from edit to permanent path', {
+    requestId,
+    editKey,
+    permanentKey,
+  })
+
+  return permanentKey
+}
+
+/**
+ * Story 3.1.38: Best-effort cleanup of edit files on failure
+ * Called when the finalize transaction fails to clean up orphaned S3 objects
+ */
+async function cleanupEditFilesOnFailure(
+  bucket: string,
+  s3Keys: string[],
+  requestId: string,
+  mocId: string,
+): Promise<void> {
+  if (s3Keys.length === 0) return
+
+  try {
+    // Use batch delete for efficiency (up to 1000 objects per request)
+    const MAX_BATCH = 1000
+    for (let i = 0; i < s3Keys.length; i += MAX_BATCH) {
+      const batch = s3Keys.slice(i, i + MAX_BATCH)
+
+      await s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: bucket,
+          Delete: {
+            Objects: batch.map(key => ({ Key: key })),
+          },
+        }),
+      )
+    }
+
+    logger.info('edit.cleanup.sync.success', {
+      correlationId: requestId,
+      requestId,
+      mocId,
+      cleanedFileCount: s3Keys.length,
+    })
+  } catch (cleanupError) {
+    // Don't throw - cleanup is best-effort
+    logger.warn('edit.cleanup.sync.failed', {
+      correlationId: requestId,
+      requestId,
+      mocId,
+      attemptedFileCount: s3Keys.length,
+      error: cleanupError instanceof Error ? cleanupError.message : 'Unknown',
+    })
   }
 }

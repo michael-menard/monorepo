@@ -3,6 +3,16 @@ import {render, screen} from '@testing-library/react'
 import {AppSafeContent} from '../content/AppSafeContent'
 import {SANITIZATION_PROFILES} from '../lib/sanitization'
 
+// Mock @repo/logger
+vi.mock('@repo/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
 // Mock DOMPurify
 vi.mock('dompurify', () => ({
   default: {
@@ -86,9 +96,9 @@ describe('AppSafeContent', () => {
     expect(content.innerHTML).toBe('<b>Bold text</b>')
   })
 
-  it('should show sanitization warnings when enabled', () => {
+  it('should show sanitization warnings when enabled', async () => {
+    const { logger } = await import('@repo/logger')
     const onSanitizationWarning = vi.fn()
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     render(
       <AppSafeContent
@@ -99,12 +109,10 @@ describe('AppSafeContent', () => {
     )
 
     expect(onSanitizationWarning).toHaveBeenCalled()
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       'AppSafeContent sanitization warnings:',
       expect.any(Array),
     )
-
-    consoleSpy.mockRestore()
   })
 
   it('should pass through additional props', () => {
