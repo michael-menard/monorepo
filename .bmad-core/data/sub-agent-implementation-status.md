@@ -2,12 +2,43 @@
 
 # Sub-Agent System Implementation Status
 
-**Last Updated:** 2025-12-21
-**Status:** Phase 1, 2 & 3 Complete! Phase 4-5 Remaining
+**Last Updated:** 2025-12-26
+**Status:** Phase 1, 2, 3 Complete + Claude Code Task Tool Integration!
 
 ## Overview
 
 The BMAD sub-agent system enables parallel execution of development tasks through autonomous AI worker agents. This document tracks implementation progress.
+
+## Claude Code Task Tool Integration (NEW!)
+
+The `/implement` and `/develop` skills now use Claude Code's native Task tool to spawn sub-agents. This provides:
+
+- **True context isolation**: Each sub-agent runs with its own context, not sharing the main agent's context
+- **Reduced context load**: Heavy implementation and QA phases don't consume main agent tokens
+- **Real parallelism**: Multiple sub-agents can run concurrently via `run_in_background: true`
+- **Native integration**: Uses Claude Code's built-in sub-agent infrastructure
+
+### Architecture
+
+```
+Main Orchestrator (/develop or /implement)
+    │
+    ├── Task(subagent_type: "Explore")
+    │   └── Story discovery and validation
+    │
+    ├── Task(subagent_type: "general-purpose")
+    │   └── Code implementation per story
+    │
+    └── Task(subagent_type: "general-purpose", run_in_background: true)
+        ├── Security review (parallel)
+        ├── Performance review (parallel)
+        └── Accessibility review (parallel)
+```
+
+### Key Files Updated
+
+- `.claude/skills/implement/SKILL.md` - Refactored to use Task tool for sub-agents
+- `.claude/commands/develop.md` - Updated to reference new architecture
 
 ## ✅ Completed (Phase 1, 2 & 3)
 

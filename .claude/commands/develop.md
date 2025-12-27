@@ -13,6 +13,8 @@ A convenience wrapper for the `/implement` workflow that accepts either:
 
 Automatically resolves the story file and delegates to `/implement` with all options preserved.
 
+**Architecture Note:** The `/implement` workflow uses Claude Code's Task tool to spawn sub-agents for heavy phases (implementation, QA), minimizing context load on the main orchestrator.
+
 ## Usage
 
 ```bash
