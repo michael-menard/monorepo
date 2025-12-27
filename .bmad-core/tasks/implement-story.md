@@ -92,24 +92,101 @@ if [ -n "$EPIC_NUM" ]; then
 fi
 ```
 
+### Pre-flight Checks (30 seconds)
+
+Verify environment is ready before starting implementation:
+
+```bash
+echo "🔍 Running pre-flight checks..."
+
+# Check 1: GitHub CLI authentication
+if ! gh auth status &>/dev/null; then
+  echo "❌ GitHub CLI not authenticated"
+  echo "💡 Run: gh auth login"
+  exit 1
+fi
+echo "✅ GitHub CLI authenticated"
+
+# Check 2: Git working directory is clean (or warn)
+if [ -n "$(git status --porcelain)" ]; then
+  echo "⚠️  Uncommitted changes detected in current directory"
+  read -p "Continue anyway? (y/n): " CONFIRM
+  if [ "$CONFIRM" != "y" ]; then
+    exit 0
+  fi
+fi
+
+# Check 3: Required tools available
+for tool in yq jq; do
+  if ! command -v $tool &>/dev/null; then
+    echo "⚠️  Optional tool '$tool' not found - some features may be limited"
+  fi
+done
+
+# Check 4: Verify GitHub labels exist (warn if missing)
+REQUIRED_LABELS=("in-progress" "ready-for-review" "done" "blocked")
+echo "📋 Checking GitHub labels..."
+EXISTING_LABELS=$(gh label list --json name --jq '.[].name' 2>/dev/null || echo "")
+
+for label in "${REQUIRED_LABELS[@]}"; do
+  if ! echo "$EXISTING_LABELS" | grep -q "^${label}$"; then
+    echo "⚠️  Label '$label' not found - will be skipped in issue updates"
+    echo "💡 Create with: gh label create \"$label\" --color \"0E8A16\""
+  fi
+done
+
+# Check 5: Verify we're on a git branch
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null)
+if [ -z "$CURRENT_BRANCH" ]; then
+  echo "❌ Not on a git branch (detached HEAD state)"
+  echo "💡 Checkout a branch first: git checkout main"
+  exit 1
+fi
+echo "✅ On branch: $CURRENT_BRANCH"
+
+# Check 6: Verify remote is accessible
+if ! git ls-remote --exit-code origin &>/dev/null; then
+  echo "❌ Cannot reach remote 'origin'"
+  echo "💡 Check your network connection or git remote configuration"
+  exit 1
+fi
+echo "✅ Remote 'origin' accessible"
+
+echo ""
+echo "✅ All pre-flight checks passed!"
+echo ""
+```
+
 ### Phase 1: Story Validation (1 minute)
 
 ```bash
-# Check if story file exists
-STORY_FILE=".bmad-stories/${STORY_NUM}-*.md"
+# Load story location from config
+STORY_LOCATION=$(yq '.devStoryLocation // "docs/stories"' .bmad-core/core-config.yaml)
 
-if [ ! -f "$STORY_FILE" ]; then
-  echo "❌ Story file not found: $STORY_FILE"
+# Check if story file exists (supports both X.Y and X.Y.Z formats)
+STORY_FILE=$(find "$STORY_LOCATION" -name "${STORY_NUM}*.md" -o -name "${STORY_NUM}.*md" 2>/dev/null | head -1)
+
+if [ -z "$STORY_FILE" ] || [ ! -f "$STORY_FILE" ]; then
+  echo "❌ Story file not found in $STORY_LOCATION for story ${STORY_NUM}"
   echo "💡 Create story first with: @sm *draft story=${STORY_NUM}"
   exit 1
 fi
 
-# Check story status
-STORY_STATUS=$(grep "Status:" "$STORY_FILE" | awk '{print $2}')
+echo "📄 Found story file: $STORY_FILE"
 
-if [ "$STORY_STATUS" != "Approved" ] && [ "$STORY_STATUS" != "Draft" ]; then
+# Extract GitHub issue number from story file
+ISSUE_NUMBER=$(grep -E "^(GitHub Issue|Issue):" "$STORY_FILE" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+if [ -z "$ISSUE_NUMBER" ]; then
+  echo "⚠️  No GitHub issue number found in story file"
+  echo "💡 Add 'GitHub Issue: #123' to the story file"
+fi
+
+# Check story status
+STORY_STATUS=$(grep -E "^[Ss]tatus:" "$STORY_FILE" | awk '{print $2}')
+
+if [ "$STORY_STATUS" != "Approved" ] && [ "$STORY_STATUS" != "Draft" ] && [ "$STORY_STATUS" != "Ready" ]; then
   echo "⚠️  Story status: $STORY_STATUS"
-  echo "💡 Story should be 'Approved' before implementation"
+  echo "💡 Story should be 'Approved' or 'Ready' before implementation"
   read -p "Continue anyway? (y/n): " CONFIRM
   if [ "$CONFIRM" != "y" ]; then
     exit 0
@@ -117,6 +194,10 @@ if [ "$STORY_STATUS" != "Approved" ] && [ "$STORY_STATUS" != "Draft" ]; then
 fi
 
 echo "✅ Story validated: $STORY_FILE"
+echo "   Status: $STORY_STATUS"
+if [ -n "$ISSUE_NUMBER" ]; then
+  echo "   GitHub Issue: #$ISSUE_NUMBER"
+fi
 ```
 
 ### Phase 2: Development Setup (1-2 minutes)
@@ -125,10 +206,21 @@ echo "✅ Story validated: $STORY_FILE"
 echo "🔧 Setting up development environment..."
 
 # For each story, execute start-work task
-# This creates worktree, branch, and updates GitHub issue status
+# This creates worktree and branch (GitHub issue update handled separately)
 
 if [ "$MODE" = "parallel" ]; then
-  # For parallel mode, dev-coordinator will handle this for each worker
+  # For parallel mode, update all story issues to "in-progress"
+  echo "📋 Updating GitHub issues to 'In Progress'..."
+  for story in $STORIES; do
+    # Extract issue number from each story file
+    story_file=$(find "$STORY_LOCATION" -name "${story}*.md" | head -1)
+    issue_num=$(grep -E "^(GitHub Issue|Issue):" "$story_file" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+    if [ -n "$issue_num" ]; then
+      *update-github-issue issue=$issue_num status=in-progress \
+        context.branch="parallel-${story}" \
+        context.mode="parallel"
+    fi
+  done
   echo "📋 Dev-coordinator will create worktrees for all stories..."
 else
   # For single mode, execute start-work task directly
@@ -142,10 +234,15 @@ else
   # 4. Creates worktree in tree/{branch_name}
   # 5. Creates branch from main
   # 6. Updates story file with worktree info
-  # 7. Updates GitHub issue status to "In Progress"
 
   # Load and execute the task
   source .bmad-core/tasks/start-worktree-from-story.md
+
+  # Update GitHub issue status to "In Progress"
+  echo "📋 Updating GitHub issue status..."
+  *update-github-issue issue={issue_number} status=in-progress \
+    context.branch={branch_name} \
+    context.worktree=tree/{branch_name}
 fi
 ```
 
@@ -207,6 +304,19 @@ echo "📝 Creating pull request..."
 if [ "$MODE" = "parallel" ]; then
   # For parallel mode, dev-coordinator handles PR creation for all stories
   echo "📋 Dev-coordinator will create PRs for all stories..."
+
+  # Update all story issues to "ready-for-review"
+  echo "📋 Updating GitHub issues to 'Ready for Review'..."
+  for story in $STORIES; do
+    story_file=$(find "$STORY_LOCATION" -name "${story}*.md" | head -1)
+    issue_num=$(grep -E "^(GitHub Issue|Issue):" "$story_file" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+    pr_num=$(grep -E "^(PR|Pull Request):" "$story_file" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+    if [ -n "$issue_num" ]; then
+      *update-github-issue issue=$issue_num status=ready-for-review \
+        context.pr_number=$pr_num \
+        context.mode="parallel"
+    fi
+  done
 else
   # For single mode, execute finish-work task
   echo "📋 Creating PR for story $STORY_NUM..."
@@ -223,6 +333,13 @@ else
   # Activate dev agent and run finish-work
   @dev
   *finish-work
+
+  # Update GitHub issue status to "Ready for Review"
+  echo "📋 Updating GitHub issue status..."
+  *update-github-issue issue={issue_number} status=ready-for-review \
+    context.pr_number={pr_number} \
+    context.pr_url={pr_url} \
+    context.target_branch={target_branch}
 fi
 
 echo "✅ Pull request created"
@@ -375,22 +492,65 @@ echo "🎯 Finalizing story..."
 # Only proceed if QA passed or was skipped
 if [ "$QA_GATE" = "PASS" ] || [ "$REVIEW_TYPE" = "skip" ]; then
 
-  # Execute qa-approve-and-merge task
-  # This task:
-  # - Merges the PR
-  # - Closes the GitHub issue
-  # - Updates issue status to "Done"
-  # - Cleans up the worktree
-  # - Updates story file with completion info
+  if [ "$MODE" = "parallel" ]; then
+    # For parallel mode, merge all PRs and update all issues
+    echo "📋 Merging PRs for all stories..."
+    for story in $STORIES; do
+      @qa
+      *approve-and-merge story=$story
 
-  # Activate qa agent and run approve-and-merge
-  @qa
-  *approve-and-merge story=$STORY_NUM
+      # Update GitHub issue to done
+      story_file=$(find "$STORY_LOCATION" -name "${story}*.md" | head -1)
+      issue_num=$(grep -E "^(GitHub Issue|Issue):" "$story_file" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+      pr_num=$(grep -E "^(PR|Pull Request):" "$story_file" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+      merge_commit=$(git log -1 --format="%H" 2>/dev/null || echo "unknown")
+      if [ -n "$issue_num" ]; then
+        *update-github-issue issue=$issue_num status=done \
+          context.pr_number=$pr_num \
+          context.merge_commit=$merge_commit
+      fi
+    done
+    echo "✅ All stories merged and closed!"
+  else
+    # Execute qa-approve-and-merge task
+    # This task:
+    # - Merges the PR
+    # - Cleans up the worktree
+    # - Updates story file with completion info
+    # (GitHub issue update handled separately below)
 
-  echo "✅ Story merged and closed!"
+    # Activate qa agent and run approve-and-merge
+    @qa
+    *approve-and-merge story=$STORY_NUM
+
+    # Update GitHub issue status to "Done" and close issue
+    echo "📋 Updating GitHub issue status..."
+    *update-github-issue issue=$ISSUE_NUMBER status=done \
+      context.pr_number=$PR_NUMBER \
+      context.merge_commit=$MERGE_COMMIT
+
+    echo "✅ Story merged and closed!"
+  fi
 else
   echo "⚠️  Story not merged - QA gate did not pass"
   echo "💡 Fix issues and re-run /implement $STORY_NUM"
+
+  # Mark issues as blocked if critical issues found
+  if [ "$QA_GATE" = "FAIL" ]; then
+    if [ "$MODE" = "parallel" ]; then
+      for story in $STORIES; do
+        story_file=$(find "$STORY_LOCATION" -name "${story}*.md" | head -1)
+        issue_num=$(grep -E "^(GitHub Issue|Issue):" "$story_file" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+        if [ -n "$issue_num" ]; then
+          *update-github-issue issue=$issue_num status=blocked \
+            context.reason="QA gate failed - critical issues found"
+        fi
+      done
+    else
+      *update-github-issue issue=$ISSUE_NUMBER status=blocked \
+        context.reason="QA gate failed - critical issues found"
+    fi
+  fi
 fi
 ```
 
@@ -572,6 +732,7 @@ Failed gates:
 - **parallel-develop.md** - Parallel sub-agent development
 - **deep-review.md** - Multi-specialist QA review
 - **auto-fix.md** - Parallel issue resolution
+- **update-github-issue.md** - Centralized GitHub issue status updates (called at each phase)
 
 ## Notes
 
@@ -581,68 +742,4 @@ Failed gates:
 - It provides clear feedback and error messages
 - It supports both simple and complex stories
 - It integrates seamlessly with existing BMAD workflows
-
-### Phase 4: Issue Resolution (0-10 minutes)
-
-```bash
-# Check if QA found issues
-if [ -f ".bmad-state/qa-findings.yaml" ]; then
-  CRITICAL_COUNT=$(grep "severity: critical" .bmad-state/qa-findings.yaml | wc -l)
-  HIGH_COUNT=$(grep "severity: high" .bmad-state/qa-findings.yaml | wc -l)
-
-  if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
-    echo "🚨 Found $CRITICAL_COUNT critical and $HIGH_COUNT high-priority issues"
-    echo ""
-
-    # Show issues
-    cat .bmad-state/qa-findings.yaml
-    echo ""
-
-    read -p "Auto-fix issues in parallel? (y/n): " AUTO_FIX
-
-    if [ "$AUTO_FIX" = "y" ]; then
-      echo "🔧 Starting parallel auto-fix..."
-
-      # Extract issue IDs
-      ISSUE_IDS=$(grep "id:" .bmad-state/qa-findings.yaml | awk '{print $2}' | tr '\n' ',' | sed 's/,$//')
-
-      # Execute auto-fix with dev-coordinator
-      echo "Fixing issues: $ISSUE_IDS"
-      # The dev-coordinator handles this
-    else
-      echo "⏸️  Pausing for manual review"
-      echo "💡 Fix issues manually, then re-run: *implement story=$STORY_NUM review=deep"
-      exit 0
-    fi
-  fi
-fi
-```
-
-### Phase 5: Final Validation (2 minutes)
-
-```bash
-echo "✅ Running final validation..."
-echo ""
-
-# Re-run QA review if fixes were applied
-if [ "$AUTO_FIX" = "y" ]; then
-  echo "🔍 Re-running QA review..."
-  # Execute review again
-fi
-
-# Check final status
-FINAL_STATUS=$(cat .bmad-state/qa-decision.yaml | grep "decision:" | awk '{print $2}')
-
-if [ "$FINAL_STATUS" = "APPROVED" ]; then
-  echo "✅ Story approved for deployment!"
-elif [ "$FINAL_STATUS" = "APPROVED_WITH_CONCERNS" ]; then
-  echo "⚠️  Story approved with concerns"
-  echo "💡 Review medium-priority issues before production"
-else
-  echo "❌ Story blocked: $FINAL_STATUS"
-  echo "💡 Fix critical issues before deployment"
-  exit 1
-fi
-```
-
 

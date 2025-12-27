@@ -78,16 +78,26 @@ gh pr merge {pr_number} --merge --delete-branch
 gh pr merge {pr_number} --rebase --delete-branch
 ```
 
-### Step 5: Verify Issue Closure
+### Step 5: Verify Issue Status (Optional)
+
+**Note:** When called from `implement-story.md`, issue status updates are handled by `update-github-issue.md` task. This step is only needed for standalone usage.
+
 ```bash
 # Check if issue was auto-closed by PR merge
 gh issue view {issue_number}
 ```
 
-If issue still open:
+If running standalone (not via implement-story):
 ```bash
 # Close issue manually
 gh issue close {issue_number} --comment "Merged via PR #{pr_number}. QA approved."
+```
+
+**Recommended:** Use the centralized task instead:
+```bash
+*update-github-issue issue={issue_number} status=done \
+  context.pr_number={pr_number} \
+  context.merge_commit={merge_commit}
 ```
 
 ### Step 6: Remove Worktree
@@ -194,4 +204,6 @@ All resources have been cleaned up.
 - If QA review fails, use the normal QA rejection workflow instead
 - Worktree removal is final - ensure all work is committed and merged
 - The --delete-branch flag in gh pr merge handles remote branch cleanup
+- When called from `implement-story.md`, GitHub issue updates (labels, comments, closing) are handled by `update-github-issue.md` task
+- For standalone usage, this task can close issues directly but using `update-github-issue.md` is recommended for consistency
 
