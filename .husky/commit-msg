@@ -1,0 +1,53 @@
+#!/bin/sh
+# Commit message hook: Enforce conventional commit format
+
+commit_msg_file="$1"
+commit_msg=$(cat "$commit_msg_file")
+
+# Conventional commit pattern
+# Format: type(scope): description
+# Types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
+pattern="^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?: .+"
+
+# Check if commit message matches pattern
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo "❌ ERROR: Commit message doesn't follow conventional commit format!"
+  echo ""
+  echo "📋 Required format: type(scope): description"
+  echo ""
+  echo "Valid types:"
+  echo "  • feat:     A new feature"
+  echo "  • fix:      A bug fix"
+  echo "  • docs:     Documentation changes"
+  echo "  • style:    Code style changes (formatting, etc.)"
+  echo "  • refactor: Code refactoring"
+  echo "  • perf:     Performance improvements"
+  echo "  • test:     Adding or updating tests"
+  echo "  • chore:    Maintenance tasks"
+  echo "  • ci:       CI/CD changes"
+  echo "  • build:    Build system changes"
+  echo "  • revert:   Revert a previous commit"
+  echo ""
+  echo "Examples:"
+  echo "  ✅ feat(auth): add OAuth login"
+  echo "  ✅ fix(api): resolve timeout issue"
+  echo "  ✅ docs: update README with setup instructions"
+  echo "  ✅ refactor(ui): simplify button component"
+  echo ""
+  echo "Your commit message:"
+  echo "  ❌ $commit_msg"
+  echo ""
+  exit 1
+fi
+
+# Check commit message length (first line should be <= 100 chars)
+first_line=$(echo "$commit_msg" | head -n 1)
+if [ ${#first_line} -gt 100 ]; then
+  echo "⚠️  WARNING: Commit message first line is too long (${#first_line} chars)"
+  echo "   Recommended: <= 100 characters"
+  echo ""
+  # Don't exit, just warn
+fi
+
+echo "✅ Commit message format is valid"
+

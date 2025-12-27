@@ -109,6 +109,202 @@
     "creator": "string"
   }
 }
+```
+
+### MOC Upload Session API (Multipart Uploads)
+
+Large file uploads (up to 50MB) use a session-based multipart upload flow. This enables reliable uploads of large PDFs without timeout failures.
+
+#### Configuration
+
+| Setting           | Value   | Description                             |
+| ----------------- | ------- | --------------------------------------- |
+| Part Size         | 5 MB    | Each chunk uploaded via `uploadPart`    |
+| Session TTL       | 15 min  | Time before session expires             |
+| Max PDF Size      | 50 MB   | Maximum instruction file size           |
+| Rate Limit        | 100/day | Sessions created per user per day       |
+| Finalize Lock TTL | 5 min   | Idempotency window for finalize         |
+
+#### Upload Session Flow
+
+```
+1. POST /api/mocs/uploads/sessions
+   → Create session, validate file metadata
+   → Returns: sessionId, partSizeBytes (5MB), expiresAt
+
+2. POST /api/mocs/uploads/sessions/{sessionId}/files
+   → Register file, initiate S3 multipart upload
+   → Returns: fileId, uploadId, s3Key
+
+3. PUT /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/parts/{n}
+   → Upload 5MB chunk (binary body)
+   → Returns: partNumber, etag
+   → Repeat for all chunks
+
+4. POST /api/mocs/uploads/sessions/{sessionId}/files/{fileId}/complete
+   → Complete S3 multipart upload
+   → Verifies all parts present
+
+5. POST /api/mocs/uploads/sessions/{sessionId}/finalize
+   → Verify files in S3, magic bytes validation
+   → Create MOC record in database
+   → Returns: mocId, slug, status (idempotent)
+```
+
+#### 1. Create Session
+
+- **Method:** POST
+- **Endpoint:** `/api/mocs/uploads/sessions`
+- **Auth:** Required (Cognito JWT)
+- **Rate Limit:** 100/day per user
+
+##### Request
+
+```json
+{
+  "files": [
+    {
+      "category": "instruction",
+      "name": "instructions.pdf",
+      "size": 52428800,
+      "type": "application/pdf",
+      "ext": "pdf"
+    }
+  ]
+}
+```
+
+##### Response (201)
+
+```json
+{
+  "data": {
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+    "partSizeBytes": 5242880,
+    "expiresAt": "2024-12-09T12:15:00Z"
+  }
+}
+```
+
+#### 2. Register File
+
+- **Method:** POST
+- **Endpoint:** `/api/mocs/uploads/sessions/{sessionId}/files`
+- **Auth:** Required
+
+##### Request
+
+```json
+{
+  "category": "instruction",
+  "name": "instructions.pdf",
+  "size": 52428800,
+  "type": "application/pdf"
+}
+```
+
+##### Response (201)
+
+```json
+{
+  "data": {
+    "fileId": "file-uuid",
+    "uploadId": "s3-multipart-upload-id",
+    "s3Key": "uploads/user-id/session-id/file-id/instructions.pdf"
+  }
+}
+```
+
+#### 3. Upload Part
+
+- **Method:** PUT
+- **Endpoint:** `/api/mocs/uploads/sessions/{sessionId}/files/{fileId}/parts/{partNumber}`
+- **Auth:** Required
+- **Body:** Binary chunk data (5MB)
+
+##### Response (200)
+
+```json
+{
+  "data": {
+    "partNumber": 1,
+    "etag": "\"abc123def456\""
+  }
+}
+```
+
+#### 4. Complete File
+
+- **Method:** POST
+- **Endpoint:** `/api/mocs/uploads/sessions/{sessionId}/files/{fileId}/complete`
+- **Auth:** Required
+
+##### Request
+
+```json
+{
+  "parts": [
+    { "partNumber": 1, "etag": "\"abc123\"" },
+    { "partNumber": 2, "etag": "\"def456\"" }
+  ]
+}
+```
+
+##### Response (200)
+
+```json
+{
+  "data": {
+    "fileId": "file-uuid",
+    "fileUrl": "https://s3.amazonaws.com/bucket/path/file.pdf"
+  }
+}
+```
+
+#### 5. Finalize Session
+
+- **Method:** POST
+- **Endpoint:** `/api/mocs/uploads/sessions/{sessionId}/finalize`
+- **Auth:** Required
+- **Idempotent:** Yes (safe to retry)
+
+##### Request
+
+```json
+{
+  "uploadSessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "My LEGO MOC",
+  "description": "Optional description",
+  "tags": ["spaceship", "sci-fi"]
+}
+```
+
+##### Response (201)
+
+```json
+{
+  "data": {
+    "mocId": "moc-uuid",
+    "slug": "my-lego-moc",
+    "status": "published",
+    "title": "My LEGO MOC",
+    "idempotent": false
+  }
+}
+```
+
+#### Error Responses
+
+| Code | Error                  | Description                           |
+| ---- | ---------------------- | ------------------------------------- |
+| 400  | BAD_REQUEST            | Invalid request body or parameters    |
+| 401  | UNAUTHORIZED           | Missing or invalid JWT token          |
+| 404  | NOT_FOUND              | Session or file not found             |
+| 409  | CONFLICT               | Slug already exists                   |
+| 413  | PAYLOAD_TOO_LARGE      | File exceeds size limit               |
+| 415  | UNSUPPORTED_MEDIA_TYPE | Invalid MIME type                     |
+| 422  | VALIDATION_ERROR       | Schema validation failed              |
+| 429  | TOO_MANY_REQUESTS      | Daily rate limit exceeded             |
 
 # Source Tree
 

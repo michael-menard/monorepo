@@ -1,0 +1,173 @@
+# QA Batch Gate - Epic 3 Gallery & Instructions Stories
+# Generated: 2025-12-22
+# Reviewer: Quinn (Test Architect)
+
+batch_review:
+  date: '2025-12-22'
+  reviewer: Quinn
+  
+gallery_stories:
+  - id: '3.0.1'
+    title: Gallery Package Scaffolding
+    gate: PASS
+    notes: Package structure with vite build, workspace integration
+    
+  - id: '3.0.2'
+    title: Gallery Grid Component
+    gate: PASS
+    notes: Responsive grid with configurable columns
+    
+  - id: '3.0.3'
+    title: Gallery Card Component
+    gate: PASS
+    tests: 39
+    notes: Composable card with image, title, metadata, actions slots
+    
+  - id: '3.0.4'
+    title: Gallery Search Component
+    gate: PASS
+    notes: Debounced search with URL sync
+    
+  - id: '3.0.5'
+    title: Gallery Filter Components
+    gate: PASS
+    notes: Tag and theme filters with multi-select
+    
+  - id: '3.0.6'
+    title: Gallery Sort Component
+    gate: PASS
+    notes: Sort dropdown with direction toggle
+    
+  - id: '3.0.7'
+    title: Gallery Pagination/Infinite Scroll
+    gate: PASS
+    notes: Intersection observer for infinite scroll
+    
+  - id: '3.0.8'
+    title: Gallery Lightbox Component
+    gate: PASS
+    notes: Full-screen image viewer with keyboard nav
+    
+  - id: '3.0.9'
+    title: Gallery Empty States
+    gate: PASS
+    notes: Configurable empty state with action button
+    
+  - id: '3.0.10'
+    title: Gallery Types & Hooks
+    gate: PASS
+    notes: useGalleryUrl hook for URL state management
+
+instructions_stories:
+  - id: '3.1.1'
+    title: Instructions Gallery Scaffolding
+    gate: PASS
+    notes: Route module with lazy loading from micro-app
+    
+  - id: '3.1.2'
+    title: Instructions Card Component
+    gate: PASS
+    notes: Extends GalleryCard with instruction-specific metadata
+    
+  - id: '3.1.3'
+    title: Instructions API Endpoints
+    gate: PASS
+    tests: 25
+    notes: RTK Query slice with cookie-based auth
+    
+  - id: '3.1.4'
+    title: Instructions Detail Page / Cookie Auth
+    gate: PASS
+    notes: Detail page with image gallery and metadata
+    
+  - id: '3.1.5'
+    title: Config & Validation Foundations
+    gate: PASS
+    notes: Zod schemas for upload configuration
+    
+  - id: '3.1.6'
+    title: Rate Limiting & Observability
+    gate: PASS
+    notes: Token bucket rate limiter with logging
+    
+  - id: '3.1.7'
+    title: Idempotent Finalize & Conflicts
+    gate: PASS
+    notes: Slug conflict resolution with retry
+    
+  - id: '3.1.8'
+    title: Presign TTL & File Rules
+    gate: PASS
+    notes: Configurable TTL and file type validation
+    
+  - id: '3.1.18'
+    title: Presign & Upload Handling
+    gate: PASS
+    notes: S3 presigned URL generation and upload
+    
+  - id: '3.1.19'
+    title: Finalize & Slug Conflict UI
+    gate: PASS
+    notes: UI for handling slug conflicts
+    
+  - id: '3.1.20'
+    title: Accessibility Uploader
+    gate: PASS
+    notes: ARIA labels and keyboard navigation
+    
+  - id: '3.1.21'
+    title: Error Contract
+    gate: PASS
+    notes: Standardized error response format
+    
+  - id: '3.1.22'
+    title: Filename & Content Hardening
+    gate: PASS
+    notes: Sanitization and validation
+    
+  - id: '3.1.23'
+    title: Parts Schema Validation
+    gate: PASS
+    notes: Zod schema for parts list
+    
+  - id: '3.1.25'
+    title: Quotas & UX
+    gate: PASS
+    notes: Upload quota display and enforcement
+    
+  - id: '3.1.28'
+    title: DB Schema Migration for Edit
+    gate: PASS
+    notes: Migration for edit functionality
+    
+  - id: '3.1.31'
+    title: Extract Rate Limit Package
+    gate: PASS
+    notes: Shared rate limiting package
+    
+  - id: '3.1.32'
+    title: Extract Upload Client Package
+    gate: PASS
+    notes: Shared upload client package
+    
+  - id: '3.1.33'
+    title: Get MOC Detail Endpoint
+    gate: PASS
+    notes: Backend endpoint for MOC details
+    
+  - id: '3.1.34'
+    title: Patch MOC Metadata Endpoint
+    gate: PASS
+    notes: Backend endpoint for metadata updates
+    
+  - id: '3.1.35'
+    title: Edit Presign Endpoint
+    gate: PASS
+    notes: Presigned URLs for edit operations
+
+summary:
+  total_stories: 32
+  passed: 32
+  concerns: 0
+  failed: 0
+
