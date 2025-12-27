@@ -33,7 +33,7 @@ import { getS3Client } from '@/core/storage/s3'
 import { HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getEnv } from '@/core/utils/env'
 import { validateMagicBytes } from '@repo/file-validator'
-import { slugify, findAvailableSlug } from '@/core/utils/slug'
+import { slugify, findAvailableSlug } from '@repo/upload-types'
 import { FinalizeSessionRequestSchema, type FinalizeSessionResponse } from '../_shared/schemas'
 
 const logger = createLogger('finalize-upload-session')

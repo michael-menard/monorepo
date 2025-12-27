@@ -28,7 +28,7 @@ import {
   createFileItem,
   mapHttpErrorToUploadError,
   getErrorMessage,
-} from '@/types/uploader-upload'
+} from '@repo/upload-types'
 
 /**
  * Default concurrency limit

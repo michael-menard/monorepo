@@ -8,7 +8,7 @@
 import { memo, useCallback } from 'react'
 import { X, RefreshCw, Check, AlertCircle, Clock, Ban, FileText, Image } from 'lucide-react'
 import { Button, Progress, AppBadge, cn } from '@repo/app-component-library'
-import { type UploaderFileItem as FileItemType, type UploadStatus } from '@/types/uploader-upload'
+import { type UploaderFileItem as FileItemType, type UploadStatus } from '@repo/upload-types'
 
 /**
  * Format file size for display

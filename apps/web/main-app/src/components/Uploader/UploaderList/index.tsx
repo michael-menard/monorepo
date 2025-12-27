@@ -13,7 +13,7 @@ import {
   type UploaderFileItem as FileItemType,
   type UploadBatchState,
   type FileCategory,
-} from '@/types/uploader-upload'
+} from '@repo/upload-types'
 
 /**
  * Category display info

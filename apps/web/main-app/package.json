@@ -39,6 +39,7 @@
     "@repo/design-system": "workspace:*",
     "@repo/gallery": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/upload-types": "workspace:*",
     "@tanstack/react-router": "^1.130.2",
     "@tanstack/react-router-devtools": "^1.130.2",
     "aws-amplify": "6.15.7",

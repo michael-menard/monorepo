@@ -97,6 +97,7 @@
     "@repo/s3-client": "workspace:*",
     "@repo/search": "workspace:*",
     "@repo/upload-config": "workspace:*",
+    "@repo/upload-types": "workspace:*",
     "aws-cdk-lib": "2.227.0",
     "aws-embedded-metrics": "4.2.1",
     "aws-jwt-verify": "5.1.1",
