@@ -31,7 +31,7 @@ import {
   type APIGatewayProxyResult,
 } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
-import { findAvailableSlug } from '@/core/utils/slug'
+import { findAvailableSlug } from '@repo/upload-types'
 import { updateMocIndex } from '@/endpoints/moc-instructions/_shared/opensearch-moc'
 import type { MocInstruction } from '@repo/api-types/moc'
 

@@ -20,7 +20,7 @@ import {
   getStorageKey,
   generateAnonSessionId,
   migrateSession,
-} from '@/types/uploader-session'
+} from '@repo/upload-types'
 
 /** Debounce delay for localStorage writes (ms) */
 const DEBOUNCE_MS = 300

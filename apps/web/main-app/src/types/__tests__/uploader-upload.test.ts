@@ -12,7 +12,7 @@ import {
   createFileItem,
   createFileId,
   type UploaderFileItem,
-} from '../uploader-upload'
+} from '@repo/upload-types'
 
 describe('mapHttpErrorToUploadError', () => {
   it('maps 401 to UNAUTHORIZED', () => {

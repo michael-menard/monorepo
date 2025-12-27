@@ -39,8 +39,7 @@ import { RateLimitBanner } from '@/components/Uploader/RateLimitBanner'
 import { SessionExpiredBanner } from '@/components/Uploader/SessionExpiredBanner'
 import { useUploadManager, type FileWithUploadUrl } from '@/hooks/useUploadManager'
 import { finalizeSession, type FileValidationError } from '@/services/api/finalizeClient'
-import type { UploaderSession } from '@/types/uploader-session'
-import type { FileCategory } from '@/types/uploader-upload'
+import type { UploaderSession, FileCategory } from '@repo/upload-types'
 import {
   MocInstructionFormSchema,
   createEmptyMocForm,
