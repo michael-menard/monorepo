@@ -11,19 +11,24 @@
 
 import { useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
 import { AlertTriangle, RefreshCw, ArrowLeft, Lock, FileQuestion } from 'lucide-react'
 import { Button, Alert, AlertDescription, Card, CardContent } from '@repo/app-component-library'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import type { SerializedError } from '@reduxjs/toolkit'
 
 /**
- * Props for EditErrorDisplay component
+ * Props schema for EditErrorDisplay component
+ * Note: error types from RTK Query are complex union types that can't be fully
+ * represented as Zod schemas, so we use z.custom() for type safety
  */
-export type EditErrorDisplayProps = {
-  error: FetchBaseQueryError | SerializedError | undefined
-  onRetry?: () => void
-  mocSlug?: string
-}
+export const EditErrorDisplayPropsSchema = z.object({
+  error: z.custom<FetchBaseQueryError | SerializedError | undefined>(),
+  onRetry: z.function().optional(),
+  mocSlug: z.string().optional(),
+})
+
+export type EditErrorDisplayProps = z.infer<typeof EditErrorDisplayPropsSchema>
 
 /**
  * Error type for classification
@@ -97,13 +102,7 @@ function classifyError(error: FetchBaseQueryError | SerializedError | undefined)
 /**
  * Network Error Component
  */
-function NetworkError({
-  message,
-  onRetry,
-}: {
-  message: string
-  onRetry?: () => void
-}) {
+function NetworkError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <Card className="max-w-md mx-auto" data-testid="error-network">
       <CardContent className="pt-6 text-center">
@@ -112,12 +111,12 @@ function NetworkError({
         </div>
         <h2 className="text-lg font-semibold mb-2">Connection Error</h2>
         <p className="text-muted-foreground mb-4">{message}</p>
-        {onRetry && (
+        {onRetry ? (
           <Button onClick={onRetry} variant="default">
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -173,11 +172,11 @@ function ForbiddenError({
             <ArrowLeft className="h-4 w-4 mr-2" />
             Go Back
           </Button>
-          {needsLogin && (
+          {needsLogin ? (
             <Button onClick={onLogin} variant="default">
               Sign In
             </Button>
-          )}
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -207,12 +206,12 @@ function GenericError({
           <ArrowLeft className="h-4 w-4 mr-2" />
           Go Back
         </Button>
-        {onRetry && (
+        {onRetry ? (
           <Button onClick={onRetry} variant="default">
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   )

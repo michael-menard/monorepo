@@ -151,7 +151,7 @@ describe('FileList', () => {
   })
 
   describe('Unit: Download/preview links', () => {
-    it('should render download links for all files', () => {
+    it('should render download buttons for all files', () => {
       render(<FileList files={mockFiles} />)
 
       const downloadIcons = screen.getAllByTestId('icon-download')
@@ -166,14 +166,22 @@ describe('FileList', () => {
       expect(externalLinks.length).toBe(3)
     })
 
-    it('should have correct download href attributes', () => {
+    it('should have correct preview href attributes', () => {
       render(<FileList files={mockFiles} />)
 
-      const downloadLinks = screen.getAllByRole('link')
-      const instructionDownload = downloadLinks.find(link =>
-        link.getAttribute('download') === 'instructions.pdf'
+      const previewLinks = screen.getAllByRole('link')
+      const instructionPreview = previewLinks.find(link =>
+        link.getAttribute('aria-label') === 'Preview instructions.pdf'
       )
-      expect(instructionDownload).toHaveAttribute('href', 'https://example.com/instructions.pdf')
+      expect(instructionPreview).toHaveAttribute('href', 'https://example.com/instructions.pdf')
+    })
+
+    it('should render download buttons with correct aria-labels', () => {
+      render(<FileList files={mockFiles} />)
+
+      // Download is now a button instead of a link for presigned URL handling
+      expect(screen.getByRole('button', { name: 'Download instructions.pdf' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Download parts.xlsx' })).toBeInTheDocument()
     })
   })
 
@@ -213,11 +221,12 @@ describe('FileList', () => {
     it('should have accessible download button labels', () => {
       render(<FileList files={mockFiles} />)
 
-      expect(screen.getByLabelText('Download instructions.pdf')).toBeInTheDocument()
-      expect(screen.getByLabelText('Download parts.xlsx')).toBeInTheDocument()
+      // Download buttons have aria-label for accessibility
+      expect(screen.getByRole('button', { name: 'Download instructions.pdf' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Download parts.xlsx' })).toBeInTheDocument()
     })
 
-    it('should have accessible preview button labels', () => {
+    it('should have accessible preview link labels', () => {
       render(<FileList files={mockFiles} />)
 
       expect(screen.getByLabelText('Preview instructions.pdf')).toBeInTheDocument()

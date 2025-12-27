@@ -10,6 +10,7 @@ import { useCallback, useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import {
   Button,
@@ -24,15 +25,21 @@ import {
   AlertDescription,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
-import { EditMocFormSchema, type EditMocFormInput, type MocForEditResponse } from '@repo/upload-types'
+import {
+  EditMocFormSchema,
+  MocForEditResponseSchema,
+  type EditMocFormInput,
+} from '@repo/upload-types'
 import { FileList } from '../../components/MocEdit/FileList'
 
 /**
- * Props for InstructionsEditPage - receives MOC data from module
+ * Props schema for InstructionsEditPage - receives MOC data from module
  */
-export type InstructionsEditPageProps = {
-  moc: MocForEditResponse
-}
+export const InstructionsEditPagePropsSchema = z.object({
+  moc: MocForEditResponseSchema,
+})
+
+export type InstructionsEditPageProps = z.infer<typeof InstructionsEditPagePropsSchema>
 
 /**
  * Instructions Edit Page Component
@@ -144,11 +151,11 @@ export function InstructionsEditPage({ moc }: InstructionsEditPageProps) {
       </div>
 
       {/* Save Error */}
-      {saveError && (
+      {saveError ? (
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
       {/* Edit Form */}
       <form onSubmit={handleSubmit(handleSave)} className="space-y-6">
@@ -168,11 +175,11 @@ export function InstructionsEditPage({ moc }: InstructionsEditPageProps) {
                 aria-invalid={!!errors.title}
                 aria-describedby={errors.title ? 'title-error' : undefined}
               />
-              {errors.title && (
+              {errors.title ? (
                 <p id="title-error" className="text-sm text-destructive">
                   {errors.title.message}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Description */}
@@ -185,11 +192,11 @@ export function InstructionsEditPage({ moc }: InstructionsEditPageProps) {
                 aria-invalid={!!errors.description}
                 aria-describedby={errors.description ? 'description-error' : undefined}
               />
-              {errors.description && (
+              {errors.description ? (
                 <p id="description-error" className="text-sm text-destructive">
                   {errors.description.message}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Theme */}
@@ -202,11 +209,11 @@ export function InstructionsEditPage({ moc }: InstructionsEditPageProps) {
                 aria-invalid={!!errors.theme}
                 aria-describedby={errors.theme ? 'theme-error' : undefined}
               />
-              {errors.theme && (
+              {errors.theme ? (
                 <p id="theme-error" className="text-sm text-destructive">
                   {errors.theme.message}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Tags */}
@@ -219,11 +226,11 @@ export function InstructionsEditPage({ moc }: InstructionsEditPageProps) {
                 aria-invalid={!!errors.tags}
                 aria-describedby={errors.tags ? 'tags-error' : undefined}
               />
-              {errors.tags && (
+              {errors.tags ? (
                 <p id="tags-error" className="text-sm text-destructive">
                   {errors.tags.message}
                 </p>
-              )}
+              ) : null}
             </div>
           </CardContent>
         </Card>
