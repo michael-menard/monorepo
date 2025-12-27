@@ -9,7 +9,12 @@ description: Complete story implementation workflow from start to finish. Use wh
 
 One-command story implementation from start to finish. Uses Claude Code's Task tool to spawn sub-agents for context-efficient parallel execution.
 
-**Key Feature:** Heavy phases (development, QA) are delegated to sub-agents via the Task tool, minimizing context load on the main orchestrator.
+**Key Features:**
+- Heavy phases (development, QA) delegated to sub-agents via Task tool
+- Pre-flight checks validate environment before starting
+- Resume capability for interrupted work
+- Dry-run mode to preview actions
+- Smart auto-detection of parallel mode
 
 ## Usage
 
@@ -34,75 +39,192 @@ One-command story implementation from start to finish. Uses Claude Code's Task t
 
 # Implement epic (shorthand)
 /implement 3 --epic --parallel --deep-review
+
+# Preview what would happen (no changes made)
+/implement 1.2 --dry-run
+
+# Resume interrupted work
+/implement 1.2 --resume
 ```
 
 ## Parameters
 
 - **story number(s)** - Single story (e.g., `1.1`) or multiple stories (e.g., `1.1,1.2,1.3`)
 - **epic:{number}** - Implement all stories in an epic (e.g., `epic:3` for Epic 3)
-- **--epic** - Treat the number as an epic number (e.g., `/implement 3 --epic`)
-- **--parallel** - Use parallel sub-agent execution (faster for complex stories, **required for epics**)
-- **--deep-review** - Use multi-specialist QA review (security, performance, accessibility)
-- **--quick-review** - Use fast single-agent QA review
+- **--epic** - Treat the number as an epic number
+- **--parallel** - Use parallel sub-agent execution (auto-enabled for epics and complex stories)
+- **--deep-review** - Multi-specialist QA review (security, performance, accessibility)
+- **--quick-review** - Fast single-agent QA review
 - **--skip-review** - Skip QA review (not recommended)
+- **--dry-run** - Preview what would happen without making changes
+- **--resume** - Continue from existing worktree/branch if present
 
 ---
 
 ## EXECUTION INSTRUCTIONS
 
-**CRITICAL: This skill uses Claude Code's Task tool to spawn sub-agents for heavy phases. This minimizes context load and enables true parallel execution.**
+**CRITICAL: Follow these phases in order. Use Claude Code's Task tool for sub-agents. Use TodoWrite to track progress.**
 
-### Phase 0: Parse Arguments
+---
+
+## Phase -1: Pre-Flight Checks
+
+**Run these checks BEFORE any other work. Fail fast on critical issues.**
+
+```
+1. GitHub CLI Authentication
+   Run: gh auth status
+   - FAIL if not authenticated
+   - Provide: "Run 'gh auth login' to authenticate"
+
+2. Git Status Check
+   Run: git status --porcelain
+   - WARN if uncommitted changes exist
+   - ASK user: "Uncommitted changes detected. Continue anyway?"
+   - Note: --resume flag skips this warning
+
+3. Git Branch Check
+   Run: git branch --show-current
+   - FAIL if empty (detached HEAD state)
+   - Provide: "Checkout a branch first: git checkout main"
+
+4. Remote Accessibility
+   Run: git ls-remote --exit-code origin (with timeout)
+   - FAIL if cannot reach remote
+   - Provide: "Check network connection or git remote configuration"
+
+5. Story File Exists (quick check)
+   Run: ls docs/stories/{STORY_NUM}.*.md
+   - FAIL if no matching files
+   - Provide: "Story file not found. Create with /create-story {STORY_NUM}"
+```
+
+**If --dry-run:** Report all check results and STOP here.
+
+---
+
+## Phase 0: Parse Arguments & Initialize
 
 Parse the provided arguments to determine:
 - Story number(s) or epic reference
 - Execution mode (single vs parallel)
 - Review type (deep, quick, skip)
+- Special flags (--dry-run, --resume)
 
-### Phase 1: Story Discovery & Validation
+**Initialize progress tracking:**
+```
+TodoWrite([
+  { content: "Pre-flight checks", status: "completed", activeForm: "Running pre-flight checks" },
+  { content: "Story discovery & validation", status: "in_progress", activeForm: "Discovering story" },
+  { content: "Development setup", status: "pending", activeForm: "Setting up development" },
+  { content: "Implementation", status: "pending", activeForm: "Implementing story" },
+  { content: "Quality assurance", status: "pending", activeForm: "Running QA review" },
+  { content: "Create pull request", status: "pending", activeForm: "Creating PR" }
+])
+```
 
-**For single story:**
-Use the Explore sub-agent to find and validate the story file:
+---
+
+## Phase 1: Story Discovery & Validation
+
+**Use haiku model for fast, lightweight validation:**
 
 ```
 Task(
   subagent_type: "Explore",
-  description: "Find and validate story file",
-  prompt: "Find the story file for story {STORY_NUM} in docs/stories/ directory.
-           Verify the file exists and extract:
-           1. Story file path
-           2. Story status (should be Approved, Ready, or Draft)
-           3. GitHub issue number (if present)
-           4. List of tasks from the story
-           Return these details in a structured format."
+  model: "haiku",
+  description: "Validate story {STORY_NUM}",
+  prompt: "Find and validate story file for story {STORY_NUM}.
+
+           Search in: docs/stories/
+           Pattern: {STORY_NUM}.*.md
+
+           Extract and return:
+           1. story_file_path: Full path to story file
+           2. story_title: Title from story file
+           3. story_status: Status field (Approved, Ready, Draft, In Progress, Done, etc.)
+           4. github_issue: Issue number if present (e.g., #123)
+           5. tasks: List of task checkboxes from the story
+           6. dependencies: Any story dependencies mentioned
+           7. acceptance_criteria: List of acceptance criteria
+
+           Validation rules:
+           - FAIL if status is 'Done', 'Complete', or 'Implemented'
+           - WARN if status is not 'Approved' or 'Ready'
+           - WARN if no GitHub issue linked
+
+           Return as structured data."
 )
 ```
 
-**For epic:**
-Use Explore to discover all stories in the epic:
-
+**For epic - filter out completed stories:**
 ```
 Task(
   subagent_type: "Explore",
-  description: "Discover epic stories",
-  prompt: "Find all story files in docs/stories/ that match pattern '{EPIC_NUM}.*.md'.
+  model: "haiku",
+  description: "Discover epic {EPIC_NUM} stories",
+  prompt: "Find all implementable stories in Epic {EPIC_NUM}.
+
+           Search: docs/stories/{EPIC_NUM}.*.md
+
            For each story, extract: file path, status, dependencies.
-           Analyze dependencies and create execution waves.
-           Return the ordered list of stories to implement."
+
+           FILTER OUT stories with status: Done, Complete, Implemented, Ready for Review
+
+           Analyze dependencies between remaining stories.
+           Create execution waves (stories with no deps first, then dependent stories).
+
+           Return ordered list of stories to implement."
 )
 ```
 
-### Phase 2: Development Setup
+**Smart parallel detection:**
+If story has 5+ tasks OR touches 3+ directories → suggest `--parallel`
 
-Create worktree for the story using git worktree commands:
+---
 
-1. Generate branch name from story (e.g., `feature/story-{STORY_NUM}-{slug}`)
-2. Create worktree: `git worktree add tree/{branch_name} -b {branch_name}`
-3. Navigate to worktree for implementation
+## Phase 2: Development Setup (Resume-Aware)
 
-### Phase 3: Implementation
+**Check for existing worktree/branch first:**
 
-**CRITICAL: Spawn sub-agent(s) for implementation to minimize context load.**
+```bash
+# Generate expected branch name
+BRANCH_NAME="feature/story-{STORY_NUM}-{slug}"
+
+# Check if worktree already exists
+git worktree list | grep "{BRANCH_NAME}"
+
+# Check if branch exists
+git branch --list "{BRANCH_NAME}"
+git branch -r --list "origin/{BRANCH_NAME}"
+```
+
+**If --resume or existing work found:**
+- Switch to existing worktree: `cd tree/{BRANCH_NAME}`
+- Pull latest if remote exists: `git pull --rebase origin {BRANCH_NAME}`
+- Report: "Resuming work on existing branch"
+
+**If creating new:**
+1. Ensure on main and up-to-date: `git checkout main && git pull`
+2. Create worktree: `git worktree add tree/{BRANCH_NAME} -b {BRANCH_NAME}`
+3. Navigate: `cd tree/{BRANCH_NAME}`
+
+**Update GitHub issue (if present):**
+```bash
+gh issue edit {ISSUE_NUMBER} --add-label "in-progress"
+gh issue comment {ISSUE_NUMBER} --body "Implementation started by Claude Code"
+```
+
+---
+
+## Phase 3: Implementation
+
+**CRITICAL: Spawn sub-agent with full project context.**
+
+**Read CLAUDE.md first to include in prompt:**
+```
+CLAUDE_MD_CONTENT = Read("/path/to/CLAUDE.md")
+```
 
 **Single-agent mode (default):**
 ```
@@ -111,220 +233,393 @@ Task(
   description: "Implement story {STORY_NUM}",
   prompt: "You are implementing story {STORY_NUM}.
 
-           Story file: {STORY_FILE_PATH}
-           Working directory: tree/{branch_name}
+           ## Project Guidelines (MUST FOLLOW)
+           {CLAUDE_MD_CONTENT}
 
-           Read the story file and implement ALL tasks listed.
+           ## Story Details
+           Story file: {STORY_FILE_PATH}
+           Working directory: tree/{BRANCH_NAME}
+           Tasks to implement:
+           {TASK_LIST}
+
+           ## Implementation Process
            For each task:
            1. Read and understand the requirement
-           2. Implement the code changes
-           3. Write tests for the changes
-           4. Run tests to verify
-           5. Commit changes with descriptive message
+           2. Implement the code changes following project guidelines
+           3. Write tests (minimum 45% coverage)
+           4. Run tests to verify: pnpm test
+           5. Run type check: pnpm check-types
+           6. Commit with descriptive message
 
-           Follow these guidelines:
-           - Use @repo/ui for UI components
+           ## Critical Rules (from CLAUDE.md)
+           - Use @repo/ui for ALL UI components
            - Use @repo/logger instead of console.log
-           - Use Zod schemas for types
-           - No barrel files
-           - Minimum 45% test coverage
+           - Use Zod schemas for types (never TypeScript interfaces)
+           - NO barrel files
+           - Follow component directory structure
 
-           Report completion status for each task."
+           ## Output
+           Report completion status for each task.
+           List any issues encountered.
+           Provide summary of files changed."
 )
 ```
 
 **Parallel mode (--parallel):**
-When multiple stories or tasks can be parallelized, spawn multiple sub-agents:
-
 ```
-# Spawn sub-agents in parallel (single Task call with run_in_background: true)
+# For multiple stories, spawn in parallel with run_in_background
 Task(
   subagent_type: "general-purpose",
   description: "Implement story {STORY_1}",
   run_in_background: true,
-  prompt: "..."  # Same as above for story 1
+  prompt: "..."  # Same as above with story-specific details
 )
 
 Task(
   subagent_type: "general-purpose",
   description: "Implement story {STORY_2}",
   run_in_background: true,
-  prompt: "..."  # Same as above for story 2
+  prompt: "..."
 )
 
-# Later, collect results with TaskOutput
+# Collect results
 TaskOutput(task_id: "{agent_id_1}")
 TaskOutput(task_id: "{agent_id_2}")
 ```
 
-### Phase 4: Quality Assurance
+**Update progress:**
+```
+TodoWrite([
+  ...previous todos marked complete...,
+  { content: "Quality assurance", status: "in_progress", activeForm: "Running QA review" }
+])
+```
 
-**CRITICAL: Spawn QA sub-agent(s) to review implementation.**
+---
 
-**Quick review (--quick-review or default):**
+## Phase 4: Quality Assurance
+
+**Quick review (default) - use haiku for speed:**
 ```
 Task(
   subagent_type: "general-purpose",
+  model: "haiku",
   description: "QA review for story {STORY_NUM}",
-  prompt: "Review the implementation for story {STORY_NUM}.
+  prompt: "Review implementation for story {STORY_NUM}.
 
-           Working directory: tree/{branch_name}
+           Working directory: tree/{BRANCH_NAME}
 
-           Perform these checks:
-           1. Run full test suite: pnpm test
-           2. Run type check: pnpm check-types
-           3. Run linter: pnpm lint
-           4. Check test coverage meets 45% minimum
-           5. Verify all acceptance criteria from story are met
-           6. Check for package duplication (no reimplementing @repo/ui, etc.)
+           ## Required Checks (run these commands)
+           1. pnpm test --filter='...[origin/main]'
+           2. pnpm check-types --filter='...[origin/main]'
+           3. pnpm lint --filter='...[origin/main]'
 
-           Report:
-           - PASS/FAIL status for each check
-           - List of issues found with severity (Critical, High, Medium, Low)
-           - Overall gate decision (PASS, CONCERNS, FAIL)"
+           ## Code Review Checks
+           1. Verify all acceptance criteria from story are met
+           2. Check for package duplication (no reimplementing @repo/ui, @repo/logger, etc.)
+           3. Verify Zod schemas used (not TypeScript interfaces)
+           4. Check no console.log statements
+           5. Verify no barrel files created
+           6. Check test coverage meets 45% minimum
+
+           ## Output Format
+           {
+             checks: [
+               { name: 'Tests', status: 'PASS|FAIL', details: '...' },
+               { name: 'Types', status: 'PASS|FAIL', details: '...' },
+               ...
+             ],
+             issues: [
+               { id: 'ISSUE-001', severity: 'Critical|High|Medium|Low', description: '...', file: '...', line: N }
+             ],
+             gate: 'PASS|CONCERNS|FAIL',
+             summary: '...'
+           }"
 )
 ```
 
-**Deep review (--deep-review):**
-Spawn multiple specialist sub-agents in parallel:
-
+**Deep review (--deep-review) - parallel specialists:**
 ```
-# Security review
+# Run quick review first (required checks)
 Task(
   subagent_type: "general-purpose",
+  model: "haiku",
+  description: "Required checks",
+  prompt: "Run: pnpm test && pnpm check-types && pnpm lint
+           Report PASS/FAIL for each."
+)
+
+# Then spawn specialists in parallel
+Task(
+  subagent_type: "general-purpose",
+  model: "haiku",
   description: "Security review",
   run_in_background: true,
-  prompt: "You are a security specialist. Review the changes in tree/{branch_name}.
-           Check for: auth issues, injection vulnerabilities, data exposure,
-           OWASP Top 10, CWE Top 25. Report findings with severity."
+  prompt: "You are a security specialist reviewing tree/{BRANCH_NAME}.
+
+           Check for:
+           - Authentication/authorization issues
+           - Injection vulnerabilities (SQL, XSS, command)
+           - Sensitive data exposure
+           - OWASP Top 10 issues
+           - Hardcoded secrets or credentials
+
+           Report findings with severity (Critical/High/Medium/Low).
+           Include file path and line number for each finding."
 )
 
-# Performance review
 Task(
   subagent_type: "general-purpose",
+  model: "haiku",
   description: "Performance review",
   run_in_background: true,
-  prompt: "You are a performance specialist. Review the changes in tree/{branch_name}.
-           Check for: N+1 queries, missing indexes, bundle size impact,
-           unnecessary re-renders. Report findings with estimated impact."
+  prompt: "You are a performance specialist reviewing tree/{BRANCH_NAME}.
+
+           Check for:
+           - N+1 query patterns
+           - Missing database indexes
+           - Unnecessary re-renders in React
+           - Large bundle imports
+           - Missing memoization
+           - Inefficient algorithms
+
+           Report findings with estimated impact (High/Medium/Low).
+           Suggest specific optimizations."
 )
 
-# Accessibility review
 Task(
   subagent_type: "general-purpose",
+  model: "haiku",
   description: "Accessibility review",
   run_in_background: true,
-  prompt: "You are an accessibility specialist. Review the changes in tree/{branch_name}.
-           Check for: WCAG 2.1 AA compliance, keyboard navigation,
-           screen reader support, ARIA labels. Report findings."
+  prompt: "You are an accessibility specialist reviewing tree/{BRANCH_NAME}.
+
+           Check for:
+           - WCAG 2.1 AA compliance
+           - Keyboard navigation support
+           - Screen reader compatibility
+           - ARIA labels and roles
+           - Color contrast issues
+           - Focus management
+
+           Report findings with WCAG criterion references."
 )
 
 # Collect all results
-TaskOutput(task_id: "{security_agent_id}")
-TaskOutput(task_id: "{performance_agent_id}")
-TaskOutput(task_id: "{accessibility_agent_id}")
+TaskOutput(task_id: "{required_checks_id}")
+TaskOutput(task_id: "{security_id}")
+TaskOutput(task_id: "{performance_id}")
+TaskOutput(task_id: "{accessibility_id}")
 ```
 
-### Phase 5: Issue Resolution
+**Aggregate and decide:**
+- Any Critical issue → gate: FAIL
+- 3+ High issues → gate: FAIL
+- Any High issues → gate: CONCERNS
+- Otherwise → gate: PASS
 
-If QA found issues:
+---
 
-1. Display issues to user with severity
-2. Ask if user wants auto-fix
-3. If yes, spawn fix sub-agent:
+## Phase 5: Issue Resolution
 
+**If gate is FAIL or CONCERNS:**
+
+1. Display issues to user organized by severity
+2. Ask: "Auto-fix issues? (y/n)"
+
+**If yes, spawn fix agent:**
 ```
 Task(
   subagent_type: "general-purpose",
   description: "Fix QA issues for {STORY_NUM}",
-  prompt: "Fix the following issues found during QA review:
-           {ISSUES_LIST}
+  prompt: "Fix these issues found during QA:
 
-           Working directory: tree/{branch_name}
+           {ISSUES_LIST_WITH_DETAILS}
+
+           Working directory: tree/{BRANCH_NAME}
+
+           ## Project Guidelines
+           {CLAUDE_MD_CONTENT}
 
            For each issue:
-           1. Understand the issue
-           2. Implement the fix
-           3. Write/update tests
+           1. Understand the root cause
+           2. Implement the fix following project guidelines
+           3. Add/update tests to prevent regression
            4. Verify fix works
-           5. Commit with message referencing issue"
+           5. Commit with message: 'fix: {issue description}'
+
+           Report status for each issue fixed."
 )
 ```
 
-4. Re-run QA review after fixes
+3. Re-run QA review after fixes
+4. If still FAIL after 2 attempts → report to user and STOP
 
-### Phase 6: Create Pull Request
+---
 
-After QA passes:
+## Phase 6: Create Pull Request
 
-1. Push branch to remote: `git push -u origin {branch_name}`
-2. Create PR using gh CLI:
-   ```bash
-   gh pr create --title "feat: {story_title}" --body "..."
-   ```
-3. Link PR to GitHub issue if present
+**Only proceed if gate is PASS (or CONCERNS with user approval).**
 
-### Phase 7: Summary
+```bash
+# Ensure all changes committed
+git add -A
+git status --porcelain
+# If uncommitted changes, commit them
 
-Report to user:
-- Story number and title
-- Execution mode used
-- Time taken
-- QA status
-- PR URL
-- Next steps
+# Push branch
+git push -u origin {BRANCH_NAME}
+
+# Create PR
+gh pr create \
+  --title "feat({scope}): {story_title}" \
+  --body "## Summary
+Implements Story {STORY_NUM}: {story_title}
+
+## Changes
+{LIST_OF_CHANGES}
+
+## Test Plan
+{ACCEPTANCE_CRITERIA_AS_CHECKLIST}
+
+## QA Status
+Gate: {GATE_STATUS}
+{QA_SUMMARY}
+
+Closes #{ISSUE_NUMBER}
+
+---
+Generated with [Claude Code](https://claude.com/claude-code)"
+```
+
+**Update GitHub issue:**
+```bash
+gh issue edit {ISSUE_NUMBER} --remove-label "in-progress" --add-label "ready-for-review"
+gh issue comment {ISSUE_NUMBER} --body "PR created: {PR_URL}"
+```
+
+---
+
+## Phase 7: Summary
+
+**Report to user:**
+```
+═══════════════════════════════════════════════════════
+  Story Implementation Complete
+═══════════════════════════════════════════════════════
+
+Story:      {STORY_NUM} - {STORY_TITLE}
+Mode:       {single|parallel}
+Review:     {quick|deep|skip}
+
+Results:
+  Files changed:  {N}
+  Tests added:    {N}
+  Coverage:       {N}%
+
+QA Status:  {PASS|CONCERNS|FAIL}
+  - Tests:        {PASS|FAIL}
+  - Types:        {PASS|FAIL}
+  - Lint:         {PASS|FAIL}
+  {If deep review:}
+  - Security:     {N issues}
+  - Performance:  {N issues}
+  - Accessibility:{N issues}
+
+Pull Request: {PR_URL}
+GitHub Issue: #{ISSUE_NUMBER} (labeled: ready-for-review)
+
+Next Steps:
+  - Review PR at {PR_URL}
+  - Merge when approved
+  - Worktree at: tree/{BRANCH_NAME}
+═══════════════════════════════════════════════════════
+```
+
+**Clear todos:**
+```
+TodoWrite([])
+```
 
 ---
 
 ## Sub-Agent Architecture
 
-This workflow uses Claude Code's Task tool to spawn sub-agents:
-
 ```
 Main Orchestrator (this skill)
     │
-    ├── Explore Sub-Agent
-    │   └── Story discovery and validation
+    ├─▶ Pre-Flight Checks (inline, no sub-agent)
     │
-    ├── Implementation Sub-Agent(s)
-    │   └── Code implementation per story
+    ├─▶ Task(Explore, haiku) ─── Story discovery/validation
     │
-    └── QA Sub-Agent(s)
-        ├── Quick review (single agent)
-        └── Deep review (parallel specialists)
+    ├─▶ Task(general-purpose) ─── Implementation
+    │       └── Includes CLAUDE.md guidelines
+    │
+    └─▶ Task(general-purpose, haiku) ─── QA Review
+            ├── Quick: Single agent
+            └── Deep: Parallel specialists
+                 ├── Security
+                 ├── Performance
+                 └── Accessibility
 ```
 
-**Benefits of this architecture:**
-- **Reduced context load**: Heavy implementation and QA phases run in isolated contexts
-- **True parallelism**: Multiple stories/reviews can run concurrently
-- **Focused expertise**: Each sub-agent receives only relevant context
-- **Scalability**: Can handle epics with many stories without context overflow
+**Model Selection:**
+- `haiku` - Validation, quick checks, specialist reviews (fast, cheap)
+- `sonnet` (default) - Implementation, complex fixes (balanced)
+- `opus` - Only if explicitly requested or critical decision needed
+
+---
+
+## Error Handling
+
+**Critical Failures (STOP immediately):**
+- Pre-flight check failures (gh auth, git state)
+- Story file not found
+- Story already completed
+- QA gate FAIL after 2 fix attempts
+
+**Recoverable Issues (warn and continue):**
+- Uncommitted changes (with user approval)
+- Missing GitHub issue link
+- Story status not Approved/Ready
+
+**Resume on Failure:**
+Work is preserved in worktree. User can:
+1. Fix issues manually
+2. Run `/implement {story} --resume` to continue
+
+---
 
 ## When to Use Each Mode
 
-### Use Default (Single-Agent)
+### Default (Single-Agent)
 - Simple UI changes
 - Documentation updates
 - Small bug fixes
-- Configuration changes
 - Single-file modifications
 
-### Use --parallel
+### --parallel (Auto-suggested when beneficial)
 - Multi-component features
 - Full-stack implementations
-- Complex business logic
-- Multiple related changes
-- Performance-critical features
+- 5+ tasks in story
+- Changes spanning 3+ directories
 
-### Use --deep-review
-- Security-sensitive features (auth, payments, data access)
+### --deep-review
+- Security-sensitive (auth, payments, data access)
 - Public-facing features
 - Performance-critical paths
-- Accessibility-required features
-- Production deployments
+- Accessibility requirements
 
-### Use --quick-review
+### --quick-review
 - Internal tools
-- Development/staging only
 - Low-risk changes
 - Hotfixes (after manual review)
+
+### --dry-run
+- Preview before starting
+- Verify story is ready
+- Check environment setup
+
+### --resume
+- Continue interrupted work
+- Re-run after manual fixes

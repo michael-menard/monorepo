@@ -33,6 +33,12 @@ Automatically resolves the story file and delegates to `/implement` with all opt
 # Entire epic
 /develop epic:3 --parallel --deep-review
 /develop 3 --epic --parallel
+
+# Preview what would happen (no changes)
+/develop 1.2 --dry-run
+
+# Resume interrupted work
+/develop 1.2 --resume
 ```
 
 ## Parameters
@@ -42,11 +48,13 @@ Automatically resolves the story file and delegates to `/implement` with all opt
   - File path (e.g., `docs/stories/1.2.dashboard.md`)
   - Multiple stories (e.g., `1.1,1.2,1.3`)
   - Epic reference (e.g., `epic:3`)
-- **--parallel** - Use parallel sub-agent execution
-- **--deep-review** - Use multi-specialist QA review
-- **--quick-review** - Use fast single-agent QA review
+- **--parallel** - Use parallel sub-agent execution (auto-suggested for complex stories)
+- **--deep-review** - Multi-specialist QA review (security, performance, accessibility)
+- **--quick-review** - Fast single-agent QA review
 - **--skip-review** - Skip QA review (not recommended)
 - **--epic** - Treat number as epic number
+- **--dry-run** - Preview what would happen without making changes
+- **--resume** - Continue from existing worktree/branch if present
 
 ## Execution
 
@@ -109,10 +117,11 @@ When you provide a story number like `1.15`, the skill:
 
 ✅ **Faster** - No need to remember or type full file paths
 ✅ **Flexible** - Accepts story numbers or file paths
-✅ **Smart** - Automatically resolves files
-✅ **Transparent** - Shows what it's doing
+✅ **Smart** - Automatically resolves files and suggests parallel mode
+✅ **Transparent** - Shows what it's doing (use --dry-run to preview)
 ✅ **Compatible** - Passes through all /implement options
-✅ **Safe** - Validates before delegating
+✅ **Safe** - Pre-flight checks validate environment before starting
+✅ **Resumable** - Continue interrupted work with --resume
 
 ## When to Use
 
