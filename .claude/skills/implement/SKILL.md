@@ -299,124 +299,53 @@ TodoWrite([
 
 ## Phase 4: Quality Assurance
 
-**Quick review (default) - use haiku for speed:**
+**CRITICAL: Use the `/review` or `/qa-gate` skills instead of inline logic.**
+
+**Quick review (--quick-review or default):**
+
+Invoke the `/qa-gate` skill for fast checks:
+
 ```
-Task(
-  subagent_type: "general-purpose",
-  model: "haiku",
-  description: "QA review for story {STORY_NUM}",
-  prompt: "Review implementation for story {STORY_NUM}.
-
-           Working directory: tree/{BRANCH_NAME}
-
-           ## Required Checks (run these commands)
-           1. pnpm test --filter='...[origin/main]'
-           2. pnpm check-types --filter='...[origin/main]'
-           3. pnpm lint --filter='...[origin/main]'
-
-           ## Code Review Checks
-           1. Verify all acceptance criteria from story are met
-           2. Check for package duplication (no reimplementing @repo/ui, @repo/logger, etc.)
-           3. Verify Zod schemas used (not TypeScript interfaces)
-           4. Check no console.log statements
-           5. Verify no barrel files created
-           6. Check test coverage meets 45% minimum
-
-           ## Output Format
-           {
-             checks: [
-               { name: 'Tests', status: 'PASS|FAIL', details: '...' },
-               { name: 'Types', status: 'PASS|FAIL', details: '...' },
-               ...
-             ],
-             issues: [
-               { id: 'ISSUE-001', severity: 'Critical|High|Medium|Low', description: '...', file: '...', line: N }
-             ],
-             gate: 'PASS|CONCERNS|FAIL',
-             summary: '...'
-           }"
+Skill(
+  skill: "qa-gate",
+  args: "{STORY_NUM}"
 )
 ```
 
-**Deep review (--deep-review) - parallel specialists:**
+This runs:
+- Tests, type checking, linting
+- Produces gate file at `docs/qa/gates/{story}-{slug}.yml`
+- Returns PASS/CONCERNS/FAIL decision
+
+**Deep review (--deep-review):**
+
+Invoke the `/review` skill for comprehensive analysis:
+
 ```
-# Run quick review first (required checks)
-Task(
-  subagent_type: "general-purpose",
-  model: "haiku",
-  description: "Required checks",
-  prompt: "Run: pnpm test && pnpm check-types && pnpm lint
-           Report PASS/FAIL for each."
+Skill(
+  skill: "review",
+  args: "{STORY_NUM}"
 )
-
-# Then spawn specialists in parallel
-Task(
-  subagent_type: "general-purpose",
-  model: "haiku",
-  description: "Security review",
-  run_in_background: true,
-  prompt: "You are a security specialist reviewing tree/{BRANCH_NAME}.
-
-           Check for:
-           - Authentication/authorization issues
-           - Injection vulnerabilities (SQL, XSS, command)
-           - Sensitive data exposure
-           - OWASP Top 10 issues
-           - Hardcoded secrets or credentials
-
-           Report findings with severity (Critical/High/Medium/Low).
-           Include file path and line number for each finding."
-)
-
-Task(
-  subagent_type: "general-purpose",
-  model: "haiku",
-  description: "Performance review",
-  run_in_background: true,
-  prompt: "You are a performance specialist reviewing tree/{BRANCH_NAME}.
-
-           Check for:
-           - N+1 query patterns
-           - Missing database indexes
-           - Unnecessary re-renders in React
-           - Large bundle imports
-           - Missing memoization
-           - Inefficient algorithms
-
-           Report findings with estimated impact (High/Medium/Low).
-           Suggest specific optimizations."
-)
-
-Task(
-  subagent_type: "general-purpose",
-  model: "haiku",
-  description: "Accessibility review",
-  run_in_background: true,
-  prompt: "You are an accessibility specialist reviewing tree/{BRANCH_NAME}.
-
-           Check for:
-           - WCAG 2.1 AA compliance
-           - Keyboard navigation support
-           - Screen reader compatibility
-           - ARIA labels and roles
-           - Color contrast issues
-           - Focus management
-
-           Report findings with WCAG criterion references."
-)
-
-# Collect all results
-TaskOutput(task_id: "{required_checks_id}")
-TaskOutput(task_id: "{security_id}")
-TaskOutput(task_id: "{performance_id}")
-TaskOutput(task_id: "{accessibility_id}")
 ```
 
-**Aggregate and decide:**
-- Any Critical issue → gate: FAIL
-- 3+ High issues → gate: FAIL
-- Any High issues → gate: CONCERNS
-- Otherwise → gate: PASS
+This runs:
+- All required checks (tests, types, lint)
+- 7 specialist sub-agents in parallel:
+  - Requirements traceability
+  - Code quality
+  - Security
+  - Performance
+  - Accessibility
+  - Test coverage
+  - Technical debt
+- Aggregates findings
+- Calls `/qa-gate` to produce gate file
+- Updates story with QA Results section
+
+**Gate decision comes from the skill:**
+- PASS: No issues or only low severity
+- CONCERNS: Medium severity issues present
+- FAIL: High severity issues or check failures
 
 ---
 
