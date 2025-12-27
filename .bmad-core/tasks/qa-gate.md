@@ -2,162 +2,137 @@
 
 # qa-gate
 
-Create or update a quality gate decision file for a story based on review findings.
+Create or update a quality gate decision file for a story.
 
-## Purpose
+## Description
 
-Generate a standalone quality gate file that provides a clear pass/fail decision with actionable feedback. This gate serves as an advisory checkpoint for teams to understand quality status.
+This task delegates to the `/qa-gate` Claude Code skill, which runs quality checks and produces a persistent YAML gate file.
 
-## Prerequisites
+## Usage
 
-- Story has been reviewed (manually or via review-story task)
-- Review findings are available
-- Understanding of story requirements and implementation
+```bash
+# Via BMAD agent
+@qa *gate 3.1.5
 
-## Gate File Location
+# Direct skill invocation
+/qa-gate 3.1.5
+```
 
-**ALWAYS** check the `.bmad-core/core-config.yaml` for the `qa.qaLocation/gates`
+## Execution
 
-Slug rules:
+**Invoke the `/qa-gate` skill with the story number:**
 
-- Convert to lowercase
-- Replace spaces with hyphens
-- Strip punctuation
-- Example: "User Auth - Login!" becomes "user-auth-login"
+```
+Skill(
+  skill: "qa-gate",
+  args: "{story_id}"
+)
+```
 
-## Minimal Required Schema
+The `/qa-gate` skill will:
+
+1. **Run Required Checks**
+   - Tests: `pnpm test`
+   - Types: `pnpm check-types`
+   - Lint: `pnpm lint`
+
+2. **Run Specialist Reviews** (if `--deep` flag)
+   - Security specialist
+   - Performance specialist
+   - Accessibility specialist
+
+3. **Determine Gate Decision**
+   - PASS: No issues or only low severity
+   - CONCERNS: Medium severity issues
+   - FAIL: High severity issues or check failures
+   - WAIVED: Explicitly accepted with approval
+
+4. **Create Gate File**
+   - Location: `docs/qa/gates/{story}-{slug}.yml`
+   - Schema: Standardized YAML with findings
+
+5. **Update Story File**
+   - Appends gate reference to QA Results section
+
+## Options
+
+```bash
+# Full gate with specialist reviews
+/qa-gate 3.1.5 --deep
+
+# Specific specialists only
+/qa-gate 3.1.5 --security --performance
+
+# Waive known issues
+/qa-gate 3.1.5 --waive --reason "MVP release" --approved-by "Tech Lead"
+
+# Preview without persisting
+/qa-gate 3.1.5 --dry-run
+```
+
+## Gate File Schema
 
 ```yaml
 schema: 1
-story: '{epic}.{story}'
+story: "3.1.5"
+story_title: "Story Title"
 gate: PASS|CONCERNS|FAIL|WAIVED
-status_reason: '1-2 sentence explanation of gate decision'
-reviewer: 'Quinn'
-updated: '{ISO-8601 timestamp}'
-top_issues: [] # Empty array if no issues
-waiver: { active: false } # Only set active: true if WAIVED
-```
+status_reason: "1-2 sentence explanation"
+reviewer: "Claude Code"
+updated: "2025-01-15T10:30:00Z"
 
-## Schema with Issues
-
-```yaml
-schema: 1
-story: '1.3'
-gate: CONCERNS
-status_reason: 'Missing rate limiting on auth endpoints poses security risk.'
-reviewer: 'Quinn'
-updated: '2025-01-12T10:15:00Z'
-top_issues:
-  - id: 'SEC-001'
-    severity: high # ONLY: low|medium|high
-    finding: 'No rate limiting on login endpoint'
-    suggested_action: 'Add rate limiting middleware before production'
-  - id: 'TEST-001'
-    severity: medium
-    finding: 'No integration tests for auth flow'
-    suggested_action: 'Add integration test coverage'
-waiver: { active: false }
-```
-
-## Schema when Waived
-
-```yaml
-schema: 1
-story: '1.3'
-gate: WAIVED
-status_reason: 'Known issues accepted for MVP release.'
-reviewer: 'Quinn'
-updated: '2025-01-12T10:15:00Z'
-top_issues:
-  - id: 'PERF-001'
-    severity: low
-    finding: 'Dashboard loads slowly with 1000+ items'
-    suggested_action: 'Implement pagination in next sprint'
 waiver:
-  active: true
-  reason: 'MVP release - performance optimization deferred'
-  approved_by: 'Product Owner'
+  active: false
+  reason: ""
+  approved_by: ""
+
+top_issues:
+  - id: "SEC-001"
+    severity: high
+    finding: "Description"
+    suggested_action: "How to fix"
+    file: "src/auth.ts"
+
+nfr_validation:
+  security: { status: PASS, issue_count: 0 }
+  performance: { status: PASS, issue_count: 0 }
+  accessibility: { status: PASS, issue_count: 0 }
+  tests: { status: PASS, details: "" }
+  types: { status: PASS, details: "" }
+  lint: { status: PASS, details: "" }
+
+risk_summary:
+  totals: { high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    should_fix: []
 ```
-
-## Gate Decision Criteria
-
-### PASS
-
-- All acceptance criteria met
-- No high-severity issues
-- Test coverage meets project standards
-
-### CONCERNS
-
-- Non-blocking issues present
-- Should be tracked and scheduled
-- Can proceed with awareness
-
-### FAIL
-
-- Acceptance criteria not met
-- High-severity issues present
-- Recommend return to InProgress
-
-### WAIVED
-
-- Issues explicitly accepted
-- Requires approval and reason
-- Proceed despite known issues
 
 ## Severity Scale
 
-**FIXED VALUES - NO VARIATIONS:**
+**Fixed values - no variations:**
 
-- `low`: Minor issues, cosmetic problems
-- `medium`: Should fix soon, not blocking
-- `high`: Critical issues, should block release
+| Severity | Description |
+|----------|-------------|
+| `high` | Critical, should block |
+| `medium` | Should fix soon |
+| `low` | Fix when convenient |
 
 ## Issue ID Prefixes
 
-- `SEC-`: Security issues
-- `PERF-`: Performance issues
-- `REL-`: Reliability issues
-- `TEST-`: Testing gaps
-- `MNT-`: Maintainability concerns
-- `ARCH-`: Architecture issues
-- `DOC-`: Documentation gaps
-- `REQ-`: Requirements issues
+| Prefix | Category |
+|--------|----------|
+| SEC- | Security |
+| PERF- | Performance |
+| A11Y- | Accessibility |
+| TEST- | Testing gaps |
+| REL- | Reliability |
+| MNT- | Maintainability |
+| ARCH- | Architecture |
+| DOC- | Documentation |
+| REQ- | Requirements |
 
-## Output Requirements
+## Related
 
-1. **ALWAYS** create gate file at: `qa.qaLocation/gates` from `.bmad-core/core-config.yaml`
-2. **ALWAYS** append this exact format to story's QA Results section:
-
-   ```text
-   Gate: {STATUS} → qa.qaLocation/gates/{epic}.{story}-{slug}.yml
-   ```
-
-3. Keep status_reason to 1-2 sentences maximum
-4. Use severity values exactly: `low`, `medium`, or `high`
-
-## Example Story Update
-
-After creating gate file, append to story's QA Results section:
-
-```markdown
-## QA Results
-
-### Review Date: 2025-01-12
-
-### Reviewed By: Quinn (Test Architect)
-
-[... existing review content ...]
-
-### Gate Status
-
-Gate: CONCERNS → qa.qaLocation/gates/{epic}.{story}-{slug}.yml
-```
-
-## Key Principles
-
-- Keep it minimal and predictable
-- Fixed severity scale (low/medium/high)
-- Always write to standard path
-- Always update story with gate reference
-- Clear, actionable findings
+- `/review` - Full review with all specialists (calls `/qa-gate` at end)
+- `/implement` - Calls `/qa-gate` as part of implementation workflow
