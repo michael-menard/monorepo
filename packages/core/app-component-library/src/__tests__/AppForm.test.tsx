@@ -4,6 +4,16 @@ import userEvent from '@testing-library/user-event'
 import {AppForm} from '../forms/AppForm'
 import {SANITIZATION_PROFILES} from '../lib/sanitization'
 
+// Mock @repo/logger
+vi.mock('@repo/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
 // Mock DOMPurify
 vi.mock('dompurify', () => ({
   default: {
@@ -142,9 +152,9 @@ describe('AppForm', () => {
   })
 
   it('should show sanitization warnings when enabled', async () => {
+    const { logger } = await import('@repo/logger')
     const onSubmit = vi.fn()
     const onSanitizationWarning = vi.fn()
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     render(
       <AppForm
@@ -166,10 +176,8 @@ describe('AppForm', () => {
       expect.arrayContaining([expect.stringContaining('Field "message" was sanitized')]),
     )
 
-    // Should log warnings to console
-    expect(consoleSpy).toHaveBeenCalledWith('AppForm sanitization warnings:', expect.any(Array))
-
-    consoleSpy.mockRestore()
+    // Should log warnings via logger
+    expect(logger.warn).toHaveBeenCalledWith('AppForm sanitization warnings:', expect.any(Array))
   })
 
   it('should handle forms with no string values', async () => {

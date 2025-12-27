@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { logger } from '@repo/logger'
 import { Input, InputProps } from '../_primitives/input'
 import {
   SANITIZATION_PROFILES,
@@ -136,7 +137,7 @@ export const AppInput = React.forwardRef<HTMLInputElement, AppInputProps>(
           const validation = validateSanitizedInput(inputValue, sanitized)
           if (validation.warnings.length > 0) {
             if (showSanitizationWarnings) {
-              console.warn('AppInput sanitization warnings:', validation.warnings)
+              logger.warn('AppInput sanitization warnings:', validation.warnings)
             }
             onSanitizationWarning?.(validation.warnings)
           }
@@ -239,7 +240,7 @@ export const AppInput = React.forwardRef<HTMLInputElement, AppInputProps>(
         if (sanitized !== value) {
           // If the parent provided an unsanitized value, we should warn
           if (showSanitizationWarnings) {
-            console.warn('Initial value was sanitized', { original: value, sanitized })
+            logger.warn('Initial value was sanitized', { original: value, sanitized })
           }
         }
       }

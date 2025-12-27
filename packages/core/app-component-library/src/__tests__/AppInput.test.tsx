@@ -4,6 +4,16 @@ import userEvent from '@testing-library/user-event'
 import {AppInput} from '../inputs/AppInput'
 import {SANITIZATION_PROFILES} from '../lib/sanitization'
 
+// Mock @repo/logger
+vi.mock('@repo/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
 // Mock DOMPurify
 vi.mock('dompurify', () => ({
   default: {
@@ -180,8 +190,8 @@ describe('AppInput', () => {
     expect(input).toHaveValue('')
   })
 
-  it('should sanitize initial value if provided and controlled', () => {
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  it('should sanitize initial value if provided and controlled', async () => {
+    const { logger } = await import('@repo/logger')
 
     render(
       <AppInput
@@ -192,12 +202,10 @@ describe('AppInput', () => {
     )
 
     // Should warn about initial value sanitization
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Initial value was sanitized'),
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Initial value was sanitized',
       expect.any(Object),
     )
-
-    consoleSpy.mockRestore()
   })
 
   it('should support debounceMs prop', () => {

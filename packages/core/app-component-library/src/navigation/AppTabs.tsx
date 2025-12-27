@@ -37,7 +37,7 @@ const triggerVariantStyles: Record<TabsVariant, string> = {
     'rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3',
 }
 
-export function AppTabs({ variant = 'default', className, ...props }: AppTabsProps) {
+export function AppTabs({ className, ...props }: AppTabsProps) {
   return <Tabs className={className} {...props} />
 }
 

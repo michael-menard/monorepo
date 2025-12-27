@@ -4,7 +4,6 @@ import {
   LoadingSpinner,
   PulseSpinner,
   DotsSpinner,
-  Skeleton,
   CardSkeleton,
   AvatarSkeleton,
   TextSkeleton,

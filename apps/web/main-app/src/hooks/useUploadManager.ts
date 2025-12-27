@@ -17,7 +17,6 @@
 
 import { useCallback, useRef, useState, useMemo } from 'react'
 import { logger } from '@repo/logger'
-import { uploadToPresignedUrl, UploadError } from '@/services/api/uploadClient'
 import {
   type UploaderFileItem,
   type UploadBatchState,
@@ -29,6 +28,7 @@ import {
   mapHttpErrorToUploadError,
   getErrorMessage,
 } from '@repo/upload-types'
+import { uploadToPresignedUrl, UploadError } from '@/services/api/uploadClient'
 
 /**
  * Default concurrency limit
@@ -361,7 +361,10 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
   const retry = useCallback(
     (fileId: string): boolean => {
       const file = files.find(f => f.id === fileId)
-      if (!file || (file.status !== 'failed' && file.status !== 'expired' && file.status !== 'canceled')) {
+      if (
+        !file ||
+        (file.status !== 'failed' && file.status !== 'expired' && file.status !== 'canceled')
+      ) {
         return false
       }
 
@@ -484,7 +487,10 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
    * Set session info (call after API returns session data)
    */
   const setSession = useCallback((sessionId: string, expiresAt: number) => {
-    logger.info('Setting upload session', { sessionId, expiresAt: new Date(expiresAt).toISOString() })
+    logger.info('Setting upload session', {
+      sessionId,
+      expiresAt: new Date(expiresAt).toISOString(),
+    })
     setUploadSessionId(sessionId)
     setSessionExpiresAt(expiresAt)
   }, [])

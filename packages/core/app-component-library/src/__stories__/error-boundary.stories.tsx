@@ -89,7 +89,7 @@ export const WorkingComponent: Story = {
 
 export const WithErrorCallback: Story = {
   render: () => (
-    <ErrorBoundary onError={(error, errorInfo) => {}}>
+    <ErrorBoundary onError={() => {}}>
       <BuggyComponent shouldThrow={true} />
     </ErrorBoundary>
   ),

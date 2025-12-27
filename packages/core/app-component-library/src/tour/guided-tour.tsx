@@ -475,22 +475,35 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     }
   }
 
+  const contextValue = React.useMemo(
+    () => ({
+      registerStep,
+      unregisterStep,
+      startTour,
+      stopTour: () => stopTour(false),
+      nextStep,
+      prevStep,
+      resetTourCompletion,
+      isActive,
+      currentStepId: activeSteps[currentStep]?.id || null,
+      currentStepIndex: currentStep,
+      totalSteps: activeSteps.length,
+    }),
+    [
+      registerStep,
+      unregisterStep,
+      startTour,
+      nextStep,
+      prevStep,
+      resetTourCompletion,
+      isActive,
+      activeSteps,
+      currentStep,
+    ],
+  )
+
   return (
-    <TourContext.Provider
-      value={{
-        registerStep,
-        unregisterStep,
-        startTour,
-        stopTour: () => stopTour(false),
-        nextStep,
-        prevStep,
-        resetTourCompletion,
-        isActive,
-        currentStepId: activeSteps[currentStep]?.id || null,
-        currentStepIndex: currentStep,
-        totalSteps: activeSteps.length,
-      }}
-    >
+    <TourContext.Provider value={contextValue}>
       {children}
       <TourOverlay />
       <GlobalTourPopover />
@@ -589,8 +602,21 @@ export const TourTrigger: React.FC<{
     return null
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      startTour()
+    }
+  }
+
   return (
-    <div onClick={handleClick} className={className}>
+    <div
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className={className}
+      role="button"
+      tabIndex={0}
+    >
       {children}
     </div>
   )

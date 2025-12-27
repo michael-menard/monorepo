@@ -126,8 +126,6 @@ export const FileList: React.FC<FileListProps> = ({
 
   // Helper function to get responsive column classes
   const getColumnClasses = (column: keyof ResponsiveColumns) => {
-    const { columns } = mergedConfig
-
     // For icon, size and date columns, hide on small screens and show on large screens
     if (column === 'icon' || column === 'size' || column === 'date') {
       return 'hidden lg:table-cell'

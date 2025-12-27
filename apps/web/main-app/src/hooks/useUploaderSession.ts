@@ -8,8 +8,6 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { useToast } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
-import { useAppSelector } from '@/store/hooks'
-import { selectAuth } from '@/store/slices/authSlice'
 import {
   type UploaderSession,
   type FileMetadata,
@@ -21,6 +19,8 @@ import {
   generateAnonSessionId,
   migrateSession,
 } from '@repo/upload-types'
+import { useAppSelector } from '@/store/hooks'
+import { selectAuth } from '@/store/slices/authSlice'
 
 /** Debounce delay for localStorage writes (ms) */
 const DEBOUNCE_MS = 300

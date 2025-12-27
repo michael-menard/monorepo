@@ -47,8 +47,6 @@ export function createAuthenticatedBaseQuery(
     baseUrl,
     enableRetryLogic = true,
     enablePerformanceMonitoring = true,
-    skipAuthForEndpoints: _skipAuthForEndpoints = [],
-    requireAuthForEndpoints: _requireAuthForEndpoints = [],
     onAuthFailure,
     enableCsrf = false,
     getCsrfToken,
@@ -60,7 +58,6 @@ export function createAuthenticatedBaseQuery(
     credentials: 'include', // Story 3.1.4: Always send cookies
     prepareHeaders: (headers, { endpoint }) => {
       const startTime = enablePerformanceMonitoring ? performance.now() : 0
-      const _method = typeof endpoint === 'string' ? 'GET' : 'GET' // Will be overridden by actual request
 
       try {
         // Story 3.1.4: Default headers - Accept: application/json
@@ -200,31 +197,6 @@ export function createAuthenticatedBaseQuery(
   }
 
   return authenticatedBaseQuery
-}
-
-/**
- * Helper function to determine if an endpoint requires authentication
- * Note: With cookie-based auth, cookies are always sent (credentials: 'include'),
- * but this helps identify public vs protected endpoints for logging/metrics.
- */
-function _isProtectedEndpoint(
-  endpoint: string,
-  skipAuthForEndpoints: string[],
-  requireAuthForEndpoints: string[],
-): boolean {
-  // Check if explicitly skipped
-  if (skipAuthForEndpoints.some(skip => endpoint.includes(skip))) {
-    return false
-  }
-
-  // Check if explicitly required
-  if (requireAuthForEndpoints.some(require => endpoint.includes(require))) {
-    return true
-  }
-
-  // Default behavior: most endpoints are protected except public ones
-  const publicEndpoints = ['/health', '/status', '/public', '/auth/login', '/auth/register']
-  return !publicEndpoints.some(publicEndpoint => endpoint.includes(publicEndpoint))
 }
 
 /**

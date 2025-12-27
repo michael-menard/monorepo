@@ -51,7 +51,6 @@ const exampleFormSchema = z
 type ExampleFormData = z.infer<typeof exampleFormSchema>
 
 export const FormErrorExample: React.FC = () => {
-  const [password, setPassword] = React.useState('')
   const [passwordStrength, setPasswordStrength] = React.useState<ReturnType<
     typeof validatePasswordStrength
   > | null>(null)
@@ -71,7 +70,7 @@ export const FormErrorExample: React.FC = () => {
     mode: 'onChange',
   })
 
-  const onSubmit = async (data: ExampleFormData) => {
+  const onSubmit = async () => {
     // Simulate API call
 
     // Simulate error
@@ -79,7 +78,6 @@ export const FormErrorExample: React.FC = () => {
   }
 
   const handlePasswordChange = (value: string) => {
-    setPassword(value)
     if (value) {
       setPasswordStrength(validatePasswordStrength(value))
     } else {

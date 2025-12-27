@@ -8,12 +8,12 @@
 import { useMemo } from 'react'
 import { FileText, Image, List, ImageIcon } from 'lucide-react'
 import { Progress, Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
-import { UploaderFileItem } from '@/components/Uploader/UploaderFileItem'
 import {
   type UploaderFileItem as FileItemType,
   type UploadBatchState,
   type FileCategory,
 } from '@repo/upload-types'
+import { UploaderFileItem } from '@/components/Uploader/UploaderFileItem'
 
 /**
  * Category display info

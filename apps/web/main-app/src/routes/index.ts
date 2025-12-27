@@ -290,6 +290,45 @@ const instructionsNewRoute = createRoute({
   },
 })
 
+// Story 3.1.39: MOC Detail Route (using slug)
+// Route: /mocs/:slug for viewing MOC details
+const mocDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mocs/$slug',
+  component: () => {
+    // Lazy load instructions detail module (reuses existing module)
+    return import('./modules/InstructionsDetailModule').then(module => module.InstructionsDetail)
+  },
+  pendingComponent: LoadingPage,
+})
+
+// Story 3.1.39: MOC Edit Route
+// Route: /mocs/:slug/edit with auth guard and ownership validation
+const mocEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mocs/$slug/edit',
+  component: () => {
+    // Lazy load instructions edit module
+    return import('./modules/InstructionsEditModule').then(module => module.InstructionsEditModule)
+  },
+  pendingComponent: LoadingPage,
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
+    // AC 4: Edit requires authentication - redirect to login with returnTo param
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: { returnTo: location.pathname },
+      })
+    }
+  },
+})
+
 // Story 3.1.9: Alias route for /dashboard/mocs/upload
 const dashboardMocsUploadRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -328,6 +367,8 @@ const routeTree = rootRoute.addChildren([
   instructionsRoute,
   instructionDetailRoute,
   instructionsNewRoute,
+  mocDetailRoute, // Story 3.1.39: MOC Detail Route
+  mocEditRoute, // Story 3.1.39: MOC Edit Route
   dashboardMocsUploadRoute, // Story 3.1.9: Alias route
   dashboardRoute,
   // Stub routes for planned features

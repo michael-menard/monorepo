@@ -46,6 +46,19 @@ Automatically resolves the story file and delegates to `/implement` with all opt
 - **--skip-review** - Skip QA review (not recommended)
 - **--epic** - Treat number as epic number
 
+## Execution
+
+When this skill is invoked:
+
+1. **Parse input** - Determine if argument is a story number or file path
+2. **Resolve story file** - If story number, search `docs/stories/` for matching `{number}.*.md` files
+3. **Validate existence** - Confirm the story file exists
+4. **Invoke /implement** - Call the `/implement` skill with the resolved file path and all flags
+
+The `/implement` skill will then load and execute `.bmad-core/tasks/implement-story.md`.
+
+---
+
 ## How It Works
 
 1. **Accepts flexible input** - Story number or file path

@@ -29,6 +29,7 @@ import {
   AlertDescription,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
+import type { UploaderSession, FileCategory } from '@repo/upload-types'
 import {
   UploaderSessionProvider,
   useUploaderSessionContext,
@@ -39,7 +40,6 @@ import { RateLimitBanner } from '@/components/Uploader/RateLimitBanner'
 import { SessionExpiredBanner } from '@/components/Uploader/SessionExpiredBanner'
 import { useUploadManager, type FileWithUploadUrl } from '@/hooks/useUploadManager'
 import { finalizeSession, type FileValidationError } from '@/services/api/finalizeClient'
-import type { UploaderSession, FileCategory } from '@repo/upload-types'
 import {
   MocInstructionFormSchema,
   createEmptyMocForm,
