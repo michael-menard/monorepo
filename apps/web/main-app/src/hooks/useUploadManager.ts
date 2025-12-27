@@ -1,8 +1,18 @@
 /**
  * Story 3.1.10: Upload Manager Hook
+ * Story 3.1.24: Expiry & Interrupted Uploads — Auto-Refresh & Resume
  *
  * Manages concurrent file uploads with progress, cancel, retry, and error handling.
  * Uses XHR for upload progress events and AbortController for cancellation.
+ *
+ * Features:
+ * - Concurrent uploads with configurable concurrency limit
+ * - Progress tracking per file and overall
+ * - Cancel individual or all uploads
+ * - Retry failed/expired uploads
+ * - Session expiry detection (API error + local TTL check)
+ * - Auto-refresh session flow
+ * - Resume interrupted uploads with file handle detection
  */
 
 import { useCallback, useRef, useState, useMemo } from 'react'
@@ -26,6 +36,12 @@ import {
 const DEFAULT_CONCURRENCY = 3
 
 /**
+ * Session expiry buffer in milliseconds
+ * Check expiry this many ms before actual expiry to avoid edge cases
+ */
+const SESSION_EXPIRY_BUFFER_MS = 30_000 // 30 seconds
+
+/**
  * Upload manager options
  */
 export interface UseUploadManagerOptions {
@@ -35,8 +51,10 @@ export interface UseUploadManagerOptions {
   onComplete?: (state: UploadBatchState) => void
   /** Callback when a file upload fails */
   onError?: (fileId: string, error: UploadErrorCode) => void
-  /** Callback when session expires */
+  /** Callback when session expires (API error or local TTL check) */
   onSessionExpired?: () => void
+  /** Callback when a file needs re-selection (File handle lost) */
+  onFileNeedsReselect?: (fileId: string, fileName: string) => void
 }
 
 /**
@@ -77,13 +95,31 @@ export interface UseUploadManagerResult {
   isUploading: boolean
   /** Whether all required files are uploaded */
   isComplete: boolean
+  /** Set session info (call after API returns session data) */
+  setSession: (sessionId: string, expiresAt: number) => void
+  /** Check if session is expired (local TTL check) */
+  isSessionExpired: () => boolean
+  /** Update file URLs after session refresh */
+  updateFileUrls: (updates: Array<{ fileId: string; uploadUrl: string }>) => void
+  /** Check if file handle is available for retry */
+  hasFileHandle: (fileId: string) => boolean
+  /** Get files that need re-selection (lost file handles) */
+  getFilesNeedingReselect: () => UploaderFileItem[]
+  /** Mark all expired files as needing refresh */
+  markExpiredFiles: () => void
 }
 
 /**
  * Upload manager hook
  */
 export function useUploadManager(options: UseUploadManagerOptions = {}): UseUploadManagerResult {
-  const { concurrency = DEFAULT_CONCURRENCY, onComplete, onError, onSessionExpired } = options
+  const {
+    concurrency = DEFAULT_CONCURRENCY,
+    onComplete,
+    onError,
+    onSessionExpired,
+    onFileNeedsReselect,
+  } = options
 
   // State
   const [files, setFiles] = useState<UploaderFileItem[]>([])
@@ -257,11 +293,34 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
 
   /**
    * Start uploading queued files
+   * Returns false if session is expired
    */
-  const startUploads = useCallback(() => {
+  const startUploads = useCallback((): boolean => {
+    // Check if session is expired locally before starting
+    if (sessionExpiresAt && Date.now() >= sessionExpiresAt - SESSION_EXPIRY_BUFFER_MS) {
+      logger.warn('Cannot start uploads - session expired')
+      // Mark all queued files as expired
+      setFiles(prev =>
+        prev.map(f =>
+          f.status === 'queued'
+            ? {
+                ...f,
+                status: 'expired' as UploadStatus,
+                expired: true,
+                errorCode: 'EXPIRED_SESSION' as UploadErrorCode,
+                errorMessage: 'Session expired. Please refresh to continue.',
+              }
+            : f,
+        ),
+      )
+      onSessionExpired?.()
+      return false
+    }
+
     logger.info('Starting uploads')
     processQueue()
-  }, [processQueue])
+    return true
+  }, [processQueue, sessionExpiresAt, onSessionExpired])
 
   /**
    * Cancel a specific file upload
@@ -297,12 +356,36 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
 
   /**
    * Retry a failed file upload
+   * Returns false if file handle is missing and needs re-selection
    */
   const retry = useCallback(
-    (fileId: string) => {
+    (fileId: string): boolean => {
       const file = files.find(f => f.id === fileId)
-      if (!file || (file.status !== 'failed' && file.status !== 'expired')) {
-        return
+      if (!file || (file.status !== 'failed' && file.status !== 'expired' && file.status !== 'canceled')) {
+        return false
+      }
+
+      // Check if file handle is available
+      if (!fileHandlesRef.current.has(fileId)) {
+        logger.warn('File handle not available for retry, needs re-selection', {
+          fileId,
+          fileName: file.name,
+        })
+        onFileNeedsReselect?.(fileId, file.name)
+        return false
+      }
+
+      // Check if session is expired locally before retrying
+      if (sessionExpiresAt && Date.now() >= sessionExpiresAt - SESSION_EXPIRY_BUFFER_MS) {
+        logger.warn('Cannot retry - session expired', { fileId })
+        updateFile(fileId, {
+          status: 'expired',
+          expired: true,
+          errorCode: 'EXPIRED_SESSION',
+          errorMessage: 'Session expired. Please refresh to continue.',
+        })
+        onSessionExpired?.()
+        return false
       }
 
       logger.info('Retrying upload', { fileId })
@@ -315,31 +398,55 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
       })
 
       processQueue()
+      return true
     },
-    [files, updateFile, processQueue],
+    [files, updateFile, processQueue, sessionExpiresAt, onFileNeedsReselect, onSessionExpired],
   )
 
   /**
    * Retry all failed uploads
+   * Returns list of file IDs that need re-selection (lost file handles)
    */
-  const retryAll = useCallback(() => {
+  const retryAll = useCallback((): string[] => {
+    // Check if session is expired locally before retrying
+    if (sessionExpiresAt && Date.now() >= sessionExpiresAt - SESSION_EXPIRY_BUFFER_MS) {
+      logger.warn('Cannot retry all - session expired')
+      onSessionExpired?.()
+      return []
+    }
+
+    const filesNeedingReselect: string[] = []
+
     logger.info('Retrying all failed uploads')
     setFiles(prev =>
-      prev.map(f =>
-        f.status === 'failed' || f.status === 'expired'
-          ? {
-              ...f,
-              status: 'queued' as UploadStatus,
-              progress: 0,
-              errorCode: undefined,
-              errorMessage: undefined,
-              expired: false,
-            }
-          : f,
-      ),
+      prev.map(f => {
+        if (f.status === 'failed' || f.status === 'expired' || f.status === 'canceled') {
+          // Check if file handle is available
+          if (!fileHandlesRef.current.has(f.id)) {
+            filesNeedingReselect.push(f.id)
+            onFileNeedsReselect?.(f.id, f.name)
+            return f // Don't change status
+          }
+          return {
+            ...f,
+            status: 'queued' as UploadStatus,
+            progress: 0,
+            errorCode: undefined,
+            errorMessage: undefined,
+            expired: false,
+          }
+        }
+        return f
+      }),
     )
+
+    if (filesNeedingReselect.length > 0) {
+      logger.warn('Some files need re-selection', { count: filesNeedingReselect.length })
+    }
+
     processQueue()
-  }, [processQueue])
+    return filesNeedingReselect
+  }, [processQueue, sessionExpiresAt, onSessionExpired, onFileNeedsReselect])
 
   /**
    * Clear all files
@@ -373,6 +480,106 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
    */
   const getFile = useCallback((fileId: string) => files.find(f => f.id === fileId), [files])
 
+  /**
+   * Set session info (call after API returns session data)
+   */
+  const setSession = useCallback((sessionId: string, expiresAt: number) => {
+    logger.info('Setting upload session', { sessionId, expiresAt: new Date(expiresAt).toISOString() })
+    setUploadSessionId(sessionId)
+    setSessionExpiresAt(expiresAt)
+  }, [])
+
+  /**
+   * Check if session is expired (local TTL check with buffer)
+   */
+  const isSessionExpired = useCallback(() => {
+    if (!sessionExpiresAt) {
+      return false // No expiry set, assume valid
+    }
+    const now = Date.now()
+    const isExpired = now >= sessionExpiresAt - SESSION_EXPIRY_BUFFER_MS
+    if (isExpired) {
+      logger.warn('Session expired (local TTL check)', {
+        expiresAt: new Date(sessionExpiresAt).toISOString(),
+        now: new Date(now).toISOString(),
+      })
+    }
+    return isExpired
+  }, [sessionExpiresAt])
+
+  /**
+   * Update file URLs after session refresh
+   * Call this after getting new presigned URLs from the API
+   */
+  const updateFileUrls = useCallback((updates: Array<{ fileId: string; uploadUrl: string }>) => {
+    logger.info('Updating file URLs after session refresh', { count: updates.length })
+
+    // Update URL refs
+    updates.forEach(({ fileId, uploadUrl }) => {
+      uploadUrlsRef.current.set(fileId, uploadUrl)
+    })
+
+    // Reset expired files to queued status
+    setFiles(prev =>
+      prev.map(f => {
+        const update = updates.find(u => u.fileId === f.id)
+        if (update && (f.status === 'expired' || f.status === 'failed')) {
+          return {
+            ...f,
+            status: 'queued' as UploadStatus,
+            uploadUrl: update.uploadUrl,
+            progress: 0,
+            errorCode: undefined,
+            errorMessage: undefined,
+            expired: false,
+          }
+        }
+        return f
+      }),
+    )
+  }, [])
+
+  /**
+   * Check if file handle is available for retry
+   */
+  const hasFileHandle = useCallback((fileId: string) => {
+    return fileHandlesRef.current.has(fileId)
+  }, [])
+
+  /**
+   * Get files that need re-selection (failed/expired but lost file handles)
+   */
+  const getFilesNeedingReselect = useCallback(() => {
+    return files.filter(f => {
+      const needsRetry = f.status === 'failed' || f.status === 'expired' || f.status === 'canceled'
+      const hasHandle = fileHandlesRef.current.has(f.id)
+      return needsRetry && !hasHandle
+    })
+  }, [files])
+
+  /**
+   * Mark all files as expired if session has expired
+   * Call this when local TTL check fails or API returns EXPIRED_SESSION
+   */
+  const markExpiredFiles = useCallback(() => {
+    logger.info('Marking all non-complete files as expired')
+    setFiles(prev =>
+      prev.map(f => {
+        if (f.status === 'queued' || f.status === 'uploading') {
+          return {
+            ...f,
+            status: 'expired' as UploadStatus,
+            expired: true,
+            errorCode: 'EXPIRED_SESSION' as UploadErrorCode,
+            errorMessage: 'Session expired. Please refresh to continue.',
+          }
+        }
+        return f
+      }),
+    )
+    onSessionExpired?.()
+  }, [onSessionExpired])
+
   return {
     state,
     addFiles,
@@ -386,5 +593,11 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
     getFile,
     isUploading: state.isUploading,
     isComplete: state.isComplete,
+    setSession,
+    isSessionExpired,
+    updateFileUrls,
+    hasFileHandle,
+    getFilesNeedingReselect,
+    markExpiredFiles,
   }
 }

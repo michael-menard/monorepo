@@ -11,6 +11,9 @@
     "test:bdd": "bddgen && playwright test .features-gen/",
     "test:bdd:smoke": "bddgen && playwright test .features-gen/ --grep @smoke",
     "test:bdd:auth": "bddgen && playwright test .features-gen/features/auth/",
+    "test:bdd:uploader": "bddgen && playwright test .features-gen/features/uploader/",
+    "test:bdd:uploader:a11y": "bddgen && playwright test .features-gen/features/uploader/ --grep @a11y",
+    "test:bdd:uploader:perf": "bddgen && playwright test .features-gen/features/uploader/ --grep @perf",
     "test:legacy": "playwright test tests/",
     "test:legacy:auth": "playwright test tests/auth/",
     "test:legacy:auth:headed": "playwright test tests/auth/ --headed",
@@ -21,6 +24,7 @@
     "install": "playwright install"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.0",
     "@cucumber/cucumber": "12.2.0",
     "@playwright/test": "^1.54.1",
     "@types/react": "^19.1.0",

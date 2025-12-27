@@ -4,8 +4,39 @@
 
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
+import { setupAuthMock, setupUploadMocks } from '../utils'
 
-const { Then } = createBdd()
+const { Given, Then } = createBdd()
+
+// Authentication steps
+Given('I am logged in as a test user', async ({ page }) => {
+  // Set up mock authentication state
+  await setupAuthMock(page, {
+    id: 'test-user-123',
+    email: 'test@example.com',
+    name: 'Test User',
+  })
+
+  // Set up upload API mocks for uploader tests
+  await setupUploadMocks(page)
+
+  // Set auth cookies/localStorage as needed
+  await page.evaluate(() => {
+    // Mock auth state in localStorage (Amplify pattern)
+    const authKey = 'CognitoIdentityServiceProvider.testClientId.testUser'
+    localStorage.setItem(
+      `${authKey}.idToken`,
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwibmFtZSI6IlRlc3QgVXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxODAwMDAwMDAwfQ.mock-signature',
+    )
+    localStorage.setItem(`${authKey}.accessToken`, 'mock-access-token')
+    localStorage.setItem('auth:user', JSON.stringify({
+      userId: 'test-user-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      isAuthenticated: true,
+    }))
+  })
+})
 
 // Common UI Element visibility steps
 Then('I should see the page title {string}', async ({ page }, title: string) => {
