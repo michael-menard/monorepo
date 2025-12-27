@@ -28,6 +28,10 @@
       "import": "./src/rtk/instructions-api.ts",
       "types": "./src/rtk/instructions-api.ts"
     },
+    "./rtk/moc-api": {
+      "import": "./src/rtk/moc-api.ts",
+      "types": "./src/rtk/moc-api.ts"
+    },
     "./auth/cognito-integration": {
       "import": "./src/auth/cognito-integration.ts",
       "types": "./src/auth/cognito-integration.ts"
@@ -70,6 +74,7 @@
     "@reduxjs/toolkit": "^2.8.2",
     "@repo/cache": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/upload-types": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

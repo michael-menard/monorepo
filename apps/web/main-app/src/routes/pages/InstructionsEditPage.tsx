@@ -1,15 +1,16 @@
 /**
  * Story 3.1.39: Instructions Edit Page
+ * Story 3.1.40: Edit Page & Data Fetching
  *
  * Edit page for existing MOC instructions.
- * Validates ownership and provides edit functionality.
+ * Pre-populates form with MOC data and displays existing files.
  */
 
 import { useCallback, useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import {
   Button,
   Card,
@@ -23,63 +24,37 @@ import {
   AlertDescription,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
-import { z } from 'zod'
-import { LoadingPage } from './LoadingPage'
-
-// Simplified edit form schema (AC: 1)
-const MocEditFormSchema = z.object({
-  title: z
-    .string()
-    .min(3, 'Title must be at least 3 characters')
-    .max(120, 'Title must be at most 120 characters'),
-  description: z.string().max(2000, 'Description must be at most 2000 characters').optional(),
-  theme: z.string().max(100).optional(),
-  tags: z.string().max(500).optional(), // Comma-separated string for form input
-})
-
-type MocEditFormInput = z.infer<typeof MocEditFormSchema>
+import { EditMocFormSchema, type EditMocFormInput, type MocForEditResponse } from '@repo/upload-types'
+import { FileList } from '../../components/MocEdit/FileList'
 
 /**
- * Props for InstructionsEditPage - receives MOC data from loader
+ * Props for InstructionsEditPage - receives MOC data from module
  */
-interface InstructionsEditPageProps {
-  moc: {
-    id: string
-    title: string
-    description: string | null
-    slug: string | null
-    tags: string[] | null
-    theme: string | null
-    status: 'draft' | 'published' | 'archived' | 'pending_review'
-    isOwner: boolean
-    files: Array<{
-      id: string
-      category: string
-      filename: string
-      url: string
-    }>
-  }
-  isLoading?: boolean
-  error?: string | null
+export type InstructionsEditPageProps = {
+  moc: MocForEditResponse
 }
 
 /**
  * Instructions Edit Page Component
  * Story 3.1.39: Edit Routes & Entry Points
+ * Story 3.1.40: Edit Page & Data Fetching
+ *
+ * Displays pre-populated form with MOC data and existing files.
  */
-export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEditPageProps) {
+export function InstructionsEditPage({ moc }: InstructionsEditPageProps) {
   const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Initialize form with MOC data
-  const form = useForm<MocEditFormInput>({
-    resolver: zodResolver(MocEditFormSchema),
+  // Initialize form with MOC data using the shared schema
+  const form = useForm<EditMocFormInput>({
+    resolver: zodResolver(EditMocFormSchema),
     defaultValues: {
-      title: moc?.title ?? '',
-      description: moc?.description ?? '',
-      tags: moc?.tags?.join(', ') ?? '',
-      theme: moc?.theme ?? '',
+      title: moc.title,
+      description: moc.description ?? '',
+      tags: moc.tags?.join(', ') ?? '',
+      theme: moc.theme ?? '',
+      slug: moc.slug ?? '',
     },
     mode: 'onBlur',
   })
@@ -93,36 +68,33 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
 
   // Reset form when MOC data changes
   useEffect(() => {
-    if (moc) {
-      reset({
-        title: moc.title,
-        description: moc.description ?? '',
-        tags: moc.tags?.join(', ') ?? '',
-        theme: moc.theme ?? '',
-      })
-    }
+    reset({
+      title: moc.title,
+      description: moc.description ?? '',
+      tags: moc.tags?.join(', ') ?? '',
+      theme: moc.theme ?? '',
+      slug: moc.slug ?? '',
+    })
   }, [moc, reset])
 
   const handleBack = useCallback(() => {
-    if (moc?.slug) {
+    if (moc.slug) {
       navigate({ to: '/mocs/$slug', params: { slug: moc.slug } })
     } else {
       navigate({ to: '/dashboard' })
     }
-  }, [navigate, moc?.slug])
+  }, [navigate, moc.slug])
 
   const handleSave = useCallback(
-    async (data: MocEditFormInput) => {
-      if (!moc) return
-
+    async (data: EditMocFormInput) => {
       setIsSaving(true)
       setSaveError(null)
 
       try {
         logger.info('Saving MOC edits', { mocId: moc.id, title: data.title })
 
-        // TODO: Implement save via RTK Query mutation
-        // await updateMoc({ id: moc.id, data }).unwrap()
+        // TODO: Story 3.1.41 - Implement save via RTK Query mutation
+        // await updateMoc({ mocId: moc.id, data: formToEditRequest(data) }).unwrap()
 
         // For now, just log and navigate back
         logger.info('MOC edit saved (placeholder)', { mocId: moc.id })
@@ -143,51 +115,13 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
     [moc, navigate],
   )
 
-  // Loading state
-  if (isLoading) {
-    return <LoadingPage />
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="container max-w-4xl mx-auto py-8 px-4">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button variant="outline" onClick={handleBack} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Go Back
-        </Button>
-      </div>
-    )
-  }
-
-  // No MOC data
-  if (!moc) {
-    return (
-      <div className="container max-w-4xl mx-auto py-8 px-4">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>MOC not found</AlertDescription>
-        </Alert>
-        <Button variant="outline" onClick={handleBack} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Go Back
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
+          <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Go back">
             <ArrowLeft className="w-5 h-5" />
-            <span className="sr-only">Go back</span>
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Edit MOC</h1>
@@ -210,12 +144,11 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
       </div>
 
       {/* Save Error */}
-      {saveError ? (
+      {saveError && (
         <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
       {/* Edit Form */}
       <form onSubmit={handleSubmit(handleSave)} className="space-y-6">
@@ -233,10 +166,13 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
                 {...register('title')}
                 placeholder="Enter MOC title"
                 aria-invalid={!!errors.title}
+                aria-describedby={errors.title ? 'title-error' : undefined}
               />
-              {errors.title ? (
-                <p className="text-sm text-destructive">{errors.title.message}</p>
-              ) : null}
+              {errors.title && (
+                <p id="title-error" className="text-sm text-destructive">
+                  {errors.title.message}
+                </p>
+              )}
             </div>
 
             {/* Description */}
@@ -247,10 +183,13 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
                 {...register('description')}
                 placeholder="Describe your MOC"
                 aria-invalid={!!errors.description}
+                aria-describedby={errors.description ? 'description-error' : undefined}
               />
-              {errors.description ? (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
-              ) : null}
+              {errors.description && (
+                <p id="description-error" className="text-sm text-destructive">
+                  {errors.description.message}
+                </p>
+              )}
             </div>
 
             {/* Theme */}
@@ -261,10 +200,13 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
                 {...register('theme')}
                 placeholder="e.g., Technic, City, Creator"
                 aria-invalid={!!errors.theme}
+                aria-describedby={errors.theme ? 'theme-error' : undefined}
               />
-              {errors.theme ? (
-                <p className="text-sm text-destructive">{errors.theme.message}</p>
-              ) : null}
+              {errors.theme && (
+                <p id="theme-error" className="text-sm text-destructive">
+                  {errors.theme.message}
+                </p>
+              )}
             </div>
 
             {/* Tags */}
@@ -275,15 +217,18 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
                 {...register('tags')}
                 placeholder="Enter tags separated by commas"
                 aria-invalid={!!errors.tags}
+                aria-describedby={errors.tags ? 'tags-error' : undefined}
               />
-              {errors.tags ? (
-                <p className="text-sm text-destructive">{errors.tags.message}</p>
-              ) : null}
+              {errors.tags && (
+                <p id="tags-error" className="text-sm text-destructive">
+                  {errors.tags.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Files Section - Read Only for now */}
+        {/* Files Section */}
         <Card>
           <CardHeader>
             <CardTitle>Files</CardTitle>
@@ -292,23 +237,7 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {moc.files.length === 0 ? (
-              <p className="text-muted-foreground">No files attached</p>
-            ) : (
-              <ul className="space-y-2">
-                {moc.files.map(file => (
-                  <li
-                    key={file.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
-                  >
-                    <span className="text-sm font-medium">{file.filename}</span>
-                    <span className="text-xs text-muted-foreground capitalize">
-                      {file.category.replace('-', ' ')}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <FileList files={moc.files} />
           </CardContent>
         </Card>
       </form>

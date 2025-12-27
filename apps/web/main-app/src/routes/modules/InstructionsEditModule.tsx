@@ -1,16 +1,20 @@
 /**
  * Instructions Edit Module
  * Story 3.1.39: Edit Routes & Entry Points
+ * Story 3.1.40: Edit Page & Data Fetching
  *
- * Lazy-loads the edit page and handles MOC fetching with ownership checks.
+ * Lazy-loads the edit page and handles MOC fetching with RTK Query.
  * Implements auth guard and owner validation.
  */
 
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
+import { useGetMocForEditQuery } from '@repo/api-client/rtk/moc-api'
 import { LoadingPage } from '../pages/LoadingPage'
+import { EditPageSkeleton } from '../../components/MocEdit/EditPageSkeleton'
+import { EditErrorDisplay } from '../../components/MocEdit/EditErrorDisplay'
 
 // Lazy-load the instructions edit page
 const InstructionsEditPage = lazy(() =>
@@ -22,124 +26,94 @@ const InstructionsEditPage = lazy(() =>
 // Slug validation schema (AC: 6)
 const SlugSchema = z.string().regex(/^[a-z0-9-]+$/, 'Invalid slug format')
 
-// MOC detail type matching backend response
-interface MocDetail {
-  id: string
-  title: string
-  description: string | null
-  slug: string | null
-  tags: string[] | null
-  theme: string | null
-  status: 'draft' | 'published' | 'archived' | 'pending_review'
-  isOwner: boolean
-  files: Array<{
-    id: string
-    category: string
-    filename: string
-    url: string
-  }>
-}
-
-// Mock fetch function - TODO: Replace with RTK Query
-const fetchMocBySlug = async (slug: string): Promise<MocDetail | null> => {
-  // Validate slug format
-  const parseResult = SlugSchema.safeParse(slug)
-  if (!parseResult.success) {
-    logger.warn('Invalid slug format', { slug })
-    return null
-  }
-
-  // TODO: Replace with actual API call using RTK Query
-  // const { data, error } = useGetMocBySlugQuery(slug)
-
-  // Mock data for development
-  logger.info('Fetching MOC by slug (mock)', { slug })
-
-  // Simulate API response
-  return {
-    id: '123e4567-e89b-12d3-a456-426614174001',
-    title: 'Technic Supercar',
-    description: 'A detailed supercar model with working steering and suspension.',
-    slug: slug,
-    tags: ['vehicle', 'supercar', 'advanced'],
-    theme: 'Technic',
-    status: 'draft',
-    isOwner: true, // Mock: always owner for development
-    files: [
-      {
-        id: 'file-1',
-        category: 'instruction',
-        filename: 'instructions.pdf',
-        url: 'https://example.com/file.pdf',
-      },
-    ],
-  }
-}
-
 /**
  * Instructions Edit Module - Wrapper for lazy-loaded edit page
- * Handles MOC fetching and ownership validation (AC: 5)
+ * Story 3.1.40: Uses RTK Query for data fetching
+ *
+ * Handles:
+ * - MOC fetching via RTK Query
+ * - Ownership validation
+ * - Loading states
+ * - Error handling (404, 403, network)
  */
 export function InstructionsEditModule() {
   const navigate = useNavigate()
   const params = useParams({ from: '/mocs/$slug/edit' })
   const slug = params.slug
 
-  const [moc, setMoc] = useState<MocDetail | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Validate slug format before making API call
+  const isValidSlug = slug ? SlugSchema.safeParse(slug).success : false
 
-  // Fetch MOC data
+  // Fetch MOC data using RTK Query
+  // Skip the query if slug is invalid to avoid unnecessary API calls
+  const {
+    data: moc,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useGetMocForEditQuery(slug || '', {
+    skip: !isValidSlug,
+  })
+
+  // Handle retry for error states
+  const handleRetry = useCallback(() => {
+    refetch()
+  }, [refetch])
+
+  // Check ownership and redirect non-owners
   useEffect(() => {
-    const loadMoc = async () => {
-      if (!slug) {
-        setError('No slug provided')
-        setIsLoading(false)
-        return
-      }
-
-      // Validate slug format (AC: 6)
-      const parseResult = SlugSchema.safeParse(slug)
-      if (!parseResult.success) {
-        logger.warn('Invalid slug format', { slug })
-        setError('Invalid MOC identifier')
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        const mocData = await fetchMocBySlug(slug)
-
-        if (!mocData) {
-          setError('MOC not found')
-          setIsLoading(false)
-          return
-        }
-
-        // Check ownership (AC: 5)
-        if (!mocData.isOwner) {
-          logger.info('Non-owner attempted to access edit page', { slug })
-          // Redirect to detail page for non-owners
-          navigate({ to: '/mocs/$slug', params: { slug } })
-          return
-        }
-
-        setMoc(mocData)
-        setError(null)
-      } catch (err) {
-        logger.error('Failed to fetch MOC for editing', { slug, error: err })
-        setError('Failed to load MOC')
-      } finally {
-        setIsLoading(false)
-      }
+    if (moc && !moc.isOwner) {
+      logger.info('Non-owner attempted to access edit page', { slug })
+      // Redirect to detail page for non-owners
+      navigate({ to: '/mocs/$slug', params: { slug: slug! } })
     }
+  }, [moc, slug, navigate])
 
-    loadMoc()
-  }, [slug, navigate])
+  // Handle invalid slug format
+  if (slug && !isValidSlug) {
+    logger.warn('Invalid slug format', { slug })
+    return (
+      <EditErrorDisplay
+        error={{ status: 400, data: { message: 'Invalid MOC identifier' } }}
+        mocSlug={slug}
+      />
+    )
+  }
 
+  // Handle loading state
+  if (isLoading || isFetching) {
+    return (
+      <Suspense fallback={<LoadingPage />}>
+        <EditPageSkeleton />
+      </Suspense>
+    )
+  }
+
+  // Handle error state
+  if (error) {
+    return <EditErrorDisplay error={error} onRetry={handleRetry} mocSlug={slug} />
+  }
+
+  // Handle no data (shouldn't happen if no error, but defensive)
+  if (!moc) {
+    return (
+      <EditErrorDisplay
+        error={{ status: 404, data: { message: 'MOC not found' } }}
+        mocSlug={slug}
+      />
+    )
+  }
+
+  // Handle non-owner (will redirect via useEffect, show loading while redirecting)
+  if (!moc.isOwner) {
+    return <LoadingPage />
+  }
+
+  // Render the edit page with fetched data
   return (
-    <Suspense fallback={<LoadingPage />}>
-      <InstructionsEditPage moc={moc!} isLoading={isLoading} error={error} />
+    <Suspense fallback={<EditPageSkeleton />}>
+      <InstructionsEditPage moc={moc} />
     </Suspense>
   )
 }
