@@ -1,0 +1,86 @@
+story: 3.1.40
+title: Edit Page & Data Fetching
+reviewed_at: 2025-12-27T03:30:00Z
+gate: CONCERNS
+summary: Implementation is complete and follows project conventions. Comprehensive error handling, proper Zod schema usage, and good accessibility. Pre-existing @repo/logger resolution issues in @repo/app-component-library cause type-check and test failures, but these are unrelated to this story's changes. The story code itself is well-structured.
+issues:
+  - id: ISSUE-001
+    severity: medium
+    category: type-safety
+    description: Pre-existing TypeScript errors in @repo/app-component-library package - cannot find module '@repo/logger'. This affects 7 files in the component library and causes type-check failures. Not caused by this story's changes.
+    file: packages/core/app-component-library/src/content/AppSafeContent.tsx
+    line: 2
+    recommendation: This is a pre-existing infrastructure issue. Should be resolved separately by ensuring @repo/logger is properly listed in dependencies and tsconfig paths are configured.
+
+  - id: ISSUE-002
+    severity: low
+    category: testing
+    description: InstructionsEditPage.tsx save functionality is placeholder (TODO comment). The updateMoc mutation is prepared but not wired to the save handler, which logs and navigates instead of actually saving.
+    file: apps/web/main-app/src/routes/pages/InstructionsEditPage.tsx
+    line: 100
+    recommendation: This is intentional and documented as Story 3.1.41 scope. No action needed for this story.
+
+  - id: ISSUE-003
+    severity: low
+    category: type-safety
+    description: FileListProps uses a plain TypeScript type instead of a Zod schema, which violates the project's Zod-first types convention.
+    file: apps/web/main-app/src/components/MocEdit/FileList.tsx
+    line: 15
+    recommendation: Consider converting FileListProps to use a Zod schema with z.infer<> for consistency with project conventions.
+
+  - id: ISSUE-004
+    severity: low
+    category: type-safety
+    description: EditErrorDisplayProps uses a plain TypeScript type instead of a Zod schema.
+    file: apps/web/main-app/src/components/MocEdit/EditErrorDisplay.tsx
+    line: 22
+    recommendation: Consider converting EditErrorDisplayProps to use a Zod schema with z.infer<> for consistency.
+
+  - id: ISSUE-005
+    severity: low
+    category: type-safety
+    description: InstructionsEditPageProps uses a plain TypeScript type instead of a Zod schema.
+    file: apps/web/main-app/src/routes/pages/InstructionsEditPage.tsx
+    line: 37
+    recommendation: Consider converting InstructionsEditPageProps to use a Zod schema with z.infer<> for consistency.
+
+  - id: ISSUE-006
+    severity: low
+    category: accessibility
+    description: FileList download links use the download attribute with presigned URLs, which may not work correctly in all browsers when the server doesn't send Content-Disposition header.
+    file: apps/web/main-app/src/components/MocEdit/FileList.tsx
+    line: 144
+    recommendation: Verify S3 presigned URLs include Content-Disposition headers or consider using a server-side download endpoint.
+
+  - id: ISSUE-007
+    severity: low
+    category: testing
+    description: Test files use extensive mocking which may hide integration issues. The mocks for @repo/app-component-library and react-hook-form are quite shallow.
+    file: apps/web/main-app/src/routes/pages/__tests__/InstructionsEditPage.test.tsx
+    line: 1
+    recommendation: Consider adding integration tests that use actual components, or ensure E2E tests cover this functionality.
+
+acceptance_criteria:
+  - criterion: "AC1: Edit page fetches MOC data via RTK Query from /mocs/:mocId/edit"
+    status: PASS
+    notes: getMocForEdit endpoint implemented in moc-api.ts with proper cache configuration
+
+  - criterion: "AC2: Loading state shown while fetching"
+    status: PASS
+    notes: EditPageSkeleton component displays appropriate loading UI
+
+  - criterion: "AC3: Form pre-populated with title, description, tags, theme"
+    status: PASS
+    notes: InstructionsEditPage uses react-hook-form with defaultValues from MOC data
+
+  - criterion: "AC4: Existing files displayed with preview/download links"
+    status: PASS
+    notes: FileList component groups files by category with preview and download buttons
+
+  - criterion: "AC5: Error state for failed fetch"
+    status: PASS
+    notes: EditErrorDisplay handles network, 404, 403, 401, 5xx, and generic errors
+
+  - criterion: "AC6: Uses @repo/upload-types for type definitions"
+    status: PASS
+    notes: All types imported from @repo/upload-types including MocForEditResponse, EditMocRequest, MocFileItem
