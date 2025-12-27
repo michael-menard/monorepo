@@ -52,3 +52,19 @@ export {
   slugWithSuffix,
   findAvailableSlug,
 } from './slug'
+
+// Edit types (Story 3.1.40)
+export {
+  MocStatusSchema,
+  type MocStatus,
+  MocFileItemSchema,
+  type MocFileItem,
+  MocForEditResponseSchema,
+  type MocForEditResponse,
+  EditMocRequestSchema,
+  type EditMocRequest,
+  EditMocFormSchema,
+  type EditMocFormInput,
+  formToEditRequest,
+  responseToFormInput,
+} from './edit'
