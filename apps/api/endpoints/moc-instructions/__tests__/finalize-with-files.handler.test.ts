@@ -37,15 +37,46 @@ vi.mock('@/core/search/opensearch', () => ({
   indexDocument: vi.fn(async () => undefined),
 }))
 
-// Mock rate limit service - allow by default
-vi.mock('@/core/rate-limit/upload-rate-limit', () => ({
-  checkAndIncrementDailyLimit: vi.fn(async () => ({
-    allowed: true,
-    remaining: 99,
-    currentCount: 1,
-    nextAllowedAt: new Date(),
-    retryAfterSeconds: 0,
+// Mock rate limit store (Story 3.1.37)
+vi.mock('@/core/rate-limit/postgres-store', () => ({
+  createPostgresRateLimitStore: vi.fn(() => ({
+    checkAndIncrement: vi.fn(),
+    getCount: vi.fn(),
   })),
+}))
+
+// Mock rate limiter (Story 3.1.37) - allow by default
+vi.mock('@repo/rate-limit', () => ({
+  createRateLimiter: vi.fn(() => ({
+    checkLimit: vi.fn(() =>
+      Promise.resolve({
+        allowed: true,
+        remaining: 99,
+        currentCount: 1,
+        resetAt: new Date(),
+        nextAllowedAt: new Date(),
+        retryAfterSeconds: 0,
+      }),
+    ),
+    getCount: vi.fn(() => Promise.resolve(0)),
+  })),
+  generateDailyKey: vi.fn((prefix: string, userId: string) => `${prefix}:${userId}:2025-12-26`),
+  RATE_LIMIT_WINDOWS: { DAY: 86400000 },
+}))
+
+// Mock upload config (Story 3.1.37)
+vi.mock('@/core/config/upload', () => ({
+  getUploadConfig: vi.fn(() => ({
+    presignTtlSeconds: 3600,
+    sessionTtlSeconds: 86400,
+    rateLimitPerDay: 100,
+    maxPartsListFileSizeBytes: 10 * 1024 * 1024,
+    allowedPartsListMimeTypes: ['text/csv', 'text/xml', 'application/xml'],
+  })),
+  isMimeTypeAllowed: vi.fn(() => true),
+  getAllowedMimeTypes: vi.fn(() => ['application/pdf', 'image/png', 'image/jpeg']),
+  getFileSizeLimit: vi.fn(() => 50 * 1024 * 1024),
+  getFileCountLimit: vi.fn(() => 10),
 }))
 
 describe('finalize-with-files handler', () => {

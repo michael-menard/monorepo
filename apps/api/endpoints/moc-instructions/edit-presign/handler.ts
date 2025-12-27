@@ -40,7 +40,7 @@ import {
   getFileSizeLimit,
   getFileCountLimit,
 } from '@/core/config/upload'
-import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
+import { createRateLimiter, generateDailyKey } from '@repo/rate-limit'
 import { createPostgresRateLimitStore } from '@/core/rate-limit/postgres-store'
 import { sanitizeFilenameForS3 } from '@/core/utils/filename-sanitizer'
 
@@ -223,7 +223,8 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Task 5: Rate Limiting (AC: 5)
+    // Task 5: Rate Limiting Check (AC: 5)
+    // Story 3.1.37: Only check limit here - finalize will increment
     // ─────────────────────────────────────────────────────────────────────────
 
     const uploadConfig = getUploadConfig()
@@ -231,20 +232,24 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     const rateLimiter = createRateLimiter(store)
     const rateLimitKey = generateDailyKey('moc-upload', userId) // Shared with create uploads
 
-    const rateLimitResult = await rateLimiter.checkLimit(rateLimitKey, {
-      maxRequests: uploadConfig.rateLimitPerDay,
-      windowMs: RATE_LIMIT_WINDOWS.DAY,
-    })
+    // Only check current count - don't increment (finalize will increment)
+    const currentCount = await rateLimiter.getCount(rateLimitKey)
+    const limit = uploadConfig.rateLimitPerDay
 
-    if (!rateLimitResult.allowed) {
-      logger.warn('Rate limit exceeded for edit presign', {
+    if (currentCount >= limit) {
+      // Calculate reset time (next UTC midnight)
+      const now = new Date()
+      const resetAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+      const retryAfterSeconds = Math.ceil((resetAt.getTime() - now.getTime()) / 1000)
+
+      logger.warn('moc.edit.rate_limited', {
         requestId,
         ownerId: userId,
         mocId,
-        currentCount: rateLimitResult.currentCount,
-        maxPerDay: uploadConfig.rateLimitPerDay,
-        nextAllowedAt: rateLimitResult.nextAllowedAt.toISOString(),
-        retryAfterSeconds: rateLimitResult.retryAfterSeconds,
+        currentCount,
+        limit,
+        resetAt: resetAt.toISOString(),
+        retryAfterSeconds,
       })
 
       return {
@@ -253,13 +258,17 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Credentials': 'true',
-          'Retry-After': String(rateLimitResult.retryAfterSeconds),
+          'Retry-After': String(retryAfterSeconds),
         },
         body: JSON.stringify({
-          code: 'TOO_MANY_REQUESTS',
-          message: `Daily upload limit of ${uploadConfig.rateLimitPerDay} reached. Please try again tomorrow.`,
-          retryAfterSeconds: rateLimitResult.retryAfterSeconds,
-          nextAllowedAt: rateLimitResult.nextAllowedAt.toISOString(),
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Daily upload/edit limit reached. Please try again tomorrow.',
+          retryAfterSeconds,
+          resetAt: resetAt.toISOString(),
+          usage: {
+            current: currentCount,
+            limit,
+          },
           correlationId: requestId,
         }),
       }
@@ -268,7 +277,8 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     logger.info('Rate limit check passed', {
       requestId,
       ownerId: userId,
-      remaining: rateLimitResult.remaining,
+      currentCount,
+      remaining: limit - currentCount,
     })
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -381,11 +391,14 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     const sessionExpiresAt = new Date(Date.now() + uploadConfig.sessionTtlSeconds * 1000)
 
-    logger.info('Presigned URLs generated for edit', {
+    // Story 3.1.37: Structured log event
+    logger.info('moc.edit.presign', {
+      correlationId: requestId,
       requestId,
-      mocId,
       ownerId: userId,
+      mocId,
       fileCount: presignedFiles.length,
+      filesByCategory: categoryCounts,
       sessionExpiresAt: sessionExpiresAt.toISOString(),
     })
 
@@ -471,9 +484,9 @@ async function generateEditPresignedUrls(
       expiresAt: expiresAt.toISOString(),
     })
 
+    // Story 3.1.37: Don't log filename (could contain PII)
     logger.debug('Generated presigned URL for edit', {
       fileId,
-      filename: file.filename,
       category: file.category,
       s3Key,
       expiresAt: expiresAt.toISOString(),
