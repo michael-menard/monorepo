@@ -3,10 +3,10 @@
  *
  * POST /api/wishlist
  *
- * Creates a new wishlist item with title, description, productLink, imageUrl, category, and sortOrder.
+ * Creates a new wishlist item with title, store, and optional metadata.
  * Indexes in OpenSearch and invalidates Redis caches.
  *
- * Story 3.6 AC #1: Creates item with fields: title, description, productLink, imageUrl, category, sortOrder
+ * Updated for Epic 6 PRD data model (wish-2000)
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
@@ -22,7 +22,7 @@ import { wishlistItems } from '@/core/database/schema'
 
 /**
  * Helper function to invalidate all user's wishlist caches
- * Clears both the main list cache and category-specific caches
+ * Clears both the main list cache and store-specific caches
  */
 async function invalidateWishlistCaches(userId: string): Promise<void> {
   try {
@@ -63,11 +63,18 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       .values({
         userId,
         title: validatedData.title,
-        description: validatedData.description || null,
-        productLink: validatedData.productLink || null,
+        store: validatedData.store,
+        setNumber: validatedData.setNumber || null,
+        sourceUrl: validatedData.sourceUrl || null,
         imageUrl: validatedData.imageUrl || null,
-        category: validatedData.category || null,
-        sortOrder: validatedData.sortOrder,
+        price: validatedData.price || null,
+        currency: validatedData.currency,
+        pieceCount: validatedData.pieceCount || null,
+        releaseDate: validatedData.releaseDate ? new Date(validatedData.releaseDate) : null,
+        tags: validatedData.tags,
+        priority: validatedData.priority,
+        notes: validatedData.notes || null,
+        // sortOrder defaults to 0 from schema
       })
       .returning()
 
@@ -79,8 +86,10 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
         id: newItem.id,
         userId: newItem.userId,
         title: newItem.title,
-        description: newItem.description,
-        category: newItem.category,
+        store: newItem.store,
+        notes: newItem.notes,
+        tags: newItem.tags,
+        priority: newItem.priority,
         sortOrder: newItem.sortOrder,
         createdAt: newItem.createdAt,
       },

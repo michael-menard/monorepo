@@ -11,7 +11,7 @@
  * - Updates database imageUrl field
  * - Invalidates Redis caches
  *
- * Story 3.7: Image upload with Sharp processing
+ * Updated for Epic 6 PRD data model (wish-2000)
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
@@ -28,7 +28,7 @@ import { uploadImage, ImageUploadOptionsSchema } from '@/core/utils/image-upload
 
 /**
  * Helper function to invalidate all user's wishlist caches
- * Clears both the main list cache and category-specific caches
+ * Clears both the main list cache and store-specific caches
  */
 async function invalidateWishlistCaches(userId: string): Promise<void> {
   try {
@@ -116,13 +116,11 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       uploadOptions,
     )
 
-    // Update database with new image URL and dimensions
+    // Update database with new image URL
     await db
       .update(wishlistItems)
       .set({
         imageUrl: uploadResult.imageUrl,
-        imageWidth: uploadResult.width,
-        imageHeight: uploadResult.height,
         updatedAt: new Date(),
       })
       .where(eq(wishlistItems.id, itemId))

@@ -357,25 +357,41 @@ export const wishlistItems = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
+
+    // Core fields (required)
     title: text('title').notNull(),
-    description: text('description'),
-    productLink: text('product_link'),
-    imageUrl: text('image_url'),
-    imageWidth: integer('image_width'), // Image width in pixels for frontend optimization
-    imageHeight: integer('image_height'), // Image height in pixels for frontend optimization
-    category: text('category'), // LEGO categories like 'Speed Champions', 'Modular', 'Star Wars', etc.
-    sortOrder: text('sort_order').notNull(),
+    store: text('store').notNull(), // Retailer: LEGO, Barweer, Cata, BrickLink, Other
+
+    // Identification
+    setNumber: text('set_number'), // LEGO set number (e.g., "75192")
+    sourceUrl: text('source_url'), // Original product URL
+
+    // Image
+    imageUrl: text('image_url'), // S3 URL to stored product image
+
+    // Pricing
+    price: text('price'), // Using text for decimal precision (e.g., "199.99")
+    currency: text('currency').default('USD'), // USD, EUR, GBP, CAD, AUD
+
+    // Details
+    pieceCount: integer('piece_count'), // Number of pieces
+    releaseDate: timestamp('release_date'), // Set release date
+    tags: jsonb('tags').$type<string[]>().default([]), // Theme/category tags
+
+    // User organization
+    priority: integer('priority').default(0), // 0-5 scale
+    notes: text('notes'), // User notes (e.g., "wait for sale")
+    sortOrder: integer('sort_order').notNull().default(0), // Position in gallery for drag reorder
+
+    // Timestamps
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   table => ({
     userIdx: index('idx_wishlist_user_id').on(table.userId),
-    userSortIdx: index('idx_wishlist_sort_order').on(table.userId, table.sortOrder),
-    categorySortIdx: index('idx_wishlist_category_sort').on(
-      table.userId,
-      table.category,
-      table.sortOrder,
-    ),
+    userSortIdx: index('idx_wishlist_user_sort').on(table.userId, table.sortOrder),
+    userStoreIdx: index('idx_wishlist_user_store').on(table.userId, table.store),
+    userPriorityIdx: index('idx_wishlist_user_priority').on(table.userId, table.priority),
   }),
 )
 

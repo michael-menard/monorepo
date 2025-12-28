@@ -1,5 +1,7 @@
 /**
  * Zod Validation Schemas for Wishlist API
+ *
+ * Updated to match PRD data model for Epic 6: Wishlist (wish-2000)
  */
 
 import { z } from 'zod'
@@ -9,11 +11,20 @@ import { z } from 'zod'
  */
 export const CreateWishlistItemSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
-  description: z.string().max(2000, 'Description must be less than 2000 characters').optional(),
-  productLink: z.string().url('Invalid URL format').optional(),
+  store: z.string().min(1, 'Store is required').max(100, 'Store must be less than 100 characters'),
+  setNumber: z.string().max(50).optional(),
+  sourceUrl: z.string().url('Invalid URL format').optional(),
   imageUrl: z.string().url('Invalid URL format').optional(),
-  category: z.string().max(100, 'Category must be less than 100 characters').optional(),
-  sortOrder: z.string().default(() => new Date().toISOString()),
+  price: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid decimal')
+    .optional(),
+  currency: z.string().max(10).default('USD'),
+  pieceCount: z.number().int().nonnegative().optional(),
+  releaseDate: z.string().datetime().optional(),
+  tags: z.array(z.string().max(50)).max(20).default([]),
+  priority: z.number().int().min(0).max(5).default(0),
+  notes: z.string().max(2000, 'Notes must be less than 2000 characters').optional(),
 })
 
 export type CreateWishlistItemRequest = z.infer<typeof CreateWishlistItemSchema>
@@ -23,11 +34,22 @@ export type CreateWishlistItemRequest = z.infer<typeof CreateWishlistItemSchema>
  */
 export const UpdateWishlistItemSchema = z.object({
   title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional().nullable(),
-  productLink: z.string().url().optional().nullable(),
+  store: z.string().min(1).max(100).optional(),
+  setNumber: z.string().max(50).optional().nullable(),
+  sourceUrl: z.string().url().optional().nullable(),
   imageUrl: z.string().url().optional().nullable(),
-  category: z.string().max(100).optional().nullable(),
-  sortOrder: z.string().optional(),
+  price: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/)
+    .optional()
+    .nullable(),
+  currency: z.string().max(10).optional(),
+  pieceCount: z.number().int().nonnegative().optional().nullable(),
+  releaseDate: z.string().datetime().optional().nullable(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
+  priority: z.number().int().min(0).max(5).optional(),
+  notes: z.string().max(2000).optional().nullable(),
+  sortOrder: z.number().int().min(0).optional(),
 })
 
 export type UpdateWishlistItemRequest = z.infer<typeof UpdateWishlistItemSchema>
@@ -37,7 +59,7 @@ export type UpdateWishlistItemRequest = z.infer<typeof UpdateWishlistItemSchema>
  */
 export const ReorderWishlistItemSchema = z.object({
   id: z.string().uuid('Invalid item ID format'),
-  sortOrder: z.string().min(1, 'Sort order is required'),
+  sortOrder: z.number().int().min(0, 'Sort order must be a non-negative integer'),
 })
 
 export const ReorderWishlistSchema = z.object({
@@ -50,7 +72,9 @@ export type ReorderWishlistRequest = z.infer<typeof ReorderWishlistSchema>
  * Query Parameters Schema for List Wishlist Items
  */
 export const ListWishlistQuerySchema = z.object({
-  category: z.string().max(100).optional(),
+  store: z.string().max(100).optional(),
+  priority: z.coerce.number().int().min(0).max(5).optional(),
+  tags: z.string().optional(), // comma-separated
   search: z.string().max(200).optional(),
 })
 
@@ -89,17 +113,24 @@ export const WishlistItemIdSchema = z.object({
 export type WishlistItemIdParams = z.infer<typeof WishlistItemIdSchema>
 
 /**
- * Wishlist Item Response Schema (inferred from database)
+ * Wishlist Item Response Schema (matches database schema)
  */
 export const WishlistItemSchema = z.object({
   id: z.string().uuid(),
   userId: z.string(),
   title: z.string(),
-  description: z.string().nullable().optional(),
-  productLink: z.string().url().nullable().optional(),
+  store: z.string(),
+  setNumber: z.string().nullable().optional(),
+  sourceUrl: z.string().url().nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
-  category: z.string().nullable().optional(),
-  sortOrder: z.string(),
+  price: z.string().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  pieceCount: z.number().int().nullable().optional(),
+  releaseDate: z.date().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  priority: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  sortOrder: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })

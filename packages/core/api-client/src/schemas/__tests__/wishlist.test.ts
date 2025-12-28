@@ -1,0 +1,417 @@
+import { describe, it, expect } from 'vitest'
+
+import {
+  WishlistStoreSchema,
+  CurrencySchema,
+  WishlistItemSchema,
+  CreateWishlistItemSchema,
+  UpdateWishlistItemSchema,
+  WishlistQueryParamsSchema,
+  WishlistListResponseSchema,
+  ReorderWishlistItemSchema,
+  BatchReorderSchema,
+} from '../wishlist'
+
+describe('Wishlist Schemas', () => {
+  describe('WishlistStoreSchema', () => {
+    it('should accept valid store values', () => {
+      expect(WishlistStoreSchema.parse('LEGO')).toBe('LEGO')
+      expect(WishlistStoreSchema.parse('Barweer')).toBe('Barweer')
+      expect(WishlistStoreSchema.parse('Cata')).toBe('Cata')
+      expect(WishlistStoreSchema.parse('BrickLink')).toBe('BrickLink')
+      expect(WishlistStoreSchema.parse('Other')).toBe('Other')
+    })
+
+    it('should reject invalid store values', () => {
+      expect(() => WishlistStoreSchema.parse('InvalidStore')).toThrow()
+    })
+  })
+
+  describe('CurrencySchema', () => {
+    it('should accept valid currency values', () => {
+      expect(CurrencySchema.parse('USD')).toBe('USD')
+      expect(CurrencySchema.parse('EUR')).toBe('EUR')
+      expect(CurrencySchema.parse('GBP')).toBe('GBP')
+    })
+
+    it('should reject invalid currency values', () => {
+      expect(() => CurrencySchema.parse('INVALID')).toThrow()
+    })
+  })
+
+  describe('CreateWishlistItemSchema', () => {
+    it('should accept valid create input with required fields', () => {
+      const result = CreateWishlistItemSchema.parse({
+        title: 'LEGO Castle',
+        store: 'LEGO',
+      })
+
+      expect(result.title).toBe('LEGO Castle')
+      expect(result.store).toBe('LEGO')
+      expect(result.tags).toEqual([])
+      expect(result.priority).toBe(0)
+      expect(result.currency).toBe('USD')
+    })
+
+    it('should accept valid create input with all fields', () => {
+      const result = CreateWishlistItemSchema.parse({
+        title: 'LEGO Star Wars Millennium Falcon',
+        store: 'LEGO',
+        setNumber: '75192',
+        sourceUrl: 'https://lego.com/product/75192',
+        imageUrl: 'https://s3.amazonaws.com/bucket/image.jpg',
+        price: '849.99',
+        currency: 'USD',
+        pieceCount: 7541,
+        releaseDate: '2017-10-01T00:00:00.000Z',
+        tags: ['Star Wars', 'UCS', 'Expert'],
+        priority: 5,
+        notes: 'Dream set - wait for sale',
+      })
+
+      expect(result.title).toBe('LEGO Star Wars Millennium Falcon')
+      expect(result.setNumber).toBe('75192')
+      expect(result.price).toBe('849.99')
+      expect(result.pieceCount).toBe(7541)
+      expect(result.priority).toBe(5)
+    })
+
+    it('should reject missing required fields', () => {
+      expect(() => CreateWishlistItemSchema.parse({})).toThrow()
+      expect(() => CreateWishlistItemSchema.parse({ title: 'Test' })).toThrow()
+      expect(() => CreateWishlistItemSchema.parse({ store: 'LEGO' })).toThrow()
+    })
+
+    it('should reject empty title', () => {
+      expect(() =>
+        CreateWishlistItemSchema.parse({
+          title: '',
+          store: 'LEGO',
+        }),
+      ).toThrow()
+    })
+
+    it('should reject invalid price format', () => {
+      expect(() =>
+        CreateWishlistItemSchema.parse({
+          title: 'Test',
+          store: 'LEGO',
+          price: 'invalid',
+        }),
+      ).toThrow()
+    })
+
+    it('should accept valid decimal price formats', () => {
+      const result1 = CreateWishlistItemSchema.parse({
+        title: 'Test',
+        store: 'LEGO',
+        price: '99.99',
+      })
+      expect(result1.price).toBe('99.99')
+
+      const result2 = CreateWishlistItemSchema.parse({
+        title: 'Test',
+        store: 'LEGO',
+        price: '100',
+      })
+      expect(result2.price).toBe('100')
+    })
+
+    it('should reject negative piece count', () => {
+      expect(() =>
+        CreateWishlistItemSchema.parse({
+          title: 'Test',
+          store: 'LEGO',
+          pieceCount: -100,
+        }),
+      ).toThrow()
+    })
+
+    it('should reject priority out of range', () => {
+      expect(() =>
+        CreateWishlistItemSchema.parse({
+          title: 'Test',
+          store: 'LEGO',
+          priority: 10,
+        }),
+      ).toThrow()
+
+      expect(() =>
+        CreateWishlistItemSchema.parse({
+          title: 'Test',
+          store: 'LEGO',
+          priority: -1,
+        }),
+      ).toThrow()
+    })
+
+    it('should accept empty string for optional URL fields', () => {
+      const result = CreateWishlistItemSchema.parse({
+        title: 'Test',
+        store: 'LEGO',
+        sourceUrl: '',
+        price: '',
+      })
+      expect(result.sourceUrl).toBe('')
+      expect(result.price).toBe('')
+    })
+
+    it('should reject invalid URL format', () => {
+      expect(() =>
+        CreateWishlistItemSchema.parse({
+          title: 'Test',
+          store: 'LEGO',
+          sourceUrl: 'not-a-url',
+        }),
+      ).toThrow()
+    })
+  })
+
+  describe('UpdateWishlistItemSchema', () => {
+    it('should accept partial updates', () => {
+      const result = UpdateWishlistItemSchema.parse({
+        title: 'Updated Title',
+      })
+      expect(result.title).toBe('Updated Title')
+      expect(result.store).toBeUndefined()
+    })
+
+    it('should accept empty object', () => {
+      const result = UpdateWishlistItemSchema.parse({})
+      expect(result).toEqual({})
+    })
+
+    it('should still validate field constraints', () => {
+      expect(() =>
+        UpdateWishlistItemSchema.parse({
+          priority: 10,
+        }),
+      ).toThrow()
+    })
+  })
+
+  describe('WishlistQueryParamsSchema', () => {
+    it('should provide defaults for pagination', () => {
+      const result = WishlistQueryParamsSchema.parse({})
+      expect(result.page).toBe(1)
+      expect(result.limit).toBe(20)
+    })
+
+    it('should coerce string numbers', () => {
+      const result = WishlistQueryParamsSchema.parse({
+        page: '5',
+        limit: '50',
+        priority: '3',
+      })
+      expect(result.page).toBe(5)
+      expect(result.limit).toBe(50)
+      expect(result.priority).toBe(3)
+    })
+
+    it('should accept valid sort options', () => {
+      const result = WishlistQueryParamsSchema.parse({
+        sort: 'price',
+        order: 'desc',
+      })
+      expect(result.sort).toBe('price')
+      expect(result.order).toBe('desc')
+    })
+
+    it('should reject invalid sort options', () => {
+      expect(() =>
+        WishlistQueryParamsSchema.parse({
+          sort: 'invalidSort',
+        }),
+      ).toThrow()
+    })
+
+    it('should reject limit over 100', () => {
+      expect(() =>
+        WishlistQueryParamsSchema.parse({
+          limit: 150,
+        }),
+      ).toThrow()
+    })
+
+    it('should reject page less than 1', () => {
+      expect(() =>
+        WishlistQueryParamsSchema.parse({
+          page: 0,
+        }),
+      ).toThrow()
+    })
+  })
+
+  describe('WishlistItemSchema', () => {
+    it('should validate complete item from database', () => {
+      const result = WishlistItemSchema.parse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'LEGO Castle',
+        store: 'LEGO',
+        setNumber: '10305',
+        sourceUrl: 'https://lego.com/product/10305',
+        imageUrl: 'https://s3.amazonaws.com/bucket/image.jpg',
+        price: '399.99',
+        currency: 'USD',
+        pieceCount: 4514,
+        releaseDate: '2022-08-01T00:00:00.000Z',
+        tags: ['Castle', 'Icons'],
+        priority: 4,
+        notes: 'Want this one!',
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+      })
+
+      expect(result.id).toBe('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.title).toBe('LEGO Castle')
+      expect(result.pieceCount).toBe(4514)
+    })
+
+    it('should accept null for optional fields', () => {
+      const result = WishlistItemSchema.parse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'Test',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+      })
+
+      expect(result.setNumber).toBeNull()
+      expect(result.price).toBeNull()
+    })
+
+    it('should reject invalid UUID', () => {
+      expect(() =>
+        WishlistItemSchema.parse({
+          id: 'not-a-uuid',
+          userId: '550e8400-e29b-41d4-a716-446655440001',
+          title: 'Test',
+          store: 'LEGO',
+          setNumber: null,
+          sourceUrl: null,
+          imageUrl: null,
+          price: null,
+          currency: 'USD',
+          pieceCount: null,
+          releaseDate: null,
+          tags: [],
+          priority: 0,
+          notes: null,
+          sortOrder: 0,
+          createdAt: '2024-12-27T00:00:00.000Z',
+          updatedAt: '2024-12-27T00:00:00.000Z',
+        }),
+      ).toThrow()
+    })
+  })
+
+  describe('WishlistListResponseSchema', () => {
+    it('should validate list response with items', () => {
+      const result = WishlistListResponseSchema.parse({
+        items: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            userId: '550e8400-e29b-41d4-a716-446655440001',
+            title: 'Test',
+            store: 'LEGO',
+            setNumber: null,
+            sourceUrl: null,
+            imageUrl: null,
+            price: null,
+            currency: 'USD',
+            pieceCount: null,
+            releaseDate: null,
+            tags: [],
+            priority: 0,
+            notes: null,
+            sortOrder: 0,
+            createdAt: '2024-12-27T00:00:00.000Z',
+            updatedAt: '2024-12-27T00:00:00.000Z',
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
+      })
+
+      expect(result.items).toHaveLength(1)
+      expect(result.pagination.total).toBe(1)
+    })
+
+    it('should accept optional counts and filters', () => {
+      const result = WishlistListResponseSchema.parse({
+        items: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
+        counts: {
+          total: 0,
+          byStore: { LEGO: 0, Barweer: 0 },
+        },
+        filters: {
+          availableTags: ['Castle', 'Star Wars'],
+          availableStores: ['LEGO', 'Barweer'],
+        },
+      })
+
+      expect(result.counts?.total).toBe(0)
+      expect(result.filters?.availableTags).toContain('Castle')
+    })
+  })
+
+  describe('ReorderWishlistItemSchema', () => {
+    it('should validate reorder request', () => {
+      const result = ReorderWishlistItemSchema.parse({
+        itemId: '550e8400-e29b-41d4-a716-446655440000',
+        newSortOrder: 5,
+      })
+
+      expect(result.itemId).toBe('550e8400-e29b-41d4-a716-446655440000')
+      expect(result.newSortOrder).toBe(5)
+    })
+
+    it('should reject negative sort order', () => {
+      expect(() =>
+        ReorderWishlistItemSchema.parse({
+          itemId: '550e8400-e29b-41d4-a716-446655440000',
+          newSortOrder: -1,
+        }),
+      ).toThrow()
+    })
+  })
+
+  describe('BatchReorderSchema', () => {
+    it('should validate batch reorder request', () => {
+      const result = BatchReorderSchema.parse({
+        items: [
+          { id: '550e8400-e29b-41d4-a716-446655440000', sortOrder: 0 },
+          { id: '550e8400-e29b-41d4-a716-446655440001', sortOrder: 1 },
+          { id: '550e8400-e29b-41d4-a716-446655440002', sortOrder: 2 },
+        ],
+      })
+
+      expect(result.items).toHaveLength(3)
+      expect(result.items[0].sortOrder).toBe(0)
+    })
+  })
+})

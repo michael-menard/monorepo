@@ -4,11 +4,10 @@
  * GET /api/wishlist
  *
  * Returns all wishlist items for authenticated user, sorted by sortOrder.
- * Optional category filter supported.
+ * Optional store and priority filters supported.
  * Results cached in Redis for 5 minutes.
  *
- * Story 3.6 AC #2: Returns all user's items sorted by sortOrder with optional category filter
- * Story 3.6 AC #8: Redis caching with pattern: wishlist:user:{userId}:all
+ * Updated for Epic 6 PRD data model (wish-2000)
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
@@ -34,25 +33,28 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     // Validate query parameters
     const queryParams = ListWishlistQuerySchema.parse(event.queryStringParameters || {})
-    const { category } = queryParams
+    const { store, priority } = queryParams
 
     // Generate cache key
-    const cacheKey = category
-      ? `wishlist:user:${userId}:category:${category}`
-      : `wishlist:user:${userId}:all`
+    let cacheKey = `wishlist:user:${userId}:all`
+    if (store) cacheKey = `wishlist:user:${userId}:store:${store}`
+    if (priority !== undefined) cacheKey = `${cacheKey}:priority:${priority}`
 
     // Check Redis cache
     const redis = await getRedisClient()
     const cached = await redis.get(cacheKey)
     if (cached) {
-      logger.info('Cache hit', { userId, category })
+      logger.info('Cache hit', { userId, store, priority })
       return successResponse(JSON.parse(cached))
     }
 
     // Build query conditions
     const conditions = [eq(wishlistItems.userId, userId)]
-    if (category) {
-      conditions.push(eq(wishlistItems.category, category))
+    if (store) {
+      conditions.push(eq(wishlistItems.store, store))
+    }
+    if (priority !== undefined) {
+      conditions.push(eq(wishlistItems.priority, priority))
     }
 
     // Query database sorted by sortOrder
@@ -70,7 +72,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     // Cache result for 5 minutes
     await redis.setEx(cacheKey, 300, JSON.stringify(response))
 
-    logger.info('Wishlist items retrieved', { userId, category, count: items.length })
+    logger.info('Wishlist items retrieved', { userId, store, priority, count: items.length })
 
     return successResponse(response)
   } catch (error) {

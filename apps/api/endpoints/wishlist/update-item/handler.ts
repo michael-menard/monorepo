@@ -6,7 +6,7 @@
  * Updates wishlist item metadata with validation.
  * Updates OpenSearch index and invalidates Redis caches.
  *
- * Story 3.6 AC #4: Updates item metadata with validation
+ * Updated for Epic 6 PRD data model (wish-2000)
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
@@ -22,7 +22,7 @@ import { wishlistItems } from '@/core/database/schema'
 
 /**
  * Helper function to invalidate all user's wishlist caches
- * Clears both the main list cache and category-specific caches
+ * Clears both the main list cache and store-specific caches
  */
 async function invalidateWishlistCaches(userId: string): Promise<void> {
   try {
@@ -81,18 +81,28 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       .update(wishlistItems)
       .set({
         title: validatedData.title ?? existingItem.title,
-        description:
-          validatedData.description !== undefined
-            ? validatedData.description
-            : existingItem.description,
-        productLink:
-          validatedData.productLink !== undefined
-            ? validatedData.productLink
-            : existingItem.productLink,
+        store: validatedData.store ?? existingItem.store,
+        setNumber:
+          validatedData.setNumber !== undefined ? validatedData.setNumber : existingItem.setNumber,
+        sourceUrl:
+          validatedData.sourceUrl !== undefined ? validatedData.sourceUrl : existingItem.sourceUrl,
         imageUrl:
           validatedData.imageUrl !== undefined ? validatedData.imageUrl : existingItem.imageUrl,
-        category:
-          validatedData.category !== undefined ? validatedData.category : existingItem.category,
+        price: validatedData.price !== undefined ? validatedData.price : existingItem.price,
+        currency: validatedData.currency ?? existingItem.currency,
+        pieceCount:
+          validatedData.pieceCount !== undefined
+            ? validatedData.pieceCount
+            : existingItem.pieceCount,
+        releaseDate:
+          validatedData.releaseDate !== undefined
+            ? validatedData.releaseDate
+              ? new Date(validatedData.releaseDate)
+              : null
+            : existingItem.releaseDate,
+        tags: validatedData.tags ?? existingItem.tags,
+        priority: validatedData.priority ?? existingItem.priority,
+        notes: validatedData.notes !== undefined ? validatedData.notes : existingItem.notes,
         sortOrder: validatedData.sortOrder ?? existingItem.sortOrder,
         updatedAt: new Date(),
       })
@@ -107,8 +117,10 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
         id: updatedItem.id,
         userId: updatedItem.userId,
         title: updatedItem.title,
-        description: updatedItem.description,
-        category: updatedItem.category,
+        store: updatedItem.store,
+        notes: updatedItem.notes,
+        tags: updatedItem.tags,
+        priority: updatedItem.priority,
         sortOrder: updatedItem.sortOrder,
         createdAt: updatedItem.createdAt,
       },
