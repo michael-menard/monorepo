@@ -11,10 +11,15 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import {
   WishlistListResponseSchema,
   WishlistItemSchema,
+  MarkPurchasedResponseSchema,
+  DeleteWishlistItemResponseSchema,
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
   type UpdateWishlistItem,
+  type MarkPurchasedRequest,
+  type MarkPurchasedResponse,
+  type DeleteWishlistItemResponse,
 } from '../schemas/wishlist'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -95,8 +100,8 @@ export const wishlistGalleryApi = createApi({
     /**
      * DELETE /api/wishlist/:id
      *
-     * Deletes a wishlist item.
-     * Story wish-2003: Detail & Edit Pages
+     * Deletes a wishlist item permanently.
+     * Story wish-2003: Detail & Edit Pages / wish-2004: Delete Confirmation Modal
      */
     deleteWishlistItem: builder.mutation<void, string>({
       query: id => ({
@@ -108,6 +113,49 @@ export const wishlistGalleryApi = createApi({
         { type: 'Wishlist', id: 'LIST' },
       ],
     }),
+
+    /**
+     * DELETE /api/wishlist/:id (with response validation)
+     *
+     * Removes a wishlist item permanently.
+     * Story wish-2004: Delete Confirmation Modal
+     */
+    removeFromWishlist: builder.mutation<DeleteWishlistItemResponse, string>({
+      query: id => ({
+        url: `/wishlist/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: (response: unknown) => DeleteWishlistItemResponseSchema.parse(response),
+      invalidatesTags: (_, __, id) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * POST /api/wishlist/:id/purchased
+     *
+     * Marks a wishlist item as purchased with purchase details.
+     * Story wish-2004: Got It Flow Modal
+     */
+    markAsPurchased: builder.mutation<
+      MarkPurchasedResponse,
+      { id: string; data: MarkPurchasedRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/wishlist/${id}/purchased`,
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => MarkPurchasedResponseSchema.parse(response),
+      invalidatesTags: (result, _, { id }) =>
+        result?.removedFromWishlist
+          ? [
+              { type: 'WishlistItem', id },
+              { type: 'Wishlist', id: 'LIST' },
+            ]
+          : [],
+    }),
   }),
 })
 
@@ -118,4 +166,6 @@ export const {
   useLazyGetWishlistQuery,
   useUpdateWishlistItemMutation,
   useDeleteWishlistItemMutation,
+  useRemoveFromWishlistMutation,
+  useMarkAsPurchasedMutation,
 } = wishlistGalleryApi
