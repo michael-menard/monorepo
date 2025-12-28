@@ -14,6 +14,7 @@ import {
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
+  type UpdateWishlistItem,
 } from '../schemas/wishlist'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -71,9 +72,50 @@ export const wishlistGalleryApi = createApi({
       providesTags: (_, __, id) => [{ type: 'WishlistItem', id }],
       ...getServerlessCacheConfig('medium'),
     }),
+
+    /**
+     * PATCH /api/wishlist/:id
+     *
+     * Updates a wishlist item with partial data.
+     * Story wish-2003: Detail & Edit Pages
+     */
+    updateWishlistItem: builder.mutation<WishlistItem, { id: string; data: UpdateWishlistItem }>({
+      query: ({ id, data }) => ({
+        url: `/wishlist/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      invalidatesTags: (_, __, { id }) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * DELETE /api/wishlist/:id
+     *
+     * Deletes a wishlist item.
+     * Story wish-2003: Detail & Edit Pages
+     */
+    deleteWishlistItem: builder.mutation<void, string>({
+      query: id => ({
+        url: `/wishlist/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_, __, id) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
   }),
 })
 
 // Export hooks for use in components
-export const { useGetWishlistQuery, useGetWishlistItemQuery, useLazyGetWishlistQuery } =
-  wishlistGalleryApi
+export const {
+  useGetWishlistQuery,
+  useGetWishlistItemQuery,
+  useLazyGetWishlistQuery,
+  useUpdateWishlistItemMutation,
+  useDeleteWishlistItemMutation,
+} = wishlistGalleryApi

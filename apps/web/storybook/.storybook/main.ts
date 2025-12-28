@@ -1,4 +1,4 @@
-import { dirname, join, resolve } from 'path'
+import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { StorybookConfig } from '@storybook/react-vite'
 
@@ -35,6 +35,7 @@ const config: StorybookConfig = {
           ),
           '@repo/design-system': resolve(__dirname, '../../../../packages/core/design-system/src'),
           '@repo/logger': resolve(__dirname, '../../../../packages/core/logger/src'),
+          '@repo/app-wishlist-gallery': resolve(__dirname, '../../app-wishlist-gallery/src'),
         },
       },
     })
