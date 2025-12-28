@@ -6,7 +6,7 @@
 
 import type { Meta, StoryObj } from '@storybook/react'
 import { useState } from 'react'
-import { Button } from '@repo/ui'
+import { Button } from '@repo/app-component-library'
 import { DeleteConfirmationModal, type DeleteConfirmationModalProps } from '../index'
 
 /**
