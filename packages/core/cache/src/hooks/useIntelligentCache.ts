@@ -10,8 +10,8 @@
  */
 
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { IntelligentCacheManager } from '../managers/IntelligentCacheManager'
 import { createLogger } from '@repo/logger'
+import { IntelligentCacheManager } from '../managers/IntelligentCacheManager'
 
 const logger = createLogger('cache:intelligent')
 

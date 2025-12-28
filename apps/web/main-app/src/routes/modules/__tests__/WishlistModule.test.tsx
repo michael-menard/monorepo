@@ -1,65 +1,45 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { WishlistModule } from '../WishlistModule'
+import { render, screen, waitFor } from '@testing-library/react'
+import * as React from 'react'
 
-// Mock Redux for this component test
-vi.mock('react-redux', () => ({
-  useSelector: vi.fn(),
-  useDispatch: () => vi.fn(),
-  Provider: ({ children }: any) => children,
+// Mock @repo/app-component-library with cn for LoadingPage
+vi.mock('@repo/app-component-library', async () => {
+  const actual = await vi.importActual('@repo/app-component-library')
+  return {
+    ...actual,
+    cn: (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' '),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+    useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
+  }
+})
+
+// Mock the lazy-loaded module
+vi.mock('@repo/app-wishlist-gallery', () => ({
+  default: () =>
+    React.createElement('div', null, [
+      React.createElement('h1', { key: 'h1' }, 'Wishlist'),
+      React.createElement('p', { key: 'p' }, 'Browse your wishlist items'),
+    ]),
 }))
 
-describe.skip('WishlistModule', () => {
-  it('renders the wishlist module title and description', () => {
+// Import after mocks
+import { WishlistModule } from '../WishlistModule'
+
+describe('WishlistModule', () => {
+  it('renders the wishlist gallery page after loading', async () => {
     render(<WishlistModule />)
 
-    expect(screen.getByRole('heading', { level: 1, name: /wishlist/i })).toBeInTheDocument()
-    expect(screen.getByText(/save and organize your favorite lego mocs/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: /wishlist/i })).toBeInTheDocument()
+      expect(screen.getByText(/browse your wishlist items/i)).toBeInTheDocument()
+    })
   })
 
-  it('displays the heart icon in the title', () => {
+  it('has proper semantic structure', async () => {
     render(<WishlistModule />)
 
-    const title = screen.getByRole('heading', { level: 1, name: /wishlist/i })
-    expect(title).toBeInTheDocument()
-    // The Heart icon should be present in the title
-    expect(title.querySelector('svg')).toBeInTheDocument()
-  })
-
-  it('shows the module loading placeholder', () => {
-    render(<WishlistModule />)
-
-    expect(screen.getByText(/wishlist module loading/i)).toBeInTheDocument()
-    expect(screen.getByText(/enhanced wishlist with priority levels/i)).toBeInTheDocument()
-  })
-
-  it('displays feature cards for wishlist functionality', () => {
-    render(<WishlistModule />)
-
-    // Use role selectors to target the h4 elements specifically
-    expect(screen.getByRole('heading', { name: /priority levels/i, level: 4 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /share lists/i, level: 4 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /export data/i, level: 4 })).toBeInTheDocument()
-  })
-
-  it('has proper semantic structure', () => {
-    render(<WishlistModule />)
-
-    // Should have main heading
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-
-    // Should have feature card titles (using role selectors for h4 elements)
-    expect(screen.getByRole('heading', { name: /priority levels/i, level: 4 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /share lists/i, level: 4 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /export data/i, level: 4 })).toBeInTheDocument()
-  })
-
-  it('displays the large heart icon in the placeholder area', () => {
-    render(<WishlistModule />)
-
-    // The placeholder area should contain a large Heart icon
-    const placeholderArea = screen.getByText(/wishlist module loading/i).closest('div')
-    expect(placeholderArea).toBeInTheDocument()
-    expect(placeholderArea?.querySelector('svg')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    })
   })
 })

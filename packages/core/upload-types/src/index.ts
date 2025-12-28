@@ -45,10 +45,4 @@ export {
 } from './upload'
 
 // Slug utilities
-export {
-  SlugSchema,
-  type Slug,
-  slugify,
-  slugWithSuffix,
-  findAvailableSlug,
-} from './slug'
+export { SlugSchema, type Slug, slugify, slugWithSuffix, findAvailableSlug } from './slug'

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@repo/ui": ["../../../packages/core/app-component-library/src"],
+      "@repo/app-component-library": ["../../../packages/core/app-component-library/src"],
+      "@repo/design-system": ["../../../packages/core/design-system/src"],
+      "@repo/logger": ["../../../packages/core/logger/src"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src", ".storybook"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
