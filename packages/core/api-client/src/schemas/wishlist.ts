@@ -64,7 +64,11 @@ export const CreateWishlistItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   store: z.string().min(1, 'Store is required'),
   setNumber: z.string().optional(),
-  sourceUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  sourceUrl: z
+    .string()
+    .url('Invalid URL')
+    .optional()
+    .or(z.literal('')),
   imageUrl: z.string().url().optional(),
   price: z
     .string()
