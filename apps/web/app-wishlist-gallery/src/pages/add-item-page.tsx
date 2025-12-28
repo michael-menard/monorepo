@@ -36,6 +36,7 @@ import {
 } from '@repo/api-client/schemas/wishlist'
 import { useAddToWishlistMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { ImageUploadField } from '../components/ImageUploadField'
+import { TagInput } from '../components/TagInput'
 
 /**
  * Props schema for the AddItemPage
@@ -128,14 +129,24 @@ export function AddItemPage({ onNavigateBack, className }: AddItemPageProps) {
 
   const onSubmit = async (data: AddItemFormData) => {
     try {
-      // TODO: Implement image upload to S3 when infrastructure is ready
-      // For now, we skip image upload
+      /**
+       * DEFERRED: S3 Image Upload (AC 10)
+       *
+       * Image upload requires backend infrastructure that isn't set up for wishlist:
+       * 1. Backend presign endpoint: POST /api/wishlist/presign
+       * 2. RTK Query mutation for getting presigned URL
+       * 3. Integration with uploadToPresignedUrl from main-app/services/api/uploadClient
+       *
+       * This is tracked as a follow-up story. For now, items can be added without images.
+       * The image preview works locally for UX, but won't persist on submit.
+       *
+       * @see Story: wish-2010 (Wishlist S3 Image Upload Infrastructure)
+       */
       let imageUrl: string | undefined
 
       if (imageFile) {
         setIsUploadingImage(true)
-        // Placeholder for S3 upload
-        // imageUrl = await uploadImageToS3(imageFile)
+        // Image upload deferred - see comment above
         setIsUploadingImage(false)
       }
 
@@ -380,6 +391,25 @@ export function AddItemPage({ onNavigateBack, className }: AddItemPageProps) {
                 rows={3}
                 {...register('notes')}
                 data-testid="notes-input"
+              />
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <Controller
+                name="tags"
+                control={control}
+                render={({ field }) => (
+                  <TagInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Add tags (e.g., modular, city)..."
+                    maxTags={10}
+                    maxTagLength={30}
+                    disabled={isFormSubmitting}
+                  />
+                )}
               />
             </div>
 

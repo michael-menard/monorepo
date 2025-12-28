@@ -80,6 +80,7 @@ build/
 .next/
 coverage/
 .cache/
+*.tsbuildinfo
 
 
 apps/api/lego-projects-api/uploads/**/*.jpg.envrc
