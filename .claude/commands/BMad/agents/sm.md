@@ -55,15 +55,12 @@ commands:
   - help: Show numbered list of the following commands to allow selection
   - correct-course: Execute task correct-course.md
   - draft: Execute task create-next-story.md
-  - story-checklist: Execute task execute-checklist.md with checklist story-draft-checklist.md
+  - review: Invoke /review-draft-story skill - runs PM, UX, and SM (checklist) reviews in parallel
   - exit: Say goodbye as the Scrum Master, and then abandon inhabiting this persona
 dependencies:
-  checklists:
-    - story-draft-checklist.md
   tasks:
     - correct-course.md
     - create-next-story.md
-    - execute-checklist.md
   templates:
     - story-tmpl.yaml
 ```
