@@ -190,29 +190,37 @@ If story has 5+ tasks OR touches 3+ directories → suggest `--parallel`
 
 ## Phase 2: Development Setup (Resume-Aware)
 
+**CRITICAL: Claude Code cannot "cd" persistently. All subsequent operations must use the WORKTREE_PATH explicitly.**
+
 **Check for existing worktree/branch first:**
 
 ```bash
 # Generate expected branch name
 BRANCH_NAME="feature/story-{STORY_NUM}-{slug}"
 
+# Get absolute path to repo root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+WORKTREE_PATH="${REPO_ROOT}/tree/${BRANCH_NAME}"
+
 # Check if worktree already exists
-git worktree list | grep "{BRANCH_NAME}"
+git worktree list | grep "${BRANCH_NAME}"
 
 # Check if branch exists
-git branch --list "{BRANCH_NAME}"
-git branch -r --list "origin/{BRANCH_NAME}"
+git branch --list "${BRANCH_NAME}"
+git branch -r --list "origin/${BRANCH_NAME}"
 ```
 
 **If --resume or existing work found:**
-- Switch to existing worktree: `cd tree/{BRANCH_NAME}`
-- Pull latest if remote exists: `git pull --rebase origin {BRANCH_NAME}`
-- Report: "Resuming work on existing branch"
+- Verify worktree exists at `${WORKTREE_PATH}`
+- Pull latest if remote exists: `git -C "${WORKTREE_PATH}" pull --rebase origin ${BRANCH_NAME}`
+- Report: "Resuming work in worktree: ${WORKTREE_PATH}"
 
 **If creating new:**
 1. Ensure on main and up-to-date: `git checkout main && git pull`
-2. Create worktree: `git worktree add tree/{BRANCH_NAME} -b {BRANCH_NAME}`
-3. Navigate: `cd tree/{BRANCH_NAME}`
+2. Create worktree: `git worktree add "${WORKTREE_PATH}" -b ${BRANCH_NAME}`
+3. Verify creation: `ls "${WORKTREE_PATH}"`
+
+**IMPORTANT: Store WORKTREE_PATH for use in Phase 3+. All git commands must use `git -C "${WORKTREE_PATH}"` and all file operations must use absolute paths within the worktree.**
 
 **Update GitHub issue (if present):**
 ```bash
@@ -245,11 +253,11 @@ status: In Progress
 
 ## Phase 3: Implementation
 
-**CRITICAL: Spawn sub-agent with full project context.**
+**CRITICAL: Spawn sub-agent with full project context AND explicit worktree path.**
 
 **Read CLAUDE.md first to include in prompt:**
 ```
-CLAUDE_MD_CONTENT = Read("/path/to/CLAUDE.md")
+CLAUDE_MD_CONTENT = Read("{WORKTREE_PATH}/CLAUDE.md")
 ```
 
 **Single-agent mode (default):**
@@ -259,12 +267,22 @@ Task(
   description: "Implement story {STORY_NUM}",
   prompt: "You are implementing story {STORY_NUM}.
 
+           ## CRITICAL: Worktree Path
+           **ALL work must happen in the worktree, not the main repo.**
+
+           WORKTREE_PATH: {WORKTREE_PATH}
+
+           - All file reads/writes must use absolute paths starting with {WORKTREE_PATH}
+           - All git commands must use: git -C {WORKTREE_PATH} <command>
+           - Example: git -C {WORKTREE_PATH} add .
+           - Example: git -C {WORKTREE_PATH} commit -m 'message'
+           - All pnpm commands must run from worktree: pnpm --prefix {WORKTREE_PATH} <command>
+
            ## Project Guidelines (MUST FOLLOW)
            {CLAUDE_MD_CONTENT}
 
            ## Story Details
-           Story file: {STORY_FILE_PATH}
-           Working directory: tree/{BRANCH_NAME}
+           Story file: {WORKTREE_PATH}/docs/stories/{STORY_FILE_NAME}
            Tasks to implement:
            {TASK_LIST}
 
@@ -273,9 +291,9 @@ Task(
            1. Read and understand the requirement
            2. Implement the code changes following project guidelines
            3. Write tests (minimum 45% coverage)
-           4. Run tests to verify: pnpm test
-           5. Run type check: pnpm check-types
-           6. Commit with descriptive message
+           4. Run tests to verify: pnpm --prefix {WORKTREE_PATH} test
+           5. Run type check: pnpm --prefix {WORKTREE_PATH} check-types
+           6. Commit with: git -C {WORKTREE_PATH} add . && git -C {WORKTREE_PATH} commit -m 'message'
 
            ## Critical Rules (from CLAUDE.md)
            - Use @repo/ui for ALL UI components
@@ -294,18 +312,19 @@ Task(
 **Parallel mode (--parallel):**
 ```
 # For multiple stories, spawn in parallel with run_in_background
+# EACH agent gets its own WORKTREE_PATH for its story
 Task(
   subagent_type: "general-purpose",
   description: "Implement story {STORY_1}",
   run_in_background: true,
-  prompt: "..."  # Same as above with story-specific details
+  prompt: "..."  # Same as above with story-specific details and WORKTREE_PATH_1
 )
 
 Task(
   subagent_type: "general-purpose",
   description: "Implement story {STORY_2}",
   run_in_background: true,
-  prompt: "..."
+  prompt: "..."  # Same as above with story-specific details and WORKTREE_PATH_2
 )
 
 # Collect results
@@ -333,12 +352,14 @@ Task(
   description: "QA review for story {STORY_NUM}",
   prompt: "Review implementation for story {STORY_NUM}.
 
-           Working directory: tree/{BRANCH_NAME}
+           ## CRITICAL: Worktree Path
+           WORKTREE_PATH: {WORKTREE_PATH}
+           All commands must run from worktree using --prefix or -C flags.
 
            ## Required Checks (run these commands)
-           1. pnpm test --filter='...[origin/main]'
-           2. pnpm check-types --filter='...[origin/main]'
-           3. pnpm lint --filter='...[origin/main]'
+           1. pnpm --prefix {WORKTREE_PATH} test --filter='...[origin/main]'
+           2. pnpm --prefix {WORKTREE_PATH} check-types --filter='...[origin/main]'
+           3. pnpm --prefix {WORKTREE_PATH} lint --filter='...[origin/main]'
 
            ## Code Review Checks
            1. Verify all acceptance criteria from story are met
@@ -371,7 +392,9 @@ Task(
   subagent_type: "general-purpose",
   model: "haiku",
   description: "Required checks",
-  prompt: "Run: pnpm test && pnpm check-types && pnpm lint
+  prompt: "WORKTREE_PATH: {WORKTREE_PATH}
+           Run from worktree:
+           pnpm --prefix {WORKTREE_PATH} test && pnpm --prefix {WORKTREE_PATH} check-types && pnpm --prefix {WORKTREE_PATH} lint
            Report PASS/FAIL for each."
 )
 
@@ -381,7 +404,7 @@ Task(
   model: "haiku",
   description: "Security review",
   run_in_background: true,
-  prompt: "You are a security specialist reviewing tree/{BRANCH_NAME}.
+  prompt: "You are a security specialist reviewing {WORKTREE_PATH}.
 
            Check for:
            - Authentication/authorization issues
@@ -399,7 +422,7 @@ Task(
   model: "haiku",
   description: "Performance review",
   run_in_background: true,
-  prompt: "You are a performance specialist reviewing tree/{BRANCH_NAME}.
+  prompt: "You are a performance specialist reviewing {WORKTREE_PATH}.
 
            Check for:
            - N+1 query patterns
@@ -418,7 +441,7 @@ Task(
   model: "haiku",
   description: "Accessibility review",
   run_in_background: true,
-  prompt: "You are an accessibility specialist reviewing tree/{BRANCH_NAME}.
+  prompt: "You are an accessibility specialist reviewing {WORKTREE_PATH}.
 
            Check for:
            - WCAG 2.1 AA compliance
@@ -462,7 +485,10 @@ Task(
 
            {ISSUES_LIST_WITH_DETAILS}
 
-           Working directory: tree/{BRANCH_NAME}
+           ## CRITICAL: Worktree Path
+           WORKTREE_PATH: {WORKTREE_PATH}
+           All file operations must use absolute paths within {WORKTREE_PATH}.
+           All git commands must use: git -C {WORKTREE_PATH} <command>
 
            ## Project Guidelines
            {CLAUDE_MD_CONTENT}
@@ -471,8 +497,8 @@ Task(
            1. Understand the root cause
            2. Implement the fix following project guidelines
            3. Add/update tests to prevent regression
-           4. Verify fix works
-           5. Commit with message: 'fix: {issue description}'
+           4. Verify fix works: pnpm --prefix {WORKTREE_PATH} test
+           5. Commit with: git -C {WORKTREE_PATH} commit -m 'fix: {issue description}'
 
            Report status for each issue fixed."
 )
@@ -488,13 +514,15 @@ Task(
 **Only proceed if gate is PASS (or CONCERNS with user approval).**
 
 ```bash
+# All git commands must use -C flag with worktree path
+
 # Ensure all changes committed
-git add -A
-git status --porcelain
+git -C {WORKTREE_PATH} add -A
+git -C {WORKTREE_PATH} status --porcelain
 # If uncommitted changes, commit them
 
 # Push branch
-git push -u origin {BRANCH_NAME}
+git -C {WORKTREE_PATH} push -u origin {BRANCH_NAME}
 
 # Create PR
 gh pr create \
