@@ -4,38 +4,37 @@
 schema: 1
 story: 'wish-2002'
 story_title: 'Add Item Flow'
-gate: CONCERNS
-status_reason: 'Implementation is solid with good test coverage (50 tests), but two acceptance criteria have incomplete implementations: S3 image upload has TODO placeholder (AC 10) and Tags input UI is not implemented (AC 13). Storybook stories also missing (Task 7).'
+gate: PASS
+status_reason: 'All blocking concerns resolved. TagInput component implemented with 15 tests (FEAT-002). S3 upload properly deferred to wish-2010 with documentation (FEAT-001). Test coverage: 65 tests passing. Type checks pass.'
 reviewer: 'Quinn (Test Architect)'
-updated: '2025-12-28T23:45:00Z'
+updated: '2025-12-28T16:50:00Z'
 
 waiver: { active: false }
 
 top_issues:
-  - id: 'FEAT-001'
-    severity: medium
-    finding: 'AC 10: Image upload to S3 has TODO placeholder - upload function not implemented'
-    suggested_action: 'Implement uploadImageToS3() function or defer to separate story'
-    suggested_owner: dev
-  - id: 'FEAT-002'
-    severity: medium
-    finding: 'AC 13: Tags input (chip-style) UI not implemented - form has tags array but no input component'
-    suggested_action: 'Add TagsInput component or defer to separate story'
-    suggested_owner: dev
   - id: 'TEST-001'
     severity: low
-    finding: 'Task 7: Storybook stories not created for ImageUploadField and AddItemPage'
-    suggested_action: 'Create Storybook stories for visual testing'
+    finding: 'Task 7: Storybook stories not created for ImageUploadField, TagInput, and AddItemPage'
+    suggested_action: 'Create Storybook stories for visual testing (nice-to-have for MVP)'
     suggested_owner: dev
+    status: open
 
-quality_score: 70  # 100 - (0*20 FAILs) - (3*10 CONCERNS) = 70
+resolved_issues:
+  - id: 'FEAT-001'
+    resolution: 'S3 upload explicitly deferred to wish-2010 with clear documentation in add-item-page.tsx:133-144'
+    resolved_date: '2025-12-28'
+  - id: 'FEAT-002'
+    resolution: 'TagInput component fully implemented with chip-style UI, 15 comprehensive tests'
+    resolved_date: '2025-12-28'
+
+quality_score: 90  # 100 - (0*20 FAILs) - (1*10 low CONCERNS) = 90
 
 evidence:
-  tests_reviewed: 50
+  tests_reviewed: 65
   risks_identified: 0
   trace:
-    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18]
-    ac_gaps: [10, 13]  # Image upload S3, Tags input
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18]
+    ac_gaps: [10]  # Image upload S3 - explicitly deferred to wish-2010
 
 nfr_validation:
   security:
@@ -49,17 +48,15 @@ nfr_validation:
     notes: 'Error handling with toasts, proper loading states'
   maintainability:
     status: PASS
-    notes: 'Good code structure, Zod schemas for types, comprehensive tests'
+    notes: 'Good code structure, Zod schemas for types, comprehensive tests (65 total)'
   accessibility:
     status: PASS
     notes: 'ARIA labels, keyboard navigation, proper form labels'
 
 recommendations:
-  immediate:
-    - action: 'Decide whether to implement S3 upload now or defer to separate story'
-      refs: ['apps/web/app-wishlist-gallery/src/pages/add-item-page.tsx:131-139']
-    - action: 'Decide whether to implement Tags input now or defer'
-      refs: ['apps/web/app-wishlist-gallery/src/pages/add-item-page.tsx']
+  immediate: []
   future:
     - action: 'Add Storybook stories for visual regression testing'
-      refs: ['apps/web/app-wishlist-gallery/src/components/ImageUploadField/__stories__/']
+      refs: ['apps/web/app-wishlist-gallery/src/components/ImageUploadField/__stories__/', 'apps/web/app-wishlist-gallery/src/components/TagInput/__stories__/']
+    - action: 'Implement S3 presigned URL upload when backend infrastructure ready'
+      refs: ['wish-2010']
