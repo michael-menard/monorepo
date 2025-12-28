@@ -101,6 +101,32 @@ const wishlistRoute = createRoute({
   },
 })
 
+// Story wish-2002: Add Item Flow
+const wishlistAddRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/wishlist/add',
+  component: () => {
+    // Lazy load wishlist add item module
+    return import('./modules/WishlistAddModule').then(module => module.WishlistAddModule)
+  },
+  pendingComponent: LoadingPage,
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
+    // Check authentication with redirect back
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: location.pathname },
+      })
+    }
+  },
+})
+
 const instructionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions',
@@ -364,6 +390,7 @@ const routeTree = rootRoute.addChildren([
   verifyEmailRoute,
   newPasswordRoute,
   wishlistRoute,
+  wishlistAddRoute, // Story wish-2002: Add Item Flow
   instructionsRoute,
   instructionDetailRoute,
   instructionsNewRoute,
