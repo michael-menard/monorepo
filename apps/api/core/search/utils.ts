@@ -88,8 +88,8 @@ const wishlistSearchConfig: SearchConfig = {
   table: wishlistItems,
   searchableFields: [
     { field: 'title', boost: 3, postgresColumn: wishlistItems.title },
-    { field: 'description', boost: 2, postgresColumn: wishlistItems.description },
-    { field: 'category', boost: 1, postgresColumn: wishlistItems.category },
+    { field: 'notes', boost: 2, postgresColumn: wishlistItems.notes },
+    { field: 'store', boost: 1, postgresColumn: wishlistItems.store },
   ],
   userIdColumn: wishlistItems.userId,
   sortColumn: wishlistItems.sortOrder,

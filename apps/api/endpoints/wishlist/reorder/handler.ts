@@ -6,7 +6,7 @@
  * Updates sortOrder for multiple wishlist items in a batch transaction.
  * Verifies ownership and invalidates Redis caches.
  *
- * Story 3.6 AC #6: Updates sortOrder for multiple items in batch transaction
+ * Updated for Epic 6 PRD data model (wish-2000)
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
@@ -22,7 +22,7 @@ import { wishlistItems } from '@/core/database/schema'
 
 /**
  * Helper function to invalidate all user's wishlist caches
- * Clears both the main list cache and category-specific caches
+ * Clears both the main list cache and store-specific caches
  */
 async function invalidateWishlistCaches(userId: string): Promise<void> {
   try {
