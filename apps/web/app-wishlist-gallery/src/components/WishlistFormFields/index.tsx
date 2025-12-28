@@ -276,13 +276,15 @@ export function WishlistFormFields({
           placeholder="e.g., star-wars, ucs, display"
           disabled={disabled}
           {...register('tags', {
-            setValueAs: (value: string) =>
-              value
+            setValueAs: (value: string | string[]) =>
+              Array.isArray(value)
                 ? value
-                    .split(',')
-                    .map(t => t.trim())
-                    .filter(Boolean)
-                : [],
+                : value
+                  ? value
+                      .split(',')
+                      .map(t => t.trim())
+                      .filter(Boolean)
+                  : [],
           })}
           data-testid="wishlist-form-tags"
         />

@@ -2,12 +2,12 @@
  * DeleteConfirmationModal Component
  *
  * Confirmation modal for permanently removing a wishlist item.
- * Uses the ConfirmationDialog from @repo/ui with destructive styling.
+ * Uses the ConfirmationDialog from @repo/app-component-library with destructive styling.
  *
  * Story wish-2004: Delete Confirmation Modal
  */
 
-import { ConfirmationDialog, showSuccessToast, showErrorToast } from '@repo/ui'
+import { ConfirmationDialog, showSuccessToast, showErrorToast } from '@repo/app-component-library'
 import { useRemoveFromWishlistMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { logger } from '@repo/logger'
 

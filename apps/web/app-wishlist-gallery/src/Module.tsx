@@ -5,6 +5,7 @@
  * This module is designed to be lazy-loaded by the shell app.
  *
  * Story wish-2001: Wishlist Gallery MVP
+ * Story wish-2002: Add Item Flow
  * Story wish-2003: Detail & Edit Pages
  */
 
@@ -34,6 +35,8 @@ type RouteState = z.infer<typeof RouteStateSchema>
 const AppWishlistGalleryModulePropsSchema = z.object({
   /** Optional className for styling */
   className: z.string().optional(),
+  /** Called when navigation to add page is requested */
+  onNavigateToAdd: z.function().args().returns(z.void()).optional(),
   /** Initial item ID for deep linking */
   initialItemId: z.string().uuid().optional(),
   /** Initial view for deep linking */
@@ -51,6 +54,7 @@ export type AppWishlistGalleryModuleProps = z.infer<typeof AppWishlistGalleryMod
  */
 export function AppWishlistGalleryModule({
   className,
+  onNavigateToAdd,
   initialItemId,
   initialView = 'list',
 }: AppWishlistGalleryModuleProps) {
@@ -93,7 +97,7 @@ export function AppWishlistGalleryModule({
         )
       case 'list':
       default:
-        return <MainPage onItemClick={navigateToDetail} />
+        return <MainPage onItemClick={navigateToDetail} onNavigateToAdd={onNavigateToAdd} />
     }
   }
 

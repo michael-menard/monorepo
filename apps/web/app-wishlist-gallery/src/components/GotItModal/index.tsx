@@ -27,7 +27,7 @@ import {
   Input,
   showSuccessToast,
   showErrorToast,
-} from '@repo/ui'
+} from '@repo/app-component-library'
 import { useMarkAsPurchasedMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { logger } from '@repo/logger'

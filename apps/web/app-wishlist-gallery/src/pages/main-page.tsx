@@ -16,8 +16,8 @@ import {
   GalleryEmptyState,
   GallerySkeleton,
 } from '@repo/gallery'
-import { Tabs, TabsList, TabsTrigger } from '@repo/app-component-library'
-import { Heart } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, Button } from '@repo/app-component-library'
+import { Heart, Plus } from 'lucide-react'
 import { useGetWishlistQuery } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { WishlistCard } from '../components/WishlistCard'
 
@@ -28,6 +28,8 @@ const MainPagePropsSchema = z.object({
   className: z.string().optional(),
   /** Callback when an item is clicked */
   onItemClick: z.function().args(z.string()).returns(z.void()).optional(),
+  /** Called when navigation to add page is requested */
+  onNavigateToAdd: z.function().args().returns(z.void()).optional(),
 })
 
 export type MainPageProps = z.infer<typeof MainPagePropsSchema>
@@ -50,7 +52,7 @@ const wishlistSortOptions = [
 /**
  * Wishlist Gallery Main Page Component
  */
-export function MainPage({ className, onItemClick }: MainPageProps) {
+export function MainPage({ className, onItemClick, onNavigateToAdd }: MainPageProps) {
   // Filter state
   const [search, setSearch] = useState('')
   const [selectedStore, setSelectedStore] = useState<string | null>(null)
@@ -170,15 +172,27 @@ export function MainPage({ className, onItemClick }: MainPageProps) {
     return (
       <div className={className}>
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Wishlist</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Wishlist</h1>
+            {onNavigateToAdd ? (
+              <Button onClick={onNavigateToAdd} className="gap-2" data-testid="add-item-button">
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            ) : null}
+          </div>
           <GalleryEmptyState
             icon={Heart}
             title="Your wishlist is empty"
             description="Add LEGO sets to your wishlist to keep track of what you want."
-            action={{
-              label: 'Browse Sets',
-              onClick: () => console.log('Navigate to browse'), // TODO: Navigate to browse page
-            }}
+            action={
+              onNavigateToAdd
+                ? {
+                    label: 'Add First Item',
+                    onClick: onNavigateToAdd,
+                  }
+                : undefined
+            }
           />
         </div>
       </div>
@@ -190,11 +204,19 @@ export function MainPage({ className, onItemClick }: MainPageProps) {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Wishlist</h1>
-          {counts ? (
-            <span className="text-muted-foreground">
-              {counts.total} {counts.total === 1 ? 'item' : 'items'}
-            </span>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">Wishlist</h1>
+            {counts ? (
+              <span className="text-muted-foreground">
+                {counts.total} {counts.total === 1 ? 'item' : 'items'}
+              </span>
+            ) : null}
+          </div>
+          {onNavigateToAdd ? (
+            <Button onClick={onNavigateToAdd} className="gap-2" data-testid="add-item-button">
+              <Plus className="h-4 w-4" />
+              Add Item
+            </Button>
           ) : null}
         </div>
 

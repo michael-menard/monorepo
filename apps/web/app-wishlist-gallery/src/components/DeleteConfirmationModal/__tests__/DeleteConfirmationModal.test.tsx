@@ -19,8 +19,8 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
 }))
 
 // Mock toast functions
-vi.mock('@repo/ui', async () => {
-  const actual = await vi.importActual('@repo/ui')
+vi.mock('@repo/app-component-library', async () => {
+  const actual = await vi.importActual('@repo/app-component-library')
   return {
     ...actual,
     showSuccessToast: vi.fn(),

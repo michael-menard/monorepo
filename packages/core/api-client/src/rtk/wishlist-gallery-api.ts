@@ -16,6 +16,7 @@ import {
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
+  type CreateWishlistItem,
   type UpdateWishlistItem,
   type MarkPurchasedRequest,
   type MarkPurchasedResponse,
@@ -76,6 +77,22 @@ export const wishlistGalleryApi = createApi({
       transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
       providesTags: (_, __, id) => [{ type: 'WishlistItem', id }],
       ...getServerlessCacheConfig('medium'),
+    }),
+
+    /**
+     * POST /api/wishlist
+     *
+     * Creates a new wishlist item.
+     * Story wish-2002: Add Item Flow
+     */
+    addToWishlist: builder.mutation<WishlistItem, CreateWishlistItem>({
+      query: data => ({
+        url: '/wishlist',
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
     }),
 
     /**
@@ -164,6 +181,7 @@ export const {
   useGetWishlistQuery,
   useGetWishlistItemQuery,
   useLazyGetWishlistQuery,
+  useAddToWishlistMutation,
   useUpdateWishlistItemMutation,
   useDeleteWishlistItemMutation,
   useRemoveFromWishlistMutation,
