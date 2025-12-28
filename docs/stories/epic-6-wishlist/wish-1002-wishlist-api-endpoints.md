@@ -1,4 +1,4 @@
-# Story 3.3.3: Wishlist API Endpoints
+# Story wish-1002: Wishlist API Endpoints
 
 ## Status
 
@@ -10,6 +10,10 @@ Draft
 **I want** API endpoints for wishlist items,
 **so that** users can manage their purchase wishlist.
 
+## Dependencies
+
+- **wish-1004**: Database Schema & Zod Types (provides database schema and Zod validation)
+
 ## Acceptance Criteria
 
 1. ⬜ GET /api/wishlist - list items with pagination
@@ -17,8 +21,8 @@ Draft
 3. ⬜ POST /api/wishlist - add new item
 4. ⬜ PATCH /api/wishlist/:id - update item
 5. ⬜ DELETE /api/wishlist/:id - remove item
-6. ⬜ POST /api/wishlist/:id/purchased - mark as purchased
-7. ⬜ Filter by type (set/instruction) supported
+6. ⬜ POST /api/wishlist/:id/purchased - mark as purchased (stub if Sets API unavailable)
+7. ⬜ Filter by store (LEGO, Barweer, etc.) supported
 8. ⬜ RTK Query hooks generated
 
 ## Tasks / Subtasks
@@ -32,10 +36,9 @@ Draft
 
 - [ ] **Task 2: Query Parameters**
   - [ ] `q` - search query
-  - [ ] `type` - set | instruction
-  - [ ] `theme` - theme filter
+  - [ ] `store` - LEGO | Barweer | Other
   - [ ] `tags` - tag filter
-  - [ ] `priority` - priority filter
+  - [ ] `priority` - priority filter (0-5)
   - [ ] `sort` / `order` - sorting
   - [ ] `page` / `limit` - pagination
 
@@ -55,6 +58,7 @@ Draft
 
 ```typescript
 // GET /api/wishlist
+// Use Zod schemas from @repo/api-client/schemas/wishlist (defined in wish-1004)
 interface WishlistListResponse {
   items: WishlistItem[]
   pagination: {
@@ -65,53 +69,49 @@ interface WishlistListResponse {
   }
   counts: {
     total: number
-    sets: number
-    instructions: number
+    byStore: Record<string, number>  // { LEGO: 5, Barweer: 3, ... }
   }
   filters: {
     availableTags: string[]
-    availableThemes: string[]
+    availableStores: string[]
   }
 }
 
+// WishlistItem matches schema from wish-1004
 interface WishlistItem {
   id: string
-  type: 'set' | 'instruction'
-  name: string
-  thumbnail: string
-  images: Array<{
-    id: string
-    src: string
-    thumbnail: string
-  }>
-  pieceCount?: number
-  theme?: string
-  tags: string[]
-  price?: number
-  currency?: string
+  userId: string
+  title: string
+  store: string  // LEGO, Barweer, Cata, Other
   setNumber?: string
-  source?: string
   sourceUrl?: string
+  imageUrl?: string
+  price?: number
+  currency: string
+  pieceCount?: number
+  releaseDate?: string
+  tags: string[]
+  priority: number  // 0-5 scale (0=unset, 5=must have)
   notes?: string
-  priority: 'low' | 'medium' | 'high'
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }
 
 // POST /api/wishlist
 interface CreateWishlistItemRequest {
-  type: 'set' | 'instruction'
-  name: string
-  pieceCount?: number
-  theme?: string
-  tags?: string[]
+  title: string
+  store: string
+  setNumber?: string
+  sourceUrl?: string
+  imageUrl?: string
   price?: number
   currency?: string
-  setNumber?: string
-  source?: string
-  sourceUrl?: string
+  pieceCount?: number
+  releaseDate?: string
+  tags?: string[]
+  priority?: number  // defaults to 0
   notes?: string
-  priority?: 'low' | 'medium' | 'high'
 }
 
 // POST /api/wishlist/:id/purchased
@@ -126,10 +126,18 @@ interface MarkPurchasedRequest {
 ### RTK Query Slice
 
 ```typescript
-// services/wishlistApi.ts
+// packages/core/api-client/src/rtk/wishlist-api.ts
+import { createApi } from '@reduxjs/toolkit/query/react'
+import { baseQueryWithAuth } from './base-query'
+import {
+  WishlistListResponseSchema,
+  WishlistItemSchema,
+  CreateWishlistItemSchema
+} from '../schemas/wishlist'
+
 export const wishlistApi = createApi({
   reducerPath: 'wishlistApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  baseQuery: baseQueryWithAuth,
   tagTypes: ['Wishlist'],
   endpoints: (builder) => ({
     getWishlist: builder.query<WishlistListResponse, GetWishlistParams>({
@@ -137,8 +145,7 @@ export const wishlistApi = createApi({
         url: '/wishlist',
         params: {
           q: params.search,
-          type: params.type,
-          theme: params.theme,
+          store: params.store,
           tags: params.tags?.join(','),
           priority: params.priority,
           sort: params.sort,
@@ -147,6 +154,7 @@ export const wishlistApi = createApi({
           limit: params.limit,
         },
       }),
+      transformResponse: (response) => WishlistListResponseSchema.parse(response),
       providesTags: (result) =>
         result
           ? [
@@ -158,6 +166,7 @@ export const wishlistApi = createApi({
 
     getWishlistItem: builder.query<WishlistItem, string>({
       query: (id) => `/wishlist/${id}`,
+      transformResponse: (response) => WishlistItemSchema.parse(response),
       providesTags: (result, error, id) => [{ type: 'Wishlist', id }],
     }),
 
@@ -167,6 +176,7 @@ export const wishlistApi = createApi({
         method: 'POST',
         body: data,
       }),
+      transformResponse: (response) => WishlistItemSchema.parse(response),
       invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
     }),
 
@@ -176,6 +186,7 @@ export const wishlistApi = createApi({
         method: 'PATCH',
         body: data,
       }),
+      transformResponse: (response) => WishlistItemSchema.parse(response),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Wishlist', id },
         { type: 'Wishlist', id: 'LIST' },
@@ -190,7 +201,7 @@ export const wishlistApi = createApi({
       invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
     }),
 
-    markAsPurchased: builder.mutation<{ newItemId: string; type: string }, { id: string; data: MarkPurchasedRequest }>({
+    markAsPurchased: builder.mutation<{ newItemId: string; store: string }, { id: string; data: MarkPurchasedRequest }>({
       query: ({ id, data }) => ({
         url: `/wishlist/${id}/purchased`,
         method: 'POST',
@@ -198,13 +209,13 @@ export const wishlistApi = createApi({
       }),
       invalidatesTags: [
         { type: 'Wishlist', id: 'LIST' },
-        // Also invalidate Sets or Instructions depending on type
+        // Also invalidate Sets or Instructions depending on destination
       ],
     }),
 
-    uploadWishlistImage: builder.mutation<{ imageId: string; url: string }, { itemId: string; formData: FormData }>({
+    uploadWishlistImage: builder.mutation<{ imageUrl: string }, { itemId: string; formData: FormData }>({
       query: ({ itemId, formData }) => ({
-        url: `/wishlist/${itemId}/images`,
+        url: `/wishlist/${itemId}/image`,
         method: 'POST',
         body: formData,
       }),
@@ -227,62 +238,41 @@ export const {
 ### Backend Handler (Mark as Purchased)
 
 ```typescript
-// apps/api/src/handlers/wishlist/markPurchased.ts
+// apps/api/endpoints/wishlist/purchased/handler.ts
+// Note: This is a stub implementation. The actual "Got It" flow moves items
+// to Sets or Instructions galleries, which may not be implemented yet.
+// See wish-1009 for the full "Got It" modal flow.
+
 export const handler = async (event: APIGatewayProxyEvent) => {
   const { id } = event.pathParameters!
-  const body = JSON.parse(event.body!)
+  const body = MarkPurchasedRequestSchema.parse(JSON.parse(event.body!))
+  const userId = getUserIdFromEvent(event)
 
-  // Get wishlist item
+  // Get wishlist item (owned by user)
   const wishlistItem = await db
     .select()
     .from(wishlistItems)
-    .where(eq(wishlistItems.id, id))
+    .where(and(
+      eq(wishlistItems.id, id),
+      eq(wishlistItems.userId, userId)
+    ))
     .get()
 
   if (!wishlistItem) {
     return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) }
   }
 
-  // Create the actual item based on type
-  let newItemId: string
+  // For MVP: Simply delete from wishlist
+  // Future: Create corresponding record in Sets or Instructions gallery
+  // based on user selection in the "Got It" modal (see wish-1009)
 
-  if (wishlistItem.type === 'set') {
-    const [newSet] = await db
-      .insert(sets)
-      .values({
-        name: wishlistItem.name,
-        setNumber: wishlistItem.setNumber,
-        pieceCount: wishlistItem.pieceCount,
-        theme: wishlistItem.theme,
-        tags: wishlistItem.tags,
-        purchaseDate: body.purchaseDate ?? new Date().toISOString(),
-        purchasePrice: body.purchasePrice ?? wishlistItem.price,
-        // Copy images from wishlist
-      })
-      .returning()
-    newItemId = newSet.id
-  } else {
-    const [newInstruction] = await db
-      .insert(instructions)
-      .values({
-        name: wishlistItem.name,
-        pieceCount: wishlistItem.pieceCount,
-        theme: wishlistItem.theme,
-        tags: wishlistItem.tags,
-        // Copy images from wishlist
-      })
-      .returning()
-    newItemId = newInstruction.id
-  }
-
-  // Delete from wishlist
   await db.delete(wishlistItems).where(eq(wishlistItems.id, id))
 
   return {
     statusCode: 200,
     body: JSON.stringify({
-      newItemId,
-      type: wishlistItem.type,
+      message: 'Item marked as purchased and removed from wishlist',
+      store: wishlistItem.store,
     }),
   }
 }
@@ -291,12 +281,13 @@ export const handler = async (event: APIGatewayProxyEvent) => {
 ## Testing
 
 - [ ] API test: GET /wishlist returns paginated list
-- [ ] API test: type filter works
-- [ ] API test: POST creates new item
+- [ ] API test: store filter works (LEGO, Barweer, etc.)
+- [ ] API test: POST creates new item with correct schema
 - [ ] API test: PATCH updates item
 - [ ] API test: DELETE removes item
-- [ ] API test: mark purchased creates new record and removes from wishlist
+- [ ] API test: mark purchased removes from wishlist
 - [ ] Unit test: RTK Query hooks work correctly
+- [ ] Unit test: Zod schema validation in transformResponse
 
 ## Change Log
 

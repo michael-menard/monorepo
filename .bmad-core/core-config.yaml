@@ -22,6 +22,7 @@ devStoryLocation: docs/stories
 devStoryPattern: "epic-*/{{prefix}}-{{number}}-*.md"
 devStoryPrefixes:
   - hskp  # Epic 0 - Housekeeping
+  - lnch  # Epic 0 - Launch Readiness
   - auth  # Epic 1 - Auth
   - dash  # Epic 2 - Dashboard
   - glry  # Epic 3 - Shared Gallery

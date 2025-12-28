@@ -1,4 +1,4 @@
-# Story 3.3.4: Wishlist Add Item Page
+# Story wish-1003: Wishlist Add Item Page
 
 ## Status
 
@@ -10,43 +10,48 @@ Draft
 **I want** to add items to my wishlist,
 **so that** I can track sets and instructions I want to purchase.
 
+## Dependencies
+
+- **wish-1004**: Database Schema & Zod Types (provides WishlistItem type and CreateWishlistItemSchema)
+- **wish-1002**: API Endpoints (provides useAddToWishlistMutation hook)
+
 ## Acceptance Criteria
 
 1. ⬜ Route `/wishlist/add` configured
 2. ⬜ Form to enter item details
-3. ⬜ Type selection (Set or Instructions)
-4. ⬜ Image upload support
+3. ⬜ Store selection (LEGO, Barweer, Other)
+4. ⬜ Image upload support (uses existing S3 upload infrastructure)
 5. ⬜ Price and source fields
-6. ⬜ Priority selection
+6. ⬜ Priority selection (0-5 scale)
 7. ⬜ Success redirects to wishlist gallery
 
 ## Tasks / Subtasks
 
 - [ ] **Task 1: Create Add Route**
   - [ ] Create `routes/wishlist/add.tsx`
-  - [ ] Configure route
+  - [ ] Configure route with lazy loading
 
 - [ ] **Task 2: Add Item Form**
-  - [ ] Type selection (radio)
-  - [ ] Name input (required)
-  - [ ] Set number input (conditional)
+  - [ ] Store selection (LEGO, Barweer, Other)
+  - [ ] Title input (required)
+  - [ ] Set number input
   - [ ] Piece count input
-  - [ ] Theme selector
-  - [ ] Tags input
+  - [ ] Tags input (chip-style)
   - [ ] Price and currency
-  - [ ] Source and URL
-  - [ ] Priority selector
+  - [ ] Source URL
+  - [ ] Priority selector (0-5)
   - [ ] Notes textarea
 
 - [ ] **Task 3: Image Upload**
-  - [ ] Image upload zone
-  - [ ] Multiple images support
-  - [ ] Image preview
+  - [ ] Use existing S3 presigned URL infrastructure
+  - [ ] Single image upload (imageUrl field)
+  - [ ] Image preview with remove option
+  - [ ] Upload progress indicator
 
 - [ ] **Task 4: Form Submission**
-  - [ ] Validation with Zod
-  - [ ] Submit to API
-  - [ ] Success toast and redirect
+  - [ ] Validation with CreateWishlistItemSchema from wish-1004
+  - [ ] Submit via useAddToWishlistMutation
+  - [ ] Success toast and redirect to /wishlist
 
 ## Dev Notes
 
@@ -54,67 +59,60 @@ Draft
 
 ```typescript
 // routes/wishlist/add.tsx
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { CreateWishlistItemSchema } from '@repo/api-client/schemas/wishlist'
+import { useAddToWishlistMutation } from '@repo/api-client/rtk/wishlist-api'
 import { z } from 'zod'
 
 export const Route = createFileRoute('/wishlist/add')({
   component: AddWishlistItemPage,
 })
 
-const wishlistItemSchema = z.object({
-  type: z.enum(['set', 'instruction']),
-  name: z.string().min(1, 'Name is required'),
-  setNumber: z.string().optional(),
-  pieceCount: z.number().int().positive().optional(),
-  theme: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  price: z.number().positive().optional(),
-  currency: z.string().default('USD'),
-  source: z.string().optional(),
-  sourceUrl: z.string().url().optional().or(z.literal('')),
-  notes: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+// Extend the API schema with form-specific fields
+const AddWishlistFormSchema = CreateWishlistItemSchema.extend({
+  // imageFile is handled separately, not part of API request
 })
 
-type WishlistItemFormData = z.infer<typeof wishlistItemSchema>
+type AddWishlistFormData = z.infer<typeof AddWishlistFormSchema>
+
+const STORES = ['LEGO', 'Barweer', 'Cata', 'Other'] as const
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD'] as const
 
 function AddWishlistItemPage() {
   const navigate = useNavigate()
   const [addToWishlist, { isLoading }] = useAddToWishlistMutation()
-  const { success, error } = useToast()
-  const [images, setImages] = useState<File[]>([])
+  const { toast } = useToast()
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
-  const form = useForm<WishlistItemFormData>({
-    resolver: zodResolver(wishlistItemSchema),
+  const form = useForm<AddWishlistFormData>({
+    resolver: zodResolver(AddWishlistFormSchema),
     defaultValues: {
-      type: 'set',
-      priority: 'medium',
+      store: 'LEGO',
+      priority: 0,
       currency: 'USD',
       tags: [],
     },
   })
 
-  const itemType = form.watch('type')
-
-  const onSubmit = async (data: WishlistItemFormData) => {
+  const onSubmit = async (data: AddWishlistFormData) => {
     try {
-      const item = await addToWishlist(data).unwrap()
-
-      // Upload images if any
-      if (images.length > 0) {
-        for (const image of images) {
-          const formData = new FormData()
-          formData.append('file', image)
-          await uploadWishlistImage({ itemId: item.id, formData })
-        }
+      // If there's an image, upload it first via presigned URL
+      let imageUrl: string | undefined
+      if (imageFile) {
+        // Use existing S3 presigned URL infrastructure
+        // Similar to MOC instruction upload flow
+        imageUrl = await uploadImageToS3(imageFile)
       }
 
-      success('Item added to wishlist')
+      await addToWishlist({ ...data, imageUrl }).unwrap()
+
+      toast({ title: 'Success', description: 'Item added to wishlist' })
       navigate({ to: '/wishlist' })
     } catch (err) {
-      error('Failed to add item')
+      toast({ title: 'Error', description: 'Failed to add item', variant: 'destructive' })
     }
   }
 
@@ -130,41 +128,37 @@ function AddWishlistItemPage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Type Selection */}
+          {/* Store Selection */}
           <FormField
             control={form.control}
-            name="type"
+            name="store"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Item Type</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="set" id="type-set" />
-                      <Label htmlFor="type-set">LEGO Set</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="instruction" id="type-instruction" />
-                      <Label htmlFor="type-instruction">MOC Instructions</Label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
+                <FormLabel>Store *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select store" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {STORES.map((store) => (
+                      <SelectItem key={store} value={store}>{store}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* Name */}
+          {/* Title */}
           <FormField
             control={form.control}
-            name="name"
+            name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name *</FormLabel>
+                <FormLabel>Title *</FormLabel>
                 <FormControl>
                   <Input placeholder="e.g., Medieval Castle" {...field} />
                 </FormControl>
@@ -173,68 +167,41 @@ function AddWishlistItemPage() {
             )}
           />
 
-          {/* Set Number (conditional) */}
-          {itemType === 'set' && (
-            <FormField
-              control={form.control}
-              name="setNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Set Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 10305" {...field} />
-                  </FormControl>
-                  <FormDescription>Official LEGO set number</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          {/* Set Number */}
+          <FormField
+            control={form.control}
+            name="setNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Set Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., 10305" {...field} />
+                </FormControl>
+                <FormDescription>Official set number (if applicable)</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          {/* Piece Count & Theme Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="pieceCount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Piece Count</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 2500"
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="theme"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Theme</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select theme" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {themes.map((theme) => (
-                        <SelectItem key={theme} value={theme}>{theme}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          {/* Piece Count */}
+          <FormField
+            control={form.control}
+            name="pieceCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Piece Count</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 2500"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Price & Currency Row */}
           <div className="grid grid-cols-3 gap-4">
@@ -271,10 +238,9 @@ function AddWishlistItemPage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="CAD">CAD</SelectItem>
+                      {CURRENCIES.map((currency) => (
+                        <SelectItem key={currency} value={currency}>{currency}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -289,17 +255,23 @@ function AddWishlistItemPage() {
             name="priority"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Priority</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <FormLabel>Priority (0-5)</FormLabel>
+                <Select
+                  onValueChange={(v) => field.onChange(parseInt(v))}
+                  value={field.value?.toString()}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="0">0 - Unset</SelectItem>
+                    <SelectItem value="1">1 - Low</SelectItem>
+                    <SelectItem value="2">2 - Medium-Low</SelectItem>
+                    <SelectItem value="3">3 - Medium</SelectItem>
+                    <SelectItem value="4">4 - High</SelectItem>
+                    <SelectItem value="5">5 - Must Have</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -307,15 +279,49 @@ function AddWishlistItemPage() {
             )}
           />
 
-          {/* Images */}
+          {/* Image Upload */}
           <div className="space-y-2">
-            <Label>Images</Label>
-            <ImageUploadZone
-              images={images}
-              onImagesChange={setImages}
-              maxImages={5}
+            <Label>Image</Label>
+            <ImageUploadField
+              file={imageFile}
+              preview={imagePreview}
+              onFileChange={(file) => {
+                setImageFile(file)
+                if (file) {
+                  setImagePreview(URL.createObjectURL(file))
+                } else {
+                  setImagePreview(null)
+                }
+              }}
+              onRemove={() => {
+                setImageFile(null)
+                setImagePreview(null)
+              }}
             />
+            <FormDescription>
+              Upload a product image (optional)
+            </FormDescription>
           </div>
+
+          {/* Source URL */}
+          <FormField
+            control={form.control}
+            name="sourceUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Source URL</FormLabel>
+                <FormControl>
+                  <Input
+                    type="url"
+                    placeholder="https://www.lego.com/product/..."
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>Link to the product page</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Notes */}
           <FormField
@@ -352,12 +358,92 @@ function AddWishlistItemPage() {
 }
 ```
 
+### ImageUploadField Component
+
+The `ImageUploadField` is a simple component for single image uploads:
+
+```typescript
+// routes/wishlist/-components/ImageUploadField.tsx
+// Or reuse from existing upload infrastructure if available
+
+interface ImageUploadFieldProps {
+  file: File | null
+  preview: string | null
+  onFileChange: (file: File | null) => void
+  onRemove: () => void
+}
+
+function ImageUploadField({ file, preview, onFileChange, onRemove }: ImageUploadFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="border-2 border-dashed rounded-lg p-4">
+      {preview ? (
+        <div className="relative w-32 h-32">
+          <img src={preview} alt="Preview" className="w-full h-full object-cover rounded" />
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="absolute -top-2 -right-2 h-6 w-6"
+            onClick={onRemove}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div
+          className="flex flex-col items-center justify-center py-4 cursor-pointer"
+          onClick={() => inputRef.current?.click()}
+        >
+          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">Click to upload image</p>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+      />
+    </div>
+  )
+}
+```
+
+### S3 Upload Helper
+
+```typescript
+// Reuse existing S3 upload infrastructure from MOC instructions
+// See existing presign endpoint implementation
+
+async function uploadImageToS3(file: File): Promise<string> {
+  // 1. Get presigned URL from API
+  const { presignedUrl, imageUrl } = await getPresignedUrl({
+    filename: file.name,
+    contentType: file.type,
+  })
+
+  // 2. Upload directly to S3
+  await fetch(presignedUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
+  })
+
+  return imageUrl
+}
+```
+
 ## Testing
 
-- [ ] Form validates required fields
-- [ ] Set number field appears only for set type
-- [ ] Images can be uploaded and previewed
-- [ ] Form submits successfully
+- [ ] Form validates required fields (title, store)
+- [ ] Store selector shows all options
+- [ ] Image can be uploaded and previewed
+- [ ] Image can be removed before submission
+- [ ] Form submits successfully with image
+- [ ] Form submits successfully without image
 - [ ] Success redirects to wishlist gallery
 - [ ] Error toast on failure
 

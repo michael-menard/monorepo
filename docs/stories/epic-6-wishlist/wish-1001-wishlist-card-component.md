@@ -1,4 +1,4 @@
-# Story 3.3.2: Wishlist Card Component
+# Story wish-1001: Wishlist Card Component
 
 ## Status
 
@@ -10,15 +10,20 @@ Draft
 **I want** wishlist items displayed in informative cards,
 **so that** I can see key details about items I want to purchase.
 
+## Dependencies
+
+- **wish-1004**: Database Schema & Zod Types (provides WishlistItem type)
+- **wish-1005**: Verify Shared Gallery Compatibility (confirms GalleryCard works)
+
 ## Acceptance Criteria
 
 1. ⬜ WishlistCard component extends GalleryCard
 2. ⬜ Displays item image (thumbnail)
 3. ⬜ Shows item name/title
-4. ⬜ Shows item type badge (Set/Instruction)
+4. ⬜ Shows store badge (LEGO, Barweer, etc.)
 5. ⬜ Shows price if set
 6. ⬜ Shows piece count if available
-7. ⬜ Shows theme tag
+7. ⬜ Shows priority indicator (1-5 scale)
 8. ⬜ Hover shows actions (view, edit, remove, mark purchased)
 
 ## Tasks / Subtasks
@@ -26,15 +31,15 @@ Draft
 - [ ] **Task 1: Create WishlistCard Component**
   - [ ] Create `routes/wishlist/-components/WishlistCard.tsx`
   - [ ] Extend GalleryCard from @repo/gallery
-  - [ ] Define WishlistItem type
+  - [ ] Import WishlistItem type from @repo/api-client/schemas/wishlist
 
 - [ ] **Task 2: Card Content**
-  - [ ] Image thumbnail
-  - [ ] Item name
-  - [ ] Type badge (Set vs Instruction)
-  - [ ] Price display
-  - [ ] Piece count badge
-  - [ ] Theme tag
+  - [ ] Image thumbnail (from imageUrl)
+  - [ ] Item title
+  - [ ] Store badge (LEGO, Barweer, etc.)
+  - [ ] Price display with currency
+  - [ ] Piece count
+  - [ ] Priority indicator (0-5 scale)
 
 - [ ] **Task 3: Card Actions**
   - [ ] View details
@@ -47,23 +52,27 @@ Draft
 ### Component API
 
 ```typescript
-interface WishlistItem {
-  id: string
-  type: 'set' | 'instruction'
-  name: string
-  thumbnail: string
-  images: string[]
-  pieceCount?: number
-  theme?: string
-  tags: string[]
-  price?: number
-  currency?: string
-  setNumber?: string  // For official sets
-  source?: string     // Where to buy (e.g., "LEGO.com", "BrickLink")
-  notes?: string
-  priority?: 'low' | 'medium' | 'high'
-  createdAt: string
-}
+// Import from @repo/api-client/schemas/wishlist (defined in wish-1004)
+import { WishlistItem } from '@repo/api-client/schemas/wishlist'
+
+// WishlistItem has these fields:
+// - id: string (uuid)
+// - userId: string (uuid)
+// - title: string
+// - store: string (LEGO, Barweer, Cata, etc.)
+// - setNumber: string | null
+// - sourceUrl: string | null
+// - imageUrl: string | null (S3 URL)
+// - price: number | null
+// - currency: string (default 'USD')
+// - pieceCount: number | null
+// - releaseDate: string | null
+// - tags: string[]
+// - priority: number (0-5)
+// - notes: string | null
+// - sortOrder: number
+// - createdAt: string
+// - updatedAt: string
 
 interface WishlistCardProps {
   item: WishlistItem
@@ -78,18 +87,16 @@ function WishlistCard({ item, ...handlers }: WishlistCardProps) {
     <div className="group relative">
       <GalleryCard
         image={{
-          src: item.thumbnail,
-          alt: item.name,
+          src: item.imageUrl ?? '/placeholder-set.png',
+          alt: item.title,
           aspectRatio: '4/3',
         }}
-        title={item.name}
+        title={item.title}
         onClick={() => handlers.onView?.(item.id)}
         metadata={
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant={item.type === 'set' ? 'default' : 'secondary'}>
-                {item.type === 'set' ? 'Set' : 'Instructions'}
-              </Badge>
+              <Badge variant="secondary">{item.store}</Badge>
               {item.setNumber && (
                 <span className="text-sm text-muted-foreground">#{item.setNumber}</span>
               )}
@@ -113,12 +120,12 @@ function WishlistCard({ item, ...handlers }: WishlistCardProps) {
         }
       />
 
-      {/* Priority indicator */}
-      {item.priority === 'high' && (
+      {/* Priority indicator (show for priority >= 4) */}
+      {item.priority >= 4 && (
         <div className="absolute top-2 left-2">
           <Badge variant="destructive" className="text-xs">
             <Star className="w-3 h-3 mr-1 fill-current" />
-            High Priority
+            {item.priority === 5 ? 'Must Have' : 'High Priority'}
           </Badge>
         </div>
       )}

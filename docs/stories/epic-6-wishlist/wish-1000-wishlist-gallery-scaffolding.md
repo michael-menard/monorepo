@@ -1,4 +1,4 @@
-# Story 3.3.1: Wishlist Gallery Page Scaffolding
+# Story wish-1000: Wishlist Gallery Page Scaffolding
 
 ## Status
 
@@ -8,7 +8,13 @@ Draft
 
 **As a** developer,
 **I want** the Wishlist Gallery page scaffolded,
-**so that** users can browse sets and instructions they want to purchase.
+**so that** users can browse LEGO sets they want to purchase.
+
+## Dependencies
+
+- **wish-1004**: Database Schema & Zod Types (provides WishlistItem type)
+- **wish-1002**: API Endpoints (provides useGetWishlistQuery hook)
+- **wish-1005**: Verify Shared Gallery Compatibility (confirms @repo/gallery works)
 
 ## Acceptance Criteria
 
@@ -16,7 +22,7 @@ Draft
 2. ⬜ WishlistGalleryPage component renders
 3. ⬜ Lazy loading configured for route
 4. ⬜ Page uses @repo/gallery components
-5. ⬜ Type filter (sets, instructions, all)
+5. ⬜ Store filter (LEGO, Barweer, Cata, All)
 6. ⬜ Add to wishlist button in header
 
 ## Tasks / Subtasks
@@ -29,7 +35,8 @@ Draft
 - [ ] **Task 2: Page Component**
   - [ ] Create WishlistGalleryPage component
   - [ ] Import gallery components from @repo/gallery
-  - [ ] Add type filter tabs (All / Sets / Instructions)
+  - [ ] Import WishlistItem type from wish-1004 schemas
+  - [ ] Add store filter tabs (All / LEGO / Barweer / Other)
   - [ ] Add "Add Item" CTA
 
 - [ ] **Task 3: Router Configuration**
@@ -63,21 +70,23 @@ import {
   GallerySkeleton,
   useGalleryUrl,
 } from '@repo/gallery'
+import { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { useGetWishlistQuery } from '@repo/api-client/rtk/wishlist-api'
 
 export const Route = createFileRoute('/wishlist/')({
   component: WishlistGalleryPage,
 })
 
-type WishlistItemType = 'all' | 'set' | 'instruction'
+type StoreFilter = 'all' | 'LEGO' | 'Barweer' | 'Other'
 
 function WishlistGalleryPage() {
   const { state, updateUrl } = useGalleryUrl()
-  const [itemType, setItemType] = useState<WishlistItemType>('all')
+  const [storeFilter, setStoreFilter] = useState<StoreFilter>('all')
   const navigate = useNavigate()
 
   const { data, isLoading } = useGetWishlistQuery({
     ...state,
-    type: itemType === 'all' ? undefined : itemType,
+    store: storeFilter === 'all' ? undefined : storeFilter,
   })
 
   return (
@@ -91,21 +100,16 @@ function WishlistGalleryPage() {
         </Button>
       </div>
 
-      {/* Type Filter Tabs */}
-      <Tabs value={itemType} onValueChange={(v) => setItemType(v as WishlistItemType)}>
+      {/* Store Filter Tabs */}
+      <Tabs value={storeFilter} onValueChange={(v) => setStoreFilter(v as StoreFilter)}>
         <TabsList>
           <TabsTrigger value="all">
             All
-            {data?.counts.total && <Badge variant="secondary" className="ml-2">{data.counts.total}</Badge>}
+            {data?.pagination.total && <Badge variant="secondary" className="ml-2">{data.pagination.total}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="set">
-            Sets
-            {data?.counts.sets && <Badge variant="secondary" className="ml-2">{data.counts.sets}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="instruction">
-            Instructions
-            {data?.counts.instructions && <Badge variant="secondary" className="ml-2">{data.counts.instructions}</Badge>}
-          </TabsTrigger>
+          <TabsTrigger value="LEGO">LEGO</TabsTrigger>
+          <TabsTrigger value="Barweer">Barweer</TabsTrigger>
+          <TabsTrigger value="Other">Other</TabsTrigger>
         </TabsList>
       </Tabs>
 
