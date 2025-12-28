@@ -1,8 +1,14 @@
 # Story wish-2004: Modals & Transitions
 
+## GitHub Issue
+
+- Issue: #TBD
+- URL: https://github.com/michael-menard/monorepo/issues/TBD
+- Status: Todo
+
 ## Status
 
-Draft
+Approved
 
 ## Consolidates
 
@@ -23,10 +29,86 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 - Transition to Sets ("Got it" Flow)
 - User Interface > "Got it" Modal
 
+## Epic Context
+
+This is **Story 4 of Epic 6: Wishlist Gallery**.
+
+## Blocked By
+
+- **wish-2000**: Database Schema & Shared Types (must be complete - provides core types)
+- **wish-2001**: Wishlist Gallery MVP (must be complete - provides gallery context for modals)
+- **wish-2003**: Detail & Edit Pages (must be complete - provides detail page where modals are triggered)
+
 ## Dependencies
 
 - **wish-2000**: Database Schema & Shared Types
 - **wish-2001**: Wishlist Gallery MVP (provides item context)
+
+## Technical Requirements
+
+### Type System
+
+- All types MUST be derived from Zod schemas using `z.infer<>`
+- NO TypeScript interfaces - use Zod schemas exclusively
+- Import shared types from `@repo/api-client/schemas/wishlist`
+
+### Form Architecture
+
+- Use react-hook-form with zodResolver for all forms
+- Validation mode: `mode: 'onBlur'` for optimal UX
+- All form schemas defined with Zod
+
+### Target Application
+
+- app-wishlist-gallery standalone app (when created)
+- Integration with main-app detail pages
+
+## UX Requirements
+
+### Modal Design
+
+- **Overlay**: Semi-transparent backdrop (bg-black/50) with blur effect
+- **Focus Trap**: Focus must be trapped within modal while open
+- **Escape to Close**: Pressing Escape key closes modal (unless in loading state)
+- **Click Outside**: Clicking overlay closes modal (configurable per modal type)
+- **Centered Positioning**: Modals centered vertically and horizontally
+- **Responsive Width**: Max-width constraints with mobile-friendly sizing
+
+### Interaction Design
+
+- **Keyboard Navigation**: Full Tab/Shift+Tab navigation within modal
+- **Default Focus**: Focus moves to first interactive element on open
+- **Focus Return**: Focus returns to trigger element on close
+- **Transitions/Animations**:
+  - Modal enter: fade-in + scale-up (150ms ease-out)
+  - Modal exit: fade-out + scale-down (100ms ease-in)
+  - Item removal: fade-out animation before removing from list
+
+### Feedback & States
+
+- **Loading States**: Spinner on action buttons during API calls
+- **Button Disable**: Disable buttons during loading to prevent double-submit
+- **Confirmation Flows**: Clear visual hierarchy for destructive vs safe actions
+- **Success Feedback**: Toast notifications for successful actions
+- **Celebration Moment**: Subtle animation/icon for "Got It" success
+
+### Error Handling UX
+
+- **Toast Notifications**: Use @repo/ui toast system for all feedback
+- **Error Recovery**: Clear messaging about what went wrong
+- **Retry Options**: Where appropriate, offer retry capability
+- **Graceful Degradation**: Handle Sets API unavailability gracefully
+
+### Accessibility (WCAG 2.1 AA)
+
+- **Focus Management**: Proper focus trap and return
+- **aria-modal="true"**: Required on modal containers
+- **role="dialog"** or **role="alertdialog"**: Appropriate role per modal type
+- **aria-labelledby**: Modal title connected to dialog
+- **aria-describedby**: Modal description connected to dialog
+- **Screen Reader Announcements**: Live regions for dynamic content updates
+- **Reduced Motion**: Respect prefers-reduced-motion for animations
+- **Color Contrast**: All text meets 4.5:1 ratio minimum
 
 ## Acceptance Criteria
 
@@ -65,6 +147,30 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 25. useMarkAsPurchasedMutation hook available
 26. Cache invalidation on success
 
+### UX & Accessibility
+
+27. Both modals trap focus while open (Tab cycles within modal)
+28. Escape key closes modal and returns focus to trigger element
+29. Modal has appropriate ARIA attributes (aria-modal, role, aria-labelledby)
+30. Screen readers announce modal title when opened
+31. Loading states prevent interaction during API calls
+32. Destructive action button uses destructive/danger styling
+33. Animations respect prefers-reduced-motion media query
+34. All interactive elements have visible focus indicators
+35. Color contrast meets WCAG 2.1 AA (4.5:1 minimum)
+36. Toast notifications are announced to screen readers
+
+### E2E Tests
+
+37. E2E test: Delete modal opens from gallery card action menu
+38. E2E test: Delete modal opens from detail page
+39. E2E test: Cancel closes delete modal without deletion
+40. E2E test: Confirm deletes item and shows success toast
+41. E2E test: Got It modal opens and displays item summary
+42. E2E test: Got It form submission marks item as purchased
+43. E2E test: Keyboard navigation works within modals
+44. E2E test: Focus returns to trigger after modal closes
+
 ## Tasks / Subtasks
 
 ### Task 1: Create DELETE Endpoint
@@ -94,37 +200,69 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 ### Task 4: Create DeleteConfirmationModal
 
 - [ ] Create `apps/web/main-app/src/components/wishlist/DeleteConfirmationModal.tsx`
-- [ ] Use AlertDialog from @repo/ui
+- [ ] Use AlertDialog from @repo/ui (provides built-in accessibility)
 - [ ] Show item title in message
 - [ ] Clear warning about permanent deletion
-- [ ] Cancel and Confirm buttons
-- [ ] Loading state during deletion
-- [ ] Handle API errors
+- [ ] Cancel and Confirm buttons with proper styling (destructive variant for confirm)
+- [ ] Loading state during deletion (spinner, disabled buttons)
+- [ ] Handle API errors with toast notifications
+- [ ] Ensure focus trap is active while modal is open
+- [ ] Implement Escape key to close (disabled during loading)
+- [ ] Add aria-describedby linking to warning message
+- [ ] Ensure focus returns to trigger element on close
+- [ ] Add prefers-reduced-motion support for animations
 
 ### Task 5: Create GotItModal
 
 - [ ] Create `apps/web/main-app/src/components/wishlist/GotItModal.tsx`
-- [ ] Use Dialog from @repo/ui
+- [ ] Use Dialog from @repo/ui (provides built-in accessibility)
 - [ ] Item summary header (image, title, set number)
-- [ ] Purchase details form with Zod validation
-- [ ] "Keep on wishlist" checkbox
-- [ ] Date picker for purchase date
-- [ ] Quantity stepper
-- [ ] Celebration moment (icon/animation)
+- [ ] Purchase details form with Zod validation (react-hook-form + zodResolver, mode: 'onBlur')
+- [ ] "Keep on wishlist" checkbox with accessible label
+- [ ] Date picker for purchase date (keyboard accessible)
+- [ ] Quantity stepper with +/- buttons (keyboard accessible)
+- [ ] Celebration moment (PartyPopper icon with subtle animation)
+- [ ] Loading state during submission (spinner, disabled buttons)
+- [ ] Focus trap active while modal is open
+- [ ] Escape key to close (disabled during loading)
+- [ ] aria-labelledby connected to dialog title
+- [ ] Form field labels properly associated with inputs
+- [ ] Error messages announced to screen readers
+- [ ] Focus returns to trigger element on close
+- [ ] Reduced motion: disable celebration animation if preferred
 
 ### Task 6: Wire Up to Detail & Gallery
 
 - [ ] Integrate DeleteConfirmationModal in detail page
-- [ ] Integrate DeleteConfirmationModal in gallery card
+- [ ] Integrate DeleteConfirmationModal in gallery card action menu
 - [ ] Integrate GotItModal in detail page
-- [ ] Integrate GotItModal in gallery card
-- [ ] Handle navigation after success
+- [ ] Integrate GotItModal in gallery card action menu
+- [ ] Handle navigation after success (gallery refresh or navigate to gallery)
+- [ ] Ensure focus management when navigating after modal closes
+- [ ] Add fade-out animation for deleted/purchased items in gallery
 
 ### Task 7: Undo Toast for Got It
 
-- [ ] Show success toast with Undo action
-- [ ] 5-second window for undo
+- [ ] Show success toast with Undo action button
+- [ ] 5-second window for undo (visible countdown optional)
 - [ ] Undo restores wishlist item, removes Set (if created)
+- [ ] Toast announced to screen readers via live region
+- [ ] Undo button keyboard accessible
+
+### Task 8: E2E Tests (Playwright)
+
+- [ ] Create `apps/web/playwright/tests/wishlist-modals.spec.ts`
+- [ ] Set up API mocking for wishlist endpoints
+- [ ] Test: Delete modal opens from gallery card action menu
+- [ ] Test: Delete modal opens from detail page delete button
+- [ ] Test: Cancel button closes delete modal without API call
+- [ ] Test: Confirm button calls DELETE API and shows success toast
+- [ ] Test: Got It modal opens and displays item summary
+- [ ] Test: Got It form pre-fills price from wishlist item
+- [ ] Test: Got It form submission calls purchased API
+- [ ] Test: Keyboard navigation (Tab, Escape) works within modals
+- [ ] Test: Focus returns to trigger element after modal closes
+- [ ] Test: Error states display appropriate toast messages
 
 ## Dev Notes
 
@@ -761,17 +899,49 @@ apps/api/endpoints/wishlist/
 
 ## Definition of Done
 
+### Functional
+
 - [ ] Delete endpoint works with hard delete
 - [ ] Purchased endpoint handles all cases
 - [ ] DeleteConfirmationModal prevents accidental deletion
 - [ ] GotItModal captures purchase details
 - [ ] Graceful handling when Sets API unavailable
-- [ ] All tests pass
+
+### UX & Accessibility
+
+- [ ] Focus trap works correctly in both modals
+- [ ] Escape key closes modals appropriately
+- [ ] Focus returns to trigger element on modal close
+- [ ] All ARIA attributes properly configured
+- [ ] Screen reader announcements verified
+- [ ] Animations respect prefers-reduced-motion
+- [ ] Color contrast meets WCAG 2.1 AA (4.5:1)
+- [ ] Keyboard navigation fully functional
+
+### Testing & Quality
+
+- [ ] Unit tests pass with adequate coverage
+- [ ] E2E tests pass (Playwright)
+- [ ] Accessibility audit passed (axe-core)
 - [ ] Code reviewed
+- [ ] No TypeScript errors
+- [ ] No ESLint warnings
 
 ## Change Log
 
-| Date       | Version | Description                                                    | Author   |
-| ---------- | ------- | -------------------------------------------------------------- | -------- |
-| 2025-12-27 | 0.1     | Initial draft                                                  | SM Agent |
-| 2025-12-27 | 0.2     | Consolidated from wish-1002 (delete/purchased), wish-1008, 1009 | Claude   |
+| Date       | Version | Description                                                    | Author       |
+| ---------- | ------- | -------------------------------------------------------------- | ------------ |
+| 2025-12-27 | 0.1     | Initial draft                                                  | SM Agent     |
+| 2025-12-27 | 0.2     | Consolidated from wish-1002 (delete/purchased), wish-1008, 1009 | Claude       |
+| 2025-12-27 | 0.3     | Added GitHub Issue section                                     | Bob (SM)     |
+| 2025-12-27 | 0.3     | Added Epic Context section                                     | Bob (SM)     |
+| 2025-12-27 | 0.3     | Added Blocked By section with prerequisite stories             | Bob (SM)     |
+| 2025-12-27 | 0.3     | Added Technical Requirements (Zod types, form arch, target app)| Bob (SM)     |
+| 2025-12-27 | 0.3     | Added UX Requirements section (modal design, interactions, a11y)| Sally (UX)   |
+| 2025-12-27 | 0.3     | Added UX & Accessibility acceptance criteria (AC 27-36)        | Sally (UX)   |
+| 2025-12-27 | 0.3     | Added E2E Tests acceptance criteria (AC 37-44)                 | Bob (SM)     |
+| 2025-12-27 | 0.3     | Updated Task 4-7 with UX details (focus, keyboard, loading)    | Bob (SM)     |
+| 2025-12-27 | 0.3     | Added Task 8: E2E Tests with Playwright and API mocking        | Bob (SM)     |
+| 2025-12-27 | 0.3     | Updated Definition of Done with UX/A11y and Testing sections   | Bob (SM)     |
+| 2025-12-27 | 0.4     | Story draft checklist validated - all 5 categories PASS        | Bob (SM)     |
+| 2025-12-27 | 0.4     | Status changed from Draft to Approved                          | Bob (SM)     |
