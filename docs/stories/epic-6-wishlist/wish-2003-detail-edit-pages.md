@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Approved
 
 ## Consolidates
 
@@ -88,7 +88,7 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 3: Create Detail Page
 
-- [ ] Create `apps/web/main-app/src/routes/wishlist/$id.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/routes/$id.tsx`
 - [ ] Configure TanStack Router file-based route
 - [ ] Fetch item with useGetWishlistItemQuery
 - [ ] Handle loading state with skeleton
@@ -99,19 +99,33 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 4: Create Edit Page
 
-- [ ] Create `apps/web/main-app/src/routes/wishlist/$id.edit.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/routes/$id.edit.tsx`
 - [ ] Fetch existing item data
 - [ ] Initialize form with item values
-- [ ] Reuse form fields from add page
+- [ ] Reuse form fields from add page (WishlistFormFields)
 - [ ] Handle image: show current, replace, or remove
 - [ ] Submit via useUpdateWishlistItemMutation
 - [ ] Navigate to detail on success
 
 ### Task 5: Shared Components
 
-- [ ] Extract WishlistFormFields component from add page
-- [ ] Create PriceDisplay helper component
-- [ ] Create PriorityBadge component
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/WishlistFormFields/index.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/PriceDisplay/index.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/PriorityBadge/index.tsx`
+
+### Task 6: Storybook Stories
+
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/PriceDisplay/__stories__/PriceDisplay.stories.tsx`
+  - [ ] USD currency
+  - [ ] EUR currency
+  - [ ] No price (null handling)
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/PriorityBadge/__stories__/PriorityBadge.stories.tsx`
+  - [ ] All priority levels (0-5)
+- [ ] Create `apps/web/app-wishlist-gallery/src/routes/__stories__/DetailPage.stories.tsx`
+  - [ ] Full item with all fields
+  - [ ] Minimal item (required fields only)
+  - [ ] Loading state
+  - [ ] Not found state
 
 ## Dev Notes
 
@@ -189,7 +203,7 @@ export const { useUpdateWishlistItemMutation } = wishlistApi
 ### Detail Page Component
 
 ```typescript
-// routes/wishlist/$id.tsx
+// apps/web/app-wishlist-gallery/src/routes/$id.tsx
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useGetWishlistItemQuery } from '@repo/api-client/rtk/wishlist-api'
 import { Button, Badge, Skeleton } from '@repo/ui'
@@ -385,7 +399,7 @@ function DetailSkeleton() {
 ### Edit Page Component
 
 ```typescript
-// routes/wishlist/$id.edit.tsx
+// apps/web/app-wishlist-gallery/src/routes/$id.edit.tsx
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -543,12 +557,23 @@ function mapItemToFormValues(item: WishlistItem): UpdateWishlistItem {
 ### Route Structure
 
 ```
-apps/web/main-app/src/routes/
-  wishlist/
-    $id.tsx           # Detail page
-    $id.edit.tsx      # Edit page
-    -components/
-      WishlistFormFields.tsx  # Shared form fields (extracted)
+apps/web/app-wishlist-gallery/src/
+  routes/
+    $id.tsx              # Detail page
+    $id.edit.tsx         # Edit page
+  components/
+    WishlistFormFields/
+      index.tsx          # Shared form fields
+      __tests__/
+        WishlistFormFields.test.tsx
+    PriceDisplay/
+      index.tsx
+      __stories__/
+        PriceDisplay.stories.tsx
+    PriorityBadge/
+      index.tsx
+      __stories__/
+        PriorityBadge.stories.tsx
 ```
 
 ## Testing
@@ -584,13 +609,31 @@ apps/web/main-app/src/routes/
 - [ ] Image can be removed
 - [ ] New image can be uploaded
 
+### Playwright E2E Tests (Mocked APIs)
+
+- [ ] Create `apps/web/playwright/e2e/wishlist/detail-page.spec.ts`
+  - [ ] Detail page displays all item metadata
+  - [ ] "Got it!" button opens modal
+  - [ ] Edit button navigates to edit page
+  - [ ] Delete button opens confirmation modal
+  - [ ] Back button returns to gallery
+  - [ ] 404 displays for invalid ID
+- [ ] Create `apps/web/playwright/e2e/wishlist/edit-page.spec.ts`
+  - [ ] Form pre-populated with existing data
+  - [ ] Save updates item and navigates to detail
+  - [ ] Cancel returns to detail without saving
+  - [ ] Validation errors display inline
+  - [ ] Image can be replaced or removed
+
 ## Definition of Done
 
 - [ ] PATCH endpoint updates items correctly
 - [ ] Detail page displays all item information
 - [ ] Edit page allows updating all fields
 - [ ] RTK Query cache invalidates correctly
-- [ ] All tests pass
+- [ ] All unit/component tests pass
+- [ ] Storybook stories created for custom components
+- [ ] Playwright E2E tests pass with mocked APIs
 - [ ] Code reviewed
 
 ## Change Log

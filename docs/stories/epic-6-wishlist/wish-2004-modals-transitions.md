@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Approved
 
 ## Consolidates
 
@@ -93,7 +93,7 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 4: Create DeleteConfirmationModal
 
-- [ ] Create `apps/web/main-app/src/components/wishlist/DeleteConfirmationModal.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/index.tsx`
 - [ ] Use AlertDialog from @repo/ui
 - [ ] Show item title in message
 - [ ] Clear warning about permanent deletion
@@ -103,7 +103,7 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 5: Create GotItModal
 
-- [ ] Create `apps/web/main-app/src/components/wishlist/GotItModal.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx`
 - [ ] Use Dialog from @repo/ui
 - [ ] Item summary header (image, title, set number)
 - [ ] Purchase details form with Zod validation
@@ -125,6 +125,17 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 - [ ] Show success toast with Undo action
 - [ ] 5-second window for undo
 - [ ] Undo restores wishlist item, removes Set (if created)
+
+### Task 8: Storybook Stories
+
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/__stories__/DeleteConfirmationModal.stories.tsx`
+  - [ ] Default open state
+  - [ ] Deleting (loading) state
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/GotItModal/__stories__/GotItModal.stories.tsx`
+  - [ ] Default open with item data
+  - [ ] Submitting state
+  - [ ] With price pre-filled
+  - [ ] With "keep on wishlist" checked
 
 ## Dev Notes
 
@@ -273,7 +284,7 @@ export const {
 ### DeleteConfirmationModal Component
 
 ```typescript
-// components/wishlist/DeleteConfirmationModal.tsx
+// apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/index.tsx
 import {
   AlertDialog,
   AlertDialogAction,
@@ -341,7 +352,7 @@ export function DeleteConfirmationModal({
 ### GotItModal Component
 
 ```typescript
-// components/wishlist/GotItModal.tsx
+// apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -710,9 +721,20 @@ function WishlistDetailPage() {
 ### File Structure
 
 ```
-apps/web/main-app/src/components/wishlist/
-  DeleteConfirmationModal.tsx
-  GotItModal.tsx
+apps/web/app-wishlist-gallery/src/
+  components/
+    DeleteConfirmationModal/
+      index.tsx
+      __tests__/
+        DeleteConfirmationModal.test.tsx
+      __stories__/
+        DeleteConfirmationModal.stories.tsx
+    GotItModal/
+      index.tsx
+      __tests__/
+        GotItModal.test.tsx
+      __stories__/
+        GotItModal.stories.tsx
 
 apps/api/endpoints/wishlist/
   delete/handler.ts
@@ -759,6 +781,19 @@ apps/api/endpoints/wishlist/
 - [ ] Item removed from gallery (if not kept)
 - [ ] Cancel closes without action
 
+### Playwright E2E Tests (Mocked APIs)
+
+- [ ] Create `apps/web/playwright/e2e/wishlist/modals.spec.ts`
+  - [ ] Delete modal: Cancel closes without deleting
+  - [ ] Delete modal: Confirm deletes and shows toast
+  - [ ] Delete modal: Escape key closes modal
+  - [ ] Got It modal: Opens with item summary
+  - [ ] Got It modal: Price pre-filled from wishlist item
+  - [ ] Got It modal: Submit marks as purchased
+  - [ ] Got It modal: "Keep on wishlist" retains item
+  - [ ] Got It modal: Success shows undo toast
+  - [ ] Undo toast: Clicking undo restores item
+
 ## Definition of Done
 
 - [ ] Delete endpoint works with hard delete
@@ -766,7 +801,9 @@ apps/api/endpoints/wishlist/
 - [ ] DeleteConfirmationModal prevents accidental deletion
 - [ ] GotItModal captures purchase details
 - [ ] Graceful handling when Sets API unavailable
-- [ ] All tests pass
+- [ ] All unit/component tests pass
+- [ ] Storybook stories created for modal components
+- [ ] Playwright E2E tests pass with mocked APIs
 - [ ] Code reviewed
 
 ## Change Log
