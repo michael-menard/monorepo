@@ -69,7 +69,9 @@ export function RecentMocsGrid({ mocs }: RecentMocsGridProps) {
                   <p className="font-medium truncate text-sm">{moc.title}</p>
 
                   {/* Date */}
-                  <p className="text-xs text-muted-foreground">{formatRelativeDate(moc.createdAt)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatRelativeDate(moc.createdAt)}
+                  </p>
                 </CardContent>
               </Card>
             </Link>

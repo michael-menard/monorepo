@@ -20,6 +20,14 @@
       "import": "./src/rtk/wishlist-api.ts",
       "types": "./src/rtk/wishlist-api.ts"
     },
+    "./rtk/wishlist-gallery-api": {
+      "import": "./src/rtk/wishlist-gallery-api.ts",
+      "types": "./src/rtk/wishlist-gallery-api.ts"
+    },
+    "./schemas/wishlist": {
+      "import": "./src/schemas/wishlist.ts",
+      "types": "./src/schemas/wishlist.ts"
+    },
     "./rtk/dashboard-api": {
       "import": "./src/rtk/dashboard-api.ts",
       "types": "./src/rtk/dashboard-api.ts"

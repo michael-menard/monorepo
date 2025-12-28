@@ -19,3 +19,11 @@ export {
   clearMocks,
   mockResponses,
 } from './api-mocks'
+
+export {
+  setupWishlistMocks,
+  clearWishlistMocks,
+  wishlistMockResponses,
+  mockWishlistItems,
+} from './wishlist-mocks'
+export type { MockWishlistItem, MockWishlistListResponse, WishlistMockOptions } from './wishlist-mocks'

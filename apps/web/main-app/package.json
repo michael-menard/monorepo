@@ -35,6 +35,7 @@
     "@repo/app-component-library": "workspace:*",
     "@repo/app-dashboard": "workspace:*",
     "@repo/app-instructions-gallery": "workspace:*",
+    "@repo/app-wishlist-gallery": "workspace:*",
     "@repo/cache": "workspace:*",
     "@repo/design-system": "workspace:*",
     "@repo/gallery": "workspace:*",

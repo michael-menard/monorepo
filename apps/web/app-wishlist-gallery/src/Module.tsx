@@ -3,8 +3,13 @@
  *
  * Main entry point for the App Wishlist Gallery feature module.
  * This module is designed to be lazy-loaded by the shell app.
+ *
+ * Story wish-2001: Wishlist Gallery MVP
  */
+
 import { z } from 'zod'
+import { Provider } from 'react-redux'
+import { store } from './store'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 
@@ -22,12 +27,15 @@ export type AppWishlistGalleryModuleProps = z.infer<typeof AppWishlistGalleryMod
  * AppWishlistGallery Module Component
  *
  * This is the main export that the shell app will lazy-load.
+ * Includes Redux Provider for RTK Query wishlist API.
  */
 export function AppWishlistGalleryModule({ className }: AppWishlistGalleryModuleProps) {
   return (
-    <ModuleLayout className={className}>
-      <MainPage />
-    </ModuleLayout>
+    <Provider store={store}>
+      <ModuleLayout className={className}>
+        <MainPage />
+      </ModuleLayout>
+    </Provider>
   )
 }
 

@@ -1,7 +1,20 @@
+/**
+ * Wishlist Gallery App Tests
+ *
+ * Basic rendering tests for the wishlist gallery module.
+ * API integration tests should use MSW for proper mocking.
+ *
+ * Story wish-2001: Wishlist Gallery MVP
+ */
+
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { App } from './App'
+import { configureStore } from '@reduxjs/toolkit'
+import { Provider } from 'react-redux'
+import { MainPage } from './pages/main-page'
+import { ModuleLayout } from './components/module-layout'
 
+// Mock @repo/logger
 vi.mock('@repo/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -17,20 +30,67 @@ vi.mock('@repo/logger', () => ({
   }),
 }))
 
-describe('App Wishlist Gallery Module', () => {
-  it('renders the page heading', () => {
-    render(<App />)
-    expect(screen.getByRole('heading', { name: /App Wishlist Gallery/i })).toBeInTheDocument()
+// Mock the RTK Query hook to avoid actual API calls
+vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
+  useGetWishlistQuery: vi.fn().mockReturnValue({
+    data: null,
+    isLoading: true,
+    isFetching: false,
+    error: null,
+  }),
+  wishlistGalleryApi: {
+    reducerPath: 'wishlistGalleryApi',
+    reducer: (state = {}) => state,
+    middleware: () => (next: any) => (action: any) => next(action),
+  },
+}))
+
+// Create a mock store for testing
+const createTestStore = () =>
+  configureStore({
+    reducer: {
+      wishlistGalleryApi: (state = {}) => state,
+    },
   })
 
-  it('displays the welcome message', () => {
-    render(<App />)
-    expect(screen.getByText(/Welcome to the App Wishlist Gallery module/i)).toBeInTheDocument()
+describe('Wishlist Gallery Module', () => {
+  describe('ModuleLayout', () => {
+    it('renders children correctly', () => {
+      render(
+        <ModuleLayout>
+          <div data-testid="test-child">Test Content</div>
+        </ModuleLayout>,
+      )
+      expect(screen.getByTestId('test-child')).toBeInTheDocument()
+    })
+
+    it('applies className prop', () => {
+      render(
+        <ModuleLayout className="custom-class">
+          <div>Content</div>
+        </ModuleLayout>,
+      )
+      expect(document.querySelector('.custom-class')).toBeInTheDocument()
+    })
   })
 
-  it('shows the Getting Started card', () => {
-    render(<App />)
-    expect(screen.getByText(/Getting Started/i)).toBeInTheDocument()
-    expect(screen.getByText(/Customize this module to build your feature/i)).toBeInTheDocument()
+  describe('MainPage', () => {
+    it('renders the page heading', () => {
+      render(
+        <Provider store={createTestStore()}>
+          <MainPage />
+        </Provider>,
+      )
+      expect(screen.getByRole('heading', { name: /Wishlist/i })).toBeInTheDocument()
+    })
+
+    it('shows loading skeleton when loading', () => {
+      render(
+        <Provider store={createTestStore()}>
+          <MainPage />
+        </Provider>,
+      )
+      expect(screen.getByTestId('gallery-skeleton')).toBeInTheDocument()
+    })
   })
 })

@@ -61,6 +61,12 @@ export interface GalleryFilterBarProps {
   /** Whether to show active filters section */
   showActiveFilters?: boolean
 
+  /**
+   * Custom filter UI slot - renders gallery-specific filters (e.g., store tabs, priority filters)
+   * Displayed above the standard search/sort controls.
+   */
+  children?: React.ReactNode
+
   /** Additional CSS classes */
   className?: string
   /** Test ID for testing purposes */
@@ -108,6 +114,7 @@ export const GalleryFilterBar = ({
   sortPlaceholder = 'Sort by',
   onClearAll,
   showActiveFilters = true,
+  children,
   className,
   'data-testid': testId = 'gallery-filter-bar',
 }: GalleryFilterBarProps) => {
@@ -168,6 +175,9 @@ export const GalleryFilterBar = ({
 
   return (
     <div className={cn('space-y-4', className)} data-testid={testId}>
+      {/* Custom Filter UI Slot - gallery-specific filters (e.g., store tabs) */}
+      {children ? <div data-testid={`${testId}-custom-filters`}>{children}</div> : null}
+
       {/* Filter Controls Row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
         {/* Search */}
