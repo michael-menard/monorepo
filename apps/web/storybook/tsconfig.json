@@ -18,7 +18,8 @@
       "@repo/ui": ["../../../packages/core/app-component-library/src"],
       "@repo/app-component-library": ["../../../packages/core/app-component-library/src"],
       "@repo/design-system": ["../../../packages/core/design-system/src"],
-      "@repo/logger": ["../../../packages/core/logger/src"]
+      "@repo/logger": ["../../../packages/core/logger/src"],
+      "@repo/app-wishlist-gallery/*": ["../app-wishlist-gallery/src/*"]
     },
     "baseUrl": "."
   },
