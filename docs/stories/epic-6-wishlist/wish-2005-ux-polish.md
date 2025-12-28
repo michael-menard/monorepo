@@ -4,6 +4,12 @@
 
 Draft
 
+
+## Note: this may not be a ux-polish story as much as it is an update to the existing gallery package.
+- We need to also add the ability to ue custom filters in the gallery via { children } so that any gallery can be filtered. I am not sure how the actual filter works if the column can be any type. it is possible that in all gallery views (gallery grid, card list) except for the table view, we just use full text search filtering. in the databable view me maybe have more sophisticated filtering by dynamic column types? 
+- the sorting should have more than one column sort. for example maybe i want to sort by price ascending, and piece count descending to find the least expensive largets set. or maybe i want to sort by release date and piece count, or year and price. 
+
+
 ## Consolidates
 
 - wish-1002: Wishlist API Endpoints (reorder endpoint)
@@ -34,14 +40,15 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Drag-and-Drop Reorder
 
-1. Items can be dragged to new positions in gallery
-2. Visual feedback during drag (ghost image, drop zone highlight)
-3. Position saved immediately on drop
-4. Undo toast appears after reorder (5-second window)
-5. Keyboard alternative: select item, arrow keys, enter to confirm
-6. Touch support: long-press (300ms) to initiate drag
-7. PATCH /api/wishlist/reorder persists order
-8. Optimistic update for instant feedback
+1. not supported in the datatable view
+2. Items can be dragged to new positions in gallery
+3. Visual feedback during drag (ghost image, drop zone highlight)
+4. Position saved immediately on drop
+5. Undo toast appears after reorder (5-second window)
+6. Keyboard alternative: select item, arrow keys, enter to confirm
+7. Touch support: long-press (300ms) to initiate drag
+8. PATCH /api/wishlist/reorder persists order
+9. Optimistic update for instant feedback
 
 ### Empty States
 

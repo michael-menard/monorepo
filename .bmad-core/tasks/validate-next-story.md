@@ -6,6 +6,16 @@
 
 To comprehensively validate a story draft before implementation begins, ensuring it is complete, accurate, and provides sufficient context for successful development. This task identifies issues and gaps that need to be addressed, preventing hallucinations and ensuring implementation readiness.
 
+## Alternative: Multi-Perspective Review
+
+For a comprehensive review that includes PM (product) and UX (design) perspectives alongside implementation readiness, use the `/review-draft-story` skill instead:
+
+```bash
+/review-draft-story {story_number}
+```
+
+This spawns parallel sub-agents to review from multiple stakeholder perspectives.
+
 ## SEQUENTIAL Task Execution (Do not proceed until current Task is complete)
 
 ### 0. Load Core Configuration and Inputs
