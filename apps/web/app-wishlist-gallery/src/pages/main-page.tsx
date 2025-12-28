@@ -26,6 +26,8 @@ import { WishlistCard } from '../components/WishlistCard'
  */
 const MainPagePropsSchema = z.object({
   className: z.string().optional(),
+  /** Callback when an item is clicked */
+  onItemClick: z.function().args(z.string()).returns(z.void()).optional(),
 })
 
 export type MainPageProps = z.infer<typeof MainPagePropsSchema>
@@ -48,7 +50,7 @@ const wishlistSortOptions = [
 /**
  * Wishlist Gallery Main Page Component
  */
-export function MainPage({ className }: MainPageProps) {
+export function MainPage({ className, onItemClick }: MainPageProps) {
   // Filter state
   const [search, setSearch] = useState('')
   const [selectedStore, setSelectedStore] = useState<string | null>(null)
@@ -124,10 +126,12 @@ export function MainPage({ className }: MainPageProps) {
   }, [])
 
   // Handle card click (navigate to detail page)
-  const handleCardClick = useCallback((itemId: string) => {
-    // TODO: Navigate to detail page when route is set up
-    console.log('Navigate to wishlist item:', itemId)
-  }, [])
+  const handleCardClick = useCallback(
+    (itemId: string) => {
+      onItemClick?.(itemId)
+    },
+    [onItemClick],
+  )
 
   // Loading state
   if (isLoading) {

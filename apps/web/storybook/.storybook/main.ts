@@ -1,4 +1,4 @@
-import { dirname, join, resolve } from 'path'
+import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { StorybookConfig } from '@storybook/react-vite'
 
