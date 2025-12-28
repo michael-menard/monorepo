@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Approved
 
 ## Consolidates
 
@@ -75,7 +75,7 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 3: Create Add Page Route
 
-- [ ] Create `apps/web/main-app/src/routes/wishlist/add.tsx`
+- [ ] Create `apps/web/app-wishlist-gallery/src/routes/add.tsx`
 - [ ] Configure TanStack Router file-based route
 - [ ] Add lazy loading
 - [ ] Header with back navigation
@@ -95,7 +95,7 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 5: Image Upload
 
-- [ ] Create ImageUploadField component
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/ImageUploadField/index.tsx`
 - [ ] Use existing S3 presigned URL infrastructure
 - [ ] Show upload progress
 - [ ] Image preview after upload
@@ -110,6 +110,18 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 - [ ] Handle validation errors inline
 - [ ] Success toast and redirect to /wishlist
 - [ ] Error toast on failure
+
+### Task 7: Storybook Stories
+
+- [ ] Create `apps/web/app-wishlist-gallery/src/components/ImageUploadField/__stories__/ImageUploadField.stories.tsx`
+  - [ ] Default empty state
+  - [ ] With preview image
+  - [ ] Upload in progress state
+  - [ ] Error state
+- [ ] Create `apps/web/app-wishlist-gallery/src/routes/__stories__/AddItemPage.stories.tsx`
+  - [ ] Empty form
+  - [ ] Form with validation errors
+  - [ ] Form submitting state
 
 ## Dev Notes
 
@@ -175,7 +187,7 @@ export const { useAddToWishlistMutation } = wishlistApi
 ### Add Page Component
 
 ```typescript
-// routes/wishlist/add.tsx
+// apps/web/app-wishlist-gallery/src/routes/add.tsx
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -486,7 +498,7 @@ function AddWishlistItemPage() {
 ### ImageUploadField Component
 
 ```typescript
-// routes/wishlist/-components/ImageUploadField.tsx
+// apps/web/app-wishlist-gallery/src/components/ImageUploadField/index.tsx
 import { useRef } from 'react'
 import { Button } from '@repo/ui'
 import { Upload, X } from 'lucide-react'
@@ -569,11 +581,16 @@ export async function uploadImageToS3(file: File): Promise<string> {
 ### Route Structure
 
 ```
-apps/web/main-app/src/routes/
-  wishlist/
-    add.tsx                  # Add page
-    -components/
-      ImageUploadField.tsx   # Reusable image upload
+apps/web/app-wishlist-gallery/src/
+  routes/
+    add.tsx                     # Add page
+  components/
+    ImageUploadField/
+      index.tsx                 # Reusable image upload
+      __tests__/
+        ImageUploadField.test.tsx
+      __stories__/
+        ImageUploadField.stories.tsx
 ```
 
 ## Testing
@@ -602,13 +619,25 @@ apps/web/main-app/src/routes/
 - [ ] New item appears in gallery after redirect
 - [ ] Error toast shows on API failure
 
+### Playwright E2E Tests (Mocked APIs)
+
+- [ ] Create `apps/web/playwright/e2e/wishlist/add-item.spec.ts`
+- [ ] Happy path: Fill form and submit successfully
+- [ ] Validation: Required field errors display
+- [ ] Image upload: Preview displays after file selection
+- [ ] API error: Toast displays on submission failure
+- [ ] Navigation: Cancel returns to gallery
+- [ ] Navigation: Success redirects to gallery with new item
+
 ## Definition of Done
 
 - [ ] POST endpoint creates items correctly
 - [ ] Form validates all inputs
 - [ ] Image upload works with S3
 - [ ] RTK Query cache invalidates on success
-- [ ] All tests pass
+- [ ] All unit/component tests pass
+- [ ] Storybook stories created for custom components
+- [ ] Playwright E2E tests pass with mocked APIs
 - [ ] Code reviewed
 
 ## Change Log
