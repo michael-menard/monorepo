@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   useReactTable,
   getCoreRowModel,
@@ -133,6 +134,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   persistColumnOrder = true,
 }: GalleryDataTableProps<TItem>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFilter<TItem>[]>([])
+  const shouldReduceMotion = useReducedMotion()
 
   // Check if columns are legacy format or TanStack format
   const isLegacyColumns = (
@@ -447,12 +449,24 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
         <GalleryDataTableSkeleton columns={colCount} rows={10} />
       ) : showError ? (
         <div className="w-full">
-          <GalleryTableError
-            error={error as Error}
-            onRetry={onRetry}
-            isRetrying={isRetrying}
-            className="min-h-[320px]"
-          />
+          <motion.div
+            initial={{ opacity: 0, x: 0 }}
+            animate={{
+              opacity: 1,
+              x: shouldReduceMotion ? 0 : [0, -10, 10, -10, 10, 0],
+            }}
+            transition={{
+              opacity: { duration: 0.15 },
+              x: { duration: 0.3, times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+            }}
+          >
+            <GalleryTableError
+              error={error as Error}
+              onRetry={onRetry}
+              isRetrying={isRetrying}
+              className="min-h-[320px]"
+            />
+          </motion.div>
         </div>
       ) : (
         <Table
@@ -473,7 +487,10 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
                   {table.getHeaderGroups().map(headerGroup => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map(header => (
-                        <TableHead key={header.id} className="border-b border-border bg-muted/40">
+                        <TableHead
+                          key={header.id}
+                          className="border-b border-border bg-muted/40 motion-safe:transition-all motion-safe:duration-100 motion-safe:hover:-translate-y-[1px] motion-safe:hover:shadow-sm"
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(header.column.columnDef.header, header.getContext())}
@@ -487,7 +504,10 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
               table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
-                    <TableHead key={header.id} className="border-b border-border bg-muted/40">
+                    <TableHead
+                      key={header.id}
+                      className="border-b border-border bg-muted/40 motion-safe:transition-all motion-safe:duration-100 motion-safe:hover:-translate-y-[1px] motion-safe:hover:shadow-sm"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -501,30 +521,45 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
             {rowCount === 0 && (
               <TableRow>
                 <TableCell colSpan={colCount} className="px-4 py-6">
-                  <GalleryTableEmpty
-                    variant={emptyVariant}
-                    onAddItem={!hasActiveFilters ? onAddItem : undefined}
-                    onClearFilters={hasActiveFilters ? onClearFilters : undefined}
-                  />
+                  <motion.div
+                    initial={shouldReduceMotion ? undefined : { opacity: 0, y: 20 }}
+                    animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
+                    <GalleryTableEmpty
+                      variant={emptyVariant}
+                      onAddItem={!hasActiveFilters ? onAddItem : undefined}
+                      onClearFilters={hasActiveFilters ? onClearFilters : undefined}
+                    />
+                  </motion.div>
                 </TableCell>
               </TableRow>
             )}
 
             {rowCount > 0 &&
-              table.getRowModel().rows.map(row => (
-                <TableRow
+              table.getRowModel().rows.map((row, index) => (
+                <motion.tr
                   key={row.id}
                   tabIndex={0}
-                  className="hover:bg-accent/5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors min-h-[44px]"
+                  initial={shouldReduceMotion ? undefined : { opacity: 0, y: 10 }}
+                  animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.2,
+                    delay: shouldReduceMotion ? 0 : Math.min(index * 0.05, 0.5),
+                    ease: 'easeOut',
+                  }}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                  className="border-b transition-colors duration-100 hover:bg-accent/10 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background min-h-[44px]"
                   onClick={() => onRowClick?.(row.original)}
                   onKeyDown={event => handleRowKeyDown(event, row.original)}
+                  style={{ willChange: 'transform' }}
                 >
                   {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className="align-middle">
+                    <TableCell key={cell.id} className="align-middle px-4 py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
-                </TableRow>
+                </motion.tr>
               ))}
           </TableBody>
         </Table>
