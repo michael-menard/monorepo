@@ -29,6 +29,8 @@
     "test:msw": "vitest run --config vitest.config.msw.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "5.2.2",
+    "@reduxjs/toolkit": "^2.8.2",
     "@repo/accessibility": "workspace:*",
     "@repo/api-client": "workspace:*",
     "@repo/app-component-library": "workspace:*",
@@ -37,6 +39,8 @@
     "@repo/gallery": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/mock-data": "workspace:*",
+    "@repo/upload-types": "workspace:*",
+    "@repo/upload-client": "workspace:*",
     "@tanstack/react-router": "^1.130.2",
     "@tanstack/react-router-devtools": "^1.130.2",
     "class-variance-authority": "^0.7.1",
@@ -45,6 +49,8 @@
     "lucide-react": "^0.476.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "7.66.1",
+    "react-redux": "^9.2.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^4.1.11",
     "tailwindcss-animate": "^1.0.7",

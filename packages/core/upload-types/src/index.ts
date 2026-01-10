@@ -46,3 +46,27 @@ export {
 
 // Slug utilities
 export { SlugSchema, type Slug, slugify, slugWithSuffix, findAvailableSlug } from './slug'
+
+// Edit MOC types
+export {
+  LEGO_THEMES,
+  type LegoTheme,
+  MocStatusSchema,
+  type MocStatus,
+  MocFileCategorySchema,
+  type MocFileCategory,
+  MocFileItemSchema,
+  type MocFileItem,
+  MocForEditResponseSchema,
+  type MocForEditResponse,
+  TagSchema,
+  EditSlugSchema,
+  EditMocFormSchema,
+  type EditMocFormInput,
+  EditMocRequestSchema,
+  type EditMocRequest,
+  SlugAvailabilityResponseSchema,
+  type SlugAvailabilityResponse,
+  hasFormChanges,
+  toFormValues,
+} from './edit'
