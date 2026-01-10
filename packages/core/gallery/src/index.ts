@@ -120,6 +120,8 @@ export {
   type GalleryDataTableProps,
   type GalleryDataTableColumn,
 } from './components/GalleryDataTable'
+export { SortableHeader } from './components/SortableHeader'
+export { useSortFromURL } from './hooks/useSortFromURL'
 
 // Utils
 export {

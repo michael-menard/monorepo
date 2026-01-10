@@ -2,9 +2,11 @@ import React, { type ReactNode } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
   flexRender,
   createColumnHelper,
   type ColumnDef,
+  type SortingState,
 } from '@tanstack/react-table'
 import { Loader2 } from 'lucide-react'
 import {
@@ -23,6 +25,8 @@ import { ColumnFilterInput } from './ColumnFilterInput'
 import { GalleryDataTableSkeleton } from './GalleryDataTableSkeleton'
 import { GalleryTableEmpty } from './GalleryTableEmpty'
 import { GalleryTableError } from './GalleryTableError'
+import { SortableHeader } from './SortableHeader'
+import { useSortFromURL } from '../hooks/useSortFromURL'
 
 export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
   field: keyof TItem
@@ -33,6 +37,8 @@ export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
   className?: string
   /** Optional column width (TanStack size, e.g. 400 for 40% of 1000) */
   size?: number
+  /** Whether this column can be sorted (defaults to true) */
+  enableSorting?: boolean
 }
 
 export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
@@ -68,6 +74,14 @@ export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
   onRetry?: () => void
   /** Whether a retry is currently in progress */
   isRetrying?: boolean
+  /** Whether to enable sorting for the table (defaults to true) */
+  enableSorting?: boolean
+  /** Whether to persist sort state in URL (defaults to true when enableSorting is true) */
+  persistSortInUrl?: boolean
+  /** Whether to enable multi-column sorting (defaults to false) */
+  enableMultiSort?: boolean
+  /** Maximum number of columns that can be sorted simultaneously (defaults to 2) */
+  maxMultiSortColCount?: number
 }
 
 export function GalleryDataTable<TItem extends Record<string, unknown>>({
@@ -87,8 +101,28 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   error,
   onRetry,
   isRetrying = false,
+  enableSorting = true,
+  persistSortInUrl = true,
+  enableMultiSort = false,
+  maxMultiSortColCount = 2,
 }: GalleryDataTableProps<TItem>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFilter<TItem>[]>([])
+  
+  // Sorting state management
+  const urlSortHook = React.useMemo(() => {
+    if (persistSortInUrl && enableSorting) {
+      // We can't conditionally call hooks, but we can conditionally use their results
+      return { useUrl: true }
+    }
+    return { useUrl: false }
+  }, [persistSortInUrl, enableSorting])
+  
+  // Always call the hook but only use it if needed
+  const [sortingFromUrl, setSortingFromUrl] = useSortFromURL(maxMultiSortColCount)
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
+  
+  const sorting = urlSortHook.useUrl ? sortingFromUrl : internalSorting
+  const setSorting = urlSortHook.useUrl ? setSortingFromUrl : setInternalSorting
 
   // Apply column filters before passing data to TanStack Table
   const filteredItems = useColumnFilters(items, columnFilters)
@@ -121,13 +155,15 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   const tanstackColumns = React.useMemo<ColumnDef<TItem, unknown>[]>(
     () =>
       columns.map(col =>
-        columnHelper.accessor(col.field as string & keyof TItem, {
-          header: () => {
+        columnHelper.accessor(row => row[col.field], {
+          id: col.field as string,
+          header: ({ column }) => {
             const filterable = getFilterableColumn(col.field)
             const currentFilter = columnFilters.find(f => f.field === col.field)
-
-            return (
-              <div className="flex items-center gap-2 px-4 py-3">
+            
+            // For sortable columns, use SortableHeader wrapper
+            const headerContent = (
+              <>
                 <span className="font-semibold text-sm">{col.header}</span>
                 {filterable ? (
                   <ColumnFilterInput<TItem>
@@ -139,6 +175,21 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
                     operators={filterable.operators ?? []}
                   />
                 ) : null}
+              </>
+            )
+
+            return enableSorting && col.enableSorting !== false ? (
+              <SortableHeader 
+                column={column} 
+                className="px-4 py-3"
+                enableMultiSort={enableMultiSort}
+                maxMultiSortColCount={maxMultiSortColCount}
+              >
+                {headerContent}
+              </SortableHeader>
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-3">
+                {headerContent}
               </div>
             )
           },
@@ -153,16 +204,37 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
             )
           },
           size: col.size,
+          enableSorting: enableSorting && col.enableSorting !== false,
         }),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columns, filterableColumns, columnFilters],
+    [columns, filterableColumns, columnFilters, enableSorting],
   )
 
   const table = useReactTable<TItem>({
     data: filteredItems,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
+    state: {
+      ...(enableSorting && { sorting }),
+    },
+    ...(enableSorting && {
+      onSortingChange: setSorting,
+      enableSortingRemoval: true, // Allow toggling back to unsorted
+      enableMultiSort: enableMultiSort,
+      maxMultiSortColCount: maxMultiSortColCount,
+      isMultiSortEvent: (e: unknown) => {
+        // Type guard for mouse and keyboard events
+        if (!enableMultiSort) return false
+        if (typeof e === 'object' && e !== null) {
+          if ('shiftKey' in e) {
+            return (e as React.MouseEvent | React.KeyboardEvent).shiftKey
+          }
+        }
+        return false
+      },
+    }),
   })
 
   // Infinite scroll sentinel (only when onLoadMore/hasMore provided)
@@ -205,6 +277,31 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   const emptyVariant = hasActiveFilters ? 'no-results' : 'no-items'
 
   const showError = Boolean(error)
+
+  // Generate screen reader announcement for sorting
+  const sortAnnouncement = React.useMemo(() => {
+    if (!enableSorting || sorting.length === 0) return 'Sorting cleared'
+    
+    if (sorting.length === 1) {
+      const sort = sorting[0]
+      const column = columns.find(col => col.field === sort.id)
+      if (!column) return ''
+      return `Sorted by ${column.header}, ${sort.desc ? 'descending' : 'ascending'}`
+    }
+    
+    if (sorting.length === 2) {
+      const [primary, secondary] = sorting
+      const primaryCol = columns.find(col => col.field === primary.id)
+      const secondaryCol = columns.find(col => col.field === secondary.id)
+      if (!primaryCol || !secondaryCol) return ''
+      return (
+        `Sorted by ${primaryCol.header} ${primary.desc ? 'descending' : 'ascending'}, ` +
+        `then ${secondaryCol.header} ${secondary.desc ? 'descending' : 'ascending'}`
+      )
+    }
+    
+    return ''
+  }, [sorting, columns, enableSorting])
 
   return (
     <div className={cn('hidden md:block w-full', className)}>
@@ -283,6 +380,13 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         </div>
       ) : null}
+      
+      {/* Screen reader announcements for sorting */}
+      {enableSorting && (
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {sortAnnouncement}
+        </div>
+      )}
     </div>
   )
 }
