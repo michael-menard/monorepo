@@ -52,6 +52,20 @@ Full-spectrum story review using parallel specialist sub-agents BEFORE implement
 
 ---
 
+## Context Optimization Strategy
+
+**To minimize context consumption:**
+
+1. **Don't load epic/architecture content into parent** - only get file paths
+2. **Pass file paths to sub-agents** - let them read files directly
+3. **Use concise YAML output** - only report issues, not all sections
+4. **SM checklist: reference file** - don't duplicate all items in prompt
+5. **Use Haiku for sub-agents** - faster and cheaper
+
+**Impact:** Reduces parent context by 60-80% for stories with large epic/architecture docs.
+
+---
+
 ## Phase 0: Initialize & Gather Context
 
 ```
@@ -66,19 +80,21 @@ TodoWrite([
 
 **Gather context:**
 1. Load `.bmad-core/core-config.yaml` for story locations and patterns
-2. Locate and read the story file:
+2. Locate the story file path:
    - If number provided: Search in `docs/stories/` for matching file
-   - If path provided: Read directly
-3. Extract from story:
+   - If path provided: Use directly
+3. Read story file and extract:
    - Title and description
    - Acceptance criteria
    - Tasks/subtasks
    - Dev Notes section
    - Testing section
-   - Referenced files/architecture
-4. Load parent epic if referenced
-5. Load architecture docs if referenced in story
+   - Referenced files/architecture paths (just paths, not content)
+4. Get parent epic FILE PATH if referenced (don't read content)
+5. Get architecture doc FILE PATHS if referenced (don't read content)
 6. Determine if story has UI components (affects UX review)
+
+**OPTIMIZATION: Don't load epic/architecture content into parent context - pass file paths to sub-agents**
 
 **Skip Logic:**
 - Skip UX review if story has no UI components (API-only, backend, migrations)
@@ -101,7 +117,9 @@ Task(
   prompt: "You are John, an experienced Product Manager reviewing a story draft.
 
            Story file path: {STORY_FILE_PATH}
-           Epic context: {EPIC_CONTENT or 'Not provided'}
+           Epic file path: {EPIC_FILE_PATH or 'Not provided'}
+
+           IMPORTANT: Read the story file. If epic path provided, read it for context.
 
            Review the story from a PRODUCT perspective:
 
@@ -135,43 +153,22 @@ Task(
               - Are there business/compliance considerations?
               - Is there fallback behavior defined?
 
-           Output format:
+           Output format (ONLY include sections with issues):
            ```yaml
            pm_review:
              overall_assessment: READY|NEEDS_WORK|BLOCKED
              confidence: high|medium|low
 
-             requirements_clarity:
-               status: PASS|PARTIAL|FAIL
-               issues:
-                 - issue: 'Description'
-                   severity: low|medium|high
-                   suggestion: 'How to fix'
+             issues:
+               - category: requirements_clarity|scope|user_value|acceptance_criteria|dependencies|risks
+                 severity: blocking|should_fix|note
+                 issue: 'Clear description'
+                 suggestion: 'How to fix'
 
-             scope_appropriateness:
-               status: PASS|PARTIAL|FAIL
-               issues: []
+             summary: 'Brief 1-2 sentence assessment'
+           ```
 
-             user_value:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             acceptance_criteria:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             dependencies:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             risks:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             top_recommendations:
-               - 'Most important fix or improvement'
-               - 'Second priority'
-           ```"
+           NOTE: Only list actual issues. Omit categories with no concerns."
 )
 ```
 
@@ -186,7 +183,9 @@ Task(
   prompt: "You are Sally, an experienced UX Expert reviewing a story draft.
 
            Story file path: {STORY_FILE_PATH}
-           Architecture context: {ARCHITECTURE_CONTENT or 'Not provided'}
+           Architecture file paths: {ARCHITECTURE_FILE_PATHS or 'Not provided'}
+
+           IMPORTANT: Read the story file. If architecture paths provided, read them for context.
 
            Review the story from a UX/UI perspective:
 
@@ -226,51 +225,23 @@ Task(
               - Are new components clearly specified?
               - Is design system alignment mentioned?
 
-           Output format:
+           Output format (ONLY include sections with issues):
            ```yaml
            ux_review:
              overall_assessment: READY|NEEDS_WORK|BLOCKED
              confidence: high|medium|low
              ui_complexity: low|medium|high
 
-             user_flow:
-               status: PASS|PARTIAL|FAIL
-               issues:
-                 - issue: 'Description'
-                   severity: low|medium|high
-                   suggestion: 'How to fix'
+             issues:
+               - category: user_flow|interaction|visual|states|accessibility|responsive|components
+                 severity: blocking|should_fix|note
+                 issue: 'Clear description'
+                 suggestion: 'How to fix'
 
-             interaction_design:
-               status: PASS|PARTIAL|FAIL
-               issues: []
+             summary: 'Brief 1-2 sentence assessment'
+           ```
 
-             visual_specs:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             state_handling:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             accessibility:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             responsive:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             component_reuse:
-               status: PASS|PARTIAL|FAIL
-               issues: []
-
-             top_recommendations:
-               - 'Most important UX improvement'
-               - 'Second priority'
-
-             suggested_wireframe_notes: |
-               Brief description of key UI elements needed
-           ```"
+           NOTE: Only list actual issues. Omit categories with no concerns."
 )
 ```
 
@@ -287,125 +258,35 @@ Task(
   prompt: "You are Bob, a Scrum Master executing the Story Draft Checklist.
 
            Story file path: {STORY_FILE_PATH}
-           Checklist path: .bmad-core/checklists/story-draft-checklist.md
+           Checklist file path: .bmad-core/checklists/story-draft-checklist.md
 
-           IMPORTANT: Read both the story file AND the checklist file. Execute each
-           checklist item systematically.
+           IMPORTANT:
+           1. Read the story file
+           2. Read the checklist file
+           3. Execute each checklist item systematically
+           4. For each item, mark: [x] PASS, [~] PARTIAL, [ ] FAIL
+           5. Identify blocking vs should_fix vs note issues
 
-           Execute each section of the Story Draft Checklist:
-
-           ## 1. GOAL & CONTEXT CLARITY
-           Evaluate each checkbox:
-           - [ ] Story goal/purpose is clearly stated
-           - [ ] Relationship to epic goals is evident
-           - [ ] How the story fits into overall system flow is explained
-           - [ ] Dependencies on previous stories are identified (if applicable)
-           - [ ] Business context and value are clear
-
-           ## 2. TECHNICAL IMPLEMENTATION GUIDANCE
-           Evaluate each checkbox:
-           - [ ] Key files to create/modify are identified (not necessarily exhaustive)
-           - [ ] Technologies specifically needed for this story are mentioned
-           - [ ] Critical APIs or interfaces are sufficiently described
-           - [ ] Necessary data models or structures are referenced
-           - [ ] Required environment variables are listed (if applicable)
-           - [ ] Any exceptions to standard coding patterns are noted
-
-           ## 3. REFERENCE EFFECTIVENESS
-           Evaluate each checkbox:
-           - [ ] References to external documents point to specific relevant sections
-           - [ ] Critical information from previous stories is summarized (not just referenced)
-           - [ ] Context is provided for why references are relevant
-           - [ ] References use consistent format (e.g., docs/filename.md#section)
-
-           ## 4. SELF-CONTAINMENT ASSESSMENT
-           Evaluate each checkbox:
-           - [ ] Core information needed is included (not overly reliant on external docs)
-           - [ ] Implicit assumptions are made explicit
-           - [ ] Domain-specific terms or concepts are explained
-           - [ ] Edge cases or error scenarios are addressed
-
-           ## 5. TESTING GUIDANCE
-           Evaluate each checkbox:
-           - [ ] Required testing approach is outlined
-           - [ ] Key test scenarios are identified
-           - [ ] Success criteria are defined
-           - [ ] Special testing considerations are noted (if applicable)
-
-           For each checkbox, mark: [x] PASS, [~] PARTIAL, [ ] FAIL
-
-           Output format:
+           Output format (ONLY include actual issues):
            ```yaml
            sm_review:
              overall_assessment: READY|NEEDS_REVISION|BLOCKED
              clarity_score: 1-10
+             could_implement: true|false
 
-             checklist_results:
-               goal_context_clarity:
-                 status: PASS|PARTIAL|FAIL
-                 items:
-                   - item: 'Story goal/purpose is clearly stated'
-                     status: PASS|PARTIAL|FAIL
-                     note: 'Optional note if issue found'
-                 issues: []
+             issues:
+               - category: goal_clarity|technical_guidance|references|self_containment|testing
+                 severity: blocking|should_fix|note
+                 issue: 'Clear description of what''s missing or unclear'
+                 suggestion: 'How to fix'
 
-               technical_guidance:
-                 status: PASS|PARTIAL|FAIL
-                 items:
-                   - item: 'Key files to create/modify are identified'
-                     status: PASS|PARTIAL|FAIL
-                     note: ''
-                 issues: []
+             developer_questions:
+               - 'Question a dev would have'
 
-               reference_effectiveness:
-                 status: PASS|PARTIAL|FAIL
-                 items: []
-                 issues: []
+             summary: 'Brief 1-2 sentence assessment from dev perspective'
+           ```
 
-               self_containment:
-                 status: PASS|PARTIAL|FAIL
-                 items: []
-                 issues: []
-
-               testing_guidance:
-                 status: PASS|PARTIAL|FAIL
-                 items: []
-                 issues: []
-
-             validation_table:
-               - category: '1. Goal & Context Clarity'
-                 status: PASS|PARTIAL|FAIL
-                 issues: 'Brief description or empty'
-               - category: '2. Technical Implementation Guidance'
-                 status: PASS|PARTIAL|FAIL
-                 issues: ''
-               - category: '3. Reference Effectiveness'
-                 status: PASS|PARTIAL|FAIL
-                 issues: ''
-               - category: '4. Self-Containment Assessment'
-                 status: PASS|PARTIAL|FAIL
-                 issues: ''
-               - category: '5. Testing Guidance'
-                 status: PASS|PARTIAL|FAIL
-                 issues: ''
-
-             developer_perspective:
-               could_implement: true|false
-               questions:
-                 - 'Question a dev would have'
-               delay_risks:
-                 - 'What might cause rework'
-
-             blocking_issues:
-               - 'Critical issue that blocks implementation'
-
-             should_fix_issues:
-               - 'Important but not blocking'
-
-             top_recommendations:
-               - 'Most important fix'
-               - 'Second priority'
-           ```"
+           NOTE: Only list actual issues. If everything passes, issues array should be empty."
 )
 ```
 
@@ -427,7 +308,7 @@ results = {
 
 ## Phase 3: Synthesize Concerns
 
-**Parent QA agent extracts and synthesizes all sub-agent findings into a unified concerns list:**
+**Parent orchestrator extracts and synthesizes all sub-agent findings into a unified concerns list:**
 
 ```yaml
 concerns:
@@ -444,12 +325,21 @@ concerns:
 - **should_fix**: Important issue that should be addressed
 - **note**: Minor observation, nice-to-have improvement
 
-**Synthesis Rules:**
+**Synthesis Rules (MUCH SIMPLER NOW):**
 1. Parse YAML output from each sub-agent
-2. Extract all issues with severity >= should_fix as concerns
-3. Deduplicate similar concerns (keep highest severity)
-4. Assign sequential IDs
-5. Sort by severity (blocking → should_fix → note)
+2. Concatenate all `issues` arrays from PM, UX, and SM
+3. Add sequential IDs and source labels
+4. Sort by severity (blocking → should_fix → note)
+5. Deduplicate if needed (keep highest severity)
+
+**Example:**
+```python
+all_issues = pm_review.issues + ux_review.issues + sm_review.issues
+concerns = [
+  {id: i+1, source: issue.source, **issue}
+  for i, issue in enumerate(sorted(all_issues, key=lambda x: severity_rank[x.severity]))
+]
+```
 
 ---
 

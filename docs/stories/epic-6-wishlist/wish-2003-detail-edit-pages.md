@@ -2,7 +2,12 @@
 
 ## Status
 
-Approved
+Done
+
+## Merged PR
+
+- **PR #350**: feat(wishlist): implement Detail & Edit pages (wish-2003)
+- **Merged**: 2025-12-28
 
 ## Consolidates
 

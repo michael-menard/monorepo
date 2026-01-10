@@ -53,6 +53,10 @@ export type { GalleryNoResultsProps } from './components/GalleryNoResults'
 export { GallerySkeleton } from './components/GallerySkeleton'
 export type { GallerySkeletonProps } from './components/GallerySkeleton'
 
+// Contexts
+export { FilterProvider, useFilterContext } from './contexts/FilterContext'
+export type { FilterContextValue } from './contexts/FilterContext'
+
 // Hooks
 export { useInfiniteScroll } from './hooks/useInfiniteScroll'
 export type { UseInfiniteScrollOptions, UseInfiniteScrollReturn } from './hooks/useInfiniteScroll'
@@ -87,6 +91,18 @@ export type {
   GalleryResponse,
   GallerySearchParams,
 } from './types'
+
+// Column filtering (datatable)
+export type {
+  FilterOperator,
+  ColumnFilter,
+  ColumnType,
+  FilterableColumn,
+} from './__types__/columnFilter'
+
+export { useColumnFilters } from './hooks/useColumnFilters'
+export { ColumnFilterInput } from './components/ColumnFilterInput'
+export { GalleryDataTable } from './components/GalleryDataTable'
 
 // Zod Schemas (for runtime validation)
 export {

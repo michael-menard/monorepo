@@ -4,11 +4,18 @@
 
 Draft
 
+## Scope Note
 
-## Note: this may not be a ux-polish story as much as it is an update to the existing gallery package.
-- We need to also add the ability to ue custom filters in the gallery via { children } so that any gallery can be filtered. I am not sure how the actual filter works if the column can be any type. it is possible that in all gallery views (gallery grid, card list) except for the table view, we just use full text search filtering. in the databable view me maybe have more sophisticated filtering by dynamic column types? 
-- the sorting should have more than one column sort. for example maybe i want to sort by price ascending, and piece count descending to find the least expensive largets set. or maybe i want to sort by release date and piece count, or year and price. 
+This story focuses on **wishlist-specific** UX polish features:
+- Drag-and-drop priority reordering for wishlist items
+- Empty state messaging tailored to wishlist scenarios
+- Loading/error states for wishlist pages
 
+**General gallery package enhancements have been moved to separate stories:**
+- **glry-1001**: Custom filters via children prop (supports domain-specific filters in all galleries)
+- **glry-1002**: Multi-column sorting (advanced sorting across all galleries)
+
+These gallery stories will benefit all galleries (wishlist, instructions, sets, inspiration) and should be implemented before or alongside this story for maximum reusability.
 
 ## Consolidates
 
@@ -35,6 +42,10 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 - **wish-2002**: Add Item Flow (empty state CTA)
 - **wish-2003**: Detail & Edit Pages
 - **wish-2004**: Modals & Transitions
+
+**Optional (for enhanced UX):**
+- **glry-1001**: Custom Filters (enables wishlist-specific filtering UI)
+- **glry-1002**: Multi-Column Sort (enables advanced sort combinations)
 
 ## Acceptance Criteria
 
@@ -599,3 +610,4 @@ apps/api/endpoints/wishlist/
 | ---------- | ------- | ------------------------------------------------------ | -------- |
 | 2025-12-27 | 0.1     | Initial draft                                          | SM Agent |
 | 2025-12-27 | 0.2     | Consolidated from wish-1002 (reorder), wish-1010, 1011 | Claude   |
+| 2025-12-28 | 0.3     | Scope clarified: moved gallery enhancements to glry-1001, glry-1002 | SM Agent |

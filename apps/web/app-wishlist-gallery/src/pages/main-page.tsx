@@ -15,6 +15,8 @@ import {
   GalleryPagination,
   GalleryEmptyState,
   GallerySkeleton,
+  FilterProvider,
+  useFilterContext,
 } from '@repo/gallery'
 import { Tabs, TabsList, TabsTrigger } from '@repo/app-component-library'
 import { Heart } from 'lucide-react'
@@ -46,15 +48,24 @@ const wishlistSortOptions = [
 ]
 
 /**
- * Wishlist Gallery Main Page Component
+ * Wishlist filter shape for FilterProvider
  */
-export function MainPage({ className }: MainPageProps) {
-  // Filter state
-  const [search, setSearch] = useState('')
-  const [selectedStore, setSelectedStore] = useState<string | null>(null)
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [sortValue, setSortValue] = useState('sortOrder-asc')
-  const [page, setPage] = useState(1)
+interface WishlistFilters {
+  search: string
+  store: string | null
+  tags: string[]
+  sort: string
+  page: number
+}
+
+function WishlistMainPageContent({ className }: MainPageProps) {
+  const { filters, updateFilter, clearFilters } = useFilterContext<WishlistFilters>()
+
+  const search = filters.search
+  const selectedStore = filters.store
+  const selectedTags = filters.tags
+  const sortValue = filters.sort
+  const page = filters.page
 
   // Parse sort value
   const [sortField, sortOrder] = sortValue.split('-') as [string, 'asc' | 'desc']
@@ -79,49 +90,60 @@ export function MainPage({ className }: MainPageProps) {
   const items = wishlistData?.items ?? []
   const pagination = wishlistData?.pagination
   const counts = wishlistData?.counts
-  const filters = wishlistData?.filters
+  const availableFilters = wishlistData?.filters
 
   // Store tabs content
-  const stores = filters?.availableStores ?? []
+  const stores = availableFilters?.availableStores ?? []
   const storeCounts = counts?.byStore ?? {}
 
   // Handle search
-  const handleSearch = useCallback((value: string) => {
-    setSearch(value)
-    setPage(1) // Reset to first page on search
-  }, [])
+  const handleSearch = useCallback(
+    (value: string) => {
+      updateFilter('search', value)
+      updateFilter('page', 1)
+    },
+    [updateFilter],
+  )
 
   // Handle store filter
-  const handleStoreChange = useCallback((store: string | null) => {
-    setSelectedStore(store)
-    setPage(1)
-  }, [])
+  const handleStoreChange = useCallback(
+    (store: string | null) => {
+      updateFilter('store', store)
+      updateFilter('page', 1)
+    },
+    [updateFilter],
+  )
 
   // Handle tag filter
-  const handleTagsChange = useCallback((tags: string[]) => {
-    setSelectedTags(tags)
-    setPage(1)
-  }, [])
+  const handleTagsChange = useCallback(
+    (tags: string[]) => {
+      updateFilter('tags', tags)
+      updateFilter('page', 1)
+    },
+    [updateFilter],
+  )
 
   // Handle sort
-  const handleSortChange = useCallback((value: string) => {
-    setSortValue(value)
-    setPage(1)
-  }, [])
+  const handleSortChange = useCallback(
+    (value: string) => {
+      updateFilter('sort', value)
+      updateFilter('page', 1)
+    },
+    [updateFilter],
+  )
 
   // Handle page change
-  const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage)
-  }, [])
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      updateFilter('page', newPage)
+    },
+    [updateFilter],
+  )
 
   // Clear all filters
   const handleClearFilters = useCallback(() => {
-    setSearch('')
-    setSelectedStore(null)
-    setSelectedTags([])
-    setSortValue('sortOrder-asc')
-    setPage(1)
-  }, [])
+    clearFilters()
+  }, [clearFilters])
 
   // Handle card click (navigate to detail page)
   const handleCardClick = useCallback((itemId: string) => {
@@ -197,10 +219,10 @@ export function MainPage({ className }: MainPageProps) {
         {/* Filter Bar with Store Tabs */}
         <GalleryFilterBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={handleSearch}
           onSearch={handleSearch}
           searchPlaceholder="Search wishlist..."
-          tags={filters?.availableTags ?? []}
+          tags={availableFilters?.availableTags ?? []}
           selectedTags={selectedTags}
           onTagsChange={handleTagsChange}
           tagsPlaceholder="Filter by tags"
@@ -269,6 +291,22 @@ export function MainPage({ className }: MainPageProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+export function MainPage({ className }: MainPageProps) {
+  return (
+    <FilterProvider<WishlistFilters>
+      initialFilters={{
+        search: '',
+        store: null,
+        tags: [],
+        sort: 'sortOrder-asc',
+        page: 1,
+      }}
+    >
+      <WishlistMainPageContent className={className} />
+    </FilterProvider>
   )
 }
 

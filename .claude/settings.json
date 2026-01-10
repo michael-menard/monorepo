@@ -1,36 +1,37 @@
 {
-  "allow": [
-    "Read(./**)",
-    "Write(./**)",
-    "Edit(./**)",
-    "WebSearch",
-    "WebFetch(*)",
-    "Bash(*)",
-    "mcp__github__*",
-    "mcp__chrome-devtools__*"
-  ],
+  "permissions": {
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "WebSearch",
+      "WebFetch(domain:*)",
+      "Bash",
+      "mcp__github__*",
+      "mcp__chrome-devtools__*"
+    ],
 
-  "ask": [
-    "Bash(git reset --hard*)",
-    "Bash(git push --force*)",
-    "Bash(git push -f*)",
-    "Bash(git clean*)",
-    "Bash(git rebase*)",
-    "Bash(rm -rf*)",
-    "Bash(rm *)",
-    "Bash(npx drizzle-kit push*)",
-    "Bash(npx drizzle-kit migrate*)",
-    "Bash(npx drizzle-kit drop*)",
-    "Bash(npx drizzle-kit generate*)",
-    "Bash(sst deploy*)",
-    "Bash(sst remove*)",
-    "Bash(aws *)"
-  ],
+    "ask": [
+      "Bash(git reset --hard:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git clean:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rm :*)",
+      "Bash(npx drizzle-kit push:*)",
+      "Bash(npx drizzle-kit migrate:*)",
+      "Bash(npx drizzle-kit drop:*)",
+      "Bash(npx drizzle-kit generate:*)",
+      "Bash(sst deploy:*)",
+      "Bash(sst remove:*)",
+      "Bash(aws :*)"
+    ],
 
-  "deny": [
-    "Write(./node_modules/**)",
-    "Edit(./node_modules/**)",
-    "Write(./.git/**)",
-    "Edit(./.git/**)"
-  ]
+    "deny": [
+      "Write(./node_modules/**)",
+      "Edit(./node_modules/**)",
+      "Write(./.git/**)",
+      "Edit(./.git/**)"
+    ]
+  }
 }
