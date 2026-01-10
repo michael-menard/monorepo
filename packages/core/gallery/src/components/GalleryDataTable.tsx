@@ -21,6 +21,7 @@ import { useColumnFilters } from '../hooks/useColumnFilters'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
 import { ColumnFilterInput } from './ColumnFilterInput'
 import { GalleryDataTableSkeleton } from './GalleryDataTableSkeleton'
+import { GalleryTableEmpty } from './GalleryTableEmpty'
 
 export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
   field: keyof TItem
@@ -54,6 +55,12 @@ export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
   className?: string
   /** Optional callback to observe active column filters */
   onColumnFiltersChange?: (filters: ColumnFilter<TItem>[]) => void
+  /** Whether any filters (search, column, etc.) are currently active */
+  hasActiveFilters?: boolean
+  /** Called when the user clicks "Clear Filters" in the empty state */
+  onClearFilters?: () => void
+  /** Called when the user clicks "Add Item" in the empty state */
+  onAddItem?: () => void
 }
 
 export function GalleryDataTable<TItem extends Record<string, unknown>>({
@@ -67,6 +74,9 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   ariaLabel,
   className,
   onColumnFiltersChange,
+  hasActiveFilters = false,
+  onClearFilters,
+  onAddItem,
 }: GalleryDataTableProps<TItem>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFilter<TItem>[]>([])
 
@@ -182,6 +192,8 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
 
   const showSkeleton = isLoading && rowCount === 0
 
+  const emptyVariant = hasActiveFilters ? 'no-results' : 'no-items'
+
   return (
     <div className={cn('hidden md:block w-full', className)}>
       {showSkeleton ? (
@@ -210,11 +222,12 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
           <TableBody>
             {rowCount === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={colCount}
-                  className="px-4 py-6 text-center text-muted-foreground"
-                >
-                  No results match the current filters.
+                <TableCell colSpan={colCount} className="px-4 py-6">
+                  <GalleryTableEmpty
+                    variant={emptyVariant}
+                    onAddItem={!hasActiveFilters ? onAddItem : undefined}
+                    onClearFilters={hasActiveFilters ? onClearFilters : undefined}
+                  />
                 </TableCell>
               </TableRow>
             )}

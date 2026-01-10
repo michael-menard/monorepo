@@ -168,8 +168,40 @@ describe('GalleryDataTable', () => {
     expect(columnHeaders).toHaveLength(columns.length)
 
     const rows = screen.getAllByRole('row')
-    // 1 header row + 10 skeleton rows
+    // 1 header row + skeleton rows
     expect(rows.length).toBeGreaterThan(1)
+  })
+
+  it('shows no-items empty state when there are no items and no active filters', () => {
+    render(
+      <GalleryDataTable<WishlistItem>
+        items={[]}
+        columns={columns}
+        ariaLabel="Wishlist items table"
+      />,
+    )
+
+    expect(screen.getByTestId('gallery-table-empty-title')).toHaveTextContent(
+      'Your wishlist is empty',
+    )
+  })
+
+  it('shows no-results empty state when there are no items and active filters', () => {
+    const handleClearFilters = vi.fn()
+
+    render(
+      <GalleryDataTable<WishlistItem>
+        items={[]}
+        columns={columns}
+        ariaLabel="Wishlist items table"
+        hasActiveFilters
+        onClearFilters={handleClearFilters}
+      />,
+    )
+
+    expect(screen.getByTestId('gallery-table-empty-title')).toHaveTextContent(
+      'No results match your filters',
+    )
   })
 })
 

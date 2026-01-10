@@ -197,6 +197,12 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   const stores = availableFilters?.availableStores ?? []
   const storeCounts = counts?.byStore ?? {}
 
+  const hasActiveFilters = Boolean(
+    (search && search.trim().length > 0) ||
+      selectedStore ||
+      (selectedTags && selectedTags.length > 0),
+  )
+
   // Handle search
   const handleSearch = useCallback(
     (value: string) => {
@@ -404,6 +410,8 @@ function WishlistMainPageContent({ className }: MainPageProps) {
                     handlePageChange(pagination.page + 1)
                   }}
                   ariaLabel="Wishlist items table"
+                  hasActiveFilters={hasActiveFilters}
+                  onClearFilters={handleClearFilters}
                 />
               )}
 
