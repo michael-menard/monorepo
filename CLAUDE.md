@@ -162,11 +162,11 @@ console.log('message')
 
 ## Quality Gates
 
-All code must pass before commit:
+All code must pass before commit, and **all new additions must pass linting and tests**:
 
 1. TypeScript compilation
-2. ESLint (no errors, warnings addressed)
-3. Tests pass
+2. ESLint (no errors, warnings addressed) on all new/changed code
+3. All relevant tests pass (unit, integration, and E2E where applicable) for new/changed code
 4. Prettier formatting
 
 ## Package Management
