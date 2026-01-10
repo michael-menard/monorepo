@@ -95,6 +95,8 @@ export type {
   GalleryResponse,
   GallerySearchParams,
   ViewMode,
+  FilterableFields,
+  SearchableFieldConfig,
 } from './types'
 
 // Column filtering (datatable)

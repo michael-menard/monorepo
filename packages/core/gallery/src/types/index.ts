@@ -171,6 +171,10 @@ export type GallerySortOption = z.infer<typeof GallerySortOptionSchema>
 // Multi-column sort types (glry-1002)
 export type { SortDirection, SortColumn } from './sort'
 
+// Search configuration & utility types (glry-1003)
+export type { FilterableFields, SearchableFieldConfig } from './search'
+export { SearchableFieldConfigSchema } from './search'
+
 // =============================================================================
 // API Query/Response Schemas
 // =============================================================================
