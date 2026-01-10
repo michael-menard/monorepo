@@ -115,7 +115,11 @@ export type {
 
 export { useColumnFilters } from './hooks/useColumnFilters'
 export { ColumnFilterInput } from './components/ColumnFilterInput'
-export { GalleryDataTable } from './components/GalleryDataTable'
+export {
+  GalleryDataTable,
+  type GalleryDataTableProps,
+  type GalleryDataTableColumn,
+} from './components/GalleryDataTable'
 
 // Utils
 export {

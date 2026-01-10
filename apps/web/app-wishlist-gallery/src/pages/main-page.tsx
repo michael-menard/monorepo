@@ -7,7 +7,7 @@
  * Story wish-2001: Wishlist Gallery MVP
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { z } from 'zod'
 import {
   GalleryGrid,
@@ -16,13 +16,16 @@ import {
   GalleryEmptyState,
   GallerySkeleton,
   GalleryViewToggle,
+  GalleryDataTable,
   FilterProvider,
   useFilterContext,
   useViewMode,
   useFirstTimeHint,
+  type GalleryDataTableColumn,
 } from '@repo/gallery'
 import { Tabs, TabsList, TabsTrigger } from '@repo/app-component-library'
 import { Heart } from 'lucide-react'
+import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { useGetWishlistQuery } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { WishlistCard } from '../components/WishlistCard'
 
@@ -48,6 +51,75 @@ const wishlistSortOptions = [
   { value: 'price-desc', label: 'Price: High to Low' },
   { value: 'priority-desc', label: 'Priority: High to Low' },
   { value: 'priority-asc', label: 'Priority: Low to High' },
+]
+
+/**
+ * Format price string with currency for display in the wishlist datatable.
+ */
+const formatCurrency = (price: string | null, currency: string): string => {
+  if (!price) return ''
+
+  const numPrice = Number(price)
+  if (Number.isNaN(numPrice)) return ''
+
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
+
+  return formatter.format(numPrice)
+}
+
+/**
+ * Hardcoded wishlist columns for the datatable view.
+ *
+ * Columns: title, price, store, priority.
+ */
+const wishlistColumns: GalleryDataTableColumn<WishlistItem>[] = [
+  {
+    field: 'title',
+    header: 'Title',
+    size: 400, // 40% of 1000
+    render: item => (
+      <div className="flex flex-col">
+        <span className="font-medium text-foreground truncate">{item.title}</span>
+        {item.setNumber ? (
+          <span className="text-xs text-muted-foreground mt-0.5">Set #{item.setNumber}</span>
+        ) : null}
+      </div>
+    ),
+  },
+  {
+    field: 'price',
+    header: 'Price',
+    size: 200,
+    className: 'text-right',
+render: item => (
+      <span>{item.price ? formatCurrency(item.price, item.currency) : '—'}</span>
+    ),
+  },
+  {
+    field: 'store',
+    header: 'Store',
+    size: 200,
+    className: 'text-center',
+    render: item => (
+      <span className="inline-block px-2 py-1 text-xs rounded bg-muted">{item.store}</span>
+    ),
+  },
+  {
+    field: 'priority',
+    header: 'Priority',
+    size: 200,
+    className: 'text-center',
+render: item => (
+      <span aria-label={`Priority ${item.priority} of 5`}>
+        {item.priority > 0 ? '★'.repeat(item.priority) : '—'}
+      </span>
+    ),
+  },
 ]
 
 /**
@@ -100,6 +172,26 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   const pagination = wishlistData?.pagination
   const counts = wishlistData?.counts
   const availableFilters = wishlistData?.filters
+
+  // Accumulated items for infinite scroll in datatable view
+  const [allItems, setAllItems] = useState<WishlistItem[]>([])
+
+  useEffect(() => {
+    if (!wishlistData || viewMode !== 'datatable') return
+
+    const nextItems = wishlistData.items as WishlistItem[]
+
+    if (!pagination || pagination.page === 1) {
+      setAllItems(nextItems)
+      return
+    }
+
+    setAllItems(prev => {
+      const existingIds = new Set(prev.map(item => item.id))
+      const newItems = nextItems.filter(item => !existingIds.has(item.id))
+      return [...prev, ...newItems]
+    })
+  }, [wishlistData, pagination, viewMode])
 
   // Store tabs content
   const stores = availableFilters?.availableStores ?? []
@@ -154,11 +246,17 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     clearFilters()
   }, [clearFilters])
 
-  // Handle card click (navigate to detail page)
+  // Handle card/row click (navigate to detail page)
   const handleCardClick = useCallback((itemId: string) => {
-    // TODO: Navigate to detail page when route is set up
-    console.log('Navigate to wishlist item:', itemId)
+    window.location.href = `/wishlist/${itemId}`
   }, [])
+
+  const handleRowClick = useCallback(
+    (item: WishlistItem) => {
+      handleCardClick(item.id)
+    },
+    [handleCardClick],
+  )
 
   // Loading state
   if (isLoading) {
@@ -294,14 +392,23 @@ function WishlistMainPageContent({ className }: MainPageProps) {
                   ))}
                 </GalleryGrid>
               ) : (
-                // Datatable implementation will be provided in glry-1006; placeholder for now
-                <div className="mt-4 text-sm text-muted-foreground">
-                  Datatable view coming soon.
-                </div>
+                <GalleryDataTable<WishlistItem>
+                  items={allItems}
+                  columns={wishlistColumns}
+                  isLoading={isFetching}
+                  onRowClick={handleRowClick}
+                  hasMore={Boolean(pagination && pagination.page < pagination.totalPages)}
+                  onLoadMore={() => {
+                    if (!pagination) return
+                    if (pagination.page >= pagination.totalPages) return
+                    handlePageChange(pagination.page + 1)
+                  }}
+                  ariaLabel="Wishlist items table"
+                />
               )}
 
-              {/* Pagination */}
-              {pagination && pagination.totalPages > 1 ? (
+              {/* Pagination - grid view only */}
+              {viewMode === 'grid' && pagination && pagination.totalPages > 1 ? (
                 <div className="mt-8">
                   <GalleryPagination
                     currentPage={pagination.page}
