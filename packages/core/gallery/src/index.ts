@@ -56,6 +56,7 @@ export type { GallerySkeletonProps } from './components/GallerySkeleton'
 // Contexts
 export { FilterProvider, useFilterContext } from './contexts/FilterContext'
 export type { FilterContextValue } from './contexts/FilterContext'
+export { SortProvider, useSortContext } from './contexts/SortContext'
 
 // Hooks
 export { useInfiniteScroll } from './hooks/useInfiniteScroll'
@@ -67,6 +68,7 @@ export type { UseLightboxReturn } from './hooks/useLightbox'
 export { useGalleryState } from './hooks/useGalleryState'
 export type { UseGalleryStateOptions, UseGalleryStateReturn } from './hooks/useGalleryState'
 
+export { useMultiSort } from './hooks/useMultiSort'
 export { useViewMode } from './hooks/useViewMode'
 
 export { useGalleryUrl } from './hooks/useGalleryUrl'

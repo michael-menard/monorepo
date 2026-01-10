@@ -168,6 +168,9 @@ export const GallerySortOptionSchema = z.object({
 
 export type GallerySortOption = z.infer<typeof GallerySortOptionSchema>
 
+// Multi-column sort types (glry-1002)
+export type { SortDirection, SortColumn } from './sort'
+
 // =============================================================================
 // API Query/Response Schemas
 // =============================================================================
