@@ -28,12 +28,20 @@ apps/
     playwright/           # E2E tests
 packages/
   core/                   # Shared core packages
-    app-component-library/  # shadcn/ui components (@repo/ui)
+    app-component-library/  # UI primitives + app-level components (@repo/app-component-library)
     logger/               # Logging utility (@repo/logger)
     design-system/        # Design tokens
     accessibility/        # A11y utilities
   backend/                # Backend utilities
 ```
+
+### App Component Library Architecture (@repo/app-component-library)
+
+- `_primitives/` = raw shadcn/Radix wrappers
+  - Things like `Button`, `Tabs`, `Select`, `DropdownMenu`, etc. live here.
+  - They are as close as possible to the original shadcn components, just wired to our Tailwind theme + `cn`.
+- Feature folders (e.g. `buttons/`, `cards/`, `selects/`, etc.) = app‑level variations
+  - Components like `CustomButton`, `AppSelect`, `StatsCards`, etc. compose or wrap the primitives with app‑specific behavior and opinionated APIs.
 
 ## Code Style
 

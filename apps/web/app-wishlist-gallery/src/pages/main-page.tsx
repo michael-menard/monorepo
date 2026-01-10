@@ -15,8 +15,11 @@ import {
   GalleryPagination,
   GalleryEmptyState,
   GallerySkeleton,
+  GalleryViewToggle,
   FilterProvider,
   useFilterContext,
+  useViewMode,
+  useFirstTimeHint,
 } from '@repo/gallery'
 import { Tabs, TabsList, TabsTrigger } from '@repo/app-component-library'
 import { Heart } from 'lucide-react'
@@ -66,6 +69,12 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   const selectedTags = filters.tags
   const sortValue = filters.sort
   const page = filters.page
+
+  // View mode state (grid | datatable) with persistence
+  const [viewMode, setViewMode] = useViewMode('wishlist')
+
+  // First-time hint state for view toggle tooltip
+  const [showHint, dismissHint] = useFirstTimeHint()
 
   // Parse sort value
   const [sortField, sortOrder] = sortValue.split('-') as [string, 'asc' | 'desc']
@@ -216,7 +225,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
           ) : null}
         </div>
 
-        {/* Filter Bar with Store Tabs */}
+        {/* Filter Bar with Store Tabs and View Toggle */}
         <GalleryFilterBar
           search={search}
           onSearchChange={handleSearch}
@@ -230,6 +239,14 @@ function WishlistMainPageContent({ className }: MainPageProps) {
           selectedSort={sortValue}
           onSortChange={handleSortChange}
           onClearAll={handleClearFilters}
+          rightSlot={
+            <GalleryViewToggle
+              currentView={viewMode}
+              onViewChange={setViewMode}
+              showFirstTimeHint={showHint}
+              onDismissHint={dismissHint}
+            />
+          }
           data-testid="wishlist-filter-bar"
         >
           {/* Store Tabs - custom filter UI */}
@@ -265,16 +282,23 @@ function WishlistMainPageContent({ className }: MainPageProps) {
             />
           ) : (
             <>
-              {/* Gallery Grid */}
-              <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
-                {items.map(item => (
-                  <WishlistCard
-                    key={item.id}
-                    item={item}
-                    onClick={() => handleCardClick(item.id)}
-                  />
-                ))}
-              </GalleryGrid>
+              {/* Gallery Content - view mode controlled by GalleryViewToggle */}
+              {viewMode === 'grid' ? (
+                <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
+                  {items.map(item => (
+                    <WishlistCard
+                      key={item.id}
+                      item={item}
+                      onClick={() => handleCardClick(item.id)}
+                    />
+                  ))}
+                </GalleryGrid>
+              ) : (
+                // Datatable implementation will be provided in glry-1006; placeholder for now
+                <div className="mt-4 text-sm text-muted-foreground">
+                  Datatable view coming soon.
+                </div>
+              )}
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 ? (

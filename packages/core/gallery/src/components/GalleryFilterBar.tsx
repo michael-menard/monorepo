@@ -67,6 +67,12 @@ export interface GalleryFilterBarProps {
    */
   children?: React.ReactNode
 
+  /**
+   * Optional right-aligned slot for additional controls (e.g., view mode toggle).
+   * Rendered on the same row as the primary filter controls, aligned to the right.
+   */
+  rightSlot?: React.ReactNode
+
   /** Additional CSS classes */
   className?: string
   /** Test ID for testing purposes */
@@ -115,6 +121,7 @@ export const GalleryFilterBar = ({
   onClearAll,
   showActiveFilters = true,
   children,
+  rightSlot,
   className,
   'data-testid': testId = 'gallery-filter-bar',
 }: GalleryFilterBarProps) => {
@@ -179,55 +186,68 @@ export const GalleryFilterBar = ({
       {children ? <div data-testid={`${testId}-custom-filters`}>{children}</div> : null}
 
       {/* Filter Controls Row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-        {/* Search */}
-        {hasSearch ? (
-          <div className="flex-1 min-w-[200px] sm:max-w-xs">
-            <GallerySearch
-              value={search}
-              onChange={onSearchChange}
-              onSearch={onSearch}
-              placeholder={searchPlaceholder}
-              data-testid={`${testId}-search`}
-            />
-          </div>
-        ) : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        {/* Primary filter controls (left side) */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end flex-1">
+          {/* Search */}
+          {hasSearch ? (
+            <div className="flex-1 min-w-[200px] sm:max-w-xs">
+              <GallerySearch
+                value={search}
+                onChange={onSearchChange}
+                onSearch={onSearch}
+                placeholder={searchPlaceholder}
+                data-testid={`${testId}-search`}
+              />
+            </div>
+          ) : null}
 
-        {/* Tag Filter */}
-        {hasTags ? (
-          <div className="flex-1 min-w-[200px] sm:max-w-xs">
-            <GalleryTagFilter
-              tags={tags}
-              selected={selectedTags}
-              onChange={onTagsChange}
-              placeholder={tagsPlaceholder}
-              data-testid={`${testId}-tags`}
-            />
-          </div>
-        ) : null}
+          {/* Tag Filter */}
+          {hasTags ? (
+            <div className="flex-1 min-w-[200px] sm:max-w-xs">
+              <GalleryTagFilter
+                tags={tags}
+                selected={selectedTags}
+                onChange={onTagsChange}
+                placeholder={tagsPlaceholder}
+                data-testid={`${testId}-tags`}
+              />
+            </div>
+          ) : null}
 
-        {/* Theme Filter */}
-        {hasThemes ? (
-          <div className="w-full sm:w-auto">
-            <GalleryThemeFilter
-              themes={themes}
-              selected={selectedTheme}
-              onChange={onThemeChange}
-              placeholder={themePlaceholder}
-              data-testid={`${testId}-theme`}
-            />
-          </div>
-        ) : null}
+          {/* Theme Filter */}
+          {hasThemes ? (
+            <div className="w-full sm:w-auto">
+              <GalleryThemeFilter
+                themes={themes}
+                selected={selectedTheme}
+                onChange={onThemeChange}
+                placeholder={themePlaceholder}
+                data-testid={`${testId}-theme`}
+              />
+            </div>
+          ) : null}
 
-        {/* Sort */}
-        {hasSort ? (
-          <div className="w-full sm:w-auto sm:min-w-[180px]">
-            <AppSelect
-              options={sortOptions}
-              value={selectedSort}
-              onValueChange={onSortChange}
-              placeholder={sortPlaceholder}
-            />
+          {/* Sort */}
+          {hasSort ? (
+            <div className="w-full sm:w-auto sm:min-w-[180px]">
+              <AppSelect
+                options={sortOptions}
+                value={selectedSort}
+                onValueChange={onSortChange}
+                placeholder={sortPlaceholder}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {/* Right-aligned slot for additional controls (e.g., view toggle) */}
+        {rightSlot ? (
+          <div
+            className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
+            data-testid={`${testId}-right-slot`}
+          >
+            {rightSlot}
           </div>
         ) : null}
       </div>

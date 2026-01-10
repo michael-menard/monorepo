@@ -330,6 +330,9 @@ export {
 // Tabs
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './_primitives/tabs'
 
+// Tooltip
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './_primitives/tooltip'
+
 // Accordion
 export {
   Accordion,
