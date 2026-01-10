@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Completed
 
 ## Story
 
@@ -382,6 +382,7 @@ Object.defineProperty(global, 'localStorage', {
 
 ## Change Log
 
-| Date       | Version | Description                       | Author |
-| ---------- | ------- | --------------------------------- | ------ |
-| 2025-12-28 | 0.1     | Initial draft for glry-1004 story | Bob (SM) |
+|| Date       | Version | Description                       | Author |
+|| ---------- | ------- | --------------------------------- | ------ |
+|| 2025-12-28 | 0.1     | Initial draft for glry-1004 story | Bob (SM) |
+|| 2026-01-10 | 0.2     | Implemented ViewMode schema, view-mode storage utilities, useViewMode hook, tests, and exports; marked story as Completed | Dev Agent |

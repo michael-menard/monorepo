@@ -151,6 +151,9 @@ export type GalleryState = z.infer<typeof GalleryStateSchema>
 // UI Configuration Schemas
 // =============================================================================
 
+export { ViewModeSchema } from './view-mode'
+export type { ViewMode } from './view-mode'
+
 /**
  * Schema for sort option configuration in dropdown menus
  */

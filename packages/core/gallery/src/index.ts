@@ -67,6 +67,8 @@ export type { UseLightboxReturn } from './hooks/useLightbox'
 export { useGalleryState } from './hooks/useGalleryState'
 export type { UseGalleryStateOptions, UseGalleryStateReturn } from './hooks/useGalleryState'
 
+export { useViewMode } from './hooks/useViewMode'
+
 export { useGalleryUrl } from './hooks/useGalleryUrl'
 export type {
   UseGalleryUrlOptions,
@@ -90,6 +92,7 @@ export type {
   GalleryQueryParams,
   GalleryResponse,
   GallerySearchParams,
+  ViewMode,
 } from './types'
 
 // Column filtering (datatable)
@@ -103,6 +106,13 @@ export type {
 export { useColumnFilters } from './hooks/useColumnFilters'
 export { ColumnFilterInput } from './components/ColumnFilterInput'
 export { GalleryDataTable } from './components/GalleryDataTable'
+
+// Utils
+export {
+  getViewModeStorageKey,
+  getViewModeFromStorage,
+  saveViewModeToStorage,
+} from './utils/view-mode-storage'
 
 // Zod Schemas (for runtime validation)
 export {
