@@ -20,6 +20,7 @@ export const BrickSetSchema = z.object({
   pieceCount: z.number(),
   theme: z.string(),
   tags: z.array(z.string()),
+  buildStatus: z.enum(['complete', 'in-progress', 'planned']).optional(),
   purchaseDate: z.string().optional(),
   purchasePrice: z.number().optional(),
   purchaseCurrency: z.string().optional(),
@@ -42,6 +43,7 @@ export const CreateSetRequestSchema = z.object({
   pieceCount: z.number().int().positive(),
   theme: z.string().min(1),
   tags: z.array(z.string()).default([]),
+  buildStatus: z.enum(['complete', 'in-progress', 'planned']).optional(),
   purchaseDate: z.string().optional(),
   purchasePrice: z.number().positive().optional(),
   purchaseCurrency: z.string().default('USD'),
@@ -54,8 +56,51 @@ export type CreateSetRequest = z.infer<typeof CreateSetRequestSchema>
 // Mock delay to simulate network
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-// Mock in-memory storage
-let mockSets: BrickSet[] = []
+// Mock in-memory storage with sample data
+let mockSets: BrickSet[] = [
+  {
+    id: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
+    name: 'The Friends Apartments',
+    setNumber: '10292',
+    thumbnail: 'https://via.placeholder.com/300x200?text=Friends+Apartments',
+    images: [],
+    pieceCount: 2048,
+    theme: 'Creator Expert',
+    tags: ['Modular', 'TV Show'],
+    buildStatus: 'complete',
+    linkedMocs: [],
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z',
+  },
+  {
+    id: 'b2c3d4e5-6789-01bc-defg-2345678901bc',
+    name: 'Millennium Falcon',
+    setNumber: '75192',
+    thumbnail: 'https://via.placeholder.com/300x200?text=Millennium+Falcon',
+    images: [],
+    pieceCount: 7541,
+    theme: 'Star Wars',
+    tags: ['UCS', 'Movie'],
+    buildStatus: 'in-progress',
+    linkedMocs: [],
+    createdAt: '2024-02-20T14:30:00Z',
+    updatedAt: '2024-02-20T14:30:00Z',
+  },
+  {
+    id: 'c3d4e5f6-7890-12cd-efgh-3456789012cd',
+    name: 'Hogwarts Castle',
+    setNumber: '71043',
+    thumbnail: 'https://via.placeholder.com/300x200?text=Hogwarts+Castle',
+    images: [],
+    pieceCount: 6020,
+    theme: 'Harry Potter',
+    tags: ['Castle', 'Movie'],
+    buildStatus: 'planned',
+    linkedMocs: [],
+    createdAt: '2024-03-10T09:15:00Z',
+    updatedAt: '2024-03-10T09:15:00Z',
+  },
+]
 
 /**
  * Mock: Add a new set

@@ -698,6 +698,9 @@ importers:
       '@repo/design-system':
         specifier: workspace:*
         version: link:../../../packages/core/design-system
+      '@repo/gallery':
+        specifier: workspace:*
+        version: link:../../../packages/core/gallery
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
@@ -710,6 +713,9 @@ importers:
       '@tanstack/react-router-devtools':
         specifier: ^1.130.2
         version: 1.139.3(@tanstack/react-router@1.139.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@tanstack/router-core@1.139.3)(@types/node@22.19.1)(csstype@3.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.10)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
+      '@tanstack/react-table':
+        specifier: ^8.20.1
+        version: 8.21.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -728,6 +734,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.0(react@19.2.0)
+      react-router-dom:
+        specifier: ^7.1.1
+        version: 7.12.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       tailwind-merge:
         specifier: ^2.6.0
         version: 2.6.0
@@ -11261,11 +11270,28 @@ packages:
       react: '>=16.8'
       react-dom: '>=16.8'
 
+  react-router-dom@7.12.0:
+    resolution: {integrity: sha512-pfO9fiBcpEfX4Tx+iTYKDtPbrSLLCbwJ5EqP+SPYQu1VYCXdy79GSj0wttR0U4cikVdlImZuEZ/9ZNCgoaxwBA==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+
   react-router@6.30.2:
     resolution: {integrity: sha512-H2Bm38Zu1bm8KUE5NVWRMzuIyAV8p/JrOaBJAwVmp37AXG72+CZJlEBw6pdn9i5TBgLMhNDgijS4ZlblpHyWTA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
+
+  react-router@7.12.0:
+    resolution: {integrity: sha512-kTPDYPFzDVGIIGNLS5VJykK0HfHLY5MF3b+xj0/tTyNYL1gF1qs7u67Z9jEhQk2sQ98SUaHxlG31g1JtF7IfVw==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
 
   react-style-singleton@2.2.3:
     resolution: {integrity: sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==}
@@ -11642,6 +11668,9 @@ packages:
 
   set-blocking@2.0.0:
     resolution: {integrity: sha512-KiKBS8AnWGEyLzofFfmvKwpdPzqiy16LvQfK3yv/fVH7Bj13/wl3JSR1J+rfgRE9q7xUJK4qvgS8raSOeLUehw==}
+
+  set-cookie-parser@2.7.2:
+    resolution: {integrity: sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw==}
 
   set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -20918,7 +20947,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@22.19.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.0))(lightningcss@1.30.2)(msw@2.12.3(@types/node@22.19.1)(typescript@5.8.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
+      vitest: 3.2.4(@types/node@24.9.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.0))(lightningcss@1.30.2)(msw@2.12.3(@types/node@24.9.1)(typescript@5.8.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
 
   '@vitest/ui@3.2.4(vitest@4.0.13)':
     dependencies:
@@ -25981,10 +26010,24 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
       react-router: 6.30.2(react@19.2.0)
 
+  react-router-dom@7.12.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
+      react-router: 7.12.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+
   react-router@6.30.2(react@19.2.0):
     dependencies:
       '@remix-run/router': 1.23.1
       react: 19.2.0
+
+  react-router@7.12.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      cookie: 1.0.2
+      react: 19.2.0
+      set-cookie-parser: 2.7.2
+    optionalDependencies:
+      react-dom: 19.2.0(react@19.2.0)
 
   react-style-singleton@2.2.3(@types/react@19.2.7)(react@19.2.0):
     dependencies:
@@ -26479,6 +26522,8 @@ snapshots:
       - utf-8-validate
 
   set-blocking@2.0.0: {}
+
+  set-cookie-parser@2.7.2: {}
 
   set-function-length@1.2.2:
     dependencies:
