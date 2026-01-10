@@ -1,14 +1,6 @@
 import { z } from 'zod'
 
-export const FilterOperatorSchema = z.enum([
-  'equals',
-  'contains',
-  'gt',
-  'lt',
-  'gte',
-  'lte',
-  'in',
-])
+export const FilterOperatorSchema = z.enum(['equals', 'contains', 'gt', 'lt', 'gte', 'lte', 'in'])
 
 export type FilterOperator = z.infer<typeof FilterOperatorSchema>
 
@@ -35,9 +27,7 @@ export const FilterableColumnSchema = z.object({
   operators: z.array(FilterOperatorSchema).optional(),
 })
 
-export type FilterableColumn<
-  TItem extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type FilterableColumn<TItem extends Record<string, unknown> = Record<string, unknown>> = {
   field: keyof TItem
   label: string
   type: ColumnType

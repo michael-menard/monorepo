@@ -243,10 +243,7 @@ export const GalleryFilterBar = ({
 
         {/* Right-aligned slot for additional controls (e.g., view toggle) */}
         {rightSlot ? (
-          <div
-            className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
-            data-testid={`${testId}-right-slot`}
-          >
+          <div className="mt-2 sm:mt-0 sm:ml-4 flex-shrink-0" data-testid={`${testId}-right-slot`}>
             {rightSlot}
           </div>
         ) : null}

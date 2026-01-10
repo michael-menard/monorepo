@@ -19,7 +19,7 @@ export interface FilterContextValue<
   activeFilterCount: number
 }
 
-const FilterContext = createContext<FilterContextValue | null>(null)
+const FilterContext = createContext<FilterContextValue<any> | null>(null)
 
 interface FilterProviderProps<TFilters extends Record<string, unknown>> {
   initialFilters: TFilters
@@ -64,15 +64,12 @@ export function FilterProvider<TFilters extends Record<string, unknown>>({
     }, 0)
   }, [filters, initialFilters])
 
-  const updateFilter = useCallback(
-    <K extends keyof TFilters>(key: K, value: TFilters[K]) => {
-      setFilters(prev => ({
-        ...prev,
-        [key]: value,
-      }))
-    },
-    [],
-  )
+  const updateFilter = useCallback(<K extends keyof TFilters>(key: K, value: TFilters[K]) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+    }))
+  }, [])
 
   const clearFilters = useCallback(() => {
     setFilters(initialFilters)

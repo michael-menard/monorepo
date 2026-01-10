@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { LayoutGrid, Table } from 'lucide-react'
 import { z } from 'zod'
 import { cn, Tooltip, TooltipContent, TooltipTrigger } from '@repo/app-component-library'
-
 import { ViewModeSchema } from '../types'
 
 export const GalleryViewTogglePropsSchema = z.object({

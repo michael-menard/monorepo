@@ -14,6 +14,7 @@ import {
   CardTitle,
   Badge,
 } from '@repo/app-component-library'
+import { logger } from '@repo/logger'
 import { mockGetSetById, mockDeleteSet, type BrickSet } from '../api/mock-sets-api'
 
 const SetDetailPagePropsSchema = z.object({
@@ -55,13 +56,13 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   useEffect(() => {
     const fetchSet = async () => {
       if (!id) return
-      
+
       setIsLoading(true)
       try {
         const data = await mockGetSetById(id)
         setSet(data)
       } catch (error) {
-        console.error('Failed to fetch set:', error)
+        logger.warn('Failed to fetch set', { error })
       } finally {
         setIsLoading(false)
       }
@@ -77,7 +78,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
       await mockDeleteSet(set.id)
       navigate('/')
     } catch (error) {
-      console.error('Failed to delete set:', error)
+      logger.warn('Failed to delete set', { error })
       setIsDeleting(false)
     }
   }
@@ -120,11 +121,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
+          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
             <Trash2 className="mr-2 h-4 w-4" />
             {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
@@ -157,15 +154,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Image */}
-            {set.thumbnail && (
+            {set.thumbnail ? (
               <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                <img
-                  src={set.thumbnail}
-                  alt={set.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={set.thumbnail} alt={set.name} className="w-full h-full object-cover" />
               </div>
-            )}
+            ) : null}
 
             <hr className="my-4" />
 
@@ -173,30 +166,28 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Pieces:</span>
-                <span className="font-medium tabular-nums">
-                  {set.pieceCount.toLocaleString()}
-                </span>
+                <span className="font-medium tabular-nums">{set.pieceCount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Theme:</span>
                 <span className="font-medium">{set.theme}</span>
               </div>
-              {set.purchaseDate && (
+              {set.purchaseDate ? (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Purchase Date:</span>
                   <span className="font-medium">
                     {new Date(set.purchaseDate).toLocaleDateString()}
                   </span>
                 </div>
-              )}
-              {set.purchasePrice && (
+              ) : null}
+              {set.purchasePrice ? (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Purchase Price:</span>
                   <span className="font-medium">
                     {set.purchaseCurrency || 'USD'} {set.purchasePrice.toFixed(2)}
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Tags */}
@@ -217,7 +208,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
             )}
 
             {/* Notes */}
-            {set.notes && (
+            {set.notes ? (
               <>
                 <hr className="my-4" />
                 <div>
@@ -225,7 +216,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                   <p className="text-sm">{set.notes}</p>
                 </div>
               </>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
@@ -238,15 +229,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Created:</span>
-                <span className="text-sm">
-                  {new Date(set.createdAt).toLocaleDateString()}
-                </span>
+                <span className="text-sm">{new Date(set.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Last Updated:</span>
-                <span className="text-sm">
-                  {new Date(set.updatedAt).toLocaleDateString()}
-                </span>
+                <span className="text-sm">{new Date(set.updatedAt).toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -263,18 +250,16 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                         className="flex items-center justify-between p-2 border rounded-lg"
                       >
                         <div className="flex items-center gap-2">
-                          {moc.thumbnail && (
+                          {moc.thumbnail ? (
                             <img
                               src={moc.thumbnail}
                               alt={moc.name}
                               className="w-10 h-10 rounded object-cover"
                             />
-                          )}
+                          ) : null}
                           <div>
                             <p className="text-sm font-medium">{moc.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {moc.pieceCount} pieces
-                            </p>
+                            <p className="text-xs text-muted-foreground">{moc.pieceCount} pieces</p>
                           </div>
                         </div>
                       </div>

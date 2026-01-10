@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 const DEFAULT_DEBOUNCE_MS = 300
 
-const useDebouncedValue = <T,>(value: T, delay: number = DEFAULT_DEBOUNCE_MS): T => {
+const useDebouncedValue = <T>(value: T, delay: number = DEFAULT_DEBOUNCE_MS): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { z } from 'zod'
 import { Plus } from 'lucide-react'
 import { Button } from '@repo/app-component-library'
+import { logger } from '@repo/logger'
 import { useViewMode, GalleryViewToggle, GalleryDataTable } from '@repo/gallery'
 import { GalleryFilterBar } from '../components/GalleryFilterBar'
 import { GalleryGrid } from '../components/GalleryGrid'
@@ -46,7 +47,7 @@ export function MainPage({ className }: MainPageProps) {
         const data = await mockGetSets()
         setSets(data)
       } catch (error) {
-        console.error('Failed to fetch sets:', error)
+        logger.warn('Failed to fetch sets', { error })
       } finally {
         setIsLoading(false)
       }
@@ -73,9 +74,7 @@ export function MainPage({ className }: MainPageProps) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold">My Sets Collection</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage and track your LEGO sets
-            </p>
+            <p className="text-muted-foreground mt-1">Manage and track your LEGO sets</p>
           </div>
           <Button onClick={() => navigate('/sets/add')}>
             <Plus className="mr-2 h-4 w-4" />

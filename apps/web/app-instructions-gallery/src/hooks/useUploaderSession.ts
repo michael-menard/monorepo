@@ -108,7 +108,7 @@ export function useUploaderSession(options: UseUploaderSessionOptions): UseUploa
         }
       }, DEBOUNCE_MS)
     },
-    [storageKey, route, user?.id],
+    [storageKey, route],
   )
 
   // Restore from localStorage on mount
@@ -229,7 +229,7 @@ export function useUploaderSession(options: UseUploaderSessionOptions): UseUploa
     } catch (error) {
       logger.warn('Failed to clear uploader session', { error, route })
     }
-  }, [storageKey, route, user?.id])
+  }, [storageKey, route])
 
   // Mark as finalized (clear from storage)
   const markFinalized = useCallback(() => {

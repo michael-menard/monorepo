@@ -96,9 +96,7 @@ const wishlistColumns: GalleryDataTableColumn<WishlistItem>[] = [
     header: 'Price',
     size: 200,
     className: 'text-right',
-render: item => (
-      <span>{item.price ? formatCurrency(item.price, item.currency) : '—'}</span>
-    ),
+    render: item => <span>{item.price ? formatCurrency(item.price, item.currency) : '—'}</span>,
   },
   {
     field: 'store',
@@ -114,7 +112,7 @@ render: item => (
     header: 'Priority',
     size: 200,
     className: 'text-center',
-render: item => (
+    render: item => (
       <span aria-label={`Priority ${item.priority} of 5`}>
         {item.priority > 0 ? '★'.repeat(item.priority) : '—'}
       </span>
@@ -309,7 +307,9 @@ function WishlistMainPageContent({ className }: MainPageProps) {
             description="Add LEGO sets to your wishlist to keep track of what you want."
             action={{
               label: 'Browse Sets',
-              onClick: () => console.log('Navigate to browse'), // TODO: Navigate to browse page
+              onClick: () => {
+                window.location.href = '/sets'
+              },
             }}
           />
         </div>
@@ -375,20 +375,20 @@ function WishlistMainPageContent({ className }: MainPageProps) {
         {/* Loading overlay for refetching */}
         <div className={isFetching && !isLoading ? 'opacity-60 pointer-events-none' : ''}>
           {/* No results after filtering */}
-              {error ? (
-                <GalleryDataTable
-                  items={[]}
-                  columns={wishlistColumns}
-                  isLoading={isLoading}
-                  ariaLabel="Wishlist items table"
-                  error={error as Error}
-                  onRetry={() => {
-                    void refetch()
-                  }}
-                  isRetrying={isFetching}
-                />
-              ) : items.length === 0 ? (
-                <GalleryEmptyState
+          {error ? (
+            <GalleryDataTable
+              items={[]}
+              columns={wishlistColumns}
+              isLoading={isLoading}
+              ariaLabel="Wishlist items table"
+              error={error as Error}
+              onRetry={() => {
+                void refetch()
+              }}
+              isRetrying={isFetching}
+            />
+          ) : items.length === 0 ? (
+            <GalleryEmptyState
               icon={Heart}
               title="No matching items"
               description="Try adjusting your filters or search terms."
@@ -400,7 +400,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
           ) : (
             <>
               {/* Gallery Content - view mode controlled by GalleryViewToggle */}
-                  {viewMode === 'grid' ? (
+              {viewMode === 'grid' ? (
                 <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
                   {items.map(item => (
                     <WishlistCard

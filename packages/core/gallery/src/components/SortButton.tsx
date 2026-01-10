@@ -26,9 +26,7 @@ export function SortButton<TItem extends Record<string, unknown>>({
           size="sm"
           className="gap-2"
           aria-label={
-            activeCount > 0
-              ? `Sort, ${activeCount} columns active`
-              : 'Sort, no columns active'
+            activeCount > 0 ? `Sort, ${activeCount} columns active` : 'Sort, no columns active'
           }
         >
           <ArrowUpDown className="h-4 w-4" />

@@ -404,6 +404,9 @@ export {
 } from './_primitives/select'
 export type { SelectProps } from './_primitives/select'
 
+// Popover
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './_primitives/popover'
+
 // Form
 export {
   useFormField,

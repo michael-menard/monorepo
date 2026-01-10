@@ -2,15 +2,7 @@
  * GalleryGrid Component
  * Grid layout wrapper for gallery items
  */
-import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
-
-const GalleryGridPropsSchema = z.object({
-  items: z.array(z.any()),
-  isLoading: z.boolean().optional(),
-  children: z.function(),
-  className: z.string().optional(),
-})
 
 export type GalleryGridProps<T> = {
   items: T[]
@@ -63,10 +55,7 @@ export function GalleryGrid<T>({
 
   return (
     <div
-      className={
-        className ||
-        'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-      }
+      className={className || 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'}
       data-testid="gallery-grid"
     >
       {items.map((item, index) => (

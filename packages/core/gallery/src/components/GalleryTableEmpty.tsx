@@ -4,16 +4,8 @@ import { cn, Button } from '@repo/app-component-library'
 
 export const GalleryTableEmptyPropsSchema = z.object({
   variant: z.enum(['no-items', 'no-results']),
-  onClearFilters: z
-    .function()
-    .args()
-    .returns(z.void())
-    .optional(),
-  onAddItem: z
-    .function()
-    .args()
-    .returns(z.void())
-    .optional(),
+  onClearFilters: z.function().args().returns(z.void()).optional(),
+  onAddItem: z.function().args().returns(z.void()).optional(),
   className: z.string().optional(),
 })
 

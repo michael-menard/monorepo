@@ -5,7 +5,7 @@
  * This module is designed to be lazy-loaded by the shell app.
  */
 import { z } from 'zod'
-import { Routes, Route, BrowserRouter, MemoryRouter } from 'react-router-dom'
+import { Routes, Route, MemoryRouter } from 'react-router-dom'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { AddSetPage } from './pages/add-set-page'
@@ -28,7 +28,10 @@ export type AppSetsGalleryModuleProps = z.infer<typeof AppSetsGalleryModuleProps
  *
  * This is the main export that the shell app will lazy-load.
  */
-export function AppSetsGalleryModule({ className, useMemoryRouter = false }: AppSetsGalleryModuleProps) {
+export function AppSetsGalleryModule({
+  className,
+  useMemoryRouter = false,
+}: AppSetsGalleryModuleProps) {
   const content = (
     <ModuleLayout className={className}>
       <Routes>
@@ -43,7 +46,7 @@ export function AppSetsGalleryModule({ className, useMemoryRouter = false }: App
   if (useMemoryRouter) {
     return <MemoryRouter>{content}</MemoryRouter>
   }
-  
+
   return content
 }
 

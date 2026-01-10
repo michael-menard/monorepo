@@ -7,45 +7,80 @@ import { GalleryDataTable, type GalleryDataTableColumn } from '../components/Gal
 export function GalleryDataTableReorderingExample() {
   // Sample data
   const items = [
-    { id: '1', name: 'LEGO Classic Bricks', pieces: 1500, price: 49.99, status: 'In Stock', category: 'Classic' },
-    { id: '2', name: 'LEGO Technic Buggy', pieces: 374, price: 34.99, status: 'In Stock', category: 'Technic' },
-    { id: '3', name: 'LEGO City Fire Station', pieces: 509, price: 79.99, status: 'Low Stock', category: 'City' },
-    { id: '4', name: 'LEGO Creator Expert Car', pieces: 1458, price: 149.99, status: 'Out of Stock', category: 'Creator' },
-    { id: '5', name: 'LEGO Star Wars X-Wing', pieces: 1949, price: 239.99, status: 'In Stock', category: 'Star Wars' },
+    {
+      id: '1',
+      name: 'LEGO Classic Bricks',
+      pieces: 1500,
+      price: 49.99,
+      status: 'In Stock',
+      category: 'Classic',
+    },
+    {
+      id: '2',
+      name: 'LEGO Technic Buggy',
+      pieces: 374,
+      price: 34.99,
+      status: 'In Stock',
+      category: 'Technic',
+    },
+    {
+      id: '3',
+      name: 'LEGO City Fire Station',
+      pieces: 509,
+      price: 79.99,
+      status: 'Low Stock',
+      category: 'City',
+    },
+    {
+      id: '4',
+      name: 'LEGO Creator Expert Car',
+      pieces: 1458,
+      price: 149.99,
+      status: 'Out of Stock',
+      category: 'Creator',
+    },
+    {
+      id: '5',
+      name: 'LEGO Star Wars X-Wing',
+      pieces: 1949,
+      price: 239.99,
+      status: 'In Stock',
+      category: 'Star Wars',
+    },
   ]
 
-  type Item = typeof items[0]
+  type Item = (typeof items)[0]
 
   // Column definitions
   const columns: GalleryDataTableColumn<Item>[] = [
-    { 
-      field: 'name', 
+    {
+      field: 'name',
       header: 'Product Name',
       size: 300,
     },
-    { 
-      field: 'category', 
+    {
+      field: 'category',
       header: 'Category',
       size: 150,
     },
-    { 
-      field: 'pieces', 
+    {
+      field: 'pieces',
       header: 'Piece Count',
       size: 120,
-      render: (item) => item.pieces.toLocaleString(),
+      render: item => item.pieces.toLocaleString(),
     },
-    { 
-      field: 'price', 
+    {
+      field: 'price',
       header: 'Price',
       size: 100,
-      render: (item) => `$${item.price.toFixed(2)}`,
+      render: item => `$${item.price.toFixed(2)}`,
     },
-    { 
-      field: 'status', 
+    {
+      field: 'status',
       header: 'Stock Status',
       size: 150,
-      render: (item) => (
-        <span 
+      render: item => (
+        <span
           className={`
             inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
             ${item.status === 'In Stock' ? 'bg-green-50 text-green-700' : ''}
@@ -62,7 +97,7 @@ export function GalleryDataTableReorderingExample() {
   const [columnOrder, setColumnOrder] = React.useState<string[]>()
 
   const handleColumnOrderChange = (newOrder: string[]) => {
-    console.log('Column order changed:', newOrder)
+    // Column order changed - update state
     setColumnOrder(newOrder)
   }
 
@@ -71,15 +106,15 @@ export function GalleryDataTableReorderingExample() {
       <div className="rounded-lg border p-4">
         <h2 className="text-lg font-semibold mb-2">Column Reordering Example</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Drag the grip handles (⋮⋮) next to column headers to reorder columns. 
-          The order is automatically saved to localStorage.
+          Drag the grip handles (⋮⋮) next to column headers to reorder columns. The order is
+          automatically saved to localStorage.
         </p>
-        
-        {columnOrder && (
+
+        {columnOrder ? (
           <div className="mb-4 p-2 bg-muted rounded text-xs">
             Current order: {columnOrder.join(' → ')}
           </div>
-        )}
+        ) : null}
 
         <GalleryDataTable
           items={items}

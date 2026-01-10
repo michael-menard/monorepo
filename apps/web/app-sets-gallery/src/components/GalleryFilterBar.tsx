@@ -2,16 +2,8 @@
  * GalleryFilterBar Component
  * Filter bar with search input and view toggle
  */
-import { z } from 'zod'
 import { Search } from 'lucide-react'
 import { Input } from '@repo/app-component-library'
-
-const GalleryFilterBarPropsSchema = z.object({
-  searchTerm: z.string(),
-  onSearchChange: z.function(),
-  children: z.any().optional(),
-  className: z.string().optional(),
-})
 
 export type GalleryFilterBarProps = {
   searchTerm: string
@@ -50,9 +42,7 @@ export function GalleryFilterBar({
       </div>
 
       {/* Additional Controls (View Toggle, etc) */}
-      {children && (
-        <div className="flex items-center gap-2">{children}</div>
-      )}
+      {children ? <div className="flex items-center gap-2">{children}</div> : null}
     </div>
   )
 }

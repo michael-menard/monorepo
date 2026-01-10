@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from 'react'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import type { SortColumn } from '../types'
 
 interface SortContextValue<TItem extends Record<string, unknown> = Record<string, unknown>> {
@@ -16,7 +10,7 @@ interface SortContextValue<TItem extends Record<string, unknown> = Record<string
   clearSorts: () => void
 }
 
-const SortContext = createContext<SortContextValue | null>(null)
+const SortContext = createContext<SortContextValue<any> | null>(null)
 
 interface SortProviderProps<TItem extends Record<string, unknown>> {
   children: ReactNode
@@ -41,12 +35,9 @@ export function SortProvider<TItem extends Record<string, unknown>>({
     [maxSorts],
   )
 
-  const updateSort = useCallback(
-    (index: number, updates: Partial<SortColumn<TItem>>) => {
-      setSorts(prev => prev.map((sort, i) => (i === index ? { ...sort, ...updates } : sort)))
-    },
-    [],
-  )
+  const updateSort = useCallback((index: number, updates: Partial<SortColumn<TItem>>) => {
+    setSorts(prev => prev.map((sort, i) => (i === index ? { ...sort, ...updates } : sort)))
+  }, [])
 
   const removeSort = useCallback((index: number) => {
     setSorts(prev => {
@@ -68,21 +59,22 @@ export function SortProvider<TItem extends Record<string, unknown>>({
     setSorts([])
   }, [])
 
-  const value: SortContextValue<TItem> = {
-    sorts,
-    addSort,
-    updateSort,
-    removeSort,
-    reorderSorts,
-    clearSorts,
-  }
+  const value: SortContextValue<TItem> = useCallback(
+    () => ({
+      sorts,
+      addSort,
+      updateSort,
+      removeSort,
+      reorderSorts,
+      clearSorts,
+    }),
+    [sorts, addSort, updateSort, removeSort, reorderSorts, clearSorts],
+  )()
 
   return <SortContext.Provider value={value}>{children}</SortContext.Provider>
 }
 
-export function useSortContext<
-  TItem extends Record<string, unknown> = Record<string, unknown>,
->() {
+export function useSortContext<TItem extends Record<string, unknown> = Record<string, unknown>>() {
   const ctx = useContext(SortContext) as SortContextValue<TItem> | null
   if (!ctx) {
     throw new Error('useSortContext must be used within a SortProvider')

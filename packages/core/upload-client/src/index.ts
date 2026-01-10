@@ -8,19 +8,20 @@
  * @example Basic file upload
  * ```typescript
  * import { uploadToPresignedUrl, UploadError } from '@repo/upload-client'
+ * import { logger } from '@repo/logger'
  *
  * try {
  *   const result = await uploadToPresignedUrl({
  *     url: presignedUrl,
  *     file: myFile,
  *     onProgress: (progress) => {
- *       console.log(`Upload progress: ${progress.percent}%`)
+ *       logger.info(`Upload progress: ${progress.percent}%`)
  *     },
  *   })
- *   console.log('Upload complete:', result)
+ *   logger.info('Upload complete:', result)
  * } catch (error) {
  *   if (error instanceof UploadError) {
- *     console.error(`Upload failed: ${error.code}`)
+ *     logger.error(`Upload failed: ${error.code}`)
  *   }
  * }
  * ```

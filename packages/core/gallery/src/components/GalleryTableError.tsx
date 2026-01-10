@@ -4,11 +4,7 @@ import { cn, Button } from '@repo/app-component-library'
 
 export const GalleryTableErrorPropsSchema = z.object({
   error: z.instanceof(Error),
-  onRetry: z
-    .function()
-    .args()
-    .returns(z.void())
-    .optional(),
+  onRetry: z.function().args().returns(z.void()).optional(),
   isRetrying: z.boolean().optional().default(false),
   className: z.string().optional(),
 })
@@ -16,22 +12,25 @@ export const GalleryTableErrorPropsSchema = z.object({
 export type GalleryTableErrorProps = z.infer<typeof GalleryTableErrorPropsSchema>
 
 export function GalleryTableError({
-  error, // eslint-disable-line @typescript-eslint/no-unused-vars
+  error,
   onRetry,
   isRetrying = false,
   className,
 }: GalleryTableErrorProps) {
+  // Mark error as used for TypeScript while keeping UI generic
+  void error
+
   return (
     <div
-      className={cn(
-        'flex flex-col items-center justify-center py-16 px-4 text-center',
-        className,
-      )}
+      className={cn('flex flex-col items-center justify-center py-16 px-4 text-center', className)}
       role="alert"
       aria-live="assertive"
       data-testid="gallery-table-error"
     >
-      <div className="mb-4 rounded-full bg-destructive/10 p-4" data-testid="gallery-table-error-icon">
+      <div
+        className="mb-4 rounded-full bg-destructive/10 p-4"
+        data-testid="gallery-table-error-icon"
+      >
         <AlertCircle className="h-12 w-12 text-destructive" aria-hidden="true" />
       </div>
 

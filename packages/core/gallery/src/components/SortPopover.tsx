@@ -72,10 +72,7 @@ function SortRow<TItem extends Record<string, unknown>>({
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Select
-          value={String(field)}
-          onValueChange={val => onUpdate(index, { field: val })}
-        >
+        <Select value={String(field)} onValueChange={val => onUpdate(index, { field: val })}>
           <SelectTrigger className="flex-1">
             <SelectValue />
           </SelectTrigger>
@@ -96,9 +93,7 @@ function SortRow<TItem extends Record<string, unknown>>({
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              onUpdate(index, { direction: direction === 'asc' ? 'desc' : 'asc' })
-            }
+            onClick={() => onUpdate(index, { direction: direction === 'asc' ? 'desc' : 'asc' })}
             aria-pressed={direction === 'desc'}
             aria-label={direction === 'asc' ? 'Sort ascending' : 'Sort descending'}
           >

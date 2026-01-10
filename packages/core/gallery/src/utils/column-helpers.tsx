@@ -1,9 +1,8 @@
-import React from 'react'
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table'
 
 /**
  * Creates a column helper for a specific data type
- * 
+ *
  * @example
  * const columnHelper = createGalleryColumns<MyDataType>()
  * const columns = [
@@ -21,13 +20,13 @@ export function createGalleryColumns<TItem>() {
 export function createTextColumn<TItem>(
   accessor: keyof TItem & string,
   header: string,
-  size = 300
+  size = 300,
 ): ColumnDef<TItem> {
   const helper = createColumnHelper<TItem>()
   return helper.accessor(accessor as any, {
     header,
     size,
-    cell: (info) => {
+    cell: info => {
       const value = info.getValue()
       return value != null ? String(value) : '-'
     },
@@ -40,13 +39,13 @@ export function createTextColumn<TItem>(
 export function createNumberColumn<TItem>(
   accessor: keyof TItem & string,
   header: string,
-  formatter?: (value: number) => string
+  formatter?: (value: number) => string,
 ): ColumnDef<TItem> {
   const helper = createColumnHelper<TItem>()
   return helper.accessor(accessor as any, {
     header,
     size: 150,
-    cell: (info) => {
+    cell: info => {
       const value = info.getValue() as number | null | undefined
       if (value == null) return '-'
       return formatter ? formatter(value) : value.toLocaleString()
@@ -65,13 +64,13 @@ export function createDateColumn<TItem>(
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  }
+  },
 ): ColumnDef<TItem> {
   const helper = createColumnHelper<TItem>()
   return helper.accessor(accessor as any, {
     header,
     size: 200,
-    cell: (info) => {
+    cell: info => {
       const value = info.getValue() as string | Date | null | undefined
       if (!value) return '-'
       try {
@@ -90,13 +89,13 @@ export function createDateColumn<TItem>(
 export function createPriceColumn<TItem>(
   accessor: keyof TItem & string,
   header = 'Price',
-  currencyAccessor?: keyof TItem & string
+  currencyAccessor?: keyof TItem & string,
 ): ColumnDef<TItem> {
   const helper = createColumnHelper<TItem>()
   return helper.accessor(accessor as any, {
     header,
     size: 150,
-    cell: (info) => {
+    cell: info => {
       const price = info.getValue() as number | null | undefined
       if (price == null) return '-'
 
@@ -127,24 +126,26 @@ export function createBadgeColumn<TItem>(
     size?: number
     colorMap?: Record<string, string>
     formatter?: (value: string) => string
-  }
+  },
 ): ColumnDef<TItem> {
   const helper = createColumnHelper<TItem>()
   return helper.accessor(accessor as any, {
     header,
     size: options?.size || 150,
-    cell: (info) => {
+    cell: info => {
       const value = info.getValue() as string | null | undefined
       if (!value) return '-'
-      
-      const displayValue = options?.formatter 
+
+      const displayValue = options?.formatter
         ? options.formatter(value)
         : value.replace(/[-_]/g, ' ')
-      
+
       const className = options?.colorMap?.[value] || ''
-      
+
       return (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${className}`}>
+        <span
+          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${className}`}
+        >
           {displayValue}
         </span>
       )
@@ -162,18 +163,18 @@ export function createImageColumn<TItem>(
     size?: number
     altAccessor?: keyof TItem & string
     fallback?: string
-  }
+  },
 ): ColumnDef<TItem> {
   const helper = createColumnHelper<TItem>()
   return helper.accessor(accessor as any, {
     header,
     size: options?.size || 100,
-    cell: (info) => {
+    cell: info => {
       const src = info.getValue() as string | null | undefined
-      const alt = options?.altAccessor 
+      const alt = options?.altAccessor
         ? (info.row.original[options.altAccessor] as string | undefined)
         : header
-      
+
       if (!src) {
         return options?.fallback ? (
           <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
@@ -183,14 +184,9 @@ export function createImageColumn<TItem>(
           '-'
         )
       }
-      
+
       return (
-        <img
-          src={src}
-          alt={alt || ''}
-          className="h-10 w-10 rounded object-cover"
-          loading="lazy"
-        />
+        <img src={src} alt={alt || ''} className="h-10 w-10 rounded object-cover" loading="lazy" />
       )
     },
   })

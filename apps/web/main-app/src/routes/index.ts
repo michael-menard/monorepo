@@ -119,7 +119,13 @@ const instructionsNewRoute = createRoute({
     return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
   },
   pendingComponent: LoadingPage,
-  beforeLoad: ({ context, location }: { context: RouteContext; location: { pathname: string } }) => {
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
     // Check authentication for upload
     if (!context.auth?.isAuthenticated) {
       throw redirect({
@@ -148,7 +154,13 @@ const instructionEditRoute = createRoute({
     return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
   },
   pendingComponent: LoadingPage,
-  beforeLoad: ({ context, location }: { context: RouteContext; location: { pathname: string } }) => {
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
     // Check authentication for edit
     if (!context.auth?.isAuthenticated) {
       throw redirect({
@@ -293,7 +305,6 @@ const cookiesRoute = createRoute({
   component: PlaceholderPage,
 })
 
-
 // MOC routes (using slug) - also handled by instructions module
 const mocDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -313,7 +324,13 @@ const mocEditRoute = createRoute({
     return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
   },
   pendingComponent: LoadingPage,
-  beforeLoad: ({ context, location }: { context: RouteContext; location: { pathname: string } }) => {
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
     // Check authentication for edit
     if (!context.auth?.isAuthenticated) {
       throw redirect({

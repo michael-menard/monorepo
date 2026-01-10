@@ -4,11 +4,11 @@ import { type SortingState } from '@tanstack/react-table'
 
 /**
  * useSortFromURL - Manages sorting state synchronized with URL query parameters
- * 
- * URL format: 
+ *
+ * URL format:
  * - Single sort: ?sort=column:direction (e.g., ?sort=title:asc)
  * - Multi-sort: ?sort=col1:dir,col2:dir (e.g., ?sort=price:asc,title:desc)
- * 
+ *
  * @param maxSorts - Maximum number of sorts allowed (defaults to 2)
  * @returns [sortingState, setSortingState] - TanStack Table compatible sorting state and setter
  */
@@ -33,7 +33,7 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
       if (direction !== 'asc' && direction !== 'desc') continue
 
       sorts.push({ id, desc: direction === 'desc' })
-      
+
       // Enforce max sorts limit
       if (sorts.length >= maxSorts) break
     }
@@ -47,23 +47,28 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
       // Handle functional updates
       const resolvedSorting = typeof newSorting === 'function' ? newSorting(sorting) : newSorting
 
-      const newSearch = { ...search }
-      
-      if (resolvedSorting.length === 0) {
-        // Remove sort param when no sorting
-        delete newSearch.sort
-      } else {
-        // Build comma-separated sort string for multiple sorts
-        const sortString = resolvedSorting
-          .slice(0, maxSorts) // Enforce max sorts limit
-          .map(({ id, desc }) => `${id}:${desc ? 'desc' : 'asc'}`)
-          .join(',')
-        newSearch.sort = sortString
-      }
+      navigate({
+        replace: true,
+        search: (prev: any) => {
+          const next = { ...prev } as any
 
-      navigate({ search: newSearch, replace: true })
+          if (resolvedSorting.length === 0) {
+            // Remove sort param when no sorting
+            delete (next as { sort?: string }).sort
+          } else {
+            // Build comma-separated sort string for multiple sorts
+            const sortString = resolvedSorting
+              .slice(0, maxSorts) // Enforce max sorts limit
+              .map(({ id, desc }) => `${id}:${desc ? 'desc' : 'asc'}`)
+              .join(',')
+            ;(next as { sort?: string }).sort = sortString
+          }
+
+          return next
+        },
+      })
     },
-    [search, navigate, sorting, maxSorts],
+    [navigate, sorting, maxSorts],
   )
 
   return [sorting, setSorting]

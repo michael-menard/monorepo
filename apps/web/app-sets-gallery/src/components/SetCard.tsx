@@ -2,14 +2,8 @@
  * SetCard Component
  * Card display for sets in the grid view
  */
-import { z } from 'zod'
 import { Card, CardContent, CardFooter, Badge } from '@repo/app-component-library'
 import type { BrickSet } from '../api/mock-sets-api'
-
-const SetCardPropsSchema = z.object({
-  set: z.any(), // Using any here because BrickSet is already typed
-  onClick: z.function().optional(),
-})
 
 export type SetCardProps = {
   set: BrickSet
@@ -72,12 +66,7 @@ export function SetCard({ set, onClick }: SetCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <svg
-              className="w-12 h-12"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
+            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

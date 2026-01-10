@@ -28,10 +28,7 @@ export type { GalleryActiveFiltersProps, ActiveFilter } from './components/Galle
 
 export { GalleryFilterBar } from './components/GalleryFilterBar'
 export type { GalleryFilterBarProps, SortOption } from './components/GalleryFilterBar'
-export {
-  GalleryViewToggle,
-  GalleryViewTogglePropsSchema,
-} from './components/GalleryViewToggle'
+export { GalleryViewToggle, GalleryViewTogglePropsSchema } from './components/GalleryViewToggle'
 export type { GalleryViewToggleProps } from './components/GalleryViewToggle'
 
 export { GallerySort, defaultGallerySortOptions } from './components/GallerySort'

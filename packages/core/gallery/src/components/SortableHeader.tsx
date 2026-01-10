@@ -14,7 +14,7 @@ interface SortableHeaderProps<TData> {
 
 /**
  * SortableHeader component for datatable columns
- * 
+ *
  * Provides visual indicators and keyboard/mouse interaction for column sorting.
  * Supports single and multi-column sorting with priority indicators.
  * Use Shift+click or Shift+Enter to add secondary sort.
@@ -66,8 +66,9 @@ export function SortableHeader<TData>({
         if (typeof node === 'string') return node
         if (typeof node === 'number') return node.toString()
         if (React.isValidElement(node)) {
-          if (node.props.children) {
-            return extractText(node.props.children)
+          const element = node as React.ReactElement
+          if (element.props.children) {
+            return extractText(element.props.children)
           }
         }
         if (Array.isArray(node)) {
@@ -87,7 +88,7 @@ export function SortableHeader<TData>({
 
   // Tooltip for multi-sort hint
   const title = enableMultiSort
-    ? 'Click to sort, Shift+click to add secondary sort'
+    ? `Click to sort, Shift+click to add up to ${maxMultiSortColCount} sorted column${maxMultiSortColCount > 1 ? 's' : ''}`
     : 'Click to sort'
 
   return (
@@ -102,17 +103,13 @@ export function SortableHeader<TData>({
       role="button"
       tabIndex={0}
       aria-sort={
-        sortDirection === 'asc'
-          ? 'ascending'
-          : sortDirection === 'desc'
-            ? 'descending'
-            : 'none'
+        sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none'
       }
       aria-label={ariaLabel}
       title={title}
     >
       {children}
-      {sortDirection && (
+      {sortDirection ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{
@@ -124,13 +121,11 @@ export function SortableHeader<TData>({
           className="ml-auto flex items-center"
         >
           <ArrowUp className="h-4 w-4" aria-hidden="true" />
-          {enableMultiSort && sortIndex > -1 && (
-            <sup className="text-[10px] ml-0.5 font-semibold">
-              {sortIndex + 1}
-            </sup>
-          )}
+          {enableMultiSort && sortIndex > -1 ? (
+            <sup className="text-[10px] ml-0.5 font-semibold">{sortIndex + 1}</sup>
+          ) : null}
         </motion.div>
-      )}
+      ) : null}
     </div>
   )
 }

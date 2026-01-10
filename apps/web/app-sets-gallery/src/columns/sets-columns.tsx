@@ -30,22 +30,20 @@ const formatBuildStatus = (status?: string) => {
 /**
  * Column definitions for the Sets datatable
  */
-export const setsColumns: ColumnDef<BrickSet>[] = [
+export const setsColumns: ColumnDef<BrickSet, any>[] = [
   columnHelper.accessor('setNumber', {
     header: 'Set #',
     size: 150,
-    cell: info => (
-      <span className="font-mono text-sm text-foreground">{info.getValue()}</span>
-    ),
+    cell: info => <span className="font-mono text-sm text-foreground">{info.getValue()}</span>,
     enableSorting: true,
-  }),
+  }) as ColumnDef<BrickSet, any>,
 
   columnHelper.accessor('name', {
     header: 'Name',
     size: 400,
     cell: info => <div className="font-medium text-sm">{info.getValue()}</div>,
     enableSorting: true,
-  }),
+  }) as ColumnDef<BrickSet, any>,
 
   columnHelper.accessor('pieceCount', {
     header: 'Pieces',
@@ -59,7 +57,7 @@ export const setsColumns: ColumnDef<BrickSet>[] = [
       )
     },
     enableSorting: true,
-  }),
+  }) as ColumnDef<BrickSet, any>,
 
   columnHelper.accessor('buildStatus', {
     header: 'Build Status',
@@ -70,5 +68,5 @@ export const setsColumns: ColumnDef<BrickSet>[] = [
       return <Badge variant={variant}>{formatBuildStatus(status)}</Badge>
     },
     enableSorting: true,
-  }),
+  }) as ColumnDef<BrickSet, any>,
 ]

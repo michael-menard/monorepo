@@ -1,7 +1,13 @@
-import React from 'react'
 import { z } from 'zod'
-
-import { cn, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/app-component-library'
+import {
+  cn,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@repo/app-component-library'
 
 const GalleryDataTableSkeletonPropsSchema = z.object({
   columns: z.number().int().min(1),

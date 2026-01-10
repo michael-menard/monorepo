@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { Logger } from '@repo/logger'
 
-const logger: Logger | Console = (globalThis as any).logger ?? console
+const logger: Pick<Logger, 'warn'> = (globalThis as any).logger ?? console
 
 const HINT_STORAGE_KEY = 'gallery_tooltip_dismissed'
 

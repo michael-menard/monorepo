@@ -2,7 +2,8 @@ import { ViewModeSchema, type ViewMode } from '../types'
 
 const STORAGE_PREFIX = 'gallery_view_mode_'
 
-export const getViewModeStorageKey = (galleryType: string): string => `${STORAGE_PREFIX}${galleryType}`
+export const getViewModeStorageKey = (galleryType: string): string =>
+  `${STORAGE_PREFIX}${galleryType}`
 
 export const getViewModeFromStorage = (galleryType: string): ViewMode | null => {
   try {

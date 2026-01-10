@@ -1,16 +1,18 @@
 /**
  * Tests for Sets Gallery Main Page with Datatable Integration
  */
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { MainPage } from '../main-page'
-import * as mockApi from '../../api/mock-sets-api'
+
+const useViewModeMock = vi.fn(() => ['grid', vi.fn()])
 
 // Mock the gallery package
 vi.mock('@repo/gallery', () => ({
-  useViewMode: vi.fn(() => ['grid', vi.fn()]),
+  useViewMode: useViewModeMock,
   GalleryViewToggle: ({ currentView, onViewChange }: any) => (
     <button
       onClick={() => onViewChange(currentView === 'grid' ? 'datatable' : 'grid')}
@@ -63,6 +65,8 @@ vi.mock('react-router-dom', async () => {
 describe('Sets Gallery - Main Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useViewModeMock.mockReset()
+    useViewModeMock.mockImplementation(() => ['grid', vi.fn()])
     // Reset localStorage
     localStorage.clear()
   })
@@ -87,12 +91,11 @@ describe('Sets Gallery - Main Page', () => {
 
     it('switches to datatable view on toggle click', async () => {
       const user = userEvent.setup()
-      const mockUseViewMode = vi.fn(() => {
+
+      useViewModeMock.mockImplementation(() => {
         const [view, setView] = React.useState('grid')
-        return [view, setView] as const
+        return [view, setView]
       })
-      
-      vi.mocked(vi.importMock('@repo/gallery')).useViewMode = mockUseViewMode
       
       renderWithRouter(<MainPage />)
       
@@ -109,15 +112,13 @@ describe('Sets Gallery - Main Page', () => {
       const user = userEvent.setup()
       let viewMode = 'grid'
       
-      const mockUseViewMode = vi.fn(() => {
+      useViewModeMock.mockImplementation(() => {
         const setViewMode = (newMode: string) => {
           viewMode = newMode
           localStorage.setItem('gallery_view_mode_sets', newMode)
         }
-        return [viewMode, setViewMode] as const
+        return [viewMode, setViewMode]
       })
-      
-      vi.mocked(vi.importMock('@repo/gallery')).useViewMode = mockUseViewMode
       
       renderWithRouter(<MainPage />)
       
@@ -130,8 +131,7 @@ describe('Sets Gallery - Main Page', () => {
 
   describe('Datatable Functionality', () => {
     it('renders sets datatable with correct columns', async () => {
-      const mockUseViewMode = vi.fn(() => ['datatable', vi.fn()])
-      vi.mocked(vi.importMock('@repo/gallery')).useViewMode = mockUseViewMode
+      useViewModeMock.mockImplementation(() => ['datatable', vi.fn()])
       
       renderWithRouter(<MainPage />)
       
@@ -146,8 +146,7 @@ describe('Sets Gallery - Main Page', () => {
     })
 
     it('displays sets data in table rows', async () => {
-      const mockUseViewMode = vi.fn(() => ['datatable', vi.fn()])
-      vi.mocked(vi.importMock('@repo/gallery')).useViewMode = mockUseViewMode
+      useViewModeMock.mockImplementation(() => ['datatable', vi.fn()])
       
       renderWithRouter(<MainPage />)
       
@@ -160,8 +159,7 @@ describe('Sets Gallery - Main Page', () => {
 
     it('navigates to detail page on row click', async () => {
       const user = userEvent.setup()
-      const mockUseViewMode = vi.fn(() => ['datatable', vi.fn()])
-      vi.mocked(vi.importMock('@repo/gallery')).useViewMode = mockUseViewMode
+      useViewModeMock.mockImplementation(() => ['datatable', vi.fn()])
       
       renderWithRouter(<MainPage />)
       
@@ -193,8 +191,7 @@ describe('Sets Gallery - Main Page', () => {
 
     it('filters sets by search term in datatable view', async () => {
       const user = userEvent.setup()
-      const mockUseViewMode = vi.fn(() => ['datatable', vi.fn()])
-      vi.mocked(vi.importMock('@repo/gallery')).useViewMode = mockUseViewMode
+      useViewModeMock.mockImplementation(() => ['datatable', vi.fn()])
       
       renderWithRouter(<MainPage />)
       
@@ -270,5 +267,3 @@ describe('Sets Gallery - Main Page', () => {
   })
 })
 
-// Import React for the test
-import React from 'react'

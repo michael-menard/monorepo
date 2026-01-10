@@ -11,9 +11,8 @@ export const SearchableFieldConfigSchema = z.object({
   label: z.string(),
 })
 
-export type SearchableFieldConfig<
-  TItem extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  field: keyof TItem
-  label: string
-}
+export type SearchableFieldConfig<TItem extends Record<string, unknown> = Record<string, unknown>> =
+  {
+    field: keyof TItem
+    label: string
+  }

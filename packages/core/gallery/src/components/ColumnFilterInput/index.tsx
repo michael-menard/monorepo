@@ -42,9 +42,7 @@ export function ColumnFilterInput<TItem extends Record<string, unknown>>({
   operators,
 }: ColumnFilterInputProps<TItem>) {
   const [open, setOpen] = useState(false)
-  const [operator, setOperator] = useState<FilterOperator>(
-    currentFilter?.operator ?? operators[0],
-  )
+  const [operator, setOperator] = useState<FilterOperator>(currentFilter?.operator ?? operators[0])
   const [value, setValue] = useState<string>(
     currentFilter?.value != null ? String(currentFilter.value) : '',
   )
@@ -114,10 +112,7 @@ export function ColumnFilterInput<TItem extends Record<string, unknown>>({
 
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Operator</p>
-            <Select
-              value={operator}
-              onValueChange={val => setOperator(val as FilterOperator)}
-            >
+            <Select value={operator} onValueChange={val => setOperator(val as FilterOperator)}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>

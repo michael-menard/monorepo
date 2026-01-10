@@ -18,14 +18,7 @@ export function DraggableTableHeader<TData>({
   className,
   isDraggingEnabled = true,
 }: DraggableTableHeaderProps<TData>) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
     disabled: !isDraggingEnabled,
   })
@@ -41,13 +34,9 @@ export function DraggableTableHeader<TData>({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        'flex items-center gap-2 group relative',
-        isDragging && 'z-50',
-        className
-      )}
+      className={cn('flex items-center gap-2 group relative', isDragging && 'z-50', className)}
     >
-      {isDraggingEnabled && (
+      {isDraggingEnabled ? (
         <button
           {...attributes}
           {...listeners}
@@ -57,18 +46,15 @@ export function DraggableTableHeader<TData>({
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
             'md:opacity-0 md:group-hover:opacity-100',
             'cursor-grab active:cursor-grabbing',
-            isDragging && 'opacity-100'
+            isDragging && 'opacity-100',
           )}
           aria-label={`Reorder ${column.id} column`}
           aria-roledescription="sortable column"
           type="button"
         >
-          <GripVertical 
-            className="h-4 w-4 text-muted-foreground" 
-            aria-hidden="true"
-          />
+          <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </button>
-      )}
+      ) : null}
       <div className="flex-1">{children}</div>
     </div>
   )
