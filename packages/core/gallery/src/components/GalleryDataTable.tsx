@@ -44,8 +44,8 @@ export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
 export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
   /** Raw items to render in the table */
   items: TItem[]
-  /** Column definitions for this table */
-  columns: GalleryDataTableColumn<TItem>[]
+  /** Column definitions for this table - can be TanStack ColumnDef or legacy GalleryDataTableColumn */
+  columns: ColumnDef<TItem>[] | GalleryDataTableColumn<TItem>[]
   /** Optional configuration for per-column filters */
   filterableColumns?: FilterableColumn<TItem>[]
   /** Optional loading flag (used for infinite scroll indicator) */
@@ -149,67 +149,97 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   const getFilterableColumn = (field: keyof TItem) =>
     filterableColumns.find(fc => fc.field === field)
 
-  // Map lightweight column config into TanStack Table column definitions
+  // Check if columns are legacy format or TanStack format
+  const isLegacyColumns = (cols: any[]): cols is GalleryDataTableColumn<TItem>[] => {
+    if (!cols || cols.length === 0) return false
+    // Legacy columns have 'field' and 'header' as required properties
+    return 'field' in cols[0] && 'header' in cols[0] && typeof cols[0].header === 'string'
+  }
+
+  // Map columns to TanStack Table column definitions
   const columnHelper = createColumnHelper<TItem>()
 
-  const tanstackColumns = React.useMemo<ColumnDef<TItem, unknown>[]>(
-    () =>
-      columns.map(col =>
-        columnHelper.accessor(row => row[col.field], {
-          id: col.field as string,
-          header: ({ column }) => {
-            const filterable = getFilterableColumn(col.field)
-            const currentFilter = columnFilters.find(f => f.field === col.field)
-            
-            // For sortable columns, use SortableHeader wrapper
-            const headerContent = (
-              <>
-                <span className="font-semibold text-sm">{col.header}</span>
-                {filterable ? (
-                  <ColumnFilterInput<TItem>
-                    field={col.field}
-                    label={col.header}
-                    type={filterable.type}
-                    currentFilter={currentFilter}
-                    onChange={filter => handleFilterChange(col.field, filter)}
-                    operators={filterable.operators ?? []}
-                  />
-                ) : null}
-              </>
-            )
-
-            return enableSorting && col.enableSorting !== false ? (
+  const tanstackColumns = React.useMemo<ColumnDef<TItem, unknown>[]>(() => {
+    // If already TanStack ColumnDef format, use directly with sorting wrapper
+    if (!isLegacyColumns(columns)) {
+      return (columns as ColumnDef<TItem>[]).map(col => {
+        // Wrap headers with SortableHeader if sorting is enabled
+        if (enableSorting && typeof col.header === 'string') {
+          return {
+            ...col,
+            header: ({ column }) => (
               <SortableHeader 
                 column={column} 
                 className="px-4 py-3"
                 enableMultiSort={enableMultiSort}
                 maxMultiSortColCount={maxMultiSortColCount}
               >
-                {headerContent}
+                <span className="font-semibold text-sm">{col.header}</span>
               </SortableHeader>
-            ) : (
-              <div className="flex items-center gap-2 px-4 py-3">
-                {headerContent}
-              </div>
-            )
-          },
-          cell: info => {
-            const item = info.row.original as TItem
-            if (col.render) return col.render(item)
-            const value = item[col.field]
-            return (
-              <div className={cn('px-4 py-3 align-middle', col.className)}>
-                {value != null ? String(value) : ''}
-              </div>
-            )
-          },
-          size: col.size,
-          enableSorting: enableSorting && col.enableSorting !== false,
-        }),
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columns, filterableColumns, columnFilters, enableSorting],
-  )
+            ),
+          }
+        }
+        return col
+      })
+    }
+
+    // Convert legacy format to TanStack format
+    return columns.map(col =>
+      columnHelper.accessor(row => row[col.field], {
+        id: col.field as string,
+        header: ({ column }) => {
+          const filterable = getFilterableColumn(col.field)
+          const currentFilter = columnFilters.find(f => f.field === col.field)
+          
+          // For sortable columns, use SortableHeader wrapper
+          const headerContent = (
+            <>
+              <span className="font-semibold text-sm">{col.header}</span>
+              {filterable ? (
+                <ColumnFilterInput<TItem>
+                  field={col.field}
+                  label={col.header}
+                  type={filterable.type}
+                  currentFilter={currentFilter}
+                  onChange={filter => handleFilterChange(col.field, filter)}
+                  operators={filterable.operators ?? []}
+                />
+              ) : null}
+            </>
+          )
+
+          return enableSorting && col.enableSorting !== false ? (
+            <SortableHeader 
+              column={column} 
+              className="px-4 py-3"
+              enableMultiSort={enableMultiSort}
+              maxMultiSortColCount={maxMultiSortColCount}
+            >
+              {headerContent}
+            </SortableHeader>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-3">
+              {headerContent}
+            </div>
+          )
+        },
+        cell: info => {
+          const item = info.row.original as TItem
+          if (col.render) return col.render(item)
+          const value = item[col.field]
+          return (
+            <div className={cn('px-4 py-3 align-middle', col.className)}>
+              {value != null ? String(value) : ''}
+            </div>
+          )
+        },
+        size: col.size,
+        enableSorting: enableSorting && col.enableSorting !== false,
+      }),
+    )
+  }, 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [columns, filterableColumns, columnFilters, enableSorting, enableMultiSort, maxMultiSortColCount])
 
   const table = useReactTable<TItem>({
     data: filteredItems,

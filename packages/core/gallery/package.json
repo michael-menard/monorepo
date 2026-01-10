@@ -15,10 +15,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@repo/app-component-library": "workspace:*",
-    "@repo/logger": "workspace:*",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.1.14",
+    "@repo/app-component-library": "workspace:*",
+    "@repo/logger": "workspace:*",
     "@tanstack/react-table": "^8.0.0",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.468.0",
@@ -37,9 +37,9 @@
     "vitest": "^3.0.5"
   },
   "peerDependencies": {
+    "@tanstack/react-router": "^1.130.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@tanstack/react-router": "^1.130.0"
+    "react-dom": "^19.0.0"
   },
   "peerDependenciesMeta": {
     "@tanstack/react-router": {

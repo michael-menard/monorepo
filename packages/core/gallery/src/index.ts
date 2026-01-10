@@ -123,6 +123,17 @@ export {
 export { SortableHeader } from './components/SortableHeader'
 export { useSortFromURL } from './hooks/useSortFromURL'
 
+// Column Helpers
+export {
+  createGalleryColumns,
+  createTextColumn,
+  createNumberColumn,
+  createDateColumn,
+  createPriceColumn,
+  createBadgeColumn,
+  createImageColumn,
+} from './utils/column-helpers'
+
 // Utils
 export {
   getViewModeStorageKey,
