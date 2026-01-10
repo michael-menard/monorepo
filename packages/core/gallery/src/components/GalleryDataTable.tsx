@@ -7,7 +7,10 @@ import {
   createColumnHelper,
   type ColumnDef,
   type SortingState,
+  type ColumnOrderState,
 } from '@tanstack/react-table'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { Loader2 } from 'lucide-react'
 import {
   cn,
@@ -21,11 +24,13 @@ import {
 import type { ColumnFilter, FilterableColumn } from '../__types__/columnFilter'
 import { useColumnFilters } from '../hooks/useColumnFilters'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
+import { useColumnOrder } from '../hooks/useColumnOrder'
 import { ColumnFilterInput } from './ColumnFilterInput'
 import { GalleryDataTableSkeleton } from './GalleryDataTableSkeleton'
 import { GalleryTableEmpty } from './GalleryTableEmpty'
 import { GalleryTableError } from './GalleryTableError'
 import { SortableHeader } from './SortableHeader'
+import { DraggableTableHeader } from './DraggableTableHeader'
 import { useSortFromURL } from '../hooks/useSortFromURL'
 
 export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
@@ -82,6 +87,14 @@ export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
   enableMultiSort?: boolean
   /** Maximum number of columns that can be sorted simultaneously (defaults to 2) */
   maxMultiSortColCount?: number
+  /** Enable column reordering via drag and drop */
+  enableColumnReordering?: boolean
+  /** Callback when column order changes */
+  onColumnOrderChange?: (columnOrder: string[]) => void
+  /** Initial column order (column IDs) */
+  initialColumnOrder?: string[]
+  /** Persist column order in localStorage */
+  persistColumnOrder?: boolean
 }
 
 export function GalleryDataTable<TItem extends Record<string, unknown>>({
@@ -105,8 +118,19 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   persistSortInUrl = true,
   enableMultiSort = false,
   maxMultiSortColCount = 2,
+  enableColumnReordering = false,
+  onColumnOrderChange,
+  initialColumnOrder,
+  persistColumnOrder = true,
 }: GalleryDataTableProps<TItem>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFilter<TItem>[]>([])
+  
+  // Check if columns are legacy format or TanStack format
+  const isLegacyColumns = (cols: any[]): cols is GalleryDataTableColumn<TItem>[] => {
+    if (!cols || cols.length === 0) return false
+    // Legacy columns have 'field' and 'header' as required properties
+    return 'field' in cols[0] && 'header' in cols[0] && typeof cols[0].header === 'string'
+  }
   
   // Sorting state management
   const urlSortHook = React.useMemo(() => {
@@ -123,6 +147,33 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   
   const sorting = urlSortHook.useUrl ? sortingFromUrl : internalSorting
   const setSorting = urlSortHook.useUrl ? setSortingFromUrl : setInternalSorting
+
+  // Column order state management
+  const defaultColumnOrder = React.useMemo(() => {
+    if (initialColumnOrder) return initialColumnOrder
+    // Extract column IDs from column definitions
+    if (!isLegacyColumns(columns)) {
+      return (columns as ColumnDef<TItem>[]).map((col: any) => col.id || col.accessorKey || '')
+        .filter(Boolean)
+    }
+    return columns.map(col => col.field as string)
+  }, [columns, initialColumnOrder])
+
+  const { columnOrder, setColumnOrder } = useColumnOrder({
+    storageKey: `gallery-table-column-order-${ariaLabel || 'default'}`,
+    initialOrder: defaultColumnOrder,
+    persist: enableColumnReordering && persistColumnOrder,
+  })
+
+  // DnD sensors for keyboard and pointer
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  )
 
   // Apply column filters before passing data to TanStack Table
   const filteredItems = useColumnFilters(items, columnFilters)
@@ -149,11 +200,17 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   const getFilterableColumn = (field: keyof TItem) =>
     filterableColumns.find(fc => fc.field === field)
 
-  // Check if columns are legacy format or TanStack format
-  const isLegacyColumns = (cols: any[]): cols is GalleryDataTableColumn<TItem>[] => {
-    if (!cols || cols.length === 0) return false
-    // Legacy columns have 'field' and 'header' as required properties
-    return 'field' in cols[0] && 'header' in cols[0] && typeof cols[0].header === 'string'
+  // Handle drag end event for column reordering
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id) {
+      const oldIndex = columnOrder.indexOf(active.id as string)
+      const newIndex = columnOrder.indexOf(over?.id as string)
+      const newOrder = arrayMove(columnOrder, oldIndex, newIndex)
+      setColumnOrder(newOrder)
+      onColumnOrderChange?.(newOrder)
+    }
   }
 
   // Map columns to TanStack Table column definitions
@@ -167,16 +224,24 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
         if (enableSorting && typeof col.header === 'string') {
           return {
             ...col,
-            header: ({ column }) => (
-              <SortableHeader 
-                column={column} 
-                className="px-4 py-3"
-                enableMultiSort={enableMultiSort}
-                maxMultiSortColCount={maxMultiSortColCount}
-              >
-                <span className="font-semibold text-sm">{col.header}</span>
-              </SortableHeader>
-            ),
+            header: ({ column }) => {
+              const headerContent = (
+                <SortableHeader 
+                  column={column} 
+                  className="px-4 py-3"
+                  enableMultiSort={enableMultiSort}
+                  maxMultiSortColCount={maxMultiSortColCount}
+                >
+                  <span className="font-semibold text-sm">{col.header}</span>
+                </SortableHeader>
+              )
+              
+              return enableColumnReordering ? (
+                <DraggableTableHeader column={column} isDraggingEnabled={enableColumnReordering}>
+                  {headerContent}
+                </DraggableTableHeader>
+              ) : headerContent
+            },
           }
         }
         return col
@@ -208,7 +273,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
             </>
           )
 
-          return enableSorting && col.enableSorting !== false ? (
+          const sortableContent = enableSorting && col.enableSorting !== false ? (
             <SortableHeader 
               column={column} 
               className="px-4 py-3"
@@ -222,6 +287,12 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
               {headerContent}
             </div>
           )
+
+          return enableColumnReordering ? (
+            <DraggableTableHeader column={column} isDraggingEnabled={enableColumnReordering}>
+              {sortableContent}
+            </DraggableTableHeader>
+          ) : sortableContent
         },
         cell: info => {
           const item = info.row.original as TItem
@@ -239,7 +310,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
     )
   }, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [columns, filterableColumns, columnFilters, enableSorting, enableMultiSort, maxMultiSortColCount])
+  [columns, filterableColumns, columnFilters, enableSorting, enableMultiSort, maxMultiSortColCount, enableColumnReordering])
 
   const table = useReactTable<TItem>({
     data: filteredItems,
@@ -248,7 +319,17 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
     getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
     state: {
       ...(enableSorting && { sorting }),
+      ...(enableColumnReordering && { columnOrder }),
     },
+    ...(enableColumnReordering && {
+      onColumnOrderChange: (updater) => {
+        const newOrder = typeof updater === 'function' 
+          ? updater(columnOrder as ColumnOrderState)
+          : updater
+        setColumnOrder(newOrder as string[])
+        onColumnOrderChange?.(newOrder as string[])
+      },
+    }),
     ...(enableSorting && {
       onSortingChange: setSorting,
       enableSortingRemoval: true, // Allow toggling back to unsorted
@@ -355,17 +436,42 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
           className="min-w-full text-left text-sm"
         >
           <TableHeader>
-            {table.getHeaderGroups().map(headerGroup => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <TableHead key={header.id} className="border-b border-border bg-muted/40">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            {enableColumnReordering ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={columnOrder}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <TableHead key={header.id} className="border-b border-border bg-muted/40">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </SortableContext>
+              </DndContext>
+            ) : (
+              table.getHeaderGroups().map(headerGroup => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
+                    <TableHead key={header.id} className="border-b border-border bg-muted/40">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))
+            )}
           </TableHeader>
           <TableBody>
             {rowCount === 0 && (
