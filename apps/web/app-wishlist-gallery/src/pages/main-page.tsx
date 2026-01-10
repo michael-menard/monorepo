@@ -157,6 +157,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     isLoading,
     isFetching,
     error,
+    refetch,
   } = useGetWishlistQuery({
     q: search || undefined,
     store: selectedStore || undefined,
@@ -374,8 +375,20 @@ function WishlistMainPageContent({ className }: MainPageProps) {
         {/* Loading overlay for refetching */}
         <div className={isFetching && !isLoading ? 'opacity-60 pointer-events-none' : ''}>
           {/* No results after filtering */}
-          {items.length === 0 ? (
-            <GalleryEmptyState
+              {error ? (
+                <GalleryDataTable
+                  items={[]}
+                  columns={wishlistColumns}
+                  isLoading={isLoading}
+                  ariaLabel="Wishlist items table"
+                  error={error as Error}
+                  onRetry={() => {
+                    void refetch()
+                  }}
+                  isRetrying={isFetching}
+                />
+              ) : items.length === 0 ? (
+                <GalleryEmptyState
               icon={Heart}
               title="No matching items"
               description="Try adjusting your filters or search terms."
@@ -387,7 +400,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
           ) : (
             <>
               {/* Gallery Content - view mode controlled by GalleryViewToggle */}
-              {viewMode === 'grid' ? (
+                  {viewMode === 'grid' ? (
                 <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
                   {items.map(item => (
                     <WishlistCard

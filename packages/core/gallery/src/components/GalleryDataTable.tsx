@@ -22,6 +22,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
 import { ColumnFilterInput } from './ColumnFilterInput'
 import { GalleryDataTableSkeleton } from './GalleryDataTableSkeleton'
 import { GalleryTableEmpty } from './GalleryTableEmpty'
+import { GalleryTableError } from './GalleryTableError'
 
 export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
   field: keyof TItem
@@ -61,6 +62,12 @@ export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
   onClearFilters?: () => void
   /** Called when the user clicks "Add Item" in the empty state */
   onAddItem?: () => void
+  /** Optional error to show an error state instead of table rows */
+  error?: Error | null
+  /** Called when the user clicks retry on the error state */
+  onRetry?: () => void
+  /** Whether a retry is currently in progress */
+  isRetrying?: boolean
 }
 
 export function GalleryDataTable<TItem extends Record<string, unknown>>({
@@ -77,6 +84,9 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   hasActiveFilters = false,
   onClearFilters,
   onAddItem,
+  error,
+  onRetry,
+  isRetrying = false,
 }: GalleryDataTableProps<TItem>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFilter<TItem>[]>([])
 
@@ -194,10 +204,21 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
 
   const emptyVariant = hasActiveFilters ? 'no-results' : 'no-items'
 
+  const showError = Boolean(error)
+
   return (
     <div className={cn('hidden md:block w-full', className)}>
       {showSkeleton ? (
         <GalleryDataTableSkeleton columns={colCount} rows={10} />
+      ) : showError ? (
+        <div className="w-full">
+          <GalleryTableError
+            error={error as Error}
+            onRetry={onRetry}
+            isRetrying={isRetrying}
+            className="min-h-[320px]"
+          />
+        </div>
       ) : (
         <Table
           role="table"
