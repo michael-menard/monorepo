@@ -259,7 +259,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   )
 
   // Loading state
-  if (isLoading) {
+  if (isLoading && viewMode === 'grid') {
     return (
       <div className={className}>
         <div className="space-y-6">

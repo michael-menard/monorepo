@@ -6,6 +6,7 @@ import {
   createColumnHelper,
   type ColumnDef,
 } from '@tanstack/react-table'
+import { Loader2 } from 'lucide-react'
 import {
   cn,
   Table,
@@ -19,6 +20,7 @@ import type { ColumnFilter, FilterableColumn } from '../__types__/columnFilter'
 import { useColumnFilters } from '../hooks/useColumnFilters'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
 import { ColumnFilterInput } from './ColumnFilterInput'
+import { GalleryDataTableSkeleton } from './GalleryDataTableSkeleton'
 
 export interface GalleryDataTableColumn<TItem extends Record<string, unknown>> {
   field: keyof TItem
@@ -178,65 +180,73 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   const rowCount = filteredItems.length
   const colCount = columns.length
 
+  const showSkeleton = isLoading && rowCount === 0
+
   return (
     <div className={cn('hidden md:block w-full', className)}>
-      <Table
-        role="table"
-        caption={ariaLabel ?? 'Gallery items table'}
-        aria-rowcount={rowCount}
-        aria-colcount={colCount}
-        className="min-w-full text-left text-sm"
-      >
-        <TableHeader>
-          {table.getHeaderGroups().map(headerGroup => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <TableHead key={header.id} className="border-b border-border bg-muted/40">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {rowCount === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={colCount}
-                className="px-4 py-6 text-center text-muted-foreground"
-              >
-                No results match the current filters.
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map(row => (
-              <TableRow
-                key={row.id}
-                tabIndex={0}
-                className="hover:bg-accent/5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors min-h-[44px]"
-                onClick={() => onRowClick?.(row.original)}
-                onKeyDown={event => handleRowKeyDown(event, row.original)}
-              >
-                {row.getVisibleCells().map(cell => (
-                  <TableCell key={cell.id} className="align-middle">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+      {showSkeleton ? (
+        <GalleryDataTableSkeleton columns={colCount} rows={10} />
+      ) : (
+        <Table
+          role="table"
+          caption={ariaLabel ?? 'Gallery items table'}
+          aria-rowcount={rowCount}
+          aria-colcount={colCount}
+          className="min-w-full text-left text-sm"
+        >
+          <TableHeader>
+            {table.getHeaderGroups().map(headerGroup => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <TableHead key={header.id} className="border-b border-border bg-muted/40">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {rowCount === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={colCount}
+                  className="px-4 py-6 text-center text-muted-foreground"
+                >
+                  No results match the current filters.
+                </TableCell>
+              </TableRow>
+            )}
+
+            {rowCount > 0 &&
+              table.getRowModel().rows.map(row => (
+                <TableRow
+                  key={row.id}
+                  tabIndex={0}
+                  className="hover:bg-accent/5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors min-h-[44px]"
+                  onClick={() => onRowClick?.(row.original)}
+                  onKeyDown={event => handleRowKeyDown(event, row.original)}
+                >
+                  {row.getVisibleCells().map(cell => (
+                    <TableCell key={cell.id} className="align-middle">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      )}
 
       {hasMore && onLoadMore ? (
         <div
           ref={sentinelRef}
           className="h-10 flex items-center justify-center text-xs text-muted-foreground"
           aria-live="polite"
+          aria-label="Loading more items"
         >
-          {isLoading ? 'Loading more items…' : null}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         </div>
       ) : null}
     </div>

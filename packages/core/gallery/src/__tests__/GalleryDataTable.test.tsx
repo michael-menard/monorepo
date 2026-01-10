@@ -129,10 +129,12 @@ describe('GalleryDataTable', () => {
     )
 
     const table = screen.getByRole('table')
-    const container = table.parentElement as HTMLElement
+    // Table is wrapped by the Table container div, which is itself wrapped by the responsive container
+    const tableContainer = table.parentElement as HTMLElement
+    const responsiveWrapper = tableContainer.parentElement as HTMLElement
 
-    expect(container.className).toContain('hidden')
-    expect(container.className).toContain('md:block')
+    expect(responsiveWrapper.className).toContain('hidden')
+    expect(responsiveWrapper.className).toContain('md:block')
   })
 
   it('sets ARIA attributes for accessibility', () => {
@@ -149,6 +151,25 @@ describe('GalleryDataTable', () => {
 
     expect(table).toHaveAttribute('aria-rowcount', mockItems.length.toString())
     expect(table).toHaveAttribute('aria-colcount', columns.length.toString())
+  })
+
+  it('renders a skeleton when loading with no items', () => {
+    render(
+      <GalleryDataTable<WishlistItem>
+        items={[]}
+        columns={columns}
+        isLoading
+        onRowClick={vi.fn()}
+        ariaLabel="Wishlist items table"
+      />,
+    )
+
+    const columnHeaders = screen.getAllByRole('columnheader')
+    expect(columnHeaders).toHaveLength(columns.length)
+
+    const rows = screen.getAllByRole('row')
+    // 1 header row + 10 skeleton rows
+    expect(rows.length).toBeGreaterThan(1)
   })
 })
 
@@ -199,5 +220,22 @@ describe('GalleryDataTable infinite scroll', () => {
     })
 
     expect(handleLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders loading spinner in footer when loading more items', () => {
+    render(
+      <GalleryDataTable<WishlistItem>
+        items={mockItems}
+        columns={columns}
+        onRowClick={vi.fn()}
+        hasMore
+        isLoading
+        onLoadMore={vi.fn()}
+        ariaLabel="Wishlist items table"
+      />,
+    )
+
+    const loadingRegion = screen.getByLabelText('Loading more items')
+    expect(loadingRegion).toBeInTheDocument()
   })
 })
