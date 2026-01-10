@@ -5,11 +5,26 @@
  * Story 3.1.1: Instructions Gallery Page Scaffolding
  * Story 3.1.2: Instructions Card Component
  */
-import { useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { BookOpen } from 'lucide-react'
-import { GalleryGrid, GalleryEmptyState } from '@repo/gallery'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  GalleryGrid,
+  GalleryEmptyState,
+  GalleryFilterBar,
+  GalleryViewToggle,
+  GalleryDataTable,
+  useViewMode,
+  useFirstTimeHint,
+} from '@repo/gallery'
+import { logger } from '@repo/logger'
 import { InstructionCard } from '../components/InstructionCard'
 import type { Instruction } from '../__types__'
+import {
+  InstructionTableItemSchema,
+  type InstructionTableItem,
+  mocsColumns,
+} from '../columns/mocs-columns'
 
 export interface MainPageProps {
   className?: string
@@ -71,6 +86,21 @@ const MOCK_INSTRUCTIONS: Instruction[] = [
  */
 export function MainPage({ className }: MainPageProps) {
   const [instructions, setInstructions] = useState<Instruction[]>(MOCK_INSTRUCTIONS)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Initial view mode from URL (?view=grid|datatable)
+  const initialUrlMode = useMemo(() => {
+    if (typeof window === 'undefined') return null
+    const params = new URLSearchParams(window.location.search)
+    const view = params.get('view')
+    return view === 'datatable' || view === 'grid' ? view : null
+  }, [])
+
+  const [viewMode, setViewMode] = useViewMode('instructions', {
+    urlMode: initialUrlMode,
+  })
+
+  const [showViewHint, dismissViewHint] = useFirstTimeHint()
 
   const handleFavorite = useCallback((id: string) => {
     setInstructions(prev =>
@@ -83,18 +113,52 @@ export function MainPage({ className }: MainPageProps) {
   }, [])
 
   const handleEdit = useCallback((id: string) => {
-    // TODO: Navigate to edit page or open edit modal
-    // eslint-disable-next-line no-console
-    console.log('Edit instruction:', id)
+    logger.info('instructions.gallery.edit_click', undefined, { id })
+    if (typeof window !== 'undefined') {
+      window.location.href = `/instructions/${id}/edit`
+    }
   }, [])
 
-  const handleClick = useCallback((id: string) => {
-    // Navigate to instruction detail page
-    // The main-app shell handles routing, so we use window.location for cross-module navigation
-    window.location.href = `/instructions/${id}`
+  const handleCardClick = useCallback((id: string) => {
+    if (typeof window !== 'undefined') {
+      window.location.href = `/instructions/${id}`
+    }
   }, [])
 
-  const isEmpty = instructions.length === 0
+  // Derive table items from instructions plus optional view-only metadata
+  const tableItems: InstructionTableItem[] = useMemo(
+    () =>
+      instructions.map(instruction => {
+        const item = InstructionTableItemSchema.parse({
+          id: instruction.id,
+          name: instruction.name,
+          createdAt: instruction.createdAt,
+          // Temporary defaults until difficulty/status are wired from API
+          difficulty: 'beginner',
+          status: 'draft',
+          slug: instruction.id,
+        })
+        return item
+      }),
+    [instructions],
+  )
+
+  // Apply text search over name
+  const filteredTableItems = useMemo(() => {
+    if (!searchTerm) return tableItems
+    const query = searchTerm.toLowerCase()
+    return tableItems.filter(item => item.name.toLowerCase().includes(query))
+  }, [tableItems, searchTerm])
+
+  const isEmpty = filteredTableItems.length === 0
+
+  // Sync view mode to URL query param
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    url.searchParams.set('view', viewMode)
+    window.history.replaceState({}, '', url.toString())
+  }, [viewMode])
 
   return (
     <div className={className}>
@@ -108,26 +172,79 @@ export function MainPage({ className }: MainPageProps) {
           <p className="text-muted-foreground">Browse your MOC instruction collection</p>
         </div>
 
-        {/* Instructions Grid */}
-        {isEmpty ? (
-          <GalleryEmptyState
-            icon={BookOpen}
-            title="No instructions yet"
-            description="Upload your first MOC instructions to start your collection."
-          />
-        ) : (
-          <GalleryGrid>
-            {instructions.map(instruction => (
-              <InstructionCard
-                key={instruction.id}
-                instruction={instruction}
-                onClick={handleClick}
-                onFavorite={handleFavorite}
-                onEdit={handleEdit}
+        {/* Filter bar with search + view toggle */}
+        <GalleryFilterBar
+          search={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search instructions..."
+          data-testid="instructions-gallery-filter-bar"
+          rightSlot={
+            <GalleryViewToggle
+              currentView={viewMode}
+              onViewChange={setViewMode}
+              showFirstTimeHint={showViewHint}
+              onDismissHint={dismissViewHint}
+            />
+          }
+        />
+
+        {/* View content with animation */}
+        <AnimatePresence mode="wait">
+          {viewMode === 'grid' ? (
+            <motion.div
+              key="grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {isEmpty ? (
+                <GalleryEmptyState
+                  icon={BookOpen}
+                  title="No instructions yet"
+                  description="Upload your first MOC instructions to start your collection."
+                />
+              ) : (
+                <GalleryGrid>
+                  {filteredTableItems.map(item => {
+                    const instruction = instructions.find(i => i.id === item.id)
+                    if (!instruction) return null
+                    return (
+                      <InstructionCard
+                        key={instruction.id}
+                        instruction={instruction}
+                        onClick={handleCardClick}
+                        onFavorite={handleFavorite}
+                        onEdit={handleEdit}
+                      />
+                    )
+                  })}
+                </GalleryGrid>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="datatable"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              <GalleryDataTable
+                items={filteredTableItems}
+                columns={mocsColumns}
+                ariaLabel="Instructions gallery table"
+                onRowClick={item => {
+                  if (typeof window !== 'undefined') {
+                    window.location.href = `/instructions/${item.slug}/edit`
+                  }
+                }}
+                hasActiveFilters={Boolean(searchTerm)}
+                onClearFilters={() => setSearchTerm('')}
               />
-            ))}
-          </GalleryGrid>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
