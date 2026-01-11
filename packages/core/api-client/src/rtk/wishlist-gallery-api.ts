@@ -14,6 +14,7 @@ import {
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
+  type CreateWishlistItem,
 } from '../schemas/wishlist'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -49,7 +50,12 @@ export const wishlistGalleryApi = createApi({
           limit: params.limit,
         },
       }),
-      transformResponse: (response: unknown) => WishlistListResponseSchema.parse(response),
+      // The wishlist API returns a wrapped success response: { success, data, message, timestamp }
+      // Unwrap to the inner data payload before Zod validation.
+      transformResponse: (response: any) => {
+        const payload = response?.data ?? response
+        return WishlistListResponseSchema.parse(payload)
+      },
       providesTags: result =>
         result
           ? [
@@ -67,13 +73,38 @@ export const wishlistGalleryApi = createApi({
      */
     getWishlistItem: builder.query<WishlistItem, string>({
       query: id => `/wishlist/${id}`,
-      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      transformResponse: (response: any) => {
+        const payload = response?.data ?? response
+        return WishlistItemSchema.parse(payload)
+      },
       providesTags: (_, __, id) => [{ type: 'WishlistItem', id }],
       ...getServerlessCacheConfig('medium'),
+    }),
+
+    /**
+     * POST /api/wishlist
+     *
+     * Creates a new wishlist item.
+     */
+    addToWishlist: builder.mutation<WishlistItem, CreateWishlistItem>({
+      query: body => ({
+        url: '/wishlist',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response: any) => {
+        const payload = response?.data ?? response
+        return WishlistItemSchema.parse(payload)
+      },
+      invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
     }),
   }),
 })
 
 // Export hooks for use in components
-export const { useGetWishlistQuery, useGetWishlistItemQuery, useLazyGetWishlistQuery } =
-  wishlistGalleryApi
+export const {
+  useGetWishlistQuery,
+  useGetWishlistItemQuery,
+  useLazyGetWishlistQuery,
+  useAddToWishlistMutation,
+} = wishlistGalleryApi

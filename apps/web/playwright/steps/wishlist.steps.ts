@@ -346,3 +346,71 @@ Then('I should see the next page of items', async ({ page }) => {
   const cards = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
   await expect(cards.first()).toBeVisible()
 })
+
+// ============================================================================
+// Add Item Steps
+// ============================================================================
+
+When('I navigate to the add wishlist item page', async ({ page }) => {
+  await page.goto('/wishlist/add')
+  await page.waitForSelector('h1:has-text("Add Wishlist Item")', { timeout: 10000 })
+})
+
+When('I fill in the add wishlist form with valid data', async ({ page }) => {
+  await page.getByPlaceholder(/medieval castle/i).fill('Add Form Test Set')
+})
+
+When('I attach an image to the wishlist item', async ({ page }) => {
+  const fileChooserPromise = page.waitForEvent('filechooser')
+  await page.getByText('Click to upload image').click()
+  const fileChooser = await fileChooserPromise
+  await fileChooser.setFiles({ name: 'image.png', mimeType: 'image/png', buffer: Buffer.from('dummy') })
+})
+
+When('I submit the add wishlist form', async ({ page }) => {
+  const submitButton = page.getByRole('button', { name: /add to wishlist/i })
+  await submitButton.click()
+})
+
+Then('I should be redirected to the wishlist page', async ({ page }) => {
+  await expect(page).toHaveURL(/.*\/wishlist$/)
+})
+
+Then('I should see the item titled {string} in the wishlist', async ({ page }, title: string) => {
+  await expect(page.getByText(title)).toBeVisible({ timeout: 10000 })
+})
+
+When('I submit the add wishlist form without filling required fields', async ({ page }) => {
+  const submitButton = page.getByRole('button', { name: /add to wishlist/i })
+  await submitButton.click()
+})
+
+Then('I should see a validation message for the missing title', async ({ page }) => {
+  await expect(page.getByText(/title is required/i)).toBeVisible({ timeout: 10000 })
+})
+
+Given('the wishlist create API returns an error', async ({ page }) => {
+  await setupWishlistMocks(page, { scenario: 'success' })
+
+  await page.route('**/api/wishlist', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'INTERNAL_ERROR', message: 'Create failed' }),
+      })
+      return
+    }
+
+    await route.continue()
+  })
+})
+
+Then('I should see an error message for failed wishlist creation', async ({ page }) => {
+  await expect(page.getByText(/failed to add item/i)).toBeVisible({ timeout: 10000 })
+})
+
+When('I click the cancel button on the add wishlist form', async ({ page }) => {
+  const cancelButton = page.getByRole('button', { name: /cancel/i })
+  await cancelButton.click()
+})

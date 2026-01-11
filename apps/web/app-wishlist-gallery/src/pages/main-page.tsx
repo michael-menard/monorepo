@@ -23,7 +23,7 @@ import {
   useFirstTimeHint,
   type GalleryDataTableColumn,
 } from '@repo/gallery'
-import { Tabs, TabsList, TabsTrigger } from '@repo/app-component-library'
+import { Tabs, TabsList, TabsTrigger, Button } from '@repo/app-component-library'
 import { Heart } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { useGetWishlistQuery } from '@repo/api-client/rtk/wishlist-gallery-api'
@@ -321,13 +321,23 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     <div className={className}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Wishlist</h1>
-          {counts ? (
-            <span className="text-muted-foreground">
-              {counts.total} {counts.total === 1 ? 'item' : 'items'}
-            </span>
-          ) : null}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-bold">Wishlist</h1>
+            {counts ? (
+              <span className="text-muted-foreground">
+                {counts.total} {counts.total === 1 ? 'item' : 'items'}
+              </span>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              window.location.href = '/wishlist/add'
+            }}
+          >
+            Add Item
+          </Button>
         </div>
 
         {/* Filter Bar with Store Tabs and View Toggle */}

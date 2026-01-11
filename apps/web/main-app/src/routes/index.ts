@@ -100,6 +100,21 @@ const wishlistRoute = createRoute({
   },
 })
 
+const wishlistAddRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/wishlist/add',
+  component: () => {
+    // Lazy load wishlist module - handles add page internally
+    return import('./modules/WishlistModule').then(module => module.WishlistModule)
+  },
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
 // Instructions routes - all handled by the instructions module
 const instructionsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -376,6 +391,7 @@ const routeTree = rootRoute.addChildren([
   verifyEmailRoute,
   newPasswordRoute,
   wishlistRoute,
+  wishlistAddRoute,
   instructionsRoute,
   instructionsNewRoute,
   instructionDetailRoute,

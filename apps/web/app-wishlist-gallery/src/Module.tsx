@@ -12,6 +12,7 @@ import { Provider } from 'react-redux'
 import { store } from './store'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
+import { AddWishlistItemPage } from './pages/add-item-page'
 
 /**
  * Module props schema - validated at runtime
@@ -30,10 +31,13 @@ export type AppWishlistGalleryModuleProps = z.infer<typeof AppWishlistGalleryMod
  * Includes Redux Provider for RTK Query wishlist API.
  */
 export function AppWishlistGalleryModule({ className }: AppWishlistGalleryModuleProps) {
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/wishlist'
+  const isAddPage = path === '/wishlist/add'
+
   return (
     <Provider store={store}>
       <ModuleLayout className={className}>
-        <MainPage />
+        {isAddPage ? <AddWishlistItemPage /> : <MainPage />}
       </ModuleLayout>
     </Provider>
   )

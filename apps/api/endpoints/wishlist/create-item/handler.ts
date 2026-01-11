@@ -11,6 +11,7 @@
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { ZodError } from 'zod'
+import { eq, max } from 'drizzle-orm'
 import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
 import { successResponse, errorResponse } from '@/core/utils/responses'
@@ -57,6 +58,14 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const body = JSON.parse(event.body || '{}')
     const validatedData = CreateWishlistItemSchema.parse(body)
 
+    // Compute next sortOrder for this user (max existing + 1)
+    const [maxResult] = await db
+      .select({ maxSortOrder: max(wishlistItems.sortOrder) })
+      .from(wishlistItems)
+      .where(eq(wishlistItems.userId, userId))
+
+    const nextSortOrder = (maxResult?.maxSortOrder ?? -1) + 1
+
     // Create item in database
     const [newItem] = await db
       .insert(wishlistItems)
@@ -74,7 +83,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
         tags: validatedData.tags,
         priority: validatedData.priority,
         notes: validatedData.notes || null,
-        // sortOrder defaults to 0 from schema
+        sortOrder: nextSortOrder,
       })
       .returning()
 
