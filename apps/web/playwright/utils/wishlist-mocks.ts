@@ -1,9 +1,16 @@
 /**
- * Wishlist API Mocking Utilities for E2E Tests
+ * Wishlist API Mocking Utilities for E2E Tests (LEGACY)
  * Story wish-2001: Wishlist Gallery MVP
  *
  * Provides mock responses for wishlist API endpoints.
  * Tests run against mocked API - no backend deployment required.
+ *
+ * IMPORTANT (wish-2007): These mocks MUST NOT be used by the real
+ * wishlist end-to-end regression suite. Real E2E tests for wishlist
+ * flows should exercise the deployed API + database without
+ * page.route() interception. This file is kept only for legacy/
+ * exploratory tests and BDD scenarios that are explicitly marked
+ * as mocked.
  */
 
 import type { Page, Route } from '@playwright/test'

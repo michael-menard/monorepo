@@ -8,7 +8,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { MainPage } from '../main-page'
 
-const useViewModeMock = vi.fn(() => ['grid', vi.fn()])
+// We treat this as any to avoid over-constraining the mock's return type in tests
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const useViewModeMock: any = vi.fn(() => ['grid', vi.fn()])
 
 // Mock the gallery package
 vi.mock('@repo/gallery', () => ({

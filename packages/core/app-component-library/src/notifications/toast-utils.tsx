@@ -19,12 +19,19 @@ export interface ToastApiError {
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
 // Custom toast component with countdown and hover pause
+interface ToastActionProps {
+  label: string
+  onClick: () => void
+}
+
 interface CustomToastProps {
   type: ToastType
   title: string
   description?: string
   duration?: number
   onClose?: () => void
+  primaryAction?: ToastActionProps
+  secondaryAction?: ToastActionProps
 }
 
 const CustomToast: React.FC<CustomToastProps> = ({
@@ -33,6 +40,8 @@ const CustomToast: React.FC<CustomToastProps> = ({
   description,
   duration = 5000,
   onClose,
+  primaryAction,
+  secondaryAction,
 }) => {
   const [progress, setProgress] = useState(100)
   const [isPaused, setIsPaused] = useState(false)
@@ -129,6 +138,34 @@ const CustomToast: React.FC<CustomToastProps> = ({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900">{title}</p>
           {description ? <p className="text-sm text-gray-600 mt-1">{description}</p> : null}
+          {primaryAction || secondaryAction ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {primaryAction ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    primaryAction.onClick()
+                    onClose?.()
+                  }}
+                  className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  {primaryAction.label}
+                </button>
+              ) : null}
+              {secondaryAction ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    secondaryAction.onClick()
+                    onClose?.()
+                  }}
+                  className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  {secondaryAction.label}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -209,7 +246,13 @@ export const getErrorMessage = (error: unknown): string => {
 }
 
 // Toast utility functions
-export const showSuccessToast = (title: string, description?: string, duration?: number) => {
+export const showSuccessToast = (
+  title: string,
+  description?: string,
+  duration?: number,
+  primaryAction?: ToastActionProps,
+  secondaryAction?: ToastActionProps,
+) => {
   toast.custom(
     t => (
       <CustomToast
@@ -217,6 +260,8 @@ export const showSuccessToast = (title: string, description?: string, duration?:
         title={title}
         description={description}
         duration={duration}
+        primaryAction={primaryAction}
+        secondaryAction={secondaryAction}
         onClose={() => toast.dismiss(t)}
       />
     ),
@@ -224,7 +269,13 @@ export const showSuccessToast = (title: string, description?: string, duration?:
   )
 }
 
-export const showErrorToast = (error: unknown, title: string = 'Error', duration?: number) => {
+export const showErrorToast = (
+  error: unknown,
+  title: string = 'Error',
+  duration?: number,
+  primaryAction?: ToastActionProps,
+  secondaryAction?: ToastActionProps,
+) => {
   const message = getErrorMessage(error)
   toast.custom(
     t => (
@@ -233,6 +284,8 @@ export const showErrorToast = (error: unknown, title: string = 'Error', duration
         title={title}
         description={message}
         duration={duration}
+        primaryAction={primaryAction}
+        secondaryAction={secondaryAction}
         onClose={() => toast.dismiss(t)}
       />
     ),
@@ -240,7 +293,13 @@ export const showErrorToast = (error: unknown, title: string = 'Error', duration
   )
 }
 
-export const showWarningToast = (title: string, description?: string, duration?: number) => {
+export const showWarningToast = (
+  title: string,
+  description?: string,
+  duration?: number,
+  primaryAction?: ToastActionProps,
+  secondaryAction?: ToastActionProps,
+) => {
   toast.custom(
     t => (
       <CustomToast
@@ -248,6 +307,8 @@ export const showWarningToast = (title: string, description?: string, duration?:
         title={title}
         description={description}
         duration={duration}
+        primaryAction={primaryAction}
+        secondaryAction={secondaryAction}
         onClose={() => toast.dismiss(t)}
       />
     ),
@@ -255,7 +316,13 @@ export const showWarningToast = (title: string, description?: string, duration?:
   )
 }
 
-export const showInfoToast = (title: string, description?: string, duration?: number) => {
+export const showInfoToast = (
+  title: string,
+  description?: string,
+  duration?: number,
+  primaryAction?: ToastActionProps,
+  secondaryAction?: ToastActionProps,
+) => {
   toast.custom(
     t => (
       <CustomToast
@@ -263,6 +330,8 @@ export const showInfoToast = (title: string, description?: string, duration?: nu
         title={title}
         description={description}
         duration={duration}
+        primaryAction={primaryAction}
+        secondaryAction={secondaryAction}
         onClose={() => toast.dismiss(t)}
       />
     ),

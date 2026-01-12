@@ -7,10 +7,10 @@
  * Story wish-2001: Wishlist Gallery MVP
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, type MouseEvent } from 'react'
+import { useDispatch } from 'react-redux'
 import { z } from 'zod'
 import {
-  GalleryGrid,
   GalleryFilterBar,
   GalleryPagination,
   GalleryEmptyState,
@@ -23,11 +23,29 @@ import {
   useFirstTimeHint,
   type GalleryDataTableColumn,
 } from '@repo/gallery'
-import { Tabs, TabsList, TabsTrigger, Button } from '@repo/app-component-library'
+import { Tabs, TabsList, TabsTrigger, Button, useToast } from '@repo/app-component-library'
 import { Heart } from 'lucide-react'
-import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
-import { useGetWishlistQuery } from '@repo/api-client/rtk/wishlist-gallery-api'
+import type { WishlistItem, MarkPurchasedResponse } from '@repo/api-client/schemas/wishlist'
+import {
+  wishlistGalleryApi,
+  useGetWishlistQuery,
+  useRemoveFromWishlistMutation,
+  useAddToWishlistMutation,
+  useReorderWishlistMutation,
+} from '@repo/api-client/rtk/wishlist-gallery-api'
 import { WishlistCard } from '../components/WishlistCard'
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal'
+import { GotItModal } from '../components/GotItModal'
+import { SortableGallery } from '../components/SortableGallery'
+import { SortableWishlistCard } from '../components/SortableWishlistCard'
+import {
+  NewUserEmptyState,
+  AllPurchasedEmptyState,
+  NoResultsEmptyState,
+} from '../components/WishlistEmptyStates'
+import { useRovingTabindex } from '../hooks/useRovingTabindex'
+import { useWishlistKeyboardShortcuts } from '../hooks/useWishlistKeyboardShortcuts'
+import { announce } from '../components/common/Announcer'
 
 /**
  * Main page props schema
@@ -123,7 +141,7 @@ const wishlistColumns: GalleryDataTableColumn<WishlistItem>[] = [
 /**
  * Wishlist filter shape for FilterProvider
  */
-interface WishlistFilters {
+interface WishlistFilters extends Record<string, unknown> {
   search: string
   store: string | null
   tags: string[]
@@ -133,6 +151,26 @@ interface WishlistFilters {
 
 function WishlistMainPageContent({ className }: MainPageProps) {
   const { filters, updateFilter, clearFilters } = useFilterContext<WishlistFilters>()
+  const { toast, success, error } = useToast()
+  const dispatch = useDispatch<any>()
+
+  const [selectedItemForDelete, setSelectedItemForDelete] = useState<WishlistItem | null>(null)
+  const [selectedItemForGotIt, setSelectedItemForGotIt] = useState<WishlistItem | null>(null)
+  const [lastPurchasedItem, setLastPurchasedItem] = useState<WishlistItem | null>(null)
+  const [lastPurchaseResponse, setLastPurchaseResponse] = useState<MarkPurchasedResponse | null>(
+    null,
+  )
+
+  const [removeFromWishlist, { isLoading: isDeleting }] = useRemoveFromWishlistMutation()
+  const [addToWishlist] = useAddToWishlistMutation()
+  const [reorderWishlist] = useReorderWishlistMutation()
+
+  // Local grid items state for optimistic drag-and-drop reordering
+  const [gridItems, setGridItems] = useState<WishlistItem[]>([])
+
+  // Track whether the user has ever had wishlist items, so we can
+  // differentiate new-user vs all-purchased empty states.
+  const [hasHadItems, setHasHadItems] = useState(false)
 
   const search = filters.search
   const selectedStore = filters.store
@@ -149,14 +187,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   // Parse sort value
   const [sortField, sortOrder] = sortValue.split('-') as [string, 'asc' | 'desc']
 
-  // Fetch wishlist data
-  const {
-    data: wishlistData,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useGetWishlistQuery({
+  const queryArgs = {
     q: search || undefined,
     store: selectedStore || undefined,
     tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
@@ -164,7 +195,16 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     order: sortOrder,
     page,
     limit: 20,
-  })
+  }
+
+  // Fetch wishlist data
+  const {
+    data: wishlistData,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useGetWishlistQuery(queryArgs)
 
   // Extract data
   const items = wishlistData?.items ?? []
@@ -174,6 +214,36 @@ function WishlistMainPageContent({ className }: MainPageProps) {
 
   // Accumulated items for infinite scroll in datatable view
   const [allItems, setAllItems] = useState<WishlistItem[]>([])
+
+  // Initialise hasHadItems from localStorage on first mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.localStorage.getItem('wishlist:hadItems')
+    if (stored === 'true') {
+      setHasHadItems(true)
+    }
+  }, [])
+
+  // Keep track of whether the user has ever had wishlist items
+  useEffect(() => {
+    if (counts?.total && counts.total > 0) {
+      setHasHadItems(true)
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('wishlist:hadItems', 'true')
+      }
+    }
+  }, [counts?.total])
+
+  // Keep a local copy of items for grid view so we can optimistically
+  // update the UI during drag-and-drop reordering.
+  useEffect(() => {
+    if (!items || items.length === 0) {
+      setGridItems([])
+      return
+    }
+
+    setGridItems(items)
+  }, [items])
 
   useEffect(() => {
     if (!wishlistData || viewMode !== 'datatable') return
@@ -195,6 +265,42 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   // Store tabs content
   const stores = availableFilters?.availableStores ?? []
   const storeCounts = counts?.byStore ?? {}
+
+  // Local items used for the grid view (may diverge from API order during drag-and-drop)
+  const galleryItems = gridItems.length > 0 ? gridItems : items
+
+  // Roving tabindex state for keyboard navigation in the grid view
+  const {
+    focusedIndex,
+    focusedId,
+    setItemRef,
+    handleKeyDown: handleGridKeyDown,
+    getTabIndex,
+  } = useRovingTabindex({
+    items: galleryItems,
+    columns: 4,
+    onActivate: id => {
+      handleCardClick(id)
+    },
+  })
+
+  // Global keyboard shortcuts for wishlist actions
+  useWishlistKeyboardShortcuts({
+    focusedItemId: viewMode === 'grid' ? focusedId : undefined,
+    onGotIt: id => {
+      const item = galleryItems.find(i => i.id === id)
+      if (item) {
+        setSelectedItemForGotIt(item)
+      }
+    },
+    onDelete: id => {
+      const item = galleryItems.find(i => i.id === id)
+      if (item) {
+        setSelectedItemForDelete(item)
+      }
+    },
+    isModalOpen: Boolean(selectedItemForGotIt || selectedItemForDelete),
+  })
 
   const hasActiveFilters = Boolean(
     (search && search.trim().length > 0) ||
@@ -256,11 +362,180 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     window.location.href = `/wishlist/${itemId}`
   }, [])
 
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!selectedItemForDelete) return
+
+    const item = selectedItemForDelete
+
+    try {
+      await removeFromWishlist(item.id).unwrap()
+      success('Item removed', `"${item.title}" was removed from your wishlist.`)
+      announce(`Removed ${item.title} from your wishlist`)
+    } catch (err) {
+      error(err, 'Failed to remove item')
+      announce('Failed to remove wishlist item', 'assertive')
+    } finally {
+      setSelectedItemForDelete(null)
+    }
+  }, [selectedItemForDelete, removeFromWishlist, success, error])
+
   const handleRowClick = useCallback(
     (item: WishlistItem) => {
       handleCardClick(item.id)
     },
     [handleCardClick],
+  )
+
+  const handleUndoPurchase = useCallback(async () => {
+    if (!lastPurchasedItem || !lastPurchaseResponse?.removedFromWishlist) return
+
+    const item = lastPurchasedItem
+
+    try {
+      await addToWishlist({
+        title: item.title,
+        store: item.store,
+        setNumber: item.setNumber ?? undefined,
+        sourceUrl: item.sourceUrl ?? undefined,
+        imageUrl: item.imageUrl ?? undefined,
+        price: item.price ?? undefined,
+        currency: item.currency,
+        pieceCount: item.pieceCount ?? undefined,
+        releaseDate: item.releaseDate ?? undefined,
+        tags: item.tags ?? [],
+        priority: item.priority,
+        notes: item.notes ?? undefined,
+      }).unwrap()
+
+      success('Undo successful', `"${item.title}" was restored to your wishlist.`)
+      setLastPurchasedItem(null)
+      setLastPurchaseResponse(null)
+    } catch (err) {
+      error(err, 'Failed to undo purchase')
+    }
+  }, [addToWishlist, lastPurchasedItem, lastPurchaseResponse, success, error])
+
+  const handleGotItCompleted = useCallback(
+    ({ item, response }: { item: WishlistItem; response: MarkPurchasedResponse }) => {
+      setSelectedItemForGotIt(null)
+      setLastPurchasedItem(item)
+      setLastPurchaseResponse(response)
+
+      const hasNewSet = Boolean(response.newSetId)
+      const wasRemoved = response.removedFromWishlist
+
+      const description = hasNewSet
+        ? 'View it in your Sets gallery.'
+        : wasRemoved
+          ? 'Item marked as purchased and removed from wishlist.'
+          : 'Item marked as purchased and kept on wishlist.'
+
+      const primaryAction = wasRemoved
+        ? {
+            label: 'Undo',
+            onClick: handleUndoPurchase,
+          }
+        : undefined
+
+      const secondaryAction = hasNewSet
+        ? {
+            label: 'View in Sets',
+            onClick: () => {
+              window.location.href = `/sets/${response.newSetId}`
+            },
+          }
+        : undefined
+
+      toast({
+        title: 'Added to your collection!',
+        description,
+        variant: 'success',
+        duration: 5000,
+        primaryAction,
+        secondaryAction,
+      })
+    },
+    [
+      handleUndoPurchase,
+      toast,
+      setSelectedItemForGotIt,
+      setLastPurchasedItem,
+      setLastPurchaseResponse,
+    ],
+  )
+
+  const handleUndo = useCallback(
+    async (previousIds: string[]) => {
+      if (!previousIds.length) return
+
+      const currentItems = gridItems.length > 0 ? gridItems : items
+      const restored = previousIds
+        .map(id => currentItems.find(item => item.id === id))
+        .filter(Boolean) as WishlistItem[]
+
+      setGridItems(restored)
+
+      try {
+        await reorderWishlist({
+          items: previousIds.map((id, index) => ({ id, sortOrder: index })),
+        }).unwrap()
+      } catch (err) {
+        error(err, 'Failed to undo wishlist priority change')
+      }
+    },
+    [gridItems, items, reorderWishlist, error],
+  )
+
+  const handleReorder = useCallback(
+    async (reorderedItems: WishlistItem[]) => {
+      const previousIds = gridItems.map(item => item.id)
+      const newIds = reorderedItems.map(item => item.id)
+
+      // Optimistically update local grid items
+      setGridItems(reorderedItems)
+
+      // Patch RTK Query cache for the current wishlist query so
+      // other subscribers (e.g. datatable view) see the new order
+      const patchResult = dispatch(
+        wishlistGalleryApi.util.updateQueryData('getWishlist', queryArgs, draft => {
+          if (!draft?.items) return
+
+          // Reorder items to match newIds, preserving object identities
+          const byId = new Map(reorderedItems.map(item => [item.id, item]))
+          draft.items = newIds.map(id => byId.get(id)).filter(Boolean) as WishlistItem[]
+        }),
+      )
+
+      // Show undo toast
+      toast({
+        title: 'Priority updated',
+        description: 'You can undo this change for the next few seconds.',
+        duration: 5000,
+        primaryAction: {
+          label: 'Undo',
+          onClick: () => {
+            void handleUndo(previousIds)
+          },
+        },
+      })
+
+      try {
+        await reorderWishlist({
+          items: newIds.map((id, index) => ({ id, sortOrder: index })),
+        }).unwrap()
+        announce('Updated wishlist item priorities')
+      } catch (err) {
+        // Revert RTK cache and local state on failure
+        ;(patchResult as any).undo()
+        const restored = previousIds
+          .map(id => reorderedItems.find(item => item.id === id))
+          .filter(Boolean) as WishlistItem[]
+        setGridItems(restored)
+        error(err, 'Failed to update wishlist priority')
+        announce('Failed to update wishlist priority', 'assertive')
+      }
+    },
+    [gridItems, queryArgs, dispatch, reorderWishlist, toast, error, handleUndo],
   )
 
   // Loading state
@@ -276,7 +551,7 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   }
 
   // Error state
-  if (error) {
+  if (queryError) {
     return (
       <div className={className}>
         <div className="space-y-6">
@@ -295,23 +570,27 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     )
   }
 
-  // Empty state
+  // Empty state (no items and no active filters)
   if (items.length === 0 && !search && !selectedStore && selectedTags.length === 0) {
+    const isAllPurchased = hasHadItems
+
     return (
       <div className={className}>
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Wishlist</h1>
-          <GalleryEmptyState
-            icon={Heart}
-            title="Your wishlist is empty"
-            description="Add LEGO sets to your wishlist to keep track of what you want."
-            action={{
-              label: 'Browse Sets',
-              onClick: () => {
-                window.location.href = '/sets'
-              },
-            }}
-          />
+          {isAllPurchased ? (
+            <AllPurchasedEmptyState
+              onAddItem={() => {
+                window.location.href = '/wishlist/add'
+              }}
+            />
+          ) : (
+            <NewUserEmptyState
+              onAddItem={() => {
+                window.location.href = '/wishlist/add'
+              }}
+            />
+          )}
         </div>
       </div>
     )
@@ -324,6 +603,10 @@ function WishlistMainPageContent({ className }: MainPageProps) {
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col">
             <h1 className="text-3xl font-bold">Wishlist</h1>
+            <p id="wishlist-keyboard-shortcuts" className="sr-only">
+              Keyboard shortcuts: A to add an item, G to mark the focused item as got it, Delete or
+              Backspace to remove the focused item, and arrow keys to move between items.
+            </p>
             {counts ? (
               <span className="text-muted-foreground">
                 {counts.total} {counts.total === 1 ? 'item' : 'items'}
@@ -385,43 +668,104 @@ function WishlistMainPageContent({ className }: MainPageProps) {
         {/* Loading overlay for refetching */}
         <div className={isFetching && !isLoading ? 'opacity-60 pointer-events-none' : ''}>
           {/* No results after filtering */}
-          {error ? (
+          {queryError ? (
             <GalleryDataTable
               items={[]}
               columns={wishlistColumns}
               isLoading={isLoading}
               ariaLabel="Wishlist items table"
-              error={error as Error}
+              error={queryError as Error}
               onRetry={() => {
                 void refetch()
               }}
               isRetrying={isFetching}
             />
           ) : items.length === 0 ? (
-            <GalleryEmptyState
-              icon={Heart}
-              title="No matching items"
-              description="Try adjusting your filters or search terms."
-              action={{
-                label: 'Clear Filters',
-                onClick: handleClearFilters,
-              }}
-            />
+            <NoResultsEmptyState onClearFilters={handleClearFilters} />
           ) : (
             <>
               {/* Gallery Content - view mode controlled by GalleryViewToggle */}
               {viewMode === 'grid' ? (
-                <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
-                  {items.map(item => (
-                    <WishlistCard
-                      key={item.id}
-                      item={item}
-                      onClick={() => handleCardClick(item.id)}
-                    />
-                  ))}
-                </GalleryGrid>
+                <div
+                  role="grid"
+                  aria-label="Wishlist items"
+                  aria-describedby="wishlist-keyboard-shortcuts"
+                  onKeyDown={handleGridKeyDown}
+                >
+                  <SortableGallery
+                    items={galleryItems}
+                    onReorder={handleReorder}
+                    columns={{ sm: 1, md: 2, lg: 3, xl: 4 }}
+                    gap={6}
+                    renderItem={(item, index) => (
+                      <div
+                        key={item.id}
+                        className={`flex flex-col gap-2 transition-opacity duration-300 ${
+                          isDeleting && selectedItemForDelete?.id === item.id ? 'opacity-40' : ''
+                        }`}
+                      >
+                        <SortableWishlistCard id={item.id}>
+                          <div
+                            role="gridcell"
+                            tabIndex={getTabIndex(index)}
+                            ref={el => setItemRef(item.id, el)}
+                            onKeyDown={event => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                handleCardClick(item.id)
+                              }
+                            }}
+                            aria-label={`
+                              ${item.title},
+                              ${item.price ? formatCurrency(item.price, item.currency) : ''}
+                              ${
+                                item.pieceCount
+                                  ? `, ${item.pieceCount.toLocaleString()} pieces`
+                                  : ''
+                              },
+                              priority ${item.priority ?? 0} of 5,
+                              ${item.store}
+                            `
+                              .replace(/\s+/g, ' ')
+                              .trim()}
+                            className={`group relative outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                              index === focusedIndex ? 'ring-2 ring-primary ring-offset-2' : ''
+                            }`}
+                            onClick={() => handleCardClick(item.id)}
+                          >
+                            <WishlistCard item={item} />
+                          </div>
+                        </SortableWishlistCard>
+                        <div className="flex gap-2">
+                      <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={(event: MouseEvent<HTMLButtonElement>) => {
+                              event.stopPropagation()
+                              setSelectedItemForGotIt(item)
+                            }}
+                          >
+                            Got it!
+                          </Button>
+                      <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={(event: MouseEvent<HTMLButtonElement>) => {
+                              event.stopPropagation()
+                              setSelectedItemForDelete(item)
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  />
+                </div>
               ) : (
-                <GalleryDataTable<WishlistItem>
+                <GalleryDataTable
                   items={allItems}
                   columns={wishlistColumns}
                   isLoading={isFetching}
@@ -452,13 +796,38 @@ function WishlistMainPageContent({ className }: MainPageProps) {
           )}
         </div>
       </div>
+
+      <DeleteConfirmationModal
+        open={selectedItemForDelete !== null}
+        onOpenChange={open => {
+          if (!open && !isDeleting) {
+            setSelectedItemForDelete(null)
+          }
+        }}
+        itemTitle={selectedItemForDelete?.title ?? ''}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+
+      {selectedItemForGotIt ? (
+        <GotItModal
+          open={selectedItemForGotIt !== null}
+          onOpenChange={open => {
+            if (!open) {
+              setSelectedItemForGotIt(null)
+            }
+          }}
+          item={selectedItemForGotIt}
+          onCompleted={handleGotItCompleted}
+        />
+      ) : null}
     </div>
   )
 }
 
 export function MainPage({ className }: MainPageProps) {
   return (
-    <FilterProvider<WishlistFilters>
+    <FilterProvider
       initialFilters={{
         search: '',
         store: null,

@@ -27,11 +27,7 @@ export function ImageUploadField({ preview, onFileChange, onRemove }: ImageUploa
       <div className="border-2 border-dashed rounded-lg p-4">
         {preview ? (
           <div className="relative w-32 h-32">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-full h-full object-cover rounded"
-            />
+            <img src={preview} alt="Preview" className="w-full h-full object-cover rounded" />
             <Button
               type="button"
               variant="destructive"

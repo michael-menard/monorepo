@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
-import { CreateWishlistItemSchema, type CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
+import {
+  CreateWishlistItemSchema,
+  type CreateWishlistItem,
+} from '@repo/api-client/schemas/wishlist'
 import {
   Badge,
   Button,
@@ -38,7 +41,7 @@ export function AddWishlistItemPage() {
   const [newTag, setNewTag] = useState('')
 
   const form = useForm<CreateWishlistItem>({
-    resolver: zodResolver(CreateWishlistItemSchema),
+    resolver: zodResolver(CreateWishlistItemSchema) as any,
     defaultValues: {
       title: '',
       store: 'LEGO',
@@ -116,18 +119,28 @@ export function AddWishlistItemPage() {
         <h1 className="text-2xl font-bold">Add Wishlist Item</h1>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <Form {...(form as any)}>
+        <form onSubmit={(form as any).handleSubmit(handleSubmit as any)} className="space-y-6">
           {/* Store selection */}
           <FormField
             control={form.control}
             name="store"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Store *</FormLabel>
+                <FormLabel htmlFor="store">
+                  Store
+                  <span className="text-destructive ml-1" aria-hidden="true">
+                    *
+                  </span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger
+                      id="store"
+                      aria-required="true"
+                      aria-invalid={form.formState.errors.store ? 'true' : 'false'}
+                      aria-describedby={form.formState.errors.store ? 'store-error' : undefined}
+                    >
                       <SelectValue placeholder="Select store" />
                     </SelectTrigger>
                   </FormControl>
@@ -139,7 +152,7 @@ export function AddWishlistItemPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage />
+                <FormMessage id="store-error" />
               </FormItem>
             )}
           />
@@ -150,9 +163,14 @@ export function AddWishlistItemPage() {
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title *</FormLabel>
+                <FormLabel htmlFor="title">
+                  Title
+                  <span className="text-destructive ml-1" aria-hidden="true">
+                    *
+                  </span>
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Medieval Castle" {...field} />
+                  <Input id="title" placeholder="e.g., Medieval Castle" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -206,9 +224,10 @@ export function AddWishlistItemPage() {
               name="price"
               render={({ field }) => (
                 <FormItem className="col-span-2">
-                  <FormLabel>Price</FormLabel>
+                  <FormLabel htmlFor="price">Price</FormLabel>
                   <FormControl>
                     <Input
+                      id="price"
                       type="number"
                       step="0.01"
                       placeholder="e.g., 199.99"
@@ -226,10 +245,10 @@ export function AddWishlistItemPage() {
               name="currency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Currency</FormLabel>
+                  <FormLabel htmlFor="currency">Currency</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger id="currency">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -359,9 +378,10 @@ export function AddWishlistItemPage() {
             name="sourceUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Source URL</FormLabel>
+                <FormLabel htmlFor="sourceUrl">Source URL</FormLabel>
                 <FormControl>
                   <Input
+                    id="sourceUrl"
                     type="url"
                     placeholder="https://www.lego.com/product/..."
                     {...field}
@@ -379,9 +399,10 @@ export function AddWishlistItemPage() {
             name="notes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Notes</FormLabel>
+                <FormLabel htmlFor="notes">Notes</FormLabel>
                 <FormControl>
                   <Textarea
+                    id="notes"
                     rows={3}
                     placeholder="Any additional notes (e.g., wait for sale)..."
                     {...field}
@@ -403,7 +424,7 @@ export function AddWishlistItemPage() {
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Add to Wishlist
             </Button>
           </div>

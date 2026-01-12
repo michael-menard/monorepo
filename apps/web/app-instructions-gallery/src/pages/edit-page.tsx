@@ -41,9 +41,12 @@ type MocEditFormInput = z.infer<typeof MocEditFormSchema>
 
 /**
  * Props for InstructionsEditPage - receives MOC data from loader
+ *
+ * Note: moc is optional so the page can render a "not found" state
+ * when data is missing or while integrating with different loaders.
  */
 interface InstructionsEditPageProps {
-  moc: {
+  moc?: {
     id: string
     title: string
     description: string | null

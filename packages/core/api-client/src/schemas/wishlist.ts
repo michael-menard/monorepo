@@ -170,3 +170,26 @@ export const BatchReorderSchema = z.object({
 })
 
 export type BatchReorder = z.infer<typeof BatchReorderSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Purchased Flow Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MarkPurchasedRequestSchema = z.object({
+  purchasePrice: z.number().nonnegative(),
+  purchaseTax: z.number().nonnegative().optional(),
+  purchaseShipping: z.number().nonnegative().optional(),
+  quantity: z.number().int().min(1).default(1),
+  purchaseDate: z.string().datetime(),
+  keepOnWishlist: z.boolean().default(false),
+})
+
+export type MarkPurchasedRequest = z.infer<typeof MarkPurchasedRequestSchema>
+
+export const MarkPurchasedResponseSchema = z.object({
+  message: z.string(),
+  newSetId: z.string().uuid().nullable(),
+  removedFromWishlist: z.boolean(),
+})
+
+export type MarkPurchasedResponse = z.infer<typeof MarkPurchasedResponseSchema>

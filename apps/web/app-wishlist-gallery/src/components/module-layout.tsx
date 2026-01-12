@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react'
 import { z } from 'zod'
 import { cn } from '@repo/app-component-library'
+import { Announcer } from './common/Announcer'
 
 /**
  * Module layout props schema
@@ -26,7 +27,13 @@ export type ModuleLayoutProps = z.infer<typeof ModuleLayoutPropsSchema>
  * Wraps module content with consistent layout and styling.
  */
 export function ModuleLayout({ children, className }: ModuleLayoutProps) {
-  return <div className={cn('min-h-full', className)}>{children}</div>
+  return (
+    <div className={cn('min-h-full', className)}>
+      {children}
+      {/* Live regions for accessibility announcements (keyboard, state changes, errors) */}
+      <Announcer />
+    </div>
+  )
 }
 
 export default ModuleLayout

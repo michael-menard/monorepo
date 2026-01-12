@@ -99,6 +99,9 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => {
       reducerPath: 'wishlistGalleryApi',
       reducer: (state = {}) => state,
       middleware: () => (next: any) => (action: any) => next(action),
+      util: {
+        updateQueryData: vi.fn(() => ({ undo: vi.fn() })),
+      },
     },
   }
 })

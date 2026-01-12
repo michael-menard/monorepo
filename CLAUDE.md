@@ -88,7 +88,8 @@ Benefits: Runtime validation, automatic type inference, self-documenting constra
 
 - Functional components only (function declarations)
 - Named exports preferred
-- **NO BARREL FILES** - import directly from source files
+- **NO NEW BARREL FILES** – import directly from source files for new code
+- Existing barrel files may remain for now (do not refactor them as part of unrelated work)
 
 ### Component Directory Structure (REQUIRED)
 
@@ -125,14 +126,19 @@ Notes:
 
 ## Critical Import Rules
 
-### UI Components - ALWAYS use @repo/ui
+### UI Components - App Component Library (@repo/app-component-library)
+
+- For application code (apps/), import UI from `@repo/app-component-library`.
+- Use the **app-level components** (e.g. `AppDialog`, `AppButton`, etc.) where they exist.
+- Only add or modify `_primitives` inside the `app-component-library` package itself.
+- Do **not** import directly from `_primitives` in app code.
 
 ```typescript
-// CORRECT
-import { Button, Card, Table } from '@repo/ui'
+// CORRECT (app code)
+import { Button, Dialog, Form } from '@repo/app-component-library'
 
-// WRONG - never import from individual paths
-import { Button } from '@repo/ui/button'
+// WRONG - do not import primitives directly from the internal folder
+import { Button as PrimitiveButton } from '@repo/app-component-library/src/_primitives/button'
 ```
 
 ### Logging - ALWAYS use @repo/logger
@@ -181,7 +187,7 @@ All code must pass before commit, and **all new additions must pass linting and 
 
 ## Common Pitfalls
 
-1. Don't create barrel files (index.ts re-exports)
+1. Don't create new barrel files (index.ts re-exports); leave existing ones in place unless a story explicitly calls for refactoring
 2. Don't import shadcn components from individual paths
 3. Don't use console.log - use @repo/logger
 4. Don't skip type errors - fix them

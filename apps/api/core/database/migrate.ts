@@ -46,7 +46,7 @@ async function runMigrations() {
     const db = drizzle(pool)
 
     // Run migrations
-    await migrate(db, { migrationsFolder: './src/db/migrations' })
+    await migrate(db, { migrationsFolder: './core/database/migrations/app' })
 
     logger.info('✅ Database migrations completed successfully')
   } catch (error) {

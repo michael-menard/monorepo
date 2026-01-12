@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -47,14 +46,15 @@ describe('Instructions Gallery - View Mode Integration', () => {
     localStorage.clear()
 
     // Minimal window.location override for navigation assertions
-    // @ts-expect-error test override
-    delete window.location
-    // @ts-expect-error minimal href implementation
-    window.location = { href: 'http://localhost/instructions' } as Location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).location = { href: 'http://localhost/instructions' }
   })
 
   afterEach(() => {
-    window.location = originalLocation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).location = originalLocation
   })
 
   it('defaults to grid view and renders gallery grid', () => {

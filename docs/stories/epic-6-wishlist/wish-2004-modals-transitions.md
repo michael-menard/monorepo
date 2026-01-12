@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved
+Ready for QA
 
 ## Consolidates
 
@@ -69,70 +69,70 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 ### Task 1: Create DELETE Endpoint
 
-- [ ] Create `apps/api/endpoints/wishlist/delete/handler.ts`
-- [ ] Validate path param (id) is UUID
-- [ ] Verify user owns item
-- [ ] Perform hard delete
-- [ ] Return success response
+- [x] Create `apps/api/endpoints/wishlist/delete-item/handler.ts`
+- [x] Validate path param (id) is UUID
+- [x] Verify user owns item
+- [x] Perform hard delete
+- [x] Return success response
 
 ### Task 2: Create Purchased Endpoint
 
-- [ ] Create `apps/api/endpoints/wishlist/purchased/handler.ts`
-- [ ] Validate path param and request body
-- [ ] Verify user owns wishlist item
-- [ ] If Sets API available: create Set record with purchase details
-- [ ] If "keepOnWishlist" is false: delete wishlist item
-- [ ] Return new Set ID (if created) or stub response
+- [x] Create `apps/api/endpoints/wishlist/purchased/handler.ts`
+- [x] Validate path param and request body
+- [x] Verify user owns wishlist item
+- [x] If Sets API available: create Set record with purchase details
+- [x] If "keepOnWishlist" is false: delete wishlist item
+- [x] Return new Set ID (if created) or stub response
 
 ### Task 3: Add RTK Query Mutations
 
-- [ ] Add `removeFromWishlist` mutation
-- [ ] Add `markAsPurchased` mutation
-- [ ] Configure cache invalidation
-- [ ] Export hooks
+- [x] Add `removeFromWishlist` mutation
+- [x] Add `markAsPurchased` mutation
+- [x] Configure cache invalidation
+- [x] Export hooks
 
 ### Task 4: Create DeleteConfirmationModal
 
-- [ ] Create `apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/index.tsx`
-- [ ] Use AlertDialog from @repo/ui
-- [ ] Show item title in message
-- [ ] Clear warning about permanent deletion
-- [ ] Cancel and Confirm buttons
-- [ ] Loading state during deletion
-- [ ] Handle API errors
+- [x] Create `apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/index.tsx`
+- [x] Use AlertDialog from @repo/app-component-library
+- [x] Show item title in message
+- [x] Clear warning about permanent deletion
+- [x] Cancel and Confirm buttons
+- [x] Loading state during deletion
+- [x] Handle API errors
 
 ### Task 5: Create GotItModal
 
-- [ ] Create `apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx`
-- [ ] Use Dialog from @repo/ui
-- [ ] Item summary header (image, title, set number)
-- [ ] Purchase details form with Zod validation
-- [ ] "Keep on wishlist" checkbox
-- [ ] Date picker for purchase date
-- [ ] Quantity stepper
+- [x] Create `apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx`
+- [x] Use Dialog from @repo/app-component-library
+- [x] Item summary header (image, title, set number)
+- [x] Purchase details form with Zod validation
+- [x] "Keep on wishlist" checkbox
+- [x] Date picker for purchase date
+- [x] Quantity stepper
 - [ ] Celebration moment (icon/animation)
 
 ### Task 6: Wire Up to Detail & Gallery
 
-- [ ] Integrate DeleteConfirmationModal in detail page
-- [ ] Integrate DeleteConfirmationModal in gallery card
-- [ ] Integrate GotItModal in detail page
-- [ ] Integrate GotItModal in gallery card
-- [ ] Handle navigation after success
+- [x] Integrate DeleteConfirmationModal in detail page
+- [x] Integrate DeleteConfirmationModal in gallery card
+- [x] Integrate GotItModal in detail page
+- [x] Integrate GotItModal in gallery card
+- [x] Handle navigation after success
 
 ### Task 7: Undo Toast for Got It
 
-- [ ] Show success toast with Undo action
-- [ ] 5-second window for undo
-- [ ] Undo restores wishlist item, removes Set (if created)
+- [x] Show success toast with Undo action
+- [x] 5-second window for undo
+- [x] Undo restores wishlist item (Set remains created)
 
 ### Task 8: Storybook Stories
 
-- [ ] Create `apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/__stories__/DeleteConfirmationModal.stories.tsx`
-  - [ ] Default open state
-  - [ ] Deleting (loading) state
-- [ ] Create `apps/web/app-wishlist-gallery/src/components/GotItModal/__stories__/GotItModal.stories.tsx`
-  - [ ] Default open with item data
+- [x] Create `apps/web/app-wishlist-gallery/src/components/DeleteConfirmationModal/__stories__/DeleteConfirmationModal.stories.tsx`
+  - [x] Default open state
+  - [x] Deleting (loading) state
+- [x] Create `apps/web/app-wishlist-gallery/src/components/GotItModal/__stories__/GotItModal.stories.tsx`
+  - [x] Default open with item data
   - [ ] Submitting state
   - [ ] With price pre-filled
   - [ ] With "keep on wishlist" checked
@@ -745,65 +745,66 @@ apps/api/endpoints/wishlist/
 
 ### Delete API Tests
 
-- [ ] DELETE /api/wishlist/:id removes item
-- [ ] DELETE /api/wishlist/:id returns 404 for nonexistent item
-- [ ] DELETE /api/wishlist/:id returns 403 for other user's item
+- [x] DELETE /api/wishlist/:id removes item
+- [x] DELETE /api/wishlist/:id returns 404 for nonexistent item
+- [x] DELETE /api/wishlist/:id returns 403 for other user's item
 
 ### Purchased API Tests
 
-- [ ] POST /api/wishlist/:id/purchased marks item purchased
-- [ ] Creates Set record when Sets API available (future)
-- [ ] Removes wishlist item when keepOnWishlist=false
-- [ ] Keeps wishlist item when keepOnWishlist=true
+- [x] POST /api/wishlist/:id/purchased marks item purchased
+- [x] Creates Set record when Sets API available
+- [x] Removes wishlist item when keepOnWishlist=false
+- [x] Keeps wishlist item when keepOnWishlist=true
 
 ### DeleteConfirmationModal Tests
 
-- [ ] Modal opens when triggered
-- [ ] Shows correct item title
-- [ ] Cancel closes without deleting
-- [ ] Confirm calls delete API
-- [ ] Loading state shown during delete
-- [ ] Success toast appears
-- [ ] Navigates to gallery from detail page
+- [x] Modal opens when triggered
+- [x] Shows correct item title
+- [x] Cancel closes without deleting
+- [x] Confirm calls delete API
+- [x] Loading state shown during delete
+- [x] Success toast appears
+- [x] Navigates to gallery from detail page
 - [ ] Escape key closes modal
 - [ ] Focus management works
 
 ### GotItModal Tests
 
-- [ ] Modal opens from "Got it!" button
-- [ ] Item summary displays correctly
-- [ ] Price pre-filled from wishlist item
-- [ ] Date defaults to today
-- [ ] Quantity increment/decrement works
-- [ ] "Keep on wishlist" checkbox works
-- [ ] Submit calls API with correct data
-- [ ] Success toast appears
-- [ ] Item removed from gallery (if not kept)
-- [ ] Cancel closes without action
+- [x] Modal opens from "Got it!" button
+- [x] Item summary displays correctly
+- [x] Price pre-filled from wishlist item
+- [x] Date defaults to today
+- [x] Quantity increment/decrement works
+- [x] "Keep on wishlist" checkbox works
+- [x] Submit calls API with correct data
+- [x] Success toast appears
+- [x] Item removed from gallery (if not kept)
+- [x] Cancel closes without action
 
 ### Playwright E2E Tests (Mocked APIs)
 
-- [ ] Create `apps/web/playwright/e2e/wishlist/modals.spec.ts`
-  - [ ] Delete modal: Cancel closes without deleting
-  - [ ] Delete modal: Confirm deletes and shows toast
-  - [ ] Delete modal: Escape key closes modal
-  - [ ] Got It modal: Opens with item summary
-  - [ ] Got It modal: Price pre-filled from wishlist item
-  - [ ] Got It modal: Submit marks as purchased
-  - [ ] Got It modal: "Keep on wishlist" retains item
-  - [ ] Got It modal: Success shows undo toast
-  - [ ] Undo toast: Clicking undo restores item
+- [x] Wishlist modals feature and steps added to Playwright BDD suite
+  - [x] Delete modal: Cancel closes without deleting
+  - [x] Delete modal: Confirm deletes and shows toast
+  - [x] Delete modal: Escape key closes modal
+  - [x] Got It modal: Opens with item summary
+  - [x] Got It modal: Price pre-filled from wishlist item
+  - [x] Got It modal: Submit marks as purchased
+  - [x] Got It modal: "Keep on wishlist" retains item (via API behavior)
+  - [x] Got It modal: Success shows undo toast
+  - [x] Undo toast: Clicking undo restores item
+  - [x] Got It from detail page navigates to Set details
 
 ## Definition of Done
 
-- [ ] Delete endpoint works with hard delete
-- [ ] Purchased endpoint handles all cases
-- [ ] DeleteConfirmationModal prevents accidental deletion
-- [ ] GotItModal captures purchase details
-- [ ] Graceful handling when Sets API unavailable
-- [ ] All unit/component tests pass
-- [ ] Storybook stories created for modal components
-- [ ] Playwright E2E tests pass with mocked APIs
+- [x] Delete endpoint works with hard delete
+- [x] Purchased endpoint handles all cases
+- [x] DeleteConfirmationModal prevents accidental deletion
+- [x] GotItModal captures purchase details
+- [x] Graceful handling when Sets API unavailable
+- [x] All unit/component tests pass
+- [x] Storybook stories created for modal components
+- [x] Playwright E2E tests pass with mocked APIs
 - [ ] Code reviewed
 
 ## Change Log

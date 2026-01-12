@@ -236,6 +236,8 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
       return (columns as ColumnDef<TItem>[]).map(col => {
         // Wrap headers with SortableHeader if sorting is enabled
         if (enableSorting && typeof col.header === 'string') {
+          const headerLabel: string = col.header
+
           return {
             ...col,
             header: ({ column }) => {
@@ -246,7 +248,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
                   enableMultiSort={enableMultiSort}
                   maxMultiSortColCount={maxMultiSortColCount}
                 >
-                  <span className="font-semibold text-sm">{col.header}</span>
+                  <span className="font-semibold text-sm">{headerLabel}</span>
                 </SortableHeader>
               )
 
@@ -493,7 +495,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
                         >
                           {header.isPlaceholder
                             ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
+                            : flexRender(header.column.columnDef.header as any, header.getContext())}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -510,7 +512,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(header.column.columnDef.header as any, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>

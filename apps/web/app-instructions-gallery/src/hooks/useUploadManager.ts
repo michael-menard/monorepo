@@ -196,8 +196,12 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
           file,
           contentType: file.type || 'application/octet-stream',
           signal: abortController.signal,
-          onProgress: (loaded, total) => {
-            const progress = Math.round((loaded / total) * 100)
+          onProgress: ({ loaded, total, percent }) => {
+            const progress = Number.isFinite(percent)
+              ? Math.round(percent)
+              : total > 0
+              ? Math.round((loaded / total) * 100)
+              : 0
             updateFile(fileId, { progress })
           },
         })

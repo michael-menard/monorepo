@@ -49,10 +49,10 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => {
 
 function setupLocation(initialHref = 'http://localhost/wishlist/add') {
   const originalLocation = window.location
-  // @ts-expect-error override for test
-  delete window.location
-  // @ts-expect-error minimal href implementation
-  window.location = { href: initialHref } as Location
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete (window as any).location
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).location = { href: initialHref }
   return originalLocation
 }
 
@@ -72,8 +72,8 @@ describe('AddWishlistItemPage', () => {
     addMutationFn.mockReturnValue({ unwrap: unwrapMock })
 
     // Stub URL.createObjectURL for image previews
-    // @ts-expect-error partial implementation for tests
-    global.URL.createObjectURL = vi.fn(() => 'blob:preview-url')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(global.URL as any).createObjectURL = vi.fn(() => 'blob:preview-url')
   })
 
   afterEach(() => {
@@ -102,7 +102,7 @@ describe('AddWishlistItemPage', () => {
       render(<AddWishlistItemPage />)
 
       // Fill in required title (store defaults to LEGO)
-      const titleInput = screen.getByPlaceholder(/medieval castle/i)
+      const titleInput = screen.getByPlaceholderText(/medieval castle/i)
       await user.type(titleInput, 'My Test Set')
 
       const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
@@ -119,7 +119,8 @@ describe('AddWishlistItemPage', () => {
       // After successful create (no image), should redirect back to /wishlist
       expect(window.location.href).toContain('/wishlist')
     } finally {
-      window.location = originalLocation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(window as any).location = originalLocation
     }
   })
 
@@ -133,7 +134,7 @@ describe('AddWishlistItemPage', () => {
 
       const { container } = render(<AddWishlistItemPage />)
 
-      const titleInput = screen.getByPlaceholder(/medieval castle/i)
+      const titleInput = screen.getByPlaceholderText(/medieval castle/i)
       await user.type(titleInput, 'Set With Image')
 
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
@@ -150,7 +151,8 @@ describe('AddWishlistItemPage', () => {
       // Redirect after successful create + image upload
       expect(window.location.href).toContain('/wishlist')
     } finally {
-      window.location = originalLocation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(window as any).location = originalLocation
     }
   })
 
@@ -164,7 +166,7 @@ describe('AddWishlistItemPage', () => {
 
       const { container } = render(<AddWishlistItemPage />)
 
-      const titleInput = screen.getByPlaceholder(/medieval castle/i)
+      const titleInput = screen.getByPlaceholderText(/medieval castle/i)
       await user.type(titleInput, 'Set With Failing Image')
 
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
@@ -180,7 +182,8 @@ describe('AddWishlistItemPage', () => {
       // Because upload fails, the page should not redirect to /wishlist
       expect(window.location.href).toContain('/wishlist/add')
     } finally {
-      window.location = originalLocation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(window as any).location = originalLocation
     }
   })
 })

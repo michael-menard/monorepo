@@ -33,3 +33,17 @@ export {
   type ReorderWishlistItem,
   type BatchReorder,
 } from './wishlist'
+
+// Sets schemas (re-exported from types/sets for convenience)
+export {
+  SetSchema,
+  SetListQuerySchema,
+  SetListResponseSchema,
+  CreateSetSchema,
+  UpdateSetSchema,
+  type Set,
+  type SetListQuery,
+  type SetListResponse,
+  type CreateSetInput,
+  type UpdateSetInput,
+} from '../types/sets'

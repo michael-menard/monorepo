@@ -233,6 +233,24 @@ risk_summary:
     should_fix: [] # medium severity items
 ```
 
+### Optional Phase 5b: Generate UX Gate File
+
+When UX review is requested or required (e.g., UI-heavy stories), `/qa-gate` SHOULD coordinate with the UX Expert agent to produce a separate **UX gate** file.
+
+- UX gate path: `docs/qa/gates/{STORY_NUM}-{slug}-ux.yml`
+- UX gate content: follows the UX gate schema defined in `work/agents/ux-expert.md` and should include:
+  - `ux_score` (0–100)
+  - `gate` (PASS | CONCERNS | FAIL | WAIVED) from a UX/a11y/design-system perspective
+  - Summaries of AXE/Lighthouse checks, design-system conformance, and console status
+- UX agent SHOULD use Playwright and Chrome DevTools MCP integrations to:
+  - Run a11y/AXE checks and, where feasible, Lighthouse-style audits
+  - Verify use of the shared design system components
+  - Confirm there are no unresolved console errors/warnings related to the flow
+
+`/qa-gate` does not compute UX scores itself but MAY:
+- Check for the existence of `docs/qa/gates/{STORY_NUM}-{slug}-ux.yml`
+- Surface the UX gate status alongside the main QA gate in its summary output
+
 ### Phase 6: Update Story File (if story provided)
 
 **Append to story's QA Results section:**

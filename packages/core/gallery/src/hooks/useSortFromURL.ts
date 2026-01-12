@@ -47,7 +47,7 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
       // Handle functional updates
       const resolvedSorting = typeof newSorting === 'function' ? newSorting(sorting) : newSorting
 
-      navigate({
+      ;(navigate as any)({
         replace: true,
         search: (prev: any) => {
           const next = { ...prev } as any

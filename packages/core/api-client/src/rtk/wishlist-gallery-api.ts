@@ -11,10 +11,14 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import {
   WishlistListResponseSchema,
   WishlistItemSchema,
+  MarkPurchasedResponseSchema,
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
   type CreateWishlistItem,
+  type MarkPurchasedRequest,
+  type MarkPurchasedResponse,
+  type BatchReorder,
 } from '../schemas/wishlist'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -98,6 +102,62 @@ export const wishlistGalleryApi = createApi({
       },
       invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
     }),
+
+    /**
+     * DELETE /api/wishlist/:id
+     *
+     * Removes a wishlist item.
+     */
+    removeFromWishlist: builder.mutation<void, string>({
+      query: id => ({
+        url: `/wishlist/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_, __, id) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * POST /api/wishlist/:id/purchased
+     *
+     * Marks a wishlist item as purchased.
+     */
+    markAsPurchased: builder.mutation<
+      MarkPurchasedResponse,
+      { id: string; data: MarkPurchasedRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/wishlist/${id}/purchased`,
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: any) => {
+        const payload = response?.data ?? response
+        return MarkPurchasedResponseSchema.parse(payload)
+      },
+      invalidatesTags: (_, __, { id }) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * POST /api/wishlist/reorder
+     *
+     * Persists drag-and-drop priority reorder for wishlist items.
+     * Accepts a BatchReorder payload matching the BatchReorderSchema.
+     */
+    reorderWishlist: builder.mutation<void, BatchReorder>({
+      query: body => ({
+        url: '/wishlist/reorder',
+        method: 'POST',
+        body,
+      }),
+      // Keep list caches in sync after a successful reorder.
+      invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
+    }),
   }),
 })
 
@@ -107,4 +167,7 @@ export const {
   useGetWishlistItemQuery,
   useLazyGetWishlistQuery,
   useAddToWishlistMutation,
+  useRemoveFromWishlistMutation,
+  useMarkAsPurchasedMutation,
+  useReorderWishlistMutation,
 } = wishlistGalleryApi

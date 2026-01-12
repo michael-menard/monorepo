@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+In Progress
 
 ## Story
 
@@ -130,6 +130,13 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
     - Links to the final spec files.
     - Summary of covered flows.
 
+### Implemented Spec Files (Initial)
+
+- `apps/web/playwright/tests/e2e/wishlist/gallery.real.spec.ts`
+- `apps/web/playwright/tests/e2e/wishlist/add-item.real.spec.ts`
+- `apps/web/playwright/tests/e2e/wishlist/delete-got-it.real.spec.ts`
+- `apps/web/playwright/tests/e2e/wishlist/reorder.real.spec.ts` (reorder path)
+
 ## Tasks / Subtasks
 
 ### Task 1: Define E2E Environment & Auth Strategy
@@ -175,7 +182,10 @@ See [Epic 6: Wishlist PRD](/docs/prd/epic-6-wishlist.md):
 
 > NOTE: This section starts empty and must be updated as part of implementation when/if `data-testid` attributes are added for wishlist E2E.
 
-- _(To be filled in by implementation PRs)_
+- Current tests primarily use semantic selectors (headings, buttons, inputs).
+- Existing `data-testid` attributes from shared gallery components are reused
+  for convenience (e.g., `wishlist-card-<id>`), but no new wishlist-specific
+  E2E-only `data-testid` attributes have been introduced yet.
 
 ## Definition of Done
 
