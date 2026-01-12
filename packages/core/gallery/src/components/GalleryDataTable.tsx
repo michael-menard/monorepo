@@ -495,7 +495,10 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
                         >
                           {header.isPlaceholder
                             ? null
-                            : flexRender(header.column.columnDef.header as any, header.getContext())}
+                            : flexRender(
+                                header.column.columnDef.header as any,
+                                header.getContext(),
+                              )}
                         </TableHead>
                       ))}
                     </TableRow>

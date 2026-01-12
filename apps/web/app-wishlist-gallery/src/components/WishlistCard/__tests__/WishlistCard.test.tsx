@@ -4,8 +4,32 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
 import { WishlistCard } from '../index'
+import { wishlistGalleryApi } from '@repo/api-client/rtk/wishlist-gallery-api'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+
+// Create test store with RTK Query reducer
+function createTestStore() {
+  return configureStore({
+    reducer: {
+      [wishlistGalleryApi.reducerPath]: wishlistGalleryApi.reducer,
+    },
+    middleware: getDefaultMiddleware =>
+      getDefaultMiddleware().concat(wishlistGalleryApi.middleware),
+  })
+}
+
+// Test wrapper with Redux Provider
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  return <Provider store={createTestStore()}>{children}</Provider>
+}
+
+// Helper to render with Provider
+function renderWithProvider(ui: React.ReactNode) {
+  return render(<TestWrapper>{ui}</TestWrapper>)
+}
 
 // Mock data
 const mockWishlistItem: WishlistItem = {
@@ -30,32 +54,32 @@ const mockWishlistItem: WishlistItem = {
 
 describe('WishlistCard', () => {
   it('renders title correctly', () => {
-    render(<WishlistCard item={mockWishlistItem} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} />)
     expect(screen.getByText('LEGO Star Wars Millennium Falcon')).toBeInTheDocument()
   })
 
   it('renders set number as subtitle', () => {
-    render(<WishlistCard item={mockWishlistItem} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} />)
     expect(screen.getByText('Set #75192')).toBeInTheDocument()
   })
 
   it('renders store badge', () => {
-    render(<WishlistCard item={mockWishlistItem} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} />)
     expect(screen.getByTestId('wishlist-card-store')).toHaveTextContent('LEGO')
   })
 
   it('renders formatted price', () => {
-    render(<WishlistCard item={mockWishlistItem} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} />)
     expect(screen.getByTestId('wishlist-card-price')).toHaveTextContent('$849.99')
   })
 
   it('renders piece count with locale formatting', () => {
-    render(<WishlistCard item={mockWishlistItem} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} />)
     expect(screen.getByTestId('wishlist-card-pieces')).toHaveTextContent('7,541')
   })
 
   it('renders priority stars', () => {
-    render(<WishlistCard item={mockWishlistItem} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} />)
     const priorityElement = screen.getByTestId('wishlist-card-priority')
     expect(priorityElement).toBeInTheDocument()
     // Check for aria-label with priority value
@@ -64,7 +88,7 @@ describe('WishlistCard', () => {
 
   it('handles click events', () => {
     const handleClick = vi.fn()
-    render(<WishlistCard item={mockWishlistItem} onClick={handleClick} />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} onClick={handleClick} />)
 
     const card = screen.getByTestId(`wishlist-card-${mockWishlistItem.id}`)
     fireEvent.click(card)
@@ -82,7 +106,7 @@ describe('WishlistCard', () => {
       imageUrl: null,
     }
 
-    render(<WishlistCard item={minimalItem} />)
+    renderWithProvider(<WishlistCard item={minimalItem} />)
 
     expect(screen.getByText('LEGO Star Wars Millennium Falcon')).toBeInTheDocument()
     expect(screen.queryByText(/Set #/)).not.toBeInTheDocument()
@@ -93,27 +117,27 @@ describe('WishlistCard', () => {
 
   it('applies different store badge colors', () => {
     const barweerItem: WishlistItem = { ...mockWishlistItem, store: 'Barweer' }
-    const { rerender } = render(<WishlistCard item={barweerItem} />)
+    const { rerender } = renderWithProvider(<WishlistCard item={barweerItem} />)
     expect(screen.getByTestId('wishlist-card-store')).toHaveTextContent('Barweer')
 
     const bricklinkItem: WishlistItem = { ...mockWishlistItem, store: 'BrickLink' }
-    rerender(<WishlistCard item={bricklinkItem} />)
+    rerender(<TestWrapper><WishlistCard item={bricklinkItem} /></TestWrapper>)
     expect(screen.getByTestId('wishlist-card-store')).toHaveTextContent('BrickLink')
   })
 
   it('applies className prop', () => {
-    render(<WishlistCard item={mockWishlistItem} className="custom-class" />)
+    renderWithProvider(<WishlistCard item={mockWishlistItem} className="custom-class" />)
     const card = screen.getByTestId(`wishlist-card-${mockWishlistItem.id}`)
     expect(card).toHaveClass('custom-class')
   })
 
   it('renders with different priority levels', () => {
     const lowPriority: WishlistItem = { ...mockWishlistItem, priority: 1 }
-    const { rerender } = render(<WishlistCard item={lowPriority} />)
+    const { rerender } = renderWithProvider(<WishlistCard item={lowPriority} />)
     expect(screen.getByTestId('wishlist-card-priority')).toHaveAttribute('aria-label', 'Priority 1 of 5')
 
     const midPriority: WishlistItem = { ...mockWishlistItem, priority: 3 }
-    rerender(<WishlistCard item={midPriority} />)
+    rerender(<TestWrapper><WishlistCard item={midPriority} /></TestWrapper>)
     expect(screen.getByTestId('wishlist-card-priority')).toHaveAttribute('aria-label', 'Priority 3 of 5')
   })
 })

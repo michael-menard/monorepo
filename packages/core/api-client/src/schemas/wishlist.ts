@@ -172,7 +172,8 @@ export const BatchReorderSchema = z.object({
 export type BatchReorder = z.infer<typeof BatchReorderSchema>
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Purchased Flow Schemas
+// Mark As Purchased Schema (POST body)
+// Story wish-2004: Got It Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const MarkPurchasedRequestSchema = z.object({
@@ -190,6 +191,18 @@ export const MarkPurchasedResponseSchema = z.object({
   message: z.string(),
   newSetId: z.string().uuid().nullable(),
   removedFromWishlist: z.boolean(),
+  undoToken: z.string().optional(),
 })
 
 export type MarkPurchasedResponse = z.infer<typeof MarkPurchasedResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete Response Schema
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const DeleteWishlistItemResponseSchema = z.object({
+  id: z.string().uuid(),
+  message: z.string().optional(),
+})
+
+export type DeleteWishlistItemResponse = z.infer<typeof DeleteWishlistItemResponseSchema>

@@ -11,6 +11,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { InstructionsNewPage } from './pages/InstructionsNewPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
 import { RouteGuards } from '@/lib/route-guards'
@@ -100,38 +101,13 @@ const wishlistRoute = createRoute({
   },
 })
 
+// Story wish-2002: Add Item Flow
 const wishlistAddRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/wishlist/add',
   component: () => {
-    // Lazy load wishlist module - handles add page internally
-    return import('./modules/WishlistModule').then(module => module.WishlistModule)
-  },
-  pendingComponent: LoadingPage,
-  beforeLoad: ({ context }: { context: RouteContext }) => {
-    if (!context.auth?.isAuthenticated) {
-      throw redirect({ to: '/login' })
-    }
-  },
-})
-
-// Instructions routes - all handled by the instructions module
-const instructionsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/instructions',
-  component: () => {
-    // Lazy load instructions gallery module - handles all sub-routes internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
-  pendingComponent: LoadingPage,
-})
-
-const instructionsNewRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/instructions/new',
-  component: () => {
-    // Lazy load instructions gallery module - handles upload view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
+    // Lazy load wishlist add item module
+    return import('./modules/WishlistAddModule').then(module => module.WishlistAddModule)
   },
   pendingComponent: LoadingPage,
   beforeLoad: ({
@@ -141,7 +117,7 @@ const instructionsNewRoute = createRoute({
     context: RouteContext
     location: { pathname: string }
   }) => {
-    // Check authentication for upload
+    // Check authentication with redirect back
     if (!context.auth?.isAuthenticated) {
       throw redirect({
         to: '/login',
@@ -151,37 +127,35 @@ const instructionsNewRoute = createRoute({
   },
 })
 
+const instructionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/instructions',
+  component: () => {
+    // Lazy load MOC instructions module
+    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
+  },
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    // Check authentication
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
+// Story 3.1.4: Instructions Detail Page
 const instructionDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions/$instructionId',
   component: () => {
-    // Lazy load instructions gallery module - handles detail view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
+    // Lazy load instructions detail module
+    return import('./modules/InstructionsDetailModule').then(module => module.InstructionsDetail)
   },
   pendingComponent: LoadingPage,
-})
-
-const instructionEditRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/instructions/$instructionId/edit',
-  component: () => {
-    // Lazy load instructions gallery module - handles edit view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
-  pendingComponent: LoadingPage,
-  beforeLoad: ({
-    context,
-    location,
-  }: {
-    context: RouteContext
-    location: { pathname: string }
-  }) => {
-    // Check authentication for edit
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    // Check authentication
     if (!context.auth?.isAuthenticated) {
-      throw redirect({
-        to: '/login',
-        search: { returnTo: location.pathname },
-      })
+      throw redirect({ to: '/login' })
     }
   },
 })
@@ -320,23 +294,48 @@ const cookiesRoute = createRoute({
   component: PlaceholderPage,
 })
 
-// MOC routes (using slug) - also handled by instructions module
+// Story 3.1.9: Instructions uploader with session persistence
+const instructionsNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/instructions/new',
+  component: InstructionsNewPage,
+  beforeLoad: ({
+    context,
+    location,
+  }: {
+    context: RouteContext
+    location: { pathname: string }
+  }) => {
+    // Story 3.1.9: Redirect unauthenticated users with redirect param for return
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: location.pathname },
+      })
+    }
+  },
+})
+
+// Story 3.1.39: MOC Detail Route (using slug)
+// Route: /mocs/:slug for viewing MOC details
 const mocDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mocs/$slug',
   component: () => {
-    // Lazy load instructions gallery module - handles MOC detail view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
+    // Lazy load instructions detail module (reuses existing module)
+    return import('./modules/InstructionsDetailModule').then(module => module.InstructionsDetail)
   },
   pendingComponent: LoadingPage,
 })
 
+// Story 3.1.39: MOC Edit Route
+// Route: /mocs/:slug/edit with auth guard and ownership validation
 const mocEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mocs/$slug/edit',
   component: () => {
-    // Lazy load instructions gallery module - handles MOC edit view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
+    // Lazy load instructions edit module
+    return import('./modules/InstructionsEditModule').then(module => module.InstructionsEditModule)
   },
   pendingComponent: LoadingPage,
   beforeLoad: ({
@@ -346,7 +345,7 @@ const mocEditRoute = createRoute({
     context: RouteContext
     location: { pathname: string }
   }) => {
-    // Check authentication for edit
+    // AC 4: Edit requires authentication - redirect to login with returnTo param
     if (!context.auth?.isAuthenticated) {
       throw redirect({
         to: '/login',
@@ -391,13 +390,12 @@ const routeTree = rootRoute.addChildren([
   verifyEmailRoute,
   newPasswordRoute,
   wishlistRoute,
-  wishlistAddRoute,
+  wishlistAddRoute, // Story wish-2002: Add Item Flow
   instructionsRoute,
-  instructionsNewRoute,
   instructionDetailRoute,
-  instructionEditRoute,
-  mocDetailRoute,
-  mocEditRoute,
+  instructionsNewRoute,
+  mocDetailRoute, // Story 3.1.39: MOC Detail Route
+  mocEditRoute, // Story 3.1.39: MOC Edit Route
   dashboardMocsUploadRoute, // Story 3.1.9: Alias route
   dashboardRoute,
   // Stub routes for planned features

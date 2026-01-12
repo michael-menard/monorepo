@@ -200,8 +200,8 @@ export function useUploadManager(options: UseUploadManagerOptions = {}): UseUplo
             const progress = Number.isFinite(percent)
               ? Math.round(percent)
               : total > 0
-              ? Math.round((loaded / total) * 100)
-              : 0
+                ? Math.round((loaded / total) * 100)
+                : 0
             updateFile(fileId, { progress })
           },
         })

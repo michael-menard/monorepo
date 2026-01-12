@@ -12,13 +12,15 @@ import {
   WishlistListResponseSchema,
   WishlistItemSchema,
   MarkPurchasedResponseSchema,
+  DeleteWishlistItemResponseSchema,
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
   type CreateWishlistItem,
+  type UpdateWishlistItem,
   type MarkPurchasedRequest,
   type MarkPurchasedResponse,
-  type BatchReorder,
+  type DeleteWishlistItemResponse,
 } from '../schemas/wishlist'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -54,12 +56,7 @@ export const wishlistGalleryApi = createApi({
           limit: params.limit,
         },
       }),
-      // The wishlist API returns a wrapped success response: { success, data, message, timestamp }
-      // Unwrap to the inner data payload before Zod validation.
-      transformResponse: (response: any) => {
-        const payload = response?.data ?? response
-        return WishlistListResponseSchema.parse(payload)
-      },
+      transformResponse: (response: unknown) => WishlistListResponseSchema.parse(response),
       providesTags: result =>
         result
           ? [
@@ -77,10 +74,7 @@ export const wishlistGalleryApi = createApi({
      */
     getWishlistItem: builder.query<WishlistItem, string>({
       query: id => `/wishlist/${id}`,
-      transformResponse: (response: any) => {
-        const payload = response?.data ?? response
-        return WishlistItemSchema.parse(payload)
-      },
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
       providesTags: (_, __, id) => [{ type: 'WishlistItem', id }],
       ...getServerlessCacheConfig('medium'),
     }),
@@ -89,26 +83,44 @@ export const wishlistGalleryApi = createApi({
      * POST /api/wishlist
      *
      * Creates a new wishlist item.
+     * Story wish-2002: Add Item Flow
      */
     addToWishlist: builder.mutation<WishlistItem, CreateWishlistItem>({
-      query: body => ({
+      query: data => ({
         url: '/wishlist',
         method: 'POST',
-        body,
+        body: data,
       }),
-      transformResponse: (response: any) => {
-        const payload = response?.data ?? response
-        return WishlistItemSchema.parse(payload)
-      },
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
       invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
+    }),
+
+    /**
+     * PATCH /api/wishlist/:id
+     *
+     * Updates a wishlist item with partial data.
+     * Story wish-2003: Detail & Edit Pages
+     */
+    updateWishlistItem: builder.mutation<WishlistItem, { id: string; data: UpdateWishlistItem }>({
+      query: ({ id, data }) => ({
+        url: `/wishlist/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      invalidatesTags: (_, __, { id }) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
     }),
 
     /**
      * DELETE /api/wishlist/:id
      *
-     * Removes a wishlist item.
+     * Deletes a wishlist item permanently.
+     * Story wish-2003: Detail & Edit Pages / wish-2004: Delete Confirmation Modal
      */
-    removeFromWishlist: builder.mutation<void, string>({
+    deleteWishlistItem: builder.mutation<void, string>({
       query: id => ({
         url: `/wishlist/${id}`,
         method: 'DELETE',
@@ -120,9 +132,28 @@ export const wishlistGalleryApi = createApi({
     }),
 
     /**
+     * DELETE /api/wishlist/:id (with response validation)
+     *
+     * Removes a wishlist item permanently.
+     * Story wish-2004: Delete Confirmation Modal
+     */
+    removeFromWishlist: builder.mutation<DeleteWishlistItemResponse, string>({
+      query: id => ({
+        url: `/wishlist/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: (response: unknown) => DeleteWishlistItemResponseSchema.parse(response),
+      invalidatesTags: (_, __, id) => [
+        { type: 'WishlistItem', id },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
      * POST /api/wishlist/:id/purchased
      *
-     * Marks a wishlist item as purchased.
+     * Marks a wishlist item as purchased with purchase details.
+     * Story wish-2004: Got It Flow Modal
      */
     markAsPurchased: builder.mutation<
       MarkPurchasedResponse,
@@ -133,30 +164,14 @@ export const wishlistGalleryApi = createApi({
         method: 'POST',
         body: data,
       }),
-      transformResponse: (response: any) => {
-        const payload = response?.data ?? response
-        return MarkPurchasedResponseSchema.parse(payload)
-      },
-      invalidatesTags: (_, __, { id }) => [
-        { type: 'WishlistItem', id },
-        { type: 'Wishlist', id: 'LIST' },
-      ],
-    }),
-
-    /**
-     * POST /api/wishlist/reorder
-     *
-     * Persists drag-and-drop priority reorder for wishlist items.
-     * Accepts a BatchReorder payload matching the BatchReorderSchema.
-     */
-    reorderWishlist: builder.mutation<void, BatchReorder>({
-      query: body => ({
-        url: '/wishlist/reorder',
-        method: 'POST',
-        body,
-      }),
-      // Keep list caches in sync after a successful reorder.
-      invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
+      transformResponse: (response: unknown) => MarkPurchasedResponseSchema.parse(response),
+      invalidatesTags: (result, _, { id }) =>
+        result?.removedFromWishlist
+          ? [
+              { type: 'WishlistItem', id },
+              { type: 'Wishlist', id: 'LIST' },
+            ]
+          : [],
     }),
   }),
 })
@@ -167,7 +182,8 @@ export const {
   useGetWishlistItemQuery,
   useLazyGetWishlistQuery,
   useAddToWishlistMutation,
+  useUpdateWishlistItemMutation,
+  useDeleteWishlistItemMutation,
   useRemoveFromWishlistMutation,
   useMarkAsPurchasedMutation,
-  useReorderWishlistMutation,
 } = wishlistGalleryApi

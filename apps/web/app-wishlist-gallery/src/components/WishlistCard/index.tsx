@@ -5,13 +5,17 @@
  * price display, piece count, and priority indicators.
  *
  * Story wish-2001: Wishlist Gallery MVP
+ * Story wish-2004: Added action buttons for delete and "got it" modals
  */
 
+import { useState } from 'react'
 import { z } from 'zod'
 import { GalleryCard } from '@repo/gallery'
-import { Badge } from '@repo/app-component-library'
-import { Star, Puzzle } from 'lucide-react'
+import { Badge, Button } from '@repo/app-component-library'
+import { Star, Puzzle, Trash2, PartyPopper } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal'
+import { GotItModal } from '../GotItModal'
 
 /**
  * WishlistCard props schema
@@ -23,6 +27,12 @@ export const WishlistCardPropsSchema = z.object({
   onClick: z.function().optional(),
   /** Additional CSS classes */
   className: z.string().optional(),
+  /** Show action buttons (delete, got it) */
+  showActions: z.boolean().optional(),
+  /** Callback when item is deleted */
+  onDeleted: z.function().returns(z.void()).optional(),
+  /** Callback when item is marked as purchased */
+  onPurchased: z.function().returns(z.void()).optional(),
 })
 
 export type WishlistCardProps = z.infer<typeof WishlistCardPropsSchema>
@@ -77,9 +87,20 @@ const formatPrice = (price: string | null, currency: string): string => {
  * - Price display
  * - Piece count with icon
  * - Priority stars indicator
+ * - Optional action buttons (delete, got it)
  */
-export function WishlistCard({ item, onClick, className }: WishlistCardProps) {
+export function WishlistCard({
+  item,
+  onClick,
+  className,
+  showActions = false,
+  onDeleted,
+  onPurchased,
+}: WishlistCardProps) {
   const { id, title, setNumber, store, imageUrl, price, currency, pieceCount, priority } = item
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [gotItModalOpen, setGotItModalOpen] = useState(false)
 
   // Build subtitle with set number
   const subtitle = setNumber ? `Set #${setNumber}` : undefined
@@ -128,20 +149,72 @@ export function WishlistCard({ item, onClick, className }: WishlistCardProps) {
     </div>
   )
 
+  // Action buttons for delete and got it (overlay on image)
+  const cardActions = showActions ? (
+    <div className="flex gap-1">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation()
+          setGotItModalOpen(true)
+        }}
+        className="h-8"
+        data-testid="wishlist-card-got-it-btn"
+      >
+        <PartyPopper className="h-4 w-4 mr-1" aria-hidden="true" />
+        Got it!
+      </Button>
+      <Button
+        variant="secondary"
+        size="icon"
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation()
+          setDeleteModalOpen(true)
+        }}
+        className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        aria-label={`Remove ${title} from wishlist`}
+        data-testid="wishlist-card-delete-btn"
+      >
+        <Trash2 className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  ) : null
+
   return (
-    <GalleryCard
-      image={{
-        src: imageUrl || '/images/placeholder-lego.png',
-        alt: title,
-        aspectRatio: '4/3',
-      }}
-      title={title}
-      subtitle={subtitle}
-      metadata={metadata}
-      onClick={onClick}
-      className={className}
-      data-testid={`wishlist-card-${id}`}
-    />
+    <>
+      <GalleryCard
+        image={{
+          src: imageUrl || '/images/placeholder-lego.png',
+          alt: title,
+          aspectRatio: '4/3',
+        }}
+        title={title}
+        subtitle={subtitle}
+        metadata={metadata}
+        actions={cardActions}
+        onClick={onClick}
+        className={className}
+        data-testid={`wishlist-card-${id}`}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        itemId={id}
+        itemTitle={title}
+        onDeleted={onDeleted}
+      />
+
+      {/* Got It Modal */}
+      <GotItModal
+        open={gotItModalOpen}
+        onOpenChange={setGotItModalOpen}
+        item={item}
+        onCompleted={onPurchased}
+      />
+    </>
   )
 }
 

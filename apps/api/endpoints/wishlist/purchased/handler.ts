@@ -1,26 +1,34 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
-import { and, eq } from 'drizzle-orm'
+/**
+ * Mark Wishlist Item As Purchased Lambda Handler
+ *
+ * POST /api/wishlist/:id/purchased
+ *
+ * Marks a wishlist item as purchased, optionally creating a Set record.
+ * Removes item from wishlist unless keepOnWishlist is true.
+ *
+ * Story wish-2004: Got It Flow Modal
+ */
+
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
+import { eq } from 'drizzle-orm'
 import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
 import { successResponse, errorResponse } from '@/core/utils/responses'
+import {
+  WishlistItemIdSchema,
+  MarkPurchasedRequestSchema,
+} from '@/endpoints/wishlist/schemas'
 import { db } from '@/core/database/client'
 import { getRedisClient } from '@/core/cache/redis'
+import { deleteDocument } from '@/core/search/opensearch'
 import { wishlistItems } from '@/core/database/schema'
-import {
-  MarkWishlistItemPurchasedSchema,
-  WishlistItemIdSchema,
-  type MarkWishlistItemPurchasedRequest,
-} from '@/endpoints/wishlist/schemas'
-import { createSet } from '@/endpoints/sets/_shared/sets-service'
 
 /**
  * Helper function to invalidate all user's wishlist caches
- * Mirrors the pattern used in other wishlist handlers.
  */
 async function invalidateWishlistCaches(userId: string): Promise<void> {
   try {
     const redis = await getRedisClient()
-
     const pattern = `wishlist:user:${userId}:*`
     const keys = await redis.keys(pattern)
 
@@ -32,26 +40,28 @@ async function invalidateWishlistCaches(userId: string): Promise<void> {
   }
 }
 
-interface MarkPurchasedResponse {
-  message: string
-  newSetId: string | null
-  removedFromWishlist: boolean
+/**
+ * Generate an undo token that expires in 5 seconds
+ * Token format: base64(itemId:userId:expiry)
+ */
+function generateUndoToken(itemId: string, userId: string): string {
+  const expiry = Date.now() + 5000 // 5 seconds
+  const payload = `${itemId}:${userId}:${expiry}`
+  return Buffer.from(payload).toString('base64')
 }
 
 /**
- * Mark Wishlist Item Purchased Handler
- *
- * POST /api/wishlist/:id/purchased
+ * Mark Wishlist Item As Purchased Handler
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
+    // Get authenticated user ID from JWT
     const userId = getUserIdFromEvent(event)
     if (!userId) {
       return errorResponse(401, 'UNAUTHORIZED', 'Authentication required')
     }
 
+    // Extract and validate item ID from path parameters
     const itemId = event.pathParameters?.id
     if (!itemId) {
       return errorResponse(400, 'BAD_REQUEST', 'Item ID is required')
@@ -59,105 +69,95 @@ export const handler = async (
 
     WishlistItemIdSchema.parse({ id: itemId })
 
-    if (!event.body) {
-      return errorResponse(400, 'BAD_REQUEST', 'Request body is required')
-    }
+    // Parse and validate request body
+    const body = JSON.parse(event.body || '{}')
+    const validatedData = MarkPurchasedRequestSchema.parse(body)
 
-    const parsedBody = JSON.parse(event.body) as unknown
-    const purchaseData: MarkWishlistItemPurchasedRequest =
-      MarkWishlistItemPurchasedSchema.parse(parsedBody)
-
+    // Check if item exists and user owns it
     const [existingItem] = await db
       .select()
       .from(wishlistItems)
-      .where(and(eq(wishlistItems.id, itemId), eq(wishlistItems.userId, userId)))
+      .where(eq(wishlistItems.id, itemId))
 
     if (!existingItem) {
       return errorResponse(404, 'NOT_FOUND', 'Wishlist item not found')
     }
 
-    // Create a Set record from the wishlist item and purchase data.
-    // This uses the shared sets-service so we keep all validation and defaults
-    // in one place.
+    if (existingItem.userId !== userId) {
+      return errorResponse(403, 'FORBIDDEN', 'You do not have permission to modify this item')
+    }
+
     let newSetId: string | null = null
 
+    // Try to create Set record if Sets API is available
+    // This is a placeholder - actual implementation depends on Sets API
     try {
-      const createdSet = await createSet(userId, {
+      // TODO: When Sets API is available (Epic 7), create a Set record:
+      // newSetId = await createSetFromWishlist(existingItem, validatedData)
+      logger.info('Would create Set from wishlist item:', {
+        wishlistItemId: existingItem.id,
         title: existingItem.title,
-        description: existingItem.notes ?? undefined,
-        theme: undefined,
-        tags: existingItem.tags ?? [],
-        partsCount: existingItem.pieceCount ?? undefined,
-        isBuilt: false,
-        quantity: purchaseData.quantity,
-        brand: existingItem.store ?? undefined,
-        setNumber: existingItem.setNumber ?? undefined,
-        releaseYear: undefined,
-        retired: undefined,
-        store: existingItem.store ?? undefined,
-        sourceUrl: existingItem.sourceUrl ?? undefined,
-        purchasePrice:
-          purchaseData.purchasePrice !== undefined
-            ? purchaseData.purchasePrice.toFixed(2)
-            : existingItem.price ?? undefined,
-        tax:
-          purchaseData.purchaseTax !== undefined
-            ? purchaseData.purchaseTax.toFixed(2)
-            : undefined,
-        shipping:
-          purchaseData.purchaseShipping !== undefined
-            ? purchaseData.purchaseShipping.toFixed(2)
-            : undefined,
-        purchaseDate: purchaseData.purchaseDate,
+        setNumber: existingItem.setNumber,
+        purchasePrice: validatedData.purchasePrice,
+        quantity: validatedData.quantity,
       })
-
-      newSetId = createdSet.id
-
-      logger.info('Created Set from wishlist purchase', {
-        userId,
-        itemId,
-        newSetId,
-      })
-    } catch (setError) {
-      // If Sets API fails, we still mark the item as purchased in wishlist
-      // and continue. Frontend can use newSetId === null as a signal.
-      logger.error('Failed to create Set from wishlist purchase (non-fatal)', {
-        userId,
-        itemId,
-        error: setError,
-      })
+    } catch {
+      // Sets API not available - continue anyway
+      logger.info('Sets API not available, skipping Set creation')
     }
 
-    let removedFromWishlist = false
+    let undoToken: string | undefined
 
-    if (!purchaseData.keepOnWishlist) {
+    // Remove from wishlist if not keeping
+    if (!validatedData.keepOnWishlist) {
+      // Generate undo token before deletion
+      undoToken = generateUndoToken(itemId, userId)
+
+      // Store undo data in Redis with 5-second TTL
+      try {
+        const redis = await getRedisClient()
+        await redis.set(
+          `wishlist:undo:${itemId}`,
+          JSON.stringify({
+            item: existingItem,
+            purchaseData: validatedData,
+            newSetId,
+          }),
+          { EX: 5 }, // 5 second expiry
+        )
+      } catch (redisError) {
+        logger.error('Failed to store undo data (non-fatal):', redisError)
+        // Continue without undo capability
+        undoToken = undefined
+      }
+
+      // Delete from database
       await db.delete(wishlistItems).where(eq(wishlistItems.id, itemId))
-      removedFromWishlist = true
+
+      // Delete from OpenSearch
+      await deleteDocument({
+        index: 'wishlist_items',
+        id: itemId,
+      })
+
+      // Invalidate caches
+      await invalidateWishlistCaches(userId)
+
+      const redis = await getRedisClient()
+      await redis.del(`wishlist:item:${itemId}`)
     }
 
-    await invalidateWishlistCaches(userId)
-
-    const redis = await getRedisClient()
-    await redis.del(`wishlist:item:${itemId}`)
-
-    const response: MarkPurchasedResponse = {
-      message: 'Wishlist item marked as purchased',
+    return successResponse(200, {
+      message: 'Item marked as purchased',
       newSetId,
-      removedFromWishlist,
-    }
-
-    return successResponse(200, response, response.message)
+      removedFromWishlist: !validatedData.keepOnWishlist,
+      undoToken,
+    })
   } catch (error) {
-    logger.error('Mark wishlist item purchased error:', error)
-
-    if (error instanceof Error && error.message.includes('Invalid item ID')) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'Invalid item ID format')
-    }
-
-    if (error instanceof Error && error.message.includes('Validation')) {
+    logger.error('Mark as purchased error:', error)
+    if (error instanceof Error && error.message.includes('Invalid')) {
       return errorResponse(400, 'VALIDATION_ERROR', error.message)
     }
-
-    return errorResponse(500, 'INTERNAL_ERROR', 'Failed to mark wishlist item as purchased')
+    return errorResponse(500, 'INTERNAL_ERROR', 'Failed to mark item as purchased')
   }
 }

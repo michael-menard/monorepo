@@ -150,3 +150,30 @@ export const WishlistItemSchema = z.object({
 })
 
 export type WishlistItem = z.infer<typeof WishlistItemSchema>
+
+/**
+ * Mark As Purchased Request Schema
+ * Story wish-2004: Got It Flow
+ */
+export const MarkPurchasedRequestSchema = z.object({
+  purchasePrice: z.number().nonnegative('Price must be non-negative'),
+  purchaseTax: z.number().nonnegative('Tax must be non-negative').optional(),
+  purchaseShipping: z.number().nonnegative('Shipping must be non-negative').optional(),
+  quantity: z.number().int().min(1, 'Quantity must be at least 1').default(1),
+  purchaseDate: z.string().datetime('Invalid date format'),
+  keepOnWishlist: z.boolean().default(false),
+})
+
+export type MarkPurchasedRequest = z.infer<typeof MarkPurchasedRequestSchema>
+
+/**
+ * Mark As Purchased Response Schema
+ */
+export const MarkPurchasedResponseSchema = z.object({
+  message: z.string(),
+  newSetId: z.string().uuid().nullable(),
+  removedFromWishlist: z.boolean(),
+  undoToken: z.string().optional(),
+})
+
+export type MarkPurchasedResponse = z.infer<typeof MarkPurchasedResponseSchema>

@@ -1,61 +1,73 @@
-import type { FC } from 'react'
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@repo/app-component-library'
-import { Loader2 } from 'lucide-react'
+/**
+ * DeleteConfirmationModal Component
+ *
+ * Confirmation modal for permanently removing a wishlist item.
+ * Uses the ConfirmationDialog from @repo/app-component-library with destructive styling.
+ *
+ * Story wish-2004: Delete Confirmation Modal
+ */
 
-export interface DeleteConfirmationModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  itemTitle: string
-  onConfirm: () => void
-  isDeleting?: boolean
-}
+import { ConfirmationDialog, showSuccessToast, showErrorToast } from '@repo/app-component-library'
+import { useRemoveFromWishlistMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
+import { logger } from '@repo/logger'
+import { z } from 'zod'
 
-export const DeleteConfirmationModal: FC<DeleteConfirmationModalProps> = ({
+/**
+ * Props schema for DeleteConfirmationModal
+ */
+export const DeleteConfirmationModalPropsSchema = z.object({
+  open: z.boolean(),
+  onOpenChange: z.function().args(z.boolean()).returns(z.void()),
+  itemId: z.string().uuid(),
+  itemTitle: z.string(),
+  onDeleted: z.function().returns(z.void()).optional(),
+})
+
+export type DeleteConfirmationModalProps = z.infer<typeof DeleteConfirmationModalPropsSchema>
+
+/**
+ * DeleteConfirmationModal
+ *
+ * Shows a confirmation dialog before permanently deleting a wishlist item.
+ * Handles the delete mutation and shows success/error toasts.
+ */
+export function DeleteConfirmationModal({
   open,
   onOpenChange,
+  itemId,
   itemTitle,
-  onConfirm,
-  isDeleting = false,
-}) => {
+  onDeleted,
+}: DeleteConfirmationModalProps) {
+  const [removeItem, { isLoading }] = useRemoveFromWishlistMutation()
+
+  const handleConfirm = async () => {
+    try {
+      await removeItem(itemId).unwrap()
+      showSuccessToast('Item removed from wishlist')
+      onOpenChange(false)
+      onDeleted?.()
+    } catch (error) {
+      logger.error('Failed to delete wishlist item:', error)
+      showErrorToast('Failed to remove item. Please try again.')
+    }
+  }
+
+  const handleCancel = () => {
+    onOpenChange(false)
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Remove from wishlist?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to remove <strong>{itemTitle}</strong> from your wishlist?
-            <br />
-            <br />
-            <span className="text-destructive font-medium">This action cannot be undone.</span>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {isDeleting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Removing...
-              </>
-            ) : (
-              'Remove'
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Remove from Wishlist?"
+      description={`Are you sure you want to remove "${itemTitle}" from your wishlist? This action cannot be undone.`}
+      confirmText="Remove"
+      cancelText="Cancel"
+      variant="destructive"
+      loading={isLoading}
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+    />
   )
 }
