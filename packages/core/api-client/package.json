@@ -24,9 +24,17 @@
       "import": "./src/rtk/wishlist-gallery-api.ts",
       "types": "./src/rtk/wishlist-gallery-api.ts"
     },
+    "./rtk/sets-api": {
+      "import": "./src/rtk/sets-api.ts",
+      "types": "./src/rtk/sets-api.ts"
+    },
     "./schemas/wishlist": {
       "import": "./src/schemas/wishlist.ts",
       "types": "./src/schemas/wishlist.ts"
+    },
+    "./schemas/sets": {
+      "import": "./src/schemas/sets.ts",
+      "types": "./src/schemas/sets.ts"
     },
     "./rtk/dashboard-api": {
       "import": "./src/rtk/dashboard-api.ts",

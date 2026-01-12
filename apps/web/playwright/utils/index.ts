@@ -1,29 +1,7 @@
 /**
- * Playwright Test Utilities
+ * Playwright Test Utilities (deprecated barrel).
  *
- * Re-exports all utility functions for easy importing in tests
+ * Do not import from this module in new code. Prefer importing from
+ * concrete utility files instead, e.g. `../utils/api-mocks` or
+ * `../utils/cognito-admin`. Kept only for historical reference.
  */
-
-export {
-  adminConfirmSignUp,
-  adminDeleteUser,
-  adminGetUser,
-  generateTestEmail,
-  cleanupTestUser,
-} from './cognito-admin'
-
-export {
-  setupUploadMocks,
-  setupSessionMock,
-  setupAuthMock,
-  clearMocks,
-  mockResponses,
-} from './api-mocks'
-
-export {
-  setupWishlistMocks,
-  clearWishlistMocks,
-  wishlistMockResponses,
-  mockWishlistItems,
-} from './wishlist-mocks'
-export type { MockWishlistItem, MockWishlistListResponse, WishlistMockOptions } from './wishlist-mocks'

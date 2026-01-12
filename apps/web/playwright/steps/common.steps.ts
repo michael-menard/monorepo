@@ -4,7 +4,7 @@
 
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
-import { setupAuthMock, setupUploadMocks } from '../utils'
+import { setupAuthMock } from '../utils/api-mocks'
 
 const { Given, Then } = createBdd()
 
@@ -16,9 +16,6 @@ Given('I am logged in as a test user', async ({ page }) => {
     email: 'test@example.com',
     name: 'Test User',
   })
-
-  // Set up upload API mocks for uploader tests
-  await setupUploadMocks(page)
 
   // Set auth cookies/localStorage as needed
   await page.evaluate(() => {

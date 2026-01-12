@@ -19,7 +19,7 @@ const InstructionsGalleryModule = lazy(() => import('@repo/app-instructions-gall
 export function InstructionsModule() {
   return (
     <Suspense fallback={<LoadingPage />}>
-      <InstructionsGalleryModule />
+      <InstructionsGalleryModule mode="gallery" />
     </Suspense>
   )
 }

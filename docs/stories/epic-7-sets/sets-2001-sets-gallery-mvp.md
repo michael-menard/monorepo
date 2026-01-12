@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+In Progress
 
 ## Consolidates
 
@@ -30,125 +30,132 @@ See [Epic 7: Sets Gallery PRD](/docs/prd/epic-7-sets-gallery.md) - User Interfac
 
 ### API Endpoints
 
-1. [ ] GET /api/sets returns paginated list of user's sets
-2. [ ] Only returns sets owned by authenticated user
-3. [ ] Supports search by title and setNumber
-4. [ ] Supports filtering by theme, tags, isBuilt
-5. [ ] Supports sorting by title, pieceCount, purchaseDate, purchasePrice, createdAt
-6. [ ] Returns pagination metadata (page, limit, total, totalPages)
-7. [ ] Returns available filters (themes, tags) for filter UI
-8. [ ] GET /api/sets/:id returns single set with all fields
-9. [ ] Includes all associated images ordered by position
-10. [ ] Returns 404 if set not found
-11. [ ] Returns 403 if set belongs to different user
-12. [ ] RTK Query hooks created and exported
+1. [x] GET /api/sets returns paginated list of user's sets
+2. [x] Only returns sets owned by authenticated user
+3. [x] Supports search by title and setNumber
+4. [x] Supports filtering by theme, tags, isBuilt
+5. [x] Supports sorting by title, pieceCount, purchaseDate, purchasePrice, createdAt
+6. [x] Returns pagination metadata (page, limit, total, totalPages)
+7. [x] Returns available filters (themes, tags) for filter UI
+8. [x] GET /api/sets/:id returns single set with all fields
+9. [x] Includes all associated images ordered by position
+10. [x] Returns 404 if set not found
+11. [x] Returns 403 if set belongs to different user
+12. [x] RTK Query hooks created and exported
 
 ### Gallery Page
 
-13. [ ] Route `/sets` configured with lazy loading
-14. [ ] Page uses shared @repo/gallery components
-15. [ ] Integrates with useGetSetsQuery for data
-16. [ ] Filter bar with search, theme, isBuilt filters
-17. [ ] Sort options: title, pieceCount, purchaseDate, purchasePrice
-18. [ ] "Add Set" button in header navigates to add page
-19. [ ] Loading skeleton while fetching
+13. [x] Route `/sets` configured with lazy loading
+14. [x] Page uses shared @repo/gallery components
+15. [x] Integrates with useGetSetsQuery for data
+16. [x] Filter bar with search, theme, isBuilt filters
+17. [x] Sort options: title, pieceCount, purchaseDate, purchasePrice
+18. [x] "Add Set" button in header navigates to add page
+19. [x] Loading skeleton while fetching
 20. [ ] Navigation link added to app sidebar/nav
 
 ### Set Card Component
 
-21. [ ] SetCard component displays set image thumbnail
-22. [ ] Shows title and set number
-23. [ ] Shows piece count with icon
-24. [ ] Shows theme badge
-25. [ ] Shows build status indicator (Built/In Pieces) with color AND icon
-26. [ ] Shows quantity badge if quantity > 1
-27. [ ] Hover shows action menu (view, edit, delete)
-28. [ ] Click navigates to detail page
+21. [x] SetGalleryCard component is implemented as a thin wrapper around `AppGalleryCard` from `@repo/app-component-library`
+22. [x] Displays set image thumbnail (using first image or fallback)
+23. [x] Shows title and set number
+24. [x] Shows piece count with icon
+25. [x] Shows theme badge
+26. [x] Shows build status indicator (Built/In Pieces) with color AND icon
+27. [x] Shows quantity badge if quantity > 1
+28. [x] Hover shows action menu (view, edit, delete)
+29. [x] Click navigates to detail page
 
 ### Detail Page
 
-29. [ ] Route `/sets/:setId` renders detail page
-30. [ ] Shows all set images in gallery grid
-31. [ ] Lightbox opens on image click
-32. [ ] Displays set metadata (title, setNumber, pieceCount, theme, tags)
-33. [ ] Displays purchase info section (price, tax, shipping, date, total)
-34. [ ] Shows notes if present
-35. [ ] Edit button navigates to edit page
-36. [ ] Delete button triggers confirmation
-37. [ ] Back button returns to gallery
-38. [ ] 404 page for non-existent set
+29. [x] Route `/sets/:id` renders detail page
+30. [x] Shows all set images in gallery grid
+31. [x] Lightbox opens on image click
+32. [x] Displays set metadata (title, setNumber, pieceCount, theme, tags)
+33. [x] Displays purchase info section (price, tax, shipping, date, total)
+34. [x] Shows notes if present
+35. [x] Edit button navigates to edit page
+36. [x] Delete button triggers confirmation
+37. [x] Back button returns to gallery
+38. [x] 404 page for non-existent set
 
 ## Tasks / Subtasks
 
 ### Task 1: Create List Endpoint (AC: 1-7)
 
-- [ ] Create `apps/api/endpoints/sets/list/handler.ts`
-- [ ] Parse and validate query params with SetListQuerySchema
-- [ ] Build Drizzle query with filters
-- [ ] Implement search: ILIKE on title and setNumber
-- [ ] Implement theme filter: exact match
-- [ ] Implement isBuilt filter: boolean match
-- [ ] Implement tags filter: array contains
-- [ ] Implement dynamic ORDER BY based on sortField/sortDirection
-- [ ] Implement LIMIT/OFFSET pagination
-- [ ] Count query for total
-- [ ] Query distinct themes and tags for filter options
-- [ ] Left join with set_images for thumbnails
+- [x] Create `apps/api/endpoints/sets/list/handler.ts`
+- [x] Parse and validate query params with SetListQuerySchema
+- [x] Build Drizzle query with filters
+- [x] Implement search: ILIKE on title and setNumber
+- [x] Implement theme filter: exact match
+- [x] Implement isBuilt filter: boolean match
+- [x] Implement tags filter: array contains
+- [x] Implement dynamic ORDER BY based on sortField/sortDirection
+- [x] Implement LIMIT/OFFSET pagination
+- [x] Count query for total
+- [x] Query distinct themes and tags for filter options
+- [x] Left join with set_images for thumbnails
 
 ### Task 2: Create Get Endpoint (AC: 8-11)
 
-- [ ] Create `apps/api/endpoints/sets/get/handler.ts`
-- [ ] Extract setId from path params
-- [ ] Query set by ID with images joined
-- [ ] Order images by position
-- [ ] Verify ownership before returning
-- [ ] Return 404 if not found, 403 if unauthorized
+- [x] Create `apps/api/endpoints/sets/get/handler.ts`
+- [x] Extract setId from path params
+- [x] Query set by ID with images joined
+- [x] Order images by position
+- [x] Verify ownership before returning
+- [x] Return 404 if not found, 403 if unauthorized
 
 ### Task 3: Create RTK Query Slice (AC: 12)
 
-- [ ] Create `packages/core/api-client/src/rtk/sets-api.ts`
-- [ ] Define `getSets` query with params
-- [ ] Define `getSetById` query
-- [ ] Configure cache tags for invalidation
-- [ ] Transform responses with Zod schemas
-- [ ] Export hooks: `useGetSetsQuery`, `useGetSetByIdQuery`
+- [x] Create `packages/core/api-client/src/rtk/sets-api.ts`
+- [x] Define `getSets` query with params
+- [x] Define `getSetById` query
+- [x] Configure cache tags for invalidation
+- [x] Transform responses with Zod schemas
+- [x] Export hooks: `useGetSetsQuery`, `useGetSetByIdQuery`
 
-### Task 4: Create SetCard Component (AC: 21-28)
+### Task 3.5: Extract GalleryCard into app-component-library
 
-- [ ] Create `routes/sets/-components/SetCard/index.tsx`
-- [ ] Image thumbnail (aspect ratio 4:3) with fallback
-- [ ] Title with truncation and set number
-- [ ] Piece count display with icon
-- [ ] Theme badge
-- [ ] Build status badge (icon + color per PRD)
-- [ ] Quantity badge overlay (if quantity > 1)
-- [ ] Hover dropdown menu with actions
-- [ ] Click handler for navigation
+- [x] Extract `GalleryCard` from `@repo/gallery` into `@repo/app-component-library` as `AppGalleryCard` (shared primitive for gallery-style cards).
+- [x] Ensure `@repo/app-component-library` exports `AppGalleryCard` for use across apps.
+- [x] Update sets gallery components to import and use `AppGalleryCard` from `@repo/app-component-library` instead of `GalleryCard` from `@repo/gallery`.
+
+### Task 4: Create SetGalleryCard Component (AC: 21-29)
+
+- [x] Create `apps/web/app-sets-gallery/src/components/SetCard.tsx` (SetGalleryCard) as the Sets-specific adapter
+- [x] Implement as a thin adapter over `AppGalleryCard` from `@repo/app-component-library`
+- [x] Map `Set` image(s) into `AppGalleryCard.image` with 4:3 aspect ratio and fallback
+- [x] Map title/setNumber into `AppGalleryCard.title` / `subtitle`
+- [x] Render piece count, theme, build status, and quantity badges via `metadata` slot
+- [x] Render view/edit/delete actions via `actions` slot (hover overlay)
+- [x] Expose `onClick`, `onEdit`, `onDelete` callbacks
+- [x] Ensure keyboard accessibility via `AppGalleryCard` (Enter/Space) is preserved
 
 ### Task 5: Create Gallery Page (AC: 13-20)
 
-- [ ] Create `routes/sets/index.tsx`
-- [ ] Configure TanStack Router file-based route with lazy loading
-- [ ] Header with title and Add Set button
-- [ ] Use useGalleryUrl hook for URL state management
-- [ ] GalleryFilterBar with search, theme, isBuilt filters
-- [ ] Sort dropdown with options
-- [ ] Loading state with GallerySkeleton
-- [ ] GalleryGrid with SetCard items
-- [ ] Pagination component
-- [ ] Add /sets to navigation menu
+- [x] Create `apps/web/app-sets-gallery/src/pages/main-page.tsx`
+- [x] Implement `MainPage` using React Router inside the feature module
+- [x] Expose `AppSetsGalleryModule` from `apps/web/app-sets-gallery/src/Module.tsx`
+- [x] Wire `/sets` route in main-app TanStack Router to lazy-load the Sets Gallery module (similar to `InstructionsModule`)
+- [x] Header with title and Add Set button
+- [x] GalleryFilterBar with search, theme, isBuilt filters
+- [x] Sort dropdown with options
+- [x] Loading state with GalleryGrid/GalleryDataTable while fetching
+- [x] GalleryGrid with SetGalleryCard items
+- [x] Pagination controls for multi-page results
+- [x] Add /sets to navigation menu in the shell app
 
 ### Task 6: Create Detail Page (AC: 29-38)
 
-- [ ] Create `routes/sets/$setId/index.tsx`
-- [ ] Fetch set with useGetSetByIdQuery
-- [ ] Header with back button, title, edit/delete actions
-- [ ] Two-column layout (images left, metadata right)
-- [ ] Image gallery grid with lightbox on click
-- [ ] SetDetailsCard component (number, pieces, theme, tags, build status, quantity)
-- [ ] PurchaseInfoCard component (price, tax, shipping, date, total)
-- [ ] NotesCard component
-- [ ] Loading skeleton and 404 states
+- [x] Create (and reuse) `apps/web/app-sets-gallery/src/pages/set-detail-page.tsx` as the canonical Sets detail page
+- [x] Migrate existing SetDetailPage implementation to load data via `useGetSetByIdQuery` from `@repo/api-client/rtk/sets-api`
+- [x] Header with back button, title, edit/delete actions
+- [x] Two-column layout (images left, metadata right)
+- [x] Image gallery area (grid or carousel) with lightbox on click
+- [x] SetDetailsCard-style section (number, pieces, theme, tags, build status, quantity)
+- [x] PurchaseInfoCard-style section (price, tax, shipping, date, total)
+- [x] Notes section, only when notes are present
+- [x] Loading skeleton and 404 states
 
 ## Dev Notes
 
@@ -266,102 +273,99 @@ export const setsApi = createApi({
 export const { useGetSetsQuery, useGetSetByIdQuery } = setsApi
 ```
 
-### SetCard Component
+### SetGalleryCard Component (adapter over GalleryCard)
 
 ```typescript
-// routes/sets/-components/SetCard/index.tsx
-import { Set } from '@repo/api-client'
-import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@repo/ui'
-import { MoreVertical, Eye, Pencil, Trash, Package, Blocks, CheckCircle } from 'lucide-react'
+// apps/web/app-sets-gallery/src/components/SetGalleryCard.tsx
+import type { Set } from '@repo/api-client'
+import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@repo/app-component-library'
+import { GalleryCard } from '@repo/gallery'
+import { MoreVertical, Eye, Pencil, Trash, Blocks, CheckCircle } from 'lucide-react'
 
-interface SetCardProps {
+interface SetGalleryCardProps {
   set: Set
   onClick?: () => void
   onEdit?: () => void
   onDelete?: () => void
 }
 
-export function SetCard({ set, onClick, onEdit, onDelete }: SetCardProps) {
+export function SetGalleryCard({ set, onClick, onEdit, onDelete }: SetGalleryCardProps) {
+  const primaryImage = set.images[0]
+
   return (
-    <div
-      className="group relative cursor-pointer rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow"
-      onClick={onClick}
-    >
-      {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
-        {set.images[0] ? (
-          <img
-            src={set.images[0].thumbnailUrl ?? set.images[0].imageUrl}
-            alt={set.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="h-full w-full bg-muted flex items-center justify-center">
-            <Package className="h-12 w-12 text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Quantity Badge */}
-        {set.quantity > 1 && (
-          <Badge className="absolute top-2 left-2" variant="secondary">
-            x{set.quantity}
-          </Badge>
-        )}
-
-        {/* Hover Actions */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="secondary" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick?.() }}>
-                <Eye className="w-4 h-4 mr-2" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit?.() }}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={(e) => { e.stopPropagation(); onDelete?.() }}
-              >
-                <Trash className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-3 space-y-2">
-        <h3 className="font-medium truncate">{set.title}</h3>
-
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {set.setNumber && <span>#{set.setNumber}</span>}
-          {set.pieceCount && (
+    <GalleryCard
+      image={{
+        src: primaryImage?.thumbnailUrl ?? primaryImage?.imageUrl ?? '/images/set-placeholder.png',
+        alt: set.title,
+        aspectRatio: '4/3',
+      }}
+      title={set.title}
+      subtitle={set.setNumber ? `#${set.setNumber}` : undefined}
+      metadata={
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {set.pieceCount ? (
             <span className="flex items-center gap-1">
               <Blocks className="h-3 w-3" />
               {set.pieceCount.toLocaleString()}
             </span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between">
-          {set.theme && (
+          ) : null}
+          {set.theme ? (
             <Badge variant="outline" className="text-xs">
               {set.theme}
             </Badge>
-          )}
+          ) : null}
           <BuildStatusBadge isBuilt={set.isBuilt} />
+          {set.quantity > 1 ? (
+            <Badge variant="secondary" className="text-xs">
+              x{set.quantity}
+            </Badge>
+          ) : null}
         </div>
-      </div>
-    </div>
+      }
+      actions={
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+            <Button variant="secondary" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={e => {
+                e.stopPropagation()
+                onClick?.()
+              }}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={e => {
+                e.stopPropagation()
+                onEdit?.()
+              }}
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={e => {
+                e.stopPropagation()
+                onDelete?.()
+              }}
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+      onClick={onClick}
+      selected={false}
+      data-testid="set-gallery-card"
+    />
   )
 }
 
@@ -387,104 +391,91 @@ function BuildStatusBadge({ isBuilt }: { isBuilt: boolean }) {
 ### Gallery Page
 
 ```typescript
-// routes/sets/index.tsx
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { GalleryGrid, GalleryFilterBar, GallerySkeleton, useGalleryUrl } from '@repo/gallery'
-import { useGetSetsQuery } from '@repo/api-client'
-import { Button } from '@repo/ui'
+// apps/web/app-sets-gallery/src/pages/main-page.tsx
+import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { SetCard } from './-components/SetCard'
+import { Button } from '@repo/app-component-library'
+import { useViewMode, GalleryViewToggle, GalleryDataTable } from '@repo/gallery'
+import { useGetSetsQuery } from '@repo/api-client'
+import { GalleryFilterBar } from '../components/GalleryFilterBar'
+import { GalleryGrid } from '../components/GalleryGrid'
+import { SetGalleryCard } from '../components/SetGalleryCard'
 
-export const Route = createFileRoute('/sets/')({
-  component: SetsGalleryPage,
-})
-
-function SetsGalleryPage() {
-  const { state, updateUrl } = useGalleryUrl()
+function SetsGalleryMainPage() {
   const navigate = useNavigate()
+  const [viewMode, setViewMode] = useViewMode('sets')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const { data, isLoading, error, refetch } = useGetSetsQuery({
-    search: state.search,
-    theme: state.theme,
-    isBuilt: state.isBuilt,
-    tags: state.tags,
-    sortField: state.sortField ?? 'createdAt',
-    sortDirection: state.sortDirection ?? 'desc',
-    page: state.page ?? 1,
-    limit: 20,
+    search: searchTerm,
+    // Additional filters (theme, isBuilt, tags, sort, page, limit) wired from future stories
   })
 
+  const sets = data?.items ?? []
+
+  const filteredSets = useMemo(
+    () =>
+      sets.filter(set => {
+        const query = searchTerm.toLowerCase()
+        return (
+          set.title.toLowerCase().includes(query) ||
+          (set.setNumber ?? '').toLowerCase().includes(query) ||
+          (set.theme ?? '').toLowerCase().includes(query)
+        )
+      }),
+    [sets, searchTerm],
+  )
+
+  const handleSetClick = (setId: string) => {
+    navigate(`/sets/${setId}`)
+  }
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Sets</h1>
-        <Button onClick={() => navigate({ to: '/sets/add' })}>
-          <Plus className="w-4 h-4 mr-2" />
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">My Sets Collection</h1>
+          <p className="text-muted-foreground mt-1">Manage and track your LEGO sets</p>
+        </div>
+        <Button onClick={() => navigate('/sets/add')}>
+          <Plus className="mr-2 h-4 w-4" />
           Add Set
         </Button>
       </div>
 
-      {/* Filter Bar */}
-      <GalleryFilterBar
-        search={state.search}
-        onSearchChange={(s) => updateUrl({ search: s, page: 1 })}
-        filters={[
-          {
-            key: 'theme',
-            label: 'Theme',
-            options: data?.filters.availableThemes ?? [],
-            value: state.theme,
-            onChange: (v) => updateUrl({ theme: v, page: 1 }),
-          },
-          {
-            key: 'isBuilt',
-            label: 'Status',
-            options: [
-              { value: 'true', label: 'Built' },
-              { value: 'false', label: 'In Pieces' },
-            ],
-            value: state.isBuilt?.toString(),
-            onChange: (v) => updateUrl({ isBuilt: v === 'true', page: 1 }),
-          },
-        ]}
-        sortOptions={[
-          { value: 'createdAt', label: 'Date Added' },
-          { value: 'title', label: 'Name' },
-          { value: 'pieceCount', label: 'Piece Count' },
-          { value: 'purchaseDate', label: 'Purchase Date' },
-          { value: 'purchasePrice', label: 'Price Paid' },
-        ]}
-        currentSort={state.sortField}
-        currentDirection={state.sortDirection}
-        onSortChange={(field, dir) => updateUrl({ sortField: field, sortDirection: dir })}
-      />
+      {/* Filter Bar with View Toggle */}
+      <GalleryFilterBar searchTerm={searchTerm} onSearchChange={setSearchTerm}>
+        <GalleryViewToggle currentView={viewMode} onViewChange={setViewMode} />
+      </GalleryFilterBar>
 
       {/* Gallery Content */}
       {isLoading ? (
-        <GallerySkeleton count={12} />
+        <GalleryGrid items={[]} isLoading />
       ) : error ? (
-        <ErrorState error={error} onRetry={() => refetch()} />
-      ) : (
-        <GalleryGrid>
-          {data?.items.map((set) => (
-            <SetCard
-              key={set.id}
-              set={set}
-              onClick={() => navigate({ to: '/sets/$setId', params: { setId: set.id } })}
-              onEdit={() => navigate({ to: '/sets/$setId/edit', params: { setId: set.id } })}
-              onDelete={() => handleDelete(set.id)}
-            />
-          ))}
+        <div className="text-center py-12">
+          <p className="text-red-500 mb-2">Error loading sets</p>
+          <Button variant="outline" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <GalleryGrid items={filteredSets}>
+          {set => <SetGalleryCard set={set} onClick={() => handleSetClick(set.id)} />}
         </GalleryGrid>
-      )}
-
-      {/* Pagination */}
-      {data && data.pagination.totalPages > 1 && (
-        <Pagination
-          page={data.pagination.page}
-          totalPages={data.pagination.totalPages}
-          onPageChange={(p) => updateUrl({ page: p })}
+      ) : (
+        <GalleryDataTable
+          items={filteredSets}
+          // Column definition provided by app-sets-gallery (setsColumns)
+          // and wired in the actual implementation
+          columns={[] as any}
+          isLoading={false}
+          onRowClick={set => handleSetClick(set.id)}
+          ariaLabel="Sets collection table"
+          enableSorting
+          enableMultiSort
+          maxMultiSortColCount={2}
         />
       )}
     </div>
@@ -492,23 +483,29 @@ function SetsGalleryPage() {
 }
 ```
 
-### Route Structure
+### Route & Module Structure
 
 ```
-apps/web/main-app/src/routes/
-└── sets/
-    ├── index.tsx           # Gallery page
-    ├── $setId/
-    │   └── index.tsx       # Detail page
-    └── -components/
-        ├── SetCard/
-        │   └── index.tsx
-        ├── SetDetailsCard.tsx
-        ├── PurchaseInfoCard.tsx
-        └── BuildStatusBadge.tsx
+apps/web/app-sets-gallery/
+  src/
+    Module.tsx                    # Feature module entry (lazy-loaded by main-app)
+    pages/
+      main-page.tsx               # Sets gallery page (/sets)
+      set-detail-page.tsx         # Detail page (/sets/:id)
+      add-set-page.tsx            # Add set page (sets-2002)
+    components/
+      SetGalleryCard.tsx          # Set-specific adapter over GalleryCard
+      GalleryGrid.tsx             # Grid wrapper for sets
+      GalleryFilterBar.tsx        # Search + view toggle bar
 ```
 
 ## Testing
+
+### Test Infrastructure (MSW)
+
+- UI and page components MUST call real RTK Query hooks from `@repo/api-client` (no direct imports from mock API modules).
+- Network mocking for frontend tests MUST be implemented with MSW handlers for `/api/sets` and `/api/sets/:id`.
+- MSW handlers should live in shared test setup so all suites reuse the same mocked server behavior.
 
 ### API Tests
 
@@ -529,17 +526,17 @@ apps/web/main-app/src/routes/
 
 ### Component Tests
 
-- [ ] SetCard renders set title
-- [ ] SetCard renders set number with # prefix
-- [ ] SetCard renders piece count formatted
-- [ ] SetCard shows theme badge
-- [ ] SetCard shows "Built" badge when isBuilt=true
-- [ ] SetCard shows "In Pieces" badge when isBuilt=false
-- [ ] SetCard shows quantity badge when quantity > 1
-- [ ] SetCard hides quantity badge when quantity = 1
-- [ ] SetCard shows placeholder when no images
-- [ ] SetCard dropdown actions call correct handlers
-- [ ] SetCard click calls onClick handler
+- [ ] SetGalleryCard renders set title
+- [ ] SetGalleryCard renders set number with # prefix
+- [ ] SetGalleryCard renders piece count formatted
+- [ ] SetGalleryCard shows theme badge
+- [ ] SetGalleryCard shows "Built" badge when isBuilt=true
+- [ ] SetGalleryCard shows "In Pieces" badge when isBuilt=false
+- [ ] SetGalleryCard shows quantity badge when quantity > 1
+- [ ] SetGalleryCard hides quantity badge when quantity = 1
+- [ ] SetGalleryCard shows placeholder when no images (via GalleryCard fallback)
+- [ ] SetGalleryCard dropdown actions call correct handlers
+- [ ] SetGalleryCard click calls onClick handler (propagated through GalleryCard)
 
 ### Page Tests
 
@@ -563,7 +560,9 @@ apps/web/main-app/src/routes/
 
 - [ ] All API endpoints return correct data with proper filtering/sorting
 - [ ] RTK Query hooks work correctly with cache invalidation
-- [ ] SetCard displays all required metadata with accessibility
+- [ ] UI components call `useGetSetsQuery` / `useGetSetByIdQuery` from `@repo/api-client` (no in-app mock API usage)
+- [ ] Frontend tests use MSW to mock `/api/sets` and `/api/sets/:id` instead of mock API modules
+- [ ] SetGalleryCard (GalleryCard adapter) displays all required metadata with accessibility
 - [ ] Gallery page renders with proper filtering and sorting
 - [ ] Detail page shows full set information
 - [ ] All tests pass

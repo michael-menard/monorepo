@@ -814,6 +814,36 @@ functions:
             name: cognitoJwtAuthorizer
 
   # ===========================================
+  # Sets Functions (all require auth - user-specific)
+  # ===========================================
+
+  # List sets
+  setsList:
+    handler: endpoints/sets/list/handler.handler
+    description: List sets
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # Get set
+  setsGet:
+    handler: endpoints/sets/get/handler.handler
+    description: Get set by ID
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
   # MOC Parts Lists Functions
   # ===========================================
 

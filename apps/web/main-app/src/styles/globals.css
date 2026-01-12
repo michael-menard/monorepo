@@ -1,62 +1,11 @@
-@import 'tailwindcss';
-
-/*
- * Main App - Global Styles
+/* Main App - Global Styles
  * =========================
- * Imports all tokens from the design system (single source of truth).
- * Add app-specific overrides here if needed.
+ * Uses shared global styles from the design system.
+ * Add app-specific overrides in @layer base if needed.
  */
 
-/* Import the single source of truth */
-@import '@repo/design-system/design-tokens.css';
+@import '@repo/design-system/global-styles.css';
 
 @layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-primary);
-    font-feature-settings:
-      'rlig' 1,
-      'calt' 1;
-  }
-
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Focus styles for accessibility */
-  *:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--ring));
-  }
-
-  /* Loading states */
-  .loading-skeleton {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    background-color: hsl(var(--muted));
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background-color: hsl(var(--muted));
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 6px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
-  }
+  /* No app-specific overrides yet */
 }

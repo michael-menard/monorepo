@@ -44,7 +44,7 @@ const mockColumns: GalleryDataTableColumn<typeof mockItems[0]>[] = [
 ]
 
 describe('GalleryDataTable - Single Column Sort', () => {
-  const renderTable = (props = {}, initialPath = '/') => {
+  const renderTable = (props: Partial<Parameters<typeof GalleryDataTable>[0]> = {}, initialPath = '/') => {
     // Create a test router with TanStack Router
     const rootRoute = createRootRoute()
     const indexRoute = createRoute({
@@ -53,7 +53,7 @@ describe('GalleryDataTable - Single Column Sort', () => {
       component: () => (
         <GalleryDataTable
           items={mockItems}
-          columns={mockColumns}
+          columns={(props.columns as any) ?? mockColumns}
           enableSorting={true}
           persistSortInUrl={true}
           {...props}
@@ -239,7 +239,7 @@ describe('GalleryDataTable - Single Column Sort', () => {
 
   it('respects enableSorting prop on columns', async () => {
     const user = userEvent.setup()
-    
+
     const columnsWithDisabledSort: GalleryDataTableColumn<typeof mockItems[0]>[] = [
       {
         field: 'title',
@@ -253,15 +253,7 @@ describe('GalleryDataTable - Single Column Sort', () => {
       },
     ]
 
-    render(
-      <MemoryRouter>
-        <GalleryDataTable
-          items={mockItems}
-          columns={columnsWithDisabledSort}
-          enableSorting={true}
-        />
-      </MemoryRouter>,
-    )
+    renderTable({ columns: columnsWithDisabledSort, enableSorting: true })
 
     // Title header should be sortable
     const titleHeader = screen.getByRole('button', { name: /title/i })
@@ -276,37 +268,20 @@ describe('GalleryDataTable - Single Column Sort', () => {
   })
 
   it('respects global enableSorting=false prop', () => {
-    render(
-      <MemoryRouter>
-        <GalleryDataTable
-          items={mockItems}
-          columns={mockColumns}
-          enableSorting={false}
-        />
-      </MemoryRouter>,
-    )
+    renderTable({ enableSorting: false })
 
     // No sortable headers should exist
     const buttons = screen.queryAllByRole('button')
-    const sortableHeaders = buttons.filter(btn => 
-      btn.hasAttribute('aria-sort')
+    const sortableHeaders = buttons.filter(btn =>
+      btn.hasAttribute('aria-sort'),
     )
     expect(sortableHeaders).toHaveLength(0)
   })
 
   it('works without URL persistence when persistSortInUrl=false', async () => {
     const user = userEvent.setup()
-    
-    render(
-      <MemoryRouter>
-        <GalleryDataTable
-          items={mockItems}
-          columns={mockColumns}
-          enableSorting={true}
-          persistSortInUrl={false}
-        />
-      </MemoryRouter>,
-    )
+
+    renderTable({ enableSorting: true, persistSortInUrl: false })
 
     const titleHeader = screen.getByRole('button', { name: /title/i })
 
@@ -342,7 +317,15 @@ describe('GalleryDataTable - Single Column Sort', () => {
 
   it('maintains sort during data updates', async () => {
     const user = userEvent.setup()
-    const { rerender } = renderTable()
+
+    const { rerender } = render(
+      <GalleryDataTable
+        items={mockItems}
+        columns={mockColumns}
+        enableSorting={true}
+        persistSortInUrl={false}
+      />,
+    )
 
     const titleHeader = screen.getByRole('button', { name: /title/i })
 
@@ -359,14 +342,12 @@ describe('GalleryDataTable - Single Column Sort', () => {
     ]
 
     rerender(
-      <MemoryRouter>
-        <GalleryDataTable
-          items={newItems}
-          columns={mockColumns}
-          enableSorting={true}
-          persistSortInUrl={true}
-        />
-      </MemoryRouter>,
+      <GalleryDataTable
+        items={newItems}
+        columns={mockColumns}
+        enableSorting={true}
+        persistSortInUrl={false}
+      />,
     )
 
     // New item should appear first due to alphabetical sorting

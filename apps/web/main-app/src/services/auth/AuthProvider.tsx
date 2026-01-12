@@ -177,9 +177,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       dispatch(setLoading(true))
 
-      // Get current user from Cognito
-      const user = await getCurrentUser()
+      // First check for an active session. For unauthenticated users, this will
+      // return without tokens and we can safely treat them as logged out
       const session = await fetchAuthSession()
+
+      if (!session.tokens) {
+        dispatch(setUnauthenticated())
+        return
+      }
+
+      // Only call getCurrentUser when we know there is a valid session
+      const user = await getCurrentUser()
 
       if (user && session.tokens) {
         const userData: User = {
@@ -228,8 +236,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } else {
         dispatch(setUnauthenticated())
       }
-    } catch (error) {
-      logger.error('Auth check failed:', error)
+    } catch (error: any) {
+      // When no user is signed in, Amplify throws UserUnAuthenticatedException.
+      // That is an expected state on public pages, so downgrade the log level
+      // and just mark the user as unauthenticated without treating it as an error.
+      if (error?.name === 'UserUnAuthenticatedException') {
+        logger.debug('No authenticated user found during auth check')
+      } else {
+        logger.error('Auth check failed:', error)
+      }
       dispatch(setUnauthenticated())
     }
   }

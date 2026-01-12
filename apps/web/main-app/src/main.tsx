@@ -5,31 +5,44 @@ import { configureAmplify } from './lib/amplify-config'
 import { App } from './App'
 import './styles/globals.css'
 
-// Configure AWS Amplify BEFORE React renders
-// This ensures auth operations are available immediately
-configureAmplify()
+async function bootstrap() {
+  // Optionally enable MSW API mocking for local development / Playwright
+  if (import.meta.env.VITE_ENABLE_MSW === 'true') {
+    const { worker } = await import('./mocks/browser')
+    await worker.start({
+      onUnhandledRequest: 'bypass',
+    })
+    logger.info('MSW mock backend enabled')
+  }
 
-// Initialize performance monitoring
-if (import.meta.env.VITE_ENABLE_PERFORMANCE_MONITORING === 'true') {
-  import('./lib/performance').then(({ performanceMonitor }) => {
-    logger.info('Performance monitoring enabled')
+  // Configure AWS Amplify BEFORE React renders
+  // This ensures auth operations are available immediately
+  configureAmplify()
 
-    // Report initial metrics after app loads
-    setTimeout(() => {
-      const metrics = performanceMonitor.getMetrics()
-      logger.info('Initial Performance Metrics:', metrics)
-    }, 2000)
-  })
+  // Initialize performance monitoring
+  if (import.meta.env.VITE_ENABLE_PERFORMANCE_MONITORING === 'true') {
+    import('./lib/performance').then(({ performanceMonitor }) => {
+      logger.info('Performance monitoring enabled')
+
+      // Report initial metrics after app loads
+      setTimeout(() => {
+        const metrics = performanceMonitor.getMetrics()
+        logger.info('Initial Performance Metrics:', metrics)
+      }, 2000)
+    })
+  }
+
+  // Initialize error reporting
+  if (import.meta.env.VITE_ENABLE_ERROR_REPORTING === 'true') {
+    // Error reporting will be initialized here
+    logger.info('Error reporting enabled')
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
 }
 
-// Initialize error reporting
-if (import.meta.env.VITE_ENABLE_ERROR_REPORTING === 'true') {
-  // Error reporting will be initialized here
-  logger.info('Error reporting enabled')
-}
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+bootstrap()

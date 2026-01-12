@@ -36,6 +36,7 @@
     "@repo/app-dashboard": "workspace:*",
     "@repo/app-instructions-gallery": "workspace:*",
     "@repo/app-wishlist-gallery": "workspace:*",
+    "@repo/app-sets-gallery": "workspace:*",
     "@repo/cache": "workspace:*",
     "@repo/design-system": "workspace:*",
     "@repo/gallery": "workspace:*",

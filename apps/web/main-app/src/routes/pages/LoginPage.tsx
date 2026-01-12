@@ -22,6 +22,7 @@ import {
 import { Lock, Mail, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react'
 import { useAuth, type SocialProvider } from '@/services/auth/AuthProvider'
 import { useNavigation } from '@/components/Navigation/NavigationProvider'
+import { AuthLayout } from '@/components/Layout/RootLayout'
 
 // Login form validation schema
 const LoginSchema = z.object({
@@ -197,12 +198,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-8">
+    <AuthLayout>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md mx-auto"
       >
         <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm dark:bg-slate-900/95">
           <CardHeader className="text-center pb-6">
@@ -231,10 +232,10 @@ export function LoginPage() {
                   />
                 ))}
               </div>
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-sky-500 to-teal-500 flex items-center justify-center shadow-lg">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg">
                 <div className="h-4 w-4 rounded-full bg-white/90 shadow-inner"></div>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-sky-600 to-teal-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-500 bg-clip-text text-transparent">
                 LEGO MOC Hub
               </span>
             </motion.div>
@@ -280,7 +281,7 @@ export function LoginPage() {
                     type="email"
                     placeholder="Enter your email"
                     className={cn(
-                      'pl-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
+'pl-10 h-11 border-slate-200 focus:border-cyan-500 focus:ring-cyan-500',
                       errors.email && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('email')}
@@ -313,7 +314,7 @@ export function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     className={cn(
-                      'pl-10 pr-10 h-11 border-slate-200 focus:border-sky-500 focus:ring-sky-500',
+'pl-10 pr-10 h-11 border-slate-200 focus:border-cyan-500 focus:ring-cyan-500',
                       errors.password && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('password')}
@@ -353,7 +354,7 @@ export function LoginPage() {
                         id="rememberMe"
                         checked={field.value ?? false}
                         onCheckedChange={field.onChange}
-                        className="border-slate-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500"
+className="border-slate-300 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
                       />
                     )}
                   />
@@ -364,7 +365,7 @@ export function LoginPage() {
 
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-sky-600 hover:text-sky-500 font-medium transition-colors"
+className="text-sm text-cyan-500 hover:text-teal-500 font-medium transition-colors"
                   onClick={() => trackNavigation('forgot_password_link', { source: 'login_page' })}
                 >
                   Forgot password?
@@ -377,8 +378,8 @@ export function LoginPage() {
                   type="submit"
                   disabled={isSubmitting || isLoading}
                   className={cn(
-                    'w-full h-11 bg-gradient-to-r from-sky-500 to-teal-500',
-                    'hover:from-sky-600 hover:to-teal-600',
+'w-full h-11 bg-gradient-to-r from-cyan-500 to-teal-500',
+                    'hover:from-cyan-600 hover:to-teal-600',
                     'text-white font-medium shadow-lg',
                     'transition-all duration-200',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -405,7 +406,7 @@ export function LoginPage() {
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white dark:bg-slate-900 text-slate-500">
+<span className="px-4 bg-white/90 dark:bg-slate-900/90 text-slate-500">
                   Or continue with
                 </span>
               </div>
@@ -462,7 +463,7 @@ export function LoginPage() {
                 Don't have an account?{' '}
                 <Link
                   to="/register"
-                  className="text-sky-600 hover:text-sky-500 font-medium transition-colors"
+className="text-cyan-500 hover:text-teal-500 font-medium transition-colors"
                   onClick={() => trackNavigation('signup_link', { source: 'login_page' })}
                 >
                   Sign up here
@@ -475,7 +476,7 @@ export function LoginPage() {
               <Button
                 variant="outline"
                 asChild
-                className="border-slate-200 text-slate-600 hover:bg-slate-50"
+className="border-slate-200 text-slate-600 hover:bg-cyan-50/60 hover:border-cyan-200"
               >
                 <Link
                   to="/"
@@ -489,6 +490,6 @@ export function LoginPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </AuthLayout>
   )
 }

@@ -61,7 +61,7 @@
     "cost:integration-test": "tsx scripts/cost-monitoring/integration-test.ts",
     "cost:test-all": "tsx scripts/cost-monitoring/run-all-tests.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/lib/db/migrate.ts",
+    "db:migrate": "tsx core/database/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:setup-umami": "tsx src/lib/db/setup-umami.ts",

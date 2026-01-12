@@ -36,18 +36,16 @@ See [Epic 7: Sets Gallery PRD](/docs/prd/epic-7-sets-gallery.md) - CRUD Operatio
 5. [ ] Sets default values (isBuilt=false, quantity=1)
 6. [ ] RTK Query mutation hook created and exported
 
-### Add Form
+### Add Flow via Set Detail Page
 
-7. [ ] Route `/sets/add` renders add form
-8. [ ] Form validates with CreateSetSchema
-9. [ ] Required field: title
-10. [ ] Optional fields: setNumber, pieceCount, theme, tags, purchase details, notes
-11. [ ] Build status toggle (default: In Pieces)
-12. [ ] Quantity field (default: 1, minimum: 1)
-13. [ ] Submit creates set and navigates to gallery
-14. [ ] Cancel returns to gallery
-15. [ ] Success toast on creation
-16. [ ] Error handling with user feedback
+7. [ ] From Sets Gallery, "Add Set" action creates a new draft set (title required) and navigates to the Set Detail page at `/sets/:id`
+8. [ ] Set Detail page is composed of clearly separated sections: Basic Info, Images, Status, Purchase Details, and Notes
+9. [ ] Each section is displayed in a read-only state by default with a clear "Edit" affordance
+10. [ ] Clicking "Edit" on a section turns that section into an inline form validated with `CreateSetSchema`/`UpdateSetSchema` for that section's fields
+11. [ ] Saving a section persists only that section's fields, shows inline or toast success feedback, and returns the section to read-only state
+12. [ ] Canceling a section edit discards unsaved changes and returns the section to read-only state
+13. [ ] Navigating away from the Set Detail page with unsaved section changes shows a confirmation dialog
+14. [ ] After initial creation, the user remains on the Set Detail page and the Sets Gallery reflects the new set entry
 
 ### Image Upload
 
@@ -104,15 +102,12 @@ See [Epic 7: Sets Gallery PRD](/docs/prd/epic-7-sets-gallery.md) - CRUD Operatio
 - [ ] Configure cache invalidation
 - [ ] Export hooks
 
-### Task 6: Create ImageUploadZone Component (AC: 17-22, 25)
+### Task 6: Integrate ImageUploadZone Component (AC: 17-22, 25)
 
-- [ ] Create reusable ImageUploadZone component
-- [ ] Drag and drop zone with react-dropzone
-- [ ] File picker fallback
-- [ ] Preview grid with SortableJS
-- [ ] Remove button per image
-- [ ] Max images enforcement (10)
-- [ ] Progress bars for uploads
+- [ ] Reuse existing `ImageUploadZone` component from `apps/web/app-sets-gallery/src/components/ImageUploadZone.tsx` for the Images section on the Set Detail page
+- [ ] Ensure drag and drop, file picker fallback, preview grid, remove, and reorder behaviors match the acceptance criteria
+- [ ] Ensure max images enforcement (10) is correctly configured for sets images
+- [ ] Ensure progress bars for uploads (if/when added) are wired to `@repo/upload-client` (`uploadToPresignedUrl` or `createUploadManager`) for S3 presigned URL uploads, including cancellation support via `AbortController`
 
 ### Task 7: Create Add Set Page (AC: 7-16)
 
@@ -323,150 +318,28 @@ export function ImageUploadZone({
 }
 ```
 
-### Add Set Page
+### Add Flow via Set Detail Page
 
-```typescript
-// routes/sets/add.tsx
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateSetSchema, CreateSetInput, useAddSetMutation, usePresignSetImageMutation, useRegisterSetImageMutation } from '@repo/api-client'
+The "Add Set" experience reuses the Set Detail page instead of a separate `/sets/add` form route.
 
-export const Route = createFileRoute('/sets/add')({
-  component: AddSetPage,
-})
-
-function AddSetPage() {
-  const navigate = useNavigate()
-  const [addSet] = useAddSetMutation()
-  const [presignImage] = usePresignSetImageMutation()
-  const [registerImage] = useRegisterSetImageMutation()
-  const { toast } = useToast()
-  const [images, setImages] = useState<UploadedImage[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const form = useForm<CreateSetInput>({
-    resolver: zodResolver(CreateSetSchema),
-    defaultValues: {
-      title: '',
-      setNumber: '',
-      pieceCount: undefined,
-      theme: '',
-      tags: [],
-      isBuilt: false,
-      quantity: 1,
-      purchasePrice: undefined,
-      tax: undefined,
-      shipping: undefined,
-      purchaseDate: undefined,
-      notes: '',
-    },
-  })
-
-  const onSubmit = async (data: CreateSetInput) => {
-    setIsSubmitting(true)
-    try {
-      // Create set first
-      const set = await addSet(data).unwrap()
-
-      // Upload images
-      for (const image of images.filter(i => i.file)) {
-        // Get presigned URL
-        const { uploadUrl, imageUrl, key } = await presignImage({
-          setId: set.id,
-          filename: image.file!.name,
-          contentType: image.file!.type,
-        }).unwrap()
-
-        // Upload to S3
-        await fetch(uploadUrl, {
-          method: 'PUT',
-          body: image.file,
-          headers: { 'Content-Type': image.file!.type },
-        })
-
-        // Register image
-        await registerImage({
-          setId: set.id,
-          imageUrl,
-          key,
-        }).unwrap()
-      }
-
-      toast({ title: 'Set added to collection' })
-      navigate({ to: '/sets' })
-    } catch (error) {
-      toast({
-        title: 'Failed to add set',
-        description: 'Please try again',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="container mx-auto py-6 max-w-2xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" onClick={() => navigate({ to: '/sets' })}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold">Add Set</h1>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Basic Info Card */}
-          <SetInfoSection control={form.control} />
-
-          {/* Images Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Images</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ImageUploadZone images={images} onImagesChange={setImages} />
-            </CardContent>
-          </Card>
-
-          {/* Status Card */}
-          <SetStatusSection control={form.control} />
-
-          {/* Purchase Details Card */}
-          <PurchaseDetailsSection control={form.control} />
-
-          {/* Notes Card */}
-          <NotesSection control={form.control} />
-
-          {/* Actions */}
-          <div className="flex gap-4 justify-end">
-            <Button type="button" variant="outline" onClick={() => navigate({ to: '/sets' })}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Add to Collection
-            </Button>
-          </div>
-        </form>
-      </Form>
-    </div>
-  )
-}
-```
+- The Sets Gallery provides an "Add Set" action that creates a new draft set (with minimal required data, e.g. title) and immediately navigates to the Set Detail page at `/sets/:id`.
+- The Set Detail page is responsible for rendering all sections (Basic Info, Images, Status, Purchase Details, Notes) in read-only mode with inline edit controls.
+- Each section manages its own form state and submission lifecycle (loading, success, error) and calls the appropriate API mutation for that subset of fields.
+- The initial create call can either:
+  - be triggered by a lightweight inline form in the Basic Info section, or
+  - be triggered by an "Add Set" CTA that opens the detail page in a "new set" state and creates the record on first save.
+- After the record exists, all subsequent changes are incremental section-level updates rather than a single large form submit.
 
 ### Upload Flow
 
-**On Form Submit:**
-1. Form validation passes
-2. Create set via API (get setId)
-3. For each pending image:
-   - Get presigned URL
-   - Upload to S3
-   - Register with API
-4. Navigate to gallery on complete
+**In Images section:**
+1. User selects or drops images into the Images section on the Set Detail page
+2. For each new image:
+   - Get presigned URL via `presignSetImage`
+   - Upload to S3 using the presigned URL
+   - Register with API via `registerSetImage`
+3. Images list updates in-place on the Set Detail page (no full-page navigation)
+4. Deleting or reordering images happens inline and updates the API accordingly
 
 ### Theme Options
 
@@ -520,18 +393,18 @@ const THEMES = [
 
 ### Page Tests
 
-- [ ] Route renders add form
-- [ ] Title field is required
-- [ ] Form validates on submit
-- [ ] Invalid form shows error messages
-- [ ] Valid form submits successfully
-- [ ] Images upload after set creation
-- [ ] Success toast shows on creation
-- [ ] Navigates to gallery after success
-- [ ] Error toast on API failure
-- [ ] Cancel button returns to gallery
-- [ ] Default values applied correctly
-- [ ] Quantity minimum is 1
+- [ ] From gallery, "Add Set" action creates a draft set and navigates to `/sets/:id` detail page
+- [ ] Set Detail page renders all sections (Basic Info, Images, Status, Purchase Details, Notes)
+- [ ] Each section shows read-only content with an "Edit" control
+- [ ] Clicking "Edit" on a section switches that section into an inline form state
+- [ ] Section-level save calls the correct mutation and returns the section to read-only state on success
+- [ ] Section-level validation errors are shown inline for that section only
+- [ ] Section-level cancel discards unsaved changes and restores original values
+- [ ] Navigating away with unsaved section changes shows confirmation dialog
+- [ ] Images section supports add, remove, and reorder inline
+- [ ] Images upload and register successfully from the detail page
+- [ ] Success feedback is shown after initial create and after section saves
+- [ ] Errors from API are surfaced with user-friendly messaging
 
 ## Definition of Done
 

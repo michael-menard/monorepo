@@ -169,6 +169,17 @@ const initialState: NavigationState = {
       analyticsId: 'nav_instructions',
       shortcut: 'Cmd+I',
     },
+    {
+      id: 'sets',
+      label: 'My Sets',
+      href: '/sets',
+      icon: 'Images',
+      description: 'Browse and manage your LEGO sets collection',
+      keywords: ['sets', 'collection', 'inventory', 'lego'],
+      category: 'primary',
+      analyticsId: 'nav_sets',
+      shortcut: 'Cmd+S',
+    },
   ],
 
   // Secondary navigation for utility functions

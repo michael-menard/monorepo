@@ -5,19 +5,29 @@
  * This module is designed to be lazy-loaded by the shell app.
  * Handles internal routing for gallery, upload, detail, and edit views.
  */
-import { useEffect, useState } from 'react'
-import { useLocation } from '@tanstack/react-router'
 import { z } from 'zod'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
-import { DetailPage } from './pages/detail-page'
+import { DetailPageModule } from './pages/detail-module'
 import { UploadPage } from './pages/UploadPage'
 import { EditPage } from './pages/EditPage'
+import { MocDetailModule } from './pages/MocDetailModule'
+
+/**
+ * Gallery view modes controlled by the host application.
+ */
+const GalleryModeSchema = z.enum(['gallery', 'upload', 'detail', 'edit'])
+
+export type GalleryMode = z.infer<typeof GalleryModeSchema>
 
 /**
  * Module props schema - validated at runtime
  */
 const InstuctionsGalleryModulePropsSchema = z.object({
+  /** Which view to render */
+  mode: GalleryModeSchema,
+  /** Identifier for the current MOC when in detail/edit modes (slug or id). */
+  mocIdOrSlug: z.string().optional(),
   /** Optional className for styling */
   className: z.string().optional(),
 })
@@ -28,51 +38,19 @@ export type InstuctionsGalleryModuleProps = z.infer<typeof InstuctionsGalleryMod
  * InstuctionsGallery Module Component
  *
  * This is the main export that the shell app will lazy-load.
- * Handles internal routing based on the current path.
+ * The host app is responsible for routing and passes the desired view via props.
  */
-export function InstuctionsGalleryModule({ className }: InstuctionsGalleryModuleProps) {
-  const location = useLocation()
-  const [currentView, setCurrentView] = useState<'gallery' | 'upload' | 'detail' | 'edit'>(
-    'gallery',
-  )
-
-  useEffect(() => {
-    const path = location.pathname
-
-    // Determine which view to show based on the path
-    if (path === '/instructions/new') {
-      setCurrentView('upload')
-    } else if (path.match(/^\/instructions\/[^/]+\/edit$/)) {
-      // Edit page: /instructions/:id/edit
-      setCurrentView('edit')
-    } else if (path.match(/^\/mocs\/[^/]+\/edit$/)) {
-      // Edit page with slug: /mocs/:slug/edit
-      setCurrentView('edit')
-    } else if (path.match(/^\/instructions\/[^/]+$/)) {
-      // Detail page: /instructions/:id
-      setCurrentView('detail')
-    } else if (path.match(/^\/mocs\/[^/]+$/)) {
-      // Detail page with slug: /mocs/:slug
-      setCurrentView('detail')
-    } else {
-      // Default to gallery view
-      setCurrentView('gallery')
-    }
-  }, [location.pathname])
-
+export function InstuctionsGalleryModule({
+  mode,
+  mocIdOrSlug,
+  className,
+}: InstuctionsGalleryModuleProps) {
   return (
     <ModuleLayout className={className}>
-      {currentView === 'gallery' && <MainPage />}
-      {currentView === 'upload' && <UploadPage />}
-      {currentView === 'detail' && (
-        <DetailPage
-          instruction={null}
-          isLoading={false}
-          error={null}
-          onBack={() => setCurrentView('gallery')}
-        />
-      )}
-      {currentView === 'edit' && <EditPage />}
+      {mode === 'gallery' && <MainPage />}
+      {mode === 'upload' && <UploadPage />}
+      {mode === 'detail' && <MocDetailModule mocIdOrSlug={mocIdOrSlug} />}
+      {mode === 'edit' && <EditPage />}
     </ModuleLayout>
   )
 }

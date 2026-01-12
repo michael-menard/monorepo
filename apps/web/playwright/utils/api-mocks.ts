@@ -5,7 +5,7 @@
  * Provides mock responses for upload API endpoints and S3 presigned URLs.
  */
 
-import type { Page, Route } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 /**
  * Mock response types
@@ -92,128 +92,6 @@ export const mockResponses = {
   }),
 }
 
-/**
- * Setup mock API routes for upload flow
- */
-export async function setupUploadMocks(
-  page: Page,
-  options: {
-    presignError?: boolean
-    finalizeError?: 'conflict' | 'rateLimit' | 'fileValidation' | 'auth'
-    s3Error?: boolean
-  } = {},
-) {
-  // Mock presign endpoint
-  await page.route('**/api/mocs/uploads/sessions', async (route: Route) => {
-    if (route.request().method() === 'POST') {
-      if (options.presignError) {
-        await route.fulfill({
-          status: 500,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'INTERNAL_ERROR', message: 'Failed to create session' }),
-        })
-      } else {
-        await route.fulfill({
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify(mockResponses.presign()),
-        })
-      }
-    } else {
-      await route.continue()
-    }
-  })
-
-  // Mock file registration endpoint
-  await page.route('**/api/mocs/uploads/sessions/*/files', async (route: Route) => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          fileId: `file-${Date.now()}`,
-          uploadUrl: 'https://mock-s3.example.com/presigned-upload-url',
-          expiresAt: new Date(Date.now() + 3600000).toISOString(),
-        }),
-      })
-    } else {
-      await route.continue()
-    }
-  })
-
-  // Mock finalize endpoint
-  await page.route('**/api/mocs/uploads/sessions/*/finalize', async (route: Route) => {
-    if (route.request().method() === 'POST') {
-      switch (options.finalizeError) {
-        case 'conflict':
-          await route.fulfill({
-            status: 409,
-            contentType: 'application/json',
-            body: JSON.stringify(mockResponses.conflict()),
-          })
-          break
-        case 'rateLimit':
-          await route.fulfill({
-            status: 429,
-            contentType: 'application/json',
-            headers: { 'Retry-After': '60' },
-            body: JSON.stringify(mockResponses.rateLimit()),
-          })
-          break
-        case 'fileValidation':
-          await route.fulfill({
-            status: 400,
-            contentType: 'application/json',
-            body: JSON.stringify(
-              mockResponses.fileValidation([
-                {
-                  fileId: 'file-1',
-                  filename: 'test.exe',
-                  reason: 'type',
-                  message: 'File type not allowed',
-                },
-              ]),
-            ),
-          })
-          break
-        case 'auth':
-          await route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'UNAUTHORIZED', message: 'Session expired' }),
-          })
-          break
-        default: {
-          const body = JSON.parse((await route.request().postData()) || '{}')
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify(mockResponses.finalize(body.title)),
-          })
-        }
-      }
-    } else {
-      await route.continue()
-    }
-  })
-
-  // Mock S3 presigned URL uploads
-  await page.route('**/mock-s3.example.com/**', async (route: Route) => {
-    if (options.s3Error) {
-      await route.fulfill({
-        status: 403,
-        contentType: 'application/xml',
-        body: '<Error><Code>ExpiredToken</Code><Message>The provided token has expired.</Message></Error>',
-      })
-    } else {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true }),
-      })
-    }
-  })
-}
 
 /**
  * Setup mock for session restoration
@@ -240,13 +118,6 @@ export async function setupSessionMock(
   }, sessionData)
 }
 
-/**
- * Clear all mocks
- */
-export async function clearMocks(page: Page) {
-  await page.unroute('**/api/**')
-  await page.unroute('**/mock-s3.example.com/**')
-}
 
 /**
  * Setup authenticated user mock

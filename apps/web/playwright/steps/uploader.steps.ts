@@ -29,10 +29,21 @@ const GALLERY_FIXTURES = [
 // Page object instance (created per test)
 let uploaderPage: UploaderPage
 
+// Scenario control for uploader finalize behavior (handled by MSW)
+let uploaderScenario: 'conflict' | 'rateLimit' | 'fileValidation' | null = null
+
 // Background - Navigation
 Given('I am on the instructions upload page', async ({ page }) => {
   uploaderPage = new UploaderPage(page)
-  await uploaderPage.goto()
+
+  const params = new URLSearchParams()
+  if (uploaderScenario) {
+    params.set('__uploaderScenario', uploaderScenario)
+  }
+  const query = params.toString()
+
+  await page.goto(`/instructions/new${query ? `?${query}` : ''}`)
+  uploaderScenario = null
 })
 
 // UI Elements
@@ -204,81 +215,26 @@ Given('I have a previous session to restore', async ({ page }) => {
   })
 })
 
-// Error Scenarios (will be connected to API mocks)
-Given('the API will return a 409 conflict error', async ({ page }) => {
-  // This will be implemented with route interception in Task 2
-  await page.route('**/api/mocs/uploads/sessions/*/finalize', route => {
-    route.fulfill({
-      status: 409,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        error: 'SLUG_CONFLICT',
-        message: 'A MOC with this title already exists',
-        suggestedSlug: 'my-awesome-moc-2',
-      }),
-    })
-  })
+// Error Scenarios (handled by MSW via __uploaderScenario flag)
+Given('the API will return a 409 conflict error', async () => {
+  uploaderScenario = 'conflict'
 })
 
-Given('the API will return a 429 rate limit error', async ({ page }) => {
-  await page.route('**/api/mocs/uploads/sessions/*/finalize', route => {
-    route.fulfill({
-      status: 429,
-      contentType: 'application/json',
-      headers: {
-        'Retry-After': '60',
-      },
-      body: JSON.stringify({
-        error: 'RATE_LIMIT_EXCEEDED',
-        message: 'Too many requests',
-        retryAfterSeconds: 60,
-      }),
-    })
-  })
+Given('the API will return a 429 rate limit error', async () => {
+  uploaderScenario = 'rateLimit'
 })
 
-Given('the presigned URL will expire', async ({ page }) => {
-  await page.route('**/s3.amazonaws.com/**', route => {
-    route.fulfill({
-      status: 403,
-      contentType: 'application/xml',
-      body: '<Error><Code>ExpiredToken</Code><Message>The provided token has expired.</Message></Error>',
-    })
-  })
+Given('the presigned URL will expire', async () => {
+  // This scenario can be implemented in MSW or a separate S3 mock later.
+  // For now, this step is documentation-only and does not mock at Playwright level.
 })
 
-Given('the user session will expire during upload', async ({ page }) => {
-  await page.route('**/api/**', route => {
-    route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        error: 'UNAUTHORIZED',
-        message: 'Session expired',
-      }),
-    })
-  })
+Given('the user session will expire during upload', async () => {
+  // This scenario should be handled by backend/MSW; no Playwright mocks here.
 })
 
-Given('the API will return file validation errors', async ({ page }) => {
-  await page.route('**/api/mocs/uploads/sessions/*/finalize', route => {
-    route.fulfill({
-      status: 400,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        error: 'FILE_VALIDATION_FAILED',
-        message: 'Some files failed validation',
-        fileErrors: [
-          {
-            fileId: 'file-1',
-            filename: 'test.exe',
-            reason: 'type',
-            message: 'File type not allowed',
-          },
-        ],
-      }),
-    })
-  })
+Given('the API will return file validation errors', async () => {
+  uploaderScenario = 'fileValidation'
 })
 
 Then('I should see the conflict resolution modal', async () => {

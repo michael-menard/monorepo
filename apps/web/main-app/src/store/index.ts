@@ -3,6 +3,7 @@ import { setupListeners } from '@reduxjs/toolkit/query'
 import { createGalleryApi } from '@repo/api-client/rtk/gallery-api'
 import { createWishlistApi } from '@repo/api-client/rtk/wishlist-api'
 import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
+import { setsApi } from '@repo/api-client/rtk/sets-api'
 import { authSlice } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
 import { navigationSlice } from './slices/navigationSlice'
@@ -36,6 +37,7 @@ export const store = configureStore({
     [enhancedGalleryApi.reducerPath]: enhancedGalleryApi.reducer,
     [enhancedWishlistApi.reducerPath]: enhancedWishlistApi.reducer,
     [dashboardApi.reducerPath]: dashboardApi.reducer,
+    [setsApi.reducerPath]: setsApi.reducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -49,7 +51,8 @@ export const store = configureStore({
     })
       .concat(enhancedGalleryApi.middleware)
       .concat(enhancedWishlistApi.middleware)
-      .concat(dashboardApi.middleware),
+      .concat(dashboardApi.middleware)
+      .concat(setsApi.middleware),
   devTools: import.meta.env.DEV,
 })
 

@@ -12,6 +12,88 @@ export const handlers = [
     })
   }),
 
+  // Default Sets API mocks (can be overridden per test with server.use)
+  http.get(`${API_BASE_URL}/api/sets`, () => {
+    return HttpResponse.json({
+      items: [
+        {
+          id: '11111111-1111-1111-1111-111111111111',
+          userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          title: 'Default Mock Set',
+          setNumber: '0000',
+          store: 'LEGO',
+          sourceUrl: null,
+          pieceCount: 100,
+          releaseDate: null,
+          theme: 'City',
+          tags: ['mock'],
+          notes: null,
+          isBuilt: false,
+          quantity: 1,
+          purchasePrice: null,
+          tax: null,
+          shipping: null,
+          purchaseDate: null,
+          wishlistItemId: null,
+          images: [
+            {
+              id: 'img-default',
+              imageUrl: 'https://example.com/default.jpg',
+              thumbnailUrl: 'https://example.com/default-thumb.jpg',
+              position: 0,
+            },
+          ],
+          createdAt: new Date('2025-01-01').toISOString(),
+          updatedAt: new Date('2025-01-01').toISOString(),
+        },
+      ],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      filters: {
+        availableThemes: ['City'],
+        availableTags: ['mock'],
+      },
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/sets/:id`, ({ params }) => {
+    const id = params.id as string
+    return HttpResponse.json({
+      id,
+      userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      title: 'Default Mock Set Detail',
+      setNumber: '0000',
+      store: 'LEGO',
+      sourceUrl: null,
+      pieceCount: 100,
+      releaseDate: null,
+      theme: 'City',
+      tags: ['mock'],
+      notes: null,
+      isBuilt: false,
+      quantity: 1,
+      purchasePrice: null,
+      tax: null,
+      shipping: null,
+      purchaseDate: null,
+      wishlistItemId: null,
+      images: [
+        {
+          id: 'img-default',
+          imageUrl: 'https://example.com/default.jpg',
+          thumbnailUrl: 'https://example.com/default-thumb.jpg',
+          position: 0,
+        },
+      ],
+      createdAt: new Date('2025-01-01').toISOString(),
+      updatedAt: new Date('2025-01-01').toISOString(),
+    })
+  }),
+
   // Module-specific mock endpoints
   http.get(`${API_BASE_URL}/api/v2/app-sets-gallery/data`, () => {
     return HttpResponse.json({

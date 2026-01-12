@@ -1,136 +1,171 @@
 /**
- * SetCard Component
- * Card display for sets in the grid view
+ * SetGalleryCard Component
+ *
+ * Sets-specific card that wraps the shared AppGalleryCard component.
+ * Maps Set schema fields to a generic gallery card presentation.
  */
-import { Card, CardContent, CardFooter, Badge } from '@repo/app-component-library'
-import type { BrickSet } from '../api/mock-sets-api'
 
-export type SetCardProps = {
-  set: BrickSet
-  onClick?: () => void
+import { z } from 'zod'
+import { Badge, Button } from '@repo/app-component-library'
+import { GalleryCard } from '@repo/gallery'
+import { Blocks, CheckCircle2, Eye, Pencil, Trash2 } from 'lucide-react'
+import type { Set } from '@repo/api-client/schemas/sets'
+
+export const SetGalleryCardPropsSchema = z.object({
+  /** Set data from @repo/api-client */
+  set: z.custom<Set>(),
+  /** Primary click handler (card click / view details) */
+  onClick: z.function().optional(),
+  /** Edit handler for actions menu */
+  onEdit: z.function().optional(),
+  /** Delete handler for actions menu */
+  onDelete: z.function().optional(),
+  /** Optional className for styling */
+  className: z.string().optional(),
+})
+
+export type SetGalleryCardProps = z.infer<typeof SetGalleryCardPropsSchema>
+
+/**
+ * Build status label helper
+ */
+const formatBuildStatus = (isBuilt: boolean | null | undefined) => {
+  if (isBuilt) return 'Built'
+  return 'Not built yet'
 }
 
 /**
- * Format build status for display
+ * Build status badge variant
  */
-const formatBuildStatus = (status?: string) => {
-  if (!status) return 'Not Started'
-  return status
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+const getBuildStatusVariant = (isBuilt: boolean | null | undefined):
+  | 'default'
+  | 'secondary'
+  | 'outline' => {
+  if (isBuilt) return 'default'
+  return 'outline'
 }
 
-/**
- * Build status variant mapping
- */
-const buildStatusVariantMap: Record<string, 'default' | 'secondary' | 'outline'> = {
-  complete: 'default',
-  'in-progress': 'secondary',
-  planned: 'outline',
-}
+export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGalleryCardProps) {
+  const primaryImage = set.images[0]
+  const imageSrc = primaryImage?.thumbnailUrl ?? primaryImage?.imageUrl ?? '/images/placeholder-lego.png'
 
-/**
- * SetCard Component
- * Displays a set in a card format for grid view
- */
-export function SetCard({ set, onClick }: SetCardProps) {
-  const handleClick = () => {
-    onClick?.()
-  }
+  const subtitle = set.setNumber ? `Set #${set.setNumber}` : undefined
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onClick?.()
-    }
-  }
+  const metadata = (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Piece count */}
+      {typeof set.pieceCount === 'number' && (
+        <span
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+          data-testid="set-card-pieces"
+        >
+          <Blocks className="h-3 w-3" aria-hidden="true" />
+          <span className="font-mono">{set.pieceCount.toLocaleString()}</span>
+          <span>pieces</span>
+        </span>
+      )}
+
+      {/* Theme */}
+      {set.theme && (
+        <Badge variant="outline" className="text-xs" data-testid="set-card-theme">
+          {set.theme}
+        </Badge>
+      )}
+
+      {/* Quantity */}
+      {typeof set.quantity === 'number' && set.quantity > 1 && (
+        <Badge variant="secondary" className="text-xs" data-testid="set-card-quantity">
+          x{set.quantity}
+        </Badge>
+      )}
+
+      {/* Build status with icon */}
+      <Badge
+        variant={getBuildStatusVariant(set.isBuilt)}
+        className="inline-flex items-center gap-1 text-xs"
+        data-testid="set-card-build-status"
+      >
+        {set.isBuilt ? (
+          <>
+            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+            {formatBuildStatus(set.isBuilt)}
+          </>
+        ) : (
+          <>
+            <Blocks className="h-3 w-3" aria-hidden="true" />
+            {formatBuildStatus(set.isBuilt)}
+          </>
+        )}
+      </Badge>
+    </div>
+  )
+
+  const actions = (
+    <div className="flex flex-col gap-1" data-testid="set-card-actions">
+      <Button
+        variant="secondary"
+        size="icon"
+        className="h-7 w-7"
+        type="button"
+        aria-label={`View details for ${set.title}`}
+        data-testid="set-card-action-view"
+        onClick={event => {
+          event.stopPropagation()
+          onClick?.()
+        }}
+      >
+        <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+      </Button>
+      {onEdit && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          type="button"
+          aria-label={`Edit ${set.title}`}
+          data-testid="set-card-action-edit"
+          onClick={event => {
+            event.stopPropagation()
+            onEdit?.()
+          }}
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+        </Button>
+      )}
+      {onDelete && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-destructive"
+          type="button"
+          aria-label={`Delete ${set.title}`}
+          data-testid="set-card-action-delete"
+          onClick={event => {
+            event.stopPropagation()
+            onDelete?.()
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </Button>
+      )}
+    </div>
+  )
 
   return (
-    <Card
-      className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="button"
-      aria-label={`View details for ${set.name}`}
-    >
-      {/* Thumbnail Image */}
-      <div className="aspect-video bg-muted relative overflow-hidden">
-        {set.thumbnail ? (
-          <img
-            src={set.thumbnail}
-            alt={set.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-          </div>
-        )}
-        {/* Set Number Badge */}
-        <div className="absolute top-2 left-2">
-          <Badge variant="secondary" className="font-mono">
-            #{set.setNumber}
-          </Badge>
-        </div>
-      </div>
-
-      <CardContent className="p-4">
-        {/* Set Name */}
-        <h3 className="font-semibold text-base mb-2 line-clamp-2">{set.name}</h3>
-
-        {/* Set Details */}
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <div className="flex justify-between">
-            <span>Pieces:</span>
-            <span className="font-medium text-foreground tabular-nums">
-              {set.pieceCount.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Theme:</span>
-            <span className="font-medium text-foreground">{set.theme}</span>
-          </div>
-        </div>
-
-        {/* Tags */}
-        {set.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
-            {set.tags.slice(0, 3).map(tag => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-            {set.tags.length > 3 && (
-              <Badge variant="outline" className="text-xs">
-                +{set.tags.length - 3}
-              </Badge>
-            )}
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="px-4 pb-4 pt-0">
-        {/* Build Status */}
-        <Badge
-          variant={
-            set.buildStatus ? buildStatusVariantMap[set.buildStatus] || 'outline' : 'outline'
-          }
-          className="w-full justify-center"
-        >
-          {formatBuildStatus(set.buildStatus)}
-        </Badge>
-      </CardFooter>
-    </Card>
+    <GalleryCard
+      image={{
+        src: imageSrc,
+        alt: set.title,
+        aspectRatio: '4/3',
+      }}
+      title={set.title}
+      subtitle={subtitle}
+      metadata={metadata}
+      actions={actions}
+      onClick={onClick}
+      className={className}
+      data-testid={`set-card-${set.id}`}
+    />
   )
 }
 

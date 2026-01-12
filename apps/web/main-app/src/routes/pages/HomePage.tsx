@@ -1,70 +1,13 @@
-import { useSelector } from 'react-redux'
 import { Link } from '@tanstack/react-router'
+import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { z } from 'zod'
-import {
-  BookOpen,
-  Download,
-  Heart,
-  Search,
-  Shield,
-  Star,
-  Upload,
-  User,
-  Users,
-  Zap,
-} from 'lucide-react'
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@repo/app-component-library'
+import { Search, ArrowRight, LogIn } from 'lucide-react'
+import { Button } from '@repo/app-component-library'
 import { selectAuth } from '@/store/slices/authSlice'
-
-// Zod schemas for type safety (following coding style preferences)
-const FeatureSchema = z.object({
-  icon: z.any(), // LucideIcon type
-  title: z.string(),
-  description: z.string(),
-  action: z.string(),
-  href: z.string(),
-  requiresAuth: z.boolean().optional(),
-})
-
-const StatSchema = z.object({
-  label: z.string(),
-  value: z.string(),
-  icon: z.any(), // LucideIcon type
-})
-
-const BenefitSchema = z.object({
-  icon: z.any(), // LucideIcon type
-  title: z.string(),
-  description: z.string(),
-})
-
-type Feature = z.infer<typeof FeatureSchema>
-type Stat = z.infer<typeof StatSchema>
-type Benefit = z.infer<typeof BenefitSchema>
-
-// LEGO brick animation variants
-const brickVariants = {
-  initial: { scale: 0, rotate: -180, opacity: 0 },
-  animate: { scale: 1, rotate: 0, opacity: 1 },
-  hover: { scale: 1.05, rotate: 5 },
-}
 
 const containerVariants = {
   initial: { opacity: 0 },
-  animate: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
+  animate: { opacity: 1 },
 }
 
 const itemVariants = {
@@ -75,305 +18,80 @@ const itemVariants = {
 export function HomePage() {
   const auth = useSelector(selectAuth)
 
-  const features: Feature[] = [
-    {
-      icon: BookOpen,
-      title: 'Browse MOC Instructions',
-      description: 'Explore thousands of custom LEGO MOC instructions from the community',
-      action: 'Browse Gallery',
-      href: '/gallery',
-    },
-    {
-      icon: Heart,
-      title: 'Personal Wishlist',
-      description: 'Save your favorite MOCs and track your building progress',
-      action: 'View Wishlist',
-      href: '/wishlist',
-      requiresAuth: true,
-    },
-    {
-      icon: User,
-      title: 'User Profiles',
-      description: 'Manage your profile, uploads, and building history',
-      action: 'View Profile',
-      href: '/profile',
-      requiresAuth: true,
-    },
-    {
-      icon: Upload,
-      title: 'Share Your MOCs',
-      description: 'Upload and share your own custom LEGO creations',
-      action: 'Upload MOC',
-      href: '/gallery',
-      requiresAuth: true,
-    },
-  ]
-
-  const stats: Stat[] = [
-    { label: 'MOC Instructions', value: '10,000+', icon: BookOpen },
-    { label: 'Active Users', value: '5,000+', icon: Users },
-    { label: 'Downloads', value: '50,000+', icon: Download },
-    { label: 'Community Rating', value: '4.8★', icon: Star },
-  ]
-
-  const benefits: Benefit[] = [
-    {
-      icon: Shield,
-      title: 'Secure & Reliable',
-      description: 'Your MOCs and data are protected with enterprise-grade security',
-    },
-    {
-      icon: Zap,
-      title: 'Lightning Fast',
-      description: 'Optimized performance for quick browsing and seamless building',
-    },
-    {
-      icon: Users,
-      title: 'Community Driven',
-      description: 'Join thousands of builders sharing their amazing creations',
-    },
-  ]
-
   return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      variants={containerVariants}
-      className="space-y-16"
-    >
-      {/* Hero Section */}
-      <motion.section variants={itemVariants} className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-6">
-          <motion.h1
-            variants={itemVariants}
-            className="text-5xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
-          >
-            LEGO MOC Hub
-          </motion.h1>
-          <motion.p
-            variants={itemVariants}
-            className="text-xl text-muted-foreground max-w-3xl mx-auto"
-          >
-            Discover, build, and share custom LEGO MOC instructions. Join our community of builders
-            and explore thousands of unique creations from around the world.
-          </motion.p>
+    <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 min-h-screen bg-gradient-to-br from-background via-background to-muted overflow-hidden">
+      {/* Background gradient blobs */}
+      <div className="absolute inset-0 pointer-events-none opacity-60">
+        <div className="absolute right-[-10%] top-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-cyan-400/50 via-blue-500/40 to-transparent blur-3xl animate-float" />
+        <div className="absolute left-[-15%] bottom-[-15%] w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-teal-400/50 via-emerald-500/40 to-transparent blur-3xl animate-float-delayed" />
+        <div className="absolute right-[10%] top-[40%] w-[400px] h-[400px] rounded-full bg-gradient-to-bl from-cyan-500/45 via-sky-400/35 to-transparent blur-2xl animate-float" />
+        <div className="absolute left-[5%] top-[25%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-green-400/45 via-lime-500/35 to-transparent blur-2xl animate-float-delayed" />
+        <div className="absolute left-[40%] top-[5%] w-[300px] h-[300px] rounded-full bg-gradient-to-b from-blue-600/45 via-indigo-500/35 to-transparent blur-2xl animate-float" />
+        <div className="absolute right-[35%] bottom-[8%] w-[350px] h-[350px] rounded-full bg-gradient-to-t from-teal-500/45 via-cyan-400/35 to-transparent blur-2xl animate-float-delayed" />
+        <div className="absolute right-[25%] top-[20%] w-[250px] h-[250px] rounded-full bg-gradient-to-br from-sky-400/35 via-cyan-500/25 to-transparent blur-xl animate-float" />
+        <div className="absolute left-[30%] bottom-[25%] w-[280px] h-[280px] rounded-full bg-gradient-to-tl from-emerald-400/35 via-teal-500/25 to-transparent blur-xl animate-float-delayed" />
+        <div className="absolute right-[45%] top-[35%] w-[200px] h-[200px] rounded-full bg-gradient-to-br from-lime-400/30 via-green-500/20 to-transparent blur-xl animate-float" />
+        <div className="absolute left-[55%] top-[60%] w-[180px] h-[180px] rounded-full bg-gradient-to-tr from-blue-400/30 via-cyan-500/20 to-transparent blur-xl animate-float-delayed" />
+      </div>
 
-          {/* Call to Action Buttons */}
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row justify-center gap-4"
-          >
-            {auth.isAuthenticated ? (
-              <>
-                <Link to="/gallery">
-                  <motion.div whileHover="hover" variants={brickVariants}>
-                    <Button size="lg" className="gap-2 w-full sm:w-auto">
-                      <Search className="h-4 w-4" />
-                      Browse MOCs
-                    </Button>
-                  </motion.div>
-                </Link>
-                <Link to="/wishlist">
-                  <motion.div whileHover="hover" variants={brickVariants}>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="gap-2 border border-input bg-background w-full sm:w-auto"
-                    >
-                      <Heart className="h-4 w-4" />
-                      My Wishlist
-                    </Button>
-                  </motion.div>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link to="/gallery">
-                  <motion.div whileHover="hover" variants={brickVariants}>
-                    <Button size="lg" className="gap-2 w-full sm:w-auto">
-                      <Search className="h-4 w-4" />
-                      Browse MOCs
-                    </Button>
-                  </motion.div>
-                </Link>
-                <Link to="/register">
-                  <motion.div whileHover="hover" variants={brickVariants}>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="gap-2 border border-input bg-background w-full sm:w-auto"
-                    >
-                      <User className="h-4 w-4" />
-                      Sign Up
-                    </Button>
-                  </motion.div>
-                </Link>
-              </>
-            )}
-          </motion.div>
-
-          {auth.isAuthenticated && auth.user ? (
-            <motion.p variants={itemVariants} className="text-sm text-muted-foreground">
-              Welcome back, {auth.user.name || auth.user.email}!
-              <Link to="/profile" className="text-primary hover:underline ml-1">
-                View Profile
-              </Link>
-            </motion.p>
-          ) : null}
-        </div>
-      </motion.section>
-
-      {/* Stats Section */}
-      <motion.section variants={itemVariants} className="container mx-auto px-4 py-12">
-        <motion.div variants={containerVariants} className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={index}
-              variants={brickVariants}
-              whileHover="hover"
-              initial="initial"
-              animate="animate"
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="text-center hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <stat.icon className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-      </motion.section>
-
-      {/* Features Section */}
-      <motion.section variants={itemVariants} className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <motion.h2 variants={itemVariants} className="text-3xl font-bold mb-4">
-            Everything You Need to Build
-          </motion.h2>
-          <motion.p variants={itemVariants} className="text-lg text-muted-foreground">
-            From browsing to building, we've got you covered
-          </motion.p>
-        </div>
-
-        <motion.div
-          variants={containerVariants}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              variants={brickVariants}
-              whileHover="hover"
-              initial="initial"
-              animate="animate"
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <feature.icon className="h-8 w-8 text-primary mb-2" />
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {feature.requiresAuth && !auth.isAuthenticated ? (
-                    <Button
-                      variant="outline"
-                      className="w-full border border-input bg-background"
-                      disabled
-                      aria-label={`${feature.action} - Login required`}
-                    >
-                      Login Required
-                    </Button>
-                  ) : (
-                    <Link to={feature.href} className="w-full">
-                      <Button
-                        variant="outline"
-                        className="w-full border border-input bg-background"
-                        aria-label={feature.action}
-                      >
-                        {feature.action}
-                      </Button>
-                    </Link>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-      </motion.section>
-
-      {/* Benefits Section */}
-      <motion.section
-        variants={itemVariants}
-        className="container mx-auto px-4 py-16 bg-muted/30 rounded-lg"
+      {/* Main hero content */}
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={containerVariants}
+        className="relative z-10"
       >
-        <div className="text-center mb-12">
-          <motion.h2 variants={itemVariants} className="text-3xl font-bold mb-4">
-            Why Choose LEGO MOC Hub?
-          </motion.h2>
-          <motion.p variants={itemVariants} className="text-lg text-muted-foreground">
-            Built by builders, for builders
-          </motion.p>
-        </div>
+        <section className="container mx-auto px-4 pt-24 pb-16 md:pt-32 md:pb-20 relative z-10">
+          <div className="max-w-4xl mx-auto">
+            <div className="relative backdrop-blur-2xl bg-gray-500/5 dark:bg-gray-400/5 border border-white/10 dark:border-white/5 rounded-3xl p-12 md:p-16 shadow-2xl">
+              {/* Glass overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-gray-400/10 dark:from-gray-300/5 dark:via-transparent dark:to-gray-500/5 rounded-3xl pointer-events-none" />
+              <div className="absolute inset-0 rounded-3xl shadow-inner pointer-events-none" />
 
-        <motion.div variants={containerVariants} className="grid md:grid-cols-3 gap-8">
-          {benefits.map((benefit, index) => (
-            <motion.div key={index} variants={itemVariants} className="text-center space-y-4">
               <motion.div
-                variants={brickVariants}
-                whileHover="hover"
-                className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full"
+                variants={itemVariants}
+                className="relative z-10 text-center space-y-8"
               >
-                <benefit.icon className="h-8 w-8 text-primary" />
-              </motion.div>
-              <h3 className="text-xl font-semibold">{benefit.title}</h3>
-              <p className="text-muted-foreground">{benefit.description}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </motion.section>
+                <div className="space-y-5">
+                  <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-balance leading-tight">
+                    Build Your{' '}
+                    <span className="bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 bg-clip-text text-transparent">
+                      LEGO Dreams
+                    </span>
+                  </h1>
+                  <p className="text-lg md:text-xl text-foreground/80 max-w-2xl mx-auto text-pretty leading-relaxed">
+                    Discover, organize your custom LEGO MOCs instructions, and sets. Plan your next build, track your
+                    progress.
+                  </p>
+                </div>
 
-      {/* CTA Section */}
-      <motion.section variants={itemVariants} className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-6">
-          <motion.h2 variants={itemVariants} className="text-3xl font-bold">
-            Ready to Start Building?
-          </motion.h2>
-          <motion.p variants={itemVariants} className="text-lg text-muted-foreground">
-            Join our community and discover amazing LEGO MOCs today
-          </motion.p>
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row justify-center gap-4"
-          >
-            <Link to="/gallery">
-              <motion.div whileHover="hover" variants={brickVariants}>
-                <Button size="lg" className="gap-2 w-full sm:w-auto">
-                  <Search className="h-4 w-4" />
-                  Start Browsing
-                </Button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                  <Link to={auth.isAuthenticated ? '/gallery' : '/login'}>
+                    <Button
+                      size="lg"
+                      className="gap-2 text-base h-14 px-8 w-full sm:w-auto shadow-lg transition-shadow backdrop-blur-sm bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-0 cursor-pointer"
+                    >
+                      <Search className="w-5 h-5" />
+                      Browse MOCs
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link to="/login">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="gap-2 text-base h-14 px-8 w-full sm:w-auto backdrop-blur-sm bg-gradient-to-r from-pink-500 to-fuchsia-500 text-white border-2 border-pink-400 transition-shadow shadow-lg cursor-pointer"
+                    >
+                      <LogIn className="w-5 h-5" />
+                      Login
+                    </Button>
+                  </Link>
+                </div>
               </motion.div>
-            </Link>
-            {!auth.isAuthenticated && (
-              <Link to="/register">
-                <motion.div whileHover="hover" variants={brickVariants}>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="gap-2 border border-input bg-background w-full sm:w-auto"
-                  >
-                    <User className="h-4 w-4" />
-                    Create Account
-                  </Button>
-                </motion.div>
-              </Link>
-            )}
-          </motion.div>
-        </div>
-      </motion.section>
-    </motion.div>
+            </div>
+          </div>
+        </section>
+      </motion.div>
+    </div>
   )
 }

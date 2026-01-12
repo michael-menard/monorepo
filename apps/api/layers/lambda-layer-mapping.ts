@@ -169,6 +169,22 @@ export const LAMBDA_FUNCTIONS: LambdaFunctionConfig[] = [
   },
 
   // ========================================
+  // Sets - Read-Only Gallery (Minimal + Standard)
+  // ========================================
+  {
+    name: 'SetsList',
+    handler: 'endpoints/sets/list/handler.handler',
+    domain: 'sets',
+    layers: ['minimal', 'standard'],
+  },
+  {
+    name: 'SetsGet',
+    handler: 'endpoints/sets/get/handler.handler',
+    domain: 'sets',
+    layers: ['minimal', 'standard'],
+  },
+
+  // ========================================
   // Wishlist - Image Processing (Minimal + Standard + Processing)
   // ========================================
   {

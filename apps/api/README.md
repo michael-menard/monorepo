@@ -80,6 +80,41 @@ Environment variables are validated at runtime using Zod schemas (see `src/lib/u
 
 See `.env.example` for complete list.
 
+### Local database & migrations
+
+For local development (running migrations from your laptop without full infra), you can point the API at a local Postgres instance or a dev Aurora instance using `.env.local.example`:
+
+```bash
+# apps/api/.env.local.example
+NODE_ENV=development
+STAGE=dev
+AWS_REGION=us-east-1
+LOG_LEVEL=debug
+
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=legoapidb
+POSTGRES_USERNAME=postgres
+POSTGRES_PASSWORD=postgres
+```
+
+To apply Drizzle migrations locally:
+
+```bash
+cd apps/api
+export $(grep -v '^#' .env.local.example | xargs)
+pnpm db:migrate
+```
+
+Or, with `dotenv-cli`:
+
+```bash
+cd apps/api
+npx dotenv -e .env.local.example -- pnpm db:migrate
+```
+
+In real environments, `serverless.yml` injects `POSTGRES_*` from the Aurora cluster, and Lambda functions use `DB_SECRET_ARN` to fetch credentials from Secrets Manager.
+
 ### Upload Configuration (Story 3.1.5)
 
 Upload-related environment variables are validated at startup using Zod schemas. Invalid values cause Lambda initialization failure (fast-fail).

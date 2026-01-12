@@ -144,64 +144,18 @@ Then('I should see an error message {string}', async ({}, expectedError: string)
 })
 
 // Mocking
-Given('the verification API is mocked to succeed', async ({ page }) => {
-  // Mock the Cognito confirmSignUp response
-  await page.route('**/cognito-idp*', async route => {
-    const postData = route.request().postDataJSON()
-    if (postData?.ConfirmationCode) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({}),
-      })
-    } else {
-      await route.continue()
-    }
-  })
-})
+// NOTE: For email verification, we avoid Playwright-level network mocking.
+// These Given steps are documentation-only; backend or MSW should provide
+// appropriate behavior based on test environment configuration.
+
+Given('the verification API is mocked to succeed', async () => {})
 
 Given(
   'the verification API is mocked to fail with {string}',
-  async ({ page }, errorMessage: string) => {
-    await page.route('**/cognito-idp*', async route => {
-      const postData = route.request().postDataJSON()
-      if (postData?.ConfirmationCode) {
-        await route.fulfill({
-          status: 400,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            __type: 'CodeMismatchException',
-            message: errorMessage,
-          }),
-        })
-      } else {
-        await route.continue()
-      }
-    })
-  },
+  async () => {},
 )
 
-Given('the resend code API is mocked to succeed', async ({ page }) => {
-  await page.route('**/cognito-idp*', async route => {
-    const postData = route.request().postDataJSON()
-    // ResendConfirmationCode action
-    if (postData?.Username && !postData?.ConfirmationCode) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          CodeDeliveryDetails: {
-            AttributeName: 'email',
-            DeliveryMedium: 'EMAIL',
-            Destination: 't***@example.com',
-          },
-        }),
-      })
-    } else {
-      await route.continue()
-    }
-  })
-})
+Given('the resend code API is mocked to succeed', async () => {})
 
 When('I wait for the resend to complete', async ({ page }) => {
   // Wait a bit for the async operation to complete

@@ -93,7 +93,23 @@ export const parseSession = (json: string | null): UploaderSession | null => {
 
   try {
     const parsed = JSON.parse(json)
-    const result = UploaderSessionSchema.safeParse(parsed)
+
+    // Handle legacy numeric step values by mapping them to the current
+    // string-based enum before validation.
+    let candidate: any = parsed
+    if (typeof candidate.step === 'number') {
+      const stepMap: Record<number, UploaderStep> = {
+        1: 'metadata',
+        2: 'files',
+        3: 'review',
+      }
+      candidate = {
+        ...candidate,
+        step: stepMap[candidate.step] ?? 'metadata',
+      }
+    }
+
+    const result = UploaderSessionSchema.safeParse(candidate)
 
     if (result.success) {
       return result.data

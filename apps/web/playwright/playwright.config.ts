@@ -16,65 +16,51 @@ const testDir = defineBddConfig({
  */
 export default defineConfig({
   testDir,
-  /* Run tests one at a time for easier debugging */
   fullyParallel: false,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* No retries - stop on first failure for debugging */
   retries: 0,
-  /* Use only 1 worker to run tests sequentially */
   workers: 1,
-  /* Global test timeout - fail test if it runs longer than this */
-  timeout: 30000, // 30 seconds per test
-  /* Global expect timeout for assertions */
+  timeout: 30000,
   expect: {
-    timeout: 10000, // 10 seconds for expect assertions
+    timeout: 10000,
   },
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['list'],
     cucumberReporter('html', { outputFile: 'cucumber-report/report.html' }),
     cucumberReporter('json', { outputFile: 'cucumber-report/report.json' }),
   ],
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: 'http://localhost:3002',
-
-    /* Run headless by default */
     headless: true,
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-
-    /* Take screenshot on failure */
     screenshot: 'only-on-failure',
-
-    /* Record video on failure */
     video: 'retain-on-failure',
-
-    /* More generous timeouts for React app loading */
-    actionTimeout: 10000, // 10 seconds for actions (click, fill, etc.)
-    navigationTimeout: 15000, // 15 seconds for page navigation
-
-    /* Additional timeout configurations */
-    testIdAttribute: 'data-testid', // Use data-testid for element selection
+    actionTimeout: 10000,
+    navigationTimeout: 15000,
+    testIdAttribute: 'data-testid',
   },
-
-  /* Configure projects for Chrome only */
   projects: [
     {
-      name: 'chromium',
+      name: 'chromium-mocked',
       use: { ...devices['Desktop Chrome'] },
+      webServer: {
+        command: 'VITE_ENABLE_MSW=true pnpm dev --port 3002',
+        url: 'http://localhost:3002',
+        reuseExistingServer: true,
+        timeout: 120 * 1000,
+        cwd: '../main-app',
+      },
+    },
+    {
+      name: 'chromium-live',
+      use: { ...devices['Desktop Chrome'] },
+      webServer: {
+        command: 'pnpm dev --port 3002',
+        url: 'http://localhost:3002',
+        reuseExistingServer: true,
+        timeout: 120 * 1000,
+        cwd: '../main-app',
+      },
     },
   ],
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'pnpm dev --port 3002',
-    url: 'http://localhost:3002',
-    reuseExistingServer: true, // Always reuse existing server
-    timeout: 120 * 1000,
-    cwd: '../main-app',
-  },
 })

@@ -8,16 +8,7 @@ const config: Config = {
   theme: {
     extend: {
       // App-specific extensions only
-      // Base theme (colors, spacing, typography) comes from @repo/design-system
-      animation: {
-        'bounce-subtle': 'bounceSubtle 0.6s ease-in-out',
-      },
-      keyframes: {
-        bounceSubtle: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-5px)' },
-        },
-      },
+      // Base theme (colors, spacing, typography, animations) comes from @repo/design-system
     },
   },
   plugins: [require('tailwindcss-animate')],

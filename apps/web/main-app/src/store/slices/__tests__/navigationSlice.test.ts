@@ -61,7 +61,7 @@ describe('navigationSlice', () => {
       expect(navigation.isMobileMenuOpen).toBe(false)
       expect(navigation.breadcrumbs).toEqual([])
       expect(navigation.isLoading).toBe(false)
-      expect(navigation.primaryNavigation).toHaveLength(4) // dashboard, gallery, wishlist, instructions
+      expect(navigation.primaryNavigation).toHaveLength(5) // dashboard, gallery, wishlist, instructions, sets
       expect(navigation.secondaryNavigation).toHaveLength(2) // settings, help
       expect(navigation.contextualNavigation).toEqual([])
       expect(navigation.search.query).toBe('')
@@ -87,6 +87,7 @@ describe('navigationSlice', () => {
         { id: 'gallery', label: 'Gallery', href: '/gallery', icon: 'Images' },
         { id: 'wishlist', label: 'Wishlist', href: '/wishlist', icon: 'Heart' },
         { id: 'instructions', label: 'MOC Instructions', href: '/instructions', icon: 'BookOpen' },
+        { id: 'sets', label: 'My Sets', href: '/sets', icon: 'Images' },
       ]
 
       expectedItems.forEach((expectedItem, index) => {

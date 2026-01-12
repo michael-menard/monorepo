@@ -187,6 +187,22 @@ const dashboardRoute = createRoute({
   },
 })
 
+// Sets routes - handled by the App Sets Gallery module
+const setsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sets',
+  component: () => {
+    // Lazy load sets gallery module - handles sub-routes internally
+    return import('./modules/SetsGalleryModule').then(module => module.SetsGalleryModule)
+  },
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
 // Legacy routes (migrated from lego-moc-instructions-app)
 // TODO: Implement missing page components for Sprint 2 Task 3
 // const mocGalleryRoute = createRoute({
@@ -384,6 +400,7 @@ const routeTree = rootRoute.addChildren([
   mocEditRoute,
   dashboardMocsUploadRoute, // Story 3.1.9: Alias route
   dashboardRoute,
+  setsRoute,
   // Stub routes for planned features
   galleryRoute,
   galleryDetailRoute,

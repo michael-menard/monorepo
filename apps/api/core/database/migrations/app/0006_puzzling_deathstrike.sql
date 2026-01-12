@@ -1,0 +1,1 @@
+ALTER TABLE "set_images" ADD CONSTRAINT "set_images_set_id_sets_id_fk" FOREIGN KEY ("set_id") REFERENCES "public"."sets"("id") ON DELETE cascade ON UPDATE no action;

@@ -4,6 +4,31 @@
 
 This is a TypeScript monorepo (pnpm + Turborepo) for a LEGO MOC instructions platform. React 19 frontend with AWS serverless backend.
 
+## Tech Stack
+
+### Monorepo Tooling
+- **pnpm** for package management and workspaces across all apps and packages in the monorepo
+- **Turborepo** for orchestrating builds, tests, and linting with caching and parallelization
+- See also: [Monorepo tooling details](./docs/tech-stack/monorepo.md)
+
+### Frontend
+- **React 19** for the main UI layer in `apps/web/*`
+- **Tailwind CSS** for utility-first styling across all React apps
+- **shadcn/ui** as the base component primitives, wrapped in our app component library under `packages/core/app-component-library`
+- See also: [Frontend architecture](./docs/tech-stack/frontend.md)
+
+### Backend
+- **AWS Lambda** for serverless compute, deployed via the `apps/api` project
+- **Amazon API Gateway (APIGW)** for HTTP APIs and routing into Lambda handlers
+- **Amazon Aurora PostgreSQL** as the primary relational database for transactional data
+- See also: [Backend & data architecture](./docs/tech-stack/backend.md)
+
+### Testing
+- **Vitest** for unit and integration tests across apps and packages
+- **Playwright** for end-to-end browser tests in `apps/web/playwright`
+- **MSW (Mock Service Worker)** for API mocking in unit/integration tests (not used in Playwright E2E)
+- See also: [Testing strategy](./docs/testing/overview.md)
+
 ## Quick Commands
 
 ```bash

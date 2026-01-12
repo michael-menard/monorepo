@@ -33,15 +33,18 @@ vi.mock('@repo/logger', () => ({
   })),
 }))
 
-vi.mock('@repo/app-component-library', () => ({
+const { mockToast } = vi.hoisted(() => ({
+  mockToast: vi.fn(),
+}))
+
+vi.mock('@repo/app-component-library/hooks/useToast', () => ({
   useToast: vi.fn(() => ({
-    toast: vi.fn(),
+    toast: mockToast,
   })),
 }))
 
 describe('Story 3.1.9: Uploader State Resilience Integration', () => {
   let mockLocalStorage: Record<string, string>
-  let mockToast: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     // Mock localStorage
@@ -57,10 +60,7 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
       mockLocalStorage = {}
     })
 
-    // Mock toast
-    mockToast = vi.fn()
-    const { useToast } = require('@repo/app-component-library')
-    useToast.mockReturnValue({ toast: mockToast })
+    // Mock toast is wired via vi.mock('@repo/app-component-library/hooks/useToast')
 
     vi.clearAllMocks()
   })
@@ -93,7 +93,9 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         token: null,
       })
 
-      const { result: anonResult } = renderHook(() => useUploaderSession('/instructions/new'), {
+      const { result: anonResult } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
         wrapper: wrapper(anonStore),
       })
 
@@ -123,7 +125,9 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
       }
 
       // Manually persist state (simulating what the hook would do)
-      const storageKey = 'uploader:/instructions/new:anon'
+      // Use actual storage key format based on anon session id
+      const anonId = mockLocalStorage['uploader:anonSessionId']
+      const storageKey = `uploader:/instructions/new:${anonId}`
       mockLocalStorage[storageKey] = JSON.stringify(testState)
 
       // Step 2: User navigates to login (would be redirected by route guard)
@@ -135,20 +139,22 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         token: 'auth-token',
       })
 
-      const { result: authResult } = renderHook(() => useUploaderSession('/instructions/new'), {
-        wrapper: wrapper(authStore),
-      })
+      const { result: authResult } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
+          wrapper: wrapper(authStore),
+        },
+      )
 
       // Step 4: State should be restored from localStorage
       await waitFor(() => {
         expect(authResult.current).toBeDefined()
       })
 
-      // Verify logger was called to indicate restoration
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Restored uploader session'),
-        expect.any(Object),
-      )
+      // Verify restoration flag is set
+      await waitFor(() => {
+        expect(authResult.current.wasRestored).toBe(true)
+      })
 
       // Verify toast notification was shown
       expect(mockToast).toHaveBeenCalledWith({
@@ -187,9 +193,12 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         token: 'new-auth-token',
       })
 
-      const { result } = renderHook(() => useUploaderSession('/instructions/new'), {
-        wrapper: wrapper(newUserStore),
-      })
+      const { result } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
+          wrapper: wrapper(newUserStore),
+        },
+      )
 
       await waitFor(() => {
         expect(result.current).toBeDefined()
@@ -247,9 +256,12 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         token: 'auth-token',
       })
 
-      const { result } = renderHook(() => useUploaderSession('/instructions/new'), {
-        wrapper: wrapper(authStore),
-      })
+      const { result } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
+          wrapper: wrapper(authStore),
+        },
+      )
 
       await waitFor(() => {
         expect(result.current).toBeDefined()
@@ -257,15 +269,14 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
 
       // Step 3: Verify state is restored with file metadata only (no actual file objects)
       // The hook should expose methods for manual retry, not auto-upload
-
+      //
       // Files should be listed from metadata
       // This would be validated in the actual uploader component
       // The key point is: NO automatic upload calls should be made
 
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Restored uploader session'),
-        expect.any(Object),
-      )
+      await waitFor(() => {
+        expect(result.current.wasRestored).toBe(true)
+      })
 
       // Verify that file metadata is present but file blobs are not
       // (This would be checked in the component using the hook)
@@ -293,9 +304,12 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         version: 1,
       })
 
-      const { result } = renderHook(() => useUploaderSession('/instructions/new'), {
-        wrapper: wrapper(authStore),
-      })
+      const { result } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
+          wrapper: wrapper(authStore),
+        },
+      )
 
       await waitFor(() => {
         expect(result.current).toBeDefined()
@@ -315,31 +329,34 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         token: null,
       })
 
-      // Pre-populate localStorage with anon state
-      const storageKey = 'uploader:/instructions/new:anon'
-      mockLocalStorage[storageKey] = JSON.stringify({
-        title: 'Test MOC',
-        description: 'Test',
-        tags: [],
-        theme: 'space',
-        step: 1,
-        files: [],
-        version: 1,
-      })
-
-      const { result } = renderHook(() => useUploaderSession('/instructions/new'), {
-        wrapper: wrapper(anonStore),
-      })
+      const { result } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
+          wrapper: wrapper(anonStore),
+        },
+      )
 
       await waitFor(() => {
         expect(result.current).toBeDefined()
       })
 
+      // Simulate user making changes so that a session is persisted
+      const initialKeys = Object.keys(mockLocalStorage).length
+
+      result.current.updateSession({ title: 'Test MOC' })
+
+      await waitFor(() => {
+        expect(Object.keys(mockLocalStorage).length).toBeGreaterThan(initialKeys)
+      })
+
       // User opts to leave (unsaved changes dialog)
       result.current.clear()
 
-      // Verify localStorage was cleared
-      expect(mockLocalStorage[storageKey]).toBeUndefined()
+      // Verify all uploader keys for this route were cleared
+      const remainingKeys = Object.keys(mockLocalStorage).filter(key =>
+        key.startsWith('uploader:/instructions/new:'),
+      )
+      expect(remainingKeys.length).toBe(0)
     })
   })
 
@@ -364,19 +381,21 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         version: 1,
       })
 
-      const { result } = renderHook(() => useUploaderSession('/instructions/new'), {
-        wrapper: wrapper(authStore),
-      })
+      const { result } = renderHook(
+        () => useUploaderSession({ route: '/instructions/new' }),
+        {
+          wrapper: wrapper(authStore),
+        },
+      )
 
       await waitFor(() => {
         expect(result.current).toBeDefined()
       })
 
       // State should be restored successfully
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Restored uploader session'),
-        expect.any(Object),
-      )
+      await waitFor(() => {
+        expect(result.current.wasRestored).toBe(true)
+      })
     })
   })
 })

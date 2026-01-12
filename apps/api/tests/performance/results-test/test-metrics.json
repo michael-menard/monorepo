@@ -1,0 +1,14 @@
+{
+  "totalRequests": 90000,
+  "successfulRequests": 88000,
+  "failedRequests": 1500,
+  "requestRate": 150,
+  "responseTime": {
+    "median": 200,
+    "p95": 380,
+    "p99": 650
+  },
+  "errorRate": 1.67,
+  "successRate": 97.78,
+  "cacheHitRate": 88
+}

@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
-import { useToast } from '@repo/app-component-library'
+import { useToast } from '@repo/app-component-library/hooks/useToast'
 import { logger } from '@repo/logger'
 import {
   type UploaderSession,
@@ -54,6 +54,8 @@ export interface UseUploaderSessionResult {
   setStep: (step: UploaderStep) => void
   /** Reset session to empty state */
   reset: () => void
+  /** Clear session from storage without finalize semantics (e.g. user cancels) */
+  clear: () => void
   /** Clear session from storage (on finalize success) */
   markFinalized: () => void
 }
@@ -119,8 +121,28 @@ export function useUploaderSession(options: UseUploaderSessionOptions): UseUploa
   // Restore from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(storageKey)
-      const parsed = parseSession(stored)
+      const primaryStored = localStorage.getItem(storageKey)
+      let parsed = parseSession(primaryStored)
+
+      // If no user-specific session exists but user is authenticated, attempt
+      // to restore from previous anonymous session key and then re-key.
+      let restoredFromAnon = false
+      let anonStorageKey: string | null = null
+
+      if (!parsed && isAuthenticated) {
+        try {
+          const anonId = getAnonSessionId()
+          anonStorageKey = getStorageKey(route, undefined, anonId)
+          const anonStored = localStorage.getItem(anonStorageKey)
+          const anonParsed = parseSession(anonStored)
+          if (anonParsed) {
+            parsed = anonParsed
+            restoredFromAnon = true
+          }
+        } catch {
+          // Ignore anon fallback errors and continue without restoration
+        }
+      }
 
       if (parsed) {
         // Check expiry
@@ -145,6 +167,16 @@ export function useUploaderSession(options: UseUploaderSessionOptions): UseUploa
         setSession(migrated)
         setWasRestored(true)
         setIsDirty(true)
+
+        // If we restored from an anonymous key, clean it up now that the
+        // session is associated with a user-specific key.
+        if (restoredFromAnon && anonStorageKey && anonStorageKey !== storageKey) {
+          try {
+            localStorage.removeItem(anonStorageKey)
+          } catch {
+            // Non-fatal if cleanup fails
+          }
+        }
 
         logger.info('Uploader session restored', {
           route,
@@ -245,6 +277,11 @@ export function useUploaderSession(options: UseUploaderSessionOptions): UseUploa
     }
   }, [storageKey, route, user?.id])
 
+  // Clear without finalize semantics (alias for reset for now)
+  const clear = useCallback(() => {
+    reset()
+  }, [reset])
+
   // Mark as finalized (clear from storage)
   const markFinalized = useCallback(() => {
     reset()
@@ -270,6 +307,7 @@ export function useUploaderSession(options: UseUploaderSessionOptions): UseUploa
     removeFile,
     setStep,
     reset,
+    clear,
     markFinalized,
   }
 }

@@ -1,50 +1,11 @@
-@import 'tailwindcss';
+/* App Wishlist Gallery - Global Styles
+ * =====================================
+ * Uses shared global styles from the design system.
+ * Add app-specific overrides in @layer base if needed.
+ */
 
-/* Import shared design system tokens */
-@import '@repo/design-system/design-tokens.css';
+@import '@repo/design-system/global-styles.css';
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings:
-      'rlig' 1,
-      'calt' 1;
-  }
-
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Focus styles for accessibility */
-  *:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2;
-  }
-
-  /* Loading states */
-  .loading-skeleton {
-    @apply animate-pulse bg-muted;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-muted;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-md;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
-  }
+  /* No app-specific overrides yet */
 }

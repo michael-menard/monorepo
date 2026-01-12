@@ -600,13 +600,20 @@ serverless deploy function -f wishlistList --stage dev
 
 ### BMAD Workflow Commands
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/implement` | Complete story implementation | `/implement wish-2001 --parallel` |
-| `/develop` | Smart launcher for /implement | `/develop 2001` |
-| `/qa-gate` | Create quality gate decision | `/qa-gate wish-2001` |
-| `/review-story` | Review implementation | `/review-story wish-2001` |
-| `/create-next-story` | Draft new story | `/create-next-story` |
+|| Command | Description | Usage |
+||---------|-------------|-------|
+|| `/implement` | Complete story implementation | `/implement wish-2001 --parallel` |
+|| `/develop` | Smart launcher for /implement | `/develop 2001` |
+|| `/qa-gate` | Create quality gate decision | `/qa-gate wish-2001` |
+|| `/review-story` | Review implementation | `/review-story wish-2001` |
+|| `/create-next-story` | Draft new story | `/create-next-story` |
+
+### Test Workflows
+
+|| Workflow | Description | Example Usage |
+||----------|-------------|----------------|
+|| `API Tests (mocked)` | Run the `apps/api` Vitest suite with infrastructure mocked (fast unit-style verification). | `cd apps/api && pnpm test` |
+|| `API Tests (no-mock)` | Run the same `apps/api` tests with `TEST_USE_MOCKS=false` so they hit real integrations (e.g., test database) where configured. | `cd apps/api && TEST_USE_MOCKS=false pnpm test` |
 
 ### Git Worktree Commands
 

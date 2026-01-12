@@ -11,6 +11,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
+import { setImages, sets } from './sets'
+
+// Re-export Sets tables so Drizzle can discover them via schema entrypoint
+export { setImages, sets } from './sets'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
 // Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
@@ -669,5 +673,17 @@ export const uploadSessionPartsRelations = relations(uploadSessionParts, ({ one 
   file: one(uploadSessionFiles, {
     fields: [uploadSessionParts.fileId],
     references: [uploadSessionFiles.id],
+  }),
+}))
+
+// Sets Relations
+export const setsRelations = relations(sets, ({ many }) => ({
+  images: many(setImages),
+}))
+
+export const setImagesRelations = relations(setImages, ({ one }) => ({
+  set: one(sets, {
+    fields: [setImages.setId],
+    references: [sets.id],
   }),
 }))

@@ -144,6 +144,8 @@ module.exports = {
         'slide-out': 'slideOut 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'scale-out': 'scaleOut 0.2s ease-out',
+        // Subtle bounce for UI accents
+        'bounce-subtle': 'bounceSubtle 0.6s ease-in-out',
         // Cyberpunk spinner animations
         'spin-slow': 'spinSlow 3s linear infinite',
         'spin-slower': 'spinSlower 6s linear infinite',
@@ -152,6 +154,10 @@ module.exports = {
       },
 
       keyframes: {
+        bounceSubtle: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-5px)' },
+        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },

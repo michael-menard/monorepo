@@ -18,6 +18,7 @@ import {
   useFirstTimeHint,
 } from '@repo/gallery'
 import { logger } from '@repo/logger'
+import { useGetInstructionsQuery } from '@repo/api-client/rtk/instructions-api'
 import { InstructionCard } from '../components/InstructionCard'
 import type { Instruction } from '../__types__'
 import {
@@ -30,54 +31,6 @@ export interface MainPageProps {
   className?: string
 }
 
-// Mock data for demonstration - will be replaced with API data
-const MOCK_INSTRUCTIONS: Instruction[] = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174001',
-    name: 'Technic Supercar',
-    thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-    images: [],
-    pieceCount: 3599,
-    theme: 'Technic',
-    tags: ['vehicle', 'supercar', 'advanced'],
-    createdAt: '2025-01-10T10:30:00Z',
-    isFavorite: true,
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174002',
-    name: 'City Fire Station',
-    thumbnail: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=400&h=300&fit=crop',
-    images: [],
-    pieceCount: 1152,
-    theme: 'City',
-    tags: ['building', 'fire', 'emergency'],
-    createdAt: '2025-01-08T14:20:00Z',
-    isFavorite: false,
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174003',
-    name: 'Star Wars X-Wing',
-    thumbnail: 'https://images.unsplash.com/photo-1472457897821-70d3819a0e24?w=400&h=300&fit=crop',
-    images: [],
-    pieceCount: 1949,
-    theme: 'Star Wars',
-    tags: ['spaceship', 'rebel', 'starfighter'],
-    createdAt: '2025-01-05T09:15:00Z',
-    isFavorite: false,
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174004',
-    name: 'Creator Expert Modular Building',
-    thumbnail: 'https://images.unsplash.com/photo-1560961911-ba7ef651a56c?w=400&h=300&fit=crop',
-    images: [],
-    pieceCount: 2923,
-    theme: 'Creator Expert',
-    tags: ['building', 'modular', 'city'],
-    createdAt: '2025-01-02T16:45:00Z',
-    isFavorite: true,
-  },
-]
-
 /**
  * Main Page Component
  *
@@ -85,8 +38,30 @@ const MOCK_INSTRUCTIONS: Instruction[] = [
  * Uses GalleryGrid for layout and GalleryEmptyState when no instructions exist.
  */
 export function MainPage({ className }: MainPageProps) {
-  const [instructions, setInstructions] = useState<Instruction[]>(MOCK_INSTRUCTIONS)
+  const [instructions, setInstructions] = useState<Instruction[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+
+  const { data, isLoading, isError } = useGetInstructionsQuery({ page: 1, limit: 50 })
+
+  // Hydrate local instructions state from API response when it changes
+  useEffect(() => {
+    if (!data) return
+    const next: Instruction[] = data.data.items.map(api => ({
+      id: api.id,
+      name: api.name,
+      description: api.description,
+      thumbnail: api.thumbnail,
+      images: api.images ?? [],
+      pieceCount: api.pieceCount,
+      theme: api.theme,
+      tags: api.tags,
+      pdfUrl: api.pdfUrl,
+      createdAt: api.createdAt,
+      updatedAt: api.updatedAt,
+      isFavorite: api.isFavorite,
+    }))
+    setInstructions(next)
+  }, [data])
 
   // Initial view mode from URL (?view=grid|datatable)
   const initialUrlMode = useMemo(() => {
@@ -103,6 +78,7 @@ export function MainPage({ className }: MainPageProps) {
   const [showViewHint, dismissViewHint] = useFirstTimeHint()
 
   const handleFavorite = useCallback((id: string) => {
+    // TODO: Wire to toggle favorite mutation once backend supports it
     setInstructions(prev =>
       prev.map(instruction =>
         instruction.id === id

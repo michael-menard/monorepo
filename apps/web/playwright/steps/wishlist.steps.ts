@@ -3,13 +3,14 @@
  * Story wish-2001: Wishlist Gallery MVP
  *
  * BDD step definitions for wishlist E2E tests.
- * Uses page.route() to mock API endpoints.
+ * Network behavior is controlled via MSW in the main app; tests never
+ * intercept or mock routes at the Playwright layer.
  */
 
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
-import { setupWishlistMocks, mockWishlistItems } from '../utils/wishlist-mocks'
-import { setupAuthMock } from '../utils'
+import { setupAuthMock } from '../utils/api-mocks'
+import { wishlistState } from './wishlist-state'
 
 const { Given, When, Then } = createBdd()
 
@@ -17,59 +18,30 @@ const { Given, When, Then } = createBdd()
 // Background / Setup Steps
 // ============================================================================
 
-Given('the wishlist API is mocked with items', async ({ page }) => {
-  await setupWishlistMocks(page, { scenario: 'success' })
+Given('the wishlist API is mocked with items', async () => {
+  // Default scenario: populated list via MSW
+  wishlistState.scenario = null
+  wishlistState.delayMs = null
 })
 
-Given('the wishlist API returns empty results', async ({ page }) => {
-  await setupWishlistMocks(page, { scenario: 'empty' })
+Given('the wishlist API returns empty results', async () => {
+  wishlistState.scenario = 'empty'
 })
 
-Given('the wishlist API returns an error', async ({ page }) => {
-  await setupWishlistMocks(page, { scenario: 'error' })
+Given('the wishlist API returns an error', async () => {
+  wishlistState.scenario = 'error'
 })
 
-Given('the wishlist API returns search results for {string}', async ({ page }, query: string) => {
-  await setupWishlistMocks(page, { scenario: 'success', searchQuery: query })
+Given('the wishlist API returns search results for {string}', async () => {
+  // No special scenario needed; search behavior is driven by q parameter.
 })
 
-Given('the wishlist API has a {int} second delay', async ({ page }, seconds: number) => {
-  await setupWishlistMocks(page, { scenario: 'success', delayMs: seconds * 1000 })
+Given('the wishlist API has a {int} second delay', async (_context, seconds: number) => {
+  wishlistState.delayMs = seconds * 1000
 })
 
-Given('the wishlist has more than {int} items', async ({ page }, count: number) => {
-  // Generate additional mock items
-  const manyItems = [...mockWishlistItems]
-  for (let i = mockWishlistItems.length; i < count + 5; i++) {
-    manyItems.push({
-      ...mockWishlistItems[0],
-      id: `wish-${i.toString().padStart(3, '0')}`,
-      title: `Mock Set ${i}`,
-      sortOrder: i,
-    })
-  }
-
-  await page.route('**/api/wishlist', async route => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: manyItems.slice(0, 20),
-          pagination: {
-            page: 1,
-            limit: 20,
-            total: manyItems.length,
-            totalPages: Math.ceil(manyItems.length / 20),
-          },
-          counts: { total: manyItems.length, byStore: { LEGO: manyItems.length }, byPriority: {} },
-          filters: { availableStores: ['LEGO'], availableTags: [] },
-        }),
-      })
-    } else {
-      await route.continue()
-    }
-  })
+Given('the wishlist has more than {int} items', async () => {
+  wishlistState.scenario = 'many'
 })
 
 Given('I am using a mobile viewport', async ({ page }) => {
@@ -81,7 +53,20 @@ Given('I am using a mobile viewport', async ({ page }) => {
 // ============================================================================
 
 When('I navigate to the wishlist page', async ({ page }) => {
-  await page.goto('/wishlist')
+  const params = new URLSearchParams()
+  if (wishlistState.scenario) {
+    params.set('__wishlistScenario', wishlistState.scenario)
+  }
+  if (wishlistState.delayMs != null) {
+    params.set('__wishlistDelayMs', String(wishlistState.delayMs))
+  }
+  const query = params.toString()
+  await page.goto(`/wishlist${query ? `?${query}` : ''}`)
+
+  // Reset scenario after navigation so it does not leak between tests
+  wishlistState.scenario = null
+  wishlistState.delayMs = null
+
   // Wait for either content or loading state
   await page.waitForSelector('[data-testid="gallery-skeleton"], h1:has-text("Wishlist")', {
     timeout: 10000,
