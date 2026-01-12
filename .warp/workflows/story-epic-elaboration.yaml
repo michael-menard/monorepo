@@ -1,0 +1,66 @@
+name: "Story/Epic: PM → Architect → Dev → QA → UX elaboration"
+tags: ["bmad", "stories", "epics", "warp-workflows"]
+description: "Run the BMAD-style elaboration workflow on a single story or epic in this repo."
+author: "Monorepo BMAD setup"
+command: |
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  REPO_ROOT="/Users/michaelmenard/Development/Monorepo"
+  cd "$REPO_ROOT"
+
+  KIND="{{kind}}"       # "story" or "epic"
+  TARGET="{{file}}"     # e.g. story-123.md or epic-6-wishlist.md
+
+  if [[ -z "$KIND" || -z "$TARGET" ]]; then
+    echo "Usage: choose kind=story|epic and provide a file name (e.g. story-123.md or epic-6-wishlist.md)"
+    exit 1
+  fi
+
+  case "$KIND" in
+    story|Story|STORY)
+      BASE_DIR="docs/stories"
+      ;;
+    epic|Epic|EPIC)
+      BASE_DIR="docs/prd"
+      ;;
+    *)
+      echo "Unknown kind: $KIND (expected 'story' or 'epic')"
+      exit 1
+      ;;
+  esac
+
+  FILE_PATH="$BASE_DIR/$TARGET"
+  if [[ "$FILE_PATH" != *.md ]]; then
+    FILE_PATH+=".md"
+  fi
+
+  if [[ ! -f "$FILE_PATH" ]]; then
+    echo "❌ File not found: $FILE_PATH"
+    echo "  • For stories, put markdown files under docs/stories/"
+    echo "  • For epics/PRDs, put markdown files under docs/prd/"
+    exit 1
+  fi
+
+  echo "🎭 BMAD Story/Epic Elaboration"
+  echo "================================"
+  echo "Kind : $KIND"
+  echo "File : $FILE_PATH"
+  echo ""
+  echo "Next steps:"
+  echo "  1) Open this file in your editor:"
+  echo "       $FILE_PATH"
+  echo "  2) Open the Warp workflow checklist:"
+  echo "       work/workflows/story-elaboration.md"
+  echo "  3) Walk through stages: PM → Architect → Dev → QA → UX,"
+  echo "     filling in the *-review sections in the target doc."
+  echo ""
+  echo "Tip: You can pin this Warp workflow and trigger it from the palette,"
+  echo "     passing 'kind=story' or 'kind=epic' and the markdown filename."
+arguments:
+  - name: kind
+    description: "Target type: 'story' or 'epic'"
+    default_value: "story"
+  - name: file
+    description: "Story or epic markdown file name (e.g. story-123.md, epic-6-wishlist.md)"
+    default_value: ""

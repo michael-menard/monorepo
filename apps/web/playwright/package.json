@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "bdd:gen": "bddgen",
-    "test:e2e": "bddgen && playwright test",
+    "test:e2e": "bddgen && playwright test .features-gen/ tests/e2e/",
     "test:ui": "bddgen && playwright test --ui",
     "test:headed": "bddgen && playwright test --headed",
     "test:debug": "bddgen && playwright test --debug",

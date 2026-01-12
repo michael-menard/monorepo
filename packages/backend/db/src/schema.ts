@@ -116,6 +116,23 @@ export const mocInstructions = pgTable(
     retired: boolean('retired'), // Optional for Sets (default false)
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Shared build / ownership state (MOCs and Sets)
+    // ─────────────────────────────────────────────────────────────────────────
+    isBuilt: boolean('is_built').notNull().default(false),
+    quantity: integer('quantity').notNull().default(1),
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Set purchase / collection metadata
+    // ─────────────────────────────────────────────────────────────────────────
+    store: text('store'),
+    sourceUrl: text('source_url'),
+    purchasePrice: text('purchase_price'),
+    tax: text('tax'),
+    shipping: text('shipping'),
+    purchaseDate: timestamp('purchase_date'),
+    wishlistItemId: uuid('wishlist_item_id'),
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Extended Metadata (JSONB fields for complex nested data)
     // ─────────────────────────────────────────────────────────────────────────
     designer: jsonb('designer').$type<{
@@ -168,7 +185,7 @@ export const mocInstructions = pgTable(
         description?: string | null
         icon?: string | null
       }>
-    >(), // List of notable features/highlights
+    >(), // List of notable features-highlights
 
     // ─────────────────────────────────────────────────────────────────────────
     // Platform & Source Tracking
@@ -189,7 +206,7 @@ export const mocInstructions = pgTable(
         badgeImageUrl?: string | null
         awardedAt?: string | null // ISO date string in JSON
       }>
-    >(), // Competition/event badges earned by this MOC
+    >(), // Competition-event badges earned by this MOC
     moderation: jsonb('moderation').$type<{
       action: 'none' | 'approved' | 'flagged' | 'removed' | 'pending'
       moderatedAt?: string | null // ISO date string in JSON
@@ -270,6 +287,25 @@ export const mocInstructions = pgTable(
     setRetiredIdx: index('idx_sets_retired')
       .on(table.retired)
       .where(sql`type = 'set' AND retired IS NOT NULL`),
+  }),
+)
+
+// Sets Images Table (for ordered set image gallery)
+export const setImages = pgTable(
+  'set_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    setId: uuid('set_id')
+      .notNull()
+      .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+    imageUrl: text('image_url').notNull(),
+    thumbnailUrl: text('thumbnail_url'),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => ({
+    setIdx: index('idx_set_images_set_id').on(table.setId),
+    setPositionIdx: index('idx_set_images_set_position').on(table.setId, table.position),
   }),
 )
 

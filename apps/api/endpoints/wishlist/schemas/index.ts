@@ -113,6 +113,20 @@ export const WishlistItemIdSchema = z.object({
 export type WishlistItemIdParams = z.infer<typeof WishlistItemIdSchema>
 
 /**
+ * Mark Wishlist Item Purchased Request Schema
+ */
+export const MarkWishlistItemPurchasedSchema = z.object({
+  purchasePrice: z.number().nonnegative(),
+  purchaseTax: z.number().nonnegative().optional(),
+  purchaseShipping: z.number().nonnegative().optional(),
+  quantity: z.number().int().min(1).default(1),
+  purchaseDate: z.string().datetime(),
+  keepOnWishlist: z.boolean().default(false),
+})
+
+export type MarkWishlistItemPurchasedRequest = z.infer<typeof MarkWishlistItemPurchasedSchema>
+
+/**
  * Wishlist Item Response Schema (matches database schema)
  */
 export const WishlistItemSchema = z.object({

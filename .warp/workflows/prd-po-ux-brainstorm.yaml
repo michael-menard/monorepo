@@ -1,0 +1,52 @@
+name: "PRD: PO + UX brainstorming interviews"
+tags: ["bmad", "prd", "epics", "po", "ux", "warp-workflows"]
+description: "Use PO and UX agents to brainstorm and flesh out a single PRD in this repo."
+author: "Monorepo BMAD setup"
+command: |
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  REPO_ROOT="/Users/michaelmenard/Development/Monorepo"
+  cd "$REPO_ROOT"
+
+  TARGET="{{file}}"     # e.g. upload-moc-instructions-prd.md or epic-6-wishlist.md
+
+  if [[ -z "$TARGET" ]]; then
+    echo "Usage: provide a PRD file name under docs/prd (e.g. upload-moc-instructions-prd.md or epic-6-wishlist.md)"
+    exit 1
+  fi
+
+  BASE_DIR="docs/prd"
+  FILE_PATH="$BASE_DIR/$TARGET"
+  if [[ "$FILE_PATH" != *.md ]]; then
+    FILE_PATH+=".md"
+  fi
+
+  if [[ ! -f "$FILE_PATH" ]]; then
+    echo "❌ File not found: $FILE_PATH"
+    echo "  • PRDs and epics should live under docs/prd/"
+    echo "  • Create a stub PRD first, then rerun this workflow."
+    exit 1
+  fi
+
+  echo "📝 PRD Creation: PO + UX Brainstorming Interviews"
+  echo "================================================="
+  echo "File : $FILE_PATH"
+  echo ""
+  echo "Next steps:"
+  echo "  1) Open this PRD file in your editor:"
+  echo "       $FILE_PATH"
+  echo "  2) Open the PO+UX PRD checklist:"
+  echo "       work/workflows/prd-po-ux-brainstorm.md"
+  echo "  3) Use the PO agent spec (work/agents/po.md) to run a value/scope/outcomes interview."
+  echo "  4) Use the UX/UX Expert specs (work/agents/ux.md, work/agents/ux-expert.md)"
+  echo "     to define journeys, states, a11y, and design-system guidance."
+  echo "  5) Synthesize the interviews into a fully fleshed-out PRD: goals,"
+  echo "     problem statement, users, requirements, UX, risks, and next steps."
+  echo ""
+  echo "Tip: You can pin this Warp workflow and trigger it from the palette,"
+  echo "     passing the PRD markdown filename under docs/prd/."
+arguments:
+  - name: file
+    description: "PRD markdown file name under docs/prd (e.g. upload-moc-instructions-prd.md, epic-6-wishlist.md)"
+    default_value: ""

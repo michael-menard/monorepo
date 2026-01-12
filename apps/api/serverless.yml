@@ -706,6 +706,106 @@ functions:
             name: cognitoJwtAuthorizer
 
   # ===========================================
+  # Sets Functions
+  # ===========================================
+
+  setsList:
+    handler: endpoints/sets/list/handler.handler
+    description: List Sets for authenticated user
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsGet:
+    handler: endpoints/sets/get/handler.handler
+    description: Get single Set with images
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}
+          method: GET
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsCreate:
+    handler: endpoints/sets/create/handler.handler
+    description: Create new Set
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsUpdate:
+    handler: endpoints/sets/update/handler.handler
+    description: Update existing Set
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsDelete:
+    handler: endpoints/sets/delete/handler.handler
+    description: Delete Set and cleanup images
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsImagePresign:
+    handler: endpoints/sets/images/presign/handler.handler
+    description: Get presigned URL for Set image upload
+    memorySize: ${self:custom.stageConfig.uploadMemorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}/images/presign
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsImageRegister:
+    handler: endpoints/sets/images/register/handler.handler
+    description: Register uploaded Set image
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}/images
+          method: POST
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  setsImageDelete:
+    handler: endpoints/sets/images/delete/handler.handler
+    description: Delete Set image and cleanup S3
+    memorySize: ${self:custom.stageConfig.memorySize}
+    timeout: 29
+    events:
+      - httpApi:
+          path: /api/sets/{id}/images/{imageId}
+          method: DELETE
+          authorizer:
+            name: cognitoJwtAuthorizer
+
+  # ===========================================
   # Wishlist Functions (all require auth - user-specific)
   # ===========================================
 

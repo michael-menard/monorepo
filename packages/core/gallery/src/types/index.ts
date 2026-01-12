@@ -151,6 +151,9 @@ export type GalleryState = z.infer<typeof GalleryStateSchema>
 // UI Configuration Schemas
 // =============================================================================
 
+export { ViewModeSchema } from './view-mode'
+export type { ViewMode } from './view-mode'
+
 /**
  * Schema for sort option configuration in dropdown menus
  */
@@ -164,6 +167,13 @@ export const GallerySortOptionSchema = z.object({
 })
 
 export type GallerySortOption = z.infer<typeof GallerySortOptionSchema>
+
+// Multi-column sort types (glry-1002)
+export type { SortDirection, SortColumn } from './sort'
+
+// Search configuration & utility types (glry-1003)
+export type { FilterableFields, SearchableFieldConfig } from './search'
+export { SearchableFieldConfigSchema } from './search'
 
 // =============================================================================
 // API Query/Response Schemas

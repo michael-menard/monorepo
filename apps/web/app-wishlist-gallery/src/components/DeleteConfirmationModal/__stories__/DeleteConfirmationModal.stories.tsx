@@ -12,17 +12,15 @@ import { DeleteConfirmationModal, type DeleteConfirmationModalProps } from '../i
 /**
  * Wrapper component for controlled story state
  */
-function DeleteConfirmationModalStory(props: Omit<DeleteConfirmationModalProps, 'open' | 'onOpenChange'>) {
+function DeleteConfirmationModalStory(
+  props: Omit<DeleteConfirmationModalProps, 'open' | 'onOpenChange'>,
+) {
   const [open, setOpen] = useState(true)
 
   return (
     <div>
       <Button onClick={() => setOpen(true)}>Open Delete Modal</Button>
-      <DeleteConfirmationModal
-        {...props}
-        open={open}
-        onOpenChange={setOpen}
-      />
+      <DeleteConfirmationModal {...props} open={open} onOpenChange={setOpen} />
     </div>
   )
 }

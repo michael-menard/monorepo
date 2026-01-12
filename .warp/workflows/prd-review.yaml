@@ -1,0 +1,53 @@
+name: "PRD: Completion review (PO + QA + UX)"
+tags: ["bmad", "prd", "review", "po", "qa", "ux", "warp-workflows"]
+description: "Review a completed PRD against the delivered epics/stories and decide PASS/FAIL for the PRD as a whole."
+author: "Monorepo BMAD setup"
+command: |
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  REPO_ROOT="/Users/michaelmenard/Development/Monorepo"
+  cd "$REPO_ROOT"
+
+  TARGET="{{file}}"     # e.g. upload-moc-instructions-prd.md or epic-6-wishlist.md
+
+  if [[ -z "$TARGET" ]]; then
+    echo "Usage: provide a PRD file name under docs/prd (e.g. upload-moc-instructions-prd.md or epic-6-wishlist.md)"
+    exit 1
+  fi
+
+  BASE_DIR="docs/prd"
+  FILE_PATH="$BASE_DIR/$TARGET"
+  if [[ "$FILE_PATH" != *.md ]]; then
+    FILE_PATH+=".md"
+  fi
+
+  if [[ ! -f "$FILE_PATH" ]]; then
+    echo "❌ File not found: $FILE_PATH"
+    echo "  • PRDs and epics should live under docs/prd/"
+    echo "  • Create or locate the PRD markdown first, then rerun this workflow."
+    exit 1
+  fi
+
+  echo "✅ PRD Completion Review (PO + QA + UX)"
+  echo "======================================="
+  echo "File : $FILE_PATH"
+  echo ""
+  echo "Next steps:"
+  echo "  1) Open this PRD file in your editor:"
+  echo "       $FILE_PATH"
+  echo "  2) Open the PRD review checklist:"
+  echo "       work/workflows/prd-review.md"
+  echo "  3) Identify the epics and stories that implement this PRD and list them in the PRD"
+  echo "     under an 'Implementation Scope' section if not already present."
+  echo "  4) Use the PO, QA, and UX agent specs (work/agents/po.md, work/agents/qa.md,"
+  echo "     work/agents/ux.md / work/agents/ux-expert.md) to walk through the review stages:"
+  echo "     intent snapshot → evidence → PO review → QA review → UX review → overall verdict."
+  echo "  5) Record scores, verdicts, and major gaps in a 'PRD Review' section in the PRD."
+  echo ""
+  echo "Tip: You can pin this Warp workflow and trigger it from the palette,"
+  echo "     passing the PRD markdown filename under docs/prd/."
+arguments:
+  - name: file
+    description: "PRD markdown file name under docs/prd (e.g. upload-moc-instructions-prd.md, epic-6-wishlist.md)"
+    default_value: ""

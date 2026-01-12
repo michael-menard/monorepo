@@ -19,16 +19,18 @@ import { uploadToPresignedUrl } from './xhr'
  *
  * @example
  * ```typescript
+ * import { logger } from '@repo/logger'
+ *
  * const manager = createUploadManager({
  *   maxConcurrent: 3,
  *   onFileProgress: (taskId, progress) => {
- *     console.log(`${taskId}: ${progress.percent}%`)
+ *     logger.info(`${taskId}: ${progress.percent}%`)
  *   },
  *   onFileComplete: (taskId) => {
- *     console.log(`${taskId} complete`)
+ *     logger.info(`${taskId} complete`)
  *   },
  *   onAllComplete: () => {
- *     console.log('All uploads done')
+ *     logger.info('All uploads done')
  *   },
  * })
  *

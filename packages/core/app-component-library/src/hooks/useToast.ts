@@ -11,6 +11,11 @@ import type { ToastType } from '../notifications/toast-utils'
 /**
  * Toast options for the useToast hook
  */
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 export interface ToastOptions {
   /** Toast title - required */
   title: string
@@ -20,6 +25,10 @@ export interface ToastOptions {
   variant?: ToastType | 'destructive'
   /** Duration in milliseconds before auto-dismiss (default: 5000) */
   duration?: number
+  /** Primary action (e.g. "Undo") */
+  primaryAction?: ToastAction
+  /** Secondary action (e.g. "View in Sets") */
+  secondaryAction?: ToastAction
 }
 
 /**
@@ -72,24 +81,31 @@ export interface UseToastReturn {
  */
 export function useToast(): UseToastReturn {
   const showToast = useCallback((options: ToastOptions) => {
-    const { title, description, variant = 'info', duration } = options
+    const {
+      title,
+      description,
+      variant = 'info',
+      duration,
+      primaryAction,
+      secondaryAction,
+    } = options
 
     // Map 'destructive' to 'error' for compatibility with shadcn patterns
     const type: ToastType = variant === 'destructive' ? 'error' : variant
 
     switch (type) {
       case 'success':
-        showSuccessToast(title, description, duration)
+        showSuccessToast(title, description, duration, primaryAction, secondaryAction)
         break
       case 'error':
-        showErrorToast(description ?? title, title, duration)
+        showErrorToast(description ?? title, title, duration, primaryAction, secondaryAction)
         break
       case 'warning':
-        showWarningToast(title, description, duration)
+        showWarningToast(title, description, duration, primaryAction, secondaryAction)
         break
       case 'info':
       default:
-        showInfoToast(title, description, duration)
+        showInfoToast(title, description, duration, primaryAction, secondaryAction)
         break
     }
   }, [])

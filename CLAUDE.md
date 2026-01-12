@@ -28,12 +28,20 @@ apps/
     playwright/           # E2E tests
 packages/
   core/                   # Shared core packages
-    app-component-library/  # shadcn/ui components (@repo/ui)
+    app-component-library/  # UI primitives + app-level components (@repo/app-component-library)
     logger/               # Logging utility (@repo/logger)
     design-system/        # Design tokens
     accessibility/        # A11y utilities
   backend/                # Backend utilities
 ```
+
+### App Component Library Architecture (@repo/app-component-library)
+
+- `_primitives/` = raw shadcn/Radix wrappers
+  - Things like `Button`, `Tabs`, `Select`, `DropdownMenu`, etc. live here.
+  - They are as close as possible to the original shadcn components, just wired to our Tailwind theme + `cn`.
+- Feature folders (e.g. `buttons/`, `cards/`, `selects/`, etc.) = app‑level variations
+  - Components like `CustomButton`, `AppSelect`, `StatsCards`, etc. compose or wrap the primitives with app‑specific behavior and opinionated APIs.
 
 ## Code Style
 
@@ -80,7 +88,8 @@ Benefits: Runtime validation, automatic type inference, self-documenting constra
 
 - Functional components only (function declarations)
 - Named exports preferred
-- **NO BARREL FILES** - import directly from source files
+- **NO NEW BARREL FILES** – import directly from source files for new code
+- Existing barrel files may remain for now (do not refactor them as part of unrelated work)
 
 ### Component Directory Structure (REQUIRED)
 
@@ -117,14 +126,19 @@ Notes:
 
 ## Critical Import Rules
 
-### UI Components - ALWAYS use @repo/ui
+### UI Components - App Component Library (@repo/app-component-library)
+
+- For application code (apps/), import UI from `@repo/app-component-library`.
+- Use the **app-level components** (e.g. `AppDialog`, `AppButton`, etc.) where they exist.
+- Only add or modify `_primitives` inside the `app-component-library` package itself.
+- Do **not** import directly from `_primitives` in app code.
 
 ```typescript
-// CORRECT
-import { Button, Card, Table } from '@repo/ui'
+// CORRECT (app code)
+import { Button, Dialog, Form } from '@repo/app-component-library'
 
-// WRONG - never import from individual paths
-import { Button } from '@repo/ui/button'
+// WRONG - do not import primitives directly from the internal folder
+import { Button as PrimitiveButton } from '@repo/app-component-library/src/_primitives/button'
 ```
 
 ### Logging - ALWAYS use @repo/logger
@@ -154,11 +168,11 @@ console.log('message')
 
 ## Quality Gates
 
-All code must pass before commit:
+All code must pass before commit, and **all new additions must pass linting and tests**:
 
 1. TypeScript compilation
-2. ESLint (no errors, warnings addressed)
-3. Tests pass
+2. ESLint (no errors, warnings addressed) on all new/changed code
+3. All relevant tests pass (unit, integration, and E2E where applicable) for new/changed code
 4. Prettier formatting
 
 ## Package Management
@@ -173,7 +187,7 @@ All code must pass before commit:
 
 ## Common Pitfalls
 
-1. Don't create barrel files (index.ts re-exports)
+1. Don't create new barrel files (index.ts re-exports); leave existing ones in place unless a story explicitly calls for refactoring
 2. Don't import shadcn components from individual paths
 3. Don't use console.log - use @repo/logger
 4. Don't skip type errors - fix them

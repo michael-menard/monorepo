@@ -1,0 +1,70 @@
+schema: 1
+story: 'wish-2007'
+story_title: 'Wishlist End-to-End Test Suite (Real Environment)'
+gate: PENDING
+status_reason: >-
+  New real-environment Playwright E2E specs have been added for wishlist
+  gallery, add item, delete / Got It, and reorder flows. Gate remains
+  PENDING until the suite has been stabilized in CI and run across
+  multiple pipelines without flakiness.
+reviewer: 'Agent Mode'
+updated: '2026-01-11T00:00:00Z'
+
+quality_score: 0
+expires: '2026-12-31T00:00:00Z'
+
+evidence:
+  tests_reviewed: 0
+  files_analyzed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: []
+    ac_gaps: []
+    ac_gap_notes: ''
+
+nfr_validation:
+  security:
+    status: UNKNOWN
+    notes: 'Relies on existing auth + API hardening from wishlist API stories.'
+  performance:
+    status: PARTIAL
+    notes: >-
+      Gallery real E2E spec asserts a basic performance bound on initial
+      load time for a small test dataset (< 5 seconds in CI). No synthetic
+      load or stress testing is performed in this story.
+  reliability:
+    status: PARTIAL
+    notes: >-
+      Tests verify that core flows (gallery, add, delete, Got It, reorder)
+      run end-to-end against real services. Flakiness will be monitored
+      after initial CI rollout.
+  maintainability:
+    status: PASS
+    notes: >-
+      Real wishlist E2E specs live under apps/web/playwright/tests/e2e/wishlist
+      and share helpers for login + API-driven setup/teardown.
+  accessibility:
+    status: PARTIAL
+    notes: >-
+      Real E2E specs assert basic semantic roles (heading, buttons, inputs)
+      and labels. Full a11y coverage is handled by story wish-2006.
+
+recommendations:
+  immediate:
+    - action: 'Stabilize wishlist real E2E suite in CI and monitor for flakes.'
+      refs:
+        - 'apps/web/playwright/tests/e2e/wishlist/gallery.real.spec.ts'
+        - 'apps/web/playwright/tests/e2e/wishlist/add-item.real.spec.ts'
+        - 'apps/web/playwright/tests/e2e/wishlist/delete-got-it.real.spec.ts'
+        - 'apps/web/playwright/tests/e2e/wishlist/reorder.real.spec.ts'
+  future:
+    - action: 'Expand real E2E coverage to explicit edit flows once implemented.'
+      refs:
+        - 'docs/stories/epic-6-wishlist/wish-2003-detail-edit-pages.md'
+
+completed_tasks: []
+
+pending_tasks:
+  - task: 'Stabilize wishlist real E2E specs in CI and promote gate to PASS.'
+    status: pending
+    notes: 'Requires several clean CI runs and flake analysis.'

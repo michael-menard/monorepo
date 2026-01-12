@@ -51,7 +51,7 @@ function main() {
   const radar: Radar = JSON.parse(fs.readFileSync(radarPath, 'utf-8'))
   const md = generateMermaid(radar)
   fs.writeFileSync(outputPath, md)
-  console.log('Tech radar generated at', outputPath)
+  // Tech radar generated
 }
 
 main()

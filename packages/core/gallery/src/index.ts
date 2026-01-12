@@ -28,6 +28,8 @@ export type { GalleryActiveFiltersProps, ActiveFilter } from './components/Galle
 
 export { GalleryFilterBar } from './components/GalleryFilterBar'
 export type { GalleryFilterBarProps, SortOption } from './components/GalleryFilterBar'
+export { GalleryViewToggle, GalleryViewTogglePropsSchema } from './components/GalleryViewToggle'
+export type { GalleryViewToggleProps } from './components/GalleryViewToggle'
 
 export { GallerySort, defaultGallerySortOptions } from './components/GallerySort'
 export type { GallerySortProps, GallerySortOption, SortDirection } from './components/GallerySort'
@@ -53,6 +55,11 @@ export type { GalleryNoResultsProps } from './components/GalleryNoResults'
 export { GallerySkeleton } from './components/GallerySkeleton'
 export type { GallerySkeletonProps } from './components/GallerySkeleton'
 
+// Contexts
+export { FilterProvider, useFilterContext } from './contexts/FilterContext'
+export type { FilterContextValue } from './contexts/FilterContext'
+export { SortProvider, useSortContext } from './contexts/SortContext'
+
 // Hooks
 export { useInfiniteScroll } from './hooks/useInfiniteScroll'
 export type { UseInfiniteScrollOptions, UseInfiniteScrollReturn } from './hooks/useInfiniteScroll'
@@ -62,6 +69,10 @@ export type { UseLightboxReturn } from './hooks/useLightbox'
 
 export { useGalleryState } from './hooks/useGalleryState'
 export type { UseGalleryStateOptions, UseGalleryStateReturn } from './hooks/useGalleryState'
+
+export { useMultiSort } from './hooks/useMultiSort'
+export { useViewMode } from './hooks/useViewMode'
+export { useFirstTimeHint } from './hooks/useFirstTimeHint'
 
 export { useGalleryUrl } from './hooks/useGalleryUrl'
 export type {
@@ -86,7 +97,46 @@ export type {
   GalleryQueryParams,
   GalleryResponse,
   GallerySearchParams,
+  ViewMode,
+  FilterableFields,
+  SearchableFieldConfig,
 } from './types'
+
+// Column filtering (datatable)
+export type {
+  FilterOperator,
+  ColumnFilter,
+  ColumnType,
+  FilterableColumn,
+} from './__types__/columnFilter'
+
+export { useColumnFilters } from './hooks/useColumnFilters'
+export { ColumnFilterInput } from './components/ColumnFilterInput'
+export {
+  GalleryDataTable,
+  type GalleryDataTableProps,
+  type GalleryDataTableColumn,
+} from './components/GalleryDataTable'
+export { SortableHeader } from './components/SortableHeader'
+export { useSortFromURL } from './hooks/useSortFromURL'
+
+// Column Helpers
+export {
+  createGalleryColumns,
+  createTextColumn,
+  createNumberColumn,
+  createDateColumn,
+  createPriceColumn,
+  createBadgeColumn,
+  createImageColumn,
+} from './utils/column-helpers'
+
+// Utils
+export {
+  getViewModeStorageKey,
+  getViewModeFromStorage,
+  saveViewModeToStorage,
+} from './utils/view-mode-storage'
 
 // Zod Schemas (for runtime validation)
 export {

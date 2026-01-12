@@ -7,8 +7,8 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { useState } from 'react'
 import { Button } from '@repo/app-component-library'
-import { GotItModal, type GotItModalProps } from '../index'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { GotItModal, type GotItModalProps } from '../index'
 
 /**
  * Mock wishlist item for stories

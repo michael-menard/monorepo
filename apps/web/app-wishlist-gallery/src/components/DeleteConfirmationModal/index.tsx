@@ -10,7 +10,6 @@
 import { ConfirmationDialog, showSuccessToast, showErrorToast } from '@repo/app-component-library'
 import { useRemoveFromWishlistMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { logger } from '@repo/logger'
-
 import { z } from 'zod'
 
 /**

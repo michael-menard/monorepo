@@ -195,12 +195,13 @@ If story has 5+ tasks OR touches 3+ directories → suggest `--parallel`
 **Check for existing worktree/branch first:**
 
 ```bash
-# Generate expected branch name
-BRANCH_NAME="feature/story-{STORY_NUM}-{slug}"
+# Generate branch name and worktree directory name
+BRANCH_NAME="feature/{STORY_NUM}-{slug}"
+WORKTREE_DIR="{STORY_NUM}"  # Short name for directory (e.g., "wish-2002")
 
 # Get absolute path to repo root
 REPO_ROOT=$(git rev-parse --show-toplevel)
-WORKTREE_PATH="${REPO_ROOT}/tree/${BRANCH_NAME}"
+WORKTREE_PATH="${REPO_ROOT}/tree/${WORKTREE_DIR}"
 
 # Check if worktree already exists
 git worktree list | grep "${BRANCH_NAME}"
@@ -217,7 +218,9 @@ git branch -r --list "origin/${BRANCH_NAME}"
 
 **If creating new:**
 1. Ensure on main and up-to-date: `git checkout main && git pull`
-2. Create worktree: `git worktree add "${WORKTREE_PATH}" -b ${BRANCH_NAME}`
+2. Create worktree with short directory name: `git worktree add "${WORKTREE_PATH}" -b ${BRANCH_NAME}`
+   - Worktree directory: `tree/{STORY_NUM}` (e.g., `tree/wish-2002`)
+   - Branch name: `feature/{STORY_NUM}-{slug}` (e.g., `feature/wish-2002-add-item-flow`)
 3. Verify creation: `ls "${WORKTREE_PATH}"`
 
 **IMPORTANT: Store WORKTREE_PATH for use in Phase 3+. All git commands must use `git -C "${WORKTREE_PATH}"` and all file operations must use absolute paths within the worktree.**
@@ -610,7 +613,7 @@ Next Steps:
   - Review PR at {PR_URL}
   - Merge when approved
   - Run: /implement {STORY_NUM} --complete (to archive story)
-  - Worktree at: tree/{BRANCH_NAME}
+  - Worktree at: tree/{STORY_NUM}
 ═══════════════════════════════════════════════════════
 ```
 
@@ -681,8 +684,8 @@ gh issue close {ISSUE_NUMBER}
 ### 8.4 Clean Up Worktree
 
 ```bash
-# Remove the worktree
-git worktree remove tree/{BRANCH_NAME} --force
+# Remove the worktree (uses short story-based directory name)
+git worktree remove tree/{STORY_NUM} --force
 
 # Delete the local branch (remote already deleted by PR merge)
 git branch -D {BRANCH_NAME}
@@ -705,8 +708,8 @@ Actions Completed:
   ✓ PR merged:     {PR_URL}
   ✓ Story archived: docs/_archive/completed-stories/{STORY_FILENAME}
   ✓ Issue closed:  #{ISSUE_NUMBER}
-  ✓ Worktree removed: tree/{BRANCH_NAME}
-  ✓ Branch cleaned up
+  ✓ Worktree removed: tree/{STORY_NUM}
+  ✓ Branch cleaned up: {BRANCH_NAME}
 
 ═══════════════════════════════════════════════════════
 ```

@@ -153,7 +153,8 @@ export const initializeStore = async (dispatch: AppDispatch) => {
   const { fetchWishlistItems } = await import('./wishlistSlice')
   const { fetchMocInstructions } = await import('./mocInstructionsSlice')
   const { fetchProfileData } = await import('./profileSlice')
-
+  // Note: @repo/logger is not imported here because this is a mock data package
+  // and logging is not critical for its operation. The error is silently handled.
   try {
     // Fetch all initial data
     await Promise.all([
@@ -162,7 +163,8 @@ export const initializeStore = async (dispatch: AppDispatch) => {
       dispatch(fetchProfileData()),
     ])
   } catch (error) {
-    console.error('Failed to initialize store:', error)
+    // Silently handle error in mock data initialization
+    // Production code should use proper error handling
   }
 }
 

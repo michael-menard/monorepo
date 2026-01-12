@@ -144,11 +144,7 @@ export function GotItModal({ open, onOpenChange, item, onCompleted }: GotItModal
         {/* Item Summary */}
         <div className="flex gap-4 p-4 bg-muted rounded-lg">
           {item.imageUrl ? (
-            <img
-              src={item.imageUrl}
-              alt={item.title}
-              className="w-16 h-16 object-cover rounded"
-            />
+            <img src={item.imageUrl} alt={item.title} className="w-16 h-16 object-cover rounded" />
           ) : (
             <div className="w-16 h-16 bg-background rounded flex items-center justify-center">
               <Package className="w-8 h-8 text-muted-foreground" />
@@ -156,14 +152,14 @@ export function GotItModal({ open, onOpenChange, item, onCompleted }: GotItModal
           )}
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{item.title}</p>
-            {item.setNumber && (
+            {item.setNumber ? (
               <p className="text-sm text-muted-foreground">Set #{item.setNumber}</p>
-            )}
-            {item.pieceCount && (
+            ) : null}
+            {item.pieceCount ? (
               <p className="text-sm text-muted-foreground">
                 {item.pieceCount.toLocaleString()} pieces
               </p>
-            )}
+            ) : null}
           </div>
         </div>
 
