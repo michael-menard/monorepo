@@ -1,8 +1,9 @@
 /**
  * Add Set Page
- * Story 3.4.5: Sets Add Page
+ * Story sets-2002: Add Set Flow
  */
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import {
   Button,
@@ -21,15 +22,23 @@ import {
   useToast,
 } from '@repo/app-component-library'
 import { z } from 'zod'
+import { uploadToPresignedUrl } from '@repo/upload-client'
+import {
+  CreateSetSchema,
+  type CreateSetInput,
+} from '@repo/api-client/schemas/sets'
+import {
+  useAddSetMutation,
+  usePresignSetImageMutation,
+  useRegisterSetImageMutation,
+} from '@repo/api-client/rtk/sets-api'
 import { TagInput } from '../components/TagInput'
 import { ImageUploadZone } from '../components/ImageUploadZone'
-import { mockAddSet, mockUploadSetImage } from '../api/mock-sets-api'
 
-const themes = [
+const THEMES = [
   'Architecture',
   'Castle',
   'City',
-  'Classic',
   'Creator',
   'Creator Expert',
   'Disney',
@@ -46,34 +55,26 @@ const themes = [
   'Other',
 ]
 
-const setFormSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  setNumber: z.string().min(1, 'Set number is required'),
-  pieceCount: z.number().int().positive('Piece count must be positive'),
-  theme: z.string().min(1, 'Theme is required'),
-  tags: z.array(z.string()).default([]),
-  purchaseDate: z.string().optional(),
-  purchasePrice: z.number().positive().optional(),
-  purchaseCurrency: z.string().default('USD'),
-  notes: z.string().optional(),
-})
-
 export function AddSetPage({ onBack }: { onBack?: () => void }) {
+  const navigate = useNavigate()
   const { success, error } = useToast()
   const [images, setImages] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Form state
+  const [addSet] = useAddSetMutation()
+  const [presignSetImage] = usePresignSetImageMutation()
+  const [registerSetImage] = useRegisterSetImageMutation()
+
+  // Form state (string-based, mapped into CreateSetInput on submit)
   const [formData, setFormData] = useState({
-    name: '',
+    title: '',
     setNumber: '',
     pieceCount: '',
     theme: '',
     tags: [] as string[],
     purchaseDate: '',
     purchasePrice: '',
-    purchaseCurrency: 'USD',
     notes: '',
   })
 
@@ -84,49 +85,81 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
     try {
       setIsSubmitting(true)
 
-      // Validate with Zod
-      const validatedData = setFormSchema.parse({
-        ...formData,
-        pieceCount: formData.pieceCount ? Number(formData.pieceCount) : 0,
-        purchasePrice: formData.purchasePrice ? Number(formData.purchasePrice) : undefined,
-      })
+      // Map form state into CreateSetInput candidate (numbers/dates coerced)
+      const candidate: Partial<CreateSetInput> = {
+        title: formData.title,
+        setNumber: formData.setNumber || undefined,
+        pieceCount: formData.pieceCount ? Number(formData.pieceCount) : undefined,
+        theme: formData.theme || undefined,
+        tags: formData.tags,
+        notes: formData.notes || undefined,
+        purchasePrice: formData.purchasePrice
+          ? Number(formData.purchasePrice)
+          : undefined,
+        purchaseDate: formData.purchaseDate
+          ? new Date(formData.purchaseDate).toISOString()
+          : undefined,
+      }
 
-      // Add set
-      const newSet = await mockAddSet(validatedData)
+      const createInput = CreateSetSchema.parse(candidate)
 
-      // Upload images
+      // Create set via real API
+      const newSet = await addSet(createInput).unwrap()
+
+      // Upload images (best-effort)
       for (const image of images) {
-        const formDataObj = new FormData()
-        formDataObj.append('file', image)
-        await mockUploadSetImage({ setId: newSet.id, formData: formDataObj })
+        try {
+          const presign = await presignSetImage({
+            setId: newSet.id,
+            filename: image.name,
+            contentType: image.type || 'application/octet-stream',
+          }).unwrap()
+
+          await uploadToPresignedUrl({
+            url: presign.uploadUrl,
+            file: image,
+            contentType: image.type || 'application/octet-stream',
+          })
+
+          await registerSetImage({
+            setId: newSet.id,
+            imageUrl: presign.imageUrl,
+            key: presign.key,
+          }).unwrap()
+        } catch (uploadError) {
+          // Log and surface a non-blocking error; the set itself was created
+          error(uploadError, 'One or more images failed to upload. Your set was still created.')
+        }
       }
 
       success('Set added to collection', 'Your set has been successfully added.')
 
       // Reset form
       setFormData({
-        name: '',
+        title: '',
         setNumber: '',
         pieceCount: '',
         theme: '',
         tags: [],
         purchaseDate: '',
         purchasePrice: '',
-        purchaseCurrency: 'USD',
         notes: '',
       })
       setImages([])
 
-      // Navigate back if callback provided
+      // Navigate to detail page or invoke onBack callback
       if (onBack) {
-        setTimeout(onBack, 1000)
+        onBack()
+      } else {
+        navigate(`/sets/${newSet.id}`)
       }
     } catch (err) {
       if (err instanceof z.ZodError) {
         const errors: Record<string, string> = {}
         err.errors.forEach(e => {
-          if (e.path[0]) {
-            errors[e.path[0].toString()] = e.message
+          const field = e.path[0]
+          if (typeof field === 'string') {
+            errors[field] = e.message
           }
         })
         setFormErrors(errors)
@@ -157,27 +190,27 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
             <CardTitle>Set Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Name */}
+            {/* Title */}
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Set Name *
+              <label htmlFor="title" className="text-sm font-medium">
+                Title *
               </label>
               <Input
-                id="name"
+                id="title"
                 placeholder="e.g., Medieval Castle"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                value={formData.title}
+                onChange={e => setFormData({ ...formData, title: e.target.value })}
                 disabled={isSubmitting}
               />
-              {formErrors.name ? (
-                <p className="text-sm text-destructive">{formErrors.name}</p>
+              {formErrors.title ? (
+                <p className="text-sm text-destructive">{formErrors.title}</p>
               ) : null}
             </div>
 
             {/* Set Number */}
             <div className="space-y-2">
               <label htmlFor="setNumber" className="text-sm font-medium">
-                Set Number *
+                Set Number
               </label>
               <Input
                 id="setNumber"
@@ -194,7 +227,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
             {/* Piece Count */}
             <div className="space-y-2">
               <label htmlFor="pieceCount" className="text-sm font-medium">
-                Piece Count *
+                Piece Count
               </label>
               <Input
                 id="pieceCount"
@@ -212,7 +245,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
             {/* Theme */}
             <div className="space-y-2">
               <label htmlFor="theme" className="text-sm font-medium">
-                Theme *
+                Theme
               </label>
               <Select
                 value={formData.theme}
@@ -223,7 +256,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
                   <SelectValue placeholder="Select a theme" />
                 </SelectTrigger>
                 <SelectContent>
-                  {themes.map(theme => (
+                  {THEMES.map(theme => (
                     <SelectItem key={theme} value={theme}>
                       {theme}
                     </SelectItem>
@@ -289,43 +322,22 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
             </div>
 
             {/* Purchase Price */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="purchasePrice" className="text-sm font-medium">
-                  Purchase Price
-                </label>
-                <Input
-                  id="purchasePrice"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.purchasePrice}
-                  onChange={e => setFormData({ ...formData, purchasePrice: e.target.value })}
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="purchaseCurrency" className="text-sm font-medium">
-                  Currency
-                </label>
-                <Select
-                  value={formData.purchaseCurrency}
-                  onValueChange={value => setFormData({ ...formData, purchaseCurrency: value })}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="purchaseCurrency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                    <SelectItem value="CAD">CAD</SelectItem>
-                    <SelectItem value="AUD">AUD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <label htmlFor="purchasePrice" className="text-sm font-medium">
+                Purchase Price
+              </label>
+              <Input
+                id="purchasePrice"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.purchasePrice}
+                onChange={e => setFormData({ ...formData, purchasePrice: e.target.value })}
+                disabled={isSubmitting}
+              />
+              {formErrors.purchasePrice ? (
+                <p className="text-sm text-destructive">{formErrors.purchasePrice}</p>
+              ) : null}
             </div>
           </CardContent>
         </Card>

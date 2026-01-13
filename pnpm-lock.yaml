@@ -160,6 +160,9 @@ importers:
       '@opensearch-project/opensearch':
         specifier: ^2.12.0
         version: 2.13.0
+      '@repo/api-client':
+        specifier: workspace:*
+        version: link:../../packages/core/api-client
       '@repo/api-types':
         specifier: workspace:*
         version: link:../../packages/shared/api-types
@@ -725,6 +728,9 @@ importers:
       '@repo/mock-data':
         specifier: workspace:*
         version: link:../../../packages/backend/mock-data
+      '@repo/upload-client':
+        specifier: workspace:*
+        version: link:../../../packages/core/upload-client
       '@tanstack/react-router':
         specifier: ^1.130.2
         version: 1.139.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -20488,7 +20494,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@24.9.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.0))(lightningcss@1.30.2)(msw@2.12.3(@types/node@24.9.1)(typescript@5.8.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
+      vitest: 3.2.4(@types/node@22.19.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.0))(lightningcss@1.30.2)(msw@2.12.3(@types/node@22.19.1)(typescript@5.8.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
 
   '@vitest/ui@3.2.4(vitest@4.0.13)':
     dependencies:

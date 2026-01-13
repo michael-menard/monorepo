@@ -48,6 +48,8 @@ See [Epic 7: Sets Gallery PRD](/docs/prd/epic-7-sets-gallery.md) - Interaction P
 14. [ ] Optimistic update with toast and Undo
 15. [ ] Quantity badge on card when quantity > 1
 16. [ ] Keyboard shortcuts +/- on detail page
+17. [ ] Detail page shows a combined "Build & quantity" card that groups status and quantity controls
+18. [ ] Card visually groups controls with a clear title and helper text
 
 ## Tasks / Subtasks
 
@@ -76,12 +78,12 @@ See [Epic 7: Sets Gallery PRD](/docs/prd/epic-7-sets-gallery.md) - Interaction P
 - [ ] Respects prefers-reduced-motion
 - [ ] Non-blocking, subtle
 
-### Task 4: Integrate into Card and Detail (AC: 1, 2, 8, 9, 16)
+### Task 4: Integrate into Card and Detail (AC: 1, 2, 8, 9, 16-18)
 
-- [ ] Add BuildStatusToggle to SetCard
-- [ ] Add BuildStatusToggle to detail page
-- [ ] Add QuantityStepper to detail page
-- [ ] Add keyboard shortcuts on detail page
+- [ ] Add BuildStatusToggle to SetCard in gallery
+- [ ] Add BuildStatusToggle to "Build & quantity" card on set detail page
+- [ ] Add QuantityStepper to "Build & quantity" card on set detail page
+- [ ] Add keyboard shortcuts on set detail page
 
 ## Dev Notes
 

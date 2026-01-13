@@ -94,9 +94,12 @@ export const ImageUploadZone = ({
         }}
       >
         <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground mb-2">
+        <label
+          className="text-sm text-muted-foreground mb-2"
+          htmlFor="image-upload-input"
+        >
           Drag and drop images here, or click to select
-        </p>
+        </label>
         <p className="text-xs text-muted-foreground">
           {images.length}/{maxImages} images
         </p>
@@ -126,6 +129,7 @@ export const ImageUploadZone = ({
                   type="button"
                   size="sm"
                   variant="ghost"
+                  aria-label="Remove image"
                   onClick={() => removeImage(index)}
                   className="text-white hover:text-white hover:bg-white/20"
                 >
@@ -136,6 +140,7 @@ export const ImageUploadZone = ({
                     type="button"
                     size="sm"
                     variant="ghost"
+                    aria-label="Move image up"
                     onClick={() => moveImage(index, index - 1)}
                     className="text-white hover:text-white hover:bg-white/20"
                   >

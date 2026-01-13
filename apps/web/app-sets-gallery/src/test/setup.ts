@@ -53,6 +53,14 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }))
 
+// Stub URL.createObjectURL for components that use object URLs
+if (!('createObjectURL' in URL)) {
+  Object.defineProperty(URL, 'createObjectURL', {
+    writable: true,
+    value: vi.fn(() => 'blob:mock-url'),
+  })
+}
+
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', async () => {
   const actual = await vi.importActual('@tanstack/react-router')

@@ -11,9 +11,12 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import {
   SetListResponseSchema,
   SetSchema,
+  SetImageSchema,
   type SetListResponse,
   type Set,
+  type SetImage,
   type SetListQuery,
+  type CreateSetInput,
 } from '../schemas/sets'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -43,8 +46,7 @@ export const setsApi = createApi({
           theme: params.theme,
           // API accepts tags as comma-separated string
           tags: params.tags?.join(','),
-          isBuilt:
-            typeof params.isBuilt === 'boolean' ? String(params.isBuilt) : undefined,
+          isBuilt: typeof params.isBuilt === 'boolean' ? String(params.isBuilt) : undefined,
           sortField: params.sortField,
           sortDirection: params.sortDirection,
           page: params.page,
@@ -73,8 +75,120 @@ export const setsApi = createApi({
       providesTags: (_result, _error, id) => [{ type: 'Set' as const, id }],
       ...getServerlessCacheConfig('medium'),
     }),
+
+    /**
+     * POST /api/sets
+     *
+     * Creates a new set for the authenticated user.
+     */
+    addSet: builder.mutation<Set, CreateSetInput>({
+      query: data => ({
+        url: '/sets',
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => SetSchema.parse(response),
+      invalidatesTags: result =>
+        result
+          ? [
+              { type: 'SetList' as const, id: 'LIST' },
+              { type: 'Set' as const, id: result.id },
+            ]
+          : [{ type: 'SetList' as const, id: 'LIST' }],
+    }),
+
+    /**
+     * POST /api/sets/:id/images/presign
+     *
+     * Generates a presigned URL for uploading a set image to S3.
+     */
+    presignSetImage: builder.mutation<
+      { uploadUrl: string; imageUrl: string; key: string },
+      { setId: string; filename: string; contentType: string }
+    >({
+      query: ({ setId, ...body }) => ({
+        url: `/sets/${setId}/images/presign`,
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    /**
+     * POST /api/sets/:id/images
+     *
+     * Registers an uploaded image for a set.
+     */
+    registerSetImage: builder.mutation<
+      SetImage,
+      { setId: string; imageUrl: string; key: string; thumbnailUrl?: string }
+    >({
+      query: ({ setId, ...body }) => ({
+        url: `/sets/${setId}/images`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response: unknown) => SetImageSchema.parse(response),
+      async onQueryStarted({ setId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+
+          // Update getSetById cache to include the new image without refetching
+          dispatch(
+            setsApi.util.updateQueryData('getSetById', setId, draft => {
+              draft.images.push(data)
+              draft.images.sort((a, b) => a.position - b.position)
+            }),
+          )
+        } catch {
+          // Ignore; API error surfaces in the calling component via .unwrap()
+        }
+      },
+      invalidatesTags: (_result, _error, { setId }) => [
+        { type: 'Set' as const, id: setId },
+        { type: 'SetList' as const, id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * DELETE /api/sets/:id/images/:imageId
+     *
+     * Deletes a registered set image.
+     */
+    deleteSetImage: builder.mutation<void, { setId: string; imageId: string }>({
+      query: ({ setId, imageId }) => ({
+        url: `/sets/${setId}/images/${imageId}`,
+        method: 'DELETE',
+      }),
+      async onQueryStarted({ setId, imageId }, { dispatch, queryFulfilled }) {
+        // Optimistically remove image from getSetById cache
+        const patchResult = dispatch(
+          setsApi.util.updateQueryData('getSetById', setId, draft => {
+            draft.images = draft.images.filter(image => image.id !== imageId)
+          }),
+        )
+
+        try {
+          await queryFulfilled
+        } catch {
+          // Roll back optimistic update on failure
+          patchResult.undo()
+        }
+      },
+      invalidatesTags: (_result, _error, { setId }) => [
+        { type: 'Set' as const, id: setId },
+        { type: 'SetList' as const, id: 'LIST' },
+      ],
+    }),
   }),
 })
 
 // Export hooks for use in components
-export const { useGetSetsQuery, useLazyGetSetsQuery, useGetSetByIdQuery } = setsApi
+export const {
+  useGetSetsQuery,
+  useLazyGetSetsQuery,
+  useGetSetByIdQuery,
+  useAddSetMutation,
+  usePresignSetImageMutation,
+  useRegisterSetImageMutation,
+  useDeleteSetImageMutation,
+} = setsApi
