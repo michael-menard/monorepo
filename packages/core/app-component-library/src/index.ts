@@ -50,6 +50,8 @@ export {
 // Cards
 export { StatsCards } from './cards/stats-cards'
 export type { StatsCardsProps, StatItem } from './cards/stats-cards'
+export { AppCounterCard, AppCounterCardPropsSchema } from './cards/AppCounterCard'
+export type { AppCounterCardProps } from './cards/AppCounterCard'
 
 // Avatars
 export { AppAvatar } from './avatars/AppAvatar'
