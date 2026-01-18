@@ -5,7 +5,7 @@
  * No process.env access - config is injected by the caller.
  */
 
-import type { FileCategory, UploadConfig } from './schema'
+import type { FileCategory, UploadConfig } from './schema.js'
 
 /**
  * Get file size limit in bytes for a given file category

@@ -33,7 +33,7 @@ export {
   DEFAULT_ALLOWED_MIME_TYPES,
   VALID_IMAGE_FORMATS,
   VALID_PARTS_FORMATS,
-} from './schema'
+} from './schema.js'
 
 export type {
   UploadConfig,
@@ -41,7 +41,7 @@ export type {
   AllowedMimeTypes,
   ValidImageFormat,
   ValidPartsFormat,
-} from './schema'
+} from './schema.js'
 
 // Config functions
 export {
@@ -54,4 +54,4 @@ export {
   mbToBytes,
   bytesToMb,
   formatBytes,
-} from './limits'
+} from './limits.js'
