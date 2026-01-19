@@ -1,0 +1,201 @@
+### Gallery Albums API Contract Tests
+### Base URL: http://localhost:3001
+### Story: STORY-006 - Gallery Albums (Full CRUD)
+
+@baseUrl = http://localhost:3001/api/gallery/albums
+
+### ============================================================
+### CREATE OPERATIONS
+### ============================================================
+
+### createAlbum - Create album with required fields only (201)
+# @name createAlbum
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "title": "My New Album"
+}
+
+### createAlbumFull - Create album with all optional fields (201)
+# @name createAlbumFull
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "title": "Complete Album",
+  "description": "Album with all fields",
+  "coverImageId": "33333333-3333-3333-3333-333333333001"
+}
+
+### createAlbumMissingTitle - 400 error case (missing title)
+# @name createAlbumMissingTitle
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "description": "No title provided"
+}
+
+### createAlbumInvalidCover - 400 error case (invalid coverImageId format)
+# @name createAlbumInvalidCover
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "title": "Invalid Cover Album",
+  "coverImageId": "not-a-uuid"
+}
+
+### createAlbumNonExistentCover - 400 error case (non-existent coverImageId)
+# @name createAlbumNonExistentCover
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "title": "Non-existent Cover Album",
+  "coverImageId": "99999999-9999-9999-9999-999999999999"
+}
+
+### createAlbumForbiddenCover - 403 error case (other user's image as cover)
+# @name createAlbumForbiddenCover
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "title": "Forbidden Cover Album",
+  "coverImageId": "33333333-3333-3333-3333-333333333003"
+}
+
+### ============================================================
+### LIST OPERATIONS
+### ============================================================
+
+### listAlbums - List albums with default pagination (200)
+# @name listAlbums
+GET {{baseUrl}}/list
+
+### listAlbumsPaginated - List albums with custom page/limit (200)
+# @name listAlbumsPaginated
+GET {{baseUrl}}/list?page=1&limit=5
+
+### listAlbumsPageBeyondTotal - List albums page beyond total (200, empty array)
+# @name listAlbumsPageBeyondTotal
+GET {{baseUrl}}/list?page=999
+
+### ============================================================
+### GET OPERATIONS
+### ============================================================
+
+### getAlbum - Get existing album (200)
+# @name getAlbum
+GET {{baseUrl}}/22222222-2222-2222-2222-222222222001
+
+### getAlbumNotFound - 404 error case (non-existent album)
+# @name getAlbumNotFound
+GET {{baseUrl}}/99999999-9999-9999-9999-999999999999
+
+### getAlbumInvalidId - 400 error case (invalid UUID)
+# @name getAlbumInvalidId
+GET {{baseUrl}}/not-a-uuid
+
+### getAlbumForbidden - 403 error case (other user's album)
+# @name getAlbumForbidden
+GET {{baseUrl}}/22222222-2222-2222-2222-222222222003
+
+### ============================================================
+### UPDATE OPERATIONS
+### ============================================================
+
+### updateAlbum - Update album title (200)
+# @name updateAlbum
+PATCH {{baseUrl}}/22222222-2222-2222-2222-222222222001
+Content-Type: application/json
+
+{
+  "title": "Updated Castle Builds"
+}
+
+### updateAlbumDescription - Update album description (200)
+# @name updateAlbumDescription
+PATCH {{baseUrl}}/22222222-2222-2222-2222-222222222001
+Content-Type: application/json
+
+{
+  "description": "Updated description for castle builds collection"
+}
+
+### updateAlbumClearCover - PATCH with coverImageId: null (200)
+# @name updateAlbumClearCover
+PATCH {{baseUrl}}/22222222-2222-2222-2222-222222222002
+Content-Type: application/json
+
+{
+  "coverImageId": null
+}
+
+### updateAlbumSetCover - PATCH with valid coverImageId (200)
+# @name updateAlbumSetCover
+PATCH {{baseUrl}}/22222222-2222-2222-2222-222222222002
+Content-Type: application/json
+
+{
+  "coverImageId": "33333333-3333-3333-3333-333333333001"
+}
+
+### updateAlbumNotFound - 404 error case
+# @name updateAlbumNotFound
+PATCH {{baseUrl}}/99999999-9999-9999-9999-999999999999
+Content-Type: application/json
+
+{
+  "title": "Will Not Work"
+}
+
+### updateAlbumForbidden - 403 error case (other user's album)
+# @name updateAlbumForbidden
+PATCH {{baseUrl}}/22222222-2222-2222-2222-222222222003
+Content-Type: application/json
+
+{
+  "title": "Trying to update other user's album"
+}
+
+### updateAlbumInvalidId - 400 error case (invalid UUID)
+# @name updateAlbumInvalidId
+PATCH {{baseUrl}}/not-a-uuid
+Content-Type: application/json
+
+{
+  "title": "Invalid ID"
+}
+
+### updateAlbumForbiddenCover - 403 error case (other user's image as cover)
+# @name updateAlbumForbiddenCover
+PATCH {{baseUrl}}/22222222-2222-2222-2222-222222222001
+Content-Type: application/json
+
+{
+  "coverImageId": "33333333-3333-3333-3333-333333333003"
+}
+
+### ============================================================
+### DELETE OPERATIONS
+### ============================================================
+
+### deleteAlbumNotFound - 404 error case (non-existent album)
+# @name deleteAlbumNotFound
+DELETE {{baseUrl}}/99999999-9999-9999-9999-999999999999
+
+### deleteAlbumForbidden - 403 error case (other user's album)
+# @name deleteAlbumForbidden
+DELETE {{baseUrl}}/22222222-2222-2222-2222-222222222003
+
+### deleteAlbumInvalidId - 400 error case (invalid UUID)
+# @name deleteAlbumInvalidId
+DELETE {{baseUrl}}/not-a-uuid
+
+### deleteAlbum - Delete existing album (204) - RUN LAST
+### Note: This will delete the seeded album, run after other tests
+# @name deleteAlbum
+# DELETE {{baseUrl}}/22222222-2222-2222-2222-222222222001

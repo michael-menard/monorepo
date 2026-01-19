@@ -6,9 +6,9 @@
  */
 
 // Common types (pagination, responses, errors)
-export * from './common'
+export * from './common/index.js'
 
 // Domain-specific types
-export * from './moc'
-export * from './gallery'
-export * from './wishlist'
+export * from './moc/index.js'
+export * from './gallery/index.js'
+export * from './wishlist/index.js'

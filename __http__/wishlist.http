@@ -1,0 +1,291 @@
+### Wishlist API Tests for STORY-004
+### Base URL: http://localhost:3000 (vercel dev)
+### Requires: AUTH_BYPASS=true and seeded database
+
+@baseUrl = http://localhost:3000
+
+### =============================================================================
+### List Wishlist Items
+### =============================================================================
+
+### List Wishlist Items - Basic
+# @name listWishlistItems
+GET {{baseUrl}}/api/wishlist/list
+
+### List Wishlist Items - Paginated (page 2, limit 2)
+# @name listWishlistItemsPaginated
+GET {{baseUrl}}/api/wishlist/list?page=1&limit=2
+
+### List Wishlist Items - Limit capped at 100
+# @name listWishlistItemsLimitCap
+GET {{baseUrl}}/api/wishlist/list?limit=200
+
+### List Wishlist Items - Page beyond total (empty result)
+# @name listWishlistItemsEmptyPage
+GET {{baseUrl}}/api/wishlist/list?page=999
+
+### =============================================================================
+### Get Wishlist Item by ID
+### =============================================================================
+
+### Get Wishlist Item - Valid ID (Millennium Falcon)
+# @name getWishlistItem
+GET {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+
+### Get Wishlist Item - Invalid UUID format (400)
+# @name getWishlistItemInvalidId
+GET {{baseUrl}}/api/wishlist/not-a-uuid
+
+### Get Wishlist Item - Non-existent ID (404)
+# @name getWishlistItemNotFound
+GET {{baseUrl}}/api/wishlist/00000000-0000-0000-0000-000000000000
+
+### Get Wishlist Item - Other user's item (403)
+# @name getWishlistItemForbidden
+GET {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111004
+
+### =============================================================================
+### Search Wishlist Items
+### =============================================================================
+
+### Search Wishlist Items - Basic search
+# @name searchWishlistItems
+GET {{baseUrl}}/api/wishlist/search?q=millennium
+
+### Search Wishlist Items - Case insensitive
+# @name searchWishlistItemsCaseInsensitive
+GET {{baseUrl}}/api/wishlist/search?q=FALCON
+
+### Search Wishlist Items - Partial match
+# @name searchWishlistItemsPartial
+GET {{baseUrl}}/api/wishlist/search?q=castle
+
+### Search Wishlist Items - No matches
+# @name searchWishlistItemsNoMatches
+GET {{baseUrl}}/api/wishlist/search?q=nonexistent
+
+### Search Wishlist Items - With pagination
+# @name searchWishlistItemsPaginated
+GET {{baseUrl}}/api/wishlist/search?q=LEGO&page=1&limit=10
+
+### Search Wishlist Items - Empty query (400)
+# @name searchWishlistItemsEmpty
+GET {{baseUrl}}/api/wishlist/search?q=
+
+### Search Wishlist Items - Missing query param (400)
+# @name searchWishlistItemsMissingQuery
+GET {{baseUrl}}/api/wishlist/search
+
+### Search Wishlist Items - Special characters (should escape safely)
+# @name searchWishlistItemsSpecialChars
+GET {{baseUrl}}/api/wishlist/search?q=100%25_complete
+
+### =============================================================================
+### Create Wishlist Item (STORY-005)
+### =============================================================================
+
+### Create Wishlist Item - Required fields only
+# @name createWishlistItem
+POST {{baseUrl}}/api/wishlist
+Content-Type: application/json
+
+{
+  "title": "Test Item",
+  "store": "LEGO"
+}
+
+### Create Wishlist Item - All fields
+# @name createWishlistItemFull
+POST {{baseUrl}}/api/wishlist
+Content-Type: application/json
+
+{
+  "title": "Hogwarts Express",
+  "store": "Amazon",
+  "setNumber": "76423",
+  "sourceUrl": "https://www.amazon.com/dp/B0BZ12345",
+  "price": "499.99",
+  "currency": "EUR",
+  "pieceCount": 2532,
+  "releaseDate": "2023-06-01T00:00:00.000Z",
+  "tags": ["Harry Potter", "Train"],
+  "priority": 4,
+  "notes": "Wait for holiday sale"
+}
+
+### Create Wishlist Item - Missing title (400)
+# @name createWishlistItemMissingTitle
+POST {{baseUrl}}/api/wishlist
+Content-Type: application/json
+
+{
+  "store": "LEGO"
+}
+
+### Create Wishlist Item - Missing store (400)
+# @name createWishlistItemMissingStore
+POST {{baseUrl}}/api/wishlist
+Content-Type: application/json
+
+{
+  "title": "Test Item"
+}
+
+### Create Wishlist Item - Invalid priority (400)
+# @name createWishlistItemInvalidPriority
+POST {{baseUrl}}/api/wishlist
+Content-Type: application/json
+
+{
+  "title": "Test Item",
+  "store": "LEGO",
+  "priority": 10
+}
+
+### =============================================================================
+### Update Wishlist Item (STORY-005)
+### =============================================================================
+
+### Update Wishlist Item - Single field
+# @name updateWishlistItem
+PUT {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+Content-Type: application/json
+
+{
+  "title": "Updated Millennium Falcon"
+}
+
+### Update Wishlist Item - Multiple fields
+# @name updateWishlistItemMultiple
+PUT {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+Content-Type: application/json
+
+{
+  "title": "Millennium Falcon UCS",
+  "priority": 5,
+  "notes": "Must buy soon!"
+}
+
+### Update Wishlist Item - Empty body (200 - no-op, only updates updatedAt)
+# @name updateWishlistItemEmpty
+PUT {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+Content-Type: application/json
+
+{}
+
+### Update Wishlist Item - Not Found (404)
+# @name updateWishlistItemNotFound
+PUT {{baseUrl}}/api/wishlist/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "title": "Should not work"
+}
+
+### Update Wishlist Item - Forbidden (403) - other user's item
+# @name updateWishlistItemForbidden
+PUT {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111004
+Content-Type: application/json
+
+{
+  "title": "Should not work"
+}
+
+### Update Wishlist Item - Invalid UUID (400)
+# @name updateWishlistItemInvalidId
+PUT {{baseUrl}}/api/wishlist/not-a-uuid
+Content-Type: application/json
+
+{
+  "title": "Should not work"
+}
+
+### =============================================================================
+### Delete Wishlist Item (STORY-005)
+### =============================================================================
+
+### Delete Wishlist Item - Success
+### NOTE: Run createWishlistItem first to create a test item, then use its ID here
+# @name deleteWishlistItem
+DELETE {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+
+### Delete Wishlist Item - Not Found (404)
+# @name deleteWishlistItemNotFound
+DELETE {{baseUrl}}/api/wishlist/00000000-0000-0000-0000-000000000000
+
+### Delete Wishlist Item - Forbidden (403) - other user's item
+# @name deleteWishlistItemForbidden
+DELETE {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111004
+
+### Delete Wishlist Item - Invalid UUID (400)
+# @name deleteWishlistItemInvalidId
+DELETE {{baseUrl}}/api/wishlist/not-a-uuid
+
+### =============================================================================
+### Reorder Wishlist Items (STORY-005)
+### =============================================================================
+
+### Reorder Wishlist Items - Swap two items
+# @name reorderWishlistItems
+PATCH {{baseUrl}}/api/wishlist/reorder
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": "11111111-1111-1111-1111-111111111001", "sortOrder": 2 },
+    { "id": "11111111-1111-1111-1111-111111111002", "sortOrder": 0 },
+    { "id": "11111111-1111-1111-1111-111111111003", "sortOrder": 1 }
+  ]
+}
+
+### Reorder Wishlist Items - Empty array (400)
+# @name reorderWishlistItemsEmpty
+PATCH {{baseUrl}}/api/wishlist/reorder
+Content-Type: application/json
+
+{
+  "items": []
+}
+
+### Reorder Wishlist Items - Invalid ID format (400)
+# @name reorderWishlistItemsInvalidId
+PATCH {{baseUrl}}/api/wishlist/reorder
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": "not-a-uuid", "sortOrder": 0 }
+  ]
+}
+
+### Reorder Wishlist Items - Non-existent item (400)
+# @name reorderWishlistItemsNotFound
+PATCH {{baseUrl}}/api/wishlist/reorder
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": "00000000-0000-0000-0000-000000000000", "sortOrder": 0 }
+  ]
+}
+
+### Reorder Wishlist Items - Other user's item (403)
+# @name reorderWishlistItemsForbidden
+PATCH {{baseUrl}}/api/wishlist/reorder
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": "11111111-1111-1111-1111-111111111004", "sortOrder": 0 }
+  ]
+}
+
+### =============================================================================
+### Auth Error Tests (manual - requires AUTH_BYPASS=false)
+### =============================================================================
+
+### List Without Auth - 401 (only works when AUTH_BYPASS=false)
+# @name listWithoutAuth
+# Note: This test requires AUTH_BYPASS=false to return 401
+# With AUTH_BYPASS=true, it will return 200
+GET {{baseUrl}}/api/wishlist/list

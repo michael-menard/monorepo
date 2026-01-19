@@ -1,6 +1,13 @@
 /**
  * Edit Page for Instructions Gallery Module
- * Re-exports the edit functionality moved from main-app
+ *
+ * For the standalone instructions-gallery module, the full edit experience
+ * lives in the shell app. This component currently renders a loading state
+ * and can be extended later to delegate to the shell.
  */
 
-export { InstructionsEditPage as EditPage } from './edit-page'
+import { LoadingPage } from './LoadingPage'
+
+export function EditPage() {
+  return <LoadingPage />
+}

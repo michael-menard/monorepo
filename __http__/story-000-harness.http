@@ -1,0 +1,289 @@
+###
+# Story 000: Vercel Runtime Harness - Test Requests
+# Endpoint: GET /api/sets/list
+#
+# Prerequisites:
+# - Vercel dev server running: cd apps/api && vercel dev
+# - Database seeded with test data
+# - Environment variables configured
+#
+# Usage (VS Code REST Client):
+# - Click "Send Request" above each request
+# - Or use httpyac CLI: httpyac send requests/story-000-harness.http
+###
+
+@baseUrl = http://localhost:3000
+@authToken = Bearer test-jwt-token
+
+### 1. Basic GET request (Happy Path)
+# Expected: 200 OK with paginated list of sets
+# Response includes: items[], pagination{}, filters{}
+GET {{baseUrl}}/api/sets/list
+Authorization: {{authToken}}
+
+
+### 2. Pagination - First page with default limit (20)
+# Expected: 200 OK with up to 20 items, pagination.page = 1
+GET {{baseUrl}}/api/sets/list?page=1
+Authorization: {{authToken}}
+
+
+### 3. Pagination - Custom page and limit
+# Expected: 200 OK with up to 5 items, pagination.page = 2
+GET {{baseUrl}}/api/sets/list?page=2&limit=5
+Authorization: {{authToken}}
+
+
+### 4. Search by title
+# Expected: 200 OK with sets matching "Star" in title or set number
+GET {{baseUrl}}/api/sets/list?search=Star
+Authorization: {{authToken}}
+
+
+### 5. Search by set number
+# Expected: 200 OK with sets matching "75" in set number
+GET {{baseUrl}}/api/sets/list?search=75
+Authorization: {{authToken}}
+
+
+### 6. Filter by theme
+# Expected: 200 OK with only "Star Wars" themed sets
+GET {{baseUrl}}/api/sets/list?theme=Star%20Wars
+Authorization: {{authToken}}
+
+
+### 7. Filter by single tag
+# Expected: 200 OK with sets tagged "space"
+GET {{baseUrl}}/api/sets/list?tags=space
+Authorization: {{authToken}}
+
+
+### 8. Filter by multiple tags (comma-separated)
+# Expected: 200 OK with sets tagged "space" OR "ship"
+GET {{baseUrl}}/api/sets/list?tags=space,ship
+Authorization: {{authToken}}
+
+
+### 9. Filter by build status - unbuilt only
+# Expected: 200 OK with only unbuilt sets (isBuilt = false)
+GET {{baseUrl}}/api/sets/list?isBuilt=false
+Authorization: {{authToken}}
+
+
+### 10. Filter by build status - built only
+# Expected: 200 OK with only built sets (isBuilt = true)
+GET {{baseUrl}}/api/sets/list?isBuilt=true
+Authorization: {{authToken}}
+
+
+### 11. Sort by title ascending
+# Expected: 200 OK with sets sorted alphabetically A-Z
+GET {{baseUrl}}/api/sets/list?sortField=title&sortDirection=asc
+Authorization: {{authToken}}
+
+
+### 12. Sort by purchase date descending (most recent first)
+# Expected: 200 OK with newest purchases first
+GET {{baseUrl}}/api/sets/list?sortField=purchaseDate&sortDirection=desc
+Authorization: {{authToken}}
+
+
+### 13. Sort by piece count descending (largest first)
+# Expected: 200 OK with sets sorted by piece count, largest first
+GET {{baseUrl}}/api/sets/list?sortField=pieceCount&sortDirection=desc
+Authorization: {{authToken}}
+
+
+### 14. Sort by purchase price ascending (cheapest first)
+# Expected: 200 OK with sets sorted by price, lowest first
+GET {{baseUrl}}/api/sets/list?sortField=purchasePrice&sortDirection=asc
+Authorization: {{authToken}}
+
+
+### 15. Combined filters - search + theme + tags + built status
+# Expected: 200 OK with sets matching all filters
+GET {{baseUrl}}/api/sets/list?search=Falcon&theme=Star%20Wars&tags=ship&isBuilt=false
+Authorization: {{authToken}}
+
+
+### 16. Combined filters with sorting and pagination
+# Expected: 200 OK with filtered, sorted, paginated results
+GET {{baseUrl}}/api/sets/list?search=Star&sortField=purchaseDate&sortDirection=desc&page=1&limit=10
+Authorization: {{authToken}}
+
+
+### 17. Empty result set (search with no matches)
+# Expected: 200 OK with empty items array, total = 0
+GET {{baseUrl}}/api/sets/list?search=NonExistentSetThatDoesNotExist12345
+Authorization: {{authToken}}
+
+
+### 18. Maximum limit (100 items per page)
+# Expected: 200 OK with up to 100 items
+GET {{baseUrl}}/api/sets/list?limit=100
+Authorization: {{authToken}}
+
+
+### 19. Minimum limit (1 item per page)
+# Expected: 200 OK with exactly 1 item
+GET {{baseUrl}}/api/sets/list?limit=1
+Authorization: {{authToken}}
+
+
+### 20. Special characters in search (URL encoded)
+# Expected: 200 OK with sets matching "LEGO® Star Wars™"
+GET {{baseUrl}}/api/sets/list?search=LEGO%C2%AE%20Star%20Wars%E2%84%A2
+Authorization: {{authToken}}
+
+
+### 21. Query with empty query string
+# Expected: 200 OK with default pagination (page=1, limit=20)
+GET {{baseUrl}}/api/sets/list?
+Authorization: {{authToken}}
+
+
+### ERROR CASES ###
+
+### 22. Missing authentication (no Authorization header)
+# Expected: 401 Unauthorized
+# Response: { success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } }
+GET {{baseUrl}}/api/sets/list
+
+
+### 23. Invalid authentication (malformed token)
+# Expected: 401 Unauthorized or 200 with empty claims (depending on adapter behavior)
+GET {{baseUrl}}/api/sets/list
+Authorization: InvalidToken
+
+
+### 24. Invalid page number (negative)
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?page=-1
+Authorization: {{authToken}}
+
+
+### 25. Invalid page number (zero)
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?page=0
+Authorization: {{authToken}}
+
+
+### 26. Invalid limit (exceeds maximum)
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?limit=101
+Authorization: {{authToken}}
+
+
+### 27. Invalid limit (zero)
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?limit=0
+Authorization: {{authToken}}
+
+
+### 28. Invalid limit (negative)
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?limit=-5
+Authorization: {{authToken}}
+
+
+### 29. Invalid sortField
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?sortField=invalidField
+Authorization: {{authToken}}
+
+
+### 30. Invalid sortDirection
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?sortDirection=invalid
+Authorization: {{authToken}}
+
+
+### 31. Invalid isBuilt value (not "true" or "false")
+# Expected: Ignored or validation error
+GET {{baseUrl}}/api/sets/list?isBuilt=maybe
+Authorization: {{authToken}}
+
+
+### 32. Non-numeric page parameter
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?page=abc
+Authorization: {{authToken}}
+
+
+### 33. Non-numeric limit parameter
+# Expected: 400 Bad Request - validation error
+GET {{baseUrl}}/api/sets/list?limit=xyz
+Authorization: {{authToken}}
+
+
+### METHOD NOT ALLOWED ###
+
+### 34. POST request (method not allowed)
+# Expected: 405 Method Not Allowed or no handler (Vercel returns 404)
+POST {{baseUrl}}/api/sets/list
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Test Set"
+}
+
+
+### 35. PUT request (method not allowed)
+# Expected: 405 Method Not Allowed or no handler (Vercel returns 404)
+PUT {{baseUrl}}/api/sets/list
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Test Set"
+}
+
+
+### 36. DELETE request (method not allowed)
+# Expected: 405 Method Not Allowed or no handler (Vercel returns 404)
+DELETE {{baseUrl}}/api/sets/list
+Authorization: {{authToken}}
+
+
+### EDGE CASES ###
+
+### 37. Very long search query (stress test)
+# Expected: 200 OK or 400 if query too long
+GET {{baseUrl}}/api/sets/list?search=ThisIsAVeryLongSearchQueryWithManyWordsToTestTheSystemHandlingOfLargeInputStringsAndEnsureItDoesNotCrashOrReturnUnexpectedErrors
+Authorization: {{authToken}}
+
+
+### 38. All query parameters at once (kitchen sink)
+# Expected: 200 OK with all filters applied
+GET {{baseUrl}}/api/sets/list?search=Star&theme=Star%20Wars&tags=space,ship&isBuilt=false&sortField=purchaseDate&sortDirection=desc&page=1&limit=10
+Authorization: {{authToken}}
+
+
+### 39. Unicode characters in search
+# Expected: 200 OK with proper Unicode handling
+GET {{baseUrl}}/api/sets/list?search=%E2%98%85%E2%98%86%E2%98%85
+Authorization: {{authToken}}
+
+
+### 40. Empty tag filter (no tags)
+# Expected: 200 OK (empty tags param ignored)
+GET {{baseUrl}}/api/sets/list?tags=
+Authorization: {{authToken}}
+
+
+### PERFORMANCE / STRESS ###
+
+### 41. High page number (beyond available data)
+# Expected: 200 OK with empty items array
+GET {{baseUrl}}/api/sets/list?page=999999
+Authorization: {{authToken}}
+
+
+### 42. Maximum safe values (edge of valid range)
+# Expected: 200 OK
+GET {{baseUrl}}/api/sets/list?page=2147483647&limit=100
+Authorization: {{authToken}}
+
+
+### END OF TEST SUITE ###

@@ -5,6 +5,7 @@
  * Maps Set schema fields to a generic gallery card presentation.
  */
 
+import type React from 'react'
 import { z } from 'zod'
 import { Badge, Button } from '@repo/app-component-library'
 import { GalleryCard } from '@repo/gallery'
@@ -37,17 +38,17 @@ const formatBuildStatus = (isBuilt: boolean | null | undefined) => {
 /**
  * Build status badge variant
  */
-const getBuildStatusVariant = (isBuilt: boolean | null | undefined):
-  | 'default'
-  | 'secondary'
-  | 'outline' => {
+const getBuildStatusVariant = (
+  isBuilt: boolean | null | undefined,
+): 'default' | 'secondary' | 'outline' => {
   if (isBuilt) return 'default'
   return 'outline'
 }
 
 export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGalleryCardProps) {
   const primaryImage = set.images[0]
-  const imageSrc = primaryImage?.thumbnailUrl ?? primaryImage?.imageUrl ?? '/images/placeholder-lego.png'
+  const imageSrc =
+    primaryImage?.thumbnailUrl ?? primaryImage?.imageUrl ?? '/images/placeholder-lego.png'
 
   const subtitle = set.setNumber ? `Set #${set.setNumber}` : undefined
 
@@ -66,11 +67,11 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
       )}
 
       {/* Theme */}
-      {set.theme && (
+      {set.theme ? (
         <Badge variant="outline" className="text-xs" data-testid="set-card-theme">
           {set.theme}
         </Badge>
-      )}
+      ) : null}
 
       {/* Quantity */}
       {typeof set.quantity === 'number' && set.quantity > 1 && (
@@ -109,14 +110,14 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
         type="button"
         aria-label={`View details for ${set.title}`}
         data-testid="set-card-action-view"
-        onClick={event => {
+        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
           event.stopPropagation()
           onClick?.()
         }}
       >
         <Eye className="h-3.5 w-3.5" aria-hidden="true" />
       </Button>
-      {onEdit && (
+      {onEdit ? (
         <Button
           variant="ghost"
           size="icon"
@@ -124,15 +125,15 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
           type="button"
           aria-label={`Edit ${set.title}`}
           data-testid="set-card-action-edit"
-          onClick={event => {
+          onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation()
             onEdit?.()
           }}
         >
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
-      )}
-      {onDelete && (
+      ) : null}
+      {onDelete ? (
         <Button
           variant="ghost"
           size="icon"
@@ -140,14 +141,14 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
           type="button"
           aria-label={`Delete ${set.title}`}
           data-testid="set-card-action-delete"
-          onClick={event => {
+          onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation()
             onDelete?.()
           }}
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
-      )}
+      ) : null}
     </div>
   )
 

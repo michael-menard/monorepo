@@ -1,4 +1,3 @@
-import type React from 'react'
 import { Card, CardContent } from '@repo/app-component-library'
 import type { Moc } from './__types__/moc'
 
@@ -11,7 +10,6 @@ export function CoverCard({ moc }: CoverCardProps) {
     <Card className="overflow-hidden border-border shadow-sm transition-all duration-300 hover:shadow-md">
       <CardContent className="p-4">
         <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={moc.coverImageUrl}
             alt={`Cover image for ${moc.title}`}

@@ -1,0 +1,11 @@
+### Config API
+### Returns public configuration for browser clients
+
+@baseUrl = http://localhost:3000/api
+
+
+### Get Upload Config
+# Returns upload limits, allowed MIME types, and session settings
+# No authentication required
+
+GET {{baseUrl}}/config/upload

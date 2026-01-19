@@ -35,14 +35,16 @@ export function MetaCard({ moc }: MetaCardProps) {
   const safeTags = tags ?? []
 
   const shouldClamp = description && description.length > DESCRIPTION_CLAMP_LENGTH && !isExpanded
-  const displayDescription = shouldClamp ? `${description.slice(0, DESCRIPTION_CLAMP_LENGTH)}…` : description
+  const displayDescription = shouldClamp
+    ? `${description.slice(0, DESCRIPTION_CLAMP_LENGTH)}…`
+    : description
 
   return (
     <Card className="border-border shadow-sm transition-all duration-300 hover:shadow-md">
       <CardContent className="p-4 space-y-4">
         <h1 className="text-2xl font-bold leading-tight text-balance text-foreground">{title}</h1>
 
-        {author && (
+        {author ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <User className="h-4 w-4" aria-hidden="true" />
             <span>By</span>
@@ -64,30 +66,30 @@ export function MetaCard({ moc }: MetaCardProps) {
               <span className="font-medium text-foreground">{author.displayName}</span>
             )}
           </div>
-        )}
+        ) : null}
 
         <dl className="space-y-2 text-sm">
-          {publishDate && (
+          {publishDate ? (
             <div className="flex items-center gap-2 p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <dt className="text-muted-foreground">Published</dt>
               <dd className="text-foreground font-medium">{formatDate(publishDate)}</dd>
             </div>
-          )}
-          {updatedAt && (
+          ) : null}
+          {updatedAt ? (
             <div className="flex items-center gap-2 p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <dt className="text-muted-foreground">Updated</dt>
               <dd className="text-foreground font-medium">{formatDate(updatedAt)}</dd>
             </div>
-          )}
-          {purchasedDate && (
+          ) : null}
+          {purchasedDate ? (
             <div className="flex items-center gap-2 p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <dt className="text-muted-foreground">Purchased</dt>
               <dd className="text-foreground font-medium">{formatDate(purchasedDate)}</dd>
             </div>
-          )}
+          ) : null}
         </dl>
 
         {safeTags.length > 0 && (
@@ -105,7 +107,7 @@ export function MetaCard({ moc }: MetaCardProps) {
           </div>
         )}
 
-        {description && (
+        {description ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground leading-relaxed transition-all duration-300">
               {displayDescription}
@@ -121,7 +123,7 @@ export function MetaCard({ moc }: MetaCardProps) {
               </button>
             )}
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   )

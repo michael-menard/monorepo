@@ -281,7 +281,7 @@ export function LoginPage() {
                     type="email"
                     placeholder="Enter your email"
                     className={cn(
-'pl-10 h-11 border-slate-200 focus:border-cyan-500 focus:ring-cyan-500',
+                      'pl-10 h-11 border-slate-200 focus:border-cyan-500 focus:ring-cyan-500',
                       errors.email && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('email')}
@@ -314,7 +314,7 @@ export function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     className={cn(
-'pl-10 pr-10 h-11 border-slate-200 focus:border-cyan-500 focus:ring-cyan-500',
+                      'pl-10 pr-10 h-11 border-slate-200 focus:border-cyan-500 focus:ring-cyan-500',
                       errors.password && 'border-red-300 focus:border-red-500 focus:ring-red-500',
                     )}
                     {...register('password')}
@@ -354,7 +354,7 @@ export function LoginPage() {
                         id="rememberMe"
                         checked={field.value ?? false}
                         onCheckedChange={field.onChange}
-className="border-slate-300 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
+                        className="border-slate-300 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
                       />
                     )}
                   />
@@ -365,7 +365,7 @@ className="border-slate-300 data-[state=checked]:bg-cyan-500 data-[state=checked
 
                 <Link
                   to="/forgot-password"
-className="text-sm text-cyan-500 hover:text-teal-500 font-medium transition-colors"
+                  className="text-sm text-cyan-500 hover:text-teal-500 font-medium transition-colors"
                   onClick={() => trackNavigation('forgot_password_link', { source: 'login_page' })}
                 >
                   Forgot password?
@@ -378,7 +378,7 @@ className="text-sm text-cyan-500 hover:text-teal-500 font-medium transition-colo
                   type="submit"
                   disabled={isSubmitting || isLoading}
                   className={cn(
-'w-full h-11 bg-gradient-to-r from-cyan-500 to-teal-500',
+                    'w-full h-11 bg-gradient-to-r from-cyan-500 to-teal-500',
                     'hover:from-cyan-600 hover:to-teal-600',
                     'text-white font-medium shadow-lg',
                     'transition-all duration-200',
@@ -406,7 +406,7 @@ className="text-sm text-cyan-500 hover:text-teal-500 font-medium transition-colo
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-<span className="px-4 bg-white/90 dark:bg-slate-900/90 text-slate-500">
+                <span className="px-4 bg-white/90 dark:bg-slate-900/90 text-slate-500">
                   Or continue with
                 </span>
               </div>
@@ -463,7 +463,7 @@ className="text-sm text-cyan-500 hover:text-teal-500 font-medium transition-colo
                 Don't have an account?{' '}
                 <Link
                   to="/register"
-className="text-cyan-500 hover:text-teal-500 font-medium transition-colors"
+                  className="text-cyan-500 hover:text-teal-500 font-medium transition-colors"
                   onClick={() => trackNavigation('signup_link', { source: 'login_page' })}
                 >
                   Sign up here
@@ -476,7 +476,7 @@ className="text-cyan-500 hover:text-teal-500 font-medium transition-colors"
               <Button
                 variant="outline"
                 asChild
-className="border-slate-200 text-slate-600 hover:bg-cyan-50/60 hover:border-cyan-200"
+                className="border-slate-200 text-slate-600 hover:bg-cyan-50/60 hover:border-cyan-200"
               >
                 <Link
                   to="/"

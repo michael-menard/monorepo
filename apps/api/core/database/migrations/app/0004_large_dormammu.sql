@@ -1,6 +1,6 @@
 DROP INDEX "idx_wishlist_sort_order";--> statement-breakpoint
 DROP INDEX "idx_wishlist_category_sort";--> statement-breakpoint
-ALTER TABLE "wishlist_items" ALTER COLUMN "sort_order" SET DATA TYPE integer;--> statement-breakpoint
+ALTER TABLE "wishlist_items" ALTER COLUMN "sort_order" SET DATA TYPE integer USING sort_order::integer;--> statement-breakpoint
 ALTER TABLE "moc_files" ADD COLUMN "updated_at" timestamp with time zone DEFAULT now();--> statement-breakpoint
 ALTER TABLE "moc_files" ADD COLUMN "deleted_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "wishlist_items" ADD COLUMN "store" text NOT NULL;--> statement-breakpoint

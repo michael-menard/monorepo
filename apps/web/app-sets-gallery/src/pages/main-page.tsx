@@ -163,9 +163,7 @@ export function MainPage({ className }: MainPageProps) {
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
                       My Sets Collection
                     </h1>
-                    <p className="text-muted-foreground">
-                      Manage and track your LEGO sets
-                    </p>
+                    <p className="text-muted-foreground">Manage and track your LEGO sets</p>
                   </div>
                   <Button
                     onClick={() => navigate('/sets/add')}

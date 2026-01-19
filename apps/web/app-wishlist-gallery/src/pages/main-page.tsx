@@ -122,14 +122,16 @@ const wishlistColumns: GalleryDataTableColumn<WishlistItem>[] = [
 
 /**
  * Wishlist filter shape for FilterProvider
+ *
+ * Must satisfy Record<string, unknown> to work with FilterProvider generics.
  */
-interface WishlistFilters {
+type WishlistFilters = {
   search: string
   store: string | null
   tags: string[]
   sort: string
   page: number
-}
+} & Record<string, unknown>
 
 function WishlistMainPageContent({ className }: MainPageProps) {
   const { filters, updateFilter, clearFilters } = useFilterContext<WishlistFilters>()

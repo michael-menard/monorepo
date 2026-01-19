@@ -2,9 +2,9 @@ import { useCallback } from 'react'
 import { z } from 'zod'
 import { useGetInstructionByIdQuery } from '@repo/api-client/rtk/instructions-api'
 import { createLogger } from '@repo/logger'
+import { Skeleton } from '@repo/app-component-library'
 import { MocDetailDashboard } from '../components/MocDetailDashboard/MocDetailDashboard'
 import { MocSchema } from '../components/MocDetailDashboard/__types__/moc'
-import { Skeleton } from '@repo/app-component-library'
 
 const logger = createLogger('app-instructions-gallery:MocDetailModule')
 
@@ -29,11 +29,7 @@ export function MocDetailModule({ mocIdOrSlug }: MocDetailModuleProps) {
     return (
       <div className="container mx-auto py-6">
         <p className="text-sm text-destructive">No MOC specified.</p>
-        <button
-          type="button"
-          onClick={handleBack}
-          className="mt-4 text-sm text-primary underline"
-        >
+        <button type="button" onClick={handleBack} className="mt-4 text-sm text-primary underline">
           Back
         </button>
       </div>
@@ -51,20 +47,14 @@ export function MocDetailModule({ mocIdOrSlug }: MocDetailModuleProps) {
 
   if (isError || !data) {
     const message =
-      error && error instanceof Error
-        ? error.message
-        : 'Failed to load MOC. Please try again.'
+      error && error instanceof Error ? error.message : 'Failed to load MOC. Please try again.'
 
     logger.warn('Failed to load instruction detail for MOC dashboard', { id, error: message })
 
     return (
       <div className="container mx-auto py-6 space-y-4">
         <p className="text-destructive text-sm">{message}</p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="text-sm text-primary underline"
-        >
+        <button type="button" onClick={() => refetch()} className="text-sm text-primary underline">
           Retry
         </button>
       </div>
@@ -103,11 +93,7 @@ export function MocDetailModule({ mocIdOrSlug }: MocDetailModuleProps) {
     return (
       <div className="container mx-auto py-6 space-y-4">
         <p className="text-destructive text-sm">Invalid data received for this MOC.</p>
-        <button
-          type="button"
-          onClick={handleBack}
-          className="text-sm text-primary underline"
-        >
+        <button type="button" onClick={handleBack} className="text-sm text-primary underline">
           Back
         </button>
       </div>

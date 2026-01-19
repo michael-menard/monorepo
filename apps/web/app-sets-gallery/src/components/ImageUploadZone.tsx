@@ -94,10 +94,7 @@ export const ImageUploadZone = ({
         }}
       >
         <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <label
-          className="text-sm text-muted-foreground mb-2"
-          htmlFor="image-upload-input"
-        >
+        <label className="text-sm text-muted-foreground mb-2" htmlFor="image-upload-input">
           Drag and drop images here, or click to select
         </label>
         <p className="text-xs text-muted-foreground">

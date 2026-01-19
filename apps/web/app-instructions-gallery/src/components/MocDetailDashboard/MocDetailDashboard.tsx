@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import type React from 'react'
 import type { Moc } from './__types__/moc'
 import { CoverCard } from './CoverCard'
 import { MetaCard } from './MetaCard'
@@ -25,9 +26,10 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
   const [dragOverCardId, setDragOverCardId] = useState<DashboardCardId | null>(null)
 
   useEffect(() => {
-    const savedOrder = typeof window !== 'undefined'
-      ? window.localStorage.getItem(DASHBOARD_CARD_ORDER_STORAGE_KEY)
-      : null
+    const savedOrder =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(DASHBOARD_CARD_ORDER_STORAGE_KEY)
+        : null
 
     if (savedOrder) {
       try {
@@ -104,11 +106,7 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
   const renderCard = (cardId: DashboardCardId) => {
     switch (cardId) {
       case 'orders':
-        return (
-          <OrdersCard
-            orders={moc.orders}
-          />
-        )
+        return <OrdersCard orders={moc.orders} />
       case 'partsLists':
         return <PartsListsCard partsLists={moc.partsLists} />
       case 'instructions':
@@ -122,6 +120,11 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
     return (
       <div
         key={cardId}
+        role="listitem"
+        aria-roledescription="Draggable dashboard card"
+        aria-grabbed={draggedCardId === cardId}
+        tabIndex={0}
+        draggable
         onDragStart={handleDragStart(cardId)}
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver(cardId)}

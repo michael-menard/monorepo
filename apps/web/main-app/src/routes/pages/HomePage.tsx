@@ -48,10 +48,7 @@ export function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-gray-400/10 dark:from-gray-300/5 dark:via-transparent dark:to-gray-500/5 rounded-3xl pointer-events-none" />
               <div className="absolute inset-0 rounded-3xl shadow-inner pointer-events-none" />
 
-              <motion.div
-                variants={itemVariants}
-                className="relative z-10 text-center space-y-8"
-              >
+              <motion.div variants={itemVariants} className="relative z-10 text-center space-y-8">
                 <div className="space-y-5">
                   <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-balance leading-tight">
                     Build Your{' '}
@@ -60,8 +57,8 @@ export function HomePage() {
                     </span>
                   </h1>
                   <p className="text-lg md:text-xl text-foreground/80 max-w-2xl mx-auto text-pretty leading-relaxed">
-                    Discover, organize your custom LEGO MOCs instructions, and sets. Plan your next build, track your
-                    progress.
+                    Discover, organize your custom LEGO MOCs instructions, and sets. Plan your next
+                    build, track your progress.
                   </p>
                 </div>
 

@@ -224,7 +224,10 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
 
   if (!setId) {
     return (
-      <SetDetailError message="No set specified. Please navigate from the sets gallery." onBack={handleBack} />
+      <SetDetailError
+        message="No set specified. Please navigate from the sets gallery."
+        onBack={handleBack}
+      />
     )
   }
 
@@ -272,7 +275,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   const total = totalNumeric > 0 ? formatCurrency(totalNumeric) : null
 
   const hasPurchaseInfo =
-    purchasePrice !== null || tax !== null || shipping !== null || !!set.purchaseDate || total !== null
+    purchasePrice !== null ||
+    tax !== null ||
+    shipping !== null ||
+    !!set.purchaseDate ||
+    total !== null
 
   const hasTags = set.tags.length > 0
   const hasNotes = !!set.notes
@@ -299,9 +306,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
               {set.title}
             </h1>
             {set.setNumber ? (
-              <p className="text-muted-foreground text-sm">
-                Set #{set.setNumber}
-              </p>
+              <p className="text-muted-foreground text-sm">Set #{set.setNumber}</p>
             ) : null}
           </div>
         </div>
@@ -441,15 +446,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
               <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
                 <div>
                   <p className="font-medium">Added</p>
-                  <p className="mt-0.5">
-                    {formatDate(set.createdAt) ?? 'Unknown'}
-                  </p>
+                  <p className="mt-0.5">{formatDate(set.createdAt) ?? 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="font-medium">Last updated</p>
-                  <p className="mt-0.5">
-                    {formatDate(set.updatedAt) ?? 'Unknown'}
-                  </p>
+                  <p className="mt-0.5">{formatDate(set.updatedAt) ?? 'Unknown'}</p>
                 </div>
               </div>
             </CardContent>

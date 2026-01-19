@@ -1,0 +1,12 @@
+### Health Check API
+### Validates connectivity to all infrastructure dependencies
+
+@baseUrl = http://localhost:3000/api
+# http://localhost:3000/api/health
+
+### Health Check
+# Returns status of all services (PostgreSQL, OpenSearch, Redis)
+# 200: All services healthy or degraded
+# 503: Critical services unavailable
+
+GET {{baseUrl}}/health

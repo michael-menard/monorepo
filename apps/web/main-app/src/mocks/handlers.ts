@@ -135,10 +135,7 @@ export const handlers = [
     const item = mockWishlistItems.find(i => i.id === id)
 
     if (!item) {
-      return HttpResponse.json(
-        { error: 'NOT_FOUND', message: 'Item not found' },
-        { status: 404 },
-      )
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
     }
 
     return HttpResponse.json(item, { status: 200 })
@@ -178,10 +175,7 @@ export const handlers = [
     const id = String(params.id)
     const index = mockWishlistItems.findIndex(i => i.id === id)
     if (index === -1) {
-      return HttpResponse.json(
-        { error: 'NOT_FOUND', message: 'Item not found' },
-        { status: 404 },
-      )
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
     }
 
     const body = (await request.json()) as Partial<MockWishlistItem>
@@ -200,10 +194,7 @@ export const handlers = [
     const id = String(params.id)
     const index = mockWishlistItems.findIndex(i => i.id === id)
     if (index === -1) {
-      return HttpResponse.json(
-        { error: 'NOT_FOUND', message: 'Item not found' },
-        { status: 404 },
-      )
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
     }
 
     mockWishlistItems.splice(index, 1)
@@ -216,10 +207,7 @@ export const handlers = [
     const id = String(params.id)
     const index = mockWishlistItems.findIndex(i => i.id === id)
     if (index === -1) {
-      return HttpResponse.json(
-        { error: 'NOT_FOUND', message: 'Item not found' },
-        { status: 404 },
-      )
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
     }
 
     const body = (await request.json()) as {

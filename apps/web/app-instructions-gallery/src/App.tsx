@@ -4,7 +4,7 @@ import { InstuctionsGalleryModule } from './Module'
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="instructions-gallery-theme">
-      <InstuctionsGalleryModule />
+      <InstuctionsGalleryModule mode="gallery" />
     </ThemeProvider>
   )
 }

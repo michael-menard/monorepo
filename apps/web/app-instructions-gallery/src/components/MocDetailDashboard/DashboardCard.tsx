@@ -1,12 +1,6 @@
 import type React from 'react'
 import { useState, useCallback } from 'react'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  Button,
-} from '@repo/app-component-library'
+import { Card, CardHeader, CardTitle, CardContent, Button } from '@repo/app-component-library'
 
 interface DashboardCardProps {
   id: string
@@ -59,12 +53,7 @@ export function DashboardCard({
     >
       <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-4 cursor-grab active:cursor-grabbing select-none">
         <div className="flex-shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-          <svg
-            aria-hidden="true"
-            className="h-5 w-5"
-            viewBox="0 0 16 16"
-            focusable="false"
-          >
+          <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 16 16" focusable="false">
             <circle cx="3" cy="4" r="1" className="fill-current" />
             <circle cx="3" cy="8" r="1" className="fill-current" />
             <circle cx="3" cy="12" r="1" className="fill-current" />
@@ -76,9 +65,7 @@ export function DashboardCard({
 
         <div className="flex-1 flex items-center gap-2 min-w-0">
           {titleIcon}
-          <CardTitle className="text-lg font-semibold text-foreground truncate">
-            {title}
-          </CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground truncate">{title}</CardTitle>
           {badge}
         </div>
 

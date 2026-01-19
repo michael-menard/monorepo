@@ -1,4 +1,10 @@
 import type { Config } from 'drizzle-kit'
+import { config } from 'dotenv'
+
+// Load .env.local for local development (takes precedence)
+config({ path: '.env.local' })
+// Fallback to .env
+config({ path: '.env' })
 
 /**
  * Drizzle Kit Configuration for SST Serverless Migration

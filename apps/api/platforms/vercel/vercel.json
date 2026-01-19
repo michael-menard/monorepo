@@ -1,0 +1,39 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "name": "lego-api-vercel",
+  "buildCommand": null,
+  "installCommand": "pnpm install",
+  "rewrites": [
+    { "source": "/api/health", "destination": "/api/health.ts" },
+    { "source": "/api/config/upload", "destination": "/api/config/upload.ts" },
+    { "source": "/api/sets/test", "destination": "/api/sets/test.ts" },
+    { "source": "/api/sets/list", "destination": "/api/sets/list.ts" },
+    { "source": "/api/sets", "destination": "/api/sets/index.ts" },
+    { "source": "/api/sets/:id", "destination": "/api/sets/[id].ts" },
+    { "source": "/api/wishlist/list", "destination": "/api/wishlist/list.ts" },
+    { "source": "/api/wishlist/search", "destination": "/api/wishlist/search.ts" },
+    { "source": "/api/wishlist/reorder", "destination": "/api/wishlist/reorder.ts" },
+    { "source": "/api/wishlist/:id", "destination": "/api/wishlist/[id].ts" },
+    { "source": "/api/wishlist", "destination": "/api/wishlist/index.ts" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Authorization, Content-Type"
+        }
+      ]
+    }
+  ]
+}

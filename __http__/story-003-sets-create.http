@@ -1,0 +1,346 @@
+### STORY-003: Sets Write Operations - API Tests
+### Base URL: http://localhost:3000
+### Requires: Valid Cognito JWT token in @token variable
+
+@baseUrl = http://localhost:3000
+@token = {{$dotenv JWT_TOKEN}}
+
+### ============================================================
+### POST /api/sets - Happy Path Tests
+### ============================================================
+
+### Test 1: Happy Path - Minimal Create (title only)
+# @name createSetMinimal
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set"
+}
+
+### Expected: 201 Created
+### Response should include:
+### - id (UUID)
+### - userId (from JWT)
+### - title: "Test Set"
+### - isBuilt: false (default)
+### - quantity: 1 (default)
+### - images: [] (empty)
+### - wishlistItemId: null
+### - createdAt, updatedAt (ISO timestamps)
+### Headers should include:
+### - Location: /api/sets/{id}
+
+###
+
+### Test 2: Happy Path - Full Create (all fields)
+# @name createSetFull
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "LEGO Star Wars Millennium Falcon",
+  "setNumber": "75192",
+  "store": "LEGO.com",
+  "sourceUrl": "https://www.lego.com/product/75192",
+  "pieceCount": 7541,
+  "releaseDate": "2017-10-01T00:00:00.000Z",
+  "theme": "Star Wars",
+  "tags": ["UCS", "display", "retired"],
+  "notes": "Ultimate Collector Series",
+  "isBuilt": true,
+  "quantity": 1,
+  "purchasePrice": 799.99,
+  "tax": 64.00,
+  "shipping": 0,
+  "purchaseDate": "2020-05-04T00:00:00.000Z"
+}
+
+### Expected: 201 Created with all fields populated
+
+###
+
+### ============================================================
+### POST /api/sets - Validation Error Tests
+### ============================================================
+
+### Test 3: Validation Error - Missing Title
+# @name createSetMissingTitle
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "setNumber": "12345"
+}
+
+### Expected: 400 Bad Request with validation error for missing title
+
+###
+
+### Test 4: Validation Error - Invalid URL
+# @name createSetInvalidUrl
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "sourceUrl": "not-a-valid-url"
+}
+
+### Expected: 400 Bad Request with validation error for URL format
+
+###
+
+### Test 5: Validation Error - Negative Numbers
+# @name createSetNegativeNumbers
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "pieceCount": -100
+}
+
+### Expected: 400 Bad Request with validation error
+
+###
+
+### Test 5b: Validation Error - Negative Price
+# @name createSetNegativePrice
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "purchasePrice": -50.00
+}
+
+### Expected: 400 Bad Request with validation error
+
+###
+
+### ============================================================
+### POST /api/sets - Authentication Error Tests
+### ============================================================
+
+### Test 6: Authentication Error - No Token
+# @name createSetNoToken
+POST {{baseUrl}}/api/sets
+Content-Type: application/json
+
+{
+  "title": "Test Set"
+}
+
+### Expected: 401 Unauthorized
+
+###
+
+### Test 7: Authentication Error - Invalid Token
+# @name createSetInvalidToken
+POST {{baseUrl}}/api/sets
+Authorization: Bearer invalid-token
+Content-Type: application/json
+
+{
+  "title": "Test Set"
+}
+
+### Expected: 401 Unauthorized
+
+###
+
+### ============================================================
+### CORS Preflight Test
+### ============================================================
+
+### Test 8: CORS Preflight
+# @name corsPreflight
+OPTIONS {{baseUrl}}/api/sets
+Origin: http://localhost:5173
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type, Authorization
+
+### Expected: 200/204 with CORS headers:
+### - Access-Control-Allow-Origin: http://localhost:5173
+### - Access-Control-Allow-Methods: POST, OPTIONS
+### - Access-Control-Allow-Headers: Content-Type, Authorization
+
+###
+
+### ============================================================
+### Additional Edge Case Tests
+### ============================================================
+
+### Test 9: Empty Body
+# @name createSetEmptyBody
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### Expected: 400 Bad Request (title is required)
+
+###
+
+### Test 10: Extra Unknown Fields (should be stripped)
+# @name createSetExtraFields
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "unknownField": "should be ignored",
+  "anotherUnknown": 12345
+}
+
+### Expected: 201 Created (extra fields stripped, not rejected)
+
+###
+
+### Test 11: Edge case - Title at max length (200 chars)
+# @name createSetMaxTitleLength
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "This is a very long title that approaches the maximum allowed length of two hundred characters to test the boundary condition of the title field validation in the create set endpoint testing"
+}
+
+### Expected: 201 Created (200 chars is within limit)
+
+###
+
+### Test 12: Edge case - Title too long (201 chars)
+# @name createSetTitleTooLong
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "This is a very long title that exceeds the maximum allowed length of two hundred characters to test the boundary condition of the title field validation in the create set endpoint testing!!!"
+}
+
+### Expected: 400 Bad Request (title max 200 chars)
+
+###
+
+### Test 13: Edge case - Empty tags array
+# @name createSetEmptyTags
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "tags": []
+}
+
+### Expected: 201 Created with empty tags array
+
+###
+
+### Test 14: Edge case - Maximum tags (10)
+# @name createSetMaxTags
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set with Many Tags",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"]
+}
+
+### Expected: 201 Created with 10 tags
+
+###
+
+### Test 15: Edge case - Too many tags (11)
+# @name createSetTooManyTags
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set with Too Many Tags",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11"]
+}
+
+### Expected: 400 Bad Request (max 10 tags)
+
+###
+
+### Test 16: Edge case - Invalid date format
+# @name createSetInvalidDate
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "releaseDate": "2023-13-45"
+}
+
+### Expected: 400 Bad Request (invalid date format)
+
+###
+
+### Test 17: Edge case - Non-array tags
+# @name createSetNonArrayTags
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "tags": "not-an-array"
+}
+
+### Expected: 400 Bad Request (tags must be array)
+
+###
+
+### Test 18: Edge case - Zero quantity (should fail, min is 1)
+# @name createSetZeroQuantity
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set",
+  "quantity": 0
+}
+
+### Expected: 400 Bad Request (quantity must be >= 1)
+
+###
+
+### Test 19: Method Not Allowed - GET to /api/sets
+# @name methodNotAllowedGet
+GET {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+
+### Expected: 405 Method Not Allowed
+
+###
+
+### Test 20: Method Not Allowed - PUT to /api/sets
+# @name methodNotAllowedPut
+PUT {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Set"
+}
+
+### Expected: 405 Method Not Allowed

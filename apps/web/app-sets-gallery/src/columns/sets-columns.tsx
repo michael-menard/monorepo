@@ -3,9 +3,9 @@
  */
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@repo/app-component-library'
-import type { BrickSet } from '../api/mock-sets-api'
+import type { Set } from '@repo/api-client/schemas/sets'
 
-const columnHelper = createColumnHelper<BrickSet>()
+const columnHelper = createColumnHelper<Set>()
 
 /**
  * Build status variant mapping for Badge component
@@ -30,20 +30,20 @@ const formatBuildStatus = (status?: string) => {
 /**
  * Column definitions for the Sets datatable
  */
-export const setsColumns: ColumnDef<BrickSet, any>[] = [
+export const setsColumns: ColumnDef<Set, any>[] = [
   columnHelper.accessor('setNumber', {
     header: 'Set #',
     size: 150,
     cell: info => <span className="font-mono text-sm text-foreground">{info.getValue()}</span>,
     enableSorting: true,
-  }) as ColumnDef<BrickSet, any>,
+  }) as ColumnDef<Set, any>,
 
-  columnHelper.accessor('name', {
+  columnHelper.accessor('title', {
     header: 'Name',
     size: 400,
     cell: info => <div className="font-medium text-sm">{info.getValue()}</div>,
     enableSorting: true,
-  }) as ColumnDef<BrickSet, any>,
+  }) as ColumnDef<Set, any>,
 
   columnHelper.accessor('pieceCount', {
     header: 'Pieces',
@@ -57,16 +57,17 @@ export const setsColumns: ColumnDef<BrickSet, any>[] = [
       )
     },
     enableSorting: true,
-  }) as ColumnDef<BrickSet, any>,
+  }) as ColumnDef<Set, any>,
 
-  columnHelper.accessor('buildStatus', {
+  columnHelper.accessor('isBuilt', {
     header: 'Build Status',
     size: 200,
     cell: info => {
-      const status = info.getValue()
-      const variant = status ? buildStatusVariantMap[status] || 'outline' : 'outline'
+      const isBuilt = info.getValue()
+      const status = isBuilt ? 'complete' : 'planned'
+      const variant = buildStatusVariantMap[status] || 'outline'
       return <Badge variant={variant}>{formatBuildStatus(status)}</Badge>
     },
     enableSorting: true,
-  }) as ColumnDef<BrickSet, any>,
+  }) as ColumnDef<Set, any>,
 ]

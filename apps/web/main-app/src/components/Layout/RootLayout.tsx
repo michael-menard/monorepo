@@ -227,9 +227,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-gray-400/10 dark:from-gray-300/5 dark:via-transparent dark:to-gray-500/5 rounded-3xl pointer-events-none" />
             <div className="absolute inset-0 rounded-3xl shadow-inner pointer-events-none" />
 
-            <div className="relative z-10">
-              {children}
-            </div>
+            <div className="relative z-10">{children}</div>
           </div>
         </div>
       </div>

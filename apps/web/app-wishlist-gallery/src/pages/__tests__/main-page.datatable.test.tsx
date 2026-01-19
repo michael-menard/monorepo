@@ -2,7 +2,7 @@
  * Wishlist MainPage Datatable View Tests
  * Story glry-1006: Datatable Foundation - Wishlist Only
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
@@ -202,10 +202,11 @@ describe.skip('Wishlist MainPage - Datatable View', () => {
     const user = userEvent.setup()
 
     const originalLocation = window.location
-    // @ts-expect-error override for test
-    delete window.location
-    // @ts-expect-error minimal href implementation
-    window.location = { href: 'http://localhost/' } as Location
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/' },
+    })
 
     try {
       renderWithProviders()
@@ -220,7 +221,10 @@ describe.skip('Wishlist MainPage - Datatable View', () => {
 
       expect(window.location.href).toContain('/wishlist/1')
     } finally {
-      window.location = originalLocation
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      })
     }
   })
 
@@ -229,10 +233,11 @@ describe.skip('Wishlist MainPage - Datatable View', () => {
 
     // Spy on location changes
     const originalLocation = window.location
-    // @ts-expect-error - override for testing
-    delete window.location
-    // @ts-expect-error - provide minimal href implementation
-    window.location = { href: 'http://localhost/' } as Location
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/' },
+    })
 
     try {
       renderWithProviders()
@@ -244,7 +249,10 @@ describe.skip('Wishlist MainPage - Datatable View', () => {
 
       expect(window.location.href).toContain('/wishlist/1')
     } finally {
-      window.location = originalLocation
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      })
     }
   })
 

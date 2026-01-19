@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useGetInstructionByIdQuery } from '@repo/api-client/rtk/instructions-api'
-import { DetailPage } from './detail-page'
 import type { Instruction } from '../__types__'
+import { DetailPage } from './detail-page'
 
 interface DetailPageModuleProps {
   mocIdOrSlug?: string
@@ -17,13 +17,7 @@ interface DetailPageModuleProps {
 export function DetailPageModule({ mocIdOrSlug }: DetailPageModuleProps) {
   const id = mocIdOrSlug ?? ''
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useGetInstructionByIdQuery(id, {
+  const { data, isLoading, isError, error } = useGetInstructionByIdQuery(id, {
     skip: !id,
   })
 
@@ -46,13 +40,7 @@ export function DetailPageModule({ mocIdOrSlug }: DetailPageModuleProps) {
         ? error.message
         : 'Failed to load instruction. Please try again.'
 
-    return (
-      <DetailPage
-        instruction={null}
-        error={message}
-        onBack={handleBack}
-      />
-    )
+    return <DetailPage instruction={null} error={message} onBack={handleBack} />
   }
 
   // Map API Instruction (api-responses.ts) to local Instruction type (__types__/index.ts)

@@ -1,0 +1,315 @@
+### STORY-002: Sets Read Operations - API Tests
+### Base URL: http://localhost:3000
+### Requires: Valid Cognito JWT token in @token variable
+
+@baseUrl = http://localhost:3000
+@token = {{$dotenv JWT_TOKEN}}
+
+### ============================================================
+### GET Set by ID - Happy Path Tests
+### ============================================================
+
+### GET /api/sets/:id - Get set with valid ID and auth
+# @name getSetHappyPath
+GET {{baseUrl}}/api/sets/{{$dotenv TEST_SET_ID}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with set data and images[]
+
+### ============================================================
+### GET Set by ID - Error Cases
+### ============================================================
+
+### GET /api/sets/:id - 401 Unauthorized (no token)
+# @name getSetNoAuth
+GET {{baseUrl}}/api/sets/123e4567-e89b-12d3-a456-426614174000
+Content-Type: application/json
+
+### Expected: 401 Unauthorized
+
+### GET /api/sets/:id - 401 Unauthorized (invalid token)
+# @name getSetInvalidToken
+GET {{baseUrl}}/api/sets/123e4567-e89b-12d3-a456-426614174000
+Authorization: Bearer invalid-token-here
+Content-Type: application/json
+
+### Expected: 401 Unauthorized
+
+### GET /api/sets/:id - 400 Bad Request (invalid UUID)
+# @name getSetInvalidUUID
+GET {{baseUrl}}/api/sets/not-a-valid-uuid
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 400 Bad Request - Invalid set ID format
+
+### GET /api/sets/:id - 404 Not Found (set doesn't exist)
+# @name getSetNotFound
+GET {{baseUrl}}/api/sets/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 404 Not Found
+
+### GET /api/sets/:id - 403 Forbidden (set belongs to different user)
+### Note: This requires a set ID that belongs to another user
+# @name getSetForbidden
+GET {{baseUrl}}/api/sets/{{$dotenv OTHER_USER_SET_ID}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 403 Forbidden
+
+### ============================================================
+### LIST Sets - Happy Path Tests
+### ============================================================
+
+### GET /api/sets/list - List sets with default pagination
+# @name listSetsDefault
+GET {{baseUrl}}/api/sets/list
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with items[], pagination, filters
+
+### GET /api/sets/list - List sets with custom pagination
+# @name listSetsPaginated
+GET {{baseUrl}}/api/sets/list?page=1&limit=10
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with limit=10 items max
+
+### GET /api/sets/list - List sets page 2
+# @name listSetsPage2
+GET {{baseUrl}}/api/sets/list?page=2&limit=5
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with page=2 offset
+
+### ============================================================
+### LIST Sets - Filtering Tests
+### ============================================================
+
+### GET /api/sets/list - Filter by search (title)
+# @name listSetsSearchTitle
+GET {{baseUrl}}/api/sets/list?search=Star%20Wars
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with sets matching "Star Wars" in title or setNumber
+
+### GET /api/sets/list - Filter by search (set number)
+# @name listSetsSearchSetNumber
+GET {{baseUrl}}/api/sets/list?search=75192
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with sets matching "75192" in setNumber
+
+### GET /api/sets/list - Filter by theme
+# @name listSetsFilterTheme
+GET {{baseUrl}}/api/sets/list?theme=Star%20Wars
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with only Star Wars theme sets
+
+### GET /api/sets/list - Filter by tags (single)
+# @name listSetsFilterTagSingle
+GET {{baseUrl}}/api/sets/list?tags=UCS
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with sets having UCS tag
+
+### GET /api/sets/list - Filter by tags (multiple)
+# @name listSetsFilterTagMultiple
+GET {{baseUrl}}/api/sets/list?tags=UCS,Collector
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with sets having UCS OR Collector tag
+
+### GET /api/sets/list - Filter by isBuilt=true
+# @name listSetsFilterBuilt
+GET {{baseUrl}}/api/sets/list?isBuilt=true
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with only built sets
+
+### GET /api/sets/list - Filter by isBuilt=false
+# @name listSetsFilterNotBuilt
+GET {{baseUrl}}/api/sets/list?isBuilt=false
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with only unbuilt sets
+
+### GET /api/sets/list - Combined filters
+# @name listSetsCombinedFilters
+GET {{baseUrl}}/api/sets/list?theme=Star%20Wars&isBuilt=true&tags=UCS
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with Star Wars theme, built, UCS tagged sets
+
+### ============================================================
+### LIST Sets - Sorting Tests
+### ============================================================
+
+### GET /api/sets/list - Sort by title ascending
+# @name listSetsSortTitleAsc
+GET {{baseUrl}}/api/sets/list?sortField=title&sortDirection=asc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK sorted by title A-Z
+
+### GET /api/sets/list - Sort by title descending
+# @name listSetsSortTitleDesc
+GET {{baseUrl}}/api/sets/list?sortField=title&sortDirection=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK sorted by title Z-A
+
+### GET /api/sets/list - Sort by pieceCount
+# @name listSetsSortPieceCount
+GET {{baseUrl}}/api/sets/list?sortField=pieceCount&sortDirection=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK sorted by piece count high to low
+
+### GET /api/sets/list - Sort by purchaseDate
+# @name listSetsSortPurchaseDate
+GET {{baseUrl}}/api/sets/list?sortField=purchaseDate&sortDirection=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK sorted by purchase date newest first
+
+### GET /api/sets/list - Sort by purchasePrice
+# @name listSetsSortPurchasePrice
+GET {{baseUrl}}/api/sets/list?sortField=purchasePrice&sortDirection=asc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK sorted by price low to high
+
+### GET /api/sets/list - Sort by createdAt (default)
+# @name listSetsSortCreatedAt
+GET {{baseUrl}}/api/sets/list?sortField=createdAt&sortDirection=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK sorted by creation date newest first
+
+### ============================================================
+### LIST Sets - Error Cases
+### ============================================================
+
+### GET /api/sets/list - 401 Unauthorized (no token)
+# @name listSetsNoAuth
+GET {{baseUrl}}/api/sets/list
+Content-Type: application/json
+
+### Expected: 401 Unauthorized
+
+### GET /api/sets/list - 401 Unauthorized (expired token)
+# @name listSetsExpiredToken
+GET {{baseUrl}}/api/sets/list
+Authorization: Bearer expired.token.here
+Content-Type: application/json
+
+### Expected: 401 Unauthorized - Token has expired
+
+### GET /api/sets/list - 400 Bad Request (invalid page)
+# @name listSetsInvalidPage
+GET {{baseUrl}}/api/sets/list?page=0
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 400 Bad Request - page must be >= 1
+
+### GET /api/sets/list - 400 Bad Request (invalid limit)
+# @name listSetsInvalidLimit
+GET {{baseUrl}}/api/sets/list?limit=500
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 400 Bad Request - limit must be <= 100
+
+### GET /api/sets/list - 400 Bad Request (invalid sortField)
+# @name listSetsInvalidSortField
+GET {{baseUrl}}/api/sets/list?sortField=invalid
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 400 Bad Request - invalid sortField
+
+### GET /api/sets/list - 400 Bad Request (invalid sortDirection)
+# @name listSetsInvalidSortDirection
+GET {{baseUrl}}/api/sets/list?sortDirection=sideways
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 400 Bad Request - invalid sortDirection
+
+### ============================================================
+### LIST Sets - Edge Cases
+### ============================================================
+
+### GET /api/sets/list - Max pagination (limit=100)
+# @name listSetsMaxLimit
+GET {{baseUrl}}/api/sets/list?limit=100
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with up to 100 items
+
+### GET /api/sets/list - Empty search results
+# @name listSetsEmptyResults
+GET {{baseUrl}}/api/sets/list?search=nonexistent12345xyz
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK with empty items[], total=0
+
+### GET /api/sets/list - Empty tags filter
+# @name listSetsEmptyTags
+GET {{baseUrl}}/api/sets/list?tags=
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK (empty tags should not filter)
+
+### GET /api/sets/list - Special characters in search
+# @name listSetsSpecialChars
+GET {{baseUrl}}/api/sets/list?search=%25test%25
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Expected: 200 OK (should escape SQL special chars)
+
+### ============================================================
+### CORS Preflight Tests
+### ============================================================
+
+### OPTIONS /api/sets/:id - CORS preflight for get
+# @name corsPreflightGet
+OPTIONS {{baseUrl}}/api/sets/123e4567-e89b-12d3-a456-426614174000
+Origin: http://localhost:5173
+
+### Expected: 200 OK with CORS headers
+
+### OPTIONS /api/sets/list - CORS preflight for list
+# @name corsPreflightList
+OPTIONS {{baseUrl}}/api/sets/list
+Origin: http://localhost:5173
+
+### Expected: 200 OK with CORS headers

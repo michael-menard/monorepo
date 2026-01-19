@@ -17,6 +17,10 @@ export default defineConfig({
     fileParallelism: true,
     environment: 'jsdom',
     environmentMatchGlobs: [
+      // Backend tests use node environment
+      ['apps/api/**/*.{test,spec}.ts', 'node'],
+      ['packages/backend/**/*.{test,spec}.ts', 'node'],
+      // Frontend tests use jsdom environment
       ['**/*.{test,spec}.tsx', 'jsdom'],
       ['**/*.{test,spec}.jsx', 'jsdom'],
     ],
@@ -51,6 +55,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@packages/ui': path.resolve(__dirname, './packages/ui/src'),
       '@packages/auth': path.resolve(__dirname, './packages/auth/src'),
+      // Backend aliases for apps/api
+      '@/core': path.resolve(__dirname, './apps/api/core'),
+      '@/endpoints': path.resolve(__dirname, './apps/api/platforms/aws/endpoints'),
     },
   },
 })

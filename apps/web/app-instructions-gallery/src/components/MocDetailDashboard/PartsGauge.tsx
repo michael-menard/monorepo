@@ -43,7 +43,14 @@ export function PartsGauge({ partsOwned, partsTotal }: PartsGaugeProps) {
                 viewBox="0 0 120 120"
                 className="-rotate-90 transition-transform duration-300 group-hover:scale-105"
               >
-                <circle cx="60" cy="60" r="45" fill="none" strokeWidth="10" className="stroke-muted" />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  strokeWidth="10"
+                  className="stroke-muted"
+                />
                 <circle
                   cx="60"
                   cy="60"
@@ -72,7 +79,14 @@ export function PartsGauge({ partsOwned, partsTotal }: PartsGaugeProps) {
                 viewBox="0 0 120 120"
                 className="-rotate-90 transition-transform duration-300 group-hover:scale-105"
               >
-                <circle cx="60" cy="60" r="45" fill="none" strokeWidth="10" className="stroke-muted" />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  strokeWidth="10"
+                  className="stroke-muted"
+                />
                 <circle
                   cx="60"
                   cy="60"
@@ -98,11 +112,15 @@ export function PartsGauge({ partsOwned, partsTotal }: PartsGaugeProps) {
           <div className="flex-1 space-y-3">
             <div className="flex justify-between items-center p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <span className="text-sm text-muted-foreground">Parts Owned</span>
-              <span className="text-sm font-semibold text-foreground">{partsOwned.toLocaleString()}</span>
+              <span className="text-sm font-semibold text-foreground">
+                {partsOwned.toLocaleString()}
+              </span>
             </div>
             <div className="flex justify-between items-center p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <span className="text-sm text-muted-foreground">Total Required</span>
-              <span className="text-sm font-semibold text-foreground">{partsTotal.toLocaleString()}</span>
+              <span className="text-sm font-semibold text-foreground">
+                {partsTotal.toLocaleString()}
+              </span>
             </div>
             <div className="h-px bg-border" />
             <div className="flex justify-between items-center p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">

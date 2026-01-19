@@ -1,0 +1,542 @@
+openapi: 3.0.3
+info:
+  title: LEGO MOC API - Sets Gallery
+  version: 1.0.0
+  description: |
+    LEGO MOC Instructions Platform API - Story 000: Vercel Runtime Harness
+
+    This spec documents the `/api/sets/list` endpoint as proof-of-concept
+    for running existing Lambda handlers on Vercel with zero logic changes.
+  contact:
+    name: API Support
+    url: https://github.com/yourorg/lego-moc-platform
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development (Vercel dev)
+  - url: https://api-dev.example.com
+    description: Development environment
+  - url: https://api.example.com
+    description: Production environment
+
+tags:
+  - name: sets
+    description: Operations on LEGO sets collection
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/sets/list:
+    get:
+      tags:
+        - sets
+      summary: List user's LEGO sets
+      description: |
+        Retrieves a paginated list of LEGO sets for the authenticated user.
+        Supports filtering by search text, theme, tags, and build status.
+        Results can be sorted by various fields.
+      operationId: listSets
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Search text to filter sets by title or set number (case-insensitive)
+          required: false
+          schema:
+            type: string
+            example: "Star Wars"
+          examples:
+            searchByTitle:
+              value: "Millennium Falcon"
+              summary: Search by set title
+            searchByNumber:
+              value: "75192"
+              summary: Search by set number
+
+        - name: theme
+          in: query
+          description: Filter by LEGO theme (e.g., "Star Wars", "City", "Technic")
+          required: false
+          schema:
+            type: string
+            example: "Star Wars"
+
+        - name: tags
+          in: query
+          description: Comma-separated list of tags to filter by (sets must match at least one tag)
+          required: false
+          schema:
+            type: string
+            example: "space,ship"
+          examples:
+            singleTag:
+              value: "space"
+              summary: Single tag filter
+            multipleTags:
+              value: "space,ship,battle"
+              summary: Multiple tags filter
+
+        - name: isBuilt
+          in: query
+          description: Filter by build status ("true" for built, "false" for unbuilt)
+          required: false
+          schema:
+            type: string
+            enum: [true, false]
+            example: "false"
+
+        - name: sortField
+          in: query
+          description: Field to sort results by
+          required: false
+          schema:
+            type: string
+            enum: [title, setNumber, pieceCount, purchaseDate, purchasePrice, createdAt]
+            default: createdAt
+            example: "purchaseDate"
+
+        - name: sortDirection
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+            example: "desc"
+
+        - name: page
+          in: query
+          description: Page number for pagination (1-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+
+      responses:
+        '200':
+          description: Successfully retrieved sets list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                  - timestamp
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SetListResponse'
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-17T12:00:00.000Z"
+              examples:
+                successWithResults:
+                  summary: Successful response with sets
+                  value:
+                    success: true
+                    data:
+                      items:
+                        - id: "550e8400-e29b-41d4-a716-446655440000"
+                          userId: "user-123"
+                          title: "Millennium Falcon"
+                          setNumber: "75192"
+                          store: "LEGO Store"
+                          sourceUrl: "https://www.lego.com/product/75192"
+                          pieceCount: 7541
+                          releaseDate: "2017-10-01T00:00:00.000Z"
+                          theme: "Star Wars"
+                          tags: ["space", "ship", "iconic"]
+                          notes: "Ultimate Collector Series"
+                          isBuilt: false
+                          quantity: 1
+                          purchasePrice: 849.99
+                          tax: 68.00
+                          shipping: 0.00
+                          purchaseDate: "2024-01-15T10:30:00.000Z"
+                          wishlistItemId: null
+                          images:
+                            - id: "img-001"
+                              imageUrl: "https://cdn.example.com/sets/75192-full.jpg"
+                              thumbnailUrl: "https://cdn.example.com/sets/75192-thumb.jpg"
+                              position: 0
+                          createdAt: "2024-01-15T10:35:00.000Z"
+                          updatedAt: "2024-01-15T10:35:00.000Z"
+                      pagination:
+                        page: 1
+                        limit: 20
+                        total: 42
+                        totalPages: 3
+                      filters:
+                        availableThemes: ["Star Wars", "City", "Technic", "Creator"]
+                        availableTags: ["space", "ship", "vehicle", "building"]
+                    timestamp: "2024-01-17T12:00:00.000Z"
+
+                emptyResults:
+                  summary: Successful response with no sets
+                  value:
+                    success: true
+                    data:
+                      items: []
+                      pagination:
+                        page: 1
+                        limit: 20
+                        total: 0
+                        totalPages: 0
+                      filters:
+                        availableThemes: []
+                        availableTags: []
+                    timestamp: "2024-01-17T12:00:00.000Z"
+
+        '400':
+          description: Validation error - invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Invalid query parameters"
+                  details:
+                    field: "page"
+                    issue: "Expected number, received string"
+                timestamp: "2024-01-17T12:00:00.000Z"
+
+        '401':
+          description: Unauthorized - missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Authentication required"
+                timestamp: "2024-01-17T12:00:00.000Z"
+
+        '405':
+          description: Method not allowed - endpoint only accepts GET requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "METHOD_NOT_ALLOWED"
+                  message: "Only GET requests are allowed for this endpoint"
+                timestamp: "2024-01-17T12:00:00.000Z"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                internalError:
+                  summary: Generic internal error
+                  value:
+                    success: false
+                    error:
+                      code: "INTERNAL_ERROR"
+                      message: "Failed to list sets"
+                    timestamp: "2024-01-17T12:00:00.000Z"
+
+                databaseError:
+                  summary: Database connection error
+                  value:
+                    success: false
+                    error:
+                      code: "INTERNAL_ERROR"
+                      message: "Failed to list sets"
+                      stack: "Error: Database connection failed\n    at handler (handler.ts:52:15)"
+                    timestamp: "2024-01-17T12:00:00.000Z"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token from Cognito authentication.
+        For local development/testing, the adapter accepts any Bearer token
+        and mocks the JWT claims with a test user ID.
+
+  schemas:
+    SetImage:
+      type: object
+      required:
+        - id
+        - imageUrl
+        - position
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "img-550e8400-e29b-41d4-a716-446655440000"
+        imageUrl:
+          type: string
+          format: uri
+          example: "https://cdn.example.com/sets/75192-full.jpg"
+        thumbnailUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cdn.example.com/sets/75192-thumb.jpg"
+        position:
+          type: integer
+          minimum: 0
+          example: 0
+          description: Sort order for multiple images
+
+    Set:
+      type: object
+      required:
+        - id
+        - userId
+        - title
+        - isBuilt
+        - quantity
+        - images
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          format: uuid
+          example: "user-123-456"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Millennium Falcon"
+        setNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+          example: "75192"
+        store:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: "LEGO Store"
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://www.lego.com/product/75192"
+        pieceCount:
+          type: integer
+          minimum: 1
+          nullable: true
+          example: 7541
+        releaseDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2017-10-01T00:00:00.000Z"
+        theme:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: "Star Wars"
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+          maxItems: 10
+          default: []
+          example: ["space", "ship", "iconic"]
+        notes:
+          type: string
+          maxLength: 2000
+          nullable: true
+          example: "Ultimate Collector Series - retired 2020"
+        isBuilt:
+          type: boolean
+          default: false
+          example: false
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+          example: 1
+        purchasePrice:
+          type: number
+          format: float
+          minimum: 0
+          nullable: true
+          example: 849.99
+        tax:
+          type: number
+          format: float
+          minimum: 0
+          nullable: true
+          example: 68.00
+        shipping:
+          type: number
+          format: float
+          minimum: 0
+          nullable: true
+          example: 0.00
+        purchaseDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-15T10:30:00.000Z"
+        wishlistItemId:
+          type: string
+          format: uuid
+          nullable: true
+          example: null
+          description: Reference to wishlist item if set was added from wishlist
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/SetImage'
+          default: []
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:35:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:35:00.000Z"
+
+    SetListPagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          example: 42
+          description: Total number of items across all pages
+        totalPages:
+          type: integer
+          minimum: 0
+          example: 3
+          description: Total number of pages
+
+    SetListFilters:
+      type: object
+      required:
+        - availableThemes
+        - availableTags
+      properties:
+        availableThemes:
+          type: array
+          items:
+            type: string
+          example: ["Star Wars", "City", "Technic", "Creator"]
+          description: List of all themes present in user's collection
+        availableTags:
+          type: array
+          items:
+            type: string
+          example: ["space", "ship", "vehicle", "building"]
+          description: List of all tags used in user's collection
+
+    SetListResponse:
+      type: object
+      required:
+        - items
+        - pagination
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Set'
+        pagination:
+          $ref: '#/components/schemas/SetListPagination'
+        filters:
+          $ref: '#/components/schemas/SetListFilters'
+          nullable: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - NOT_FOUND
+                - METHOD_NOT_ALLOWED
+                - INTERNAL_ERROR
+              example: "INTERNAL_ERROR"
+            message:
+              type: string
+              example: "Failed to list sets"
+            details:
+              type: object
+              additionalProperties: true
+              description: Additional error context (validation errors, etc.)
+            stack:
+              type: string
+              description: Stack trace (only included in development mode)
+              example: "Error: Database connection failed\n    at handler (handler.ts:52:15)"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-17T12:00:00.000Z"

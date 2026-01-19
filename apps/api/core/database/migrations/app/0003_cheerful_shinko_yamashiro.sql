@@ -44,7 +44,7 @@ CREATE TABLE "user_daily_uploads" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "moc_instructions" ALTER COLUMN "build_time_hours" SET DATA TYPE integer;--> statement-breakpoint
+ALTER TABLE "moc_instructions" ALTER COLUMN "build_time_hours" SET DATA TYPE integer USING build_time_hours::integer;--> statement-breakpoint
 ALTER TABLE "moc_instructions" ADD COLUMN "source_platform" jsonb;--> statement-breakpoint
 ALTER TABLE "moc_instructions" ADD COLUMN "event_badges" jsonb;--> statement-breakpoint
 ALTER TABLE "moc_instructions" ADD COLUMN "moderation" jsonb;--> statement-breakpoint

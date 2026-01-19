@@ -23,10 +23,7 @@ import {
 } from '@repo/app-component-library'
 import { z } from 'zod'
 import { uploadToPresignedUrl } from '@repo/upload-client'
-import {
-  CreateSetSchema,
-  type CreateSetInput,
-} from '@repo/api-client/schemas/sets'
+import { CreateSetSchema, type CreateSetInput } from '@repo/api-client/schemas/sets'
 import {
   useAddSetMutation,
   usePresignSetImageMutation,
@@ -93,9 +90,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
         theme: formData.theme || undefined,
         tags: formData.tags,
         notes: formData.notes || undefined,
-        purchasePrice: formData.purchasePrice
-          ? Number(formData.purchasePrice)
-          : undefined,
+        purchasePrice: formData.purchasePrice ? Number(formData.purchasePrice) : undefined,
         purchaseDate: formData.purchaseDate
           ? new Date(formData.purchaseDate).toISOString()
           : undefined,

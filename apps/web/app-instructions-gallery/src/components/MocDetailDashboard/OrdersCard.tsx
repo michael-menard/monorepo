@@ -1,5 +1,13 @@
 import { AppBadge as Badge } from '@repo/app-component-library'
-import { ExternalLink, Package, Truck, CheckCircle2, XCircle, Clock, ShoppingCart } from 'lucide-react'
+import {
+  ExternalLink,
+  Package,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ShoppingCart,
+} from 'lucide-react'
 import { DashboardCard } from './DashboardCard'
 import type { MocOrder } from './__types__/moc'
 
@@ -119,14 +127,14 @@ export function OrdersCard({ orders }: OrdersCardProps) {
                     <span>{formatDate(order.orderDate)}</span>
                     <span>•</span>
                     <span>{order.partsCount.toLocaleString()} parts</span>
-                    {order.totalPrice && (
+                    {order.totalPrice ? (
                       <>
                         <span>•</span>
                         <span>{formatPrice(order.totalPrice, order.currency)}</span>
                       </>
-                    )}
+                    ) : null}
                   </div>
-                  {order.trackingUrl && order.status === 'shipped' && (
+                  {order.trackingUrl && order.status === 'shipped' ? (
                     <a
                       href={order.trackingUrl}
                       target="_blank"
@@ -136,13 +144,10 @@ export function OrdersCard({ orders }: OrdersCardProps) {
                       <Truck className="h-3 w-3" aria-hidden="true" />
                       Track Shipment
                     </a>
-                  )}
+                  ) : null}
                 </div>
 
-                <Badge
-                  variant="outline"
-                  className={`flex-shrink-0 gap-1 border ${status.color}`}
-                >
+                <Badge variant="outline" className={`flex-shrink-0 gap-1 border ${status.color}`}>
                   <StatusIcon className="h-3 w-3" />
                   {status.label}
                 </Badge>

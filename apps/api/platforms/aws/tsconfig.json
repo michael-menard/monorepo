@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+    "moduleResolution": "Bundler",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/core/*": ["../../core/*"],
+      "@/endpoints/*": ["./endpoints/*"],
+      "@/infrastructure/*": ["./infrastructure/*"]
+    }
+  },
+  "include": [
+    "../../core/**/*",
+    "endpoints/**/*",
+    "functions/**/*",
+    "infrastructure/**/*",
+    "stacks/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".serverless",
+    ".build",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

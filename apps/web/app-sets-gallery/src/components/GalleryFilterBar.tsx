@@ -109,9 +109,7 @@ export function GalleryFilterBar({
             <AppSelect
               options={builtOptions}
               value={builtFilter}
-              onValueChange={value =>
-                onBuiltFilterChange?.((value as BuiltFilterValue) ?? 'all')
-              }
+              onValueChange={value => onBuiltFilterChange?.((value as BuiltFilterValue) ?? 'all')}
               aria-label="Filter by build status"
             />
           </div>

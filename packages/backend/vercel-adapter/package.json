@@ -1,0 +1,39 @@
+{
+  "name": "@repo/vercel-adapter",
+  "version": "1.0.0",
+  "description": "Adapter layer to run AWS Lambda handlers on Vercel",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "dependencies": {
+    "@vercel/node": "^3.0.21",
+    "aws-jwt-verify": "^5.0.0",
+    "aws-lambda": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.4"
+  },
+  "keywords": [
+    "vercel",
+    "lambda",
+    "adapter",
+    "serverless"
+  ]
+}

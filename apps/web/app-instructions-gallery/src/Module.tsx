@@ -8,7 +8,6 @@
 import { z } from 'zod'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
-import { DetailPageModule } from './pages/detail-module'
 import { UploadPage } from './pages/UploadPage'
 import { EditPage } from './pages/EditPage'
 import { MocDetailModule } from './pages/MocDetailModule'

@@ -41,7 +41,7 @@ export function MainPage({ className }: MainPageProps) {
   const [instructions, setInstructions] = useState<Instruction[]>([])
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { data, isLoading, isError } = useGetInstructionsQuery({ page: 1, limit: 50 })
+  const { data, isLoading, isError, error } = useGetInstructionsQuery({ page: 1, limit: 50 })
 
   // Hydrate local instructions state from API response when it changes
   useEffect(() => {
@@ -128,6 +128,9 @@ export function MainPage({ className }: MainPageProps) {
 
   const isEmpty = filteredTableItems.length === 0
 
+  const showLoadingState = isLoading && !instructions.length
+  const showErrorState = isError && !isLoading
+
   // Sync view mode to URL query param
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -135,6 +138,23 @@ export function MainPage({ className }: MainPageProps) {
     url.searchParams.set('view', viewMode)
     window.history.replaceState({}, '', url.toString())
   }, [viewMode])
+
+  if (showErrorState) {
+    const message =
+      error && error instanceof Error
+        ? error.message
+        : 'Failed to load instructions. Please try again.'
+
+    return (
+      <div className={className}>
+        <div className="container mx-auto py-6 space-y-6">
+          <p className="text-destructive" role="alert">
+            {message}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={className}>
@@ -174,7 +194,9 @@ export function MainPage({ className }: MainPageProps) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
             >
-              {isEmpty ? (
+              {showLoadingState ? (
+                <p className="text-muted-foreground">Loading instructions...</p>
+              ) : isEmpty ? (
                 <GalleryEmptyState
                   icon={BookOpen}
                   title="No instructions yet"

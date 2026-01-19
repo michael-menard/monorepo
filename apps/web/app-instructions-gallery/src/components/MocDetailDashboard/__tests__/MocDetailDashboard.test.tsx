@@ -37,7 +37,7 @@ describe('MocSchema', () => {
 
   it('rejects invalid data', () => {
     expect(() =>
-      // @ts-expect-error intentional invalid data
+      // @ts-ignore - intentional invalid data to exercise runtime Zod validation
       MocSchema.parse({ ...BASE_MOC, coverImageUrl: 'not-a-url' }),
     ).toThrow()
   })

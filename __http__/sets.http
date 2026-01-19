@@ -1,0 +1,63 @@
+### Sets API
+### CRUD operations for user's LEGO sets collection
+
+@baseUrl = http://localhost:3000/api/sets
+@token = 00000000-0000-0000-0000-000000000001
+
+### List Sets
+# Returns paginated sets for authenticated user
+# Supports filtering by search, theme, tags, isBuilt
+# Supports sorting by title, setNumber, pieceCount, purchaseDate, purchasePrice, createdAt
+# http://localhost:3000/api/sets/list
+GET http://localhost:3000/api/sets/list
+Authorization: Bearer {{token}}
+
+###
+
+### List Sets with Filters
+GET {{baseUrl}}search=millennium&theme=Star Wars&isBuilt=true&sortField=title&sortDirection=asc
+Authorization: Bearer {{token}}
+
+###
+
+### Get Set by ID
+# @name getSet
+@setId = ee007dfd-e170-401f-a9c1-4c3983e8bdfb
+
+GET {{baseUrl}}/{{setId}}
+Authorization: Bearer {{token}}
+
+###
+
+### Create Set
+# Creates a new set for the authenticated user
+
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Millennium Falcon",
+  "setNumber": "75192",
+  "store": "LEGO",
+  "pieceCount": 7541,
+  "theme": "Star Wars",
+  "tags": ["UCS", "Star Wars", "Display"],
+  "isBuilt": false,
+  "quantity": 1,
+  "purchasePrice": 849.99,
+  "notes": "Ultimate Collector Series"
+}
+
+###
+
+### Create Set (Minimal)
+# Only required field is title
+
+POST {{baseUrl}}/api/sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "My New Set"
+}

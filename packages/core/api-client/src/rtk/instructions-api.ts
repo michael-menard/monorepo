@@ -155,7 +155,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
 
           return response
         },
-        providesTags: (result, _error, id) => [{ type: 'Instruction' as const, id }],
+        providesTags: (_result, _error, id) => [{ type: 'Instruction' as const, id }],
         // Long caching for individual instructions (30 minutes)
         ...getServerlessCacheConfig('long'),
       }),

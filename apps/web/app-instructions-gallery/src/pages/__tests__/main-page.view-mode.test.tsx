@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -47,14 +46,17 @@ describe('Instructions Gallery - View Mode Integration', () => {
     localStorage.clear()
 
     // Minimal window.location override for navigation assertions
-    // @ts-expect-error test override
-    delete window.location
-    // @ts-expect-error minimal href implementation
-    window.location = { href: 'http://localhost/instructions' } as Location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/instructions' },
+    })
   })
 
   afterEach(() => {
-    window.location = originalLocation
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    })
   })
 
   it('defaults to grid view and renders gallery grid', () => {

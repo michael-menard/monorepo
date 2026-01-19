@@ -49,7 +49,8 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
 
       navigate({
         replace: true,
-        search: (prev: any) => {
+        // Cast to router search reducer type to satisfy @tanstack/router generics
+        search: ((prev: any) => {
           const next = { ...prev } as any
 
           if (resolvedSorting.length === 0) {
@@ -65,7 +66,7 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
           }
 
           return next
-        },
+        }) as any,
       })
     },
     [navigate, sorting, maxSorts],

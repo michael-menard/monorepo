@@ -15,4 +15,4 @@ export {
   getJwtClaims,
   type AuthResult,
   type AuthzResult,
-} from './auth-validator'
+} from './auth-validator.js'
