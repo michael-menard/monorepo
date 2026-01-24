@@ -117,10 +117,10 @@ function sendToSlack(webhookUrl, payload) {
       },
     }
 
-    const req = https.request(options, (res) => {
+    const req = https.request(options, res => {
       let responseBody = ''
 
-      res.on('data', (chunk) => {
+      res.on('data', chunk => {
         responseBody += chunk
       })
 
@@ -131,14 +131,12 @@ function sendToSlack(webhookUrl, payload) {
             body: responseBody,
           })
         } else {
-          reject(
-            new Error(`Slack webhook returned status ${res.statusCode}: ${responseBody}`),
-          )
+          reject(new Error(`Slack webhook returned status ${res.statusCode}: ${responseBody}`))
         }
       })
     })
 
-    req.on('error', (error) => {
+    req.on('error', error => {
       reject(error)
     })
 
@@ -150,7 +148,7 @@ function sendToSlack(webhookUrl, payload) {
 /**
  * Lambda handler
  */
-exports.handler = async (event) => {
+exports.handler = async event => {
   console.log('Received SNS event:', JSON.stringify(event, null, 2))
 
   const webhookUrl = process.env.SLACK_WEBHOOK_URL

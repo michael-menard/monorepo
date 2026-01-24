@@ -1,4 +1,13 @@
-import { boolean, decimal, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  decimal,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 // NOTE: We currently model user ownership via Cognito user IDs (text), not a relational users table.
 // This stays consistent with the rest of the schema (gallery, wishlist, MOCs).

@@ -15,7 +15,6 @@ import {
   type APIGatewayProxyResult,
   type HealthCheckData,
 } from '@repo/lambda-responses'
-
 import type { ApiSuccessResponse, ApiErrorType } from './response-types'
 
 // Re-export utilities from the package

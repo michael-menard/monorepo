@@ -15,8 +15,8 @@ import {
 } from '@aws-sdk/client-apigatewaymanagementapi'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb'
-import { logger } from '@/core/observability/logger'
 import type { WebSocketMessage } from './message-types'
+import { logger } from '@/core/observability/logger'
 
 // Initialize clients
 const dynamoClient = new DynamoDBClient({})

@@ -16,7 +16,7 @@ export function createDatabaseIamRoles(
   cloudWatchLogsBucket: any,
   postgres: any,
   openSearch: any,
-  stage: string
+  stage: string,
 ) {
   /**
    * ECS Task Execution Role for Observability Services
@@ -72,24 +72,25 @@ export function createDatabaseIamRoles(
    * - Read/write access to CloudWatch logs bucket
    */
   const openReplayS3Policy = new aws.iam.Policy('OpenReplayS3Policy', {
-    policy: pulumi.all([openReplaySessionsBucket.nodes.bucket.arn, cloudWatchLogsBucket.nodes.bucket.arn]).apply(([sessionsArn, logsArn]) => JSON.stringify({
-      Version: '2012-10-17',
-      Statement: [
-        {
-          Effect: 'Allow',
-          Action: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-          Resource: [
-            `${sessionsArn}/*`,
-            `${logsArn}/*`,
+    policy: pulumi
+      .all([openReplaySessionsBucket.nodes.bucket.arn, cloudWatchLogsBucket.nodes.bucket.arn])
+      .apply(([sessionsArn, logsArn]) =>
+        JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Action: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+              Resource: [`${sessionsArn}/*`, `${logsArn}/*`],
+            },
+            {
+              Effect: 'Allow',
+              Action: ['s3:ListBucket'],
+              Resource: [sessionsArn, logsArn],
+            },
           ],
-        },
-        {
-          Effect: 'Allow',
-          Action: ['s3:ListBucket'],
-          Resource: [sessionsArn, logsArn],
-        },
-      ],
-    })),
+        }),
+      ),
   })
 
   new aws.iam.RolePolicyAttachment('OpenReplayS3PolicyAttachment', {

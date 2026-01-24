@@ -1,6 +1,6 @@
 /**
  * VPC Infrastructure for LEGO API Serverless
- * 
+ *
  * Creates VPC with public/private subnets across 2 Availability Zones
  * - /24 CIDR block (10.0.0.0/24) for 256 IP addresses
  * - Public subnets: /27 (32 IPs each) for NAT Gateway and ALB

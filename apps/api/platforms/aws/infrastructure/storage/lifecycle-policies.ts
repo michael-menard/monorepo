@@ -1,6 +1,6 @@
 /**
  * S3 Lifecycle Policies for Cost Optimization
- * 
+ *
  * Applies lifecycle policies to S3 buckets for automatic cost optimization:
  * - MOC files: Intelligent-Tiering after 30 days
  * - Gallery images: Standard-IA after 90 days, Glacier after 1 year

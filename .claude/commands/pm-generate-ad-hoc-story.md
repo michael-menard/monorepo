@@ -77,8 +77,9 @@ If the index must be updated:
 - Do NOT modify the index in this step
 
 Output:
-Produce ONE file only:
-- STORY-XXX.md (or a clearly labeled ad-hoc story file if STORY-XXX was not provided)
+Produce ONE story directory with file:
+- plans/stories/backlog/STORY-XXX/STORY-XXX.md (or clearly labeled ad-hoc story if STORY-XXX was not provided)
+- plans/stories/backlog/STORY-XXX/_pm/ (artifact directory)
 
 Hard Constraints:
 - Do NOT modify plans/stories.index.md

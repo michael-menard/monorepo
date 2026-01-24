@@ -1,12 +1,12 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { z } from 'zod'
 import { desc, eq } from 'drizzle-orm'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import type { SetImage } from '@repo/api-client/schemas/sets'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { db } from '@/core/database/client'
 import { sets, setImages } from '@/core/database/schema'
-import type { SetImage } from '@repo/api-client/schemas/sets'
 
 /**
  * Register Set Image
@@ -26,9 +26,7 @@ const RegisterBodySchema = z.object({
   thumbnailUrl: z.string().url().optional(),
 })
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {

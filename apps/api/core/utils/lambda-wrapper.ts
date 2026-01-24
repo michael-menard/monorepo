@@ -23,14 +23,14 @@
  */
 
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
-import { errorResponseFromError } from '@/core/utils/responses'
-import { sanitizeError, sanitizeErrorForLogging } from '@/core/observability/error-sanitizer'
 import {
   createLambdaLogger,
   generateCorrelationId,
   getXRayTraceId,
   extractCorrelationId,
 } from '@repo/logger'
+import { errorResponseFromError } from '@/core/utils/responses'
+import { sanitizeError, sanitizeErrorForLogging } from '@/core/observability/error-sanitizer'
 import { addAnnotation, addMetadata, addError } from '@/core/observability/tracing'
 import { recordColdStart, recordExecution, recordError } from '@/core/observability/metrics'
 

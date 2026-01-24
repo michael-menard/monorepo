@@ -1,8 +1,8 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
-import { db } from '@/core/database/client'
-import { mocPartsLists, mocInstructions } from '@/core/database/schema'
 import { and, eq } from 'drizzle-orm'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { db } from '@/core/database/client'
+import { mocPartsLists, mocInstructions } from '@/core/database/schema'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { logger } from '@/core/observability/logger'
 

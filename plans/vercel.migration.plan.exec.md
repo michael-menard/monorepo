@@ -18,7 +18,14 @@ tags:
 - A story folder is the source of truth for all related documentation.
 - Story docs MUST include:
   - YAML front matter
+  - A Token Budget section (track cost per phase)
   - An append-only Agent Log section (at bottom)
+
+## Token Budget Rule
+- Each story MUST include a `## Token Budget` section
+- Before starting a phase, record `/cost` session total
+- After completing a phase, record delta
+- Template: `plans/stories/TOKEN-BUDGET-TEMPLATE.md`
 
 ## Naming Rule (timestamps in filenames)
 All docs MUST include a timestamp in the filename:

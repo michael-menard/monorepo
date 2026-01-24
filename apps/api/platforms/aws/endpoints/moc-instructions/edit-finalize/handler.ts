@@ -29,7 +29,9 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-
+import { validateMagicBytes } from '@repo/file-validator'
+import type { MocInstruction } from '@repo/api-types/moc'
+import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles } from '@/core/database/schema'
 import {
@@ -45,9 +47,6 @@ import {
 } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
 import { updateMocIndex } from '@/endpoints/moc-instructions/_shared/opensearch-moc'
-import { validateMagicBytes } from '@repo/file-validator'
-import type { MocInstruction } from '@repo/api-types/moc'
-import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
 import { createPostgresRateLimitStore } from '@/core/rate-limit/postgres-store'
 import { getUploadConfig } from '@/core/config/upload'
 
@@ -279,8 +278,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
         },
         body: JSON.stringify({
           code: 'CONCURRENT_EDIT',
-          message:
-            'This MOC was modified since you started editing. Please reload and try again.',
+          message: 'This MOC was modified since you started editing. Please reload and try again.',
           currentUpdatedAt: existingMoc.updatedAt.toISOString(),
           correlationId: requestId,
         }),
@@ -390,12 +388,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       const existingFiles = await db
         .select({ id: mocFiles.id, mocId: mocFiles.mocId })
         .from(mocFiles)
-        .where(
-          and(
-            inArray(mocFiles.id, removedFileIds),
-            isNull(mocFiles.deletedAt),
-          ),
-        )
+        .where(and(inArray(mocFiles.id, removedFileIds), isNull(mocFiles.deletedAt)))
 
       // Verify all files belong to this MOC
       for (const file of existingFiles) {
@@ -587,12 +580,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     const activeFiles = await db
       .select()
       .from(mocFiles)
-      .where(
-        and(
-          eq(mocFiles.mocId, mocId),
-          isNull(mocFiles.deletedAt),
-        ),
-      )
+      .where(and(eq(mocFiles.mocId, mocId), isNull(mocFiles.deletedAt)))
 
     // Generate presigned GET URLs for files
     const filesWithUrls = await Promise.all(

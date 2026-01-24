@@ -150,3 +150,123 @@ export const ImageRowSchema = z.object({
 })
 
 export type ImageRow = z.infer<typeof ImageRowSchema>
+
+// ============================================================
+// IMAGE OPERATION SCHEMAS (STORY-007)
+// ============================================================
+
+/**
+ * List Images Filter Options
+ *
+ * - page/limit: Pagination params
+ * - albumId: Optional filter to show images in specific album
+ *   When omitted, returns only standalone images (albumId IS NULL)
+ */
+export const ListImagesFiltersSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  albumId: z.string().uuid().optional(),
+})
+
+export type ListImagesFilters = z.infer<typeof ListImagesFiltersSchema>
+
+/**
+ * Search Images Filter Options
+ *
+ * - search: Required search term (searches title, description, tags)
+ * - page/limit: Pagination params
+ */
+export const SearchImagesFiltersSchema = z.object({
+  search: z.string().min(1, 'Search term is required'),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+})
+
+export type SearchImagesFilters = z.infer<typeof SearchImagesFiltersSchema>
+
+/**
+ * Flag Image Input Schema
+ *
+ * - imageId: Required UUID of image to flag
+ * - reason: Optional reason for flagging
+ */
+export const FlagImageInputSchema = z.object({
+  imageId: z.string().regex(uuidRegex, 'Invalid image ID format'),
+  reason: z.string().max(1000).optional().nullable(),
+})
+
+export type FlagImageInput = z.infer<typeof FlagImageInputSchema>
+
+/**
+ * Image List Response Schema
+ */
+export const ImageListResponseSchema = z.object({
+  data: z.array(GalleryImageSchema),
+  pagination: PaginationSchema,
+})
+
+export type ImageListResponse = z.infer<typeof ImageListResponseSchema>
+
+/**
+ * Flag Row Schema (DB row format)
+ */
+export const FlagRowSchema = z.object({
+  id: z.string().uuid(),
+  imageId: z.string().uuid(),
+  userId: z.string(),
+  reason: z.string().nullable(),
+  createdAt: z.date(),
+  lastUpdatedAt: z.date(),
+})
+
+export type FlagRow = z.infer<typeof FlagRowSchema>
+
+/**
+ * Flag Result Schema (API response format)
+ */
+export const FlagResultSchema = z.object({
+  id: z.string().uuid(),
+  imageId: z.string().uuid(),
+  userId: z.string(),
+  reason: z.string().nullable(),
+  createdAt: z.string(), // ISO date string
+  lastUpdatedAt: z.string(), // ISO date string
+})
+
+export type FlagResult = z.infer<typeof FlagResultSchema>
+
+// ============================================================
+// IMAGE WRITE OPERATION SCHEMAS (STORY-008)
+// ============================================================
+
+/**
+ * Update Image Input Schema
+ *
+ * Validation for updating an existing image (patch semantics).
+ * - title: Optional, 1-200 chars if provided (empty string invalid)
+ * - description: Optional, can be null (to clear) or string up to 2000 chars
+ * - tags: Optional, can be null (to clear), empty array, or array of strings (max 20 tags, 50 chars each)
+ * - albumId: Optional, can be null (move to standalone) or valid UUID
+ *
+ * Note: imageUrl, thumbnailUrl, and flagged are NOT updatable via this endpoint.
+ */
+export const UpdateImageInputSchema = z.object({
+  title: z
+    .string()
+    .min(1, 'Title cannot be empty')
+    .max(200, 'Title must be less than 200 characters')
+    .optional(),
+  description: z
+    .string()
+    .max(2000, 'Description must be less than 2000 characters')
+    .nullable()
+    .optional(),
+  tags: z
+    .array(z.string().max(50, 'Each tag must be 50 characters or less'))
+    .max(20, 'Maximum 20 tags allowed')
+    .nullable()
+    .optional(),
+  albumId: z.string().regex(uuidRegex, 'Invalid album ID format').nullable().optional(),
+})
+
+export type UpdateImageInput = z.infer<typeof UpdateImageInputSchema>

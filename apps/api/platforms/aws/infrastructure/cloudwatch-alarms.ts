@@ -263,7 +263,7 @@ export function createCompositeHealthAlarm(
   const threshold = options?.threshold ?? 2
 
   // Build alarm rule: at least N alarms in ALARM state
-  const alarmNames = alarms.map((alarm) => alarm.name)
+  const alarmNames = alarms.map(alarm => alarm.name)
   const alarmRule = `ALARM(${alarmNames.join(') OR ALARM(')})`
 
   return new aws.cloudwatch.CompositeAlarm('ApiHealthCompositeAlarm', {

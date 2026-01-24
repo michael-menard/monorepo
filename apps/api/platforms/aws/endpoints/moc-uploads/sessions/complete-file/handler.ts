@@ -9,6 +9,9 @@
  * Route: POST /api/mocs/uploads/sessions/:sessionId/files/:fileId/complete
  */
 
+import { eq, and, asc } from 'drizzle-orm'
+import { CompleteMultipartUploadCommand } from '@aws-sdk/client-s3'
+import { CompleteFileRequestSchema, type CompleteFileResponse } from '../_shared/schemas'
 import {
   successResponse,
   errorResponseFromError,
@@ -21,11 +24,8 @@ import {
 import { createLogger } from '@/core/observability/logger'
 import { getDbAsync } from '@/core/database/client'
 import { uploadSessions, uploadSessionFiles, uploadSessionParts } from '@/core/database/schema'
-import { eq, and, asc } from 'drizzle-orm'
 import { getS3Client } from '@/core/storage/s3'
-import { CompleteMultipartUploadCommand } from '@aws-sdk/client-s3'
 import { getEnv } from '@/core/utils/env'
-import { CompleteFileRequestSchema, type CompleteFileResponse } from '../_shared/schemas'
 
 const logger = createLogger('complete-file-upload')
 

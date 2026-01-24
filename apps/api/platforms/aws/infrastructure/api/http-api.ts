@@ -1,6 +1,6 @@
 /**
  * HTTP API Gateway Configuration
- * 
+ *
  * Creates API Gateway HTTP API with:
  * - CORS enabled for all origins
  * - JWT authentication via Cognito for protected routes
@@ -21,7 +21,13 @@ export function createHttpApi(stage: string) {
           ? ['https://lego-moc-instructions.com']
           : ['http://localhost:3002', 'http://localhost:5173'],
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token'],
+      allowHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Amz-Date',
+        'X-Api-Key',
+        'X-Amz-Security-Token',
+      ],
       allowCredentials: true,
     },
   })

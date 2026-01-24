@@ -1,10 +1,10 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { CreateSetSchema, type CreateSetInput, type Set } from '@repo/api-client/schemas/sets'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { db } from '@/core/database/client'
 import { sets } from '@/core/database/schema'
-import { CreateSetSchema, type CreateSetInput, type Set } from '@repo/api-client/schemas/sets'
 
 // Drizzle insert type for sets table
 export type NewSetRow = typeof sets.$inferInsert
@@ -20,9 +20,7 @@ export type NewSetRow = typeof sets.$inferInsert
 // Simple wrapper to validate request body shape before mapping to Drizzle
 const CreateSetRequestSchema = CreateSetSchema
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {
@@ -62,22 +60,16 @@ export const handler = async (
         input.purchasePrice !== undefined && input.purchasePrice !== null
           ? input.purchasePrice.toString()
           : null,
-      tax:
-        input.tax !== undefined && input.tax !== null ? input.tax.toString() : null,
+      tax: input.tax !== undefined && input.tax !== null ? input.tax.toString() : null,
       shipping:
-        input.shipping !== undefined && input.shipping !== null
-          ? input.shipping.toString()
-          : null,
+        input.shipping !== undefined && input.shipping !== null ? input.shipping.toString() : null,
       purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : null,
       wishlistItemId: null,
       createdAt: now,
       updatedAt: now,
     }
 
-    const [row] = await db
-      .insert(sets)
-      .values(newSet)
-      .returning()
+    const [row] = await db.insert(sets).values(newSet).returning()
 
     // Normalize DB row to API Set shape
     const set: Set = {
@@ -98,14 +90,8 @@ export const handler = async (
         row.purchasePrice === null || row.purchasePrice === undefined
           ? null
           : Number(row.purchasePrice),
-      tax:
-        row.tax === null || row.tax === undefined
-          ? null
-          : Number(row.tax),
-      shipping:
-        row.shipping === null || row.shipping === undefined
-          ? null
-          : Number(row.shipping),
+      tax: row.tax === null || row.tax === undefined ? null : Number(row.tax),
+      shipping: row.shipping === null || row.shipping === undefined ? null : Number(row.shipping),
       purchaseDate: row.purchaseDate ? row.purchaseDate.toISOString() : null,
       wishlistItemId: row.wishlistItemId,
       images: [],

@@ -65,6 +65,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:custom": "tsx core/database/migrate.ts",
     "db:seed": "tsx core/database/seeds/index.ts",
+    "db:reset": "tsx core/database/reset.ts",
     "db:status": "drizzle-kit status",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",

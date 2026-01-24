@@ -2,13 +2,13 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { z } from 'zod'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { eq } from 'drizzle-orm'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { db } from '@/core/database/client'
 import { sets } from '@/core/database/schema'
 import { sanitizeFilenameForS3 } from '@/core/utils/filename-sanitizer'
-import { eq } from 'drizzle-orm'
 
 /**
  * Presign Set Image Upload
@@ -29,9 +29,7 @@ const PresignBodySchema = z.object({
 
 const s3Client = new S3Client({})
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {

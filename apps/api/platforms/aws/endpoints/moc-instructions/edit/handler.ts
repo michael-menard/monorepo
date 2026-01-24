@@ -17,7 +17,8 @@
 
 import { z } from 'zod'
 import { eq, and, ne } from 'drizzle-orm'
-
+import { findAvailableSlug } from '@repo/upload-types'
+import type { MocInstruction } from '@repo/api-types/moc'
 import { db } from '@/core/database/client'
 import { mocInstructions } from '@/core/database/schema'
 import {
@@ -31,9 +32,7 @@ import {
   type APIGatewayProxyResult,
 } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
-import { findAvailableSlug } from '@repo/upload-types'
 import { updateMocIndex } from '@/endpoints/moc-instructions/_shared/opensearch-moc'
-import type { MocInstruction } from '@repo/api-types/moc'
 
 const logger = createLogger('moc-patch-metadata')
 

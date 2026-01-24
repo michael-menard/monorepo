@@ -1,6 +1,6 @@
 /**
  * WebSocket API Gateway Configuration
- * 
+ *
  * Creates WebSocket API Gateway with:
  * - Real-time bidirectional communication
  * - Used for upload progress, notifications, and real-time updates

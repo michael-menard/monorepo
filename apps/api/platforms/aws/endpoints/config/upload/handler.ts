@@ -7,11 +7,11 @@
  * API Gateway Endpoint: GET /api/config/upload
  */
 
+import type { UploadConfig } from '@repo/upload-config'
 import { successResponse, type APIGatewayProxyResult } from '@/core/utils/responses'
 import { withErrorHandling } from '@/core/utils/lambda-wrapper'
 import { createLogger } from '@/core/observability/logger'
 import { loadEnvConfig } from '@/core/config/env-loader'
-import type { UploadConfig } from '@repo/upload-config'
 
 const logger = createLogger('config-upload')
 

@@ -2,8 +2,8 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { z } from 'zod'
 import { DeleteObjectsCommand, S3Client } from '@aws-sdk/client-s3'
 import { eq, and } from 'drizzle-orm'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { logger } from '@/core/observability/logger'
 import { errorResponse, noContentResponse } from '@/core/utils/responses'
 import { db } from '@/core/database/client'
 import { sets, setImages } from '@/core/database/schema'
@@ -21,9 +21,7 @@ const PathParamsSchema = z.object({
 
 const s3Client = new S3Client({})
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {
@@ -64,9 +62,7 @@ export const handler = async (
     }
 
     // Delete DB record
-    await db
-      .delete(setImages)
-      .where(and(eq(setImages.id, imageId), eq(setImages.setId, setId)))
+    await db.delete(setImages).where(and(eq(setImages.id, imageId), eq(setImages.setId, setId)))
 
     const bucket = process.env.SETS_BUCKET
 
@@ -123,9 +119,7 @@ export const handler = async (
 function extractS3KeyFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url)
-    const key = parsed.pathname.startsWith('/')
-      ? parsed.pathname.slice(1)
-      : parsed.pathname
+    const key = parsed.pathname.startsWith('/') ? parsed.pathname.slice(1) : parsed.pathname
     return key || null
   } catch {
     return null

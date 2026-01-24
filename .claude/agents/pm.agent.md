@@ -33,8 +33,28 @@ The PM agent must produce a `story.md` file containing:
 - Do NOT assume infra exists unless stated
 - Every AC must be verifiable by QA
 
+## Token Logging (REQUIRED)
+
+Every PM agent output MUST include a Token Log section.
+See: `.claude/agents/_token-logging.md` for format.
+
+Append to your output artifact:
+
+```markdown
+## Token Log
+
+| Operation | Type | Bytes | Tokens (est) |
+|-----------|------|-------|--------------|
+| Read: stories.index.md | input | X | ~Y |
+| Read: existing-handlers/* | input | X | ~Y |
+| Write: STORY-XXX.md | output | X | ~Y |
+| **Total Input** | — | X | **~Y** |
+| **Total Output** | — | X | **~Y** |
+```
+
 ## Definition of Done
 - All ACs are unambiguous
 - Demo Script can be followed by a human
 - Constraints are explicit
 - QA can meaningfully verify success/failure
+- Token Log section is complete

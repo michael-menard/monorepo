@@ -1,6 +1,6 @@
 /**
  * API Gateway Authorizers
- * 
+ *
  * Creates JWT authorizers for API Gateway:
  * - Cognito JWT Authorizer for HTTP API
  * - Validates JWT tokens from Cognito User Pool

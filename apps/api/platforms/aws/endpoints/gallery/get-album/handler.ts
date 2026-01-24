@@ -4,8 +4,8 @@
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, desc } from 'drizzle-orm'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { AlbumIdSchema } from '@/endpoints/gallery/schemas'
 import { db } from '@/core/database/client'

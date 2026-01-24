@@ -9,6 +9,10 @@
  * Route: POST /api/mocs/uploads/sessions/:sessionId/files
  */
 
+import { eq, and } from 'drizzle-orm'
+import { v4 as uuidv4 } from 'uuid'
+import { CreateMultipartUploadCommand } from '@aws-sdk/client-s3'
+import { RegisterFileRequestSchema, type RegisterFileResponse } from '../_shared/schemas'
 import {
   successResponse,
   errorResponseFromError,
@@ -21,13 +25,9 @@ import {
 import { createLogger } from '@/core/observability/logger'
 import { getDbAsync } from '@/core/database/client'
 import { uploadSessions, uploadSessionFiles } from '@/core/database/schema'
-import { eq, and } from 'drizzle-orm'
-import { v4 as uuidv4 } from 'uuid'
 import { getS3Client } from '@/core/storage/s3'
-import { CreateMultipartUploadCommand } from '@aws-sdk/client-s3'
 import { getEnv } from '@/core/utils/env'
 import { getUploadConfig, isMimeTypeAllowed, getAllowedMimeTypes } from '@/core/config/upload'
-import { RegisterFileRequestSchema, type RegisterFileResponse } from '../_shared/schemas'
 
 const logger = createLogger('register-upload-file')
 

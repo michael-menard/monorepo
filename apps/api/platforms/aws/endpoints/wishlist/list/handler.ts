@@ -13,13 +13,13 @@
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { eq, and, asc, desc, ilike, or, sql, count } from 'drizzle-orm'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { z } from 'zod'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { db } from '@/core/database/client'
 import { getRedisClient } from '@/core/cache/redis'
 import { wishlistItems } from '@/core/database/schema'
-import { z } from 'zod'
 
 /**
  * Query Parameters Schema for List Wishlist
@@ -48,19 +48,15 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
     // Validate query parameters
     const queryParams = ListWishlistQuerySchema.parse(event.queryStringParameters || {})
-    const {
-      q,
-      store,
-      tags,
-      priority,
-      sort = 'sortOrder',
-      order = 'asc',
-      page,
-      limit,
-    } = queryParams
+    const { q, store, tags, priority, sort = 'sortOrder', order = 'asc', page, limit } = queryParams
 
     // Parse comma-separated tags
-    const tagList = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
+    const tagList = tags
+      ? tags
+          .split(',')
+          .map(t => t.trim())
+          .filter(Boolean)
+      : []
 
     // Generate cache key based on all params
     const cacheKey = `wishlist:user:${userId}:q:${q || ''}:store:${store || ''}:tags:${tagList.join(',')}:priority:${priority ?? ''}:sort:${sort}:order:${order}:page:${page}:limit:${limit}`
@@ -87,17 +83,17 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     if (q) {
       // Search in title and setNumber
       conditions.push(
-        or(
-          ilike(wishlistItems.title, `%${q}%`),
-          ilike(wishlistItems.setNumber, `%${q}%`),
-        )!,
+        or(ilike(wishlistItems.title, `%${q}%`), ilike(wishlistItems.setNumber, `%${q}%`))!,
       )
     }
 
     if (tagList.length > 0) {
       // Filter by tags (items must have at least one matching tag)
       conditions.push(
-        sql`${wishlistItems.tags} && ARRAY[${sql.join(tagList.map(t => sql`${t}`), sql`,`)}]::text[]`,
+        sql`${wishlistItems.tags} && ARRAY[${sql.join(
+          tagList.map(t => sql`${t}`),
+          sql`,`,
+        )}]::text[]`,
       )
     }
 

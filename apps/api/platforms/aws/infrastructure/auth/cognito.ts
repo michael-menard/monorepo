@@ -1,6 +1,6 @@
 /**
  * Cognito Authentication Infrastructure
- * 
+ *
  * Creates Cognito User Pool and Identity Pool for authentication:
  * - Email-based sign-in with auto-verification
  * - Password policy: 8+ chars, lowercase, uppercase, digits

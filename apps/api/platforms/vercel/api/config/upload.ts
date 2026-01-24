@@ -10,8 +10,8 @@
  * - Formats response with CORS headers
  * - Returns public-safe upload configuration
  */
-import dotenv from 'dotenv'
 import { resolve } from 'path'
+import dotenv from 'dotenv'
 
 // Load .env.local from the vercel platform directory
 dotenv.config({ path: resolve(process.cwd(), '.env.local') })
@@ -43,10 +43,7 @@ function addCorsHeaders(res: VercelResponse, origin: string | undefined): void {
  * GET /api/config/upload - Returns public-safe upload configuration
  * OPTIONS /api/config/upload - CORS preflight
  */
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const origin = req.headers.origin as string | undefined
 
   // Handle CORS preflight

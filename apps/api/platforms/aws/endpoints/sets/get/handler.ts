@@ -9,8 +9,8 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { db } from '@/core/database/client'
 import { sets, setImages } from '@/core/database/schema'
@@ -19,9 +19,7 @@ const SetIdSchema = z.object({
   id: z.string().uuid('Invalid set ID format'),
 })
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {

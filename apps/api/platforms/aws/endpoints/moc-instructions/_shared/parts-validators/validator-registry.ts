@@ -7,7 +7,6 @@
  * extended with new formats without modifying existing code.
  */
 
-import { createLogger } from '@/core/observability/logger'
 import type {
   PartsListValidator,
   PartsValidationResult,
@@ -17,6 +16,7 @@ import type {
 import { getValidatorConfig } from './config'
 import csvValidator from './csv-validator'
 import xmlValidator from './xml-validator'
+import { createLogger } from '@/core/observability/logger'
 
 const logger = createLogger('validator-registry')
 

@@ -89,8 +89,9 @@ State one of:
 Do NOT modify the index in this step.
 
 Output:
-Produce ONE file only:
-- BUG-XXX.md (or a clearly named bug story file if BUG-XXX not provided)
+Produce ONE story directory with file:
+- plans/stories/backlog/BUG-XXX/BUG-XXX.md (or clearly named bug story if BUG-XXX not provided)
+- plans/stories/backlog/BUG-XXX/_pm/ (artifact directory)
 
 Hard Constraints:
 - Do NOT generate multiple stories

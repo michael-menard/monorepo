@@ -1,1288 +1,1088 @@
 # Feature Development Workflow
 
-A comprehensive guide for implementing features in this codebase, integrating API Portability, AI Automation, and the consolidated story approach.
+A comprehensive guide for implementing features using the structured multi-agent pipeline with Claude Code commands.
 
 ## Table of Contents
 
 1. [Overview](#1-overview)
-2. [Prerequisites](#2-prerequisites)
-3. [The Feature Development Lifecycle](#3-the-feature-development-lifecycle)
-4. [Command Reference](#4-command-reference)
-5. [Architecture Quick Reference](#5-architecture-quick-reference)
-6. [Common Patterns](#6-common-patterns)
+2. [Story Lifecycle](#2-story-lifecycle)
+3. [Command Reference](#3-command-reference)
+4. [The Development Pipeline](#4-the-development-pipeline)
+5. [Artifacts and Directory Structure](#5-artifacts-and-directory-structure)
+6. [Quality Gates](#6-quality-gates)
 7. [Troubleshooting](#7-troubleshooting)
-8. [Examples](#8-examples)
 
 ---
 
 ## 1. Overview
 
-### The Philosophy: Foundation -> AI Automation -> 10x Velocity
+### The Multi-Agent Pipeline
 
-This project follows a strategic approach to development that maximizes velocity through proper sequencing:
+This project uses a structured, artifact-driven workflow where specialized agents handle different phases of story development. Each agent:
 
-```mermaid
-graph LR
-    A[Phase 1<br/>API Portability] --> B[Phase 2<br/>AI Automation]
-    B --> C[Phase 3<br/>10x Velocity]
-
-    style A fill:#e3f2fd
-    style B fill:#fff3e0
-    style C fill:#e8f5e9
-```
-
-1. **API Portability** - Hexagonal architecture enables fast local development (2 min vs 5+ min deploys)
-2. **AI Automation** - MCP servers and skills provide context-aware code generation
-3. **10x Velocity** - Combined foundation enables rapid feature implementation
-
-### What Changed from the Old Workflow
-
-| Old Workflow | New Workflow |
-|-------------|--------------|
-| Lambda-only development | Hexagonal architecture with local Express server |
-| Manual code scaffolding | AI-assisted scaffolding via skills |
-| Granular stories (1 per endpoint) | Consolidated vertical slice stories |
-| Deploy-to-test cycle (5+ min) | Local-first development (seconds) |
-| Manual cross-file updates | MCP-informed atomic changes |
-
-### When to Use Which Approach
-
-| Scenario | Approach |
-|----------|----------|
-| New full feature (API + UI) | `/implement` with parallel mode |
-| Single API endpoint | Manual implementation or `/scaffold-endpoint` |
-| UI component only | `/scaffold-component` |
-| Bug fix | Standard git workflow |
-| Refactoring | `/refactor` agent (when available) |
-
----
-
-## 2. Prerequisites
-
-### Local Development Setup
-
-Before implementing features, ensure your local environment is configured:
-
-#### Required Tools
-
-```bash
-# Check prerequisites
-node --version      # v18+ required
-pnpm --version      # v9+ required
-docker --version    # Docker Desktop required
-gh auth status      # GitHub CLI authenticated
-```
-
-#### Docker + Express Setup
-
-```bash
-# Start local database
-docker compose -f docker/docker-compose.local.yml up -d
-
-# Verify database is running
-docker ps | grep lego-moc-postgres
-
-# Run migrations
-pnpm --filter @repo/db migrate:local
-
-# Optional: Seed test data
-pnpm --filter @repo/db seed:local
-```
-
-#### Environment Configuration
-
-Create `.env.local` in the project root:
-
-```bash
-# Database (Docker)
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USERNAME=lego_moc_user
-POSTGRES_PASSWORD=local_dev_password
-POSTGRES_DATABASE=lego_moc_db
-
-# Auth (real Cognito - free tier)
-COGNITO_USER_POOL_ID=us-east-1_xxxxx
-COGNITO_CLIENT_ID=xxxxxxxxx
-COGNITO_REGION=us-east-1
-
-# S3 (options: real S3 or local MinIO)
-S3_BUCKET=lego-moc-files-dev
-
-# Server
-PORT=4000
-NODE_ENV=development
-```
-
-### MCP Servers
-
-MCP (Model Context Protocol) servers provide AI assistants with project context. When fully implemented, configure in `.claude/settings.local.json`:
-
-```json
-{
-  "mcpServers": {
-    "drizzle-mcp": {
-      "command": "node",
-      "args": ["tools/mcp-servers/drizzle-mcp/dist/index.js"],
-      "cwd": "/path/to/project"
-    },
-    "serverless-mcp": {
-      "command": "node",
-      "args": ["tools/mcp-servers/serverless-mcp/dist/index.js"],
-      "cwd": "/path/to/project"
-    }
-  }
-}
-```
-
-### Understanding Project Conventions
-
-Before implementing features, familiarize yourself with:
-
-| Document | Location | Purpose |
-|----------|----------|---------|
-| CLAUDE.md | `/CLAUDE.md` | Core project conventions |
-| Coding Standards | `/docs/architecture/coding-standards.md` | Code style and patterns |
-| Tech Stack | `/docs/architecture/tech-stack.md` | Technology choices |
-| Source Tree | `/docs/architecture/source-tree.md` | Directory structure |
-
-**Key Conventions (from CLAUDE.md):**
-
-- Use `@repo/ui` for all UI components (never individual paths)
-- Use `@repo/logger` instead of `console.log`
-- Use Zod schemas for types (never TypeScript interfaces)
-- NO barrel files (import directly from source)
-- Follow component directory structure
-
----
-
-## 3. The Feature Development Lifecycle
-
-### Workflow Overview
+- Has a single responsibility
+- Communicates via durable artifact files (not chat context)
+- Enforces hard quality gates before passing to the next phase
 
 ```mermaid
-graph TB
-    subgraph "Phase 1: Story Selection"
-        A1[Pick Story] --> A2[Review Dependencies]
-        A2 --> A3[Verify Ready Status]
+flowchart LR
+    subgraph Planning
+        A[PM Generate] --> B[QA Elaborate]
+        B -->|FAIL| C[PM Fix]
+        C --> A
+        B -->|SPLIT| D[PM Split]
+        D --> A
     end
 
-    subgraph "Phase 2: Setup"
-        B1[Create Worktree] --> B2[Start Local Stack]
-        B2 --> B3[Verify Environment]
+    subgraph Development
+        B -->|PASS| E[Dev Implement]
+        E --> F[Code Review]
+        F -->|FAIL| G[Dev Fix]
+        G --> F
     end
 
-    subgraph "Phase 3: Implementation"
-        C1[Implement Backend] --> C2[Implement Frontend]
-        C2 --> C3[Write Tests]
+    subgraph Verification
+        F -->|PASS| H[QA Verify]
+        H -->|FAIL| G
+        H -->|PASS| I[Done]
     end
 
-    subgraph "Phase 4: Quality"
-        D1[Run Tests] --> D2[Type Check]
-        D2 --> D3[Lint]
-        D3 --> D4[QA Review]
-    end
-
-    subgraph "Phase 5: Delivery"
-        E1[Create PR] --> E2[Code Review]
-        E2 --> E3[Merge]
-        E3 --> E4[Archive Story]
-    end
-
-    A3 --> B1
-    B3 --> C1
-    C3 --> D1
-    D4 --> E1
+    style A fill:#4CAF50,color:#fff
+    style B fill:#2196F3,color:#fff
+    style E fill:#FF9800,color:#fff
+    style F fill:#9C27B0,color:#fff
+    style H fill:#2196F3,color:#fff
+    style I fill:#4CAF50,color:#fff
 ```
+
+### Key Principles
+
+| Principle | Description |
+|-----------|-------------|
+| **Artifact-First** | Agents write to files, not chat. Artifacts are the source of truth. |
+| **Hard Gates** | Each phase has pass/fail criteria. No skipping gates. |
+| **Status-Driven** | Story frontmatter status controls what can happen next. |
+| **Reuse-First** | Shared logic lives in `packages/**`. No per-story one-offs. |
+| **Local-First** | All testing happens locally before any deployment. |
 
 ---
 
-### Phase 1: Story Selection
+## 2. Story Lifecycle
 
-#### Finding Stories
+### Status Flow
 
-Stories are located in `/docs/stories/` organized by epic:
+Stories progress through statuses in their YAML frontmatter:
 
+```mermaid
+stateDiagram-v2
+    [*] --> backlog: /pm-generate-story
+
+    backlog --> ready_to_work: /elab-story PASS
+    backlog --> needs_refinement: /elab-story FAIL
+    backlog --> needs_split: /elab-story SPLIT REQUIRED
+
+    needs_refinement --> backlog: /pm-fix-story
+    needs_split --> superseded: PM creates splits
+    superseded --> [*]: Archived
+
+    ready_to_work --> in_progress: /dev-implement-story starts
+    in_progress --> ready_for_code_review: Implementation complete
+
+    ready_for_code_review --> code_review_failed: /dev-code-review FAIL
+    ready_for_code_review --> ready_for_qa: /dev-code-review PASS
+
+    code_review_failed --> ready_for_code_review: /dev-fix-story
+
+    ready_for_qa --> in_qa: /qa-verify-story starts
+    in_qa --> needs_work: /qa-verify-story FAIL
+    in_qa --> uat: /qa-verify-story PASS
+
+    needs_work --> ready_for_code_review: /dev-fix-story
+
+    uat --> done: User acceptance
+    done --> [*]: Complete
+
+    note right of needs_split
+        Story too large
+        PM must split into
+        STORY-XXX-A, STORY-XXX-B
+    end note
+
+    note right of needs_refinement
+        QA audit failed
+        PM must fix issues
+    end note
 ```
-docs/stories/
-  epic-0-housekeeping/      # Infrastructure stories (HSKP-*)
-  epic-0-launch-readiness/  # Launch prep stories (LNCH-*)
-  epic-5-inspiration/       # Inspiration gallery (INSP-*)
-  epic-6-wishlist/          # Wishlist feature (WISH-*)
-  epic-7-sets/              # Sets gallery (SETS-*)
+
+### Status Definitions
+
+| Status | Description | Next Action |
+|--------|-------------|-------------|
+| `backlog` | Story created, awaiting QA audit | `/elab-story` |
+| `needs-refinement` | QA audit failed, PM must fix | `/pm-fix-story` |
+| `needs-split` | Story too large, PM must split | PM creates split stories |
+| `superseded` | Original story replaced by splits | Archive |
+| `ready-to-work` | QA audit passed, ready for dev | `/dev-implement-story` |
+| `in-progress` | Dev is implementing or fixing | Wait for completion |
+| `ready-for-code-review` | Implementation complete, awaiting code review | `/dev-code-review` |
+| `code-review-failed` | Code review failed, dev must fix | `/dev-fix-story` |
+| `ready-for-qa` | Code review passed, awaiting QA verification | `/qa-verify-story` |
+| `in-qa` | QA verification in progress | Wait for completion |
+| `needs-work` | QA verify failed, dev must fix | `/dev-fix-story` |
+| `uat` | QA passed, ready for user acceptance | Manual review |
+| `done` | Story complete | Archive |
+
+---
+
+## 3. Command Reference
+
+### Core Workflow Commands
+
+| Command | Agent | Purpose | Input Status | Output Status |
+|---------|-------|---------|--------------|---------------|
+| `/pm-generate-story STORY-XXX` | PM | Generate story from index | pending (index) | `backlog` |
+| `/elab-story STORY-XXX` | QA | Audit story before implementation | `backlog` | `ready-to-work`, `needs-refinement`, or `needs-split` |
+| `/dev-implement-story STORY-XXX` | Dev | Implement the story | `ready-to-work` | `ready-for-code-review` |
+| `/dev-code-review STORY-XXX` | Code Review | Review code quality and standards | `ready-for-code-review` | `ready-for-qa` (pass) or `code-review-failed` (fail) |
+| `/qa-verify-story STORY-XXX` | QA | Verify implementation | `ready-for-qa` | `uat` or `needs-work` |
+
+### Fix Commands (Remediation Loop)
+
+| Command | Agent | Purpose | Input Status | Output Status |
+|---------|-------|---------|--------------|---------------|
+| `/pm-fix-story STORY-XXX` | PM | Fix story after failed audit | `needs-refinement` | `backlog` |
+| `/dev-fix-story STORY-XXX` | Dev | Fix implementation after failed review/QA | `code-review-failed` or `needs-work` | `ready-for-code-review` |
+
+### Supporting Commands
+
+| Command | Agent | Purpose |
+|---------|-------|---------|
+| `/pm-generate-story next` | PM | Auto-select next ready story from index |
+| `/pm-generate-bug-story` | PM | Generate a bug fix story |
+| `/pm-generate-ad-hoc-story` | PM | Generate an off-index story |
+| `/ui-ux-review STORY-XXX` | UI/UX | Review UI/UX after implementation |
+| `/pm-generate-story-000-harness` | PM | Generate the workflow harness story |
+
+---
+
+## 4. The Development Pipeline
+
+### Phase 1: Story Generation (`/pm-generate-story`)
+
+The PM agent orchestrates sub-agents to produce a complete, implementable story.
+
+```mermaid
+flowchart TB
+    subgraph PM["PM Orchestrator"]
+        A[Read stories.index.md] --> B{Story exists?}
+        B -->|No| ERR[STOP: Not in index]
+        B -->|Yes| C[Create STORY-XXX directory]
+    end
+
+    subgraph SubAgents["Sub-Agents (Sequential)"]
+        C --> D[Test Plan Drafter]
+        D --> E{UI touched?}
+        E -->|Yes| F[UI/UX Recommender]
+        E -->|No| G[Skip UI/UX]
+        F --> H[Dev Feasibility Reviewer]
+        G --> H
+    end
+
+    subgraph Synthesis["Story Synthesis"]
+        H --> I{Blockers found?}
+        I -->|Yes| J[Write BLOCKERS.md]
+        J --> K[STOP]
+        I -->|No| L[Synthesize STORY-XXX.md]
+        L --> M[Update index: pending → generated]
+        M --> N[Status: backlog]
+    end
+
+    style D fill:#4CAF50,color:#fff
+    style F fill:#9C27B0,color:#fff
+    style H fill:#FF9800,color:#fff
+    style N fill:#2196F3,color:#fff
 ```
 
-#### Understanding the Consolidated Story Format
+**Sub-Agents:**
+1. **Test Plan Drafter** - Creates happy path, error cases, edge cases
+2. **UI/UX Recommender** - Provides component suggestions, a11y requirements (if UI touched)
+3. **Dev Feasibility Reviewer** - Identifies risks, hidden dependencies, missing AC
 
-Stories now follow a **vertical slice** pattern, consolidating related work:
+**Artifacts Created:**
+```
+plans/stories/STORY-XXX/
+├── STORY-XXX.md           # The story file
+└── _pm/
+    ├── TEST-PLAN.md       # Test plan from sub-agent
+    ├── UIUX-NOTES.md      # UI/UX guidance (or SKIPPED)
+    ├── DEV-FEASIBILITY.md # Risk assessment
+    └── BLOCKERS.md        # Any blocking issues
+```
+
+**Hard Rules:**
+- Scope must match `stories.index.md` exactly
+- No blocking TBDs - PM must decide
+- Test plan is mandatory
+- Seed requirements must be explicit if applicable
+
+---
+
+### Phase 2: Story Elaboration (`/elab-story`)
+
+QA audits the story BEFORE implementation to ensure it's safe, unambiguous, and locally testable.
+
+```mermaid
+flowchart TB
+    subgraph Audit["Audit Phase"]
+        A[Read STORY-XXX.md] --> B[1. Scope Alignment]
+        B --> C[2. Internal Consistency]
+        C --> D[3. Reuse-First Check]
+        D --> E[4. Ports & Adapters]
+        E --> F[5. Local Testability]
+        F --> G[6. Decision Completeness]
+        G --> H[7. Risk Disclosure]
+        H --> I[8. Story Sizing]
+    end
+
+    subgraph Sizing["Story Sizing Check"]
+        I --> J{2+ size indicators?}
+        J -->|Yes| K[Recommend Split]
+        K --> SPLIT[SPLIT REQUIRED]
+        J -->|No| L[Continue]
+    end
+
+    subgraph Discovery["Discovery Phase"]
+        L --> M[Q1: What are we missing?]
+        M --> N[Q2: What makes this killer?]
+        N --> O[Compile Findings]
+    end
+
+    subgraph Interactive["Interactive Discussion"]
+        O --> P{User wants to discuss?}
+        P -->|Yes| Q[Present items one-by-one]
+        Q --> R[Record decisions]
+        P -->|No| S[Log as Not Reviewed]
+        R --> T[Append QA Discovery Notes]
+        S --> T
+    end
+
+    subgraph Verdict["Final Verdict"]
+        T --> U{Critical issues?}
+        U -->|Yes| FAIL[FAIL]
+        U -->|No| V{High issues?}
+        V -->|Yes| COND[CONDITIONAL PASS]
+        V -->|No| PASS[PASS]
+    end
+
+    SPLIT --> W[Status: needs-split]
+    FAIL --> X[Status: needs-refinement]
+    COND --> Y[Status: ready-to-work]
+    PASS --> Y
+
+    style PASS fill:#4CAF50,color:#fff
+    style COND fill:#FFC107,color:#000
+    style FAIL fill:#f44336,color:#fff
+    style SPLIT fill:#9C27B0,color:#fff
+```
+
+**Audit Checklist:**
+1. Scope alignment with index
+2. Internal consistency (goals vs non-goals, AC vs scope)
+3. Reuse-first enforcement
+4. Ports & adapters compliance
+5. Local testability (`.http` for backend, Playwright for frontend)
+6. Decision completeness (no blocking TBDs)
+7. Risk disclosure
+8. **Story sizing** (too large detection)
+
+**Story Sizing Detection:**
+
+Stories should be completable in 1-3 focused dev sessions. The elaboration checks for "too large" indicators:
+
+| Indicator | Threshold |
+|-----------|-----------|
+| Acceptance Criteria | > 8 ACs |
+| Endpoints created/modified | > 5 endpoints |
+| Full-stack scope | Significant frontend AND backend |
+| Bundled features | Multiple independent features |
+| Test scenarios | > 3 distinct happy path scenarios |
+| Package touches | > 2 packages in `packages/**` |
+
+If 2+ indicators are present, QA recommends story split with:
+- Proposed STORY-XXX-A, STORY-XXX-B naming
+- Clear boundaries between split stories
+- AC allocation per split
+- Dependency order (e.g., backend before frontend)
+
+**Discovery Phase (After Audit):**
+
+After the audit checklist, QA performs discovery analysis:
+
+1. **Gaps & Blind Spots** - What have we not thought about?
+   - Edge cases not covered in AC
+   - Error scenarios not addressed
+   - Security considerations overlooked
+   - Performance implications
+   - Accessibility gaps (if UI)
+   - Data migration/backward compatibility
+   - Monitoring/observability gaps
+
+2. **Enhancement Opportunities** - What would make this a killer feature?
+   - UX improvements that would delight users
+   - Power-user features with minimal complexity
+   - Integration opportunities
+   - Analytics/insights that could be captured
+   - Future-proofing enhancements
+
+**Interactive Improvement Discussion:**
+
+QA asks if you want to discuss improvements before finalizing. For each item:
+- Add to story as new AC
+- Add as follow-up story note
+- Mark as out-of-scope (with justification)
+- Skip / Not relevant
+
+Decisions are recorded in a `## QA Discovery Notes` section appended to STORY-XXX.md.
+
+**Output:**
+```
+plans/stories/STORY-XXX/
+├── STORY-XXX.md           # Updated with QA Discovery Notes section
+└── ELAB-STORY-XXX.md      # Elaboration verdict: PASS / CONDITIONAL PASS / FAIL / SPLIT REQUIRED
+```
+
+**Verdicts:**
+- **PASS** → Status becomes `ready-to-work`
+- **CONDITIONAL PASS** → Status becomes `ready-to-work` with warnings
+- **FAIL** → Status becomes `needs-refinement`, requires `/pm-fix-story`
+- **SPLIT REQUIRED** → Status becomes `needs-split`, PM must create split stories
+
+---
+
+### Phase 3: Implementation (`/dev-implement-story`)
+
+The Dev orchestrator spawns parallel sub-agents to implement the story.
+
+**Execution Flow:**
+
+```mermaid
+flowchart TB
+    subgraph Phase0["Phase 0: Setup"]
+        A[Orchestrator] --> B[Create _implementation/ directory]
+        B --> C[Write SCOPE.md]
+    end
+
+    subgraph Phase1["Phase 1: Planning"]
+        C --> D[Planner Agent]
+        D --> E[IMPLEMENTATION-PLAN.md]
+        E --> F[Plan Validator]
+        F --> G{Plan valid?}
+        G -->|No| H[BLOCKERS.md]
+        H --> STOP[STOP]
+        G -->|Yes| I[PLAN-VALIDATION.md]
+    end
+
+    subgraph Phase2["Phase 2: Coding (Parallel)"]
+        I --> J[Backend Agent]
+        I --> K[Frontend Agent]
+        J --> L[BACKEND-LOG.md]
+        K --> M[FRONTEND-LOG.md]
+        L --> N[Contracts Agent]
+        N --> O[CONTRACTS.md]
+    end
+
+    subgraph Phase3["Phase 3: Verification (Parallel)"]
+        O --> P[Verifier Agent]
+        M --> P
+        O --> Q[Playwright Agent]
+        M --> Q
+        P --> R[VERIFICATION.md]
+        Q --> R
+    end
+
+    subgraph Phase4["Phase 4: Synthesis"]
+        R --> S{All checks pass?}
+        S -->|No| T[BLOCKERS.md]
+        T --> STOP2[STOP]
+        S -->|Yes| U[Proof Writer]
+        U --> V[PROOF-STORY-XXX.md]
+    end
+
+    subgraph Phase5["Phase 5: Learnings"]
+        V --> W[Learnings Agent]
+        W --> X[Append to LESSONS-LEARNED.md]
+    end
+
+    subgraph Phase6["Phase 6: Complete"]
+        X --> Y[Update status]
+        Y --> Z[ready-for-code-review]
+    end
+
+    style D fill:#4CAF50,color:#fff
+    style J fill:#FF9800,color:#fff
+    style K fill:#9C27B0,color:#fff
+    style P fill:#2196F3,color:#fff
+    style U fill:#4CAF50,color:#fff
+    style Z fill:#4CAF50,color:#fff
+```
+
+**Sub-Agents:**
+
+| Phase | Agent | Output |
+|-------|-------|--------|
+| 1A | Planner | `IMPLEMENTATION-PLAN.md` |
+| 1B | Plan Validator | `PLAN-VALIDATION.md` |
+| 2 | Backend Coder | `BACKEND-LOG.md` |
+| 2 | Frontend Coder | `FRONTEND-LOG.md` |
+| 2B | Contracts | `CONTRACTS.md` |
+| 3A | Verifier | `VERIFICATION.md` |
+| 3B | Playwright | Appends to `VERIFICATION.md` |
+| 4 | Proof Writer | `PROOF-STORY-XXX.md` |
+| 5 | Learnings | Appends to `LESSONS-LEARNED.md` |
+
+**Artifacts Created:**
+```
+plans/stories/STORY-XXX/
+├── STORY-XXX.md
+├── PROOF-STORY-XXX.md
+└── _implementation/
+    ├── SCOPE.md
+    ├── IMPLEMENTATION-PLAN.md
+    ├── PLAN-VALIDATION.md
+    ├── BACKEND-LOG.md
+    ├── FRONTEND-LOG.md
+    ├── CONTRACTS.md
+    ├── VERIFICATION.md
+    └── BLOCKERS.md (if any)
+```
+
+**Fast-Fail:** Backend/Frontend coders run `pnpm check-types` after each chunk.
+
+---
+
+### Phase 4: Code Review (`/dev-code-review STORY-XXX`)
+
+Code review gate ensuring implementation follows project standards before QA verification.
+The orchestrator spawns 4 parallel sub-agents for efficient review.
+
+**Execution Flow:**
+
+```mermaid
+flowchart TB
+    subgraph Phase0["Phase 0: Setup"]
+        A[Orchestrator] --> B[Identify touched files]
+        B --> C[Validate preconditions]
+    end
+
+    subgraph Phase1["Phase 1: Parallel Review"]
+        C --> D[Lint Agent]
+        C --> E[Style Compliance Agent]
+        C --> F[Syntax Agent]
+        C --> G[Security Agent]
+
+        D --> H[CODE-REVIEW-LINT.md]
+        E --> I[CODE-REVIEW-STYLE.md]
+        F --> J[CODE-REVIEW-SYNTAX.md]
+        G --> K[CODE-REVIEW-SECURITY.md]
+    end
+
+    subgraph Phase2["Phase 2: Synthesis"]
+        H --> L[Orchestrator]
+        I --> L
+        J --> L
+        K --> L
+
+        L --> M{Critical/High issues?}
+        M -->|Security Critical| FAIL1[FAIL]
+        M -->|Style Violation| FAIL2[FAIL]
+        M -->|Lint Errors| FAIL3[FAIL]
+        M -->|Warnings Only| WARN[PASS-WITH-WARNINGS]
+        M -->|Clean| PASS[PASS]
+    end
+
+    FAIL1 --> N[code-review-failed]
+    FAIL2 --> N
+    FAIL3 --> N
+    WARN --> O[ready-for-qa]
+    PASS --> O
+
+    style D fill:#FFC107,color:#000
+    style E fill:#9C27B0,color:#fff
+    style F fill:#2196F3,color:#fff
+    style G fill:#f44336,color:#fff
+    style PASS fill:#4CAF50,color:#fff
+    style WARN fill:#FFC107,color:#000
+    style N fill:#f44336,color:#fff
+```
+
+**Sub-Agents:**
+
+| Agent | Purpose | Output | Blocks? |
+|-------|---------|--------|---------|
+| Lint | Run linter on touched files only | `CODE-REVIEW-LINT.md` | Errors block |
+| Style Compliance | Verify Tailwind/component library only | `CODE-REVIEW-STYLE.md` | **HARD RULE** |
+| Syntax | Check ES7+ patterns (not stylistic) | `CODE-REVIEW-SYNTAX.md` | Violations block |
+| Security | OWASP checks, secrets, injection | `CODE-REVIEW-SECURITY.md` | Critical/High block |
+
+**HARD RULES (Zero Tolerance):**
+
+1. **Style Compliance** - ALL styling must come from:
+   - Tailwind CSS utility classes
+   - `@repo/app-component-library` components
+   - NO custom CSS, inline styles, or arbitrary Tailwind values
+
+2. **Lint on Touched Files Only** - Do not lint entire codebase
+
+3. **ES7+ Syntax** - Modern patterns required, but don't fail on:
+   - Semicolons, quotes, trailing commas (Prettier handles these)
+
+**Output:**
+```
+plans/stories/STORY-XXX/
+├── CODE-REVIEW-STORY-XXX.md  # Final verdict
+└── _implementation/
+    ├── CODE-REVIEW-LINT.md
+    ├── CODE-REVIEW-STYLE.md
+    ├── CODE-REVIEW-SYNTAX.md
+    └── CODE-REVIEW-SECURITY.md
+```
+
+**Verdicts:**
+- **PASS** → Story proceeds to `/qa-verify-story`
+- **PASS-WITH-WARNINGS** → Story proceeds with noted concerns
+- **FAIL** → Status becomes `needs-work`, requires `/dev-fix-story`
+
+---
+
+### Phase 5: QA Verification (`/qa-verify-story`)
+
+Final quality gate verifying the implementation meets all acceptance criteria.
+
+```mermaid
+flowchart TB
+    subgraph Input["Inputs"]
+        A[STORY-XXX.md] --> D[QA Agent]
+        B[PROOF-STORY-XXX.md] --> D
+        C[CODE-REVIEW-STORY-XXX.md] --> D
+        T[Test Files] --> D
+    end
+
+    subgraph Verification["Verification Checklist"]
+        D --> E[1. AC Evidence Mapping]
+        E --> F{All ACs covered?}
+        F -->|No| FAIL1[Missing AC Evidence]
+
+        F -->|Yes| G[2. Test Quality Review]
+        G --> G1[Read test code]
+        G1 --> G2{Tests meaningful?}
+        G2 -->|No| FAIL2[Poor Test Quality]
+
+        G2 -->|Yes| H[3. Coverage Check]
+        H --> H1[Run pnpm test --coverage]
+        H1 --> H2{Coverage >= 80%?}
+        H2 -->|No| FAIL3[Insufficient Coverage]
+
+        H2 -->|Yes| I[4. Execute All Tests]
+        I --> I1[pnpm test]
+        I1 --> I2{Backend changes?}
+        I2 -->|Yes| I2a[Start dev server]
+        I2a --> I2b[Execute ALL .http requests]
+        I2b --> I2c[Verify responses]
+        I2 -->|No| I3
+        I2c --> I3{UI changes?}
+        I3 -->|Yes| I3a[Playwright E2E]
+        I3 -->|No| I4
+        I3a --> I4{All tests pass?}
+        I4 -->|No| FAIL4[Tests Failed]
+
+        I4 -->|Yes| J[5. Proof Quality]
+        J --> K{Proof complete?}
+        K -->|No| FAIL5[Incomplete Proof]
+
+        K -->|Yes| L[6. Architecture Check]
+        L --> M{Reuse violations?}
+        M -->|Yes| FAIL6[Architecture Violation]
+
+        M -->|No| PASS[PASS]
+    end
+
+    subgraph Outcomes["Outcomes"]
+        FAIL1 --> N[needs-work]
+        FAIL2 --> N
+        FAIL3 --> N
+        FAIL4 --> N
+        FAIL5 --> N
+        FAIL6 --> N
+
+        PASS --> O[uat]
+        O --> P[Index Updater]
+        P --> Q[Mark completed in index]
+        Q --> R[Clear downstream deps]
+    end
+
+    style PASS fill:#4CAF50,color:#fff
+    style N fill:#f44336,color:#fff
+    style O fill:#4CAF50,color:#fff
+    style I1 fill:#FF9800,color:#fff
+    style I2 fill:#FF9800,color:#fff
+    style I3 fill:#FF9800,color:#fff
+    style H1 fill:#2196F3,color:#fff
+```
+
+**Verification Checklist:**
+1. Every AC mapped to concrete evidence
+2. **Test Implementation Quality** - Review actual test code:
+   - Tests are meaningful with real assertions
+   - Tests cover business logic, not just happy paths
+   - No skipped tests without justification
+   - No test anti-patterns (always-pass, over-mocked)
+3. **Test Coverage Verification** - Run coverage reports:
+   - New code: 80% line coverage minimum
+   - Critical paths: 90% coverage
+   - Coverage gaps documented and justified
+4. **Test Execution** - RUN ALL TESTS:
+   - `pnpm test` - All unit tests must pass
+   - `.http` API tests (MANDATORY for backend):
+     - Start local dev server
+     - Execute EVERY request in relevant `.http` files
+     - Verify status codes and response bodies
+     - Record all request/response pairs
+   - Playwright E2E tests executed (if UI changes)
+   - **Any test failure = FAIL verdict**
+5. Proof document is complete and verifiable
+6. No architecture or reuse violations
+
+**Output:**
+```
+plans/stories/STORY-XXX/
+└── QA-VERIFY-STORY-XXX.md  # Verdict: PASS / FAIL
+```
+
+**Verdicts:**
+- **PASS** → Status becomes `uat`, index updated
+- **FAIL** → Status becomes `needs-work`, requires `/dev-fix-story`
+
+**On PASS:** The Index Updater sub-agent:
+1. Marks story as `completed` in index
+2. Clears satisfied dependencies from downstream stories
+3. Updates progress summary
+4. Recalculates "Ready to Start" section
+
+---
+
+### Token Tracking System
+
+Every agent and phase tracks token usage to enable cost analysis and optimization.
+
+**Token Estimation Formula:**
+```
+Input tokens ≈ bytes_read / 4
+Output tokens ≈ bytes_written / 4
+```
+
+**Agent-Level Tracking:**
+
+Every agent output MUST include a Token Log section:
 
 ```markdown
-# Story WISH-2001: Wishlist Gallery MVP (Vertical Slice)
+## Token Log
 
-## Status
-Draft | Approved | In Progress | Ready for Review | Done
-
-## Consolidates
-- wish-1000: Gallery scaffolding
-- wish-1001: Card component
-- wish-1002: API endpoints
-
-## Story
-As a user,
-I want to view my wishlist items in a gallery,
-So that I can browse and manage sets I want to purchase.
-
-## Dependencies
-- WISH-2000: Database Schema (must be complete first)
-
-## Acceptance Criteria
-1. GalleryGrid renders wishlist items correctly
-2. GET /api/wishlist returns paginated list
-3. WishlistCard component displays metadata
-...
-
-## Tasks / Subtasks
-- [ ] Task 1: Audit shared gallery
-- [ ] Task 2: Create API endpoints
-- [ ] Task 3: Create RTK Query slice
-...
-
-## Dev Notes
-[Implementation guidance, code examples]
-
-## Testing
-[Test requirements by layer]
+| Operation | Type | Bytes | Tokens (est) |
+|-----------|------|-------|--------------|
+| Read: STORY-XXX.md | input | 18,397 | ~4,600 |
+| Read: serverless.yml | input | 70,000 | ~17,500 |
+| Write: IMPLEMENTATION-PLAN.md | output | 8,000 | ~2,000 |
+| **Total Input** | — | 88,397 | **~22,100** |
+| **Total Output** | — | 8,000 | **~2,000** |
 ```
 
-#### Checking Dependencies
+**Story-Level Aggregation:**
 
-Before starting a story, verify its dependencies are complete:
+The orchestrator creates `_implementation/TOKEN-SUMMARY.md` with:
 
-```bash
-# Check if dependency stories are done
-ls docs/stories/epic-6-wishlist/wish-2000*.md
+```markdown
+## Sub-Agent Token Usage
 
-# Look for status in the file
-grep -i "status" docs/stories/epic-6-wishlist/wish-2000*.md
+| Phase | Agent | Input | Output | Total |
+|-------|-------|-------|--------|-------|
+| 1A: Plan | Planner | ~25,000 | ~4,000 | ~29,000 |
+| 1B: Validate | Validator | ~30,000 | ~3,000 | ~33,000 |
+| 2: Backend | Backend Coder | ~45,000 | ~15,000 | ~60,000 |
+| **Total** | — | **~100,000** | **~22,000** | **~122,000** |
 ```
+
+**High-Cost Operations Reference:**
+
+| Operation | Typical Tokens | Notes |
+|-----------|----------------|-------|
+| Read serverless.yml | ~17,500 | Avoid if possible |
+| Full codebase Explore | ~25,000+ | Use targeted Grep |
+| code-reviewer agent | ~30,000+ | Review smaller changesets |
+| Read full story + PM docs | ~10,000 | Required context |
+
+**Token Budget Template:**
+
+Each story includes a Token Budget section (see `TOKEN-BUDGET-TEMPLATE.md`):
+- Estimated tokens per phase
+- Actual measurements after completion
+- Comparison and optimization notes
+
+**Global Learnings:**
+
+Token patterns and optimization tips are captured in `plans/stories/LESSONS-LEARNED.md`.
 
 ---
 
-### Phase 2: Local Development Setup
-
-#### Option A: Using Worktree Workflow (Recommended)
-
-Worktrees allow parallel feature development without branch switching:
-
-```bash
-# Create new worktree for feature
-/wt-new
-# Follow prompts for base branch and feature name
-
-# Or use the automated approach
-/start-feature
-# Commits/stashes current work, then creates worktree
-
-# List existing worktrees
-/wt-list
-
-# Switch between worktrees
-/wt-switch
-```
-
-#### Option B: Traditional Branch Workflow
-
-```bash
-# Create feature branch
-git checkout main
-git pull origin main
-git checkout -b feature/wish-2001-gallery-mvp
-```
-
-#### Starting the Local Stack
-
-```bash
-# Terminal 1: Start Docker PostgreSQL
-docker compose -f docker/docker-compose.local.yml up -d
-
-# Terminal 2: Start Express API (when available)
-pnpm --filter api-express dev
-
-# Terminal 3: Start Frontend
-pnpm --filter main-app dev
-
-# Or use the combined command (when configured)
-pnpm dev:local
-```
-
-#### Verifying Local Environment
-
-```bash
-# Check database connection
-pnpm --filter @repo/db test:connection
-
-# Check API health
-curl http://localhost:4000/health
-
-# Check frontend
-open http://localhost:3000
-```
-
----
-
-### Phase 3: Implementation with AI Assistance
-
-#### Using the /implement Skill
-
-The primary way to implement stories:
-
-```bash
-# Simple story implementation
-/implement wish-2001
-
-# With parallel sub-agents (faster for complex stories)
-/implement wish-2001 --parallel
-
-# With deep review (security, performance, accessibility)
-/implement wish-2001 --parallel --deep-review
-
-# Preview what would happen
-/implement wish-2001 --dry-run
-
-# Resume interrupted work
-/implement wish-2001 --resume
-```
-
-#### Using /develop (Convenience Wrapper)
-
-```bash
-# Accepts story number or file path
-/develop 2001
-/develop wish-2001
-/develop docs/stories/epic-6-wishlist/wish-2001-wishlist-gallery-mvp.md
-```
-
-#### Using Scaffold Skills (When Available)
-
-For individual pieces:
-
-```bash
-# Scaffold a complete endpoint
-/scaffold-endpoint "list all wishlist items for current user"
-
-# Scaffold a feature (API + UI + tests)
-/scaffold-feature "wishlist priority sorting with drag-drop"
-
-# Scaffold a component
-/scaffold-component "priority badge showing 1-5 stars"
-
-# Add a field across all layers
-/add-field wishlistItems priority "integer default 0, sort order"
-```
-
-#### Manual Implementation
-
-When implementing manually, follow this order:
-
-**1. Backend First (if applicable)**
-
-```typescript
-// 1. Schema updates (packages/backend/db/src/schema.ts)
-export const wishlistItems = pgTable('wishlist_items', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  // ...
-})
-
-// 2. Service layer (packages/backend/api-services/src/wishlist/)
-export async function listWishlistItems(userId: string, query: WishlistQuery) {
-  // Business logic
-}
-
-// 3. Handler (packages/backend/api-handlers/src/wishlist/)
-export async function handleListWishlist(
-  request: Request,
-  ctx: HandlerContext
-): Promise<Response> {
-  // Request handling
-}
-
-// 4. Lambda adapter (apps/api/endpoints/wishlist/list/)
-export const handler = async (event: APIGatewayProxyEvent) => {
-  // AWS Lambda wrapper
-}
-```
-
-**2. Frontend Second**
-
-```typescript
-// 1. RTK Query hooks (packages/core/api-client/src/rtk/)
-export const wishlistApi = createApi({
-  endpoints: (builder) => ({
-    getWishlist: builder.query<WishlistResponse, WishlistQuery>({
-      // ...
-    }),
-  }),
-})
-
-// 2. Components (apps/web/main-app/src/routes/wishlist/-components/)
-export function WishlistCard({ item }: WishlistCardProps) {
-  // ...
-}
-
-// 3. Pages (apps/web/main-app/src/routes/wishlist/)
-export function WishlistGalleryPage() {
-  // ...
-}
-```
-
----
-
-### Phase 4: Testing Locally
-
-#### Running Tests
-
-```bash
-# Run tests for changed packages only (fast)
-pnpm test
-
-# Run all tests
-pnpm test:all
-
-# Run tests for specific package
-pnpm --filter @repo/api-services test
-pnpm --filter main-app test
-
-# Run with coverage
-pnpm test -- --coverage
-```
-
-#### Type Checking
-
-```bash
-# Check changed packages only (fast)
-pnpm check-types
-
-# Check everything
-pnpm check-types:all
-```
-
-#### Linting
-
-```bash
-# Lint changed files only
-pnpm lint
-
-# Lint everything
-pnpm lint:all
-
-# Fix auto-fixable issues
-pnpm lint:fix
-```
-
-#### Manual Testing
-
-```bash
-# Test API endpoint directly
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:4000/api/wishlist
-
-# Test with query params
-curl "http://localhost:4000/api/wishlist?store=LEGO&sort=price"
-```
-
-#### Debugging with Express (vs Lambda)
-
-Express provides better debugging than Lambda:
-
-```typescript
-// Add breakpoints in VS Code
-// Or use console.debug (via @repo/logger)
-import { logger } from '@repo/logger'
-
-logger.debug('Processing request', { params, userId })
-```
-
----
-
-### Phase 5: Code Review and PR
-
-#### Creating Commits
-
-```bash
-# Use the commit skill for proper formatting
-/commit
-
-# Or manually with conventional commits
-git add .
-git commit -m "feat(wishlist): implement gallery page with cards
-
-- Add GET /api/wishlist endpoint
-- Create WishlistCard component
-- Integrate with RTK Query
-
-Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-#### Creating Pull Requests
-
-```bash
-# Push branch
-git push -u origin feature/wish-2001-gallery-mvp
-
-# Create PR with proper template
-gh pr create \
-  --title "feat(wishlist): implement gallery MVP (Story WISH-2001)" \
-  --body "## Summary
-Implements Story WISH-2001: Wishlist Gallery MVP
-
-## Changes
-- API endpoints for listing and getting wishlist items
-- WishlistCard component with store badges
-- Gallery page with filtering and sorting
-
-## Test Plan
-- [ ] Gallery loads with test data
-- [ ] Store filter tabs work
-- [ ] Cards display all metadata
-
-Closes #123"
-```
-
-#### QA Gate Process
-
-```bash
-# Run QA gate review
-/qa-gate wish-2001
-
-# This creates a gate file at:
-# docs/qa/gates/wish-2001-wishlist-gallery-mvp.yml
-```
-
-Gate statuses:
-- **PASS** - Ready to merge
-- **CONCERNS** - Can proceed with awareness
-- **FAIL** - Must fix issues first
-- **WAIVED** - Issues explicitly accepted
-
----
-
-### Phase 6: Deployment
-
-#### Lambda Deployment (Current Production)
-
-```bash
-# Deploy via Serverless Framework
-cd apps/api
-serverless deploy --stage dev
-
-# Or deploy specific function
-serverless deploy function -f wishlistList --stage dev
-```
-
-#### Post-Merge Cleanup
-
-```bash
-# After PR is merged, run completion
-/implement wish-2001 --complete
-
-# This will:
-# - Archive story to docs/_archive/completed-stories/
-# - Close GitHub issue
-# - Clean up worktree
-# - Delete local branch
-```
-
----
-
-## 4. Command Reference
-
-### BMAD Workflow Commands
-
-|| Command | Description | Usage |
-||---------|-------------|-------|
-|| `/implement` | Complete story implementation | `/implement wish-2001 --parallel` |
-|| `/develop` | Smart launcher for /implement | `/develop 2001` |
-|| `/qa-gate` | Create quality gate decision | `/qa-gate wish-2001` |
-|| `/review-story` | Review implementation | `/review-story wish-2001` |
-|| `/create-next-story` | Draft new story | `/create-next-story` |
-
-### Test Workflows
-
-|| Workflow | Description | Example Usage |
-||----------|-------------|----------------|
-|| `API Tests (mocked)` | Run the `apps/api` Vitest suite with infrastructure mocked (fast unit-style verification). | `cd apps/api && pnpm test` |
-|| `API Tests (no-mock)` | Run the same `apps/api` tests with `TEST_USE_MOCKS=false` so they hit real integrations (e.g., test database) where configured. | `cd apps/api && TEST_USE_MOCKS=false pnpm test` |
-
-### Git Worktree Commands
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/wt-new` | Create new worktree | `/wt-new` |
-| `/wt-list` | List all worktrees | `/wt-list` |
-| `/wt-switch` | Switch to worktree | `/wt-switch` |
-| `/wt-status` | Show worktree status | `/wt-status` |
-| `/wt-sync` | Sync with remote | `/wt-sync` |
-| `/wt-finish` | Merge and cleanup | `/wt-finish` |
-| `/wt-cleanup` | Remove merged worktrees | `/wt-cleanup` |
-
-### Feature Start Commands
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/start-feature` | Commit/stash and start new feature | `/start-feature` |
-| `/switch-feature` | Commit/stash and switch worktree | `/switch-feature` |
-
-### Scaffold Skills (When Available)
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/scaffold-endpoint` | Generate API endpoint | `/scaffold-endpoint "list wishlist items"` |
-| `/scaffold-feature` | Generate vertical slice | `/scaffold-feature "priority sorting"` |
-| `/scaffold-component` | Generate React component | `/scaffold-component "priority badge"` |
-| `/add-field` | Add field across layers | `/add-field wishlistItems priority integer` |
-| `/sync-types` | Ensure type consistency | `/sync-types --check` |
-
-### BMAD Agent Commands
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/sm` | Story Manager agent | `/sm` |
-| `/dev` | Developer agent | `/dev` |
-| `/qa` | QA agent | `/qa` |
-| `/architect` | Architect agent | `/architect` |
-| `/analyst` | Business Analyst agent | `/analyst` |
-
-### Git/PR Commands (Plugin)
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/commit` | Create conventional commit | `/commit` |
-| `/commit-push-pr` | Commit, push, and open PR | `/commit-push-pr` |
-| `/review-pr` | Comprehensive PR review | `/review-pr 123` |
-| `/clean-gone` | Clean up deleted branches | `/clean-gone` |
-
----
-
-## 5. Architecture Quick Reference
-
-### Hexagonal Architecture
+### Phase 6: Remediation (if needed)
 
 ```mermaid
-graph TB
-    subgraph "Adapters (Transport Layer)"
-        Lambda["AWS Lambda<br/>Production"]
-        Express["Express Server<br/>Local Dev"]
+flowchart TB
+    subgraph ElabFail["QA Audit Failed"]
+        A[needs-refinement] --> B[/pm-fix-story]
+        B --> C[PM fixes Critical/High issues]
+        C --> D[backlog]
+        D --> E[/elab-story]
+        E --> F{Pass?}
+        F -->|No| A
+        F -->|Yes| G[ready-to-work]
     end
 
-    subgraph "Handlers (Application Layer)"
-        Handlers["@repo/api-handlers<br/>Request/Response"]
+    subgraph SplitRequired["Story Too Large"]
+        H[needs-split] --> I[PM reviews split recommendations]
+        I --> J[Add splits to stories.index.md]
+        J --> K[STORY-XXX-A, STORY-XXX-B]
+        K --> L[Mark original as superseded]
+        L --> M[/pm-generate-story for each split]
     end
 
-    subgraph "Services (Domain Layer)"
-        Services["@repo/api-services<br/>Business Logic"]
+    subgraph CodeReviewFail["Code Review Failed"]
+        N[code-review-failed] --> O[/dev-fix-story]
+        O --> P[Dev fixes code quality issues]
+        P --> Q[ready-for-code-review]
+        Q --> R[/dev-code-review]
+        R --> S{Pass?}
+        S -->|No| N
+        S -->|Yes| T[ready-for-qa]
     end
 
-    subgraph "Infrastructure"
-        DB["@repo/db<br/>Drizzle ORM"]
-        S3["@repo/s3-client"]
-        Auth["@repo/lambda-auth"]
+    subgraph QAVerifyFail["QA Verify Failed"]
+        U[needs-work] --> V[/dev-fix-story]
+        V --> W[Dev fixes AC coverage issues]
+        W --> X[ready-for-code-review]
+        X --> Y[/dev-code-review]
+        Y --> Z[/qa-verify-story]
+        Z --> AA{Pass?}
+        AA -->|No| U
+        AA -->|Yes| AB[uat]
     end
 
-    Lambda --> Handlers
-    Express --> Handlers
-    Handlers --> Services
-    Services --> DB
-    Services --> S3
-    Services --> Auth
+    style G fill:#4CAF50,color:#fff
+    style L fill:#9C27B0,color:#fff
+    style T fill:#4CAF50,color:#fff
+    style AB fill:#4CAF50,color:#fff
 ```
 
-### Where to Put Code
+**If QA Audit Failed (`/pm-fix-story`):**
+- PM revises story to address all Critical/High issues
+- Cannot change story ID
+- Status: `needs-refinement` → `backlog`
+- Then re-run `/elab-story`
 
-| Type | Location | Example |
-|------|----------|---------|
-| **Database Schema** | `packages/backend/db/src/schema.ts` | Table definitions |
-| **Zod Schemas** | `packages/backend/db/src/schemas/` | Validation schemas |
-| **Business Logic** | `packages/backend/api-services/src/{domain}/` | Service functions |
-| **Request Handlers** | `packages/backend/api-handlers/src/{domain}/` | Unified handlers |
-| **Lambda Adapters** | `apps/api/endpoints/{domain}/` | AWS Lambda wrappers |
-| **RTK Query** | `packages/core/api-client/src/rtk/` | API hooks |
-| **UI Components** | `apps/web/main-app/src/routes/{domain}/-components/` | React components |
-| **Pages** | `apps/web/main-app/src/routes/{domain}/` | Route components |
-| **Shared UI** | `packages/core/app-component-library/` | Design system |
+**If Story Too Large (`needs-split`):**
+- PM reviews ELAB-STORY-XXX.md for split recommendations
+- PM creates split stories in stories.index.md
+- Original story marked as `superseded`
+- Generate and elaborate each split separately
 
-### Package Dependencies
+**If Code Review Failed (`/dev-fix-story`):**
+- Dev fixes code quality, architecture, or security issues
+- Cannot change AC or scope
+- Status: `code-review-failed` → `ready-for-code-review`
+- Then re-run `/dev-code-review`
+
+**If QA Verify Failed (`/dev-fix-story`):**
+- Dev fixes implementation issues related to AC coverage
+- Cannot change AC or scope
+- Status: `needs-work` → `ready-for-code-review`
+- Then re-run `/dev-code-review` → `/qa-verify-story`
+
+---
+
+## 5. Artifacts and Directory Structure
+
+### Story Directory Layout
+
+```
+plans/stories/
+├── stories.index.md           # Master index with status tracking
+├── LESSONS-LEARNED.md         # Accumulated learnings across stories (global)
+├── TOKEN-BUDGET-TEMPLATE.md   # Template for token budget sections
+│
+└── STORY-XXX/
+    ├── STORY-XXX.md              # The story (with status frontmatter + Token Budget)
+    ├── ELAB-STORY-XXX.md         # QA audit result (includes Discovery findings)
+    ├── PROOF-STORY-XXX.md        # Dev proof document
+    ├── CODE-REVIEW-STORY-XXX.md  # Code review result
+    ├── QA-VERIFY-STORY-XXX.md    # QA verification result
+    │
+    ├── _pm/                   # PM sub-agent artifacts
+    │   ├── TEST-PLAN.md
+    │   ├── UIUX-NOTES.md
+    │   ├── DEV-FEASIBILITY.md
+    │   └── BLOCKERS.md        # PM-phase blockers
+    │
+    └── _implementation/       # Dev sub-agent artifacts
+        ├── SCOPE.md               # Backend/frontend/infra impact flags
+        ├── IMPLEMENTATION-PLAN.md # Step-by-step dev plan
+        ├── PLAN-VALIDATION.md     # Pre-implementation plan validation
+        ├── BACKEND-LOG.md         # Backend coder output
+        ├── FRONTEND-LOG.md        # Frontend coder output
+        ├── CONTRACTS.md           # API contracts
+        ├── VERIFICATION.md        # Build/test/lint results
+        ├── TOKEN-SUMMARY.md       # Aggregated token usage per phase
+        ├── BLOCKERS.md            # Implementation-phase blockers
+        ├── CODE-REVIEW-LINT.md    # Lint sub-agent output
+        ├── CODE-REVIEW-STYLE.md   # Style compliance sub-agent output
+        ├── CODE-REVIEW-SYNTAX.md  # Syntax sub-agent output
+        └── CODE-REVIEW-SECURITY.md # Security sub-agent output
+```
+
+### HTTP Contracts Location
+
+API contracts (`.http` files) live in:
+```
+/__http__/<domain>.http
+```
+
+Stories reference contracts by path: `/__http__/gallery.http#listImages`
+
+---
+
+## 6. Quality Gates
 
 ```mermaid
-graph TB
-    subgraph "Apps"
-        API["apps/api"]
-        MainApp["apps/web/main-app"]
+flowchart LR
+    subgraph Gates["Quality Gates"]
+        A[Story Audit] -->|PASS| B[Plan Validation]
+        B -->|PASS| C[Build/Test]
+        C -->|PASS| D[Code Review]
+        D -->|PASS| E[QA Verify]
+        E -->|PASS| F[Done]
     end
 
-    subgraph "Backend Packages"
-        Handlers["@repo/api-handlers"]
-        Services["@repo/api-services"]
-        Lambda["@repo/lambda-adapter"]
-        DB["@repo/db"]
-        S3["@repo/s3-client"]
-    end
+    A -->|FAIL| A1[/pm-fix-story]
+    A -->|SPLIT| A2[PM splits story]
+    B -->|FAIL| B1[Block implementation]
+    C -->|FAIL| C1[Block proof]
+    D -->|FAIL| D1[/dev-fix-story]
+    E -->|FAIL| E1[/dev-fix-story]
 
-    subgraph "Core Packages"
-        UI["@repo/ui"]
-        APIClient["@repo/api-client"]
-        Logger["@repo/logger"]
-    end
-
-    API --> Lambda
-    Lambda --> Handlers
-    Handlers --> Services
-    Services --> DB
-    Services --> S3
-
-    MainApp --> UI
-    MainApp --> APIClient
-    MainApp --> Logger
+    style A fill:#2196F3,color:#fff
+    style B fill:#FF9800,color:#fff
+    style C fill:#FF9800,color:#fff
+    style D fill:#9C27B0,color:#fff
+    style E fill:#2196F3,color:#fff
+    style F fill:#4CAF50,color:#fff
 ```
 
----
-
-## 6. Common Patterns
-
-### Adding a New API Endpoint
-
-**Step 1: Define the Schema (if new table)**
-
-```typescript
-// packages/backend/db/src/schema.ts
-export const wishlistItems = pgTable('wishlist_items', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull(),
-  title: text('title').notNull(),
-  store: text('store').notNull(),
-  price: decimal('price', { precision: 10, scale: 2 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
-```
-
-**Step 2: Create Zod Schemas**
-
-```typescript
-// packages/backend/db/src/schemas/wishlist.ts
-import { z } from 'zod'
-
-export const WishlistItemSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string(),
-  title: z.string().min(1),
-  store: z.string(),
-  price: z.number().positive().optional(),
-  createdAt: z.coerce.date(),
-})
-
-export type WishlistItem = z.infer<typeof WishlistItemSchema>
-
-export const WishlistQuerySchema = z.object({
-  store: z.string().optional(),
-  sort: z.enum(['createdAt', 'price', 'title']).default('createdAt'),
-  order: z.enum(['asc', 'desc']).default('desc'),
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
-})
-```
-
-**Step 3: Create Service**
-
-```typescript
-// packages/backend/api-services/src/wishlist/list-service.ts
-import { db } from '@repo/db'
-import { wishlistItems } from '@repo/db/schema'
-import { eq, desc, asc } from 'drizzle-orm'
-
-export async function listWishlistItems(
-  userId: string,
-  query: WishlistQuery
-): Promise<WishlistListResponse> {
-  const { store, sort, order, page, limit } = query
-
-  const orderFn = order === 'asc' ? asc : desc
-
-  const items = await db
-    .select()
-    .from(wishlistItems)
-    .where(eq(wishlistItems.userId, userId))
-    .orderBy(orderFn(wishlistItems[sort]))
-    .limit(limit)
-    .offset((page - 1) * limit)
-
-  return { items, page, limit }
-}
-```
-
-**Step 4: Create Handler**
-
-```typescript
-// packages/backend/api-handlers/src/wishlist/list.handler.ts
-import { listWishlistItems } from '@repo/api-services/wishlist'
-import { WishlistQuerySchema } from '@repo/db/schemas/wishlist'
-
-export interface HandlerContext {
-  userId: string
-}
-
-export async function handleListWishlist(
-  request: Request,
-  ctx: HandlerContext
-): Promise<Response> {
-  try {
-    const url = new URL(request.url)
-    const params = Object.fromEntries(url.searchParams)
-    const query = WishlistQuerySchema.parse(params)
-
-    const result = await listWishlistItems(ctx.userId, query)
-
-    return Response.json(result)
-  } catch (error) {
-    return handleError(error)
-  }
-}
-```
-
-**Step 5: Create Lambda Adapter**
-
-```typescript
-// apps/api/endpoints/wishlist/list/handler.ts
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import { handleListWishlist } from '@repo/api-handlers/wishlist'
-import { toLambdaRequest, fromLambdaResponse, getUserId } from '@repo/lambda-adapter'
-
-export const handler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  const userId = getUserId(event)
-  if (!userId) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) }
-  }
-
-  const request = toLambdaRequest(event)
-  const response = await handleListWishlist(request, { userId })
-  return fromLambdaResponse(response)
-}
-```
-
-**Step 6: Add to serverless.yml**
-
-```yaml
-# apps/api/serverless.yml
-functions:
-  wishlistList:
-    handler: endpoints/wishlist/list/handler.handler
-    events:
-      - http:
-          path: /api/wishlist
-          method: get
-          authorizer: cognitoAuthorizer
-```
-
-**Step 7: Create RTK Query Hook**
-
-```typescript
-// packages/core/api-client/src/rtk/wishlist-api.ts
-export const wishlistApi = createApi({
-  reducerPath: 'wishlistApi',
-  baseQuery: baseQueryWithAuth,
-  tagTypes: ['Wishlist'],
-  endpoints: (builder) => ({
-    getWishlist: builder.query<WishlistListResponse, Partial<WishlistQuery>>({
-      query: (params) => ({ url: '/wishlist', params }),
-      providesTags: [{ type: 'Wishlist', id: 'LIST' }],
-    }),
-  }),
-})
-
-export const { useGetWishlistQuery } = wishlistApi
-```
-
----
-
-### Adding a New UI Component
-
-**Step 1: Create Component Directory**
-
-```
-apps/web/main-app/src/routes/wishlist/-components/
-  WishlistCard/
-    index.tsx           # Main component
-    __tests__/
-      WishlistCard.test.tsx
-    __types__/
-      index.ts          # Zod schemas for props
-```
-
-**Step 2: Define Types with Zod**
-
-```typescript
-// __types__/index.ts
-import { z } from 'zod'
-import { WishlistItemSchema } from '@repo/api-client/schemas/wishlist'
-
-export const WishlistCardPropsSchema = z.object({
-  item: WishlistItemSchema,
-  onView: z.function().args(z.string()).returns(z.void()).optional(),
-  onEdit: z.function().args(z.string()).returns(z.void()).optional(),
-  onRemove: z.function().args(z.string()).returns(z.void()).optional(),
-})
-
-export type WishlistCardProps = z.infer<typeof WishlistCardPropsSchema>
-```
-
-**Step 3: Implement Component**
-
-```typescript
-// index.tsx
-import { Card, Badge, Button, DropdownMenu } from '@repo/ui'
-import { MoreVertical, Eye, Pencil, Trash } from 'lucide-react'
-import type { WishlistCardProps } from './__types__'
-
-export function WishlistCard({ item, onView, onEdit, onRemove }: WishlistCardProps) {
-  return (
-    <Card className="group relative">
-      <img
-        src={item.imageUrl ?? '/placeholder.png'}
-        alt={item.title}
-        className="aspect-[4/3] object-cover"
-      />
-      <div className="p-4">
-        <h3 className="font-semibold">{item.title}</h3>
-        <Badge variant="secondary">{item.store}</Badge>
-        {item.price && (
-          <span className="font-bold">
-            {new Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-            }).format(item.price)}
-          </span>
-        )}
-      </div>
-
-      {/* Hover actions */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100">
-        <DropdownMenu>
-          {/* ... menu items */}
-        </DropdownMenu>
-      </div>
-    </Card>
-  )
-}
-```
-
-**Step 4: Write Tests**
-
-```typescript
-// __tests__/WishlistCard.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react'
-import { WishlistCard } from '../index'
-
-const mockItem = {
-  id: '123',
-  title: 'LEGO Castle',
-  store: 'LEGO',
-  price: 149.99,
-  imageUrl: '/test.png',
-}
-
-describe('WishlistCard', () => {
-  it('renders item title and store', () => {
-    render(<WishlistCard item={mockItem} />)
-
-    expect(screen.getByText('LEGO Castle')).toBeInTheDocument()
-    expect(screen.getByText('LEGO')).toBeInTheDocument()
-  })
-
-  it('formats price correctly', () => {
-    render(<WishlistCard item={mockItem} />)
-
-    expect(screen.getByText('$149.99')).toBeInTheDocument()
-  })
-
-  it('calls onView when clicked', () => {
-    const handleView = vi.fn()
-    render(<WishlistCard item={mockItem} onView={handleView} />)
-
-    fireEvent.click(screen.getByRole('button', { name: /view/i }))
-    expect(handleView).toHaveBeenCalledWith('123')
-  })
-})
-```
-
----
-
-### Adding a Database Field
-
-When adding a field to an existing table:
-
-**Step 1: Update Schema**
-
-```typescript
-// packages/backend/db/src/schema.ts
-export const wishlistItems = pgTable('wishlist_items', {
-  // ... existing fields
-  priority: integer('priority').default(0).notNull(),  // NEW
-})
-```
-
-**Step 2: Generate Migration**
-
-```bash
-pnpm --filter @repo/db generate
-# Review the generated migration in drizzle/migrations/
-```
-
-**Step 3: Update Zod Schema**
-
-```typescript
-// packages/backend/db/src/schemas/wishlist.ts
-export const WishlistItemSchema = z.object({
-  // ... existing fields
-  priority: z.number().int().min(0).max(5).default(0),  // NEW
-})
-```
-
-**Step 4: Update Services (if business logic needed)**
-
-```typescript
-// packages/backend/api-services/src/wishlist/update-service.ts
-export async function updateWishlistPriority(
-  userId: string,
-  itemId: string,
-  priority: number
-): Promise<WishlistItem> {
-  // Implementation
-}
-```
-
-**Step 5: Update UI Components**
-
-```typescript
-// Add priority display/edit to WishlistCard
-{item.priority >= 4 && (
-  <Badge variant="destructive">High Priority</Badge>
-)}
-```
-
----
-
-### Creating a Full Feature (Vertical Slice)
-
-For a complete feature like "Wishlist Priority Sorting":
-
-**1. Story Tasks:**
-- [ ] Database: Add `priority` and `sortOrder` fields
-- [ ] API: Add reorder endpoint
-- [ ] UI: Add drag-and-drop reorder
-- [ ] UI: Add priority badges
-- [ ] Tests: Full coverage
-
-**2. Implementation Order:**
-
-```mermaid
-graph TB
-    A[1. DB Migration] --> B[2. Zod Schemas]
-    B --> C[3. API Service]
-    C --> D[4. API Handler]
-    D --> E[5. Lambda Adapter]
-    E --> F[6. RTK Query Hook]
-    F --> G[7. UI Component]
-    G --> H[8. Tests]
-```
-
-**3. Using /implement:**
-
-```bash
-# The skill handles all of this
-/implement wish-2003 --parallel --deep-review
-```
+### Gate Summary
+
+| Gate | Command | Checks | Fail Action |
+|------|---------|--------|-------------|
+| **Story Audit** | `/elab-story` | Scope, consistency, testability, completeness, sizing | `/pm-fix-story` or split |
+| **Plan Validation** | (within `/dev-implement-story`) | Valid paths, existing reuse targets, complete AC coverage | Block implementation |
+| **Build/Test** | (within `/dev-implement-story`) | `pnpm check-types`, `pnpm test`, `pnpm lint` | Block proof |
+| **Code Review** | `/dev-code-review` | Code quality, architecture, security, testing, conventions | `/dev-fix-story` |
+| **QA Verify** | `/qa-verify-story` | AC evidence, test execution, proof quality | `/dev-fix-story` |
+
+### Hard Rules Enforced
+
+1. **Reuse-First**
+   - Shared logic in `packages/**`
+   - No per-story one-off utilities
+
+2. **Ports & Adapters**
+   - Core logic is transport-agnostic
+   - Adapters are explicitly identified
+
+3. **Local Testability**
+   - Backend: Runnable `.http` tests
+   - Frontend: Playwright tests
+
+4. **No Blocking TBDs**
+   - PM decides or declares out of scope
+   - No "TBD" in AC or test plans
+
+5. **Story Sizing**
+   - Stories completable in 1-3 dev sessions
+   - 2+ "too large" indicators triggers mandatory split
+   - No bundling of independent features
 
 ---
 
 ## 7. Troubleshooting
 
-### Common Issues and Solutions
+### Common Issues
 
-#### Docker/Database Issues
-
-**Problem:** Cannot connect to database
-
+#### Story Blocked on Dependencies
 ```bash
-# Check if Docker is running
-docker ps
-
-# Check container logs
-docker logs lego-moc-postgres
-
-# Restart containers
-docker compose -f docker/docker-compose.local.yml down
-docker compose -f docker/docker-compose.local.yml up -d
-
-# Verify connection
-psql postgresql://lego_moc_user:local_dev_password@localhost:5432/lego_moc_db
+# Check dependencies in index
+grep -A5 "STORY-XXX" plans/stories/stories.index.md
 ```
+Stories cannot start until dependencies have `status: completed`.
 
-#### Type Errors
+#### Agent Produced BLOCKERS.md
+1. Read the blockers file for details
+2. If PM issue → `/pm-fix-story`
+3. If Dev issue → Fix and re-run relevant phase
 
-**Problem:** Type mismatch between packages
+#### Status Mismatch
+If a command fails due to wrong status:
+1. Check current status in story frontmatter
+2. Run the appropriate command for that status
+3. Follow the status flow diagram
 
-```bash
-# Rebuild all packages
-pnpm build
+#### Tests Failing in Implementation
+The dev sub-agents use fast-fail - they run `pnpm check-types` after each chunk. If blocked:
+1. Check `_implementation/BLOCKERS.md`
+2. Check `_implementation/VERIFICATION.md` for details
+3. Fix issues and re-run `/dev-implement-story`
 
-# Check for circular dependencies
-pnpm check-types:all 2>&1 | head -50
+### Where to Find Logs
 
-# Clean and rebuild
-pnpm clean && pnpm install && pnpm build
-```
-
-#### Test Failures
-
-**Problem:** Tests fail locally but pass in CI
-
-```bash
-# Run tests in isolation
-pnpm test -- --run --reporter=verbose
-
-# Check for test pollution
-pnpm test -- --run --sequence.shuffle
-
-# Run specific test file
-pnpm test -- path/to/test.test.ts
-```
-
-#### Lint Errors
-
-**Problem:** ESLint errors after changes
-
-```bash
-# Auto-fix what's possible
-pnpm lint:fix
-
-# Check specific file
-pnpm lint -- path/to/file.ts
-
-# Disable rule for specific line (last resort)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-```
-
-#### Git Worktree Issues
-
-**Problem:** Worktree stuck or corrupted
-
-```bash
-# List worktrees
-git worktree list
-
-# Prune stale references
-git worktree prune
-
-# Remove specific worktree
-git worktree remove tree/feature-name --force
-```
-
-### Where to Get Help
-
-| Issue Type | Resource |
-|------------|----------|
-| Architecture questions | `/architect` agent |
-| Story clarification | `/sm` agent |
-| Code review | `/qa` agent or `/review-pr` |
-| Build issues | Check `turbo.json` and package dependencies |
-| AWS issues | Check CloudWatch logs |
+| Artifact | Location | Contains |
+|----------|----------|----------|
+| Test Plan | `_pm/TEST-PLAN.md` | Happy path, error cases, edge cases |
+| PM Blockers | `_pm/BLOCKERS.md` | PM-phase blockers and decisions |
+| Scope | `_implementation/SCOPE.md` | Backend/frontend/infra impact flags |
+| Implementation Plan | `_implementation/IMPLEMENTATION-PLAN.md` | Step-by-step dev plan with AC mapping |
+| Plan Validation | `_implementation/PLAN-VALIDATION.md` | Pre-implementation validation results |
+| Backend Log | `_implementation/BACKEND-LOG.md` | What backend coder did |
+| Frontend Log | `_implementation/FRONTEND-LOG.md` | What frontend coder did |
+| Verification | `_implementation/VERIFICATION.md` | Build/test/lint results |
+| Token Summary | `_implementation/TOKEN-SUMMARY.md` | Aggregated token usage per phase |
+| Proof | `PROOF-STORY-XXX.md` | Complete evidence for QA |
+| Code Review | `CODE-REVIEW-STORY-XXX.md` | Final code review verdict |
+| Code Review - Lint | `_implementation/CODE-REVIEW-LINT.md` | Lint results on touched files |
+| Code Review - Style | `_implementation/CODE-REVIEW-STYLE.md` | Tailwind/component compliance |
+| Code Review - Syntax | `_implementation/CODE-REVIEW-SYNTAX.md` | ES7+ syntax check |
+| Code Review - Security | `_implementation/CODE-REVIEW-SECURITY.md` | Security vulnerability scan |
+| Learnings | `plans/stories/LESSONS-LEARNED.md` | Patterns to apply/avoid (global file) |
 
 ---
 
-## 8. Examples
+## Quick Reference
 
-### Reference: Well-Structured Stories
+### Complete Happy Path
 
-The wishlist stories in `/docs/stories/epic-6-wishlist/wish-200*.md` demonstrate the consolidated story format:
+```mermaid
+sequenceDiagram
+    participant PM as PM Agent
+    participant QA as QA Agent
+    participant Dev as Dev Agent
+    participant CR as Code Review
+    participant User
 
-| Story | Description | Key Patterns |
-|-------|-------------|--------------|
-| `wish-2000` | Database schema + types | Foundation story |
-| `wish-2001` | Gallery MVP (vertical slice) | Consolidates gallery + card + API |
-| `wish-2002` | Add item flow | Form + validation + API |
-| `wish-2003` | Detail + edit pages | CRUD operations |
-| `wish-2004` | Modals + transitions | UX polish |
-| `wish-2005` | UX polish | Empty states, loading |
-| `wish-2006` | Accessibility | Keyboard nav, screen reader |
+    User->>PM: /pm-generate-story STORY-007
+    PM->>PM: Run sub-agents (Test, UI/UX, Feasibility)
+    PM-->>User: STORY-007.md created (backlog)
 
-### Reference: Foundation Stories
+    User->>QA: /elab-story STORY-007
+    QA->>QA: Audit checklist (8 checks)
+    QA->>QA: Discovery phase
+    QA->>User: Discuss improvements?
+    User-->>QA: Decisions recorded
+    QA-->>User: PASS → ready-to-work
 
-The housekeeping stories in `/docs/stories/epic-0-housekeeping/hskp-200*.md` show infrastructure patterns:
+    User->>Dev: /dev-implement-story STORY-007
+    Dev->>Dev: Planner → Validator
+    Dev->>Dev: Backend + Frontend (parallel)
+    Dev->>Dev: Verifier + Playwright
+    Dev->>Dev: Proof Writer
+    Dev-->>User: PROOF-STORY-007.md → ready-for-code-review
 
-| Story | Description | Key Patterns |
-|-------|-------------|--------------|
-| `hskp-2000` | API service extraction | Hexagonal architecture |
-| `hskp-2001` | Express local dev | Docker + Express setup |
-| `hskp-2002` | MCP server infrastructure | AI tooling foundation |
-| `hskp-2003` | Drizzle MCP server | Schema context for AI |
-| `hskp-2004` | Serverless MCP server | Lambda config for AI |
-| `hskp-2005` | Scaffold endpoint skill | Code generation |
-| `hskp-2006` | Scaffold feature skill | Vertical slice generation |
+    User->>CR: /dev-code-review STORY-007
+    CR->>CR: Lint + Style + Syntax + Security (parallel)
+    CR-->>User: PASS → ready-for-qa
 
----
+    User->>QA: /qa-verify-story STORY-007
+    QA->>QA: Verify AC evidence
+    QA->>QA: Execute tests
+    QA-->>User: PASS → uat → done
+```
 
-## Quick Reference Card
-
-### Daily Development Commands
+### Starting a New Story
 
 ```bash
-# Start local environment
-docker compose -f docker/docker-compose.local.yml up -d
-pnpm dev:local
+# Option 1: Specific story
+/pm-generate-story STORY-007
 
-# Before committing
-pnpm test && pnpm check-types && pnpm lint
-
-# Start new feature
-/wt-new   # or /start-feature
-
-# Implement story
-/develop wish-2001 --parallel
-
-# Create PR
-/commit && git push -u origin $(git branch --show-current)
-gh pr create
-
-# After merge
-/implement wish-2001 --complete
+# Option 2: Auto-select next ready story
+/pm-generate-story next
 ```
 
-### Key File Locations
+### Full Story Workflow
 
+```bash
+# 1. Generate the story
+/pm-generate-story STORY-007
+
+# 2. QA audit the story
+/elab-story STORY-007
+
+# 3. Implement the story
+/dev-implement-story STORY-007
+
+# 4. Code review
+/dev-code-review STORY-007
+
+# 5. QA verify the implementation
+/qa-verify-story STORY-007
 ```
-/CLAUDE.md                           # Project conventions
-/docs/FEATURE-DEVELOPMENT-WORKFLOW.md # This document
-/docs/stories/                        # User stories
-/docs/prd/                           # Product requirements
-/docs/architecture/                   # Technical docs
-/.claude/skills/                     # Available skills
-/.bmad-core/                         # BMAD framework
+
+### Fix Loops
+
+```bash
+# If /elab-story fails (status: needs-refinement):
+/pm-fix-story STORY-007
+/elab-story STORY-007
+
+# If /elab-story requires split (status: needs-split):
+# 1. PM reviews ELAB-STORY-007.md for split recommendations
+# 2. PM adds split stories to stories.index.md (STORY-007-A, STORY-007-B)
+# 3. PM marks STORY-007 as status: superseded
+# 4. Generate and elaborate each split:
+/pm-generate-story STORY-007-A
+/elab-story STORY-007-A
+/pm-generate-story STORY-007-B
+/elab-story STORY-007-B
+
+# If /dev-code-review fails (status: code-review-failed):
+/dev-fix-story STORY-007
+/dev-code-review STORY-007
+# If passes → /qa-verify-story STORY-007
+
+# If /qa-verify-story fails (status: needs-work):
+/dev-fix-story STORY-007
+/dev-code-review STORY-007
+/qa-verify-story STORY-007
 ```
 
-### Quality Gates
+### Bug and Ad-Hoc Stories
 
-| Check | Command | Required |
-|-------|---------|----------|
-| Tests pass | `pnpm test` | Yes |
-| Types valid | `pnpm check-types` | Yes |
-| Lint clean | `pnpm lint` | Yes |
-| Coverage 45%+ | `pnpm test --coverage` | Yes |
-| QA review | `/qa-gate` | Recommended |
+```bash
+# Bug discovered
+/pm-generate-bug-story BUG-001
+
+# Off-index work needed
+/pm-generate-ad-hoc-story STORY-099
+
+# UI/UX review (optional, after implementation)
+/ui-ux-review STORY-007
+```
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2025-12-27*
-*Covers: API Portability, AI Automation, Consolidated Stories*
+*Document Version: 3.0*
+*Last Updated: 2026-01-22*
+*Covers: Multi-Agent Pipeline, Status-Driven Workflow, Artifact-Based Communication, Parallel Code Review Gate, Discovery Phase, Story Splitting, Token Tracking, Mermaid Diagrams*

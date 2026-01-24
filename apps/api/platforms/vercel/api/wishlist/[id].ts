@@ -268,10 +268,7 @@ async function handleDelete(
   res.status(200).json({ success: true })
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   // Only allow GET, PUT, DELETE
   if (!['GET', 'PUT', 'DELETE'].includes(req.method ?? '')) {
     res.status(405).json({ error: 'Method Not Allowed' })

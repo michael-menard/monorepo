@@ -43,9 +43,7 @@ export interface AnomalyDetectionResources {
 /**
  * Create AWS Cost Anomaly Detection with SNS integration
  */
-export function createAnomalyDetection(
-  config: AnomalyDetectionConfig,
-): AnomalyDetectionResources {
+export function createAnomalyDetection(config: AnomalyDetectionConfig): AnomalyDetectionResources {
   const { snsTopicArn, thresholdAmount, stage } = config
 
   // Create cost anomaly monitor
@@ -70,44 +68,41 @@ export function createAnomalyDetection(
   })
 
   // Create anomaly subscription with daily frequency
-  const subscription = new aws.costexplorer.AnomalySubscription(
-    'LegoApiCostAnomalySubscription',
-    {
-      name: `lego-api-cost-anomaly-alerts-${stage}`,
-      frequency: 'DAILY',
-      monitorArnList: [monitor.arn],
-      subscribers: [
+  const subscription = new aws.costexplorer.AnomalySubscription('LegoApiCostAnomalySubscription', {
+    name: `lego-api-cost-anomaly-alerts-${stage}`,
+    frequency: 'DAILY',
+    monitorArnList: [monitor.arn],
+    subscribers: [
+      {
+        type: 'SNS',
+        address: snsTopicArn,
+      },
+    ],
+    thresholdExpression: {
+      and: [
         {
-          type: 'SNS',
-          address: snsTopicArn,
+          dimension: {
+            key: 'ANOMALY_TOTAL_IMPACT_ABSOLUTE',
+            matchOptions: ['GREATER_THAN_OR_EQUAL'],
+            values: [thresholdAmount.toString()],
+          },
         },
       ],
-      thresholdExpression: {
-        and: [
-          {
-            dimension: {
-              key: 'ANOMALY_TOTAL_IMPACT_ABSOLUTE',
-              matchOptions: ['GREATER_THAN_OR_EQUAL'],
-              values: [thresholdAmount.toString()],
-            },
-          },
-        ],
-      },
-      tags: {
-        // Required tags
-        Project: 'lego-api',
-        Environment: stage,
-        ManagedBy: 'SST',
-        CostCenter: 'Engineering',
-        Owner: 'engineering@bricklink.com',
-        // Functional tags
-        Component: 'Observability',
-        Function: 'Monitoring',
-        // Cost allocation tags
-        CostOptimization: 'Review',
-      },
     },
-  )
+    tags: {
+      // Required tags
+      Project: 'lego-api',
+      Environment: stage,
+      ManagedBy: 'SST',
+      CostCenter: 'Engineering',
+      Owner: 'engineering@bricklink.com',
+      // Functional tags
+      Component: 'Observability',
+      Function: 'Monitoring',
+      // Cost allocation tags
+      CostOptimization: 'Review',
+    },
+  })
 
   return {
     monitor,

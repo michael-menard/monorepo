@@ -20,7 +20,7 @@ import { eq } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-
+import { createRateLimiter, generateDailyKey } from '@repo/rate-limit'
 import { db } from '@/core/database/client'
 import { mocInstructions } from '@/core/database/schema'
 import {
@@ -40,7 +40,6 @@ import {
   getFileSizeLimit,
   getFileCountLimit,
 } from '@/core/config/upload'
-import { createRateLimiter, generateDailyKey } from '@repo/rate-limit'
 import { createPostgresRateLimitStore } from '@/core/rate-limit/postgres-store'
 import { sanitizeFilenameForS3 } from '@/core/utils/filename-sanitizer'
 
@@ -239,7 +238,9 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     if (currentCount >= limit) {
       // Calculate reset time (next UTC midnight)
       const now = new Date()
-      const resetAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+      const resetAt = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+      )
       const retryAfterSeconds = Math.ceil((resetAt.getTime() - now.getTime()) / 1000)
 
       logger.warn('moc.edit.rate_limited', {

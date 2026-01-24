@@ -5,7 +5,16 @@
 import pg from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { boolean, decimal, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  decimal,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import loggerPkg from '@repo/logger'
 import {
@@ -21,10 +30,7 @@ import {
   UnauthorizedError,
 } from '@repo/lambda-responses'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
-import {
-  SetSchema,
-  SetListResponseSchema,
-} from '@repo/api-client/schemas/sets'
+import { SetSchema, SetListResponseSchema } from '@repo/api-client/schemas/sets'
 
 // Inline schema
 const sets = pgTable(

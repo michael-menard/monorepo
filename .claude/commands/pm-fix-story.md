@@ -12,8 +12,8 @@ The story number (STORY-XXX) is provided as an argument.
 All other inputs are fixed and must be treated as authoritative.
 
 Authoritative Inputs:
-- The story file: STORY-XXX/STORY-XXX.md
-- The QA audit file: STORY-XXX/QA-AUDIT-STORY-XXX.md
+- The story file: plans/stories/elaboration/STORY-XXX/STORY-XXX.md
+- The QA audit file: plans/stories/elaboration/STORY-XXX/QA-AUDIT-STORY-XXX.md
 - plans/stories/stories.index.md
 - vercel.migration.plan.exec.md
 - vercel.migration.plan.meta.md
@@ -25,7 +25,7 @@ Preconditions (MANDATORY):
 
 Purpose:
 Revise STORY-XXX.md to fully resolve ALL Critical and High issues
-identified in STORY-XXX//QA-AUDIT-STORY-XXX.md.
+identified in plans/stories/elaboration/STORY-XXX/QA-AUDIT-STORY-XXX.md.
 
 This step exists to:
 - eliminate ambiguity
@@ -34,13 +34,13 @@ This step exists to:
 - prevent developers from guessing
 
 Task:
-Revise STORY-XXX//STORY-XXX.md to address EVERY Critical and High issue from STORY-XXX//QA-AUDIT-STORY-XXX.md.
+Revise plans/stories/elaboration/STORY-XXX/STORY-XXX.md to address EVERY Critical and High issue from plans/stories/elaboration/STORY-XXX/QA-AUDIT-STORY-XXX.md.
 
 Rules (MANDATORY):
 1) All Critical and High issues MUST be resolved explicitly in the story.
 2) Blocking design decisions MUST be made — do NOT defer them.
 3) If scope must change to resolve an issue:
-   - Update STORY-XXX/STORY-XXX.md accordingly
+   - Update plans/stories/elaboration/STORY-XXX/STORY-XXX.md accordingly
    - Add a clear note if plans/stories.index.md is now outdated
    - Do NOT modify the index in this step
 4) Acceptance Criteria and Local Testing Plan MUST be updated to reflect all fixes.

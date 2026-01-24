@@ -1,6 +1,6 @@
 /**
  * OpenSearch Domain for Full-Text Search
- * 
+ *
  * Creates AWS OpenSearch domain with:
  * - OpenSearch 2.x
  * - t3.small for dev, r6g.large for production
@@ -62,22 +62,24 @@ export function createOpenSearch(vpc: any, openSearchSecurityGroup: any, stage: 
    * - Allows Lambda functions to read/write to OpenSearch
    */
   const openSearchLambdaPolicy = new aws.iam.Policy('OpenSearchLambdaPolicy', {
-    policy: openSearch.nodes.domain.arn.apply(arn => JSON.stringify({
-      Version: '2012-10-17',
-      Statement: [
-        {
-          Effect: 'Allow',
-          Action: [
-            'es:ESHttpGet',
-            'es:ESHttpPost',
-            'es:ESHttpPut',
-            'es:ESHttpDelete',
-            'es:ESHttpHead',
-          ],
-          Resource: `${arn}/*`,
-        },
-      ],
-    })),
+    policy: openSearch.nodes.domain.arn.apply(arn =>
+      JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: [
+              'es:ESHttpGet',
+              'es:ESHttpPost',
+              'es:ESHttpPut',
+              'es:ESHttpDelete',
+              'es:ESHttpHead',
+            ],
+            Resource: `${arn}/*`,
+          },
+        ],
+      }),
+    ),
   })
 
   return {

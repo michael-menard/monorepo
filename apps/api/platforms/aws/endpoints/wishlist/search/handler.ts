@@ -19,8 +19,8 @@
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { ZodError } from 'zod'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
+import { logger } from '@/core/observability/logger'
 import { successResponse, errorResponse } from '@/core/utils/responses'
 import { SearchWishlistQuerySchema } from '@/endpoints/wishlist/schemas'
 import { getRedisClient } from '@/core/cache/redis'

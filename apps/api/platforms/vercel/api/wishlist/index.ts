@@ -78,10 +78,7 @@ function getAuthUserId(): string | null {
   return null
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   // Only allow POST
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method Not Allowed' })

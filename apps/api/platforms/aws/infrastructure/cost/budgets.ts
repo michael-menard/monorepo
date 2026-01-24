@@ -1,6 +1,6 @@
 /**
  * AWS Budget Configuration for Cost Monitoring
- * 
+ *
  * Creates AWS Budget with multi-threshold alerts:
  * - $150/month limit with alerts at 80% ($120) and 100% ($150)
  * - Filtered to Project=UserMetrics tagged resources only

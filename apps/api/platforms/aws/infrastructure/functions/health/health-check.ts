@@ -1,6 +1,6 @@
 /**
  * Health Check Lambda Function
- * 
+ *
  * Creates health check Lambda that:
  * - Validates connectivity to PostgreSQL, OpenSearch
  * - Returns 200 (healthy/degraded) or 503 (unhealthy)
@@ -12,7 +12,7 @@ export function createHealthCheckFunction(
   postgres: any,
   openSearch: any,
   lambdaEmfPolicy: any,
-  stage: string
+  stage: string,
 ) {
   const healthCheckFunction = new sst.aws.Function('HealthCheckFunction', {
     handler: 'endpoints/health/handler.handler',

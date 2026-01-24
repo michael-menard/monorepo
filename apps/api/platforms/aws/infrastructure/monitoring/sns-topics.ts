@@ -1,6 +1,6 @@
 /**
  * SNS Topics for Monitoring and Alerts
- * 
+ *
  * Creates SNS topics for:
  * - Error alerts (Lambda function errors)
  * - Budget alerts (cost monitoring)

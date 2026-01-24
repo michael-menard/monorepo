@@ -68,9 +68,30 @@ QA must produce a verification report containing:
 - Required `.http` requests were not executed
 - Required Playwright tests were not executed
 
+## Token Logging (REQUIRED)
+
+Every QA agent output MUST include a Token Log section.
+See: `.claude/agents/_token-logging.md` for format.
+
+Append to verification report:
+
+```markdown
+## Token Log
+
+| Operation | Type | Bytes | Tokens (est) |
+|-----------|------|-------|--------------|
+| Read: STORY-XXX.md | input | X | ~Y |
+| Read: PROOF-STORY-XXX.md | input | X | ~Y |
+| Read: implementation files | input | X | ~Y |
+| Write: QA-VERIFY-STORY-XXX.md | output | X | ~Y |
+| **Total Input** | — | X | **~Y** |
+| **Total Output** | — | X | **~Y** |
+```
+
 ## Definition of Done
 - All ACs verified
 - No fake progress detected
 - Demo Script passes in reality
 - System is runnable and believable
 - All required tests executed (including `.http` and Playwright where applicable)
+- Token Log section is complete

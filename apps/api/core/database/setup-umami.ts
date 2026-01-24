@@ -26,6 +26,7 @@
  * - AWS_REGION: AWS region for Secrets Manager
  */
 
+import { randomBytes } from 'crypto'
 import { Pool } from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
@@ -34,9 +35,8 @@ import {
   CreateSecretCommand,
   DescribeSecretCommand,
 } from '@aws-sdk/client-secrets-manager'
-import { createLogger } from '@/core/observability/logger'
 import { getEnv } from '../utils/env'
-import { randomBytes } from 'crypto'
+import { createLogger } from '@/core/observability/logger'
 import * as umamiSchema from '@/core/database/schema/umami'
 
 const logger = createLogger('umami-setup')

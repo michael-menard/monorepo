@@ -1,6 +1,6 @@
 /**
  * Security Groups for LEGO API Serverless Infrastructure
- * 
+ *
  * Creates security groups for:
  * - Lambda Functions (outbound access to RDS, Redis, OpenSearch, internet)
  * - RDS PostgreSQL (inbound from Lambda only)
@@ -126,46 +126,43 @@ export function createSecurityGroups(vpc: any, stage: string) {
    * - HTTP/HTTPS ingress from internet (0.0.0.0/0)
    * - Egress to ECS tasks (OpenReplay, Umami)
    */
-  const observabilityAlbSecurityGroup = new aws.ec2.SecurityGroup(
-    'ObservabilityAlbSecurityGroup',
-    {
-      vpcId: vpc.id,
-      description: 'Security group for observability ALB',
-      ingress: [
-        {
-          protocol: 'tcp',
-          fromPort: 80,
-          toPort: 80,
-          cidrBlocks: ['0.0.0.0/0'], // HTTP from internet
-        },
-        {
-          protocol: 'tcp',
-          fromPort: 443,
-          toPort: 443,
-          cidrBlocks: ['0.0.0.0/0'], // HTTPS from internet
-        },
-      ],
-      egress: [
-        {
-          protocol: 'tcp',
-          fromPort: 80,
-          toPort: 80,
-          securityGroups: [openReplaySecurityGroup.id, umamiSecurityGroup.id],
-        },
-        {
-          protocol: 'tcp',
-          fromPort: 443,
-          toPort: 443,
-          securityGroups: [openReplaySecurityGroup.id, umamiSecurityGroup.id],
-        },
-      ],
-      tags: {
-        Name: `observability-alb-sg-${stage}`,
-        Environment: stage,
-        Project: 'lego-api-serverless',
+  const observabilityAlbSecurityGroup = new aws.ec2.SecurityGroup('ObservabilityAlbSecurityGroup', {
+    vpcId: vpc.id,
+    description: 'Security group for observability ALB',
+    ingress: [
+      {
+        protocol: 'tcp',
+        fromPort: 80,
+        toPort: 80,
+        cidrBlocks: ['0.0.0.0/0'], // HTTP from internet
       },
+      {
+        protocol: 'tcp',
+        fromPort: 443,
+        toPort: 443,
+        cidrBlocks: ['0.0.0.0/0'], // HTTPS from internet
+      },
+    ],
+    egress: [
+      {
+        protocol: 'tcp',
+        fromPort: 80,
+        toPort: 80,
+        securityGroups: [openReplaySecurityGroup.id, umamiSecurityGroup.id],
+      },
+      {
+        protocol: 'tcp',
+        fromPort: 443,
+        toPort: 443,
+        securityGroups: [openReplaySecurityGroup.id, umamiSecurityGroup.id],
+      },
+    ],
+    tags: {
+      Name: `observability-alb-sg-${stage}`,
+      Environment: stage,
+      Project: 'lego-api-serverless',
     },
-  )
+  })
 
   return {
     lambdaSecurityGroup,

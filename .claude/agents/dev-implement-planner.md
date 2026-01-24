@@ -52,7 +52,20 @@ Write exactly to:
 
 # Stop Conditions / Blockers
 - If any, list them clearly with:
-  - what’s missing
+  - what's missing
   - why it blocks implementation
   - what info is needed (from story/PM), without guessing
-2
+
+# Token Log (REQUIRED)
+- Log all file reads and writes with byte counts
+- See `.claude/agents/_token-logging.md` for format
+
+Example:
+```
+| Operation | Type | Bytes | Tokens (est) |
+|-----------|------|-------|--------------|
+| Read: STORY-XXX.md | input | 18,000 | ~4,500 |
+| Read: existing-handlers | input | 15,000 | ~3,750 |
+| Write: IMPLEMENTATION-PLAN.md | output | 8,000 | ~2,000 |
+| **Total** | — | 41,000 | **~10,250** |
+```

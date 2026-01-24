@@ -27,6 +27,12 @@
  * Authorization: User must own the MOC
  */
 
+import { eq, and, isNull, or, lt } from 'drizzle-orm'
+import { z } from 'zod'
+import { HeadObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { validateMagicBytes } from '@repo/file-validator'
+import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
+import { validatePartsFile } from '../_shared/parts-validators/validator-registry'
 import {
   successResponse,
   errorResponseFromError,
@@ -45,14 +51,8 @@ import {
 import { createLogger } from '@/core/observability/logger'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles } from '@/core/database/schema'
-import { eq, and, isNull, or, lt } from 'drizzle-orm'
-import { z } from 'zod'
-import { HeadObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getUploadConfig, getFileSizeLimit } from '@/core/config/upload'
-import { validateMagicBytes } from '@repo/file-validator'
-import { createRateLimiter, generateDailyKey, RATE_LIMIT_WINDOWS } from '@repo/rate-limit'
 import { createPostgresRateLimitStore } from '@/core/rate-limit/postgres-store'
-import { validatePartsFile } from '../_shared/parts-validators/validator-registry'
 
 const logger = createLogger('finalize-with-files')
 

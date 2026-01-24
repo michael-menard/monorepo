@@ -8,8 +8,8 @@
  * Full implementation will be completed in Story 2.8.
  */
 
-import { getOpenSearchClient } from '@/core/search/opensearch'
 import type { MocInstruction } from '@repo/api-types/moc'
+import { getOpenSearchClient } from '@/core/search/opensearch'
 import { SearchError } from '@/core/utils/responses'
 import { createLogger } from '@/core/observability/logger'
 

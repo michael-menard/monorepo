@@ -1,4 +1,5 @@
 # CLAUDE.md - Project Guidelines
+<!-- WRKF-000 Harness Validation: 2026-01-22 -->
 
 ## Overview
 

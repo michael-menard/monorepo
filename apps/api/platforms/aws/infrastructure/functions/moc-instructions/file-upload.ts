@@ -1,6 +1,6 @@
 /**
  * MOC File Upload Lambda Function
- * 
+ *
  * Creates Lambda function for MOC file uploads:
  * - Handles multipart/form-data file uploads (single or multi-file)
  * - JWT authentication via Cognito
@@ -18,7 +18,7 @@ export function createMocFileUploadFunction(
   openSearch: any,
   lambdaEmfPolicy: any,
   openSearchLambdaPolicy: any,
-  stage: string
+  stage: string,
 ) {
   const sharedConfig = createMocInstructionsConfig(
     vpc,
@@ -27,7 +27,7 @@ export function createMocFileUploadFunction(
     openSearch,
     lambdaEmfPolicy,
     openSearchLambdaPolicy,
-    stage
+    stage,
   )
 
   const mocFileUploadFunction = new sst.aws.Function('MocFileUploadFunction', {

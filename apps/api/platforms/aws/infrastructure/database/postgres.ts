@@ -1,6 +1,6 @@
 /**
  * PostgreSQL Database Infrastructure
- * 
+ *
  * Creates RDS PostgreSQL Database with:
  * - PostgreSQL 15.x
  * - Deployed in private subnets for security

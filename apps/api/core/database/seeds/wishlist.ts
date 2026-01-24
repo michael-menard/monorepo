@@ -7,7 +7,7 @@ type DB = NodePgDatabase
  * Seed data for the wishlist_items table
  *
  * Creates deterministic wishlist items with fixed UUIDs for testing.
- * Idempotent via ON CONFLICT DO UPDATE.
+ * Idempotent via ON CONFLICT DO NOTHING - only inserts if record doesn't exist.
  */
 export async function seedWishlist(db: DB) {
   console.log('  Seeding wishlist items...')
@@ -114,24 +114,9 @@ export async function seedWishlist(db: DB) {
         NOW(),
         NOW()
       )
-      ON CONFLICT (id) DO UPDATE SET
-        user_id = EXCLUDED.user_id,
-        title = EXCLUDED.title,
-        store = EXCLUDED.store,
-        set_number = EXCLUDED.set_number,
-        source_url = EXCLUDED.source_url,
-        image_url = EXCLUDED.image_url,
-        price = EXCLUDED.price,
-        currency = EXCLUDED.currency,
-        piece_count = EXCLUDED.piece_count,
-        release_date = EXCLUDED.release_date,
-        tags = EXCLUDED.tags,
-        priority = EXCLUDED.priority,
-        notes = EXCLUDED.notes,
-        sort_order = EXCLUDED.sort_order,
-        updated_at = NOW()
+      ON CONFLICT (id) DO NOTHING
     `)
   }
 
-  console.log(`  ✓ Upserted ${wishlistItems.length} wishlist items`)
+  console.log(`  ✓ Seeded ${wishlistItems.length} wishlist items (skipped existing)`)
 }

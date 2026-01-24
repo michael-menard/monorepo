@@ -76,10 +76,7 @@ async function getDb() {
  * POST /api/sets - Creates a new set for the authenticated user
  * OPTIONS /api/sets - CORS preflight
  */
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const origin = req.headers.origin as string | undefined
   const requestId = crypto.randomUUID()
 
@@ -110,10 +107,7 @@ export default async function handler(
       })
 
       addCorsHeaders(res, origin)
-      const response = errorResponseFromError(
-        new UnauthorizedError(jwtResult.message),
-        requestId,
-      )
+      const response = errorResponseFromError(new UnauthorizedError(jwtResult.message), requestId)
       res.status(response.statusCode).json(JSON.parse(response.body))
       return
     }
@@ -215,10 +209,7 @@ export default async function handler(
     addCorsHeaders(res, origin)
 
     if (error instanceof z.ZodError) {
-      const response = errorResponseFromError(
-        new BadRequestError(error.message),
-        requestId,
-      )
+      const response = errorResponseFromError(new BadRequestError(error.message), requestId)
       res.status(response.statusCode).json(JSON.parse(response.body))
       return
     }

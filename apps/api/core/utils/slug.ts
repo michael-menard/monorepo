@@ -6,4 +6,10 @@
  *   - import { slugify, findAvailableSlug } from '@/core/utils/slug'
  *   + import { slugify, findAvailableSlug } from '@repo/upload-types'
  */
-export { SlugSchema, type Slug, slugify, slugWithSuffix, findAvailableSlug } from '@repo/upload-types'
+export {
+  SlugSchema,
+  type Slug,
+  slugify,
+  slugWithSuffix,
+  findAvailableSlug,
+} from '@repo/upload-types'

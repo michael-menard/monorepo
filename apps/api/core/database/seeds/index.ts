@@ -4,6 +4,9 @@ import { config } from 'dotenv'
 import { seedSets } from './sets'
 import { seedWishlist } from './wishlist'
 import { seedGallery } from './gallery'
+import { seedMocPartsLists } from './moc-parts-lists'
+import { seedMocs } from './mocs'
+import { seedStory009 } from './story-009'
 
 // Load env files
 config({ path: '.env.local' })
@@ -34,6 +37,9 @@ async function main() {
     await seedSets(db)
     await seedWishlist(db)
     await seedGallery(db)
+    await seedMocPartsLists(db)
+    await seedMocs(db)
+    await seedStory009(db)
 
     console.log('✅ Database seeding completed successfully')
   } catch (error) {

@@ -356,6 +356,38 @@
   - **Detection:** Requests fail or return unexpected responses
   - **Acceptance:** Fix .http file until all requests execute successfully
 
+  ## Token Budget
+
+  Track token usage per phase to identify optimization opportunities.
+
+  ### Phase Summary
+
+  | Phase | Agent | Est. Input | Est. Output | Est. Total | Actual | Cost |
+  |-------|-------|------------|-------------|------------|--------|------|
+  | Story Generation | PM | — | — | — | — | — |
+  | Test Plan | PM | — | — | — | — | — |
+  | Dev Feasibility | PM | — | — | — | — | — |
+  | Implementation | Dev | — | — | — | — | — |
+  | Proof | Dev | — | — | — | — | — |
+  | Code Review | Review | — | — | — | — | — |
+  | QA Verification | QA | — | — | — | — | — |
+  | **Total** | — | — | — | — | **—** | **—** |
+
+  ### Measurement Instructions
+
+  1. Before starting a phase, run `/cost` and record the session total
+  2. After completing the phase, run `/cost` again
+  3. Record the delta in the Actual column
+  4. Note any unusually high costs for investigation
+
+  ### Actual Measurements
+
+  | Date | Phase | Before `/cost` | After `/cost` | Delta | Notes |
+  |------|-------|----------------|---------------|-------|-------|
+  | — | — | — | — | — | — |
+
+  ---
+
   ## Definition of Done (QA Gate)
 
   **Story is DONE when:**

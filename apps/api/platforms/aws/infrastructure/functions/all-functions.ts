@@ -18,7 +18,7 @@ export function createAllFunctions(
   websocketConnectionsTable: any,
   lambdaEmfPolicy: any,
   openSearchLambdaPolicy: any,
-  stage: string
+  stage: string,
 ) {
   // Shared configuration for all functions
   const baseConfig = {
@@ -218,12 +218,15 @@ export function createAllFunctions(
     memory: '512 MB',
   })
 
-  const getUserPartsListsSummaryFunction = new sst.aws.Function('GetUserPartsListsSummaryFunction', {
-    ...baseConfig,
-    handler: 'endpoints/moc-parts-lists/get-user-summary/handler.handler',
-    timeout: '20 seconds',
-    memory: '512 MB',
-  })
+  const getUserPartsListsSummaryFunction = new sst.aws.Function(
+    'GetUserPartsListsSummaryFunction',
+    {
+      ...baseConfig,
+      handler: 'endpoints/moc-parts-lists/get-user-summary/handler.handler',
+      timeout: '20 seconds',
+      memory: '512 MB',
+    },
+  )
 
   return {
     // MOC Instructions

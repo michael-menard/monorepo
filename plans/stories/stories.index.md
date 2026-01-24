@@ -4,9 +4,10 @@
 
 | Status | Count |
 |--------|-------|
-| completed | 6 |
-| in-progress | 1 |
-| pending | 12 |
+| completed | 16 |
+| generated | 1 |
+| in-progress | 0 |
+| pending | 2 |
 
 ---
 
@@ -16,16 +17,11 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| STORY-010 | MOC Parts Lists | — |
-| STORY-011 | MOC Instructions Read | — |
+| STORY-017 | Multipart Upload Sessions | — |
 | STORY-019 | WebSocket Support | — |
 
-**Waiting on STORY-007 (in-progress):**
-- STORY-008 → STORY-009 → STORY-016 → STORY-017 → STORY-018
-
-**Waiting on STORY-011:**
-- STORY-012 (also needs STORY-007)
-- STORY-013, STORY-014, STORY-015 → STORY-016
+**Waiting on STORY-017:**
+- STORY-018
 
 ---
 
@@ -148,7 +144,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-007: Gallery - Images Read
-**Status:** in-progress
+**Status:** completed
 **Depends On:** none
 **Feature:** Inspiration Gallery - Image Browsing
 **Endpoints:**
@@ -171,8 +167,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-008: Gallery - Images Write (No Upload)
-**Status:** pending
-**Depends On:** STORY-007
+**Status:** completed
+**Depends On:** none
 **Feature:** Inspiration Gallery - Image Metadata
 **Endpoints:**
 - `gallery/update-image/handler.ts`
@@ -192,8 +188,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-009: Image Uploads - Phase 1 (Simple Presign Pattern)
-**Status:** pending
-**Depends On:** STORY-008
+**Status:** completed
+**Depends On:** none
 **Feature:** Image Uploads - Sets, Wishlist, Gallery
 **Endpoints:**
 - `sets/images/presign/handler.ts`
@@ -217,7 +213,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-010: MOC Parts Lists
-**Status:** pending
+**Status:** completed
 **Depends On:** none
 **Feature:** MOC Parts Lists Management
 **Endpoints:**
@@ -243,7 +239,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-011: MOC Instructions - Read Operations
-**Status:** pending
+**Status:** completed
 **Depends On:** none
 **Feature:** MOC Instructions Gallery - Read
 **Endpoints:**
@@ -255,19 +251,18 @@ Stories with all dependencies satisfied (can be worked in parallel):
 **Vercel Infrastructure:**
 - 4 serverless functions (moc-instructions-get, list, stats, uploads-over-time)
 - Cognito auth middleware
-- PostgreSQL connection
-- OpenSearch for list queries
-- Env vars: DB connection, Cognito config, OpenSearch endpoint
+- PostgreSQL connection (ILIKE for search - OpenSearch deferred)
+- Env vars: DB connection, Cognito config
 
 **Goal:** Enable read access to MOC instruction metadata and statistics
 
-**Risk Notes:** Auth required, DB + OpenSearch reads, aggregation queries
+**Risk Notes:** Auth required, DB reads with ILIKE search, aggregation queries
 
 ---
 
 ## STORY-012: MOC Instructions - Gallery Linking
-**Status:** pending
-**Depends On:** STORY-007, STORY-011
+**Status:** completed
+**Depends On:** none
 **Feature:** MOC Instructions - Gallery Image Links
 **Endpoints:**
 - `moc-instructions/get-gallery-images/handler.ts`
@@ -288,8 +283,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-013: MOC Instructions - Edit (No Files)
-**Status:** pending
-**Depends On:** STORY-011
+**Status:** completed
+**Depends On:** none
 **Feature:** MOC Instructions - Metadata Edit
 **Endpoints:**
 - `moc-instructions/edit/handler.ts`
@@ -307,8 +302,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-014: MOC Instructions - Import
-**Status:** pending
-**Depends On:** STORY-011
+**Status:** completed
+**Depends On:** none
 **Feature:** MOC Instructions - External Import
 **Endpoints:**
 - `moc-instructions/import-from-url/handler.ts`
@@ -328,8 +323,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-015: MOC Instructions - Initialization & Finalization
-**Status:** pending
-**Depends On:** STORY-011
+**Status:** completed
+**Depends On:** none
 **Feature:** MOC Instructions - Create Flow
 **Endpoints:**
 - `moc-instructions/initialize-with-files/handler.ts`
@@ -350,8 +345,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-016: Image Uploads - Phase 2 (MOC Files)
-**Status:** pending
-**Depends On:** STORY-009, STORY-015
+**Status:** completed
+**Depends On:** none
 **Feature:** Image Uploads - MOC File Management
 **Endpoints:**
 - `moc-instructions/upload-file/handler.ts`
@@ -377,8 +372,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-017: Image Uploads - Phase 3 (Multipart Sessions)
-**Status:** pending
-**Depends On:** STORY-016
+**Status:** generated
+**Depends On:** none
 **Feature:** Image Uploads - Multipart Upload Sessions
 **Endpoints:**
 - `moc-uploads/sessions/create/handler.ts`
@@ -424,7 +419,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-019: WebSocket Support
-**Status:** pending
+**Status:** BLOCKED
 **Depends On:** none
 **Feature:** Real-Time WebSocket Connections
 **Endpoints:**

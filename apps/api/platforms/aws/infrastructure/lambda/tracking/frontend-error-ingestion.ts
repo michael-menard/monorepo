@@ -9,10 +9,10 @@
 
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { z } from 'zod'
-import { withErrorHandling } from '../../lib/utils/lambda-wrapper'
-import { successResponse } from '@/core/utils/responses'
 import { createLambdaLogger } from '@repo/logger'
+import { withErrorHandling } from '../../lib/utils/lambda-wrapper'
 import { logFrontendError } from '../../lib/tracking/cloudwatch-frontend-errors'
+import { successResponse } from '@/core/utils/responses'
 
 // Initialize structured logger
 const logger = createLambdaLogger('frontend-error-ingestion')
@@ -51,8 +51,6 @@ const BatchErrorPayloadSchema = z.object({
   sessionId: z.string(),
   errors: z.array(ErrorPayloadSchema),
 })
-
-
 
 /**
  * Lambda handler for frontend error ingestion

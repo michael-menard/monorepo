@@ -1,12 +1,9 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 import * as schema from '@/core/database/schema'
 import { getEnv } from '@/core/utils/env'
 import { createLogger } from '@/core/observability/logger'
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager'
 
 const logger = createLogger('db-client')
 

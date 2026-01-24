@@ -1,6 +1,6 @@
 /**
  * Cost Monitoring Infrastructure
- * 
+ *
  * Creates cost monitoring functions and dashboards:
  * - Lambda function to query Cost Explorer API daily
  * - Publishes custom metrics to CloudWatch for dashboard
@@ -101,9 +101,7 @@ export function createCostMonitoring(stage: string) {
           width: 6,
           height: 6,
           properties: {
-            metrics: [
-              ['UserMetrics/Cost', 'TotalDailyCost'],
-            ],
+            metrics: [['UserMetrics/Cost', 'TotalDailyCost']],
             view: 'singleValue',
             region: 'us-east-1',
             title: 'Total Daily Cost',
@@ -117,9 +115,7 @@ export function createCostMonitoring(stage: string) {
           width: 6,
           height: 6,
           properties: {
-            metrics: [
-              ['UserMetrics/Budget', 'DailyBudgetUtilization'],
-            ],
+            metrics: [['UserMetrics/Budget', 'DailyBudgetUtilization']],
             view: 'singleValue',
             region: 'us-east-1',
             title: 'Daily Budget Utilization (%)',

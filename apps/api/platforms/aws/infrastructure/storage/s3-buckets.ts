@@ -1,6 +1,6 @@
 /**
  * S3 Buckets for LEGO API Serverless
- * 
+ *
  * Creates S3 buckets for:
  * - MOC files, images, and avatars
  * - Runtime configuration

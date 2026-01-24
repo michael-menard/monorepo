@@ -9,12 +9,6 @@
  * delegating to the shared package for actual config values.
  */
 
-import { createLogger } from '@/core/observability/logger'
-import {
-  loadEnvConfig,
-  resetEnvConfig as resetEnv,
-  type ExtendedEnvConfig,
-} from '@/core/config/env-loader'
 import {
   getFileSizeLimit as packageGetFileSizeLimit,
   getFileCountLimit as packageGetFileCountLimit,
@@ -23,6 +17,12 @@ import {
   bytesToMb,
   type FileCategory,
 } from '@repo/upload-config'
+import { createLogger } from '@/core/observability/logger'
+import {
+  loadEnvConfig,
+  resetEnvConfig as resetEnv,
+  type ExtendedEnvConfig,
+} from '@/core/config/env-loader'
 
 const logger = createLogger('upload-config')
 

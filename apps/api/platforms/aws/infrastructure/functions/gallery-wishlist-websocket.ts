@@ -15,7 +15,7 @@ export function createGalleryWishlistWebSocketFunctions(
   websocketConnectionsTable: any,
   lambdaEmfPolicy: any,
   openSearchLambdaPolicy: any,
-  stage: string
+  stage: string,
 ) {
   // Base configuration
   const baseConfig = {

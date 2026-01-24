@@ -25,12 +25,14 @@ Scope (MANDATORY):
 
 STORY-000 MUST define and validate:
 1) The story lifecycle:
-   - PM → QA Audit → Dev → Elab
+   - PM → Elab (QA Audit) → Dev → Code Review → QA Verify → QA Gate
 2) Required artifacts per phase:
-   - Story markdown
-   - QA audit file
-   - Dev proof file
-   - Elab file
+   - Story markdown (PM)
+   - Elaboration file (Elab) - this IS the QA audit
+   - Proof file (Dev)
+   - Code review file (Code Review)
+   - QA verification file (QA Verify)
+   - QA gate decision file (QA Gate)
 3) Reuse-first rules:
    - Shared logic lives in `packages/**`
    - No per-story one-off utilities

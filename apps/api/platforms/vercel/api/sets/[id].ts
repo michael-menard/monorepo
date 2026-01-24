@@ -13,45 +13,39 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 const { logger } = loggerPkg
 
 // Inline Schema
-const sets = pgTable(
-  'sets',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),
-    title: text('title').notNull(),
-    setNumber: text('set_number'),
-    store: text('store'),
-    sourceUrl: text('source_url'),
-    pieceCount: integer('piece_count'),
-    releaseDate: timestamp('release_date'),
-    theme: text('theme'),
-    tags: text('tags').array().default([]),
-    notes: text('notes'),
-    isBuilt: boolean('is_built').default(false).notNull(),
-    quantity: integer('quantity').default(1).notNull(),
-    purchasePrice: decimal('purchase_price', { precision: 10, scale: 2 }),
-    tax: decimal('tax', { precision: 10, scale: 2 }),
-    shipping: decimal('shipping', { precision: 10, scale: 2 }),
-    purchaseDate: timestamp('purchase_date'),
-    wishlistItemId: uuid('wishlist_item_id'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  },
-)
+const sets = pgTable('sets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  setNumber: text('set_number'),
+  store: text('store'),
+  sourceUrl: text('source_url'),
+  pieceCount: integer('piece_count'),
+  releaseDate: timestamp('release_date'),
+  theme: text('theme'),
+  tags: text('tags').array().default([]),
+  notes: text('notes'),
+  isBuilt: boolean('is_built').default(false).notNull(),
+  quantity: integer('quantity').default(1).notNull(),
+  purchasePrice: decimal('purchase_price', { precision: 10, scale: 2 }),
+  tax: decimal('tax', { precision: 10, scale: 2 }),
+  shipping: decimal('shipping', { precision: 10, scale: 2 }),
+  purchaseDate: timestamp('purchase_date'),
+  wishlistItemId: uuid('wishlist_item_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
 
-const setImages = pgTable(
-  'set_images',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    setId: uuid('set_id')
-      .notNull()
-      .references(() => sets.id, { onDelete: 'cascade' }),
-    imageUrl: text('image_url').notNull(),
-    thumbnailUrl: text('thumbnail_url'),
-    position: integer('position').default(0).notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-  },
-)
+const setImages = pgTable('set_images', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  setId: uuid('set_id')
+    .notNull()
+    .references(() => sets.id, { onDelete: 'cascade' }),
+  imageUrl: text('image_url').notNull(),
+  thumbnailUrl: text('thumbnail_url'),
+  position: integer('position').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
 
 // Database client
 let dbClient: ReturnType<typeof drizzle> | null = null
@@ -79,10 +73,7 @@ function getAuthUserId(): string | null {
   return null
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const userId = getAuthUserId()
 
   if (!userId) {
@@ -157,7 +148,9 @@ export default async function handler(
 
     // Check ownership
     if (base.userId !== userId) {
-      res.status(403).json({ error: 'Forbidden', message: 'You do not have permission to access this set' })
+      res
+        .status(403)
+        .json({ error: 'Forbidden', message: 'You do not have permission to access this set' })
       return
     }
 

@@ -94,9 +94,7 @@ export function createAlarms(props: AlarmProps): { topicArn: $util.Output<string
             },
           ],
         }),
-        managedPolicyArns: [
-          'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole',
-        ],
+        managedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'],
       }).arn,
       code: new aws.lambda.FunctionCodeArchive(
         new $asset.AssetArchive({
@@ -146,7 +144,7 @@ exports.handler = async (event) => {
   });
 };
           `),
-        })
+        }),
       ),
       timeout: 30,
       tags: {

@@ -92,3 +92,23 @@ End with "VERIFICATION FAILED: <reason>" if any command failed.
 If unable to run verification, write details to:
 - STORY-XXX/_implementation/BLOCKERS.md
 and end with "BLOCKED: <reason>".
+
+## Token Logging (REQUIRED)
+
+At the end of VERIFICATION.md, include a Token Log section:
+
+```markdown
+## Token Log
+
+| Operation | Type | Bytes | Tokens (est) |
+|-----------|------|-------|--------------|
+| Read: STORY-XXX.md | input | — | — |
+| Read: IMPLEMENTATION-PLAN.md | input | — | — |
+| Read: BACKEND-LOG.md | input | — | — |
+| Bash: pnpm build (output) | input | — | — |
+| Write: VERIFICATION.md | output | — | — |
+| **Total Input** | — | — | **—** |
+| **Total Output** | — | — | **—** |
+```
+
+See `.claude/agents/_token-logging.md` for full specification.

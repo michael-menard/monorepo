@@ -5,9 +5,9 @@
  * Handles file uploads and form fields from API Gateway events.
  */
 
+import { Readable } from 'stream'
 import { APIGatewayProxyEventV2 } from 'aws-lambda'
 import Busboy from 'busboy'
-import { Readable } from 'stream'
 
 export interface ParsedFile {
   fieldname: string

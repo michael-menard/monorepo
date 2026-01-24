@@ -79,3 +79,24 @@ End with "BACKEND COMPLETE" when all backend work is done.
 If blocked, write details to:
 - STORY-XXX/_implementation/BLOCKERS.md
 and end with "BLOCKED: <reason>".
+
+## Token Logging (REQUIRED)
+
+At the end of BACKEND-LOG.md, include a Token Log section:
+
+```markdown
+## Token Log
+
+| Operation | Type | Bytes | Tokens (est) |
+|-----------|------|-------|--------------|
+| Read: STORY-XXX.md | input | — | — |
+| Read: IMPLEMENTATION-PLAN.md | input | — | — |
+| Read: existing-handlers/* | input | — | — |
+| Write: new-handler.ts | output | — | — |
+| Edit: schema.ts | output | — | — |
+| **Total Input** | — | — | **—** |
+| **Total Output** | — | — | **—** |
+```
+
+Log EVERY file read and write operation with byte counts.
+See `.claude/agents/_token-logging.md` for full specification.

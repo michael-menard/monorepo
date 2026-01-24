@@ -95,7 +95,7 @@ HARD RULES (PM STORY QUALITY GATES)
 - Every story MUST include:
   "Test Plan (Happy Path / Error Cases / Edge Cases)"
 - This section MUST be synthesized from:
-  plans/stories/STORY-XXX/_pm/TEST-PLAN.md
+  plans/stories/backlog/STORY-XXX/_pm/TEST-PLAN.md
 - Missing this section = story is incomplete and must not be emitted
 
 8) Seed requirement must be explicit (if applicable)
@@ -110,23 +110,23 @@ OUTPUT (FINAL)
 -------------------------------------------------------------------------------
 
 Produce ONE file only as the final output:
-- plans/stories/STORY-XXX/STORY-XXX.md
+- plans/stories/backlog/STORY-XXX/STORY-XXX.md
 
 Supporting artifacts MUST be written under:
-- plans/stories/STORY-XXX/_pm/
+- plans/stories/backlog/STORY-XXX/_pm/
 
 -------------------------------------------------------------------------------
 PIPELINE OVERVIEW (SUB-AGENTS + ARTIFACTS)
 -------------------------------------------------------------------------------
 
 Artifact directory (MANDATORY):
-- plans/stories/STORY-XXX/_pm/
+- plans/stories/backlog/STORY-XXX/_pm/
 
 Artifacts:
-- plans/stories/STORY-XXX/_pm/TEST-PLAN.md
-- plans/stories/STORY-XXX/_pm/UIUX-NOTES.md
-- plans/stories/STORY-XXX/_pm/DEV-FEASIBILITY.md
-- plans/stories/STORY-XXX/_pm/BLOCKERS.md
+- plans/stories/backlog/STORY-XXX/_pm/TEST-PLAN.md
+- plans/stories/backlog/STORY-XXX/_pm/UIUX-NOTES.md
+- plans/stories/backlog/STORY-XXX/_pm/DEV-FEASIBILITY.md
+- plans/stories/backlog/STORY-XXX/_pm/BLOCKERS.md
 
 -------------------------------------------------------------------------------
 PHASE 0 — SETUP (PM)
@@ -134,8 +134,8 @@ PHASE 0 — SETUP (PM)
 
 0.1 Validate index includes STORY-XXX
 0.2 Create:
-- plans/stories/STORY-XXX/
-- plans/stories/STORY-XXX/_pm/
+- plans/stories/backlog/STORY-XXX/
+- plans/stories/backlog/STORY-XXX/_pm/
 
 0.3 Initialize empty artifact files:
 - TEST-PLAN.md
@@ -158,7 +158,7 @@ Goal:
   - Evidence requirements
 
 Output:
-- plans/stories/STORY-XXX/_pm/TEST-PLAN.md
+- plans/stories/backlog/STORY-XXX/_pm/TEST-PLAN.md
 
 If blockers exist → write BLOCKERS.md and STOP.
 
@@ -177,7 +177,7 @@ Goal:
   - Playwright video expectation (what must be shown)
 
 Output:
-- plans/stories/STORY-XXX/_pm/UIUX-NOTES.md
+- plans/stories/backlog/STORY-XXX/_pm/UIUX-NOTES.md
 
 If hard-gate violations are unavoidable per scope → write BLOCKERS.md and STOP.
 
@@ -193,7 +193,7 @@ Goal:
   - mitigations PM should bake into AC/testing
 
 Output:
-- plans/stories/STORY-XXX/_pm/DEV-FEASIBILITY.md
+- plans/stories/backlog/STORY-XXX/_pm/DEV-FEASIBILITY.md
 
 If story cannot be implemented as written → write BLOCKERS.md and STOP.
 
@@ -202,7 +202,7 @@ PHASE 4 — SYNTHESIZE STORY (PM)
 -------------------------------------------------------------------------------
 
 Using the index entry + plan meta/exec + artifacts, produce:
-- plans/stories/STORY-XXX/STORY-XXX.md
+- plans/stories/backlog/STORY-XXX/STORY-XXX.md
 
 STORY STRUCTURE (MANDATORY HEADINGS)
 

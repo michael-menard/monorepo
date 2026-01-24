@@ -12,7 +12,6 @@
 
 import { Readable } from 'stream'
 import csv from 'csv-parser'
-import { createLogger } from '@/core/observability/logger'
 import {
   type PartsListValidator,
   type PartsValidationResult,
@@ -23,6 +22,7 @@ import {
   KNOWN_COLUMN_MAPPINGS,
   STRICT_REQUIRED_COLUMNS,
 } from './types'
+import { createLogger } from '@/core/observability/logger'
 
 const logger = createLogger('csv-validator')
 

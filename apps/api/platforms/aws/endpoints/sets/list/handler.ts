@@ -10,11 +10,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { logger } from '@/core/observability/logger'
 import { getUserIdFromEvent } from '@repo/lambda-auth'
-import { successResponse, errorResponse } from '@/core/utils/responses'
-import { db } from '@/core/database/client'
-import { sets, setImages } from '@/core/database/schema'
 import {
   SetSchema,
   SetListResponseSchema,
@@ -22,6 +18,10 @@ import {
   type SetImage,
   type SetListResponse,
 } from '@repo/api-client/schemas/sets'
+import { logger } from '@/core/observability/logger'
+import { successResponse, errorResponse } from '@/core/utils/responses'
+import { db } from '@/core/database/client'
+import { sets, setImages } from '@/core/database/schema'
 
 /**
  * Query Parameters Schema for List Sets
@@ -46,18 +46,14 @@ const ListSetsQuerySchema = z.object({
 
 export type ListSetsQuery = z.infer<typeof ListSetsQuerySchema>
 
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     const userId = getUserIdFromEvent(event)
     if (!userId) {
       return errorResponse(401, 'UNAUTHORIZED', 'Authentication required')
     }
 
-    const queryParams: ListSetsQuery = ListSetsQuerySchema.parse(
-      event.queryStringParameters || {},
-    )
+    const queryParams: ListSetsQuery = ListSetsQuerySchema.parse(event.queryStringParameters || {})
 
     const {
       search,
@@ -90,9 +86,7 @@ export const handler = async (
     const conditions = [eq(sets.userId, userId)]
 
     if (search) {
-      conditions.push(
-        or(ilike(sets.title, `%${search}%`), ilike(sets.setNumber, `%${search}%`))!,
-      )
+      conditions.push(or(ilike(sets.title, `%${search}%`), ilike(sets.setNumber, `%${search}%`))!)
     }
 
     if (theme) {
@@ -193,12 +187,9 @@ export const handler = async (
             row.purchasePrice === null || row.purchasePrice === undefined
               ? null
               : Number(row.purchasePrice),
-          tax:
-            row.tax === null || row.tax === undefined ? null : Number(row.tax),
+          tax: row.tax === null || row.tax === undefined ? null : Number(row.tax),
           shipping:
-            row.shipping === null || row.shipping === undefined
-              ? null
-              : Number(row.shipping),
+            row.shipping === null || row.shipping === undefined ? null : Number(row.shipping),
           purchaseDate: row.purchaseDate ? row.purchaseDate.toISOString() : null,
           wishlistItemId: row.wishlistItemId,
           images: [],
@@ -227,18 +218,14 @@ export const handler = async (
       .from(sets)
       .where(eq(sets.userId, userId))
 
-    const availableThemes = themeRows
-      .map(row => row.theme)
-      .filter((t): t is string => Boolean(t))
+    const availableThemes = themeRows.map(row => row.theme).filter((t): t is string => Boolean(t))
 
     const tagRows = await db
       .selectDistinct({ tags: sets.tags })
       .from(sets)
       .where(eq(sets.userId, userId))
 
-    const availableTags = [
-      ...new Set(tagRows.flatMap(row => row.tags ?? [])),
-    ] as string[]
+    const availableTags = [...new Set(tagRows.flatMap(row => row.tags ?? []))] as string[]
 
     const response: SetListResponse = {
       items: Array.from(setMap.values()),

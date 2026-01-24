@@ -16,6 +16,7 @@
  * Authorization: User must own the MOC
  */
 
+import { eq } from 'drizzle-orm'
 import {
   successResponse,
   errorResponseFromError,
@@ -32,7 +33,6 @@ import { parsePartsListFile } from '@/endpoints/moc-instructions/_shared/parts-l
 import { logger } from '@/core/observability/logger'
 import { db } from '@/core/database/client'
 import { mocInstructions, mocFiles, mocPartsLists } from '@/core/database/schema'
-import { eq } from 'drizzle-orm'
 
 /**
  * API Gateway Event Interface for Parts List Upload

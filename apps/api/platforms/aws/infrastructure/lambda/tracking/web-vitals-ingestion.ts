@@ -9,10 +9,10 @@
 
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { z } from 'zod'
-import { withErrorHandling } from '../../lib/utils/lambda-wrapper'
-import { successResponse } from '@/core/utils/responses'
 import { createLambdaLogger } from '@repo/logger'
+import { withErrorHandling } from '../../lib/utils/lambda-wrapper'
 import { recordWebVitalsMetric } from '../../lib/tracking/cloudwatch-web-vitals'
+import { successResponse } from '@/core/utils/responses'
 
 // Initialize structured logger
 const logger = createLambdaLogger('web-vitals-ingestion')

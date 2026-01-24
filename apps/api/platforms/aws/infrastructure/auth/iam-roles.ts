@@ -1,12 +1,17 @@
 /**
  * Authentication-related IAM Roles
- * 
+ *
  * Creates IAM roles for:
  * - Cognito Identity Pool (authenticated users)
  * - Grafana Workspace (CloudWatch and OpenSearch access)
  */
 
-export function createAuthIamRoles(userPool: any, userPoolClient: any, openSearch: any, stage: string) {
+export function createAuthIamRoles(
+  userPool: any,
+  userPoolClient: any,
+  openSearch: any,
+  stage: string,
+) {
   /**
    * Cognito Identity Pool
    * - Provides temporary AWS credentials for authenticated users
@@ -121,21 +126,23 @@ export function createAuthIamRoles(userPool: any, userPoolClient: any, openSearc
    * - Read access to OpenSearch for log analysis
    */
   const grafanaOpenSearchPolicy = new aws.iam.Policy('GrafanaOpenSearchPolicy', {
-    policy: openSearch.nodes.domain.arn.apply(arn => JSON.stringify({
-      Version: '2012-10-17',
-      Statement: [
-        {
-          Effect: 'Allow',
-          Action: [
-            'es:ESHttpGet',
-            'es:ESHttpPost',
-            'es:DescribeElasticsearchDomains',
-            'es:ListDomainNames',
-          ],
-          Resource: `${arn}/*`,
-        },
-      ],
-    })),
+    policy: openSearch.nodes.domain.arn.apply(arn =>
+      JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: [
+              'es:ESHttpGet',
+              'es:ESHttpPost',
+              'es:DescribeElasticsearchDomains',
+              'es:ListDomainNames',
+            ],
+            Resource: `${arn}/*`,
+          },
+        ],
+      }),
+    ),
   })
 
   new aws.iam.RolePolicyAttachment('GrafanaOpenSearchPolicyAttachment', {

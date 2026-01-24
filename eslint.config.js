@@ -180,6 +180,7 @@ export default [
         },
       ],
       'import/no-duplicates': 'error',
+      'import/no-relative-parent-imports': 'error',
     },
   },
 

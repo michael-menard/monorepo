@@ -17,8 +17,8 @@
  * ```
  */
 
-import { createLogger } from '@/core/observability/logger'
 import { validateUploadConfig } from './upload'
+import { createLogger } from '@/core/observability/logger'
 
 const logger = createLogger('config-bootstrap')
 

@@ -65,10 +65,7 @@ async function testPostgresConnection(): Promise<boolean> {
  * GET /api/health - Returns health status of critical services
  * OPTIONS /api/health - CORS preflight
  */
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const origin = req.headers.origin as string | undefined
 
   // Handle CORS preflight
@@ -96,10 +93,7 @@ export default async function handler(
 
   try {
     // Perform health check using platform-agnostic core logic
-    const healthData = await performHealthCheck(
-      { testPostgresConnection },
-      '1.0.0',
-    )
+    const healthData = await performHealthCheck({ testPostgresConnection }, '1.0.0')
 
     logger.info('Health check completed', {
       requestId,

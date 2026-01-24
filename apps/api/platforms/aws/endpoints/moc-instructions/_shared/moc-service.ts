@@ -6,6 +6,7 @@
  */
 
 import { eq, and, sql, desc, ilike, or, isNull } from 'drizzle-orm'
+import type { MocInstruction, MocListQuery, MocDetailResponse } from '@repo/api-types/moc'
 import { db } from '@/core/database/client'
 import {
   mocInstructions,
@@ -17,7 +18,6 @@ import {
   mocPartsLists,
 } from '@/core/database/schema'
 import { searchMocs as searchMocsOpenSearch } from '@/endpoints/moc-instructions/_shared/opensearch-moc'
-import type { MocInstruction, MocListQuery, MocDetailResponse } from '@repo/api-types/moc'
 import {
   DatabaseError,
   NotFoundError,

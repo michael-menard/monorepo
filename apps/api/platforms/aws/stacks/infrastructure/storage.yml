@@ -26,9 +26,23 @@ provider:
 custom:
   shared: ${file(../shared-config.yml)}
   stage: ${self:provider.stage}
+  # Vercel OIDC configuration (stored in GitHub Secrets)
+  # Set in GitHub: Settings > Secrets and variables > Actions
+  #
+  # Using GitHub CLI:
+  #   gh secret set VERCEL_OWNER_ID --body "team_xxxxx"
+  #
+  # In GitHub Actions workflow, expose as env var:
+  #   env:
+  #     VERCEL_OWNER_ID: ${{ secrets.VERCEL_OWNER_ID }}
+  vercelOwnerId: ${env:VERCEL_OWNER_ID, ''}
 
 resources:
   Description: LEGO API Storage Infrastructure (S3)
+
+  Conditions:
+    # Only create Vercel OIDC resources if vercelOwnerId is configured
+    HasVercelOwnerId: !Not [!Equals ['${self:custom.vercelOwnerId}', '']]
 
   Resources:
     # S3 Bucket for MOC files, gallery images, and other uploads
@@ -58,6 +72,12 @@ resources:
               AllowedOrigins:
                 - http://localhost:3000
                 - http://localhost:5173
+                - https://*.vercel.app
+                - https://vercel.app
+                # Production domain (uncomment and update when ready)
+                # - https://app.legomoc.com
+              ExposedHeaders:
+                - ETag
               MaxAge: 3600
         LifecycleConfiguration:
           Rules:
@@ -78,6 +98,52 @@ resources:
             Value: lego-api
           - Key: Environment
             Value: ${self:custom.stage}
+
+    # ===========================================
+    # S3 Bucket Policy (Security)
+    # ===========================================
+
+    # Bucket policy to enforce security controls
+    FilesBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref FilesBucket
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            # Deny all access over non-HTTPS
+            - Sid: DenyInsecureTransport
+              Effect: Deny
+              Principal: '*'
+              Action: 's3:*'
+              Resource:
+                - !GetAtt FilesBucket.Arn
+                - !Sub '${FilesBucket.Arn}/*'
+              Condition:
+                Bool:
+                  'aws:SecureTransport': 'false'
+            # Deny access from outside this AWS account
+            - Sid: DenyExternalAccounts
+              Effect: Deny
+              Principal: '*'
+              Action: 's3:*'
+              Resource:
+                - !GetAtt FilesBucket.Arn
+                - !Sub '${FilesBucket.Arn}/*'
+              Condition:
+                StringNotEquals:
+                  'aws:PrincipalAccount': !Ref AWS::AccountId
+            # Optional: Restrict to VPC endpoint only (uncomment if using VPC endpoint)
+            # - Sid: DenyAccessOutsideVpc
+            #   Effect: Deny
+            #   Principal: '*'
+            #   Action: 's3:*'
+            #   Resource:
+            #     - !GetAtt FilesBucket.Arn
+            #     - !Sub '${FilesBucket.Arn}/*'
+            #   Condition:
+            #     StringNotEquals:
+            #       'aws:SourceVpce': !ImportValue lego-api-${self:custom.stage}-S3VpcEndpointId
 
     # ===========================================
     # IAM Policies for S3 Access
@@ -104,6 +170,90 @@ resources:
                 - !GetAtt FilesBucket.Arn
                 - !Sub '${FilesBucket.Arn}/*'
 
+    # ===========================================
+    # Vercel OIDC Federation (for Vercel backend access)
+    # ===========================================
+
+    # Vercel OIDC Identity Provider
+    # This allows Vercel to authenticate with AWS using OIDC tokens
+    VercelOIDCProvider:
+      Type: AWS::IAM::OIDCProvider
+      Condition: HasVercelOwnerId
+      Properties:
+        Url: https://oidc.vercel.com
+        ClientIdList:
+          - !Sub 'https://vercel.com/${self:custom.vercelOwnerId}'
+        # Vercel's OIDC thumbprint (SHA-1 of their certificate)
+        # This may need updating if Vercel rotates their certificate
+        ThumbprintList:
+          - 636205ee26e37d26f840de8a8548de93e6dd80f0
+        Tags:
+          - Key: Name
+            Value: vercel-oidc-provider
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
+    # IAM Role that Vercel can assume via OIDC
+    VercelS3AccessRole:
+      Type: AWS::IAM::Role
+      Condition: HasVercelOwnerId
+      Properties:
+        RoleName: lego-api-vercel-s3-${self:custom.stage}
+        Description: Role for Vercel backend to access S3 bucket
+        MaxSessionDuration: 3600
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: !GetAtt VercelOIDCProvider.Arn
+              Action: sts:AssumeRoleWithWebIdentity
+              Condition:
+                StringEquals:
+                  # Restrict to your Vercel team/owner
+                  'oidc.vercel.com:aud': !Sub 'https://vercel.com/${self:custom.vercelOwnerId}'
+                StringLike:
+                  # Allow any project and environment under your team
+                  # Format: owner:project:environment
+                  # You can make this more restrictive, e.g.:
+                  #   '${self:custom.vercelOwnerId}:lego-api:production'
+                  'oidc.vercel.com:sub': !Sub '${self:custom.vercelOwnerId}:*:*'
+        Policies:
+          - PolicyName: S3Access
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:GetObject
+                    - s3:PutObject
+                    - s3:DeleteObject
+                    - s3:ListBucket
+                    - s3:GetObjectTagging
+                    - s3:PutObjectTagging
+                  Resource:
+                    - !GetAtt FilesBucket.Arn
+                    - !Sub '${FilesBucket.Arn}/*'
+                - Effect: Allow
+                  Action:
+                    - s3:CreateMultipartUpload
+                    - s3:UploadPart
+                    - s3:CompleteMultipartUpload
+                    - s3:AbortMultipartUpload
+                    - s3:ListMultipartUploadParts
+                  Resource:
+                    - !GetAtt FilesBucket.Arn
+                    - !Sub '${FilesBucket.Arn}/*'
+        Tags:
+          - Key: Name
+            Value: lego-api-vercel-s3-${self:custom.stage}
+          - Key: Project
+            Value: lego-api
+          - Key: Environment
+            Value: ${self:custom.stage}
+
   Outputs:
     FilesBucketName:
       Description: S3 Bucket Name for file storage
@@ -128,3 +278,10 @@ resources:
       Value: !Ref S3AccessPolicy
       Export:
         Name: lego-storage-${self:custom.stage}-AccessPolicyArn
+
+    VercelS3RoleArn:
+      Condition: HasVercelOwnerId
+      Description: IAM Role ARN for Vercel to access S3 (use in Vercel project settings)
+      Value: !GetAtt VercelS3AccessRole.Arn
+      Export:
+        Name: lego-storage-${self:custom.stage}-VercelRoleArn

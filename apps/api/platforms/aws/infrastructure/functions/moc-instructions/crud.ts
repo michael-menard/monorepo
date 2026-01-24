@@ -1,6 +1,6 @@
 /**
  * MOC Instructions CRUD Lambda Function
- * 
+ *
  * Creates Lambda function for MOC Instructions CRUD operations:
  * - Multi-method handler for CRUD operations
  * - JWT authentication via Cognito
@@ -16,7 +16,7 @@ export function createMocInstructionsFunction(
   openSearch: any,
   lambdaEmfPolicy: any,
   openSearchLambdaPolicy: any,
-  stage: string
+  stage: string,
 ) {
   const sharedConfig = createMocInstructionsConfig(
     vpc,
@@ -25,7 +25,7 @@ export function createMocInstructionsFunction(
     openSearch,
     lambdaEmfPolicy,
     openSearchLambdaPolicy,
-    stage
+    stage,
   )
 
   const mocInstructionsFunction = new sst.aws.Function('MocInstructionsFunction', {
