@@ -250,6 +250,22 @@ If verdict is FAIL:
 3. State next step: `/dev-fix-story STORY-XXX` then re-run `/dev-code-review STORY-XXX`
 
 -------------------------------------------------------------------------------
+PHASE 4 — TOKEN LOGGING (ORCHESTRATOR - YOU DO THIS)
+-------------------------------------------------------------------------------
+
+After synthesis is complete, log token usage:
+
+1. Estimate token usage from `/cost` command output or byte calculations
+2. Run: `/token-log STORY-XXX code-review <input-tokens> <output-tokens>`
+
+Example:
+```
+/token-log STORY-XXX code-review 25000 3000
+```
+
+This logs the phase tokens to `_implementation/TOKEN-LOG.md` for tracking.
+
+-------------------------------------------------------------------------------
 EXECUTION FLOW
 -------------------------------------------------------------------------------
 
@@ -279,6 +295,7 @@ DONE DEFINITION
 Stop when:
 - All sub-agents completed
 - CODE-REVIEW-STORY-XXX.md is written
+- Token usage logged via `/token-log STORY-XXX code-review`
 - Story status updated:
   - PASS/PASS-WITH-WARNINGS → `ready-for-qa`
   - FAIL → `code-review-failed`

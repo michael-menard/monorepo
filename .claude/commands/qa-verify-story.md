@@ -281,28 +281,19 @@ Stories with all dependencies satisfied (can be worked in parallel):
 TOKEN LOGGING (REQUIRED)
 -------------------------------------------------------------------------------
 
-QA-VERIFY-STORY-XXX.md MUST include a Token Log section at the end:
+After QA verification is complete, log token usage using the centralized skill:
 
-```markdown
-## Token Log
+1. Estimate token usage from `/cost` command output or byte calculations
+2. Run: `/token-log STORY-XXX qa-verify <input-tokens> <output-tokens>`
 
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: plans/stories/QA/STORY-XXX/STORY-XXX.md | input | — | — |
-| Read: plans/stories/QA/STORY-XXX/PROOF-STORY-XXX.md | input | — | — |
-| Read: implementation artifacts | input | — | — |
-| Read: test files for quality review | input | — | — |
-| Run: pnpm test --coverage | execution | — | — |
-| Run: Playwright tests (if applicable) | execution | — | — |
-| Run: .http tests (if applicable) | execution | — | — |
-| Write: plans/stories/QA/STORY-XXX/QA-VERIFY-STORY-XXX.md | output | — | — |
-| **Total Input** | — | — | **—** |
-| **Total Output** | — | — | **—** |
+Example:
+```
+/token-log STORY-XXX qa-verify 30000 4000
 ```
 
-After completion, update the story's Token Budget section with QA phase totals.
+This logs the phase tokens to `_implementation/TOKEN-LOG.md` for tracking.
 
-See `.claude/agents/_token-logging.md` for full specification.
+See `.claude/agents/_token-logging.md` for estimation formulas.
 
 -------------------------------------------------------------------------------
 DONE
@@ -312,7 +303,7 @@ Stop when:
 - All tests have been executed (unit, integration, E2E as applicable)
 - Test coverage has been verified against thresholds
 - Test implementation quality has been reviewed
-- QA-VERIFY-STORY-XXX.md is complete (including Token Log and test results)
-- Story Token Budget is updated with QA phase totals
+- QA-VERIFY-STORY-XXX.md is complete (including test results)
+- Token usage logged via `/token-log STORY-XXX qa-verify`
 - Story status is updated based on verdict
 - Index Updater sub-agent has completed (on PASS)

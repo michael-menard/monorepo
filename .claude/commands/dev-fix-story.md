@@ -146,6 +146,22 @@ After fixes and updated PROOF-STORY-XXX.md are complete:
 This ensures the story goes through code review again before QA verification.
 
 -------------------------------------------------------------------------------
+TOKEN LOGGING (REQUIRED)
+-------------------------------------------------------------------------------
+
+After fixes are complete, log token usage:
+
+1. Estimate token usage from `/cost` command output or byte calculations
+2. Run: `/token-log STORY-XXX dev-fix <input-tokens> <output-tokens>`
+
+Example:
+```
+/token-log STORY-XXX dev-fix 30000 8000
+```
+
+This logs the phase tokens to `_implementation/TOKEN-LOG.md` for tracking.
+
+-------------------------------------------------------------------------------
 NEXT STEP (IMPORTANT)
 -------------------------------------------------------------------------------
 
@@ -166,5 +182,6 @@ Stop when:
 - All blocking issues are fixed
 - Verification passes (`pnpm check-types`, `pnpm test`, `pnpm lint`)
 - Updated PROOF-STORY-XXX.md is written
+- Token usage logged via `/token-log STORY-XXX dev-fix`
 - Story status is updated to `ready-for-code-review`
 - Next step stated: `/dev-code-review STORY-XXX`

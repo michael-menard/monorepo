@@ -74,6 +74,22 @@ After the updated STORY-XXX.md is complete:
 This signals the story is ready for QA audit again.
 
 -------------------------------------------------------------------------------
+TOKEN LOGGING (REQUIRED)
+-------------------------------------------------------------------------------
+
+After fixes are complete, log token usage:
+
+1. Estimate token usage from `/cost` command output or byte calculations
+2. Run: `/token-log STORY-XXX pm-fix <input-tokens> <output-tokens>`
+
+Example:
+```
+/token-log STORY-XXX pm-fix 18000 3000
+```
+
+This logs the phase tokens to `_implementation/TOKEN-LOG.md` for tracking.
+
+-------------------------------------------------------------------------------
 NEXT STEP
 -------------------------------------------------------------------------------
 
@@ -87,3 +103,4 @@ DONE
 Stop when:
 - Updated STORY-XXX.md is complete
 - Story status is updated to `backlog`
+- Token usage logged via `/token-log`

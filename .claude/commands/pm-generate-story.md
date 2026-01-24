@@ -265,3 +265,19 @@ After successfully writing the story file:
    - Increment `generated` count by 1
 
 This ensures the index always reflects the current state of story generation.
+
+-------------------------------------------------------------------------------
+PHASE 6 — TOKEN LOGGING (REQUIRED)
+-------------------------------------------------------------------------------
+
+After story generation is complete, log token usage:
+
+1. Estimate token usage from `/cost` command output or byte calculations
+2. Run: `/token-log STORY-XXX pm-generate <input-tokens> <output-tokens>`
+
+Example:
+```
+/token-log STORY-XXX pm-generate 15000 5000
+```
+
+This logs the phase tokens to `_implementation/TOKEN-LOG.md` for tracking.

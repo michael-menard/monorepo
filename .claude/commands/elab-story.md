@@ -287,32 +287,27 @@ If the elaboration verdict is SPLIT REQUIRED:
 TOKEN LOGGING (REQUIRED)
 -------------------------------------------------------------------------------
 
-ELAB-STORY-XXX.md MUST include a Token Log section at the end:
+After elaboration is complete, log token usage using the centralized skill:
 
-```markdown
-## Token Log
+1. Estimate token usage from `/cost` command output or byte calculations
+2. Run: `/token-log STORY-XXX elaboration <input-tokens> <output-tokens>`
 
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: STORY-XXX.md | input | — | — |
-| Read: stories.index.md | input | — | — |
-| Read: vercel.migration.plan.*.md | input | — | — |
-| Write: ELAB-STORY-XXX.md | output | — | — |
-| **Total Input** | — | — | **—** |
-| **Total Output** | — | — | **—** |
+Example:
+```
+/token-log STORY-XXX elaboration 20000 2000
 ```
 
-After completion, update the story's Token Budget section with Elaboration phase totals.
+This logs the phase tokens to `_implementation/TOKEN-LOG.md` for tracking.
 
-See `.claude/agents/_token-logging.md` for full specification.
+See `.claude/agents/_token-logging.md` for estimation formulas.
 
 -------------------------------------------------------------------------------
 DONE
 -------------------------------------------------------------------------------
 
 Stop when:
-- ELAB-STORY-XXX.md is complete (including Token Log and Discovery Findings)
-- Story Token Budget is updated with Elaboration phase totals
+- ELAB-STORY-XXX.md is complete (including Discovery Findings)
+- Token usage logged via `/token-log STORY-XXX elaboration`
 - Story status is updated (based on verdict)
 - QA Discovery Notes appended to STORY-XXX.md (if any findings)
 - Interactive discussion completed (if user opted in)

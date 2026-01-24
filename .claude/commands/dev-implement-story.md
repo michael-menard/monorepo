@@ -64,12 +64,29 @@ If any phase returns BLOCKED or FAILED:
 
 ---
 
+## Token Logging
+
+After each phase leader completes, log token usage:
+
+```
+/token-log STORY-XXX dev-setup <input> <output>
+/token-log STORY-XXX dev-planning <input> <output>
+/token-log STORY-XXX dev-implementation <input> <output>
+/token-log STORY-XXX dev-verification <input> <output>
+/token-log STORY-XXX dev-documentation <input> <output>
+```
+
+Estimate tokens from `/cost` command output or byte calculations.
+
+---
+
 ## Done
 
 When Phase 4 returns `DOCUMENTATION COMPLETE`:
 - All artifacts exist in `_implementation/`
 - Story status is `ready-for-code-review`
 - Story index is updated
+- Token usage logged for all phases
 
 **Next step**: `/dev-code-review STORY-XXX`
 
