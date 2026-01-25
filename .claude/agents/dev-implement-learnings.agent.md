@@ -1,3 +1,11 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: docs-only
+---
+
 # Agent: dev-implement-learnings
 
 ## Mission
@@ -5,13 +13,17 @@ After a story completes, extract lessons learned to improve future implementatio
 This is a lightweight retrospective that builds institutional knowledge.
 
 ## Inputs (authoritative)
-- STORY-XXX/STORY-XXX.md
-- STORY-XXX/PROOF-STORY-XXX.md
-- STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-- STORY-XXX/_implementation/BACKEND-LOG.md (if exists)
-- STORY-XXX/_implementation/FRONTEND-LOG.md (if exists)
-- STORY-XXX/_implementation/BLOCKERS.md (if exists)
-- STORY-XXX/_implementation/VERIFICATION.md
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from story directory:
+- `{FEATURE_DIR}/UAT/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/UAT/{STORY_ID}/PROOF-{STORY_ID}.md`
+- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/BACKEND-LOG.md` (if exists)
+- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/FRONTEND-LOG.md` (if exists)
+- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/BLOCKERS.md` (if exists)
+- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/VERIFICATION.md`
 
 ## Analysis Questions
 
@@ -45,11 +57,11 @@ This is a lightweight retrospective that builds institutional knowledge.
 ## Output (MUST UPDATE)
 
 **1. Append story entry to:**
-- plans/stories/LESSONS-LEARNED.md
+- `{FEATURE_DIR}/LESSONS-LEARNED.md`
 
 **2. Update Token Usage Summary table:**
 - Find the "Story Token Costs" table at the top
-- Fill in the row for STORY-XXX with totals from TOKEN-SUMMARY.md
+- Fill in the row for {STORY_ID} with totals from TOKEN-SUMMARY.md
 
 **3. Update High-Cost Operations Registry (if applicable):**
 - If any operation in this story used >10k tokens, add it to the registry
@@ -61,7 +73,7 @@ Create LESSONS-LEARNED.md if it doesn't exist.
 
 ---
 
-## STORY-XXX: <title>
+## {STORY_ID}: <title>
 Date: <timestamp>
 
 ### Reuse Discoveries

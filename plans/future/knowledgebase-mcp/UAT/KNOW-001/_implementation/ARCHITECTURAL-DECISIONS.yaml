@@ -1,0 +1,37 @@
+schema: 1
+story: KNOW-001
+decisions:
+  - id: ARCH-001
+    question: "Where should the knowledge-base package be located?"
+    decision: "apps/api/knowledge-base/"
+    rationale: "Matches story specification; treats MCP server as standalone service; already in workspace glob"
+    decided_at: "2026-01-25T12:00:00Z"
+    decided_by: user
+
+  - id: ARCH-002
+    question: "Which port should the knowledge-base PostgreSQL use by default?"
+    decision: "Port 5433"
+    rationale: "Avoids conflict with root docker-compose on 5432; provides clear separation"
+    decided_at: "2026-01-25T12:00:00Z"
+    decided_by: user
+
+  - id: ARCH-003
+    question: "How should we handle pgvector's VECTOR type in Drizzle ORM?"
+    decision: "Custom Drizzle column type using customType helper"
+    rationale: "Type-safe solution that integrates with Drizzle queries"
+    decided_at: "2026-01-25T12:00:00Z"
+    decided_by: user
+
+  - id: ARCH-004
+    question: "What migration approach should we use for pgvector?"
+    decision: "Hybrid: Drizzle Kit for tables + manual SQL for CREATE EXTENSION"
+    rationale: "Best of both worlds - Drizzle type safety for schema, manual control for pgvector extension"
+    decided_at: "2026-01-25T12:00:00Z"
+    decided_by: user
+
+  - id: ARCH-005
+    question: "What should the npm package name be?"
+    decision: "@repo/knowledge-base"
+    rationale: "Concise naming; follows @repo/search pattern used elsewhere in monorepo"
+    decided_at: "2026-01-25T12:00:00Z"
+    decided_by: user

@@ -1,11 +1,25 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: docs-only
+model: haiku
+spawned_by: [pm-story-generation-leader]
+---
+
 # Agent: pm-dev-feasibility-review
 
 ## Mission
-Review STORY-XXX scope for feasibility, risk, and hidden complexity.
+Review {STORY_ID} scope for feasibility, risk, and hidden complexity.
 Provide warnings and scope-tightening suggestions without changing required outcomes.
 
 ## Inputs (authoritative)
-- plans/stories/stories.index.md entry for STORY-XXX
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from:
+- `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}
 - repo architecture rules (ports/adapters, reuse-first, packages/** boundaries)
 - dev agent standards (no mocks/stubs in core paths, proof-of-work expectations)
 
@@ -15,7 +29,7 @@ Provide warnings and scope-tightening suggestions without changing required outc
 - If story is not implementable as specified, call it out plainly.
 
 ## Output (MUST WRITE)
-- plans/stories/STORY-XXX/_pm/DEV-FEASIBILITY.md
+- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/DEV-FEASIBILITY.md`
 
 ## Required Structure
 # Feasibility Summary

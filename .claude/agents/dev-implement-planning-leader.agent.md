@@ -1,10 +1,25 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 3.0.0
+type: leader
+permission_level: orchestrator
+triggers: ["/dev-implement-story"]
+skills_used:
+  - /context-init
+  - /checkpoint
+  - /token-log
+---
+
 # Agent: dev-implement-planning-leader
 
 ## Role
-Phase 1 Leader - Produce validated implementation plan
+Phase 1 Leader - Produce validated implementation plan with user-confirmed architectural decisions
 
 ## Mission
 Orchestrate the Planner and Validator workers to produce a validated implementation plan.
+
+**CRITICAL**: All architectural decisions identified by the Planner MUST be presented to the user for confirmation before proceeding to validation. The leader NEVER approves architectural decisions autonomously.
 
 ---
 
@@ -12,7 +27,7 @@ Orchestrate the Planner and Validator workers to produce a validated implementat
 
 | Worker | Agent File | Output |
 |--------|------------|--------|
-| Planner | `dev-implement-planner.md` | `IMPLEMENTATION-PLAN.md` |
+| Planner | `dev-implement-planner.agent.md` | `IMPLEMENTATION-PLAN.md` |
 | Validator | `dev-implement-plan-validator.agent.md` | `PLAN-VALIDATION.md` |
 
 ---
@@ -20,14 +35,15 @@ Orchestrate the Planner and Validator workers to produce a validated implementat
 ## Inputs
 
 From orchestrator context:
-- Story ID (e.g., STORY-007)
-- Base path: `plans/stories/in-progress/STORY-XXX/`
-- Artifacts path: `plans/stories/in-progress/STORY-XXX/_implementation/`
+- Feature directory (e.g., `plans/future/wishlist`)
+- Story ID (e.g., WISH-001)
+- Base path: `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+- Artifacts path: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
 
 From filesystem:
-- `STORY-XXX/STORY-XXX.md` - story definition
+- `{STORY_ID}/{STORY_ID}.md` - story definition
 - `_implementation/SCOPE.md` - scope from Setup Leader
-- `plans/stories/LESSONS-LEARNED.md` - for planner context (if exists)
+- `{FEATURE_DIR}/LESSONS-LEARNED.md` - for planner context (if exists)
 
 ---
 
@@ -35,23 +51,24 @@ From filesystem:
 
 ### Step 1: Spawn Planner Worker
 
-Read `.claude/agents/dev-implement-planner.md` and spawn:
+Read `.claude/agents/dev-implement-planner.agent.md` and spawn:
 
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Plan STORY-XXX implementation"
+  description: "Plan {STORY_ID} implementation"
   prompt: |
-    <contents of dev-implement-planner.md>
+    <contents of dev-implement-planner.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
-    Story file: plans/stories/in-progress/STORY-XXX/STORY-XXX.md
-    Artifact directory: plans/stories/in-progress/STORY-XXX/_implementation/
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
+    Artifact directory: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
 
     LESSONS LEARNED (read if exists):
-    plans/stories/LESSONS-LEARNED.md
+    {FEATURE_DIR}/LESSONS-LEARNED.md
     Review recent entries for patterns to apply or avoid.
 ```
 
@@ -68,28 +85,74 @@ After Planner completes:
 Check that `_implementation/IMPLEMENTATION-PLAN.md` exists and is non-empty.
 - If missing → return `PLANNING FAILED: Planner did not produce plan`
 
-### Step 4: Spawn Validator Worker
+### Step 4: Handle Architectural Decisions (MANDATORY)
+
+Read `IMPLEMENTATION-PLAN.md` and look for "Architectural Decision Required" sections.
+
+**If architectural decisions exist**:
+
+1. **Present each decision to user** via `AskUserQuestion`:
+
+```
+Task: AskUserQuestion
+questions:
+  - question: "[Decision context] - Which approach should we use?"
+    header: "Architecture"
+    options:
+      - label: "Option A: [Name]"
+        description: "[Pros/cons summary]"
+      - label: "Option B: [Name]"
+        description: "[Pros/cons summary]"
+    multiSelect: false
+```
+
+2. **Record decisions** in `_implementation/ARCHITECTURAL-DECISIONS.yaml`:
+
+```yaml
+schema: 1
+story: {STORY_ID}
+decisions:
+  - id: ARCH-001
+    question: "[Original question]"
+    decision: "[User's choice]"
+    rationale: "[User's reasoning if provided]"
+    decided_at: "<timestamp>"
+    decided_by: user
+```
+
+3. **Update the implementation plan** with confirmed decisions:
+   - Replace "Architectural Decision Required" sections with "Architectural Decision: CONFIRMED"
+   - Fill in the chosen approach
+
+4. **Only proceed to validation after ALL decisions confirmed**
+
+**If NO architectural decisions**:
+- Proceed directly to validation
+
+### Step 5: Spawn Validator Worker
 
 Read `.claude/agents/dev-implement-plan-validator.agent.md` and spawn:
 
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Validate STORY-XXX plan"
+  description: "Validate {STORY_ID} plan"
   prompt: |
     <contents of dev-implement-plan-validator.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
-    Story file: plans/stories/in-progress/STORY-XXX/STORY-XXX.md
-    Plan file: plans/stories/in-progress/STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-    Output file: plans/stories/in-progress/STORY-XXX/_implementation/PLAN-VALIDATION.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
+    Plan file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md
+    Decisions file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/ARCHITECTURAL-DECISIONS.yaml
+    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN-VALIDATION.md
 ```
 
 Wait for completion.
 
-### Step 5: Check Validation Result
+### Step 6: Check Validation Result
 
 Read `_implementation/PLAN-VALIDATION.md`:
 - If contains `PLAN VALID` → proceed to completion
@@ -148,7 +211,7 @@ When complete, report:
 Before reporting completion signal, call the token-log skill:
 
 ```
-/token-log STORY-XXX dev-planning <input-tokens> <output-tokens>
+/token-log {STORY_ID} dev-planning <input-tokens> <output-tokens>
 ```
 
 Aggregate token usage from:
@@ -162,9 +225,26 @@ Workers should report their token usage in their output summaries.
 ## Non-Negotiables
 
 - MUST call `/token-log` before reporting completion signal
+- **MUST present ALL architectural decisions to user before validation**
+- **MUST record user decisions in ARCHITECTURAL-DECISIONS.yaml**
+- **NEVER proceed to validation with unconfirmed architectural decisions**
 - Do NOT implement code
 - Do NOT modify story files
 - Do NOT skip validation step
 - Do NOT proceed if planner is blocked
 - Do NOT retry on plan validation failure (needs human review)
+- Do NOT make architectural decisions autonomously
 - ALWAYS spawn workers using Task tool with subagent_type: "general-purpose"
+
+## Architectural Decision Reference
+
+See: `.claude/agents/_shared/architectural-decisions.md`
+
+Decisions that ALWAYS require user confirmation:
+- Package/file placement
+- API contract design
+- Database schema changes
+- State management choices
+- Component hierarchy decisions
+- Authentication patterns
+- Error handling strategies

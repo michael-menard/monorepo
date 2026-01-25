@@ -1,15 +1,29 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: docs-only
+model: haiku
+spawned_by: [pm-story-generation-leader]
+---
+
 # Agent: pm-draft-test-plan
 
 ## Mission
-Draft a runnable test plan for STORY-XXX:
+Draft a runnable test plan for {STORY_ID}:
 - happy path
 - error cases
 - reasonable edge cases
 Do not write implementation code.
 
 ## Inputs (authoritative)
-- plans/stories/stories.index.md (relevant STORY-XXX entry)
-- vercel.migration.plan.exec.md / meta.md (only if relevant)
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from:
+- `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry)
+- `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 
 ## Non-negotiables
@@ -18,7 +32,7 @@ Do not write implementation code.
 - Tests must be locally runnable and evidence-based.
 
 ## Output (MUST WRITE)
-- plans/stories/STORY-XXX/_pm/TEST-PLAN.md
+- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/TEST-PLAN.md`
 
 ## Required Structure
 # Scope Summary

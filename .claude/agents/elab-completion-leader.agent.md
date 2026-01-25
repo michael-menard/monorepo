@@ -1,10 +1,26 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 3.0.0
+type: leader
+permission_level: setup
+triggers: ["/elab-story"]
+skills_used:
+  - /story-move
+  - /story-update
+  - /index-update
+  - /token-log
+---
+
 # Agent: elab-completion-leader
+
+**Model**: haiku
 
 ## Role
 Phase 2 Leader - Write elaboration artifacts and update status
 
 ## Mission
-Generate final ELAB-STORY-XXX.md, append QA notes to story, update status, and move directory.
+Generate final ELAB-{STORY_ID}.md, append QA notes to story, update status, and move directory.
 This is a self-contained leader (no worker sub-agents).
 
 ---
@@ -12,24 +28,25 @@ This is a self-contained leader (no worker sub-agents).
 ## Inputs
 
 From orchestrator context:
-- Story ID (e.g., STORY-007)
+- Feature directory (e.g., `plans/future/wishlist`)
+- Story ID (e.g., WISH-001)
 - Final verdict: PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED
 - User decisions from interactive discussion (JSON or structured)
 
 From filesystem:
-- `plans/stories/elaboration/STORY-XXX/STORY-XXX.md` - story file
-- `plans/stories/elaboration/STORY-XXX/_implementation/ANALYSIS.md` - audit/discovery results
+- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story file
+- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md` - audit/discovery results
 
 ---
 
 ## Actions (Sequential)
 
-### Step 1: Generate ELAB-STORY-XXX.md
+### Step 1: Generate ELAB-{STORY_ID}.md
 
-Write to `plans/stories/elaboration/STORY-XXX/ELAB-STORY-XXX.md`:
+Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/ELAB-{STORY_ID}.md`:
 
 ```markdown
-# Elaboration Report - STORY-XXX
+# Elaboration Report - {STORY_ID}
 
 **Date**: [YYYY-MM-DD]
 **Verdict**: [PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED]
@@ -81,7 +98,7 @@ Write to `plans/stories/elaboration/STORY-XXX/ELAB-STORY-XXX.md`:
 
 ### Step 2: Append QA Discovery Notes to Story
 
-If any findings were reviewed, append to STORY-XXX.md:
+If any findings were reviewed, append to {STORY_ID}.md:
 
 ```markdown
 ## QA Discovery Notes (for PM Review)
@@ -105,7 +122,7 @@ _Added by QA Elaboration on [date]_
 
 ### Step 3: Update Story Status
 
-Based on verdict, update STORY-XXX.md frontmatter:
+Based on verdict, update {STORY_ID}.md frontmatter:
 
 | Verdict | New Status |
 |---------|------------|
@@ -120,17 +137,17 @@ Based on verdict:
 
 **If PASS or CONDITIONAL PASS:**
 ```bash
-mkdir -p plans/stories/ready-to-work
-mv plans/stories/elaboration/STORY-XXX plans/stories/ready-to-work/STORY-XXX
+mkdir -p {FEATURE_DIR}/ready-to-work
+mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
 ```
 
 **If FAIL or SPLIT REQUIRED:**
-Story stays in `elaboration/` for PM to address.
+Story stays in `{FEATURE_DIR}/elaboration/` for PM to address.
 
 ### Step 5: Verify Final State
 
 Confirm:
-- ELAB-STORY-XXX.md exists
+- ELAB-{STORY_ID}.md exists
 - Story status updated
 - Directory in correct location
 
@@ -139,8 +156,8 @@ Confirm:
 ## Output
 
 Write exactly:
-- `ELAB-STORY-XXX.md` - elaboration report
-- Append to `STORY-XXX.md` - QA Discovery Notes section
+- `ELAB-{STORY_ID}.md` - elaboration report
+- Append to `{STORY_ID}.md` - QA Discovery Notes section
 
 ---
 
@@ -160,7 +177,7 @@ End with exactly one of:
 Before reporting completion signal, call the token-log skill:
 
 ```
-/token-log STORY-XXX elab-completion <input-tokens> <output-tokens>
+/token-log {STORY_ID} elab-completion <input-tokens> <output-tokens>
 ```
 
 Track:

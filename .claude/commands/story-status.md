@@ -1,170 +1,114 @@
-/story-status [STORY-ID]
+---
+created: 2026-01-20
+updated: 2026-01-24
+version: 2.0.0
+type: utility
+---
 
-Check the status of stories in this project.
+/story-status [FEATURE_DIR] [STORY_ID]
 
--------------------------------------------------------------------------------
-ARGUMENT HANDLING
--------------------------------------------------------------------------------
+Check story status. Read-only utility command.
 
-This command accepts ONE OPTIONAL argument:
-- `STORY-ID` — a story identifier (e.g., STORY-007, story-007, wrkf-1020, WRKF-1020)
-- If no argument is provided, show a summary of all stories by status
+## Usage
 
--------------------------------------------------------------------------------
-INPUTS
--------------------------------------------------------------------------------
-
-Index files (dynamically discovered):
-- Find ALL files matching `plans/stories/*.stories.index.md`
-- Examples: stories.index.md, wrkf.stories.index.md, future-epic.stories.index.md
-
-Status directories (may contain story subdirectories):
-- plans/stories/backlog
-- plans/stories/elaboration
-- plans/stories/ready-to-work
-- plans/stories/in-progress
-- plans/stories/QA
-- plans/stories/UAT
-
--------------------------------------------------------------------------------
-BEHAVIOR: SINGLE STORY LOOKUP
--------------------------------------------------------------------------------
-
-When a STORY-ID is provided:
-
-1. Normalize the ID to uppercase (e.g., story-007 → STORY-007, wrkf-1020 → WRKF-1020)
-
-2. Find all index files: `plans/stories/*.stories.index.md`
-
-3. Search EACH index file for a section matching `## <STORY-ID>:` (case-insensitive)
-   - Example: `## STORY-007:` or `## wrkf-1020:`
-
-4. Extract the status from `**Status:** <status>` line within that section
-
-5. Report:
-   - Story ID
-   - Index file where found (e.g., "from wrkf.stories.index.md")
-   - Status (e.g., completed, generated, pending, in-progress, superseded)
-   - Feature name (from `**Feature:**` line if present)
-   - Dependencies (from `**Depends On:**` line if present)
-
-6. If story not found in any index:
-   - Check if a directory exists at `plans/stories/<STORY-ID>/`
-   - If found, report: "Story directory exists but not in any index"
-   - If not found, report: "Story not found"
-
--------------------------------------------------------------------------------
-BEHAVIOR: STATUS SUMMARY (NO ARGUMENT)
--------------------------------------------------------------------------------
-
-When no STORY-ID is provided:
-
-1. Find all index files: `plans/stories/*.stories.index.md`
-
-2. For EACH index file found:
-   - Extract the epic/project name from the file's title (first `# ` heading)
-   - Find all `## <ID>:` sections and their `**Status:**` values
-   - Count stories by status
-
-3. Display counts per index file, then combined totals:
-
-   ```
-   === stories.index.md ===
-   Title: Vercel Migration Stories Index
-
-   | Status      | Count |
-   |-------------|-------|
-   | completed   | 16    |
-   | generated   | 1     |
-   | pending     | 2     |
-
-   === wrkf.stories.index.md ===
-   Title: wrkf Stories Index — LangGraph Orchestrator
-
-   | Status      | Count |
-   |-------------|-------|
-   | completed   | 2     |
-   | generated   | 5     |
-   | pending     | 11    |
-   | superseded  | 1     |
-
-   === Combined Totals ===
-
-   | Status      | Count |
-   |-------------|-------|
-   | completed   | 18    |
-   | generated   | 6     |
-   | pending     | 13    |
-   | superseded  | 1     |
-
-   Total Stories: 38
-   Index Files: 2
-   ```
-
-4. ALWAYS report stories in status directories using a box-drawing table:
-
-   **IMPORTANT: This must show LIVE DATA from the filesystem, not static content.**
-
-   a. Run `ls` on each status directory to find story subdirectories
-   b. Count and list the actual story IDs found in each directory
-   c. Use "—" for empty directories
-   d. For long lists, abbreviate consecutive IDs with "thru" (e.g., "STORY-009 thru STORY-016")
-
-   **Example format** (data shown is illustrative only — always scan directories for real data):
-
-   ```
-   === Stories in Status Directories ===
-   ┌────────────────┬───────┬────────────────────────────────────────────────────────────────────────────────────┐
-   │   Directory    │ Count │                                      Stories                                       │
-   ├────────────────┼───────┼────────────────────────────────────────────────────────────────────────────────────┤
-   │ backlog/       │ 3     │ STORY-017, wrkf-1030, wrkf-1021                                                    │
-   ├────────────────┼───────┼────────────────────────────────────────────────────────────────────────────────────┤
-   │ elaboration/   │ 0     │ —                                                                                  │
-   ├────────────────┼───────┼────────────────────────────────────────────────────────────────────────────────────┤
-   │ ready-to-work/ │ 2     │ wrkf-1022-A, WORKF-1022-B                                                          │
-   ├────────────────┼───────┼────────────────────────────────────────────────────────────────────────────────────┤
-   │ in-progress/   │ 0     │ —                                                                                  │
-   ├────────────────┼───────┼────────────────────────────────────────────────────────────────────────────────────┤
-   │ QA/            │ 1     │ wrkf-1020                                                                          │
-   ├────────────────┼───────┼────────────────────────────────────────────────────────────────────────────────────┤
-   │ UAT/           │ 5     │ STORY-001 thru STORY-005                                                           │
-   └────────────────┴───────┴────────────────────────────────────────────────────────────────────────────────────┘
-   ```
-
-   This table is MANDATORY output for every status summary. Scan these directories:
-   - `plans/stories/backlog/`
-   - `plans/stories/elaboration/`
-   - `plans/stories/ready-to-work/`
-   - `plans/stories/in-progress/`
-   - `plans/stories/QA/`
-   - `plans/stories/UAT/`
-
--------------------------------------------------------------------------------
-OUTPUT FORMAT
--------------------------------------------------------------------------------
-
-For single story lookup:
 ```
-Story: STORY-007
-Status: completed
-Feature: Inspiration Gallery - Image Browsing
+/story-status                                    # Summary of all features
+/story-status plans/future/wishlist              # Summary of wishlist feature
+/story-status plans/future/wishlist WISH-001     # Single story status
+```
+
+## Arguments
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `FEATURE_DIR` | No | Feature directory path |
+| `STORY_ID` | No | Story identifier (e.g., WISH-001) |
+
+- No arguments: Show summary of all features in `plans/future/`
+- Feature dir only: Show summary of that feature
+- Both arguments: Show single story status
+
+## Single Story Lookup
+
+When both FEATURE_DIR and STORY_ID provided:
+
+1. Normalize ID to uppercase
+2. Read `{FEATURE_DIR}/stories.index.md`
+3. Search for `## <STORY_ID>:` section
+4. Extract `**Status:**`, `**Feature:**`, `**Depends On:**` values
+5. Locate actual directory
+
+**Output format:**
+```
+Feature: plans/future/wishlist
+Story: WISH-001
+Status: in-progress
+Location: plans/future/wishlist/in-progress/WISH-001/
 Depends On: none
 ```
 
-For status summary:
-- Use markdown tables for index-based counts
-- Use box-drawing table (with │ ├ ┼ ─ etc.) for status directories — this is MANDATORY
-- Include both index-based counts and directory-based counts
-- Show combined totals at the end
-- The status directories table must list actual story IDs, not just counts
+**If not found:**
+- Check all stage directories within feature
+- Report: "Story directory exists but not in index" or "Story not found"
 
--------------------------------------------------------------------------------
-NOTES
--------------------------------------------------------------------------------
+## Feature Summary
 
-- Index files are discovered dynamically via glob: `plans/stories/*.stories.index.md`
-- New epics/projects should create their own `<prefix>.stories.index.md` file
-- Status values are case-sensitive as stored in the index
-- Common statuses: pending, generated, in-progress, completed, superseded, BLOCKED
-- The Progress Summary tables at the top of each index file can be used to verify counts
-- Story directories in status folders indicate workflow position, index status is authoritative
+When only FEATURE_DIR provided:
+
+1. Read `{FEATURE_DIR}/stories.index.md`
+2. Count stories by `**Status:**` value
+3. Scan stage directories for actual locations
+
+**Output format:**
+```
+=== plans/future/wishlist ===
+Prefix: WISH
+
+| Status        | Count |
+|---------------|-------|
+| pending       | 3     |
+| in-progress   | 1     |
+| completed     | 2     |
+
+┌────────────────┬───────┬─────────────────────────────┐
+│   Directory    │ Count │           Stories           │
+├────────────────┼───────┼─────────────────────────────┤
+│ backlog/       │ 2     │ WISH-003, WISH-004          │
+├────────────────┼───────┼─────────────────────────────┤
+│ in-progress/   │ 1     │ WISH-001                    │
+├────────────────┼───────┼─────────────────────────────┤
+│ UAT/           │ 0     │ —                           │
+└────────────────┴───────┴─────────────────────────────┘
+
+Total Stories: 6
+```
+
+## All Features Summary
+
+When no arguments provided:
+
+1. Scan `plans/future/` for feature directories
+2. For each with `stories.index.md`:
+   - Count stories by status
+   - Show compact summary
+
+**Output format:**
+```
+=== Feature Status Summary ===
+
+| Feature    | Prefix | Total | Pending | In Progress | UAT | Done |
+|------------|--------|-------|---------|-------------|-----|------|
+| wishlist   | WISH   | 7     | 3       | 1           | 1   | 2    |
+| auth       | AUTH   | 4     | 4       | 0           | 0   | 0    |
+| sets       | SETS   | 5     | 2       | 2           | 0   | 1    |
+
+Total Features: 3
+Total Stories: 16
+```
+
+## Notes
+
+- Feature directories discovered via `plans/future/*/stories.index.md`
+- Status values are case-sensitive as stored
+- Common statuses: pending, generated, in-progress, uat, completed, BLOCKED
+- Story directories indicate workflow position; index status is authoritative

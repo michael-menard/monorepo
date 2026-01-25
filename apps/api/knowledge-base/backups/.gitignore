@@ -1,0 +1,14 @@
+# Ignore all backup files
+*.sql
+*.sql.gz
+*.sha256
+*.log
+
+# Ignore lock and log files
+.restore.lock
+.validation-log
+.dr-drill-log
+
+# Keep this .gitignore and .gitkeep
+!.gitignore
+!.gitkeep

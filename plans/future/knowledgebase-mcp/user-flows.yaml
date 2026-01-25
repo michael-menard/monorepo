@@ -1,0 +1,254 @@
+# User Flows
+# Generated: 2026-01-24
+#
+# Core user journeys and product flows for AI agent context
+
+---
+
+# =============================================================================
+# PRIMARY USER FLOWS
+# =============================================================================
+
+- id: flow-001
+  content: |
+    **Upload MOC Instructions**
+
+    1. User clicks "New MOC" button
+    2. System calls `/api/mocs/initialize` (creates draft, returns presigned URLs)
+    3. User fills metadata: title, description, category, difficulty
+    4. User uploads instruction PDF + optional parts list (CSV/XML)
+    5. Files upload directly to S3 via presigned URLs
+    6. User clicks "Publish"
+    7. System calls `/api/mocs/finalize` (validates files exist, sets finalizedAt)
+    8. MOC appears in user's gallery
+
+    Error states:
+    - Stale upload (>1hr): finalizingAt lock expires, user can retry
+    - Missing files: finalize returns 400 with missing file list
+    - Concurrent edit: 409 CONFLICT with expectedUpdatedAt mismatch
+  entry_type: flow
+  roles: [dev, pm, qa]
+  tags: [moc, upload, instructions, primary-flow]
+  source_file: packages/backend/moc-instructions-core
+  confidence: 1.0
+
+- id: flow-002
+  content: |
+    **Edit MOC with File Replacement**
+
+    1. User opens existing MOC
+    2. User clicks "Edit"
+    3. System calls `/api/mocs/:id/edit/presign` (returns presigned URLs, lastUpdatedAt)
+    4. User modifies metadata and/or replaces files
+    5. New files upload to S3
+    6. User clicks "Save"
+    7. System calls `/api/mocs/:id/edit/finalize` with expectedUpdatedAt
+    8. If conflict (another edit in progress): 409, user must refresh
+    9. If success: old S3 files cleaned up, MOC updated
+
+    Optimistic locking prevents lost updates in concurrent edit scenario.
+  entry_type: flow
+  roles: [dev, pm, qa]
+  tags: [moc, edit, files, optimistic-locking]
+  source_file: packages/backend/moc-instructions-core
+  confidence: 1.0
+
+- id: flow-003
+  content: |
+    **Import MOC from External URL**
+
+    1. User pastes URL (Rebrickable, BrickLink, etc.)
+    2. System calls `/api/mocs/import-from-url`
+    3. Backend fetches external page, parses metadata
+    4. Rate limiting: 10 requests per minute per user
+    5. Caching: same URL returns cached result for 15 minutes
+    6. System creates draft MOC with scraped data
+    7. User reviews and edits before publishing
+
+    Supported sources: Rebrickable, BrickLink, direct image URLs
+  entry_type: flow
+  roles: [dev, pm]
+  tags: [moc, import, external, scraping]
+  source_file: apps/api/platforms/vercel/api/mocs/import-from-url.ts
+  confidence: 1.0
+
+- id: flow-004
+  content: |
+    **Manage Inspiration Gallery**
+
+    1. User navigates to Inspiration Gallery
+    2. User creates album (optional nesting up to 5 levels)
+    3. User uploads images via drag-drop or file picker
+    4. System creates presigned URLs, uploads to S3
+    5. User organizes: drag to reorder, move between albums
+    6. User can link images to MOCs for reference
+
+    Album structure: DAG (directed acyclic graph) with cycle detection
+  entry_type: flow
+  roles: [dev, pm, qa]
+  tags: [gallery, inspiration, albums, images]
+  source_file: packages/backend/gallery-core
+  confidence: 1.0
+
+- id: flow-005
+  content: |
+    **Wishlist to Owned Set ("Got It" Flow)**
+
+    1. User adds set to wishlist (manual entry or URL import)
+    2. User sets priority, notes, target price
+    3. User acquires set IRL
+    4. User clicks "Got It" on wishlist item
+    5. System creates new Set entry with metadata carried over
+    6. Wishlist item archived or deleted (user preference)
+    7. Set appears in Sets Gallery
+
+    Cross-domain: Wishlist (Epic 6) → Sets (Epic 7)
+  entry_type: flow
+  roles: [dev, pm, qa]
+  tags: [wishlist, sets, got-it, cross-domain]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+
+- id: flow-006
+  content: |
+    **Browse and Search Sets**
+
+    1. User opens Sets Gallery
+    2. Default view: grid of owned sets, sorted by date added
+    3. User can filter by: build status, theme, year, piece count
+    4. User can search by: name, set number, theme
+    5. User clicks set to view details
+    6. Details show: images, parts count, linked MOCs, build status
+
+    Search uses PostgreSQL full-text search (OpenSearch in production)
+  entry_type: flow
+  roles: [dev, pm]
+  tags: [sets, search, browse, gallery]
+  source_file: apps/web/app-sets-gallery
+  confidence: 1.0
+
+# =============================================================================
+# AUTHENTICATION FLOWS
+# =============================================================================
+
+- id: flow-auth-001
+  content: |
+    **Sign Up**
+
+    1. User clicks "Sign Up"
+    2. User enters email + password
+    3. Cognito creates user, sends verification email
+    4. User clicks verification link
+    5. User redirected to app, logged in
+    6. JWT tokens stored in secure cookie + memory
+
+    No separate users table - Cognito `sub` is the user ID everywhere.
+  entry_type: flow
+  roles: [dev, qa]
+  tags: [auth, signup, cognito]
+  source_file: packages/backend/lambda-auth
+  confidence: 1.0
+
+- id: flow-auth-002
+  content: |
+    **Sign In**
+
+    1. User enters email + password
+    2. Cognito validates credentials
+    3. Cognito returns: access token, ID token, refresh token
+    4. Frontend stores tokens (memory for access, secure for refresh)
+    5. All API requests include Authorization header
+    6. Token refresh happens automatically before expiry
+
+    Access token TTL: 1 hour. Refresh token TTL: 30 days.
+  entry_type: flow
+  roles: [dev, qa]
+  tags: [auth, signin, cognito, jwt]
+  source_file: packages/backend/lambda-auth
+  confidence: 1.0
+
+- id: flow-auth-003
+  content: |
+    **API Request Authentication**
+
+    1. Frontend includes `Authorization: Bearer <token>` header
+    2. Lambda/Vercel handler extracts token
+    3. Handler validates JWT signature with Cognito public keys
+    4. Handler extracts `sub` claim as userId
+    5. userId passed to core function for ownership checks
+    6. If invalid/expired: 401 Unauthorized
+
+    Dev bypass: `AUTH_BYPASS=true` in .env for local development
+  entry_type: flow
+  roles: [dev]
+  tags: [auth, api, jwt, validation]
+  source_file: apps/api/core/auth
+  confidence: 1.0
+
+# =============================================================================
+# ERROR FLOWS
+# =============================================================================
+
+- id: flow-error-001
+  content: |
+    **API Error Handling**
+
+    Core functions return discriminated unions:
+    ```
+    { success: false, error: 'NOT_FOUND' | 'FORBIDDEN' | 'CONFLICT', message: string }
+    ```
+
+    Handler maps to HTTP:
+    - NOT_FOUND → 404
+    - FORBIDDEN → 404 (prevents existence leakage)
+    - CONFLICT → 409
+    - VALIDATION_ERROR → 400
+    - DB_ERROR → 500
+
+    Frontend displays user-friendly message, logs technical details.
+  entry_type: flow
+  roles: [dev]
+  tags: [error, api, http, pattern]
+  source_file: packages/backend/gallery-core
+  confidence: 1.0
+
+- id: flow-error-002
+  content: |
+    **S3 Upload Failure Recovery**
+
+    1. User starts upload, gets presigned URL
+    2. Upload to S3 fails (network, timeout, etc.)
+    3. User can retry upload with same presigned URL (valid for 1 hour)
+    4. If presigned URL expired: user must restart flow
+    5. Orphaned S3 objects cleaned up by lifecycle policy (7 days)
+
+    No partial state: finalize only succeeds if all required files present.
+  entry_type: flow
+  roles: [dev, qa]
+  tags: [error, s3, upload, recovery]
+  source_file: packages/backend/moc-instructions-core
+  confidence: 1.0
+
+# =============================================================================
+# ADMIN FLOWS
+# =============================================================================
+
+- id: flow-admin-001
+  content: |
+    **Dashboard Analytics**
+
+    1. Admin opens Dashboard app
+    2. System fetches aggregated stats:
+       - Total MOCs, sets, wishlist items
+       - Upload activity (daily/weekly/monthly)
+       - Storage usage
+       - Popular categories
+    3. Stats cached for 5 minutes
+    4. Admin can drill down by time period
+
+    Note: Single-user app, so "admin" = the user.
+  entry_type: flow
+  roles: [pm, dev]
+  tags: [dashboard, analytics, stats]
+  source_file: apps/web/app-dashboard
+  confidence: 1.0

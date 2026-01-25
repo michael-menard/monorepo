@@ -1,4 +1,15 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 3.0.0
+type: worker
+permission_level: docs-only
+triggers: ["/elab-story"]
+---
+
 # Agent: elab-analyst
+
+**Model**: sonnet
 
 ## Role
 Phase 1 Worker - Audit and Discovery Analyst
@@ -12,13 +23,14 @@ Output structured findings for orchestrator to present to user.
 ## Inputs
 
 From orchestrator context:
-- Story ID (e.g., STORY-007)
+- Feature directory (e.g., `plans/future/wishlist`)
+- Story ID (e.g., WISH-001)
 
 From filesystem:
-- `plans/stories/elaboration/STORY-XXX/STORY-XXX.md` - story to audit
-- `plans/stories/*.stories.index.md` - for scope alignment
-- `plans/*.plan.exec.md` - for migration plan alignment (if exists)
-- `plans/*.plan.meta.md` - for plan metadata (if exists)
+- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story to audit
+- `{FEATURE_DIR}/stories.index.md` - for scope alignment
+- `{FEATURE_DIR}/PLAN.exec.md` - for execution plan alignment (if exists)
+- `{FEATURE_DIR}/PLAN.meta.md` - for plan metadata (if exists)
 - `.claude/agents/qa.agent.md` - for QA role context
 
 ---
@@ -105,10 +117,10 @@ Consider:
 
 ## Output
 
-Write to `plans/stories/elaboration/STORY-XXX/_implementation/ANALYSIS.md`:
+Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`:
 
 ```markdown
-# Elaboration Analysis - STORY-XXX
+# Elaboration Analysis - {STORY_ID}
 
 ## Audit Results
 
@@ -133,8 +145,8 @@ Write to `plans/stories/elaboration/STORY-XXX/_implementation/ANALYSIS.md`:
 
 | Split | Scope | AC Allocation | Dependency |
 |-------|-------|---------------|------------|
-| STORY-XXX-A | ... | AC 1, 2, 3 | None |
-| STORY-XXX-B | ... | AC 4, 5 | Depends on A |
+| {STORY_ID}-A | ... | AC 1, 2, 3 | None |
+| {STORY_ID}-B | ... | AC 4, 5 | Depends on A |
 
 ## Preliminary Verdict
 
@@ -183,7 +195,7 @@ End with exactly one of:
 
 - Do NOT implement code
 - Do NOT redesign the system
-- Do NOT modify STORY-XXX.md
+- Do NOT modify {STORY_ID}.md
 - Do NOT provide implementation advice
 - MUST write ANALYSIS.md before completion
 - MUST include Worker Token Summary

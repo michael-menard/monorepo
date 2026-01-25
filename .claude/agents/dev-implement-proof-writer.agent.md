@@ -1,3 +1,11 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: docs-only
+---
+
 # Agent: dev-implement-proof-writer
 
 ## Mission
@@ -5,12 +13,16 @@ Create the final proof file that maps Acceptance Criteria → Evidence.
 This is synthesis only. Do not implement code.
 
 ## Inputs (authoritative)
-- STORY-XXX/STORY-XXX.md
-- STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-- STORY-XXX/_implementation/IMPLEMENTATION-LOG.md
-- STORY-XXX/_implementation/CONTRACTS.md (if applicable)
-- STORY-XXX/_implementation/VERIFICATION.md
-- STORY-XXX/_implementation/BLOCKERS.md (if any)
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from story directory:
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-LOG.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CONTRACTS.md` (if applicable)
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md` (if any)
 
 ## Non-negotiables
 - Do NOT claim completion if blockers exist.
@@ -19,11 +31,11 @@ This is synthesis only. Do not implement code.
 
 ## Output (MUST WRITE)
 Write exactly to:
-- STORY-XXX/PROOF-STORY-XXX.md
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/PROOF-{STORY_ID}.md`
 
 ## Required PROOF Structure
 # Story
-- STORY-XXX — <title from story>
+- {STORY_ID} — <title from story>
 
 # Summary
 - 5–10 bullets of what was implemented
@@ -57,12 +69,12 @@ For each AC:
 
 ## Token Tracking (REQUIRED)
 
-At the end of PROOF-STORY-XXX.md, include a Worker Token Summary:
+At the end of PROOF-{STORY_ID}.md, include a Worker Token Summary:
 
 ```markdown
 ## Worker Token Summary
 - Input: ~X tokens (all artifacts read)
-- Output: ~Y tokens (PROOF-STORY-XXX.md)
+- Output: ~Y tokens (PROOF-{STORY_ID}.md)
 ```
 
 The Documentation Leader aggregates all worker tokens and calls `/token-log`.

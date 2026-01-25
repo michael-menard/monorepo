@@ -1,0 +1,215 @@
+schema: 2
+feature_dir: "plans/future/knowledgebase-mcp"
+prefix: "KNOW"
+project_name: "knowledgebase-mcp"
+analyzed: "2026-01-24T23:55:00Z"
+
+overall_goal: |
+  Build a pgvector-based MCP server that provides institutional memory to AI agents, allowing them to query for relevant patterns, lessons learned, and architectural decisions based on their role and context.
+
+phases:
+  - id: 1
+    name: "Infrastructure"
+    description: "Set up package structure, database schema, and foundational infrastructure"
+  - id: 2
+    name: "Embedding Client"
+    description: "Implement OpenAI embedding client with caching and retry logic"
+  - id: 3
+    name: "Core CRUD"
+    description: "Build core create, read, update, delete operations for knowledge entries"
+  - id: 4
+    name: "Search"
+    description: "Implement hybrid semantic and keyword search with fallback mechanisms"
+  - id: 5
+    name: "MCP Server"
+    description: "Set up MCP server infrastructure and register all tools"
+  - id: 6
+    name: "Parsers & Seeding"
+    description: "Build parsers for existing content and seed the knowledge base"
+  - id: 7
+    name: "Admin & Polish"
+    description: "Add administrative tools, logging, and performance optimization"
+  - id: 8
+    name: "Workflow Integration"
+    description: "Integrate knowledge base into the story lifecycle workflow"
+
+stories:
+  - id: "KNOW-001"
+    title: "Package Infrastructure Setup"
+    feature: "Create package structure, database schema, Docker setup, and test configuration"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "Docker Compose with pgvector/pgvector:pg16"
+      - "PostgreSQL with pgvector extension"
+      - "Vitest configuration"
+    goal: "Establish the foundational package structure and database infrastructure for the knowledge base MCP server"
+    risk_notes: "pgvector compatibility and Docker setup may require version-specific configuration"
+    sizing_warning: false
+
+  - id: "KNOW-002"
+    title: "Embedding Client Implementation"
+    feature: "Build OpenAI embedding client with text-embedding-3-small, content-hash caching, retry logic, and batch processing"
+    phase: 2
+    depends_on: ["KNOW-001"]
+    endpoints: []
+    infrastructure:
+      - "OpenAI API integration"
+      - "embedding_cache table in PostgreSQL"
+    goal: "Provide reliable embedding generation with caching to minimize API calls and costs"
+    risk_notes: "OpenAI API rate limits and transient failures require robust retry logic; batch processing complexity"
+    sizing_warning: false
+
+  - id: "KNOW-003"
+    title: "Core CRUD Operations"
+    feature: "Implement kb_add, kb_get, kb_update, kb_delete, and kb_list with deduplication and validation"
+    phase: 3
+    depends_on: ["KNOW-002"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable basic create, read, update, delete, and list operations for knowledge entries"
+    risk_notes: "Deduplication logic must be reliable; content_hash collisions (unlikely but possible); re-embedding on update requires careful coordination"
+    sizing_warning: false
+
+  - id: "KNOW-004"
+    title: "Search Implementation"
+    feature: "Build semantic search (pgvector cosine), keyword search (PostgreSQL FTS), hybrid search with RRF, kb_get_related, and fallback mechanisms"
+    phase: 4
+    depends_on: ["KNOW-003"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide fast, relevant search across knowledge entries using hybrid semantic and keyword approaches"
+    risk_notes: "RRF algorithm tuning (0.7 semantic, 0.3 keyword weights may need adjustment); performance at scale; fallback behavior must be transparent"
+    sizing_warning: true
+
+  - id: "KNOW-005"
+    title: "MCP Server Setup"
+    feature: "Configure MCP server using @modelcontextprotocol/sdk, register all 10 tools with schemas, implement handlers, integrate @repo/logger"
+    phase: 5
+    depends_on: ["KNOW-004"]
+    endpoints: []
+    infrastructure:
+      - "MCP Server registration in ~/.claude/mcp.json"
+    goal: "Expose all knowledge base functionality as MCP tools accessible to Claude Code"
+    risk_notes: "MCP SDK integration patterns; Claude Code spawning and communication; error handling across MCP boundary"
+    sizing_warning: false
+
+  - id: "KNOW-006"
+    title: "Parsers and Seeding"
+    feature: "Build parsers for LESSONS-LEARNED.md and templates, create seed script for YAML import, implement kb_bulk_import and kb_stats tools"
+    phase: 6
+    depends_on: ["KNOW-005"]
+    endpoints: []
+    infrastructure: []
+    goal: "Import existing knowledge from markdown files and templates into the knowledge base"
+    risk_notes: "Markdown parsing complexity; maintaining YAML structure; handling malformed source files; bulk import performance"
+    sizing_warning: true
+
+  - id: "KNOW-007"
+    title: "Admin Tools and Polish"
+    feature: "Implement kb_rebuild_embeddings, comprehensive logging, performance testing, and documentation"
+    phase: 7
+    depends_on: ["KNOW-006"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide administrative capabilities and production-ready quality"
+    risk_notes: "Performance at scale (1000+ entries); rebuild time and cost implications; comprehensive test coverage"
+    sizing_warning: false
+
+  - id: "KNOW-008"
+    title: "Workflow Integration"
+    feature: "Migrate LESSONS-LEARNED.md content, modify learnings agent to write to KB, create LEARNINGS.yaml output, add kb_search to setup leader agents, implement sync recovery script"
+    phase: 8
+    depends_on: ["KNOW-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Integrate knowledge base into the story lifecycle for automatic learnings capture and context retrieval"
+    risk_notes: "Agent file modifications require careful testing; graceful degradation must work reliably; migration of existing content without data loss; potential workflow disruption during transition"
+    sizing_warning: true
+
+dependencies:
+  graph:
+    "KNOW-001": []
+    "KNOW-002": ["KNOW-001"]
+    "KNOW-003": ["KNOW-002"]
+    "KNOW-004": ["KNOW-003"]
+    "KNOW-005": ["KNOW-004"]
+    "KNOW-006": ["KNOW-005"]
+    "KNOW-007": ["KNOW-006"]
+    "KNOW-008": ["KNOW-007"]
+
+  critical_path:
+    - "KNOW-001"
+    - "KNOW-002"
+    - "KNOW-003"
+    - "KNOW-004"
+    - "KNOW-005"
+    - "KNOW-006"
+    - "KNOW-007"
+    - "KNOW-008"
+
+  critical_path_length: 8
+
+parallelization:
+  max_parallel: 1
+  groups:
+    - stories: ["KNOW-001"]
+      after: null
+    - stories: ["KNOW-002"]
+      after: "group_1"
+    - stories: ["KNOW-003"]
+      after: "group_2"
+    - stories: ["KNOW-004"]
+      after: "group_3"
+    - stories: ["KNOW-005"]
+      after: "group_4"
+    - stories: ["KNOW-006"]
+      after: "group_5"
+    - stories: ["KNOW-007"]
+      after: "group_6"
+    - stories: ["KNOW-008"]
+      after: "group_7"
+
+risks:
+  - id: "RISK-001"
+    description: "OpenAI API reliability and cost - embedding API may have rate limits, transient failures, or unexpected costs at scale"
+    affected_stories: ["KNOW-002", "KNOW-004", "KNOW-006", "KNOW-007"]
+    severity: high
+
+  - id: "RISK-002"
+    description: "pgvector performance at scale - vector similarity search may degrade with large datasets (1000+ entries)"
+    affected_stories: ["KNOW-004", "KNOW-007"]
+    severity: medium
+
+  - id: "RISK-003"
+    description: "Workflow disruption during integration - modifying agent files may introduce regressions in story lifecycle"
+    affected_stories: ["KNOW-008"]
+    severity: high
+
+  - id: "RISK-004"
+    description: "MCP protocol complexity - integration with Claude Code may have undocumented edge cases or limitations"
+    affected_stories: ["KNOW-005"]
+    severity: medium
+
+  - id: "RISK-005"
+    description: "Content migration data loss - migrating existing LESSONS-LEARNED.md content must preserve all information"
+    affected_stories: ["KNOW-006", "KNOW-008"]
+    severity: medium
+
+  - id: "RISK-006"
+    description: "Search relevance tuning - RRF weights and similarity thresholds may require iteration based on actual usage"
+    affected_stories: ["KNOW-004"]
+    severity: low
+
+  - id: "RISK-007"
+    description: "Parser robustness - markdown parsing may fail on malformed or inconsistent source files"
+    affected_stories: ["KNOW-006"]
+    severity: low
+
+metrics:
+  total_stories: 8
+  phases: 8
+  max_parallel: 1
+  critical_path_length: 8
+  stories_with_sizing_warnings: 3

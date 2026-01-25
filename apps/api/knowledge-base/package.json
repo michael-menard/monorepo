@@ -1,0 +1,68 @@
+{
+  "name": "@repo/knowledge-base",
+  "version": "1.0.0",
+  "description": "Knowledge Base MCP Server - PostgreSQL with pgvector for semantic search and embeddings",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./db": {
+      "import": "./dist/db/index.js",
+      "types": "./dist/db/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/__types__/index.js",
+      "types": "./dist/__types__/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint --fix src/",
+    "check-types": "tsc --noEmit",
+    "db:init": "tsx src/scripts/db-init.ts",
+    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/scripts/db-seed.ts",
+    "db:analyze": "tsx src/scripts/db-analyze.ts",
+    "db:studio": "drizzle-kit studio",
+    "validate:env": "tsx src/scripts/validate-env.ts"
+  },
+  "keywords": [
+    "knowledge-base",
+    "mcp",
+    "pgvector",
+    "embeddings",
+    "semantic-search",
+    "postgresql"
+  ],
+  "author": "LEGO MOC Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.44.0",
+    "openai": "6.16.0",
+    "pg": "^8.12.0",
+    "tiktoken": "1.0.22",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "drizzle-kit": "^0.30.0",
+    "eslint": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

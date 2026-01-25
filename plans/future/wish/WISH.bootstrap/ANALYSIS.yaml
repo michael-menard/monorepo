@@ -1,0 +1,308 @@
+schema: 1
+prefix: "WISH"
+project_name: "wishlist"
+analyzed: "2026-01-24T00:00:00Z"
+
+overall_goal: |
+  Enable users to track LEGO sets they want to purchase with URL-based scraping,
+  manual entry, and a "Got it" flow to transition items to their Sets collection.
+
+phases:
+  - id: 1
+    name: "Foundation"
+    description: "Database schema, Zod types, and migration infrastructure"
+  - id: 2
+    name: "Gallery MVP"
+    description: "Vertical slice with read-only gallery and basic filtering"
+  - id: 3
+    name: "Core Features"
+    description: "Complete CRUD: add, edit, delete, and purchase flows"
+  - id: 4
+    name: "UX Polish"
+    description: "Drag-and-drop reordering, empty states, and optimistic updates"
+  - id: 5
+    name: "Accessibility"
+    description: "Full keyboard navigation, screen reader support, and WCAG AA compliance"
+
+stories:
+  - id: "WISH-2000"
+    title: "Database Schema & Types"
+    feature: "Drizzle schema for wishlist_items table with all PRD fields, Zod schemas in shared package, TypeScript types via z.infer"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "wishlist_items table in Aurora PostgreSQL"
+      - "Indexes on userId and (userId, sortOrder)"
+    goal: "Establish data model foundation for wishlist items with runtime validation and type safety"
+    risk_notes: "Schema must support all PRD fields; changes after migration are costly"
+    sizing_warning: false
+    acceptance_criteria:
+      - "Drizzle schema includes all fields: id, userId, title, store, setNumber, sourceUrl, imageUrl, price, currency, pieceCount, releaseDate, tags, priority, notes, sortOrder, timestamps"
+      - "Zod schemas created: WishlistItemSchema, CreateWishlistItemSchema, UpdateWishlistItemSchema, WishlistQueryParamsSchema, WishlistListResponseSchema"
+      - "31+ unit tests for schema validation"
+      - "TypeScript types inferred via z.infer"
+    point_estimate: 3
+    current_status: "Ready for Review"
+
+  - id: "WISH-2007"
+    title: "Run Migration"
+    feature: "Execute database migration to create wishlist_items table in all environments"
+    phase: 1
+    depends_on: ["WISH-2000"]
+    endpoints: []
+    infrastructure:
+      - "Migration file: 0005_wishlist_schema_update.sql"
+    goal: "Apply schema changes to database for all environments (dev, staging, prod)"
+    risk_notes: "Must run after WISH-2000 is approved; rollback plan needed if issues arise"
+    sizing_warning: false
+    acceptance_criteria:
+      - "Migration file created with CREATE TABLE statement"
+      - "Migration successfully applied to dev environment"
+      - "Migration successfully applied to staging environment"
+      - "Migration successfully applied to prod environment (or planned for release)"
+      - "Rollback script available if needed"
+    point_estimate: 1
+    current_status: "Approved"
+
+  - id: "WISH-2001"
+    title: "Gallery MVP"
+    feature: "Vertical slice with GET endpoints, RTK Query hooks, WishlistCard component, gallery page with store filters, search, and sorting"
+    phase: 2
+    depends_on: ["WISH-2000", "WISH-2007"]
+    endpoints:
+      - "GET /api/wishlist - List with filters, pagination, sorting"
+      - "GET /api/wishlist/:id - Single item by ID"
+    infrastructure: []
+    goal: "Deliver read-only gallery view to validate UX and API integration end-to-end"
+    risk_notes: "First vertical slice; integration issues between API and frontend likely"
+    sizing_warning: true
+    acceptance_criteria:
+      - "GET /api/wishlist endpoint returns paginated list with filters (store, search)"
+      - "GET /api/wishlist/:id endpoint returns single item"
+      - "WishlistCard component renders: image, title, store badge, price, piece count, priority"
+      - "Gallery page has store filter tabs (All, LEGO, Barweer, Other)"
+      - "Search by title/set number works"
+      - "Sort by date, price, piece count, priority works"
+      - "RTK Query hooks: useGetWishlistQuery, useGetWishlistItemQuery"
+      - "Hover action menu: View, Edit, Remove, Got It"
+      - "Loading skeleton states"
+    point_estimate: 8
+    current_status: "Ready for Review"
+
+  - id: "WISH-2002"
+    title: "Add Item Flow"
+    feature: "POST endpoint, add item form with all fields, image upload to S3, form validation with Zod, RTK Query mutation"
+    phase: 3
+    depends_on: ["WISH-2001"]
+    endpoints:
+      - "POST /api/wishlist - Create new item"
+    infrastructure:
+      - "S3 presigned URL generation for image upload"
+    goal: "Enable users to add wishlist items manually with all fields and image upload"
+    risk_notes: "Image upload to S3 can fail; needs error handling and retry logic"
+    sizing_warning: false
+    acceptance_criteria:
+      - "POST /api/wishlist endpoint validates and creates item"
+      - "Add item page with form fields: store (required), title (required), set number, price, currency, piece count, priority, image, source URL, notes, tags"
+      - "Store selector: LEGO, Barweer, Cata, BrickLink, Other"
+      - "Priority selector: 0-5 scale"
+      - "Image upload field with S3 presigned URL"
+      - "Form validation with Zod (client and server)"
+      - "RTK Query mutation: useAddToWishlistMutation"
+      - "Success toast with link to view item"
+      - "Error handling for API failures"
+    point_estimate: 5
+    current_status: "Approved"
+
+  - id: "WISH-2003"
+    title: "Detail & Edit Pages"
+    feature: "PATCH endpoint, detail page showing full item info, edit page with pre-populated form, RTK Query mutation"
+    phase: 3
+    depends_on: ["WISH-2001"]
+    endpoints:
+      - "PATCH /api/wishlist/:id - Update item (partial)"
+    infrastructure: []
+    goal: "Allow users to view item details and edit any field"
+    risk_notes: "Partial updates need careful validation; image replacement can fail"
+    sizing_warning: false
+    acceptance_criteria:
+      - "PATCH /api/wishlist/:id endpoint validates and updates item"
+      - "Detail page shows: large image, all metadata, priority, tags, notes"
+      - "Action buttons: Got It!, Edit, Delete, Back"
+      - "Edit page with pre-populated form (all fields editable)"
+      - "RTK Query mutation: useUpdateWishlistItemMutation"
+      - "Optimistic update on save"
+      - "Success toast on save"
+      - "Navigation back to detail view after save"
+    point_estimate: 5
+    current_status: "Done (PR #350)"
+
+  - id: "WISH-2004"
+    title: "Modals & Transitions"
+    feature: "DELETE endpoint, POST purchased endpoint, delete confirmation modal, 'Got It' modal with purchase details form, toast notifications with undo"
+    phase: 3
+    depends_on: ["WISH-2001"]
+    endpoints:
+      - "DELETE /api/wishlist/:id - Hard delete item"
+      - "POST /api/wishlist/:id/purchased - Mark as purchased, create Set"
+    infrastructure: []
+    goal: "Complete item lifecycle with delete and purchase flows"
+    risk_notes: "'Got It' transaction must be atomic (create Set before delete Wishlist); data loss risk if not handled correctly"
+    sizing_warning: true
+    acceptance_criteria:
+      - "DELETE /api/wishlist/:id endpoint removes item"
+      - "POST /api/wishlist/:id/purchased endpoint creates Set and optionally deletes Wishlist item"
+      - "Delete confirmation modal (AlertDialog) with 'This is permanent' warning"
+      - "'Got It' modal with form: price paid (pre-filled), tax, shipping, quantity, purchase date, 'Keep on wishlist' checkbox"
+      - "Purchase date defaults to today"
+      - "'Got It' transaction is atomic: create Set first, then delete Wishlist (if checkbox unchecked)"
+      - "RTK Query mutations: useRemoveFromWishlistMutation, useMarkAsPurchasedMutation"
+      - "Toast notifications for success with 5-second undo window"
+      - "Undo restores wishlist item and deletes set item"
+      - "Navigation to Sets Gallery after 'Got It' (optional)"
+    point_estimate: 8
+    current_status: "Approved"
+
+  - id: "WISH-2005"
+    title: "UX Polish"
+    feature: "Drag-and-drop reordering with dnd-kit, PATCH reorder endpoint, optimistic updates, empty states, loading skeletons"
+    phase: 4
+    depends_on: ["WISH-2002", "WISH-2003", "WISH-2004"]
+    endpoints:
+      - "PATCH /api/wishlist/reorder - Update sortOrder for items"
+    infrastructure: []
+    goal: "Deliver polished UX with drag-and-drop priority reordering and thoughtful empty states"
+    risk_notes: "dnd-kit integration can be complex; touch support on mobile needs testing"
+    sizing_warning: false
+    acceptance_criteria:
+      - "PATCH /api/wishlist/reorder endpoint updates sortOrder"
+      - "dnd-kit setup with PointerSensor (8px threshold), TouchSensor (300ms long-press), KeyboardSensor"
+      - "SortableContext with rectSortingStrategy"
+      - "Visual feedback during drag (ghost image, drop zone highlight)"
+      - "Optimistic update on drop with undo (5-second window)"
+      - "Empty state for new user: 'Nothing on your wishlist yet' with Add CTA"
+      - "Empty state for all purchased: 'You got everything!' with Add More CTA"
+      - "Empty state for no results: 'No matches' with Clear Filters button"
+      - "Loading skeletons match card layout"
+      - "Touch support for mobile drag-and-drop"
+    point_estimate: 5
+    current_status: "Draft"
+
+  - id: "WISH-2006"
+    title: "Accessibility"
+    feature: "Full keyboard navigation with roving tabindex, keyboard shortcuts, screen reader announcements, modal focus trap, WCAG AA compliance"
+    phase: 5
+    depends_on: ["WISH-2005"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure full accessibility with keyboard navigation, screen reader support, and WCAG AA compliance"
+    risk_notes: "Roving tabindex in gallery grid is complex; screen reader testing requires macOS/Windows"
+    sizing_warning: false
+    acceptance_criteria:
+      - "Arrow keys navigate gallery grid"
+      - "Space selects/focuses item"
+      - "Enter opens detail view"
+      - "Escape closes modals"
+      - "Home/End jumps to first/last item"
+      - "Keyboard shortcuts: A (add), G (got it on focused item), Delete (remove focused item)"
+      - "Screen reader announces card focus: '[Title], [price], [pieces] pieces, priority [n] of [total]'"
+      - "Screen reader announces state changes: 'Priority updated', 'Item removed', 'Added to collection'"
+      - "Modal focus trap and return to trigger element on close"
+      - "WCAG AA color contrast compliance (automated axe check)"
+      - "VoiceOver testing on macOS (if available)"
+      - "NVDA testing on Windows (if available)"
+    point_estimate: 5
+    current_status: "Draft"
+
+dependencies:
+  graph:
+    "WISH-2000": []
+    "WISH-2007": ["WISH-2000"]
+    "WISH-2001": ["WISH-2000", "WISH-2007"]
+    "WISH-2002": ["WISH-2001"]
+    "WISH-2003": ["WISH-2001"]
+    "WISH-2004": ["WISH-2001"]
+    "WISH-2005": ["WISH-2002", "WISH-2003", "WISH-2004"]
+    "WISH-2006": ["WISH-2005"]
+
+  critical_path:
+    - "WISH-2000"
+    - "WISH-2007"
+    - "WISH-2001"
+    - "WISH-2002"
+    - "WISH-2005"
+    - "WISH-2006"
+
+  critical_path_length: 6
+
+parallelization:
+  max_parallel: 3
+  groups:
+    - stories: ["WISH-2000"]
+      after: null
+      description: "Foundation - schema and types"
+    - stories: ["WISH-2007"]
+      after: "group_1"
+      description: "Foundation - run migration"
+    - stories: ["WISH-2001"]
+      after: "group_2"
+      description: "Gallery MVP - vertical slice"
+    - stories: ["WISH-2002", "WISH-2003", "WISH-2004"]
+      after: "group_3"
+      description: "Core features - parallel work on add, edit, and modals"
+    - stories: ["WISH-2005"]
+      after: "group_4"
+      description: "UX polish - drag-and-drop and empty states"
+    - stories: ["WISH-2006"]
+      after: "group_5"
+      description: "Accessibility - keyboard navigation and screen reader support"
+
+risks:
+  - id: "RISK-001"
+    description: "Schema changes after migration are costly; must ensure all PRD fields are captured in WISH-2000"
+    affected_stories: ["WISH-2000", "WISH-2007"]
+    severity: high
+    mitigation: "Thorough PRD review before schema approval; include all optional fields now even if not used in MVP"
+
+  - id: "RISK-002"
+    description: "First vertical slice (WISH-2001) may reveal integration issues between API and frontend"
+    affected_stories: ["WISH-2001"]
+    severity: medium
+    mitigation: "Allocate extra time for debugging; validate RTK Query setup and error handling early"
+
+  - id: "RISK-003"
+    description: "S3 image upload can fail or timeout; needs robust error handling and retry logic"
+    affected_stories: ["WISH-2002", "WISH-2003"]
+    severity: medium
+    mitigation: "Implement presigned URL expiry handling; show clear error messages; allow retry without losing form data"
+
+  - id: "RISK-004"
+    description: "'Got It' transaction must be atomic to prevent data loss; create Set before deleting Wishlist item"
+    affected_stories: ["WISH-2004"]
+    severity: high
+    mitigation: "Use database transaction or two-phase commit; test rollback scenarios; never delete Wishlist item if Set creation fails"
+
+  - id: "RISK-005"
+    description: "dnd-kit integration can be complex; touch support on mobile needs thorough testing"
+    affected_stories: ["WISH-2005"]
+    severity: medium
+    mitigation: "Start with desktop drag-and-drop; add touch support incrementally; test on real mobile devices"
+
+  - id: "RISK-006"
+    description: "Roving tabindex in gallery grid is complex and error-prone; screen reader testing requires specific hardware/software"
+    affected_stories: ["WISH-2006"]
+    severity: medium
+    mitigation: "Use established patterns from @repo/accessibility package; manual testing with VoiceOver on macOS; consider automated axe checks"
+
+metrics:
+  total_stories: 7
+  phases: 5
+  max_parallel: 3
+  critical_path_length: 6
+  stories_with_sizing_warnings: 2
+  total_estimated_points: 40
+  completed_stories: 1
+  approved_stories: 3
+  ready_for_review_stories: 2
+  draft_stories: 2

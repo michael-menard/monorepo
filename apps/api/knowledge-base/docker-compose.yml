@@ -1,0 +1,36 @@
+# Docker Compose for Knowledge Base PostgreSQL with pgvector
+#
+# IMPORTANT: Uses port 5433 by default to avoid conflict with root docker-compose (5432)
+#
+# SECURITY WARNING: You MUST set KB_DB_USER and KB_DB_PASSWORD in your .env file.
+# Do NOT use default credentials in any environment.
+#
+# Usage:
+#   docker-compose up -d          # Start PostgreSQL with pgvector
+#   docker-compose down           # Stop container
+#   docker-compose down -v        # Stop and remove volume (reset data)
+#   docker-compose logs -f        # Follow container logs
+
+services:
+  kb-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: knowledge-base-postgres
+    environment:
+      POSTGRES_USER: ${KB_DB_USER:?KB_DB_USER must be set in .env file}
+      POSTGRES_PASSWORD: ${KB_DB_PASSWORD:?KB_DB_PASSWORD must be set in .env file}
+      POSTGRES_DB: ${KB_DB_NAME:-knowledgebase}
+    ports:
+      - "${KB_DB_PORT:-5433}:5432"
+    volumes:
+      - kb_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KB_DB_USER} -d ${KB_DB_NAME:-knowledgebase}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  kb_postgres_data:
+    name: knowledge_base_postgres_data

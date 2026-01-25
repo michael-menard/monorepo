@@ -1,116 +1,133 @@
-# Code Review Command Reference
-
-This document contains detailed templates, diagrams, and examples for the `/dev-code-review` command.
-
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 2.0.0
 ---
 
-## Execution Flow
+# /dev-code-review - Reference
+
+## Architecture
 
 ```
-Phase 0 (Orchestrator) ─── Validate preconditions, identify touched files
-       │
-       ▼
-Phase 1: ┌─ Lint Agent ──────────────┐
-         │                            │
-         ├─ Style Compliance Agent ──┤  (ALL PARALLEL)
-         │                            │
-         ├─ Syntax Agent ────────────┤
-         │                            │
-         └─ Security Agent ──────────┘
-       │
-       ▼
-Phase 2 (Orchestrator) ─── Synthesize results, write CODE-REVIEW-STORY-XXX.md
-       │
-       ▼
-Phase 3 (Orchestrator) ─── Update status, state next step
-       │
-       ▼
-Phase 4 (Orchestrator) ─── Log token usage via /token-log
+/dev-code-review STORY-XXX
+    │
+    ├─→ Phase 0: Setup (haiku)
+    │       └─→ Validate status, extract touched files
+    │
+    ├─→ Phase 1: Reviews (sonnet, PARALLEL)
+    │       ├─→ code-review-lint.agent.md ────────┐
+    │       ├─→ code-review-style-compliance.agent.md ─┼─→ YAML findings
+    │       ├─→ code-review-syntax.agent.md ──────┤
+    │       └─→ code-review-security.agent.md ────┘
+    │
+    ├─→ Phase 2: Aggregate (haiku)
+    │       └─→ Merge findings → VERIFICATION.yaml
+    │
+    └─→ Phase 3: Finalize (haiku)
+            └─→ Update status, call /token-log
 ```
 
----
+## Output Format
 
-## Sub-Agent Summary
+All agents follow `.claude/agents/_shared/lean-docs.md`:
+- YAML over markdown
+- Skip empty sections
+- Structured findings
 
-| Agent | File | Output | Completion Signal |
-|-------|------|--------|-------------------|
-| Lint | `code-review-lint.agent.md` | `CODE-REVIEW-LINT.md` | LINT PASS/FAIL |
-| Style | `code-review-style-compliance.agent.md` | `CODE-REVIEW-STYLE.md` | STYLE COMPLIANCE PASS/FAIL |
-| Syntax | `code-review-syntax.agent.md` | `CODE-REVIEW-SYNTAX.md` | SYNTAX PASS/FAIL |
-| Security | `code-review-security.agent.md` | `CODE-REVIEW-SECURITY.md` | SECURITY PASS/FAIL |
+Primary artifact: `VERIFICATION.yaml` (code_review section)
 
----
+## Artifacts
 
-## Final Report Template
+| File | Created By | Purpose |
+|------|------------|---------|
+| `VERIFICATION.yaml` | Orchestrator | Unified review results |
 
-Write to: `plans/stories/in-progress/STORY-XXX/CODE-REVIEW-STORY-XXX.md`
+**Note**: Workers return YAML directly to orchestrator. No intermediate files.
 
-```markdown
-# Code Review: STORY-XXX
+## VERIFICATION.yaml Structure
 
-## Verdict: PASS / PASS-WITH-WARNINGS / FAIL
+```yaml
+schema: 1
+story: STORY-XXX
+updated: 2026-01-24T10:30:00Z
 
-## Summary
-<1-2 sentence summary>
+code_review:
+  verdict: PASS | FAIL
+  lint:
+    verdict: PASS | FAIL
+    errors: 0
+    warnings: 2
+    findings: []
+  style:
+    verdict: PASS | FAIL
+    violations: 0
+    findings: []
+  syntax:
+    verdict: PASS | FAIL
+    blocking: 0
+    suggestions: 1
+    findings: []
+  security:
+    verdict: PASS | FAIL
+    critical: 0
+    high: 0
+    medium: 1
+    findings: []
 
-## Sub-Agent Results
-
-| Check | Result | Blocking Issues |
-|-------|--------|-----------------|
-| Lint | PASS/FAIL | <count> |
-| Style Compliance | PASS/FAIL | <count> |
-| ES7+ Syntax | PASS/FAIL | <count> |
-| Security | PASS/FAIL | <count> |
-
-## Files Reviewed
-<combined list from all sub-agents>
-
-## Blocking Issues (Must Fix)
-
-### Style Compliance Violations (HARD RULE)
-<from CODE-REVIEW-STYLE.md, or "None">
-
-### Lint Errors
-<from CODE-REVIEW-LINT.md, or "None">
-
-### Syntax Issues
-<from CODE-REVIEW-SYNTAX.md, or "None">
-
-### Security Issues
-<from CODE-REVIEW-SECURITY.md, or "None">
-
-## Warnings (Should Fix)
-<combined warnings from all sub-agents>
-
-## Required Fixes (if FAIL)
-<explicit list of what must be fixed>
-
-## Next Step
-<state the next command to run>
+# qa_verify section added by /qa-verify-story
+# gate section added by /qa-gate
 ```
 
----
+## Workers
+
+| Worker | Focus | Blocking Conditions |
+|--------|-------|---------------------|
+| `code-review-lint.agent.md` | ESLint errors | Any error (warnings OK) |
+| `code-review-style-compliance.agent.md` | Tailwind compliance | Any custom CSS |
+| `code-review-syntax.agent.md` | ES7+ patterns | var, unhandled promises |
+| `code-review-security.agent.md` | OWASP top 10 | Critical or High issues |
+
+## Signals
+
+See: `.claude/agents/_shared/completion-signals.md`
+
+| Signal | Meaning |
+|--------|---------|
+| `CODE-REVIEW COMPLETE: PASS` | All checks passed |
+| `CODE-REVIEW COMPLETE: FAIL` | One or more checks failed |
+| `CODE-REVIEW BLOCKED: <reason>` | Cannot proceed |
+
+## Token Tracking
+
+See: `.claude/agents/_shared/token-tracking.md`
+
+Workers report `tokens.in` and `tokens.out` in their YAML response.
+Orchestrator aggregates and calls `/token-log STORY-XXX code-review <total-in> <total-out>`.
+
+## Retry Policy
+
+| Phase | Error | Retries |
+|-------|-------|---------|
+| Setup | Missing files | 0 - fail fast |
+| Review workers | Timeout | 1 |
+| Review workers | Parse error | 1 |
+| Aggregate | N/A | 0 |
+
+## Status Transitions
+
+| Review Verdict | Story Status | Next Command |
+|----------------|--------------|--------------|
+| PASS | `ready-for-qa` | `/qa-verify-story STORY-XXX` |
+| FAIL | `code-review-failed` | `/dev-fix-story STORY-XXX` |
 
 ## Verdict Logic
 
 | Condition | Verdict |
 |-----------|---------|
-| ANY sub-agent FAIL | FAIL |
-| All PASS, some warnings | PASS-WITH-WARNINGS |
-| All PASS, no warnings | PASS |
+| ANY worker FAIL | FAIL |
+| All PASS | PASS |
 
----
-
-## Status Transitions
-
-| Verdict | New Status | Next Command |
-|---------|------------|--------------|
-| PASS / PASS-WITH-WARNINGS | `ready-for-qa` | `/qa-verify-story STORY-XXX` |
-| FAIL | `code-review-failed` | `/dev-fix-story STORY-XXX` |
-
----
-
-## Hard Rules (Enforced by Style Agent)
+## Hard Rules
 
 1. **Style Compliance is MANDATORY**
    - ALL styling MUST come from Tailwind CSS or `@repo/app-component-library`
@@ -125,34 +142,14 @@ Write to: `plans/stories/in-progress/STORY-XXX/CODE-REVIEW-STORY-XXX.md`
    - Modern JavaScript/TypeScript patterns required
    - Do NOT fail on stylistic differences (Prettier handles that)
 
----
+## Troubleshooting
 
-## Story Context Template
-
-When spawning sub-agents, include this context block:
-
-```
-STORY CONTEXT:
-Story ID: STORY-XXX
-Story file: plans/stories/in-progress/STORY-XXX/STORY-XXX.md
-Implementation dir: plans/stories/in-progress/STORY-XXX/_implementation/
-Output file: plans/stories/in-progress/STORY-XXX/_implementation/<OUTPUT-FILE>.md
-
-TOUCHED FILES (from implementation logs):
-<list the touched files here>
-```
-
----
-
-## Error Handling
-
-If any sub-agent fails to complete:
-1. Report which agent failed
-2. Include any partial output
-3. Do NOT mark the code review as complete
-4. Recommend re-running the command
-
----
+| Issue | Check |
+|-------|-------|
+| Workers timeout | Reduce file count, check file sizes |
+| YAML parse error | Validate worker output format |
+| Missing PROOF file | Run `/dev-implement-story` first |
+| Wrong status | Story must be `ready-for-code-review` |
 
 ## Token Estimation
 

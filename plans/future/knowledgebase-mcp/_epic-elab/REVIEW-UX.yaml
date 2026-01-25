@@ -1,0 +1,124 @@
+---
+perspective: ux
+verdict: READY
+created_at: "2026-01-25T00:00:00Z"
+
+ux_impact:
+  - story: KNOW-001
+    impact: medium
+    consistency: good
+    friction: none
+  - story: KNOW-002
+    impact: low
+    consistency: good
+    friction: none
+  - story: KNOW-003
+    impact: low
+    consistency: good
+    friction: none
+  - story: KNOW-004
+    impact: high
+    consistency: good
+    friction: low
+  - story: KNOW-005
+    impact: high
+    consistency: fair
+    friction: medium
+  - story: KNOW-006
+    impact: medium
+    consistency: good
+    friction: low
+  - story: KNOW-007
+    impact: medium
+    consistency: good
+    friction: none
+  - story: KNOW-008
+    impact: high
+    consistency: fair
+    friction: high
+
+design_system:
+  components_referenced: false
+  custom_styling: false
+  responsive_clear: true
+
+accessibility:
+  - story: KNOW-001
+    keyboard_nav: unclear
+    screen_reader: unclear
+    wcag_level: unclear
+  - story: KNOW-002
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: "N/A (backend only)"
+  - story: KNOW-003
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: "N/A (backend only)"
+  - story: KNOW-004
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: "N/A (backend only)"
+  - story: KNOW-005
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: "N/A (MCP only)"
+  - story: KNOW-006
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: "N/A (backend only)"
+  - story: KNOW-007
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: "N/A (backend only)"
+  - story: KNOW-008
+    keyboard_nav: unclear
+    screen_reader: unclear
+    wcag_level: unclear
+
+flow_gaps:
+  - flow: "Agent using kb_search during story development"
+    stories: [KNOW-004, KNOW-005, KNOW-008]
+    complete: false
+    friction: "Agent must understand how and when to invoke kb_search; no UI guidance"
+  - flow: "Agent reviewing search results and incorporating findings"
+    stories: [KNOW-004, KNOW-005]
+    complete: false
+    friction: "No UI for browsing or filtering results; Claude must parse JSON"
+
+critical: []
+
+high:
+  - id: UX-001
+    issue: "MCP tools appear as text prompts to agents; unclear UI affordances"
+    stories: [KNOW-005, KNOW-008]
+    action: "Document kb_search examples and usage patterns in agent instructions"
+  - id: UX-002
+    issue: "Search result format (JSON) may be hard for agents to interpret"
+    stories: [KNOW-004, KNOW-005]
+    action: "Design human-readable response format with clear field semantics"
+  - id: UX-003
+    issue: "No feedback mechanism for agent using stale/irrelevant search results"
+    stories: [KNOW-004, KNOW-008]
+    action: "Plan future feedback loop (rate result relevance)"
+
+medium:
+  - id: UX-004
+    issue: "Graceful degradation (keyword-only fallback) not transparent to agent"
+    stories: [KNOW-004, KNOW-005]
+    action: "Include fallback_mode flag in response; document in agent instructions"
+
+missing_stories:
+  - title: "Search UI for human debugging (future: optional web dashboard)"
+    gap: "Agents cannot visually browse KB; helpful for development"
+    priority: P2
+  - title: "Knowledge base UI for curation and management"
+    gap: "Humans cannot browse/edit KB entries; rely on scripts"
+    priority: P2
+
+recommendations:
+  - "Design clear, JSON response format with explicit confidence and reasoning"
+  - "Document kb_search usage patterns with concrete examples in agent files"
+  - "Include relevance feedback mechanism in future iterations"
+  - "Consider minimal CLI tool for developers to query KB locally"
+  - "Plan optional web UI for KB browsing (post-MVP)"

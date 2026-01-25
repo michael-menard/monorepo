@@ -1,0 +1,466 @@
+# Operational Runbooks
+# Generated: 2026-01-24
+#
+# Procedures for deployment, incidents, and maintenance
+
+---
+
+# =============================================================================
+# LOCAL DEVELOPMENT
+# =============================================================================
+
+- id: runbook-dev-001
+  content: |
+    **Start Local Development Environment**
+
+    ```bash
+    # 1. Start database (Docker)
+    docker-compose up -d postgres
+
+    # 2. Run migrations
+    pnpm db:migrate
+
+    # 3. Seed data (optional)
+    pnpm seed
+
+    # 4. Start all apps
+    pnpm dev
+    ```
+
+    URLs:
+    - Frontend: http://localhost:5173
+    - API (Vercel): http://localhost:3000
+    - Storybook: http://localhost:6006
+
+    Note: `pnpm seed` may fail on seedSets() - use `pnpm seed:gallery` as workaround.
+  entry_type: runbook
+  roles: [dev]
+  tags: [local, development, setup, docker]
+  source_file: README.md
+  confidence: 1.0
+
+- id: runbook-dev-002
+  content: |
+    **Run Scoped Verification**
+
+    Full monorepo verification may fail due to pre-existing issues.
+    Use scoped commands for new/changed files:
+
+    ```bash
+    # Lint specific file
+    pnpm eslint path/to/file.ts
+
+    # Type-check specific package
+    pnpm --filter @repo/your-package check-types
+
+    # Test specific package
+    pnpm --filter @repo/your-package test
+
+    # Test with coverage
+    pnpm --filter @repo/your-package test -- --coverage
+    ```
+
+    Pre-existing failures: @repo/app-dashboard, @repo/gallery-core, others.
+  entry_type: runbook
+  roles: [dev]
+  tags: [verification, lint, test, scoped]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: runbook-dev-003
+  content: |
+    **Debug Lambda Locally**
+
+    ```bash
+    # Start serverless offline
+    cd apps/api
+    pnpm sls:offline
+
+    # Lambda runs at http://localhost:4000
+    # Invoke specific function
+    curl http://localhost:4000/dev/api/mocs
+    ```
+
+    For Vercel handlers:
+    ```bash
+    cd apps/api/platforms/vercel
+    vercel dev
+    # Runs at http://localhost:3000
+    ```
+
+    Set `AUTH_BYPASS=true` in .env to skip JWT validation locally.
+  entry_type: runbook
+  roles: [dev]
+  tags: [debug, lambda, serverless, local]
+  source_file: apps/api/serverless.yml
+  confidence: 1.0
+
+# =============================================================================
+# DEPLOYMENT
+# =============================================================================
+
+- id: runbook-deploy-001
+  content: |
+    **Deploy to Staging**
+
+    ```bash
+    # 1. Ensure on main branch with latest
+    git checkout main && git pull
+
+    # 2. Run full verification
+    pnpm lint:all && pnpm check-types:all && pnpm test:all
+
+    # 3. Deploy API to staging
+    cd apps/api
+    pnpm sls:deploy --stage staging
+
+    # 4. Deploy frontend to staging
+    cd apps/web/main-app
+    pnpm build
+    # Upload to S3/CloudFront or Vercel
+    ```
+
+    Staging uses reduced resources (Aurora 0.5-2 ACU, 128-256MB Lambda).
+  entry_type: runbook
+  roles: [dev]
+  tags: [deploy, staging, serverless]
+  source_file: apps/api/serverless.yml
+  confidence: 1.0
+
+- id: runbook-deploy-002
+  content: |
+    **Deploy to Production**
+
+    ```bash
+    # 1. Create release tag
+    git tag -a v1.x.x -m "Release v1.x.x"
+    git push origin v1.x.x
+
+    # 2. Deploy API
+    cd apps/api
+    pnpm sls:deploy --stage production
+
+    # 3. Deploy frontend
+    cd apps/web/main-app
+    pnpm build
+    # Upload to production S3/CloudFront
+
+    # 4. Verify health
+    curl https://api.yourdomain.com/health
+    ```
+
+    Production config: Aurora 0.5-4 ACU, optimized Lambda memory, 5 version retention.
+  entry_type: runbook
+  roles: [dev]
+  tags: [deploy, production, release]
+  source_file: apps/api/serverless.yml
+  confidence: 1.0
+
+- id: runbook-deploy-003
+  content: |
+    **Rollback Deployment**
+
+    ```bash
+    # Lambda rollback (uses retained versions)
+    cd apps/api
+    pnpm sls rollback --stage production --timestamp <timestamp>
+
+    # Or deploy previous tag
+    git checkout v1.x.x
+    pnpm sls:deploy --stage production
+
+    # Frontend rollback
+    # Restore previous S3 version or redeploy from tag
+    ```
+
+    Production retains 5 Lambda versions. Staging retains 3.
+  entry_type: runbook
+  roles: [dev]
+  tags: [rollback, deployment, recovery]
+  source_file: apps/api/serverless.yml
+  confidence: 1.0
+
+# =============================================================================
+# DATABASE
+# =============================================================================
+
+- id: runbook-db-001
+  content: |
+    **Run Database Migrations**
+
+    ```bash
+    # Generate migration from schema changes
+    pnpm --filter @repo/database-schema db:generate
+
+    # Apply migrations
+    pnpm --filter @repo/database-schema db:migrate
+
+    # Push schema directly (dev only, no migration file)
+    pnpm --filter @repo/database-schema db:push
+    ```
+
+    Drizzle Kit handles migration files in `drizzle/` directory.
+    Always generate + review migration before applying to staging/prod.
+  entry_type: runbook
+  roles: [dev]
+  tags: [database, migrations, drizzle]
+  source_file: packages/backend/database-schema
+  confidence: 1.0
+
+- id: runbook-db-002
+  content: |
+    **Connect to Production Database**
+
+    ```bash
+    # Via AWS CLI (assumes IAM auth configured)
+    aws rds generate-db-auth-token \
+      --hostname <aurora-endpoint> \
+      --port 5432 \
+      --username <db-user> \
+      --region us-east-1
+
+    # Connect with psql
+    PGPASSWORD=<auth-token> psql \
+      -h <aurora-endpoint> \
+      -U <db-user> \
+      -d <database>
+    ```
+
+    Use read replica for queries. Never run writes directly in prod.
+  entry_type: runbook
+  roles: [dev]
+  tags: [database, production, postgres, aurora]
+  source_file: apps/api/core/database
+  confidence: 1.0
+
+- id: runbook-db-003
+  content: |
+    **Seed Database**
+
+    ```bash
+    # Full seed (may fail on seedSets)
+    pnpm seed
+
+    # Workaround: seed specific domains
+    pnpm seed:gallery
+    pnpm seed:mocs
+
+    # Direct SQL for specific records
+    psql -c "INSERT INTO gallery_images (...) VALUES (...)"
+    ```
+
+    Known issue: seedSets() fails due to tags column type mismatch.
+    Tech debt item - no active fix planned.
+  entry_type: runbook
+  roles: [dev]
+  tags: [database, seed, data]
+  source_file: apps/api/core/database/seeds
+  confidence: 1.0
+
+# =============================================================================
+# INCIDENT RESPONSE
+# =============================================================================
+
+- id: runbook-incident-001
+  content: |
+    **API 5xx Errors Spike**
+
+    1. Check CloudWatch Logs for error details
+       ```
+       aws logs filter-log-events \
+         --log-group-name /aws/lambda/<function> \
+         --filter-pattern "ERROR"
+       ```
+
+    2. Check Lambda metrics: duration, errors, throttles
+
+    3. Common causes:
+       - Database connection exhausted → check Aurora connections
+       - Cold start timeouts → increase memory/timeout
+       - Dependency failure → check S3, Cognito status
+
+    4. If unrecoverable: rollback to previous version
+  entry_type: runbook
+  roles: [dev]
+  tags: [incident, errors, api, troubleshooting]
+  source_file: apps/api/core/observability
+  confidence: 1.0
+
+- id: runbook-incident-002
+  content: |
+    **Database Connection Issues**
+
+    1. Check Aurora status in AWS Console
+
+    2. Check connection count
+       ```sql
+       SELECT count(*) FROM pg_stat_activity;
+       ```
+
+    3. Kill idle connections if needed
+       ```sql
+       SELECT pg_terminate_backend(pid)
+       FROM pg_stat_activity
+       WHERE state = 'idle'
+       AND query_start < now() - interval '10 minutes';
+       ```
+
+    4. If Aurora scaled to 0: first request triggers scale-up (30-60s delay)
+
+    5. Increase min ACU if cold starts unacceptable
+  entry_type: runbook
+  roles: [dev]
+  tags: [incident, database, connections, aurora]
+  source_file: apps/api/core/database
+  confidence: 1.0
+
+- id: runbook-incident-003
+  content: |
+    **S3 Upload Failures**
+
+    1. Check S3 bucket status and permissions
+
+    2. Verify presigned URL generation
+       ```bash
+       # Test presign locally
+       curl -X PUT "<presigned-url>" \
+         -H "Content-Type: application/pdf" \
+         --data-binary @test.pdf
+       ```
+
+    3. Check CORS configuration on bucket
+
+    4. Common causes:
+       - Expired presigned URL (1hr TTL)
+       - Wrong Content-Type header
+       - File too large (check maxSize in presign)
+       - Bucket policy changed
+
+    5. Orphaned uploads cleaned by lifecycle policy (7 days)
+  entry_type: runbook
+  roles: [dev]
+  tags: [incident, s3, upload, troubleshooting]
+  source_file: apps/api/core/storage
+  confidence: 1.0
+
+# =============================================================================
+# MAINTENANCE
+# =============================================================================
+
+- id: runbook-maint-001
+  content: |
+    **Prune Old Lambda Versions**
+
+    Serverless plugin handles this automatically:
+    - Production: keeps 5 versions
+    - Staging: keeps 3 versions
+
+    Manual prune if needed:
+    ```bash
+    cd apps/api
+    pnpm sls prune --stage production --number 5
+    ```
+  entry_type: runbook
+  roles: [dev]
+  tags: [maintenance, lambda, cleanup]
+  source_file: apps/api/serverless.yml
+  confidence: 1.0
+
+- id: runbook-maint-002
+  content: |
+    **Clean Orphaned S3 Objects**
+
+    S3 lifecycle policy auto-deletes objects in `uploads/temp/` after 7 days.
+
+    Manual cleanup:
+    ```bash
+    # List orphaned objects (no corresponding DB record)
+    aws s3 ls s3://bucket/uploads/temp/ --recursive
+
+    # Delete specific prefix
+    aws s3 rm s3://bucket/uploads/temp/2026-01-01/ --recursive
+    ```
+
+    Never delete from `uploads/final/` without DB verification.
+  entry_type: runbook
+  roles: [dev]
+  tags: [maintenance, s3, cleanup, storage]
+  source_file: apps/api/core/storage
+  confidence: 1.0
+
+- id: runbook-maint-003
+  content: |
+    **Update Dependencies**
+
+    ```bash
+    # Check outdated
+    pnpm outdated
+
+    # Update specific package
+    pnpm update <package> --recursive
+
+    # Update all (careful!)
+    pnpm update --recursive
+
+    # After update
+    pnpm install
+    pnpm lint:all && pnpm check-types:all && pnpm test:all
+    ```
+
+    Major version updates: test thoroughly in staging first.
+    React, Drizzle, Serverless Framework updates need extra care.
+  entry_type: runbook
+  roles: [dev]
+  tags: [maintenance, dependencies, updates]
+  source_file: package.json
+  confidence: 1.0
+
+# =============================================================================
+# MONITORING
+# =============================================================================
+
+- id: runbook-monitor-001
+  content: |
+    **Key Metrics to Watch**
+
+    Lambda:
+    - Duration p99 < 3s (cold start can be 5s)
+    - Error rate < 1%
+    - Throttles = 0
+
+    Aurora:
+    - Connection count < 80% of max
+    - CPU < 80%
+    - ACU scaling events
+
+    S3:
+    - 4xx errors (usually client-side, not critical)
+    - 5xx errors (investigate immediately)
+
+    CloudWatch dashboard: `/dashboards/lego-moc-prod`
+  entry_type: runbook
+  roles: [dev]
+  tags: [monitoring, metrics, cloudwatch]
+  source_file: apps/api/core/observability
+  confidence: 1.0
+
+- id: runbook-monitor-002
+  content: |
+    **Set Up Alerts**
+
+    Critical (page immediately):
+    - API error rate > 5% for 5 minutes
+    - Aurora connection failures
+    - Lambda duration p99 > 10s
+
+    Warning (review next business day):
+    - Error rate > 1% for 15 minutes
+    - Aurora ACU at max for 30 minutes
+    - S3 5xx errors
+
+    Configure in CloudWatch Alarms or third-party (Datadog, etc.)
+  entry_type: runbook
+  roles: [dev]
+  tags: [monitoring, alerts, cloudwatch]
+  source_file: apps/api/core/observability
+  confidence: 1.0

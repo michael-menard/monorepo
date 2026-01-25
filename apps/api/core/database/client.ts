@@ -62,9 +62,15 @@ async function getCredentials(): Promise<{ username: string; password: string }>
   if (!secretArn) {
     // Fall back to environment variables if no secret ARN
     const env = getEnv()
+    if (!env.POSTGRES_PASSWORD) {
+      throw new Error(
+        'Database credentials not configured. Either set DB_SECRET_ARN for Secrets Manager ' +
+          'or set POSTGRES_PASSWORD environment variable. Never use fallback passwords.',
+      )
+    }
     return {
       username: env.POSTGRES_USERNAME || 'postgres',
-      password: env.POSTGRES_PASSWORD || '',
+      password: env.POSTGRES_PASSWORD,
     }
   }
 

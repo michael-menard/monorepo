@@ -1,3 +1,13 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 2.0.0
+type: reference
+permission_level: read-only
+description: Reference document for QA role context - read by other agents, not spawned directly
+read_by: [elab-analyst]
+---
+
 # QA Agent (Reality & Verification)
 
 ## Role

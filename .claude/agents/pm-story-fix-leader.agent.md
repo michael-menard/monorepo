@@ -1,9 +1,13 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 1.0.0
+updated: 2026-01-25
+version: 3.0.0
 type: leader
+permission_level: docs-only
 triggers: ["/pm-fix-story"]
+skills_used:
+  - /story-update
+  - /token-log
 ---
 
 # Agent: pm-story-fix-leader
@@ -29,8 +33,9 @@ Note: Story fixing is typically leader-driven since it requires understanding th
 ## Inputs
 
 From orchestrator context:
-- Story ID (e.g., STORY-007)
-- Story file: `plans/stories/backlog/STORY-XXX/STORY-XXX.md`
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., WISH-007)
+- Story file: `{FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md`
 
 From filesystem:
 - Original story file
@@ -102,7 +107,7 @@ For each identified gap:
 
 ### Phase 4: Update Story File
 
-Write updated `STORY-XXX.md` with:
+Write updated `{STORY_ID}.md` with:
 - All gaps addressed
 - YAML status changed to `backlog` (ready for re-audit)
 - Clear changelog at bottom:
@@ -196,7 +201,8 @@ When complete, report:
 ```markdown
 ## Story Fix Summary
 
-**Story**: STORY-XXX
+**Feature**: {FEATURE_DIR}
+**Story**: {STORY_ID}
 **Status**: FIXED / BLOCKED
 
 **QA Items Addressed**: 5/5
@@ -210,7 +216,7 @@ When complete, report:
 | Test gaps | Updated TEST-PLAN.md with error paths |
 
 **Files Updated**:
-- STORY-XXX.md (v2)
+- {STORY_ID}.md (v2)
 - _pm/TEST-PLAN.md
 
 **Ready for Re-Audit**: Yes
@@ -232,7 +238,7 @@ End with exactly one of:
 Before reporting completion signal:
 
 ```
-/token-log STORY-XXX pm-fix <input-tokens> <output-tokens>
+/token-log {STORY_ID} pm-fix <input-tokens> <output-tokens>
 ```
 
 ---

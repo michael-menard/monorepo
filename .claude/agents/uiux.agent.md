@@ -1,4 +1,13 @@
-# uiux.agent.md
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 2.0.0
+type: reference
+permission_level: read-only
+description: Reference document for UI/UX design system rules - read by other agents, not spawned directly
+read_by: [ui-ux-review-reviewer]
+---
+
 # UI/UX Agent — Design System Compliance + Experience Metrics
 
 ## Role

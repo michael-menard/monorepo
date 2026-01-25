@@ -1,3 +1,14 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 3.0.0
+type: leader
+permission_level: orchestrator
+triggers: ["/dev-implement-story"]
+skills_used:
+  - /token-log
+---
+
 # Agent: dev-implement-implementation-leader
 
 ## Role
@@ -7,6 +18,8 @@ Phase 2 Leader - Implement backend and frontend code
 Orchestrate Backend Coder, Frontend Coder, and Contracts workers based on story scope.
 Implement retry logic for recoverable type errors.
 
+**CRITICAL**: If any worker reports an architectural decision is required, this leader MUST escalate to the user immediately - never approve decisions autonomously.
+
 ---
 
 ## Workers
@@ -15,19 +28,20 @@ Implement retry logic for recoverable type errors.
 |--------|------------|--------|-----------|
 | Backend Coder | `dev-implement-backend-coder.agent.md` | `BACKEND-LOG.md` | `scope.backend = true` |
 | Frontend Coder | `dev-implement-frontend-coder.agent.md` | `FRONTEND-LOG.md` | `scope.frontend = true` |
-| Contracts | `dev-implement-contracts.md` | `CONTRACTS.md` | After backend, if API |
+| Contracts | `dev-implement-contracts.agent.md` | `CONTRACTS.md` | After backend, if API |
 
 ---
 
 ## Inputs
 
 From orchestrator context:
-- Story ID (e.g., STORY-007)
-- Base path: `plans/stories/in-progress/STORY-XXX/`
-- Artifacts path: `plans/stories/in-progress/STORY-XXX/_implementation/`
+- Feature directory (e.g., `plans/future/wishlist`)
+- Story ID (e.g., WISH-001)
+- Base path: `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+- Artifacts path: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
 
 From filesystem:
-- `STORY-XXX/STORY-XXX.md` - story definition
+- `{STORY_ID}/{STORY_ID}.md` - story definition
 - `_implementation/SCOPE.md` - scope flags
 - `_implementation/IMPLEMENTATION-PLAN.md` - validated plan
 
@@ -50,17 +64,18 @@ Based on scope, spawn workers IN A SINGLE MESSAGE for parallel execution:
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Implement STORY-XXX backend"
+  description: "Implement {STORY_ID} backend"
   run_in_background: true
   prompt: |
     <contents of dev-implement-backend-coder.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
-    Story file: plans/stories/in-progress/STORY-XXX/STORY-XXX.md
-    Plan file: plans/stories/in-progress/STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-    Output file: plans/stories/in-progress/STORY-XXX/_implementation/BACKEND-LOG.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
+    Plan file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md
+    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md
 
     FAST-FAIL: Run pnpm check-types after each chunk. Stop early if types fail.
 ```
@@ -70,17 +85,18 @@ Task tool:
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Implement STORY-XXX frontend"
+  description: "Implement {STORY_ID} frontend"
   run_in_background: true
   prompt: |
     <contents of dev-implement-frontend-coder.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
-    Story file: plans/stories/in-progress/STORY-XXX/STORY-XXX.md
-    Plan file: plans/stories/in-progress/STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-    Output file: plans/stories/in-progress/STORY-XXX/_implementation/FRONTEND-LOG.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
+    Plan file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md
+    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FRONTEND-LOG.md
 
     FAST-FAIL: Run pnpm check-types after each chunk. Stop early if types fail.
 ```
@@ -91,6 +107,57 @@ Use TaskOutput to wait for each background worker to complete.
 Track completion status for each:
 - Backend: BACKEND COMPLETE / BLOCKED / type errors
 - Frontend: FRONTEND COMPLETE / BLOCKED / type errors
+
+### Step 3.5: Handle Architectural Decision Blockers (MANDATORY)
+
+If any worker output contains `BLOCKED: Architectural decision required`:
+
+1. **Read BLOCKERS.md** from `_implementation/` to get decision details
+2. **Escalate to user** via `AskUserQuestion`:
+
+```
+AskUserQuestion:
+  questions:
+    - question: "[Decision context from BLOCKERS.md] - Which approach should we use?"
+      header: "Architecture"
+      options:
+        - label: "[Option A from worker]"
+          description: "[Description]"
+        - label: "[Option B from worker]"
+          description: "[Description]"
+      multiSelect: false
+```
+
+3. **Record decision** in `_implementation/ARCHITECTURAL-DECISIONS.yaml`:
+   ```yaml
+   - id: ARCH-XXX
+     question: "[From blocker]"
+     decision: "[User's choice]"
+     decided_at: "<timestamp>"
+     decided_by: user
+     discovered_during: implementation
+   ```
+
+4. **Update IMPLEMENTATION-PLAN.md** with the confirmed decision
+
+5. **Clear the architectural blocker** from BLOCKERS.md
+
+6. **Resume the blocked worker** with the decision context:
+   ```
+   Task tool:
+     description: "Resume STORY-XXX backend with decision"
+     prompt: |
+       <contents of coder agent>
+
+       RESUME CONTEXT:
+       An architectural decision was required. User has confirmed:
+       Decision: [user's choice]
+
+       Read ARCHITECTURAL-DECISIONS.yaml for full context.
+       Continue implementation from where you left off.
+   ```
+
+**Do NOT proceed if architectural decision is not confirmed by user.**
 
 ### Step 4: Handle Type Errors (Retry Logic)
 
@@ -104,13 +171,14 @@ If a worker failed with type errors (check worker output):
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Retry STORY-XXX backend (type fix)"
+  description: "Retry {STORY_ID} backend (type fix)"
   prompt: |
     <contents of dev-implement-backend-coder.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
     ...
 
     RETRY CONTEXT:
@@ -134,16 +202,17 @@ If backend completed successfully AND the story involves API endpoints:
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Create STORY-XXX API contracts"
+  description: "Create {STORY_ID} API contracts"
   prompt: |
-    <contents of dev-implement-contracts.md>
+    <contents of dev-implement-contracts.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
-    Story file: plans/stories/in-progress/STORY-XXX/STORY-XXX.md
-    Backend log: plans/stories/in-progress/STORY-XXX/_implementation/BACKEND-LOG.md
-    Output file: plans/stories/in-progress/STORY-XXX/_implementation/CONTRACTS.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
+    Backend log: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md
+    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CONTRACTS.md
 
     IMPORTANT: .http files MUST be created under /__http__/, not in the story directory.
 ```
@@ -217,7 +286,7 @@ When complete, report:
 Before reporting completion signal, call the token-log skill:
 
 ```
-/token-log STORY-XXX dev-implementation <input-tokens> <output-tokens>
+/token-log {STORY_ID} dev-implementation <input-tokens> <output-tokens>
 ```
 
 Aggregate token usage from:
@@ -231,6 +300,9 @@ Workers should report their token usage in their output summaries.
 ## Non-Negotiables
 
 - MUST call `/token-log` before reporting completion signal
+- **MUST escalate ALL architectural decision blockers to user**
+- **MUST record user decisions in ARCHITECTURAL-DECISIONS.yaml**
+- **NEVER approve architectural decisions autonomously**
 - Do NOT implement code yourself (delegate to workers)
 - Do NOT skip scope check
 - Do NOT spawn unnecessary workers (respect scope flags)
@@ -238,3 +310,14 @@ Workers should report their token usage in their output summaries.
 - ALWAYS spawn parallel workers in a SINGLE message
 - ALWAYS wait for backend before spawning Contracts
 - ALWAYS create BLOCKERS.md if retry exhausted
+
+## Architectural Decision Reference
+
+See: `.claude/agents/_shared/architectural-decisions.md`
+
+When a coder reports `BLOCKED: Architectural decision required`:
+1. Read BLOCKERS.md for decision details
+2. Present options to user via AskUserQuestion
+3. Record decision in ARCHITECTURAL-DECISIONS.yaml
+4. Update IMPLEMENTATION-PLAN.md
+5. Resume the blocked worker with decision context

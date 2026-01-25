@@ -153,6 +153,12 @@ stateDiagram-v2
 | `/pm-fix-story STORY-XXX` | PM | Fix story after failed audit | `needs-refinement` | `backlog` |
 | `/dev-fix-story STORY-XXX` | Dev | Fix implementation after failed review/QA | `code-review-failed` or `needs-work` | `ready-for-code-review` |
 
+### Workflow Automation Commands
+
+| Command | Agent | Purpose |
+|---------|-------|---------|
+| `/workflow-run STORY-XXX` | Meta-orchestrator | Run full story lifecycle with context isolation |
+
 ### Supporting Commands
 
 | Command | Agent | Purpose |
@@ -1021,7 +1027,7 @@ sequenceDiagram
 /pm-generate-story next
 ```
 
-### Full Story Workflow
+### Full Story Workflow (Manual)
 
 ```bash
 # 1. Generate the story
@@ -1038,6 +1044,22 @@ sequenceDiagram
 
 # 5. QA verify the implementation
 /qa-verify-story STORY-007
+```
+
+### Full Story Workflow (Automated)
+
+```bash
+# Run full workflow with context isolation
+/workflow-run STORY-007
+
+# Run specific phase range
+/workflow-run STORY-007 --from=3 --to=5
+
+# Dry run to see planned phases
+/workflow-run STORY-007 --dry-run
+
+# With approval gates at key phases
+/workflow-run STORY-007 --approve=elab,qa
 ```
 
 ### Fix Loops
@@ -1083,6 +1105,6 @@ sequenceDiagram
 
 ---
 
-*Document Version: 3.0*
-*Last Updated: 2026-01-22*
-*Covers: Multi-Agent Pipeline, Status-Driven Workflow, Artifact-Based Communication, Parallel Code Review Gate, Discovery Phase, Story Splitting, Token Tracking, Mermaid Diagrams*
+*Document Version: 3.1*
+*Last Updated: 2026-01-24*
+*Covers: Multi-Agent Pipeline, Status-Driven Workflow, Artifact-Based Communication, Parallel Code Review Gate, Discovery Phase, Story Splitting, Token Tracking, Mermaid Diagrams, Workflow Automation*

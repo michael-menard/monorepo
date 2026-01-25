@@ -1,0 +1,75 @@
+schema: 1
+started_at: 2026-01-25T00:00:00Z
+last_updated: 2026-01-25T00:45:00Z
+status: complete
+
+commands:
+  1_dev-fix-story:
+    status: complete
+    agents:
+      - dev-fix-fix-leader.agent.md
+    completed_at: 2026-01-25T00:01:00Z
+  2_dev-implement-story:
+    status: complete
+    agents:
+      - dev-implement-backend-coder.agent.md
+      - dev-implement-frontend-coder.agent.md
+      - dev-implement-planner.agent.md
+      - dev-implement-contracts.agent.md
+      - dev-implement-plan-validator.agent.md
+      - dev-implement-verifier.agent.md
+      - dev-implement-playwright.agent.md
+      - dev-implement-proof-writer.agent.md
+      - dev-implement-learnings.agent.md
+    completed_at: 2026-01-25T00:05:00Z
+  3_qa-verify-story:
+    status: complete
+    agents:
+      - qa-verify-setup-leader.agent.md
+      - qa-verify-verification-leader.agent.md
+      - qa-verify-completion-leader.agent.md
+    completed_at: 2026-01-25T00:10:00Z
+  4_pm-fix-story:
+    status: complete
+    agents:
+      - pm-story-fix-leader.agent.md
+    completed_at: 2026-01-25T00:12:00Z
+  5_pm-story:
+    status: complete
+    agents:
+      - pm-story-adhoc-leader.agent.md
+      - pm-story-followup-leader.agent.md
+      - pm-story-split-leader.agent.md
+    completed_at: 2026-01-25T00:18:00Z
+  6_scrum-master:
+    status: complete
+    agents:
+      - scrum-master-setup-leader.agent.md
+      - scrum-master-loop-leader.agent.md
+    completed_at: 2026-01-25T00:22:00Z
+  7_ui-ux-review:
+    status: complete
+    agents:
+      - ui-ux-review-setup-leader.agent.md
+      - ui-ux-review-reviewer.agent.md
+      - ui-ux-review-report-leader.agent.md
+    completed_at: 2026-01-25T00:25:00Z
+  8_additional_agents:
+    status: complete
+    agents:
+      - pm-story-bug-leader.agent.md
+      - pm-harness-setup-leader.agent.md
+      - pm-harness-generation-leader.agent.md
+      - pm-draft-test-plan.agent.md
+      - pm-uiux-recommendations.agent.md
+      - pm-dev-feasibility-review.agent.md
+      - pm.agent.md
+    completed_at: 2026-01-25T00:40:00Z
+  9_shared_files:
+    status: complete
+    files:
+      - _shared/permissions.md
+      - _shared/story-context.md
+    completed_at: 2026-01-25T00:45:00Z
+
+resume_from: null

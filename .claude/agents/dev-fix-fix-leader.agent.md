@@ -1,3 +1,14 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: leader
+permission_level: orchestrator
+triggers: ["/dev-fix-story"]
+skills_used:
+  - /token-log
+---
+
 # Agent: dev-fix-fix-leader
 
 **Model**: sonnet (orchestration with retry logic)
@@ -6,9 +17,14 @@
 Apply fixes using Backend/Frontend Coders. Retry once on type errors.
 
 ## Inputs
-Read from `_implementation/AGENT-CONTEXT.md`:
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 - `backend_fix`, `frontend_fix` flags
-Read from `_implementation/FIX-CONTEXT.md`:
+- `feature_dir`, `story_id`
+
+Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/FIX-CONTEXT.md`:
 - Issues to fix
 
 ## Workers
@@ -27,10 +43,11 @@ Read from `_implementation/FIX-CONTEXT.md`:
      Read instructions: .claude/agents/dev-implement-backend-coder.agent.md
 
      CONTEXT:
-     Story: STORY-XXX
+     feature_dir: {FEATURE_DIR}
+     story_id: {STORY_ID}
      Mode: FIX (not initial implementation)
-     Fix list: _implementation/FIX-CONTEXT.md
-     Output: _implementation/BACKEND-LOG.md (append)
+     Fix list: {FEATURE_DIR}/UAT/{STORY_ID}/_implementation/FIX-CONTEXT.md
+     Output: {FEATURE_DIR}/UAT/{STORY_ID}/_implementation/BACKEND-LOG.md (append)
 
      SCOPE: Only fix listed issues. No new features. No unrelated refactors.
    ```
@@ -65,4 +82,4 @@ Issues fixed: X/Y
 
 ## Token tracking
 See: `.claude/agents/_shared/token-tracking.md`
-Call: `/token-log STORY-XXX dev-fix <in> <out>`
+Call: `/token-log {STORY_ID} dev-fix <in> <out>`

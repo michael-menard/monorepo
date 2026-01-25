@@ -1,9 +1,14 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 2.0.0
+updated: 2026-01-25
+version: 3.0.0
 type: orchestrator
-triggers: ["/pm-generate-story", "/pm-fix-story", "/pm-triage-features", "/pm-generate-bug-story"]
+permission_level: orchestrator
+triggers: ["/pm-story", "/pm-fix-story", "/pm-refine-story"]
+skills_used:
+  - /token-log
+  - /story-update
+  - /index-update
 ---
 
 # PM Agent (Product Manager) — Orchestrator
@@ -41,7 +46,7 @@ PM Orchestrator
 | Workflow | Leader Agent | Trigger Command |
 |----------|--------------|-----------------|
 | Story Generation | `pm-story-generation-leader.agent.md` | `/pm-generate-story` |
-| Feature Triage | `pm-triage-leader.agent.md` | `/pm-triage-features` |
+| Feature Triage | `pm-triage-leader.agent.md` | `/pm-refine-story` |
 | Story Fix | `pm-story-fix-leader.agent.md` | `/pm-fix-story` |
 | Bug Story | `pm-bug-story-leader.agent.md` | `/pm-generate-bug-story` |
 
@@ -54,6 +59,17 @@ PM Orchestrator
 | Test Plan Writer | `pm-draft-test-plan.agent.md` | Story Generation |
 | UI/UX Advisor | `pm-uiux-recommendations.agent.md` | Story Generation |
 | Dev Feasibility | `pm-dev-feasibility-review.agent.md` | Story Generation |
+
+---
+
+## Reference Documents
+
+These files contain rules and policies that workers READ for context. They are not spawnable agents.
+
+| Reference | File | Read By |
+|-----------|------|---------|
+| QA Role Context | `qa.agent.md` | `elab-analyst` |
+| UI/UX Design System Rules | `uiux.agent.md` | `ui-ux-review-reviewer` |
 
 ---
 
@@ -82,15 +98,16 @@ Example spawn:
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Generate STORY-XXX"
+  description: "Generate {STORY_ID}"
   prompt: |
     <contents of pm-story-generation-leader.agent.md>
 
     ---
     CONTEXT:
-    Story ID: STORY-XXX
-    Index file: plans/stories/stories.index.md
-    Output directory: plans/stories/backlog/STORY-XXX/
+    Feature Dir: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Index file: {FEATURE_DIR}/stories.index.md
+    Output directory: {FEATURE_DIR}/backlog/{STORY_ID}/
 ```
 
 ---
@@ -116,17 +133,22 @@ Task tool:
 
 ## Workflow: Feature Triage
 
-**Command:** `/pm-triage-features [FEAT-ID | all | top N]`
+**Command:** `/pm-refine-story [FEAT-ID | all | top N]`
 
 **Phases:**
 
 | Phase | Owner | Output |
 |-------|-------|--------|
-| 1. Load Features | Leader | Read `FEATURES.md` |
-| 2. Triage Conversation | Leader (interactive) | User dialogue |
+| 0. Setup | Orchestrator | Bootstrap `FEATURES.md` if missing |
+| 1. Load Features | Leader | Read `FEATURES.md`, filter by mode |
+| 2. Triage Conversation | Leader (interactive) | User dialogue per feature |
 | 3. Update Priorities | Leader | Updated `FEATURES.md` |
+| 4. Session Log | Leader | Save to `triage-sessions/<date>.yaml` |
+| 5. Chain to Story | Leader | Offer `/pm-story generate` for promoted features |
 
 **Note:** This workflow is interactive (conversation with user), not parallelizable.
+
+**Reference:** `.claude/docs/pm-refine-story-reference.md`
 
 ---
 
@@ -172,8 +194,8 @@ Task tool:
 Leaders call `/token-log` after completing their workflow:
 
 ```
-/token-log STORY-XXX pm-generate <input-tokens> <output-tokens>
-/token-log STORY-XXX pm-fix <input-tokens> <output-tokens>
+/token-log {STORY_ID} pm-generate <input-tokens> <output-tokens>
+/token-log {STORY_ID} pm-fix <input-tokens> <output-tokens>
 ```
 
 Workers report token usage in their output for leader aggregation.

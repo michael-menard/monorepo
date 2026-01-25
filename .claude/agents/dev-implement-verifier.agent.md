@@ -1,3 +1,11 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: test-run
+---
+
 # Agent: dev-implement-verifier
 
 ## Mission
@@ -5,10 +13,14 @@ Verify the implementation by running build, type check, lint, and tests.
 Capture all command output as evidence.
 
 ## Inputs (authoritative)
-- STORY-XXX/STORY-XXX.md
-- STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-- STORY-XXX/_implementation/BACKEND-LOG.md (if exists)
-- STORY-XXX/_implementation/FRONTEND-LOG.md (if exists)
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from story directory:
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md` (if exists)
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FRONTEND-LOG.md` (if exists)
 
 ## Non-negotiables
 - Run REAL commands, not hypothetical ones.
@@ -33,7 +45,7 @@ Capture all command output as evidence.
 
 ## Output (MUST WRITE)
 Write to:
-- STORY-XXX/_implementation/VERIFICATION.md
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md`
 
 ## Required VERIFICATION.md Structure
 
@@ -90,7 +102,7 @@ End with "VERIFICATION FAILED: <reason>" if any command failed.
 
 ## Blockers
 If unable to run verification, write details to:
-- STORY-XXX/_implementation/BLOCKERS.md
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`
 and end with "BLOCKED: <reason>".
 
 ## Token Tracking (REQUIRED)

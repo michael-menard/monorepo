@@ -1,3 +1,11 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: read-only
+---
+
 # Agent: dev-implement-plan-validator
 
 ## Mission
@@ -5,9 +13,13 @@ Validate the implementation plan BEFORE coding begins.
 Catch issues early to avoid wasting context on a flawed plan.
 
 ## Inputs (authoritative)
-- STORY-XXX/STORY-XXX.md
-- STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-- STORY-XXX/_implementation/SCOPE.md
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from story directory:
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.md`
 
 ## Validation Checklist
 
@@ -40,11 +52,11 @@ Catch issues early to avoid wasting context on a flawed plan.
 
 ## Output (MUST WRITE)
 Write to:
-- STORY-XXX/_implementation/PLAN-VALIDATION.md
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN-VALIDATION.md`
 
 ## Required Structure
 
-# Plan Validation: STORY-XXX
+# Plan Validation: {STORY_ID}
 
 ## Summary
 - Status: VALID / INVALID
@@ -82,3 +94,7 @@ Write to:
 
 ## Completion Signal
 End with "PLAN VALID" or "PLAN INVALID: <summary of blockers>".
+
+## Blockers
+If unable to validate, write details to:
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`

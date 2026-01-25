@@ -1,12 +1,24 @@
+---
+created: 2026-01-24
+updated: 2026-01-25
+version: 3.0.0
+type: worker
+permission_level: test-run
+---
+
 # Agent: dev-implement-playwright
 
 ## Mission
 Run Playwright tests for UI changes and capture video evidence.
 
 ## Inputs (authoritative)
-- STORY-XXX/STORY-XXX.md
-- STORY-XXX/_implementation/IMPLEMENTATION-PLAN.md
-- STORY-XXX/_implementation/FRONTEND-LOG.md
+- Feature directory (e.g., `plans/features/wishlist`)
+- Story ID (e.g., `WISH-001`)
+
+Read from story directory:
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FRONTEND-LOG.md`
 
 ## When to Run
 Only when frontend_impacted = true (check SCOPE.md).
@@ -25,7 +37,7 @@ Only when frontend_impacted = true (check SCOPE.md).
 
 ## Output (MUST APPEND)
 Append to:
-- STORY-XXX/_implementation/VERIFICATION.md
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md`
 
 ## Required Structure (append to VERIFICATION.md)
 
@@ -48,5 +60,5 @@ End with "PLAYWRIGHT FAILED: <reason>" if tests failed.
 
 ## Blockers
 If unable to run Playwright, write details to:
-- STORY-XXX/_implementation/BLOCKERS.md
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`
 and end with "BLOCKED: <reason>".

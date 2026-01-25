@@ -1,84 +1,62 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 2.0.0
+type: worker
+permission_level: test-run
+---
+
 # Agent: code-review-lint
 
+**Model**: sonnet
+
 ## Mission
-Run the linter ONLY on files touched by the story implementation.
-Capture all lint output as evidence.
+Run linter on touched files only. Return YAML findings.
 
-## Inputs (authoritative)
-- STORY-XXX/_implementation/BACKEND-LOG.md (lists touched files)
-- STORY-XXX/_implementation/FRONTEND-LOG.md (lists touched files)
-- STORY-XXX/PROOF-STORY-XXX.md (lists changed files)
-
-## Non-negotiables
-- Run REAL lint commands, not hypothetical ones.
-- Lint ONLY touched files, not the entire codebase.
-- Capture REAL output.
-- Do NOT fix code - only report.
+## Inputs
+From orchestrator context:
+- `story_id`: STORY-XXX
+- `touched_files`: list of files to lint
+- `artifacts_path`: where to find logs
 
 ## Task
 
-1. Identify Touched Files
-   - Read BACKEND-LOG.md, FRONTEND-LOG.md, and PROOF-STORY-XXX.md
-   - Extract list of all files created or modified
-   - Filter to only .ts, .tsx, .js, .jsx files
+1. Filter to `.ts`, `.tsx`, `.js`, `.jsx` files
+2. Run: `pnpm eslint <files> --format stylish`
+3. Categorize: errors (blocking) vs warnings (advisory)
 
-2. Run Lint on Touched Files Only
-   ```bash
-   pnpm eslint <file1> <file2> ... --format stylish
-   ```
-   Or if using turbo:
-   ```bash
-   pnpm lint -- <file1> <file2> ...
-   ```
+## Output Format
+Return YAML only (no prose):
 
-3. Categorize Results
-   - Errors: MUST be fixed (blocks review)
-   - Warnings: SHOULD be fixed (does not block)
-
-## Output (MUST WRITE)
-Append to:
-- STORY-XXX/_implementation/CODE-REVIEW-LINT.md
-
-## Required Structure
-
-```markdown
-# Lint Check: STORY-XXX
-
-## Files Checked
-- <file path>
-- ...
-
-## Command Run
-```
-<exact command>
+```yaml
+lint:
+  verdict: PASS | FAIL
+  files_checked: 5
+  errors: 0
+  warnings: 2
+  findings:
+    - severity: error
+      file: src/handlers/list.ts
+      line: 45
+      rule: no-unused-vars
+      message: "'x' is defined but never used"
+    - severity: warning
+      file: src/handlers/list.ts
+      line: 67
+      rule: prefer-const
+      message: "'items' is never reassigned"
+  command: "pnpm eslint src/handlers/list.ts --format stylish"
+  tokens:
+    in: 1500
+    out: 300
 ```
 
-## Result: PASS / FAIL
-
-## Errors (must fix)
-<numbered list with file:line, or "None">
-
-## Warnings (should fix)
-<numbered list with file:line, or "None">
-
-## Raw Output
-```
-<lint output>
-```
-```
-
-## Token Tracking
-
-Track bytes read/written and report to the orchestrator:
-
-```markdown
-## Worker Token Summary
-- Input: ~X tokens (files read)
-- Output: ~Y tokens (CODE-REVIEW-LINT.md)
-```
-
-The orchestrator aggregates and calls `/token-log` for the code-review phase.
+## Rules
+- Run REAL commands, capture REAL output
+- Lint ONLY touched files, never entire codebase
+- Do NOT fix code - only report
+- Errors block, warnings do not
 
 ## Completion Signal
-- "LINT PASS" if no errors
-- "LINT FAIL: <count> errors" if errors exist
+- `LINT PASS` - no errors
+- `LINT FAIL: N errors` - has errors

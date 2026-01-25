@@ -1,0 +1,58 @@
+---
+schema: 2
+feature_dir: "plans/future/knowledgebase-mcp"
+prefix: "KNOW"
+project_name: "knowledgebase-mcp"
+completed: "2026-01-24T23:55:30Z"
+
+files_created:
+  - path: "plans/future/knowledgebase-mcp/stories.index.md"
+    stories: 8
+    description: "Master story index with all 8 stories from KNOW-001 to KNOW-008"
+  - path: "plans/future/knowledgebase-mcp/PLAN.meta.md"
+    description: "Meta plan with documentation principles, reuse-first philosophy, and package boundaries"
+  - path: "plans/future/knowledgebase-mcp/PLAN.exec.md"
+    description: "Execution plan with artifact naming conventions and token budget rules"
+  - path: "plans/future/knowledgebase-mcp/roadmap.md"
+    description: "Visual roadmap with Mermaid dependency graph, Gantt chart, and risk indicators"
+
+metrics:
+  total_stories: 8
+  ready_to_start: 1
+  critical_path_length: 8
+  max_parallel: 1
+  phases: 8
+  stories_with_sizing_warnings: 3
+  high_risk_stories: 3
+
+roadmap_highlights:
+  critical_path:
+    - "KNOW-001"
+    - "KNOW-002"
+    - "KNOW-003"
+    - "KNOW-004"
+    - "KNOW-005"
+    - "KNOW-006"
+    - "KNOW-007"
+    - "KNOW-008"
+  parallel_groups: 0
+  max_parallel_stories: 1
+  fully_sequential: true
+
+risk_summary:
+  high_severity_risks: 3
+  - "RISK-001: OpenAI API reliability and cost"
+  - "RISK-003: Workflow disruption during integration"
+  high_risk_stories:
+    - "KNOW-002: Embedding Client Implementation"
+    - "KNOW-006: Parsers and Seeding"
+    - "KNOW-008: Workflow Integration"
+
+next_steps:
+  - "Bootstrap workflow complete (Phase 0-2)"
+  - "All 8 stories ready for elaboration"
+  - "Start with: /elab-story KNOW-001"
+  - "Follow the critical path sequentially (no parallelization)"
+  - "Monitor OpenAI API costs and pgvector performance"
+
+workflow_command: "elab-epic KNOW"

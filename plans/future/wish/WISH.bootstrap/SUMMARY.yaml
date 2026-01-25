@@ -1,0 +1,64 @@
+schema: 1
+prefix: WISH
+completed: "2026-01-24T02:00:00-07:00"
+
+files_created:
+  - path: "plans/stories/WISH.stories.index.md"
+    stories: 7
+  - path: "plans/WISH.plan.meta.md"
+  - path: "plans/WISH.plan.exec.md"
+  - path: "plans/WISH.roadmap.md"
+  - path: "plans/stories/WISH/WISH-2000/WISH-2000.md"
+  - path: "plans/stories/WISH/WISH-2007/WISH-2007.md"
+  - path: "plans/stories/WISH/WISH-2001/WISH-2001.md"
+  - path: "plans/stories/WISH/WISH-2002/WISH-2002.md"
+  - path: "plans/stories/WISH/WISH-2003/WISH-2003.md"
+  - path: "plans/stories/WISH/WISH-2004/WISH-2004.md"
+  - path: "plans/stories/WISH/WISH-2005/WISH-2005.md"
+  - path: "plans/stories/WISH/WISH-2006/WISH-2006.md"
+
+metrics:
+  total_stories: 7
+  ready_to_start: 1
+  critical_path_length: 6
+  max_parallel: 3
+  phases: 5
+  total_estimated_points: 40
+  done_stories: 1
+  approved_stories: 4
+  ready_for_review_stories: 2
+  draft_stories: 2
+
+roadmap_highlights:
+  critical_path:
+    - WISH-2000
+    - WISH-2007
+    - WISH-2001
+    - WISH-2002
+    - WISH-2005
+    - WISH-2006
+  parallel_groups: 1
+  max_parallel_stories: 3
+  mvp_stories:
+    - WISH-2000
+    - WISH-2007
+    - WISH-2001
+    - WISH-2002
+    - WISH-2004
+
+status_breakdown:
+  Done: 1
+  Approved: 4
+  Ready for Review: 2
+  Draft: 2
+
+sizing_warnings:
+  - story: WISH-2001
+    reason: Multiple domains (Backend + Frontend + Gallery integration)
+  - story: WISH-2004
+    reason: Multiple independent features (Delete + Purchase + Modals + Undo)
+
+next_step: "/elab-epic WISH"
+
+generated_by: pm-bootstrap-generation-leader
+model: haiku

@@ -1,27 +1,164 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 2.1.0
+---
+
 # Refactor Command to Phase Leader Pattern
 
-Refactor the command file at `<FILE_PATH>` using the phase leader pattern.
+Refactor a command file to use the phase leader pattern.
 
 ---
 
-## Context Documents (READ FIRST)
+## FIRST: Get Command File
 
-Before auditing, read these authoritative documents for full context:
+Before doing anything else, ask for the command file:
 
-| Document | Location | Purpose |
-|----------|----------|---------|
-| **COMMANDS.md** | `docs/COMMANDS.md` | All commands, their purpose, status transitions |
-| **SKILLS.md** | `docs/SKILLS.md` | All skills, when to use them, artifacts produced |
-| **FULL_WORKFLOW.md** | `docs/FULL_WORKFLOW.md` | End-to-end workflow, agent relationships, decision points |
-| **Junior Guardrails** | `.claude/agents/_shared/junior-guardrails.md` | Guardrails for junior developer safety |
-| **Executive Demo Guide** | `.claude/docs/executive-demo-guide.md` | Value propositions and demo script |
-| **Lean Docs Standard** | `.claude/agents/_shared/lean-docs.md` | Output format rules (YAML over prose, skip empty) |
+```
+Which command would you like to refactor?
+
+Please provide:
+1. **File path** (e.g., `.claude/commands/dev-implement-story.md`)
+   — OR —
+2. **Command name** (e.g., `/dev-implement-story` or `dev-implement-story`)
+
+I'll locate the file and begin the audit.
+```
+
+**If user provides command name** (not path):
+- Search `.claude/commands/` for matching file
+- Confirm: "Found `.claude/commands/<name>.md` — is this correct?"
+
+**If file not found**:
+- List available commands: `ls .claude/commands/*.md`
+- Ask user to select from list
+
+**Once confirmed**, proceed with the audit using `<FILE_PATH>` = the confirmed path.
+
+---
+
+## Context Documents (READ FIRST - MANDATORY)
+
+**STOP. Before ANY analysis, you MUST read these files using the Read tool.**
+
+### Required Reading Checklist
+
+Use the Read tool to load each file. Do NOT proceed until all are read:
+
+| # | Document | Location | What to Look For |
+|---|----------|----------|------------------|
+| 1 | **COMMANDS.md** | `docs/COMMANDS.md` | Current command entry, status transitions, artifacts |
+| 2 | **SKILLS.md** | `docs/SKILLS.md` | Skills this command uses or chains to |
+| 3 | **FULL_WORKFLOW.md** | `docs/FULL_WORKFLOW.md` | Where command fits in workflow, agent relationships |
+| 4 | **FEATURE-DEVELOPMENT-WORKFLOW.md** | `docs/FEATURE-DEVELOPMENT-WORKFLOW.md` | User-facing docs, mermaid diagrams, troubleshooting |
+| 5 | **Lean Docs Standard** | `.claude/agents/_shared/lean-docs.md` | Output format rules (YAML over prose) |
+
+Optional (read if relevant):
+- **Junior Guardrails** | `.claude/agents/_shared/junior-guardrails.md` | Safety guardrails
+- **Executive Demo Guide** | `.claude/docs/executive-demo-guide.md` | Demo script
+
+### Context Loading Report (REQUIRED)
+
+After reading, report what you found:
+
+```
+## Context Loading Report
+
+| Doc | Read? | Command Found? | Last Updated | Notes |
+|-----|-------|----------------|--------------|-------|
+| COMMANDS.md | ✓ | Line XX | YYYY-MM-DD | <current description> |
+| SKILLS.md | ✓ | Line XX or N/A | YYYY-MM-DD | <skills referenced> |
+| FULL_WORKFLOW.md | ✓ | Section XX | YYYY-MM-DD | <workflow position> |
+| FEATURE-DEVELOPMENT-WORKFLOW.md | ✓ | Section XX | YYYY-MM-DD | <user doc status> |
+| lean-docs.md | ✓ | — | — | <output rules confirmed> |
+```
+
+### Documents That MUST Be Updated
 
 These documents MUST be updated if the refactor changes:
-- Command behavior or status transitions
-- Agent responsibilities or outputs
-- Workflow phases or decision points
-- Skill usage patterns
+- Command behavior or status transitions → COMMANDS.md, FEATURE-DEVELOPMENT-WORKFLOW.md
+- Agent responsibilities or outputs → FULL_WORKFLOW.md, FEATURE-DEVELOPMENT-WORKFLOW.md
+- Workflow phases or decision points → FULL_WORKFLOW.md, FEATURE-DEVELOPMENT-WORKFLOW.md
+- Skill usage patterns → SKILLS.md
+
+---
+
+## Step 0: Pre-Flight Checks (REQUIRED)
+
+Before any refactoring, perform these safety checks.
+
+### 0.1 Dependency Analysis
+
+Identify what depends on this command:
+
+```
+## Dependency Analysis: <command>
+
+### Commands that call this command
+Search for `/<command>` in `.claude/commands/`:
+- <list or "none found">
+
+### Agents that reference this command
+Search for `/<command>` in `.claude/agents/`:
+- <list or "none found">
+
+### Skills that chain to this command
+Check "Next Step" sections in skills:
+- <list or "none found">
+
+### Documentation references
+- COMMANDS.md: <referenced? line number>
+- FULL_WORKFLOW.md: <referenced? section>
+- Other: <list>
+
+### Impact Summary
+| Dependency | Type | Impact |
+|------------|------|--------|
+| <name> | <type> | <must update/test/notify> |
+```
+
+### 0.2 Safety Plan
+
+Before modifying files:
+
+```
+## Safety Plan
+
+### Git Branch
+- [ ] Create branch: `refactor/<command>-phase-leaders`
+- [ ] Verify clean working directory
+
+### In-Progress Work Check
+Stories currently using this command:
+- <list from `plans/stories/in-progress/` or "none">
+
+### Rollback Plan
+If refactor fails:
+1. `git checkout main -- .claude/commands/<command>.md`
+2. Delete new leader agents: `rm .claude/agents/<command>-*-leader.agent.md`
+3. Delete reference doc: `rm .claude/docs/<command>-reference.md`
+```
+
+### 0.3 Backward Compatibility Check
+
+```
+## Backward Compatibility
+
+### Existing Artifacts
+Check for in-progress stories with artifacts from current command:
+- [ ] Search `plans/stories/*/` for command-specific artifacts
+- [ ] Identify format differences (old → new)
+
+| Artifact | Old Format | New Format | Migration Needed |
+|----------|------------|------------|------------------|
+| <file> | <format> | <format> | Yes/No |
+
+### Migration Strategy
+If migration needed:
+- [ ] Auto-convert in setup phase
+- [ ] Manual migration script
+- [ ] Version gate (old artifacts fail fast with clear message)
+```
 
 ---
 
@@ -126,11 +263,24 @@ Based on complexity, recommend one of:
 - Best for: complex commands with many phases
 
 **My recommendation**: Option X because <reason>
+
+### Estimated Effort
+
+| Size | Lines | Phases | Sessions | Est. Tokens |
+|------|-------|--------|----------|-------------|
+| Small | <200 | 2-3 | 1 | ~50k |
+| Medium | 200-400 | 4-5 | 2 | ~100k |
+| Large | >400 | 6+ | 3-4 | ~200k |
+
+This command is: <size> → <estimated effort>
 ```
 
 ### 1.4 Enhancement Recommendations
 
-Evaluate against "What Makes a Killer Command" section below. Report:
+**IMPORTANT**: Evaluate against the "What Makes a Killer Command" section (end of this document).
+For each high-ROI feature, assess whether it should be added during this refactor.
+
+Report:
 
 ```
 ## Enhancement Recommendations
@@ -253,6 +403,13 @@ Identify what docs need updating after this refactor:
 - [ ] Update decision points
 - [ ] Update files created tables
 
+### FEATURE-DEVELOPMENT-WORKFLOW.md
+- [ ] Update command reference table (Section 3)
+- [ ] Update phase diagrams (Section 4)
+- [ ] Update artifacts table (Section 5)
+- [ ] Update troubleshooting (Section 7)
+- [ ] Update version/date at bottom
+
 ### Other Docs
 - [ ] <doc> - <what needs updating>
 ```
@@ -338,9 +495,17 @@ artifacts_path: plans/stories/STORY-XXX/_implementation/
 
 ## Step 3: Create Phase Leaders
 
-Use compressed template:
+Use compressed template (note: frontmatter is REQUIRED):
 
 ```markdown
+---
+created: {{DATE}}
+updated: {{DATE}}
+version: 1.0.0
+type: leader
+triggers: ["/<command>"]
+---
+
 # Agent: <command>-<phase>-leader
 
 **Model**: haiku | sonnet
@@ -449,9 +614,17 @@ See: `.claude/agents/_shared/token-tracking.md`
 
 ## Step 5: Rewrite Orchestrator
 
-Replace command with (~40 lines):
+Replace command with (~40 lines, frontmatter REQUIRED):
 
 ```markdown
+---
+created: {{ORIGINAL_DATE}}
+updated: {{DATE}}
+version: X.0.0
+type: orchestrator
+agents: ["<command>-setup-leader.agent.md", "<command>-...-leader.agent.md"]
+---
+
 /<command> <ARGS>
 
 <1 sentence role>. Do NOT implement directly.
@@ -491,6 +664,44 @@ Report: "STORY-XXX blocked at Phase N: <reason>"
 
 ---
 
+## Step 5.5: Smoke Test (REQUIRED)
+
+Before reporting complete, verify the refactored command works:
+
+```
+## Smoke Test Results
+
+### Parse Check
+- [ ] Orchestrator YAML frontmatter valid
+- [ ] All leader agents have valid frontmatter
+- [ ] No syntax errors in markdown
+
+### Setup Phase Test
+Run setup phase only with a test story:
+- [ ] Phase 0 executes without error
+- [ ] Expected artifacts created
+- [ ] Completion signal emitted correctly
+
+### Signal Check
+Verify signals work:
+| Phase | Expected Signal | Actual |
+|-------|-----------------|--------|
+| Setup | SETUP COMPLETE | ✓/✗ |
+| ... | ... | ... |
+
+### Quick Validation
+| Test | Result |
+|------|--------|
+| Orchestrator parses | ✓/✗ |
+| Leaders spawn correctly | ✓/✗ |
+| Artifacts created | ✓/✗ |
+| Signals emit | ✓/✗ |
+
+If any fail → debug before marking complete.
+```
+
+---
+
 ## Step 6: Report Results
 
 ```
@@ -510,21 +721,42 @@ Report: "STORY-XXX blocked at Phase N: <reason>"
 ### Files Updated
 - `.claude/commands/<command>.md`
 
+### Obsolete Files (Candidates for Deletion)
+
+Files no longer needed after refactor:
+| File | Reason | Action |
+|------|--------|--------|
+| <file> | Logic moved to leader | Delete / Archive |
+
+**Note**: Files without frontmatter can be safely deleted.
+Files with frontmatter should have version deprecated or be archived.
+
+### Version Summary
+| File | Old Version | New Version | Change Type |
+|------|-------------|-------------|-------------|
+| `<command>.md` | 1.x.x | 2.0.0 | Major (refactor) |
+| `<leader>.agent.md` | — | 1.0.0 | New |
+
 ### Next Steps
 - [ ] Test end-to-end with real task
 - [ ] Verify all signals work correctly
 - [ ] Check token usage in practice
+- [ ] Delete obsolete files (after validation)
+- [ ] Merge branch to main
 ```
 
 ---
 
-## Step 7: Update Documentation (REQUIRED)
+## Step 7: Update Documentation (REQUIRED - HARD GATE)
 
-After refactoring, update the central documentation to reflect changes.
+**⚠️ DO NOT report "Refactor Complete" until this step is done.**
+
+After refactoring, you MUST update all affected documentation. Use the Edit tool to make changes.
 
 ### 7.1 Update COMMANDS.md
 
-If command behavior changed:
+Read `docs/COMMANDS.md`, find the command entry, and update:
+
 ```markdown
 ### `/<command>`
 
@@ -545,33 +777,46 @@ If command behavior changed:
 
 ### 7.2 Update FULL_WORKFLOW.md
 
-If workflow changed:
-- Update agent diagrams in relevant phase section
-- Update "Files Created" tables
-- Update decision points if verdicts changed
-- Add changelog entry
+Read `docs/FULL_WORKFLOW.md` and update:
+- Agent diagrams in relevant phase section
+- "Files Created" tables
+- Decision points if verdicts changed
+- Add changelog entry at bottom
 
 ### 7.3 Update SKILLS.md
 
-If skills are used differently or new skills created:
-- Update skill descriptions
-- Update "When Used" guidance
-- Update workflow integration section
+Read `docs/SKILLS.md` and update (if applicable):
+- Skill descriptions
+- "When Used" guidance
+- Workflow integration section
 
-### 7.4 Verification
+### 7.4 Update FEATURE-DEVELOPMENT-WORKFLOW.md
 
-After documentation updates:
+Read `docs/FEATURE-DEVELOPMENT-WORKFLOW.md` and update:
+- Command reference table (Section 3)
+- Phase diagrams if workflow changed (Section 4)
+- Artifacts table if new files created (Section 5)
+- Troubleshooting section if new failure modes (Section 7)
+- Update version and date at bottom of file
+
+### 7.5 Verification (REQUIRED OUTPUT)
+
+After making all edits, report exactly what changed:
+
 ```
 ## Documentation Sync Verification
 
-| Doc | Updated | Changes |
-|-----|---------|---------|
-| COMMANDS.md | ✓/✗ | <summary> |
-| SKILLS.md | ✓/✗/N/A | <summary> |
-| FULL_WORKFLOW.md | ✓/✗ | <summary> |
+| Doc | Updated | Edit Made | Line Numbers |
+|-----|---------|-----------|--------------|
+| COMMANDS.md | ✓/✗ | <what changed> | L123-145 |
+| SKILLS.md | ✓/✗/N/A | <what changed> | L45-50 |
+| FULL_WORKFLOW.md | ✓/✗ | <what changed> | L200-220 |
+| FEATURE-DEVELOPMENT-WORKFLOW.md | ✓/✗ | <what changed> | L300-350 |
 
-All documentation is now in sync with refactored command.
+**Confirmation:** All documentation is now in sync with refactored command.
 ```
+
+**If you skip this step, the refactor is INCOMPLETE and will cause drift.**
 
 ---
 
@@ -776,10 +1021,67 @@ Phase 4: Complete → [auto-merge if approved]
 
 ---
 
+## Version Strategy
+
+When versioning refactored files:
+
+| Scenario | Version Change | Example |
+|----------|----------------|---------|
+| New leader agent | `1.0.0` | First creation |
+| New worker agent | `1.0.0` | First creation |
+| Refactored orchestrator | Major bump | `1.x.x` → `2.0.0` |
+| Existing worker modified | Minor if additive | `1.0.0` → `1.1.0` |
+| Existing worker breaking change | Major | `1.1.0` → `2.0.0` |
+| Bug fix / clarification | Patch | `1.1.0` → `1.1.1` |
+
+**Always**:
+- Update `updated` date on all touched files
+- Preserve original `created` date
+- Use today's date for new files
+
+---
+
+## Shared Worker Impact
+
+If modifying a worker used by multiple commands:
+
+### 1. Find All Consumers
+
+```bash
+grep -r "<worker>.md" .claude/commands/
+grep -r "<worker>.md" .claude/agents/
+```
+
+### 2. Report Impact
+
+```
+## Shared Worker Impact: <worker>
+
+Used by:
+| Command/Agent | How It Uses Worker | Breaking Change? |
+|---------------|-------------------|------------------|
+| `/dev-implement` | Spawns for backend | Yes - input format |
+| `/dev-fix` | Spawns for fixes | No |
+
+### Migration Required
+- [ ] Update all consumers in same session
+- [ ] Or create follow-up tasks for each consumer
+- [ ] Or version the worker (keep old, create new)
+```
+
+### 3. Decision
+
+- **Same session**: Update all consumers now (preferred for <3 consumers)
+- **Follow-up tasks**: Create tasks to update each consumer
+- **Version fork**: Keep `worker-v1.md`, create `worker-v2.md`
+
+---
+
 ## Optimization Checklist
 
 Applied to all new agents:
 
+- [ ] **Frontmatter**: REQUIRED on all agents/commands (created, updated, version)
 - [ ] **Self-loading**: `Read instructions: .claude/agents/<file>` (not embedded)
 - [ ] **Model tiering**: haiku for simple, sonnet for complex
 - [ ] **Compressed format**: No verbose prose, just instructions
@@ -789,6 +1091,8 @@ Applied to all new agents:
 - [ ] **Parallel workers**: Single message with `run_in_background: true`
 - [ ] **Lean docs**: YAML over markdown, skip empty sections (see `lean-docs.md`)
 - [ ] **Unified files**: Use VERIFICATION.yaml not separate review files
+
+See `.claude/agents/_shared/FRONTMATTER.md` for frontmatter standard.
 
 ## Unified Output Files
 
@@ -994,6 +1298,7 @@ Commands (orchestrate workflows)
 
 | Resource | Location | Used By |
 |----------|----------|---------|
+| Frontmatter standard | `_shared/FRONTMATTER.md` | All agents/commands/skills |
 | Token tracking | `_shared/token-tracking.md` | All leaders |
 | Completion signals | `_shared/completion-signals.md` | All agents |
 | Story context | `_shared/story-context.md` | All leaders |

@@ -1,123 +1,130 @@
-Usage:
-/elab-story STORY-XXX
-
-You are the QA agent performing Story Elaboration before implementation begins.
-This is a HARD GATE - stories must pass before proceeding to dev.
-
+---
+created: 2026-01-20
+updated: 2026-01-24
+version: 3.0.0
+type: orchestrator
+agents: ["elab-setup-leader.agent.md", "elab-analyst.agent.md", "elab-completion-leader.agent.md"]
 ---
 
-## Phase Leaders
+/elab-story {FEATURE_DIR} {STORY_ID}
 
-| Phase | Agent | Success Signal |
-|-------|-------|----------------|
-| 0 | `elab-setup-leader.agent.md` | `ELAB-SETUP COMPLETE` |
-| 1 | `elab-analyst.agent.md` | `ANALYSIS COMPLETE` |
-| — | (Interactive with user) | User decisions collected |
-| 2 | `elab-completion-leader.agent.md` | `ELABORATION COMPLETE: <verdict>` |
+QA agent performing Story Elaboration before implementation. HARD GATE - stories must pass before dev.
 
----
-
-## Context Block
-
-Pass to each agent:
+## Usage
 
 ```
-STORY CONTEXT:
-Story ID: STORY-XXX
-Base path: plans/stories/elaboration/STORY-XXX/
-Artifacts path: plans/stories/elaboration/STORY-XXX/_implementation/
+/elab-story plans/future/wishlist WISH-001
 ```
 
----
+## Phases
+
+| # | Agent | Model | Signal |
+|---|-------|-------|--------|
+| 0 | `elab-setup-leader.agent.md` | haiku | `ELAB-SETUP COMPLETE` |
+| 1 | `elab-analyst.agent.md` | sonnet | `ANALYSIS COMPLETE` |
+| — | (Interactive) | — | User decisions collected |
+| 2 | `elab-completion-leader.agent.md` | haiku | `ELABORATION COMPLETE: <verdict>` |
 
 ## Execution
 
 ### Phase 0: Setup
 
-1. Read `.claude/agents/elab-setup-leader.agent.md`
-2. Spawn agent with story context
-3. Wait for signal
-4. If BLOCKED → STOP and report
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: haiku
+  description: "Phase 0 Elab-Setup {STORY_ID}"
+  prompt: |
+    Read instructions: .claude/agents/elab-setup-leader.agent.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+```
+
+Wait for `ELAB-SETUP COMPLETE`. If BLOCKED → STOP.
 
 ### Phase 1: Analysis
 
-1. Ensure `_implementation/` exists: `mkdir -p plans/stories/elaboration/STORY-XXX/_implementation`
-2. Read `.claude/agents/elab-analyst.agent.md`
-3. Spawn agent with story context
-4. Wait for `ANALYSIS COMPLETE`
-5. If BLOCKED → STOP and report
-
-### Interactive Discussion (Orchestrator Handles Directly)
-
-1. Read `_implementation/ANALYSIS.md`
-2. Count gaps and enhancements found
-3. Ask user:
-
-```
-I've identified [N] potential gaps and [M] enhancement opportunities.
-Would you like to discuss these improvements before finalizing? (yes/no)
+Move story from backlog to elaboration:
+```bash
+mv {FEATURE_DIR}/backlog/{STORY_ID} {FEATURE_DIR}/elaboration/{STORY_ID}
+mkdir -p {FEATURE_DIR}/elaboration/{STORY_ID}/_implementation
 ```
 
-**If YES:**
-- Present each finding one at a time (see reference doc for format)
-- Collect user decision for each: (1) Add as AC, (2) Follow-up story, (3) Out-of-scope, (4) Skip
-- Track all decisions
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: sonnet
+  description: "Phase 1 Analysis {STORY_ID}"
+  prompt: |
+    Read instructions: .claude/agents/elab-analyst.agent.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+```
 
-**If NO:**
-- Mark all findings as "Not Reviewed"
-- Proceed to completion
+Wait for `ANALYSIS COMPLETE`. If BLOCKED → STOP.
+
+### Interactive Discussion (Orchestrator Direct)
+
+1. Read `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`
+2. Count gaps and enhancements
+3. Ask: "I've identified [N] gaps and [M] enhancements. Discuss before finalizing? (yes/no)"
+
+**If YES**: Present each finding one at a time (format in reference doc). Collect decision:
+- (1) Add as AC
+- (2) Follow-up story
+- (3) Out-of-scope
+- (4) Skip
+
+**If NO**: Mark all "Not Reviewed"
 
 ### Phase 2: Completion
 
-1. Determine final verdict from ANALYSIS.md
-2. Read `.claude/agents/elab-completion-leader.agent.md`
-3. Spawn agent with:
-   - Story context
-   - Final verdict
-   - User decisions from interactive phase (as JSON)
-4. Wait for `ELABORATION COMPLETE: <verdict>`
+Determine verdict from ANALYSIS.md preliminary verdict.
 
----
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: haiku
+  description: "Phase 2 Completion {STORY_ID}"
+  prompt: |
+    Read instructions: .claude/agents/elab-completion-leader.agent.md
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Final verdict: <PASS|CONDITIONAL PASS|FAIL|SPLIT REQUIRED>
+    User decisions: <JSON from interactive phase>
+```
+
+Wait for `ELABORATION COMPLETE: <verdict>`.
+
+On PASS/CONDITIONAL PASS, move story to ready-to-work:
+```bash
+mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
+```
 
 ## Error Handling
 
 | Signal | Action |
 |--------|--------|
-| `BLOCKED` | Stop execution, report reason to user |
-| `FAIL` verdict | Story stays in elaboration, notify user to run `/pm-fix-story` |
-| `SPLIT REQUIRED` | Story stays in elaboration, notify user PM must split |
-
----
+| `BLOCKED` | Stop, report reason |
+| `FAIL` verdict | Story stays in elaboration, run `/pm-fix-story` |
+| `SPLIT REQUIRED` | Story stays in elaboration, PM must split |
 
 ## Token Report
 
-After completion, generate summary:
-
-```
-/token-report STORY-XXX
-```
-
----
+After completion: `/token-report {STORY_ID}`
 
 ## Done
 
 Stop when:
-- `ELABORATION COMPLETE` signal received
+- `ELABORATION COMPLETE` received
 - Token report generated
 - User notified of verdict and next steps
 
 **Next steps by verdict:**
-- PASS/CONDITIONAL PASS → `/dev-implement-story STORY-XXX`
-- FAIL → `/pm-fix-story STORY-XXX`
-- SPLIT REQUIRED → PM creates split stories, then elaborate each
+- PASS/CONDITIONAL PASS → `/dev-implement-story {FEATURE_DIR} {STORY_ID}`
+- FAIL → `/pm-fix-story {FEATURE_DIR} {STORY_ID}`
+- SPLIT REQUIRED → PM creates split stories, elaborate each
 
----
+## Ref
 
-## Reference
-
-See `.claude/docs/elab-story-reference.md` for:
-- Detailed audit checklist
-- Discovery question details
-- Interactive discussion format
-- Verdict definitions
-- Troubleshooting
+`.claude/docs/elab-story-reference.md`

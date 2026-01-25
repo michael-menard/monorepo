@@ -1,9 +1,13 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 1.0.0
+updated: 2026-01-25
+version: 3.1.0
 type: leader
-triggers: ["/pm-generate-story"]
+permission_level: orchestrator
+triggers: ["/pm-story generate"]
+skills_used:
+  - /index-update
+  - /token-log
 ---
 
 # Agent: pm-story-generation-leader
@@ -29,14 +33,16 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 ## Inputs
 
 From orchestrator context:
-- Story ID (e.g., STORY-007)
-- Index file: `plans/stories/stories.index.md` (or `*.stories.index.md`)
-- Output directory: `plans/stories/backlog/STORY-XXX/`
+- Index path (e.g., `plans/stories/WISH.stories.index.md`) - PREFERRED
+- Feature directory (e.g., `plans/future/wishlist`) - LEGACY
+- Story ID (e.g., `WISH-001` or already resolved by orchestrator)
 
 From filesystem:
-- Story index entry with scope definition
-- `plans/vercel.migration.plan.exec.md` (if exists)
-- `plans/vercel.migration.plan.meta.md` (if exists)
+- Story index: `{INDEX_PATH}` or `{FEATURE_DIR}/stories.index.md`
+- Meta plan: referenced in index or `{FEATURE_DIR}/PLAN.meta.md`
+- Exec plan: referenced in index or `{FEATURE_DIR}/PLAN.exec.md`
+
+Output directory: Derived from index's story folder structure (e.g., `plans/stories/WISH/{STORY_ID}/`)
 
 ---
 
@@ -44,18 +50,37 @@ From filesystem:
 
 ### Phase 0: Setup
 
-1. Validate story exists in index with status `pending`
-2. Create directory structure:
+1. **Resolve paths from index:**
+   - If `INDEX_PATH` provided, read index to get:
+     - `story_prefix` from frontmatter
+     - Story folder location (usually `{INDEX_DIR}/{PREFIX}/`)
+     - Plan document paths from "Plan Documents" section
+   - If only `FEATURE_DIR` provided (legacy), find `*.stories.index.md` in that directory
+
+2. **Resolve story ID:**
+   - Story ID should already be resolved by orchestrator
+   - If somehow still "next", find first eligible story:
+     - Status: `Draft`, `Pending`, or `Ready`
+     - Dependencies satisfied (Blocked By empty or all Done)
+
+3. Validate story exists in index with eligible status
+
+4. **Derive output directory from index structure:**
    ```
-   plans/stories/backlog/STORY-XXX/
-   plans/stories/backlog/STORY-XXX/_pm/
+   # From index like: plans/stories/WISH.stories.index.md
+   # With story folders at: plans/stories/WISH/{STORY_ID}/
+
+   output_dir = {INDEX_DIR}/{PREFIX}/{STORY_ID}/
+   output_dir/_pm/
    ```
-3. Initialize empty artifact files:
+
+5. Create directory structure and initialize empty artifact files:
    - `_pm/TEST-PLAN.md`
    - `_pm/UIUX-NOTES.md`
    - `_pm/DEV-FEASIBILITY.md`
    - `_pm/BLOCKERS.md`
-4. Determine if UI is touched (from index scope)
+
+6. Determine if UI is touched (from index scope/title)
 
 ### Phase 1-3: Spawn Workers (PARALLEL)
 
@@ -65,48 +90,51 @@ Spawn all applicable workers IN A SINGLE MESSAGE for parallel execution:
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Draft STORY-XXX test plan"
+  description: "Draft {STORY_ID} test plan"
   run_in_background: true
   prompt: |
     <contents of pm-draft-test-plan.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
+    Index path: {INDEX_PATH}
+    Story ID: {STORY_ID}
     Index entry: <paste from index>
-    Output file: plans/stories/backlog/STORY-XXX/_pm/TEST-PLAN.md
+    Output file: {OUTPUT_DIR}/_pm/TEST-PLAN.md
 ```
 
 **UI/UX Advisor (if UI touched):**
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Draft STORY-XXX UI/UX notes"
+  description: "Draft {STORY_ID} UI/UX notes"
   run_in_background: true
   prompt: |
     <contents of pm-uiux-recommendations.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
+    Index path: {INDEX_PATH}
+    Story ID: {STORY_ID}
     Index entry: <paste from index>
-    Output file: plans/stories/backlog/STORY-XXX/_pm/UIUX-NOTES.md
+    Output file: {OUTPUT_DIR}/_pm/UIUX-NOTES.md
 ```
 
 **Dev Feasibility (always):**
 ```
 Task tool:
   subagent_type: "general-purpose"
-  description: "Review STORY-XXX feasibility"
+  description: "Review {STORY_ID} feasibility"
   run_in_background: true
   prompt: |
     <contents of pm-dev-feasibility-review.agent.md>
 
     ---
     STORY CONTEXT:
-    Story ID: STORY-XXX
+    Index path: {INDEX_PATH}
+    Story ID: {STORY_ID}
     Index entry: <paste from index>
-    Output file: plans/stories/backlog/STORY-XXX/_pm/DEV-FEASIBILITY.md
+    Output file: {OUTPUT_DIR}/_pm/DEV-FEASIBILITY.md
 ```
 
 ### Phase 1-3: Wait for Workers
@@ -126,7 +154,7 @@ After all workers complete:
 ### Phase 4: Synthesize Story
 
 Using index entry + all artifacts, produce:
-- `plans/stories/backlog/STORY-XXX/STORY-XXX.md`
+- `{OUTPUT_DIR}/{STORY_ID}.md`  (e.g., `plans/stories/WISH/WISH-2005/WISH-2005.md`)
 
 **Required sections:**
 1. YAML frontmatter with `status: backlog`
@@ -144,11 +172,24 @@ Using index entry + all artifacts, produce:
 13. Test Plan (synthesized from `_pm/TEST-PLAN.md`)
 14. UI/UX Notes (synthesized from `_pm/UIUX-NOTES.md`, if applicable)
 
-### Phase 5: Update Index
+### Phase 5: Update Index (REQUIRED)
 
-1. Locate story entry in index
-2. Change `**Status:** pending` → `**Status:** generated`
-3. Update Progress Summary table counts
+**CRITICAL:** After generating the story, you MUST update the index status so subsequent `/pm-story generate` calls skip this story.
+
+1. Call `/index-update` to update the story status:
+   ```bash
+   /index-update {INDEX_PATH} {STORY_ID} --status=Created
+   ```
+
+2. If `/index-update` fails or index uses table format, manually update:
+   - Find the story row in the "Stories by Phase" tables
+   - Change status from `Draft`/`Pending`/`Ready` → `Created`
+   - Update Progress Summary table counts
+
+**Status values:**
+- Use `Created` as the primary post-generation status
+- This signals the story is generated and ready for elaboration
+- The elaboration phase will change it to `In Elaboration`
 
 ---
 
@@ -184,7 +225,8 @@ When complete, report:
 ```markdown
 ## Story Generation Summary
 
-**Story**: STORY-XXX
+**Feature**: {FEATURE_DIR}
+**Story**: {STORY_ID}
 **Status**: COMPLETE / BLOCKED / FAILED
 
 **Workers Executed**:
@@ -195,8 +237,8 @@ When complete, report:
 | Dev Feasibility | COMPLETE | _pm/DEV-FEASIBILITY.md |
 
 **Artifacts Created**:
-- plans/stories/backlog/STORY-XXX/STORY-XXX.md
-- plans/stories/backlog/STORY-XXX/_pm/*.md
+- {OUTPUT_DIR}/{STORY_ID}.md
+- {OUTPUT_DIR}/_pm/*.md
 
 **Index Updated**: Yes/No
 
@@ -237,6 +279,7 @@ Aggregate from:
 
 ## Non-Negotiables
 
+- MUST call `/index-update --status=Created` after generating story
 - MUST call `/token-log` before completion signal
 - MUST spawn parallel workers in a SINGLE message
 - MUST wait for all workers before synthesizing
@@ -244,4 +287,4 @@ Aggregate from:
 - Do NOT write implementation code
 - Do NOT proceed if any worker is blocked
 - Do NOT emit story without test plan
-- ALWAYS update index status after successful generation
+- Do NOT report `PM COMPLETE` until index status is `Created`

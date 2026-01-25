@@ -1,3 +1,9 @@
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 1.0.0
+---
+
 # Dev Fix Story - Reference
 
 ## Architecture

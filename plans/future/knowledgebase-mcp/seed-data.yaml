@@ -1,0 +1,2084 @@
+# Knowledgebase Seed Data
+# Generated: 2026-01-24
+#
+# This file contains actual knowledge entries to seed into the knowledgebase.
+# Run: pnpm --filter @repo/mcp-knowledgebase seed --file=seed-data.yaml
+
+---
+
+# =============================================================================
+# TOKEN OPTIMIZATION FACTS
+# =============================================================================
+
+- id: tok-001
+  content: |
+    Reading serverless.yml (70KB) costs ~17,500 tokens. Instead of reading the full file,
+    use grep to extract only the relevant resource definition:
+    `grep -A 50 "YourResourceName:" serverless.yml`
+  entry_type: fact
+  roles: [dev]
+  tags: [tokens, optimization, serverless, aws, high-cost]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: tok-002
+  content: |
+    Story file is re-read by each sub-agent in the workflow. For 5 agents reading a ~3,000
+    token story file, this costs ~15,000 tokens total. Consider passing story context
+    through the agent chain instead of re-reading.
+  entry_type: fact
+  roles: [dev]
+  tags: [tokens, optimization, agents, workflow]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: tok-003
+  content: |
+    LESSONS-LEARNED.md grows over time (~18KB currently, ~4,500 tokens). When reading for
+    context, consider creating LESSONS-LEARNED-RECENT.md with only the last 3-5 stories
+    to reduce token cost.
+  entry_type: fact
+  roles: [dev]
+  tags: [tokens, optimization, documentation]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: tok-004
+  content: |
+    Full codebase Explore agent costs ~25,000+ tokens. For specific searches, use targeted
+    Grep instead: `grep -r "pattern" --include="*.ts" src/`
+  entry_type: fact
+  roles: [dev]
+  tags: [tokens, optimization, search, agents]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: tok-005
+  content: |
+    Code-reviewer agent costs ~30,000+ tokens per invocation. For large changesets,
+    consider reviewing in smaller batches or focusing on critical files only.
+  entry_type: fact
+  roles: [dev, qa]
+  tags: [tokens, optimization, code-review]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: tok-006
+  content: |
+    Implementation plan is read by 3+ subsequent agents (~2,000 tokens each read).
+    Total redundant cost: ~6,000+ tokens. Consider summarizing plan for downstream agents.
+  entry_type: fact
+  roles: [dev]
+  tags: [tokens, optimization, workflow, agents]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+# =============================================================================
+# BACKEND PATTERNS - DEPENDENCY INJECTION
+# =============================================================================
+
+- id: be-di-001
+  content: |
+    DI pattern for core functions: Create a minimal interface with only the methods needed.
+
+    Example from gallery-core:
+    ```typescript
+    export interface GetImageDbClient {
+      select: (fields: Record<string, unknown>) => {
+        from: (table: unknown) => {
+          where: (condition: unknown) => Promise<ImageRow[]>
+        }
+      }
+    }
+    ```
+
+    This allows unit testing with simple mocks instead of full database setup.
+    Reference: packages/backend/gallery-core/src/get-image.ts
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, di, dependency-injection, testing, backend, core]
+  source_file: packages/backend/gallery-core/src/get-image.ts
+  confidence: 1.0
+
+- id: be-di-002
+  content: |
+    Schema injection pattern: Pass table references as a separate interface to keep
+    core functions platform-independent.
+
+    ```typescript
+    export interface GetImageSchema {
+      galleryImages: {
+        id: unknown
+        userId: unknown
+        // ... only fields this function needs
+      }
+    }
+    ```
+
+    This allows the same core function to work with different ORMs or database adapters.
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, di, schema, backend, core]
+  source_file: packages/backend/gallery-core/src/get-image.ts
+  confidence: 1.0
+
+- id: be-di-003
+  content: |
+    Optional deps for progressive enhancement: Make some dependencies optional in the
+    interface when they're not available in all environments.
+
+    ```typescript
+    export interface FinalizeWithFilesDeps {
+      db: DbClient
+      s3: S3Client
+      validatePartsFile?: (file: Buffer) => ValidationResult  // Optional
+    }
+    ```
+
+    This allows deployments without certain features to use the core function.
+    Reference: packages/backend/moc-instructions-core
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, di, optional, backend]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-015
+  confidence: 1.0
+
+# =============================================================================
+# BACKEND PATTERNS - RESULT TYPES
+# =============================================================================
+
+- id: be-result-001
+  content: |
+    Discriminated union result type pattern for core functions:
+
+    ```typescript
+    export type GetImageResult =
+      | { success: true; data: GalleryImage }
+      | { success: false; error: 'NOT_FOUND' | 'FORBIDDEN' | 'DB_ERROR'; message: string }
+    ```
+
+    Benefits:
+    - TypeScript narrows type after checking `success`
+    - Exhaustive error handling in handlers
+    - Clear API contract
+
+    Use Zod enum for error codes to enable exhaustive pattern matching.
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, types, result, discriminated-union, backend]
+  source_file: packages/backend/gallery-core/src/get-image.ts
+  confidence: 1.0
+
+- id: be-result-002
+  content: |
+    For delete operations that need post-delete cleanup (like S3), include the data
+    needed for cleanup in the success result:
+
+    ```typescript
+    type DeleteResult =
+      | { success: true; data: { imageUrl: string; thumbnailUrl: string } }
+      | { success: false; error: 'NOT_FOUND' | 'FORBIDDEN'; message: string }
+    ```
+
+    The handler (adapter) uses the URLs to delete from S3 after the DB delete succeeds.
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, delete, cleanup, s3, backend]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-008
+  confidence: 1.0
+
+# =============================================================================
+# BACKEND PATTERNS - DATA INTEGRITY
+# =============================================================================
+
+- id: be-data-001
+  content: |
+    FK reference clearing before delete: When deleting an entity that can be referenced
+    by another entity's FK (e.g., deleting an image that might be an album's coverImageId),
+    clear those references BEFORE deleting:
+
+    1. UPDATE albums SET coverImageId = NULL WHERE coverImageId = :imageId
+    2. DELETE FROM images WHERE id = :imageId
+
+    This prevents FK constraint violations even without CASCADE configured.
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, database, foreign-key, delete, integrity]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-008
+  confidence: 1.0
+
+- id: be-data-002
+  content: |
+    Two-phase lock pattern for concurrent operations:
+
+    1. Set transient lock: `UPDATE mocs SET finalizingAt = NOW() WHERE id = :id AND finalizingAt IS NULL`
+    2. If no rows updated, check if stale (finalizingAt > TTL) and rescue
+    3. Perform operation
+    4. Set permanent state: `UPDATE mocs SET finalizedAt = NOW(), finalizingAt = NULL`
+
+    Store transient lock (finalizingAt) separately from permanent state (finalizedAt).
+    Reference: packages/backend/moc-instructions-core finalize function
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, concurrency, locking, database]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-015
+  confidence: 1.0
+
+- id: be-data-003
+  content: |
+    Optimistic locking with expectedUpdatedAt for two-phase edits:
+
+    ```typescript
+    // Presign phase returns lastUpdatedAt
+    const presignResult = { ..., lastUpdatedAt: moc.lastUpdatedAt }
+
+    // Finalize phase validates it hasn't changed
+    if (moc.lastUpdatedAt !== input.expectedUpdatedAt) {
+      return { success: false, error: 'CONFLICT', message: 'MOC was modified' }
+    }
+    ```
+
+    This prevents concurrent edit conflicts in presign → upload → finalize flows.
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, concurrency, optimistic-locking, api]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-016
+  confidence: 1.0
+
+# =============================================================================
+# BACKEND PATTERNS - CLEANUP & ERROR HANDLING
+# =============================================================================
+
+- id: be-cleanup-001
+  content: |
+    Best-effort cleanup pattern for post-DB infrastructure operations:
+
+    ```typescript
+    // In handler (adapter), NOT in core function
+    if (result.success) {
+      // DB operation succeeded, now cleanup S3
+      try {
+        await s3.deleteObject({ Key: result.data.imageUrl })
+        await s3.deleteObject({ Key: result.data.thumbnailUrl })
+      } catch (err) {
+        // Log but don't fail the request
+        logger.warn('S3 cleanup failed', { error: err, urls: result.data })
+      }
+      return res.status(200).json({ success: true })
+    }
+    ```
+
+    Never fail the request on cleanup failure. Core stays infrastructure-agnostic.
+  entry_type: fact
+  roles: [dev]
+  tags: [pattern, cleanup, s3, error-handling, ports-adapters]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-008
+  confidence: 1.0
+
+# =============================================================================
+# VERCEL PATTERNS
+# =============================================================================
+
+- id: vercel-001
+  content: |
+    CRITICAL: Route ordering in vercel.json - specific routes MUST come before parameterized routes.
+
+    CORRECT order:
+    ```json
+    { "source": "/api/mocs/stats/by-category", "destination": "/api/mocs/stats/by-category.ts" },
+    { "source": "/api/mocs/import-from-url", "destination": "/api/mocs/import-from-url.ts" },
+    { "source": "/api/mocs/:id/edit", "destination": "/api/mocs/[id]/edit.ts" },
+    { "source": "/api/mocs/:id", "destination": "/api/mocs/[id].ts" }
+    ```
+
+    WRONG order (will never match specific routes):
+    ```json
+    { "source": "/api/mocs/:id", "destination": "/api/mocs/[id].ts" },
+    { "source": "/api/mocs/stats/by-category", "destination": "..." }  // Never reached!
+    ```
+
+    This is documented in 5+ stories. Check route order when adding new endpoints.
+  entry_type: fact
+  roles: [dev]
+  tags: [vercel, routing, api, critical, config]
+  source_file: apps/api/platforms/vercel/vercel.json
+  confidence: 1.0
+
+- id: vercel-002
+  content: |
+    For handlers that fetch external URLs, increase the function timeout in vercel.json:
+
+    ```json
+    "functions": {
+      "api/mocs/import-from-url.ts": {
+        "maxDuration": 15
+      }
+    }
+    ```
+
+    Default is 10 seconds which may not be enough for slow external APIs.
+  entry_type: fact
+  roles: [dev]
+  tags: [vercel, timeout, config, external-api]
+  source_file: apps/api/platforms/vercel/vercel.json
+  confidence: 1.0
+
+- id: vercel-003
+  content: |
+    Vercel handlers use fetch API for OpenSearch instead of @opensearch-project/opensearch SDK.
+
+    Lambda handlers use the SDK with IAM auth, but Vercel uses simpler fetch for compatibility:
+    ```typescript
+    const response = await fetch(`${OPENSEARCH_URL}/_search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(query)
+    })
+    ```
+
+    This is a justified adapter-layer difference.
+  entry_type: fact
+  roles: [dev]
+  tags: [vercel, opensearch, pattern, adapter]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-009
+  confidence: 1.0
+
+- id: vercel-004
+  content: |
+    In-memory rate limiting for stateless MVP endpoints:
+
+    ```typescript
+    const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+    function checkRateLimit(userId: string, limit = 10, windowMs = 60000): boolean {
+      const now = Date.now()
+      const entry = rateLimitMap.get(userId)
+
+      if (!entry || now > entry.resetAt) {
+        rateLimitMap.set(userId, { count: 1, resetAt: now + windowMs })
+        return true
+      }
+
+      if (entry.count >= limit) return false
+      entry.count++
+      return true
+    }
+    ```
+
+    Caveat: Resets on cold start, not shared across instances. Document this limitation.
+  entry_type: fact
+  roles: [dev]
+  tags: [vercel, rate-limiting, pattern, stateless]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-014
+  confidence: 1.0
+
+- id: vercel-005
+  content: |
+    Vercel handler template for authenticated endpoints:
+
+    ```typescript
+    import type { VercelRequest, VercelResponse } from '@vercel/node'
+    import { z } from 'zod'
+    import { getDb, schema } from '../../../core/database'
+    import { coreFunction } from '@repo/domain-core'
+
+    const InputSchema = z.object({
+      id: z.string().uuid()
+    }).strict()
+
+    export default async function handler(req: VercelRequest, res: VercelResponse) {
+      // 1. Auth (with dev bypass)
+      const userId = process.env.AUTH_BYPASS === 'true'
+        ? 'dev-user-id'
+        : await validateAuth(req)
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+      // 2. Method check
+      if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' })
+      }
+
+      // 3. Input validation
+      const parsed = InputSchema.safeParse(req.query)
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() })
+      }
+
+      // 4. Call core function with DI
+      const db = getDb()
+      const result = await coreFunction(db, schema, userId, parsed.data.id)
+
+      // 5. Map result to HTTP response
+      if (!result.success) {
+        const statusMap: Record<string, number> = {
+          NOT_FOUND: 404,
+          FORBIDDEN: 403,
+          CONFLICT: 409,
+          DB_ERROR: 500
+        }
+        return res.status(statusMap[result.error] || 500).json({ error: result.message })
+      }
+
+      return res.status(200).json(result.data)
+    }
+    ```
+  entry_type: fact
+  roles: [dev]
+  tags: [vercel, handler, template, api, pattern]
+  source_file: apps/api/platforms/vercel/api
+  confidence: 1.0
+
+# =============================================================================
+# API PATTERNS - SECURITY & VALIDATION
+# =============================================================================
+
+- id: api-sec-001
+  content: |
+    Return 404 (not 400) for malformed UUIDs in path parameters.
+
+    WRONG:
+    ```typescript
+    if (!isValidUuid(id)) return res.status(400).json({ error: 'Invalid UUID' })
+    ```
+
+    RIGHT:
+    ```typescript
+    if (!isValidUuid(id)) return res.status(404).json({ error: 'Not found' })
+    ```
+
+    This prevents attackers from distinguishing "invalid input" from "resource doesn't exist",
+    avoiding information leakage about valid ID formats.
+  entry_type: fact
+  roles: [dev]
+  tags: [security, api, validation, uuid]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-013
+  confidence: 1.0
+
+- id: api-sec-002
+  content: |
+    Use .strict() on Zod request validation schemas to reject unknown fields:
+
+    ```typescript
+    const UpdateInputSchema = z.object({
+      title: z.string().optional(),
+      description: z.string().optional()
+    }).strict()  // Rejects { title: "x", unknownField: "y" }
+    ```
+
+    This prevents clients from sending unsupported data that might cause issues later.
+  entry_type: fact
+  roles: [dev]
+  tags: [zod, validation, api, security]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-013
+  confidence: 1.0
+
+- id: api-sec-003
+  content: |
+    Ownership check pattern - return 404 instead of 403 to prevent existence leakage:
+
+    ```typescript
+    const item = await db.select().from(items).where(eq(items.id, id))
+
+    if (!item) {
+      return { success: false, error: 'NOT_FOUND', message: 'Item not found' }
+    }
+
+    // Check ownership but return NOT_FOUND, not FORBIDDEN
+    if (item.userId !== userId) {
+      return { success: false, error: 'NOT_FOUND', message: 'Item not found' }
+    }
+    ```
+
+    This prevents attackers from discovering that an item exists but belongs to another user.
+  entry_type: fact
+  roles: [dev]
+  tags: [security, authorization, api, pattern]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-011
+  confidence: 1.0
+
+# =============================================================================
+# TESTING PATTERNS
+# =============================================================================
+
+- id: test-001
+  content: |
+    Test UUIDs must be valid format because Zod validates them at runtime.
+
+    WRONG (will fail Zod validation):
+    ```typescript
+    const mockId = 'test-id'
+    const mockUserId = 'user-123'
+    ```
+
+    RIGHT:
+    ```typescript
+    const mockId = '00000000-0000-0000-0000-000000000001'
+    const mockUserId = '11111111-1111-1111-1111-111111111111'
+    ```
+
+    Using deterministic UUIDs (all 0s, all 1s, etc.) makes test output readable.
+  entry_type: fact
+  roles: [dev, qa]
+  tags: [testing, uuid, zod, mocks]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-015
+  confidence: 1.0
+
+- id: test-002
+  content: |
+    Write tests alongside implementation, not after. STORY-016 had to write 141 tests
+    in a fix phase because tests were skipped during initial implementation.
+
+    Pattern: "write chunk, test chunk"
+    1. Implement function
+    2. Write tests for that function
+    3. Run tests, fix issues
+    4. Move to next function
+
+    Do NOT defer all tests to the end.
+  entry_type: fact
+  roles: [dev]
+  tags: [testing, process, critical]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-016
+  confidence: 1.0
+
+- id: test-003
+  content: |
+    Expected test density by function complexity:
+
+    - Simple read function: ~15 tests (happy path, not found, forbidden, invalid input)
+    - Complex function with multiple validation stages: ~25-30 tests
+    - Infrastructure package (parsing, retry logic): ~10 tests per utility
+
+    5 core functions typically need ~100-150 total tests for comprehensive coverage.
+  entry_type: fact
+  roles: [dev, qa]
+  tags: [testing, estimation, coverage]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: test-004
+  content: |
+    HTTP contract test ratio: Plan for ~10-15 HTTP requests per endpoint, or ~1-2 per AC.
+
+    Coverage should include:
+    - Happy path (valid input, successful response)
+    - Authentication failures (401)
+    - Authorization failures (403/404)
+    - Validation failures (400)
+    - Not found (404)
+    - Conflict scenarios (409)
+    - Edge cases (empty results, pagination boundaries)
+  entry_type: fact
+  roles: [dev, qa]
+  tags: [testing, http, api, estimation]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: test-005
+  content: |
+    Run scoped lint after each new file creation to catch issues early:
+
+    ```bash
+    pnpm eslint path/to/new-file.ts
+    ```
+
+    This catches unused imports immediately instead of accumulating 10+ errors at final
+    verification. Especially important for:
+    - Unused imports after refactoring
+    - Prettier formatting on long Zod chains
+    - Missing type annotations
+  entry_type: fact
+  roles: [dev]
+  tags: [lint, process, verification]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+# =============================================================================
+# STORY SIZING & ESTIMATION
+# =============================================================================
+
+- id: size-001
+  content: |
+    57 ACs is too large for one story. STORY-016 (MOC File Upload Management) had 57 ACs
+    and required a substantial fix phase with 141 tests written after implementation.
+
+    Recommended maximum: 15-25 ACs per story.
+
+    If a story exceeds 25 ACs, split by:
+    - Endpoint groups (CRUD operations separately)
+    - Read vs Write operations
+    - Core functionality vs edge cases
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [story-sizing, estimation, critical]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-016
+  confidence: 1.0
+
+- id: size-002
+  content: |
+    Story sizing baselines by type:
+
+    | Type | ACs | Files | Tests | Tokens |
+    |------|-----|-------|-------|--------|
+    | Package scaffolding | ~10 | ~5 | ~2 | ~40k |
+    | Schema/types only | ~24 | ~15 | ~85 | ~70k |
+    | Backend read ops | ~24 | ~20 | ~60 | ~70k |
+    | Backend CRUD (complex) | ~25-30 | ~20 | ~100+ | ~100k |
+    | Full-stack feature | ~30-40 | ~30+ | ~150+ | ~120k+ |
+  entry_type: fact
+  roles: [pm]
+  tags: [story-sizing, estimation, planning]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+- id: size-003
+  content: |
+    Token cost patterns by story type:
+
+    - Most expensive phase is usually Backend Coder (~30-45k tokens)
+    - Planner phase: ~15-20k tokens (reads LESSONS-LEARNED, templates)
+    - Verifier phase: ~5-10k tokens
+    - Proof Writer: ~3-5k tokens
+
+    Total story cost correlates with AC count: ~3-4k tokens per AC on average.
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [tokens, estimation, planning]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+
+# =============================================================================
+# PACKAGE STRUCTURE
+# =============================================================================
+
+- id: pkg-001
+  content: |
+    Backend package template structure (use @repo/moc-parts-lists-core as canonical reference):
+
+    ```
+    packages/backend/{name}/
+    ├── package.json
+    │   {
+    │     "name": "@repo/{name}",
+    │     "type": "module",
+    │     "exports": { ".": "./dist/index.js" },
+    │     "scripts": { "build": "tsc", "test": "vitest" }
+    │   }
+    ├── tsconfig.json        # extends ../../tsconfig.base.json
+    ├── vitest.config.ts     # extends shared config
+    └── src/
+        ├── index.ts         # Re-exports all public functions
+        ├── __types__/
+        │   └── index.ts     # Zod schemas and inferred types
+        ├── __tests__/
+        │   └── *.test.ts    # Co-located unit tests
+        └── {function}.ts    # One file per core function
+    ```
+  entry_type: fact
+  roles: [dev]
+  tags: [package, structure, template, backend]
+  source_file: packages/backend/moc-parts-lists-core
+  confidence: 1.0
+
+- id: pkg-002
+  content: |
+    pnpm workspace auto-discovery: Packages under these globs are automatically recognized:
+    - packages/core/*
+    - packages/backend/*
+    - packages/tools/*
+    - apps/*
+
+    No need to modify pnpm-workspace.yaml or root package.json when adding new packages
+    under these directories.
+  entry_type: fact
+  roles: [dev]
+  tags: [pnpm, workspace, package, config]
+  source_file: pnpm-workspace.yaml
+  confidence: 1.0
+
+- id: pkg-003
+  content: |
+    ESM package.json pattern for new packages:
+
+    ```json
+    {
+      "name": "@repo/package-name",
+      "version": "0.0.0",
+      "type": "module",
+      "exports": {
+        ".": "./dist/index.js"
+      },
+      "scripts": {
+        "build": "tsc",
+        "test": "vitest run",
+        "test:watch": "vitest"
+      },
+      "dependencies": {},
+      "devDependencies": {
+        "typescript": "^5.0.0",
+        "vitest": "^1.0.0"
+      }
+    }
+    ```
+  entry_type: fact
+  roles: [dev]
+  tags: [package, esm, config, template]
+  source_file: packages/backend/moc-parts-lists-core/package.json
+  confidence: 1.0
+
+# =============================================================================
+# WORKFLOW KNOWLEDGE
+# =============================================================================
+
+- id: wf-001
+  content: |
+    Story status lifecycle:
+
+    pending → generated → ready-to-work → in-progress → ready-for-code-review
+    → ready-for-qa → in-qa → uat → done
+
+    Failure paths:
+    - From elaboration: → needs-refinement (back to PM)
+    - From code review: → in-progress (fix findings)
+    - From QA verify: → needs-work (fix failures)
+    - From QA gate: → in-progress (fix blocking issues)
+  entry_type: fact
+  roles: [pm, dev, qa]
+  tags: [workflow, status, lifecycle]
+  source_file: docs/FULL_WORKFLOW.md
+  confidence: 1.0
+
+- id: wf-002
+  content: |
+    QA Verify has 6 hard gates (all must pass):
+
+    1. AC Verification - All ACs mapped to evidence
+    2. Test Quality Review - No anti-patterns (skipped tests, weak assertions)
+    3. Test Coverage Check - 80% new code, 90% critical paths
+    4. Test Execution - All tests pass (.http, unit, E2E)
+    5. Proof Quality Check - Complete and verifiable
+    6. Architecture Compliance - No violations of ports & adapters, DI patterns
+  entry_type: fact
+  roles: [qa, dev]
+  tags: [workflow, qa-verify, gates, requirements]
+  source_file: docs/FULL_WORKFLOW.md
+  confidence: 1.0
+
+- id: wf-003
+  content: |
+    Elaboration verdicts and their meaning:
+
+    | Verdict | Meaning | Next Step |
+    |---------|---------|-----------|
+    | PASS | Ready for implementation | → Dev |
+    | CONDITIONAL PASS | Minor fixes needed | → Dev (after fixes) |
+    | NEEDS REFINEMENT | Gaps identified | → Elicitation → PM rework |
+    | FAIL | Significant issues | → PM revision |
+    | SPLIT REQUIRED | Story too large | → PM splits story |
+  entry_type: fact
+  roles: [qa, pm]
+  tags: [workflow, elaboration, verdicts]
+  source_file: docs/FULL_WORKFLOW.md
+  confidence: 1.0
+
+- id: wf-004
+  content: |
+    Phase leader pattern for workflow commands:
+
+    ```
+    /command
+        │
+        ├─→ Phase 0: setup-leader.agent.md (haiku)
+        │       └─→ Validates inputs, creates context files
+        │
+        ├─→ Phase 1: work-leader.agent.md (sonnet)
+        │       ├─→ worker-a.agent.md ──┐
+        │       ├─→ worker-b.agent.md ──┼─→ parallel workers
+        │       └─→ worker-c.agent.md ──┘
+        │
+        └─→ Phase 2: completion-leader.agent.md (haiku)
+                └─→ Aggregates results, updates status
+    ```
+
+    Model selection: haiku for simple/fast, sonnet for analysis/reasoning.
+  entry_type: fact
+  roles: [dev]
+  tags: [workflow, agents, pattern, architecture]
+  source_file: docs/FULL_WORKFLOW.md
+  confidence: 1.0
+
+# =============================================================================
+# KNOWN ISSUES (EVOLVING)
+# =============================================================================
+
+- id: issue-001
+  content: |
+    Pre-existing monorepo build failures (as of 2026-01-24):
+
+    Packages with build/type-check failures:
+    - @repo/app-dashboard (design-system export missing)
+    - @repo/app-wishlist-gallery (design-system export missing)
+    - @repo/file-validator
+    - @repo/mock-data
+    - @repo/pii-sanitizer
+    - @repo/sets-core
+    - @repo/gallery-core
+
+    Workaround: Use scoped verification instead of monorepo-wide commands:
+    ```bash
+    pnpm eslint path/to/specific/file.ts
+    pnpm vitest run --filter @repo/your-package
+    ```
+  entry_type: fact
+  roles: [dev]
+  tags: [known-issue, build, workaround]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 0.9
+  metadata:
+    stability: evolving
+    last_verified: "2026-01-24"
+
+- id: issue-002
+  content: |
+    Seed data failure: `pnpm seed` fails in seedSets() function.
+
+    Root cause: tags column type mismatch (text[] vs jsonb).
+
+    Workaround: Manual database insert or seed specific tables:
+    ```bash
+    pnpm seed:gallery  # If available
+    # Or direct SQL insert
+    ```
+
+    This has blocked 3+ consecutive stories. Tech debt story recommended.
+  entry_type: fact
+  roles: [dev]
+  tags: [known-issue, seed, database, workaround]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 0.9
+  metadata:
+    stability: evolving
+    last_verified: "2026-01-24"
+
+# =============================================================================
+# CODEBASE MAP (FOR PM CONTEXT)
+# =============================================================================
+
+- id: map-001
+  content: |
+    Application domains in this monorepo:
+
+    - **Gallery** (packages/backend/gallery-core): User image albums and gallery management.
+      CRUD for albums and images, S3 storage integration.
+
+    - **MOC Instructions** (packages/backend/moc-instructions-core): LEGO MOC building
+      instructions. Upload, edit, finalize flows with file management.
+
+    - **MOC Parts Lists** (packages/backend/moc-parts-lists-core): Parts list parsing
+      (CSV/XML), tracking, summary statistics.
+
+    - **Wishlist** (packages/backend/wishlist-core): User wishlist for desired sets/parts.
+
+    - **Sets** (packages/backend/sets-core): LEGO set catalog data and images.
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [architecture, domains, overview]
+  source_file: packages/backend
+  confidence: 1.0
+
+- id: map-002
+  content: |
+    Web applications in apps/web/:
+
+    - **main-app**: Primary user-facing application (React 19, Tailwind)
+    - **app-dashboard**: Admin/analytics dashboard
+    - **app-inspiration-gallery**: Browse community MOC inspiration
+    - **app-instructions-gallery**: Browse and manage instructions
+    - **app-sets-gallery**: Browse official LEGO sets
+    - **app-wishlist-gallery**: User wishlist management UI
+    - **user-settings**: User preferences and account settings
+    - **playwright**: E2E test suite (Cucumber/Gherkin)
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [architecture, apps, frontend, overview]
+  source_file: apps/web
+  confidence: 1.0
+
+- id: map-003
+  content: |
+    Core shared packages in packages/core/:
+
+    - **@repo/ui** (app-component-library): UI components built on shadcn/ui
+      - _primitives/: Raw shadcn wrappers
+      - Feature folders: App-specific composed components
+
+    - **@repo/logger**: Structured logging (NEVER use console.log)
+
+    - **@repo/api-client**: API client with retry logic, circuit breaker, error handling
+
+    - **@repo/design-system**: Design tokens, colors, typography, spacing
+
+    - **@repo/accessibility**: A11y utilities, hooks, ARIA helpers
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [architecture, packages, frontend, overview]
+  source_file: packages/core
+  confidence: 1.0
+
+- id: map-004
+  content: |
+    Backend infrastructure packages:
+
+    - **@repo/lambda-utils**: AWS Lambda utilities (multipart parsing, responses)
+    - **@repo/lambda-auth**: Cognito JWT validation for Lambda
+    - **@repo/lambda-responses**: Standardized Lambda response builders
+    - **@repo/vercel-adapter**: Vercel-specific adapters
+    - **@repo/vercel-multipart**: Multipart form parsing for Vercel
+    - **@repo/s3-client**: S3 operations wrapper
+    - **@repo/cognito-client**: Cognito user management
+    - **@repo/db**: Database client and connection management
+    - **@repo/rate-limiter**: Rate limiting utilities
+  entry_type: fact
+  roles: [dev]
+  tags: [architecture, packages, backend, infrastructure]
+  source_file: packages/backend
+  confidence: 1.0
+
+# =============================================================================
+# TEMPLATES
+# =============================================================================
+
+- id: tpl-proof
+  content: |
+    # PROOF-{PREFIX}-XXX
+
+    ## Summary
+    [1-2 sentence summary of what was implemented]
+
+    ## Acceptance Criteria Evidence
+
+    | AC | Description | Evidence | Status |
+    |----|-------------|----------|--------|
+    | AC-1 | [From story] | File: `path/to/file.ts:42` | ✅ |
+    | AC-2 | [From story] | Test: `describe('...')` in test.ts | ✅ |
+
+    ## Reuse Compliance
+
+    - [ ] Used existing packages where applicable
+    - [ ] No duplicate code introduced
+    - [ ] Followed patterns from LESSONS-LEARNED.md
+
+    ## Architecture Compliance
+
+    - [ ] Ports & adapters pattern followed (core vs handlers)
+    - [ ] DI interfaces for all external dependencies
+    - [ ] Zod-first types (no TypeScript interfaces)
+    - [ ] Discriminated union result types
+
+    ## Verification Results
+
+    | Check | Result | Notes |
+    |-------|--------|-------|
+    | TypeScript | ✅ PASS | No errors |
+    | ESLint | ✅ PASS | No warnings |
+    | Tests | ✅ PASS | X tests, Y% coverage |
+    | Build | ✅ PASS | |
+
+    ## Files Changed
+
+    | File | Action | Purpose |
+    |------|--------|---------|
+    | `path/to/file.ts` | created | Core function implementation |
+    | `path/to/file.test.ts` | created | Unit tests |
+
+    ## Token Usage
+
+    | Phase | Tokens |
+    |-------|--------|
+    | Planning | ~X |
+    | Implementation | ~Y |
+    | Verification | ~Z |
+    | **Total** | **~N** |
+  entry_type: template
+  roles: [dev]
+  tags: [proof, documentation, template]
+  source_file: plans/stories/UAT/WRKF-000/_templates/PROOF-TEMPLATE.md
+  confidence: 1.0
+
+- id: tpl-qa-verify
+  content: |
+    # QA-VERIFY-{PREFIX}-XXX
+
+    ## Verdict: PASS | FAIL
+
+    ## Gate Results
+
+    | Gate | Status | Notes |
+    |------|--------|-------|
+    | AC Verification | ✅ | All ACs have evidence |
+    | Test Quality | ✅ | No anti-patterns |
+    | Test Coverage | ✅ | 85% lines, 92% critical |
+    | Test Execution | ✅ | 47 passed, 0 failed |
+    | Proof Quality | ✅ | Complete |
+    | Architecture | ✅ | Compliant |
+
+    ## AC Verification Detail
+
+    | AC | Description | Evidence Location | Verified |
+    |----|-------------|-------------------|----------|
+    | AC-1 | ... | PROOF section 2.1 | ✅ |
+
+    ## Test Execution
+
+    ```
+    ✓ packages/backend/domain-core (47 tests)
+      ✓ function-a.test.ts (15 tests)
+      ✓ function-b.test.ts (18 tests)
+      ✓ function-c.test.ts (14 tests)
+    ```
+
+    ## Coverage
+
+    - Lines: 85.2%
+    - Branches: 78.4%
+    - Functions: 92.1%
+    - Critical paths: 95%
+
+    ## Issues Found
+
+    None.
+
+    ## Recommendations
+
+    [Optional suggestions for follow-up work]
+  entry_type: template
+  roles: [qa]
+  tags: [qa-verify, documentation, template]
+  source_file: plans/stories/UAT/WRKF-000/_templates/QA-VERIFY-TEMPLATE.md
+  confidence: 1.0
+
+- id: tpl-elab
+  content: |
+    # ELAB-{PREFIX}-XXX
+
+    ## Verdict: PASS | CONDITIONAL PASS | NEEDS REFINEMENT | FAIL | SPLIT REQUIRED
+
+    ## Audit Checklist
+
+    | # | Check | Status | Notes |
+    |---|-------|--------|-------|
+    | 1 | Scope Alignment | ✅ | Matches epic goals |
+    | 2 | Internal Consistency | ✅ | ACs align with goals |
+    | 3 | Reuse-First | ✅ | Uses existing packages |
+    | 4 | Ports & Adapters | ✅ | Core vs handler separation |
+    | 5 | Local Testability | ✅ | Can test without cloud |
+    | 6 | Decision Completeness | ✅ | No ambiguous choices |
+    | 7 | Risk Disclosure | ✅ | Risks documented |
+    | 8 | Story Sizing | ✅ | Under 25 ACs |
+
+    ## Issues Found
+
+    ### Blocking
+    [None | List blocking issues]
+
+    ### Concerns
+    [None | List non-blocking concerns]
+
+    ## Discovery Findings
+
+    ### Existing Code to Reuse
+    - `packages/backend/X` - [what to reuse]
+
+    ### Suggested Implementation Approach
+    [Technical guidance for dev phase]
+
+    ## Acceptable As-Is
+
+    - [Items that could be improved but are acceptable for this story]
+  entry_type: template
+  roles: [qa]
+  tags: [elaboration, documentation, template]
+  source_file: plans/stories/UAT/WRKF-000/_templates/ELAB-TEMPLATE.md
+  confidence: 1.0
+
+- id: tpl-adr
+  content: |
+    # ADR-XXX: [Short Title]
+
+    ## Status
+
+    [Proposed | Accepted | Deprecated | Superseded by ADR-YYY]
+
+    ## Context
+
+    [What is the issue that we're seeing that is motivating this decision or change?]
+
+    ## Decision
+
+    [What is the change that we're proposing and/or doing?]
+
+    ## Consequences
+
+    ### Positive
+    - [Benefit 1]
+    - [Benefit 2]
+
+    ### Negative
+    - [Drawback 1]
+    - [Drawback 2]
+
+    ### Neutral
+    - [Side effect that isn't clearly positive or negative]
+
+    ## Alternatives Considered
+
+    ### Alternative A: [Name]
+    [Description and why rejected]
+
+    ### Alternative B: [Name]
+    [Description and why rejected]
+
+    ## References
+
+    - [Link to related docs, issues, or discussions]
+  entry_type: template
+  roles: [dev, pm]
+  tags: [adr, architecture, decision, template]
+  source_file: docs/architecture/ADR-TEMPLATE.md
+  confidence: 1.0
+
+# =============================================================================
+# STORY SUMMARIES (from LESSONS-LEARNED.md)
+# =============================================================================
+
+- id: story-007
+  content: |
+    **STORY-007: Gallery - Images Read** (2026-01-19)
+
+    Implemented 4 image read operations for gallery.
+
+    Key learnings:
+    - DI pattern (`GetImageDbClient`) from album functions was highly reusable
+    - Discriminated union result types work seamlessly
+    - Seed upsert pattern (ON CONFLICT DO UPDATE) enables idempotent seeding
+    - Tags search uses `tags::text ILIKE` for JSONB field
+    - Route order matters: `/search` before `/:id` in vercel.json
+
+    Files: 18 touched (14 created, 4 modified)
+    Blockers: None
+    Recommendation: Extend existing packages first (reuse-first principle)
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, gallery, images, read, backend]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-007
+  confidence: 1.0
+
+- id: story-008
+  content: |
+    **STORY-008: Gallery - Images Write (No Upload)** (2026-01-19)
+
+    Implemented update and delete for gallery images.
+
+    Key learnings:
+    - S3 cleanup belongs in adapter (handler), not core function
+    - Core returns URLs needed for cleanup; adapter handles S3 deletion
+    - Best-effort cleanup: try/catch around S3 delete, log failure, return success
+    - Album validation for cross-entity references: check existence (400), then ownership (403)
+    - Empty body PATCH returns 200 and updates lastUpdatedAt ("touch" operation)
+
+    Files: 9 (4 modified, 5 created)
+    Blockers: None
+    Tests: 24 new (16 update + 8 delete)
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, gallery, images, write, backend, s3]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-008
+  confidence: 1.0
+
+- id: story-010
+  content: |
+    **STORY-010: MOC Parts Lists Management** (2026-01-19)
+
+    New package for parts list parsing and management.
+
+    Key learnings:
+    - @repo/gallery-core pattern fully portable to new packages
+    - Handler patterns (auth bypass, DB singleton, method validation) are reusable
+    - CSV parsing belongs in core, not handlers (ports & adapters)
+    - Batch insert pattern: 1,000 rows per batch for bulk imports
+
+    Files: 24 (17 core + 5 handlers + 2 config)
+    Blockers: None
+    Template: Use @repo/moc-parts-lists-core as template for future *-core packages
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, parts-lists, backend, package]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-010
+  confidence: 1.0
+
+- id: story-011
+  content: |
+    **STORY-011: MOC Instructions - Read Operations** (2026-01-19)
+
+    Read operations for MOC instructions.
+
+    Key learnings:
+    - Inline handler pattern validated for simple CRUD (no core extraction needed)
+    - Stats routes as sub-directory: `/api/mocs/stats/by-category`
+    - Ownership check returns 404 (not 403) to prevent existence leakage
+    - 60 tests validates comprehensive coverage for 4 read functions
+
+    Files: 19 (17 new, 2 modified)
+    Blockers: None
+    Ratio: ~15 tests per core function for read operations
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, instructions, read, backend]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-011
+  confidence: 1.0
+
+- id: story-012
+  content: |
+    **STORY-012: MOC Instructions - Gallery Linking** (2026-01-20)
+
+    Link MOC instructions to gallery images.
+
+    Key learnings:
+    - Combined GET+POST handler pattern reduces file count
+    - Nested route structure: `mocs/[id]/gallery-images/`
+    - Join table operations stay inline in handlers (no core extraction)
+    - ~6-7 HTTP requests per endpoint for comprehensive contract testing
+
+    Files: 5 (2 new, 3 modified)
+    Blockers: None (cleanest implementation in sequence)
+    Note: Seed data ID mismatch required manual DB inspection
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, gallery, linking, backend]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-012
+  confidence: 1.0
+
+- id: story-013
+  content: |
+    **STORY-013: MOC Instructions - Edit (No Files)** (2026-01-20)
+
+    Edit MOC metadata without file changes.
+
+    Key learnings:
+    - `findAvailableSlug` utility from @repo/upload-types for 409 CONFLICT scenarios
+    - LESSONS-LEARNED.md actively reduces friction when referenced in implementation
+    - .strict() on Zod schemas prevents API drift from unknown fields
+    - 404 for invalid UUID prevents existence leak (security pattern)
+
+    Files: 3 (1 new, 2 modified)
+    Blockers: None (already complete upon inspection)
+    Ratio: ~12 HTTP requests for single PATCH endpoint
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, edit, backend, security]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-013
+  confidence: 1.0
+
+- id: story-009
+  content: |
+    **STORY-009: Image Uploads - Phase 1 (Simple Presign)** (2026-01-20)
+
+    Presigned URL upload infrastructure.
+
+    Key learnings:
+    - Lambda multipart parser adapted for Vercel (Busboy with req.pipe())
+    - 4 of 5 planned handlers already existed (audit existing code first!)
+    - Vercel uses fetch for OpenSearch instead of SDK (justified adapter difference)
+    - @repo/vercel-multipart as new package template
+
+    Files: 14 (7 new package + 1 handler + 6 verified)
+    Blockers: None
+    Pattern: "Files verified" vs "Files changed" for pre-existing handlers
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, upload, presign, vercel, multipart]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-009
+  confidence: 1.0
+
+- id: story-014
+  content: |
+    **STORY-014: MOC Instructions - Import from URL** (2026-01-21)
+
+    Import MOC data from external URLs (Rebrickable, BrickLink).
+
+    Key learnings:
+    - AWS Lambda parsers reusable from Vercel via relative imports
+    - In-memory rate limiting (Map + sliding window) acceptable for MVP
+    - In-memory caching (Map + TTL) acceptable for stateless endpoints
+    - Extended function timeout (maxDuration: 15) for external fetches
+
+    Files: 3 (1 new, 2 modified)
+    Blockers: None
+    Bug found: Import path depth error (../../ vs ../../../) caught by TypeScript
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, import, external-api, rate-limiting]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-014
+  confidence: 1.0
+
+- id: story-015
+  content: |
+    **STORY-015: MOC Instructions - Initialization & Finalization** (2026-01-21)
+
+    Two-phase upload flow: initialize → upload → finalize.
+
+    Key learnings:
+    - DI with injected functions for S3 operations (generatePresignedUrl, headObject)
+    - Two-phase lock pattern: finalizingAt timestamp with TTL for stale lock rescue
+    - Optional deps for progressive enhancement (validatePartsFile optional)
+    - sanitizeFilenameForS3 utility handles path traversal and unicode
+
+    Files: 11 (6 new, 5 modified)
+    Tests: 51 (25 initialize + 26 finalize)
+    Blockers: None
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, initialize, finalize, two-phase, locking]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-015
+  confidence: 1.0
+
+- id: story-016
+  content: |
+    **STORY-016: MOC File Upload Management** (2026-01-21)
+
+    Complete file management: upload, edit, delete with parts list parsing.
+
+    Key learnings:
+    - 57 ACs is TOO LARGE - required 141 tests in fix phase
+    - Write tests alongside implementation, not after
+    - Parts list parser extraction from AWS to core validates reuse pattern
+    - Optimistic locking with expectedUpdatedAt for edit flows
+
+    Files: 18 (16 new, 2 modified)
+    Tests: 141 (written in fix phase!)
+    Blockers: Missing tests caught in verification
+
+    CRITICAL LESSON: Stories > 25 ACs have quality issues. Split them.
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, moc, files, upload, large-story, lessons]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-016
+  confidence: 1.0
+
+- id: story-wrkf-000
+  content: |
+    **WRKF-000: Story Workflow Harness** (2026-01-22)
+
+    Meta-story to validate the workflow process itself.
+
+    Key learnings:
+    - Harness stories make trivial code changes while exercising full workflow
+    - Documentation overhead is high but intentional for process validation
+    - Template extraction: PROOF, QA-VERIFY, ELAB templates created
+
+    Templates created in _templates/:
+    - PROOF-TEMPLATE.md
+    - QA-VERIFY-TEMPLATE.md
+    - ELAB-TEMPLATE.md
+
+    Purpose: Validate process machinery before feature stories
+  entry_type: summary
+  roles: [dev, pm, qa]
+  tags: [story, workflow, harness, templates, process]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: WRKF-000
+  confidence: 1.0
+
+- id: story-wrkf-1000
+  content: |
+    **WRKF-1000: Package Scaffolding** (2026-01-23)
+
+    Orchestrator package scaffold for LangGraph workflow.
+
+    Key learnings:
+    - @repo/moc-parts-lists-core is definitive backend package template
+    - pnpm workspace glob auto-discovery (no config changes needed)
+    - ESM exports pattern standardized ("type": "module")
+    - Plan validation prevented path mismatch issue
+
+    Files: 5 (all new)
+    Tokens: ~41k total, Planner most expensive (~16k)
+    Blockers: None (path issue caught in plan validation)
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, workflow, orchestrator, scaffolding, package]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: WRKF-1000
+  confidence: 1.0
+
+- id: story-wrkf-1010
+  content: |
+    **WRKF-1010: GraphState Schema** (2026-01-23)
+
+    Zod schemas for LangGraph workflow state.
+
+    Key learnings:
+    - Circular reference in Zod solved by creating separate "inner" schema
+    - Pure schema stories complete faster than handler stories
+    - Test-driven coverage works: 86 tests, 100% coverage, no fix phase
+    - Fresh package scaffolding accelerates follow-on stories
+
+    Files: 16 (15 new, 1 modified)
+    Tests: 86 (100% lines, 97.56% branches)
+    Tokens: ~70k total
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, workflow, orchestrator, schema, zod]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: WRKF-1010
+  confidence: 1.0
+
+- id: story-wrkf-1020
+  content: |
+    **WRKF-1020: Node Runner Infrastructure** (2026-01-24)
+
+    Node execution infrastructure with retry, circuit breaker, metrics.
+
+    Key learnings:
+    - @repo/api-client retry and circuit breaker patterns directly adaptable
+    - Pattern adaptation is efficient (reuse existing code)
+    - Larger stories benefit from orchestrator fix phase
+    - 220 tests for 11 source files (~20 tests per file) is appropriate
+
+    Files: 22 (11 source, 10 test, 1 modified)
+    Tests: 220
+    Tokens: ~118k total, Backend Coder most expensive (~44k)
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, workflow, orchestrator, node-runner, infrastructure]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: WRKF-1020
+  confidence: 1.0
+
+- id: story-wrkf-1021
+  content: |
+    **WRKF-1021: Node Execution Metrics** (2026-01-24)
+
+    Metrics collection for node execution monitoring.
+
+    Key learnings:
+    - RetryMetrics pattern from @repo/api-client directly reusable
+    - Check for naming conflicts before creating new types (ErrorCategory conflict)
+    - 17 ACs is manageable scope (vs 57 in STORY-016)
+    - RollingWindow class pattern reusable for other statistical calculations
+
+    Files: 7 (2 create, 5 modify)
+    Tests: 57 new (390 total in package)
+    Coverage: 97.64%
+    Tokens: ~100k total
+
+    CLEANEST IMPLEMENTATION: Zero post-implementation fixes required
+  entry_type: summary
+  roles: [dev, pm]
+  tags: [story, workflow, orchestrator, metrics, monitoring]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: WRKF-1021
+  confidence: 1.0
+
+# =============================================================================
+# PAIN POINTS & BOTTLENECKS
+# =============================================================================
+
+- id: pain-001
+  content: |
+    **Pain Point: Slow Lambda deployment cycle**
+
+    Lambda deployments take 5+ minutes per iteration. This severely impacts development
+    velocity during feature implementation.
+
+    Mitigation: API Portability initiative (Phase 1 of roadmap) enables local development
+    with Express + Docker PostgreSQL for 2-second restarts instead of 5-minute deploys.
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [pain-point, deployment, lambda, velocity]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: bottleneck
+    severity: high
+    status: mitigation-in-progress
+
+- id: pain-002
+  content: |
+    **Pain Point: serverless.yml size and complexity**
+
+    The serverless.yml file is 70KB and growing. Reading it costs ~17,500 tokens.
+    Finding the right resource definition is difficult. Changes risk breaking unrelated
+    resources.
+
+    Impact: Slows agent context loading, increases error risk.
+    Mitigation: Use grep to extract specific sections. Consider splitting by domain.
+  entry_type: fact
+  roles: [dev]
+  tags: [pain-point, serverless, config, complexity]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+  metadata:
+    category: technical-debt
+    severity: medium
+
+- id: pain-003
+  content: |
+    **Pain Point: Pre-existing build failures block verification**
+
+    Multiple packages have pre-existing build/type-check failures that predate current
+    work. This forces developers to use scoped verification commands instead of
+    monorepo-wide checks, risking missed regressions.
+
+    Affected packages: @repo/app-dashboard, @repo/app-wishlist-gallery, @repo/file-validator,
+    @repo/mock-data, @repo/pii-sanitizer, @repo/sets-core, @repo/gallery-core
+
+    Status: Tech debt, no active remediation planned.
+  entry_type: fact
+  roles: [dev, qa]
+  tags: [pain-point, build, technical-debt, monorepo]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+  metadata:
+    category: technical-debt
+    severity: medium
+    status: open
+
+- id: pain-004
+  content: |
+    **Pain Point: Seed data inconsistency**
+
+    `pnpm seed` fails due to schema mismatch (tags: text[] vs jsonb). This has blocked
+    3+ stories. Developers must manually insert data or use partial seed commands.
+
+    Impact: Slows local development setup, causes inconsistent test data.
+    Workaround: Direct SQL inserts or domain-specific seed commands.
+  entry_type: fact
+  roles: [dev]
+  tags: [pain-point, seed, database, data]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+  metadata:
+    category: bug
+    severity: medium
+    status: open
+
+- id: pain-005
+  content: |
+    **Pain Point: Token cost of context loading**
+
+    Each sub-agent re-reads story files, implementation plans, and LESSONS-LEARNED.md.
+    For a 5-agent workflow, this redundant reading costs 30,000-50,000 tokens per story.
+
+    Impact: Higher API costs, slower execution, risk of context truncation.
+    Mitigation opportunity: Pass context through agent chain, cache in shared state.
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [pain-point, tokens, agents, cost]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  confidence: 1.0
+  metadata:
+    category: optimization-opportunity
+    severity: medium
+
+- id: pain-006
+  content: |
+    **Pain Point: Story sizing discipline**
+
+    STORY-016 had 57 ACs and required a substantial fix phase (141 tests written after
+    implementation). Large stories are harder to implement correctly, review effectively,
+    and verify completely.
+
+    Pattern: Stories > 25 ACs tend to have quality issues.
+    Mitigation: Enforce 15-25 AC limit, use /pm-story split for oversized stories.
+  entry_type: fact
+  roles: [pm]
+  tags: [pain-point, story-sizing, process, quality]
+  source_file: plans/stories/LESSONS-LEARNED.md
+  source_story: STORY-016
+  confidence: 1.0
+  metadata:
+    category: process
+    severity: high
+
+# =============================================================================
+# FEATURE CHURN & COMPLEXITY HOTSPOTS
+# =============================================================================
+
+- id: churn-001
+  content: |
+    **High Churn Area: MOC Instructions domain**
+
+    The moc-instructions-core package has the most complex flows:
+    - Initialize with files (presign → upload → finalize)
+    - Edit with files (presign → upload → finalize with optimistic locking)
+    - Parts list parsing (CSV/XML with multiple format support)
+
+    Stories STORY-015 and STORY-016 both touched this area with significant complexity.
+    Future changes here require extra care and comprehensive testing.
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [churn, complexity, moc-instructions, hotspot]
+  source_file: packages/backend/moc-instructions-core
+  confidence: 1.0
+  metadata:
+    category: complexity-hotspot
+
+- id: churn-002
+  content: |
+    **High Churn Area: Vercel routing configuration**
+
+    vercel.json routes have been modified in 5+ stories. Route ordering bugs are common
+    (specific routes must precede parameterized routes). Each new endpoint requires
+    careful placement.
+
+    Pattern: Check route order after every vercel.json change.
+  entry_type: fact
+  roles: [dev]
+  tags: [churn, vercel, routing, config]
+  source_file: apps/api/platforms/vercel/vercel.json
+  confidence: 1.0
+  metadata:
+    category: complexity-hotspot
+
+- id: churn-003
+  content: |
+    **Complexity Hotspot: Nested albums (DAG structure)**
+
+    Epic 5 (Inspiration Gallery) includes nested album support with directed acyclic
+    graph structure. This requires:
+    - Cycle detection to prevent infinite loops
+    - Breadcrumb navigation through hierarchy
+    - Careful delete semantics (cascade vs orphan)
+
+    Risk: Medium probability, medium impact per roadmap risk assessment.
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [complexity, albums, dag, epic-5, risk]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: complexity-hotspot
+    epic: epic-5
+
+- id: churn-004
+  content: |
+    **Integration Complexity: Wishlist → Sets "Got It" flow**
+
+    When a user marks a wishlist item as "Got it", it should:
+    1. Create a new Set entry (or link to existing)
+    2. Optionally transfer metadata
+    3. Archive or delete the wishlist item
+
+    This cross-domain flow touches both Epic 6 (Wishlist) and Epic 7 (Sets).
+    Roadmap marks this as critical dependency: Epic 6 must complete before Epic 7.
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [integration, wishlist, sets, got-it, cross-domain]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: integration-point
+    epics: [epic-6, epic-7]
+
+# =============================================================================
+# PRODUCT ROADMAP
+# =============================================================================
+
+- id: roadmap-001
+  content: |
+    **Launch Roadmap: 11-Week Sprint to Production**
+
+    | Phase | Duration | Focus |
+    |-------|----------|-------|
+    | Phase 1 | Weeks 1-2 | API Portability (local dev environment) |
+    | Phase 2 | Weeks 3-4 | AI Automation (MCP servers, skills) |
+    | Phase 3 | Weeks 5-9 | Feature Implementation (3 epics, 86 stories) |
+    | Phase 4 | Weeks 10-11 | Polish & Launch (E2E tests, docs, deploy) |
+
+    Created: 2025-12-27
+    Status: Active
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [roadmap, launch, timeline, overview]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: roadmap
+    stability: evolving
+
+- id: roadmap-002
+  content: |
+    **Epic Summary & Story Counts**
+
+    | Epic | Stories | Status | Description |
+    |------|---------|--------|-------------|
+    | Epic 5: Inspiration Gallery | 51 | Planned | User image galleries with nested albums |
+    | Epic 6: Wishlist | 13 | Planned | LEGO set wishlist with "Got It" flow |
+    | Epic 7: Sets Gallery | 22 | Planned | Owned LEGO sets catalog |
+    | Epic 0: Launch Readiness | 53 | Planned | Documentation, runbooks, polish |
+
+    Total: 139 stories for launch
+  entry_type: fact
+  roles: [pm]
+  tags: [roadmap, epics, stories, scope]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: roadmap
+    stability: evolving
+
+- id: roadmap-003
+  content: |
+    **Epic 5: Inspiration Gallery (51 stories)**
+
+    User's personal gallery for LEGO inspiration images.
+
+    Core features:
+    - Image upload with S3 presign
+    - Album system with nesting (DAG)
+    - CRUD for images and albums
+    - Multi-image upload
+    - Drag-drop reorder
+    - MOC linking
+
+    Complexity: High (nested albums, DAG structure)
+    Dependencies: None (can start independently)
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [roadmap, epic-5, inspiration, gallery, features]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: epic
+    epic_id: epic-5
+
+- id: roadmap-004
+  content: |
+    **Epic 6: Wishlist (13 stories)**
+
+    User's wishlist for desired LEGO sets.
+
+    Core features:
+    - Add items (manual or scraped from URLs)
+    - Priority/reorder
+    - "Got It" flow (converts to owned Set)
+    - Integration with Sets gallery
+
+    Complexity: Medium
+    Dependencies: None for core, Sets for "Got It" receiver
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [roadmap, epic-6, wishlist, features]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: epic
+    epic_id: epic-6
+
+- id: roadmap-005
+  content: |
+    **Epic 7: Sets Gallery (22 stories)**
+
+    Catalog of user's owned LEGO sets.
+
+    Core features:
+    - Set CRUD with images
+    - Build status tracking
+    - Quantity management
+    - Wishlist integration ("Got It" receiver)
+    - MOC linking
+    - Duplicate detection
+
+    Complexity: Medium
+    Dependencies: Epic 6 (Wishlist) for "Got It" flow
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [roadmap, epic-7, sets, features]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: epic
+    epic_id: epic-7
+
+- id: roadmap-006
+  content: |
+    **Critical Path Dependencies**
+
+    1. API Portability → AI Automation (MCP needs local env to test against)
+    2. AI Automation → Features (Skills multiply velocity 8-16x)
+    3. Epic 6 (Wishlist) → Epic 7 (Sets) ("Got It" flow creates Sets from Wishlist)
+    4. All Features → Launch Readiness (Docs must cover implemented features)
+
+    Breaking any of these dependencies delays downstream work.
+  entry_type: fact
+  roles: [pm]
+  tags: [roadmap, dependencies, critical-path]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: roadmap
+
+# =============================================================================
+# PRODUCT DECISIONS & RATIONALE
+# =============================================================================
+
+- id: decision-001
+  content: |
+    **Decision: Hexagonal Architecture for API**
+
+    Rationale: Enables platform flexibility (Lambda, Express, Vercel) without
+    duplicating business logic. Core functions are platform-agnostic; adapters
+    handle transport-specific concerns.
+
+    Date: 2025-12-27
+    Owner: Platform Engineering
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [decision, architecture, hexagonal, ports-adapters]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: adr
+    decision_date: "2025-12-27"
+
+- id: decision-002
+  content: |
+    **Decision: Lambda as primary production, Express for local dev**
+
+    Rationale:
+    - Lambda: Maintains AWS serverless skills, production-proven, cost-effective
+    - Express: Fast local iteration (2s restart vs 5min deploy), mature ecosystem
+
+    This dual-adapter approach keeps development fast while production stays serverless.
+
+    Date: 2025-12-27
+  entry_type: fact
+  roles: [dev]
+  tags: [decision, architecture, lambda, express, deployment]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: adr
+    decision_date: "2025-12-27"
+
+- id: decision-003
+  content: |
+    **Decision: Zod-first types, no TypeScript interfaces**
+
+    Rationale:
+    - Runtime validation at API boundaries
+    - Single source of truth (schema = type)
+    - Self-documenting constraints (min, max, email, uuid)
+    - Automatic type inference with z.infer<>
+
+    This is a HARD RULE. Use `z.infer<typeof Schema>` for all types.
+  entry_type: fact
+  roles: [dev]
+  tags: [decision, types, zod, typescript, rule]
+  source_file: CLAUDE.md
+  confidence: 1.0
+  metadata:
+    category: convention
+    enforcement: strict
+
+- id: decision-004
+  content: |
+    **Decision: Hard delete for galleries (no soft delete)**
+
+    Rationale: This is a single-user portfolio app, not a multi-tenant SaaS.
+    Soft delete adds complexity without benefit. Users can use backups if needed.
+
+    Applies to: Inspiration Gallery, Albums, Wishlist items, Sets
+
+    Date: 2025-12-27
+    Owner: Product
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [decision, delete, data, product]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: product-decision
+    decision_date: "2025-12-27"
+
+- id: decision-005
+  content: |
+    **Decision: AI automation before feature implementation**
+
+    Rationale: MCP servers and skills multiply development velocity 8-16x.
+    Investing 2 weeks in automation before the 5-week feature sprint yields
+    net time savings.
+
+    Without automation: 2-4 hours per endpoint
+    With automation: 15-30 minutes per endpoint
+
+    Date: 2025-12-27
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [decision, automation, mcp, velocity, process]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: process-decision
+    decision_date: "2025-12-27"
+
+# =============================================================================
+# BUSINESS CONTEXT
+# =============================================================================
+
+- id: biz-001
+  content: |
+    **Product: LEGO MOC Instructions Platform**
+
+    A platform for LEGO enthusiasts to:
+    - Upload and manage MOC (My Own Creation) building instructions
+    - Organize inspiration images in galleries/albums
+    - Track owned LEGO sets
+    - Manage a wishlist of desired sets
+    - Link MOCs to the parts and sets needed to build them
+
+    Target user: LEGO hobbyists who create or collect custom builds
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [product, overview, business]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: business-context
+
+- id: biz-002
+  content: |
+    **Launch Criteria (Definition of Done for v1.0)**
+
+    - All 3 feature epics complete and integrated
+    - E2E test suites passing
+    - Production deployment validated
+    - Operational runbooks in place
+    - Cost: $0 local dev + AWS production maintained
+
+    Target: 11 weeks from roadmap start
+  entry_type: fact
+  roles: [pm, qa]
+  tags: [launch, criteria, definition-of-done]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: business-context
+
+- id: biz-003
+  content: |
+    **Primary User Flows**
+
+    1. **Upload MOC Instructions**: Create → Upload files → Add parts list → Finalize
+    2. **Manage Inspiration**: Browse gallery → Create album → Upload images → Organize
+    3. **Track Sets**: Add set → Mark build status → Link to MOCs
+    4. **Wishlist → Owned**: Add to wishlist → "Got It" → Creates Set entry
+
+    These represent the core value proposition of the platform.
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [user-flows, product, features]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: business-context
+
+# =============================================================================
+# RISKS & MITIGATIONS
+# =============================================================================
+
+- id: risk-001
+  content: |
+    **Risk: Service extraction breaks production**
+
+    Probability: Medium
+    Impact: High
+
+    Context: Phase 1 (API Portability) extracts services from Lambda handlers.
+    Incorrect extraction could break production endpoints.
+
+    Mitigations:
+    - Comprehensive testing before deployment
+    - Staged rollout with feature flags
+    - Ability to quickly rollback
+  entry_type: fact
+  roles: [dev, pm]
+  tags: [risk, production, api, deployment]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: risk
+    probability: medium
+    impact: high
+
+- id: risk-002
+  content: |
+    **Risk: 11-week timeline too aggressive**
+
+    Probability: Medium
+    Impact: Medium
+
+    Context: 139 stories in 11 weeks is ambitious, even with AI automation.
+
+    Mitigations:
+    - P2 stories can be deferred to post-launch
+    - Core features (P0) prioritized
+    - Weekly progress checkpoints
+  entry_type: fact
+  roles: [pm]
+  tags: [risk, timeline, planning]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: risk
+    probability: medium
+    impact: medium
+
+- id: risk-003
+  content: |
+    **Risk: AI automation doesn't deliver 10x velocity**
+
+    Probability: Low
+    Impact: High
+
+    Context: Phase 3 velocity assumptions depend on Phase 2 automation working.
+
+    Mitigations:
+    - Start Phase 3 only after automation validated
+    - Fallback to manual development if needed
+    - Track actual vs expected velocity weekly
+  entry_type: fact
+  roles: [pm, dev]
+  tags: [risk, automation, velocity]
+  source_file: docs/prd/unified-launch-roadmap.md
+  confidence: 1.0
+  metadata:
+    category: risk
+    probability: low
+    impact: high

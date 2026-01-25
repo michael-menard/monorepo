@@ -1,11 +1,27 @@
-# Security Lead - Epic Review Agent
+---
+created: 2026-01-24
+updated: 2026-01-24
+version: 3.0.0
+type: worker
+permission_level: read-only
+triggers: ["/elab-epic"]
+---
+
+# Agent: elab-epic-security
+
+**Model**: haiku
 
 Review epic from security perspective. Return YAML only.
 
 ## Input
-- `PREFIX`: Epic prefix
-- `stories_index`: plans/stories/{PREFIX}.stories.index.md
-- Read: meta plan, exec plan, roadmap
+- `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
+- `PREFIX`: Story prefix (e.g., "WISH")
+
+Read from `{FEATURE_DIR}/`:
+- `stories.index.md`
+- `PLAN.meta.md`
+- `PLAN.exec.md`
+- `roadmap.md`
 
 ## Task
 Analyze security risks, OWASP coverage, compliance, data handling.

@@ -1,0 +1,407 @@
+# Architectural Decisions
+# Generated: 2026-01-24
+#
+# Decisions extracted from codebase analysis of apps/ and packages/
+
+---
+
+# =============================================================================
+# TYPE SYSTEM
+# =============================================================================
+
+- id: adr-types-001
+  content: |
+    **Zod-first types - no TypeScript interfaces**
+
+    All types derived from Zod schemas via `z.infer<typeof Schema>`.
+    Never use `interface` or standalone `type` aliases.
+
+    Benefits: Runtime validation, single source of truth, self-documenting constraints.
+
+    Rejected: Pure TS interfaces (no runtime validation), io-ts (verbose).
+  entry_type: decision
+  roles: [dev]
+  tags: [types, zod, typescript, rule, critical]
+  source_file: CLAUDE.md
+  confidence: 1.0
+
+# =============================================================================
+# IMPORTS & MODULES
+# =============================================================================
+
+- id: adr-imports-001
+  content: |
+    **No barrel files - direct imports only**
+
+    Import from specific paths, never from index re-exports.
+
+    CORRECT: `import { Button } from '@repo/ui/buttons/custom-button'`
+    WRONG: `import { Button } from '@repo/ui'`
+
+    Benefits: Tree-shaking, clear dependencies, no circular imports.
+  entry_type: decision
+  roles: [dev]
+  tags: [imports, modules, tree-shaking, rule]
+  source_file: CLAUDE.md
+  confidence: 1.0
+
+- id: adr-imports-002
+  content: |
+    **Path aliases for imports**
+
+    Use semantic path aliases defined in vite.config.ts:
+    - `@/` → `./src/`
+    - `@/components/` → `./src/components/`
+    - `@/hooks/` → `./src/hooks/`
+    - `@/lib/` → `./src/lib/`
+    - `@/services/` → `./src/services/`
+    - `@/store/` → `./src/store/`
+    - `@/types/` → `./src/types/`
+  entry_type: decision
+  roles: [dev]
+  tags: [imports, paths, config]
+  source_file: apps/web/main-app/vite.config.ts
+  confidence: 1.0
+
+# =============================================================================
+# FRONTEND ARCHITECTURE
+# =============================================================================
+
+- id: adr-frontend-001
+  content: |
+    **React 19 + Vite + TanStack Router**
+
+    - React 19.1.0: Functional components only, no class components
+    - Vite 6.x: Build tool with React-SWC transpiler
+    - TanStack Router v1.130+: Type-safe client-side routing
+
+    Rejected: Next.js (SSR not needed), Create React App (deprecated).
+  entry_type: decision
+  roles: [dev]
+  tags: [frontend, react, vite, router]
+  source_file: apps/web/main-app/package.json
+  confidence: 1.0
+
+- id: adr-frontend-002
+  content: |
+    **RTK Query for API state**
+
+    Redux Toolkit 2.8.2 + RTK Query for:
+    - Server state management
+    - Request deduplication
+    - Built-in caching
+    - Retry logic for Lambda cold starts
+
+    Rejected: React Query (RTK already in use), SWR (less features).
+  entry_type: decision
+  roles: [dev]
+  tags: [frontend, state, rtk-query, api]
+  source_file: packages/core/api-client
+  confidence: 1.0
+
+- id: adr-frontend-003
+  content: |
+    **Component layering: Primitives → App Components**
+
+    Layer 1: `_primitives/` - Raw shadcn/Radix wrappers, minimal customization
+    Layer 2: Feature folders - App-specific composed components
+
+    Example:
+    - `_primitives/button.tsx` → raw shadcn Button
+    - `buttons/custom-button.tsx` → app-level CustomButton
+  entry_type: decision
+  roles: [dev]
+  tags: [frontend, components, architecture, shadcn]
+  source_file: packages/core/app-component-library
+  confidence: 1.0
+
+- id: adr-frontend-004
+  content: |
+    **Tailwind CSS v4 for styling**
+
+    Utility-first CSS with `@tailwindcss/vite` plugin.
+
+    Rules:
+    - Never hardcode colors - use Tailwind classes
+    - Use design tokens from @repo/design-system
+    - Framer Motion 12.23 for animations
+  entry_type: decision
+  roles: [dev]
+  tags: [frontend, styling, tailwind, css]
+  source_file: packages/core/design-system
+  confidence: 1.0
+
+# =============================================================================
+# BACKEND ARCHITECTURE
+# =============================================================================
+
+- id: adr-backend-001
+  content: |
+    **Hexagonal architecture (Ports & Adapters)**
+
+    Core functions are platform-agnostic. Adapters handle transport.
+    Same business logic runs on Lambda, Express, and Vercel.
+
+    Structure:
+    - Core: `packages/backend/*-core/` - pure business logic with DI
+    - Adapters: `apps/api/handlers/` (Lambda), `platforms/vercel/api/` (Vercel)
+  entry_type: decision
+  roles: [dev]
+  tags: [backend, architecture, hexagonal, ports-adapters]
+  source_file: packages/backend
+  confidence: 1.0
+
+- id: adr-backend-002
+  content: |
+    **Drizzle ORM + PostgreSQL**
+
+    - Drizzle 0.44.3: Type-safe, minimal runtime overhead
+    - PostgreSQL: Aurora (AWS), Neon (serverless edge)
+    - Schema in `packages/backend/database-schema/`
+
+    Rejected: Prisma (runtime overhead), TypeORM (heavy).
+  entry_type: decision
+  roles: [dev]
+  tags: [backend, database, drizzle, postgresql]
+  source_file: packages/backend/database-schema
+  confidence: 1.0
+
+- id: adr-backend-003
+  content: |
+    **UUID primary keys, Cognito sub as user_id**
+
+    - All primary keys: UUID with `defaultRandom()`
+    - User ID: text field referencing Cognito `sub` claim
+    - No separate users table - Cognito is source of truth
+
+    Benefits: Simplified data model, no user sync needed.
+  entry_type: decision
+  roles: [dev]
+  tags: [backend, database, auth, cognito]
+  source_file: packages/backend/database-schema
+  confidence: 1.0
+
+- id: adr-backend-004
+  content: |
+    **Serverless Framework for AWS deployment**
+
+    - Serverless Framework 3.40 with esbuild bundling
+    - Stage-based configs: dev, staging, production
+    - Per-function IAM roles via serverless-iam-roles-per-function
+
+    Cost optimization: Reduced memory in dev, version pruning enabled.
+  entry_type: decision
+  roles: [dev]
+  tags: [backend, deployment, serverless, aws, lambda]
+  source_file: apps/api/serverless.yml
+  confidence: 1.0
+
+- id: adr-backend-005
+  content: |
+    **Discriminated union result types**
+
+    All core functions return:
+    ```typescript
+    type Result =
+      | { success: true; data: T }
+      | { success: false; error: ErrorCode; message: string }
+    ```
+
+    Benefits: Exhaustive error handling, clear API contract, type narrowing.
+  entry_type: decision
+  roles: [dev]
+  tags: [backend, types, result, pattern]
+  source_file: packages/backend/gallery-core
+  confidence: 1.0
+
+# =============================================================================
+# LOGGING & OBSERVABILITY
+# =============================================================================
+
+- id: adr-logging-001
+  content: |
+    **Centralized logging via @repo/logger - never console.log**
+
+    - Pino backend with structured JSON
+    - Environment-specific transports
+    - Lambda: correlation IDs, X-Ray trace integration
+    - Frontend: localStorage transport option
+
+    ESLint warns on console.* usage.
+  entry_type: decision
+  roles: [dev]
+  tags: [logging, observability, pino, rule]
+  source_file: packages/core/logger
+  confidence: 1.0
+
+# =============================================================================
+# DIRECTORY CONVENTIONS
+# =============================================================================
+
+- id: adr-structure-001
+  content: |
+    **Component directory structure**
+
+    ```
+    ComponentName/
+      index.tsx              # Main component
+      __tests__/
+        ComponentName.test.tsx
+      __types__/
+        index.ts             # Zod schemas (if component-specific)
+      utils/
+        index.ts             # Component utilities
+    ```
+
+    Shared types go in central `__types__/`, not component-local.
+  entry_type: decision
+  roles: [dev]
+  tags: [structure, components, convention]
+  source_file: CLAUDE.md
+  confidence: 1.0
+
+- id: adr-structure-002
+  content: |
+    **Backend package structure**
+
+    ```
+    packages/backend/{name}/
+      package.json           # "type": "module", exports map
+      tsconfig.json          # extends base
+      vitest.config.ts
+      src/
+        index.ts             # Re-exports public API
+        __types__/index.ts   # Zod schemas
+        __tests__/*.test.ts  # Unit tests
+        {function}.ts        # One file per core function
+    ```
+
+    Template: @repo/moc-parts-lists-core
+  entry_type: decision
+  roles: [dev]
+  tags: [structure, backend, package, convention]
+  source_file: packages/backend/moc-parts-lists-core
+  confidence: 1.0
+
+# =============================================================================
+# CODE STYLE
+# =============================================================================
+
+- id: adr-style-001
+  content: |
+    **Prettier formatting (auto-enforced)**
+
+    - No semicolons
+    - Single quotes
+    - Trailing commas always
+    - 100 char line width
+    - 2 space indentation
+    - Arrow parens: `x => x` not `(x) => x`
+  entry_type: decision
+  roles: [dev]
+  tags: [style, prettier, formatting]
+  source_file: .prettierrc
+  confidence: 1.0
+
+- id: adr-style-002
+  content: |
+    **Functional components only**
+
+    - Function declarations, not arrow functions for components
+    - Named exports preferred over default exports
+    - No class components ever
+  entry_type: decision
+  roles: [dev]
+  tags: [style, react, components]
+  source_file: CLAUDE.md
+  confidence: 1.0
+
+# =============================================================================
+# TESTING
+# =============================================================================
+
+- id: adr-testing-001
+  content: |
+    **Test pyramid: Vitest + RTL + Playwright**
+
+    - Unit (70%): Vitest + React Testing Library
+    - Integration (20%): Vitest with real interactions
+    - E2E (10%): Playwright with semantic queries
+
+    Coverage: 45% global minimum, 75-100% critical paths.
+  entry_type: decision
+  roles: [dev, qa]
+  tags: [testing, vitest, playwright, coverage]
+  source_file: CLAUDE.md
+  confidence: 1.0
+
+- id: adr-testing-002
+  content: |
+    **MSW for API mocking in unit tests**
+
+    Mock Service Worker for API mocking in Vitest.
+    NOT used in Playwright E2E (real backend).
+  entry_type: decision
+  roles: [dev]
+  tags: [testing, msw, mocking]
+  source_file: apps/web/main-app/src/test/setup.ts
+  confidence: 1.0
+
+# =============================================================================
+# MONOREPO TOOLING
+# =============================================================================
+
+- id: adr-monorepo-001
+  content: |
+    **pnpm + Turborepo**
+
+    - pnpm 9.0.0: Package management and workspaces
+    - Turborepo 2.5.4: Build orchestration with caching
+    - Workspace deps use `workspace:*`
+
+    Auto-discovery: packages/core/*, packages/backend/*, apps/*
+  entry_type: decision
+  roles: [dev]
+  tags: [monorepo, pnpm, turborepo]
+  source_file: pnpm-workspace.yaml
+  confidence: 1.0
+
+- id: adr-monorepo-002
+  content: |
+    **ESM packages ("type": "module")**
+
+    All packages use ES Modules:
+    ```json
+    {
+      "type": "module",
+      "exports": { ".": "./dist/index.js" }
+    }
+    ```
+  entry_type: decision
+  roles: [dev]
+  tags: [monorepo, esm, modules]
+  source_file: packages/backend/moc-parts-lists-core/package.json
+  confidence: 1.0
+
+# =============================================================================
+# REJECTED ALTERNATIVES
+# =============================================================================
+
+- id: adr-rejected-001
+  content: |
+    **Rejected alternatives summary**
+
+    | Rejected | Chosen | Reason |
+    |----------|--------|--------|
+    | TS interfaces | Zod schemas | No runtime validation |
+    | Barrel files | Direct imports | Circular deps, tree-shaking |
+    | Prisma | Drizzle | Runtime overhead |
+    | Separate user table | Cognito sub | Simplicity |
+    | Class components | Functional | Modern React |
+    | Next.js | Vite + TanStack | SSR not needed |
+    | console.log | @repo/logger | Structured logging |
+  entry_type: decision
+  roles: [dev]
+  tags: [decisions, rejected, alternatives]
+  source_file: CLAUDE.md
+  confidence: 1.0
