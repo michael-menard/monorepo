@@ -1,8 +1,46 @@
-# Epic 6: Wishlist Feature Plan
+# Epic 6: Wishlist Feature
 
-## Overview
+**Status:** In Progress
+**Story Location:** `plans/future/wish/`
 
-This plan covers the implementation of a Wishlist feature for tracking LEGO sets and MOC instructions users want to purchase. The feature includes a full CRUD interface with gallery view, filtering, drag-and-drop reordering, and a "Got It" flow to transition items to the user's collection.
+---
+
+## Epic Goal
+
+Enable users to track LEGO and alt-brick sets they want to purchase, with a gallery view for easy browsing and a "Got it" flow to transition items to their Sets collection.
+
+---
+
+## Epic Description
+
+### Context
+
+The Wishlist is a purchase tracking tool for LEGO builders. Users add sets they want to buy, track priority and notes, and eventually mark items as purchased (moving them to the Sets Gallery).
+
+**Key Differentiators from other galleries:**
+- Focused on external products (sets from LEGO.com and other retailers)
+- Images stored in S3 (not hotlinked)
+- "Got it" flow transitions items to Sets Gallery
+- Draggable for manual priority ordering
+- Hard delete (no restore)
+
+### Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Wishlist Item** | A set the user wants to purchase, with manually entered data |
+| **"Got it" Flow** | Marks item as purchased, prompts for purchase details, moves to Sets Gallery |
+| **Priority** | User-defined ordering via drag-and-drop |
+
+### Success Criteria
+
+- Users can add sets with manual entry
+- Gallery supports sorting, filtering, and tagging (via shared gallery package)
+- Draggable reordering for priority
+- "Got it" button triggers purchase flow and moves item to Sets
+- Hard delete with confirmation works correctly
+
+---
 
 ## Tech Stack
 
@@ -12,7 +50,104 @@ This plan covers the implementation of a Wishlist feature for tracking LEGO sets
 
 ---
 
+## Backend API Architecture
+
+The backend uses a **Ports and Adapters (Hexagonal Architecture)** pattern to keep business logic platform-agnostic and deployable to multiple runtimes.
+
+### Directory Structure
+
+```
+apps/api/
+  core/                           # Shared domain logic (the "ports")
+    database/
+      schema/                     # Drizzle schemas (wishlistItems, etc.)
+      client.ts                   # Database connection
+      migrations/                 # SQL migrations
+    auth/                         # Authentication utilities
+    cache/                        # Redis client
+    storage/                      # S3 utilities
+    observability/                # Logging, metrics, tracing
+    utils/                        # Shared helpers (responses, errors, etc.)
+
+  platforms/                      # Platform-specific adapters
+    aws/
+      endpoints/
+        wishlist/
+          list/handler.ts         # AWS Lambda handler
+          get-item/handler.ts
+          create-item/handler.ts
+          ...
+    vercel/
+      api/
+        wishlist/
+          list.ts                 # Vercel serverless function
+          [id].ts
+          ...
+```
+
+### How It Works
+
+1. **Core (`apps/api/core/`)** contains all shared business logic:
+   - Database schemas and queries (Drizzle)
+   - Validation schemas (Zod)
+   - Service utilities (auth, caching, storage)
+   - Response/error formatting
+
+2. **Platform Adapters (`apps/api/platforms/`)** translate platform-specific request/response formats:
+   - **AWS Lambda**: Handles `APIGatewayProxyEventV2` and returns `APIGatewayProxyResultV2`
+   - **Vercel**: Handles `VercelRequest` and `VercelResponse`
+
+3. **Both platforms import from core**:
+   ```typescript
+   // AWS Lambda handler
+   import { db } from '@/core/database/client'
+   import { wishlistItems } from '@/core/database/schema'
+   import { successResponse, errorResponse } from '@/core/utils/responses'
+   ```
+
+### Benefits
+
+- **Single source of truth** for business logic
+- **Deploy to multiple platforms** without duplicating code
+- **Easier testing** - core logic can be unit tested without platform dependencies
+- **Flexibility** - add new platforms (e.g., Cloudflare Workers) by creating new adapters
+
+### Wishlist Endpoints by Platform
+
+| Endpoint | AWS Lambda | Vercel |
+|----------|------------|--------|
+| List | `platforms/aws/endpoints/wishlist/list/handler.ts` | `platforms/vercel/api/wishlist/list.ts` |
+| Get | `platforms/aws/endpoints/wishlist/get-item/handler.ts` | `platforms/vercel/api/wishlist/[id].ts` |
+| Create | `platforms/aws/endpoints/wishlist/create-item/handler.ts` | `platforms/vercel/api/wishlist/create.ts` |
+| Update | `platforms/aws/endpoints/wishlist/update-item/handler.ts` | `platforms/vercel/api/wishlist/[id].ts` |
+| Delete | `platforms/aws/endpoints/wishlist/delete-item/handler.ts` | `platforms/vercel/api/wishlist/[id].ts` |
+| Reorder | `platforms/aws/endpoints/wishlist/reorder/handler.ts` | `platforms/vercel/api/wishlist/reorder.ts` |
+
+---
+
 ## Data Model
+
+### Wishlist Item Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | UUID | Yes | Primary identifier |
+| `userId` | UUID | Yes | Owner |
+| `title` | string | Yes | Set name |
+| `store` | string | Yes | Retailer name (LEGO, Barweer, Cata, BrickLink, Other) |
+| `setNumber` | string | No | LEGO set number (e.g., "75192") |
+| `sourceUrl` | string | No | Original product URL |
+| `imageUrl` | string | No | S3 URL to stored product image |
+| `price` | decimal | No | Listed price |
+| `currency` | string | No | Price currency (default: USD) |
+| `pieceCount` | number | No | Number of pieces |
+| `releaseDate` | date | No | Set release date |
+| `tags` | string[] | No | Theme/category tags |
+| `priority` | number | No | User-defined priority (0-5 scale) |
+| `notes` | string | No | User notes (e.g., "wait for sale") |
+| `sortOrder` | number | Yes | Position in gallery (for drag reorder) |
+| `createdAt` | datetime | Yes | Added to wishlist timestamp |
+| `updatedAt` | datetime | Yes | Last modified timestamp |
 
 ### Database Schema (Drizzle)
 
@@ -78,6 +213,146 @@ Located in `packages/core/api-client/src/schemas/wishlist.ts`:
 
 ---
 
+## CRUD Operations
+
+### Create
+
+| Operation | Trigger | Flow |
+|-----------|---------|------|
+| **Add manually** | "Add" button | Open form -> enter all fields -> save |
+
+### Read
+
+| Operation | Description |
+|-----------|-------------|
+| **Gallery View** | Grid/list of wishlist items. Uses shared gallery package. |
+| **Detail View** | Full item details with image, metadata, notes |
+| **Filter** | By text, store, tags |
+| **Sort** | By price, date released/added, piece count, priority |
+
+### Update
+
+| Operation | Scope | Notes |
+|-----------|-------|-------|
+| **Edit Metadata** | Any field | Title, price, notes, tags, priority, etc. |
+| **Reorder** | Gallery view | Drag to new position (priority ordering) |
+
+### Delete
+
+| Operation | Flow |
+|-----------|------|
+| **Delete Item** | Confirmation modal ("Are you sure? This is permanent.") -> hard delete |
+| **"Got it"** | Not a delete - see Transition to Sets below |
+
+---
+
+## Transition to Sets ("Got it" Flow)
+
+When user clicks "Got it" on a wishlist item:
+
+1. **Modal opens** with pre-filled data from wishlist item
+2. **Additional fields requested:**
+   - Purchase price (may differ from listed price)
+   - Tax amount
+   - Shipping cost
+   - Quantity purchased
+   - Purchase date (defaults to today)
+3. **On confirm:**
+   - Create new Set item with all data
+   - Delete wishlist item (unless "Keep on wishlist" checked)
+   - Show success toast with Undo option
+
+### "Got it" Modal
+
+```
++-----------------------------------------------------+
+|  Add to Your Collection                             |
+|                                                     |
+|  [Image]  LEGO Star Wars Millennium Falcon          |
+|           Set #75192 - 7,541 pieces                 |
+|                                                     |
+|  ---------------------------------------------------+
+|                                                     |
+|  Purchase Details                                   |
+|                                                     |
+|  Price paid:     [$849.99    ]                      |
+|  Tax:            [$72.25     ]                      |
+|  Shipping:       [$0.00      ]                      |
+|  Quantity:       [- 1 +]                            |
+|  Purchase date:  [Dec 27, 2024 v]                   |
+|                                                     |
+|  [ ] Keep a copy on wishlist (want another)         |
+|                                                     |
+|              [Cancel]  [Add to Sets]                |
++-----------------------------------------------------+
+```
+
+---
+
+## User Interface
+
+### Gallery View
+
+- Uses shared gallery package (sorting, filtering, tags)
+- Grid or list layout (user preference)
+- Drag-and-drop reordering for priority
+- "Add" button opens add form
+- Each card shows: image, title, store badge, price, piece count, priority indicator
+- Hover action menu: View, Edit, Remove, Got It
+- Visual priority indicators (position = priority)
+
+### Add Item Form
+
+**Form Fields:**
+- Store (required): LEGO, Barweer, Cata, BrickLink, Other
+- Title (required)
+- Set Number (optional)
+- Price + Currency
+- Piece Count
+- Priority (0-5 scale)
+- Image upload
+- Source URL
+- Notes
+- Tags
+
+### Detail Page
+
+- Large product image with fallback
+- Full metadata display (price, piece count, release date, store)
+- Priority indicator
+- Notes field (expandable)
+- Tags section
+- Action buttons: Got It!, Edit, Delete, Back
+
+### Empty States
+
+| State | Design |
+|-------|--------|
+| **Empty wishlist (new user)** | "Nothing on your wishlist yet. Start adding sets you're dreaming about!" with prominent Add CTA |
+| **Empty wishlist (all purchased)** | Celebration: "You got everything on your list! Time to dream bigger." with Add CTA |
+| **No search/filter results** | "No wishlist items match your filters." with clear filters button |
+
+### Loading & Error States
+
+| State | Design |
+|-------|--------|
+| **Gallery loading** | Skeleton cards matching grid layout |
+| **Save failure** | Toast: "Couldn't save to wishlist. [Retry]" |
+| **"Got it" failure** | Toast: "Couldn't add to Sets. Your wishlist item is safe. [Retry]" - ensure wishlist item NOT deleted |
+
+---
+
+## Route Structure
+
+```
+/wishlist                 # Gallery page
+/wishlist/add             # Add item page
+/wishlist/:id             # Detail page
+/wishlist/:id/edit        # Edit page
+```
+
+---
+
 ## Implementation Phases
 
 ### Phase 1: Foundation (wish-2000, wish-2007)
@@ -118,8 +393,9 @@ Located in `packages/core/api-client/src/schemas/wishlist.ts`:
 - Hover action menu: View, Edit, Remove, Got It
 
 **Files**:
-- `apps/api/endpoints/wishlist/list/handler.ts`
-- `apps/api/endpoints/wishlist/get/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/list/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/get-item/handler.ts`
+- `apps/api/platforms/vercel/api/wishlist/list.ts`
 - `packages/core/api-client/src/rtk/wishlist-api.ts`
 - `apps/web/main-app/src/routes/wishlist/index.tsx`
 - `apps/web/main-app/src/routes/wishlist/-components/WishlistCard.tsx`
@@ -141,20 +417,9 @@ These can be worked in parallel after Phase 2.
 - Form validation with Zod
 - RTK Query mutation: `useAddToWishlistMutation`
 
-**Form Fields**:
-- Store (required): LEGO, Barweer, Cata, BrickLink, Other
-- Title (required)
-- Set Number (optional)
-- Price + Currency
-- Piece Count
-- Priority (0-5 scale)
-- Image upload
-- Source URL
-- Notes
-- Tags
-
 **Files**:
-- `apps/api/endpoints/wishlist/create/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/create-item/handler.ts`
+- `apps/api/platforms/vercel/api/wishlist/create.ts`
 - `apps/web/main-app/src/routes/wishlist/add.tsx`
 - `apps/web/main-app/src/components/ImageUploadField/index.tsx`
 
@@ -170,14 +435,9 @@ These can be worked in parallel after Phase 2.
 - Edit page with pre-populated form
 - RTK Query mutation: `useUpdateWishlistItemMutation`
 
-**Detail Page Layout**:
-- Large product image with fallback
-- All metadata: title, store, price, pieces, release date
-- Priority indicator, tags, notes
-- Action buttons: Got It!, Edit, Delete, Back
-
 **Files**:
-- `apps/api/endpoints/wishlist/update/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/update-item/handler.ts`
+- `apps/api/platforms/vercel/api/wishlist/[id].ts`
 - `apps/web/main-app/src/routes/wishlist/$id.tsx`
 - `apps/web/main-app/src/routes/wishlist/$id.edit.tsx`
 
@@ -195,17 +455,11 @@ These can be worked in parallel after Phase 2.
 - Toast notifications with undo
 - RTK Query mutations: `useRemoveFromWishlistMutation`, `useMarkAsPurchasedMutation`
 
-**Got It Modal Form**:
-- Price paid (pre-filled from wishlist)
-- Tax (optional)
-- Shipping (optional)
-- Quantity
-- Purchase date (defaults to today)
-- "Keep on wishlist" checkbox
-
 **Files**:
-- `apps/api/endpoints/wishlist/delete/handler.ts`
-- `apps/api/endpoints/wishlist/purchased/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/delete-item/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/purchased/handler.ts`
+- `apps/api/platforms/vercel/api/wishlist/[id].ts` (DELETE method)
+- `apps/api/platforms/vercel/api/wishlist/purchased.ts`
 - `apps/web/main-app/src/components/DeleteConfirmationModal/index.tsx`
 - `apps/web/main-app/src/components/GotItModal/index.tsx`
 
@@ -228,13 +482,9 @@ These can be worked in parallel after Phase 2.
 - SortableContext with rectSortingStrategy
 - Visual feedback during drag
 
-**Empty States**:
-1. **New User**: "Nothing on your wishlist yet" with Add Item CTA
-2. **All Purchased**: "You got everything!" celebration with Add More CTA
-3. **No Results**: "No matches" with Clear Filters button
-
 **Files**:
-- `apps/api/endpoints/wishlist/reorder/handler.ts`
+- `apps/api/platforms/aws/endpoints/wishlist/reorder/handler.ts`
+- `apps/api/platforms/vercel/api/wishlist/reorder.ts`
 - `apps/web/main-app/src/components/wishlist/SortableGallery.tsx`
 - `apps/web/main-app/src/components/wishlist/SortableWishlistCard.tsx`
 - `apps/web/main-app/src/components/wishlist/WishlistEmptyStates.tsx`
@@ -275,25 +525,25 @@ These can be worked in parallel after Phase 2.
 
 ```
 wish-2000 (Schema & Types)
-    │
-    ├── wish-2007 (Run Migration)
-    │
-    ▼
+    |
+    +-- wish-2007 (Run Migration)
+    |
+    v
 wish-2001 (Gallery MVP)
-    │
-    ├──────────┬──────────┐
-    ▼          ▼          ▼
+    |
+    +----------+----------+
+    v          v          v
 wish-2002  wish-2003  wish-2004
 (Add Flow) (Detail/   (Modals)
            Edit)
-    │          │          │
-    └──────────┴──────────┴───────────┐
-                                      │
-                                      ▼
-                              wish-2005 (UX Polish)
-                                      │
-                                      ▼
-                              wish-2006 (Accessibility)
+    |          |          |
+    +----------+----------+----------+
+                                     |
+                                     v
+                             wish-2005 (UX Polish)
+                                     |
+                                     v
+                             wish-2006 (Accessibility)
 ```
 
 ---
@@ -321,6 +571,66 @@ Polish and accessibility:
 
 ---
 
+## Mobile Considerations
+
+**MVP Scope:** Responsive design, touch-optimized.
+
+| Feature | Desktop | Mobile |
+|---------|---------|--------|
+| View gallery | Grid | List (default) or Grid |
+| View detail | Yes | Yes |
+| Add item | Yes | Yes |
+| Drag to reorder | Yes | Long-press to drag |
+| "Got it" flow | Yes | Yes |
+| Edit/Delete | Yes | Yes |
+
+**Mobile-specific UX:**
+- Bottom sheet for modals instead of centered dialogs
+- Touch-optimized tap targets
+
+---
+
+## Accessibility Requirements
+
+### Keyboard Navigation
+
+| Action | Keyboard Shortcut |
+|--------|-------------------|
+| Navigate gallery | Arrow keys |
+| Select item | Space |
+| Open detail view | Enter |
+| Close modal | Escape |
+| Reorder item | Select -> Arrow keys -> Enter |
+| Delete | Select -> Delete/Backspace |
+| "Got it" on selected | G |
+| Add new | A (when in gallery) |
+
+### Screen Reader Support
+
+| Element | Announcement |
+|---------|--------------|
+| Wishlist item | "[Title], [price], [piece count] pieces, priority [position] of [total]" |
+| "Got it" button | "Got it, moves [title] to your Sets collection" |
+| Priority changed | "[Title] moved to priority [new position]" |
+
+### Focus Management
+
+| Scenario | Focus Behavior |
+|----------|----------------|
+| Modal opens | Focus on first interactive element |
+| Modal closes | Focus returns to triggering element |
+| Item deleted | Focus moves to next item |
+| "Got it" completes | Focus on toast action or next wishlist item |
+
+### Form Accessibility
+
+- All fields have visible labels (not just placeholders)
+- Error messages linked to fields via aria-describedby
+- Required fields marked with aria-required
+- Price inputs have currency announced
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests (Vitest)
@@ -336,19 +646,7 @@ Polish and accessibility:
 
 ### Accessibility Tests
 - VoiceOver testing (macOS)
-- NVDA testing (Windows, if available)
 - Automated contrast checking (axe)
-
----
-
-## Route Structure
-
-```
-/wishlist                 # Gallery page (wish-2001)
-/wishlist/add             # Add item page (wish-2002)
-/wishlist/:id             # Detail page (wish-2003)
-/wishlist/:id/edit        # Edit page (wish-2003)
-```
 
 ---
 
@@ -383,6 +681,73 @@ The original 13 stories were consolidated into 7 cohesive stories:
 
 ---
 
+## Dependencies
+
+### Internal Dependencies
+- Shared gallery package (sorting, filtering)
+- S3 infrastructure (image storage)
+- Sets Gallery (for "Got it" transition)
+- Authentication/authorization
+
+---
+
+## Technical Notes
+
+### Image Handling
+- Download product images during add
+- Store in S3 with user-scoped prefix
+- Generate thumbnails for gallery view
+- Never hotlink to external images
+
+### Shared Gallery Integration
+Must integrate with existing gallery package for:
+- Virtualized grid/list rendering
+- Sort controls (price, date, piece count)
+- Filter sidebar (text, store, tags)
+- Tag chips
+
+---
+
+## Risks & Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Large images slow to download | Low | Low | Background processing, progress indicator |
+| "Got it" flow loses data | Low | High | Transaction-based: create Set before deleting Wishlist item |
+
+---
+
+## Definition of Done
+
+### Core Functionality
+- [ ] Users can add items manually
+- [ ] Images stored in S3, not hotlinked
+- [ ] Gallery sorting and filtering works
+- [ ] Drag-and-drop priority reordering works with undo
+- [ ] "Got it" flow transitions items to Sets correctly (atomic)
+- [ ] "Keep on wishlist" option works for wanting multiples
+- [ ] Hard delete with confirmation works
+
+### UX & Polish
+- [ ] Empty states for all scenarios
+- [ ] Undo available for "Got it" action (5 second window)
+- [ ] Toast notifications for success/error states
+- [ ] Mobile responsive
+
+### Accessibility
+- [ ] Keyboard navigation for all actions (including G for "Got it")
+- [ ] Screen reader announcements for state changes
+- [ ] Focus management for modals and flows
+- [ ] Form fields have visible labels and error associations
+- [ ] WCAG AA contrast compliance
+
+### Technical
+- [ ] All new API endpoints have tests
+- [ ] No TypeScript errors
+- [ ] Code reviewed and merged
+
+---
+
 ## Change Log
 
 | Date | Description |
@@ -392,3 +757,12 @@ The original 13 stories were consolidated into 7 cohesive stories:
 | 2025-12-27 | wish-2000 implementation complete |
 | 2025-12-28 | wish-2003 merged (PR #350) |
 | 2026-01-24 | Migrated from docs/stories.bak to plans directory |
+| 2026-01-25 | Combined PRD.md and PLAN.md into single document |
+| 2026-01-25 | Added Backend API Architecture section (Ports & Adapters pattern) |
+
+---
+
+**Related Epics:**
+- Epic 7: Sets Gallery (receives "Got it" items)
+- Epic 4: MOC Instructions
+- Epic 5: Inspiration Gallery

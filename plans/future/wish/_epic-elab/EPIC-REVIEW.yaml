@@ -1,0 +1,390 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/wish"
+prefix: "WISH"
+reviewed: "2026-01-25T23:30:46Z"
+
+verdict: CONCERNS
+summary: "Epic ready pending but 5 of 6 perspectives report concerns; critical focus on authorization, S3 security, transaction safety, and accessibility implementation"
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    findings_count: 7
+  product:
+    verdict: READY
+    findings_count: 2
+  qa:
+    verdict: CONCERNS
+    findings_count: 7
+  ux:
+    verdict: CONCERNS
+    findings_count: 6
+  platform:
+    verdict: CONCERNS
+    findings_count: 9
+  security:
+    verdict: CONCERNS
+    findings_count: 10
+
+findings:
+  critical:
+    - id: SEC-001
+      source: security
+      issue: "Authorization check missing for all WISH-2001 through WISH-2005 endpoints - users could access others' data"
+      stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      action: "Verify userId from JWT token matches requested resource owner in all GET/POST/PATCH/DELETE operations"
+    - id: ENG-001
+      source: engineering
+      issue: "WISH-2004 'Got it' flow requires atomic transaction between Sets and Wishlist tables to prevent orphaned data"
+      stories: [WISH-2004]
+      action: "Define explicit transaction boundary - create Set record before deleting Wishlist item"
+    - id: SEC-002
+      source: security
+      issue: "WISH-2002 S3 file upload has no validation for file type, size, or content - malware risk"
+      stories: [WISH-2002]
+      action: "Implement client-side and server-side file type validation, size limits, and malware scanning considerations"
+    - id: PLAT-001
+      source: platform
+      issue: "WISH-2002 S3 integration requires IAM role, bucket policy, CORS config not documented"
+      stories: [WISH-2002]
+      action: "Document S3 setup, presigned URL TTL (15min max), max file size (10MB), and bucket lifecycle policies"
+    - id: SEC-004
+      source: security
+      issue: "WISH-2004 'Got it' flow lacks isolation - users could access other users' purchase details"
+      stories: [WISH-2004]
+      action: "Verify POST /wishlist/:id/purchased validates ownership before creating Set record"
+    - id: QA-001
+      source: qa
+      issue: "WISH-2004 'Got it' flow needs explicit transaction rollback tests for partial failures"
+      stories: [WISH-2004]
+      action: "Add test scenarios for partial failure (Set created but Wishlist delete fails, and vice versa)"
+    - id: PLAT-005
+      source: platform
+      issue: "No feature flags documented for gradual rollout of wishlist functionality"
+      stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      action: "Implement feature flag infrastructure for safe canary deployment of all core stories"
+
+  high:
+    - id: ENG-002
+      source: engineering
+      issue: "WISH-2005 sizing warning indicates complexity - optimistic updates + undo + dnd-kit state management"
+      stories: [WISH-2005]
+      action: "Consider splitting into substories if estimation exceeds 13 points (drag-and-drop vs optimistic updates)"
+    - id: ENG-003
+      source: engineering
+      issue: "WISH-2001 GalleryCard integration needs clear API contract with @repo/gallery package"
+      stories: [WISH-2001]
+      action: "Verify @repo/gallery exports GalleryCard component and supports custom data structures"
+    - id: ENG-004
+      source: engineering
+      issue: "WISH-2002 S3 presigned URL generation needs proper error boundaries and retry logic"
+      stories: [WISH-2002]
+      action: "Document presigned URL expiration handling, size limits, and upload failure recovery"
+    - id: PROD-001
+      source: product
+      issue: "WISH-2005 sizing warning indicates potential scope creep in UX polish phase"
+      stories: [WISH-2005]
+      action: "Consider splitting drag-and-drop and optimistic updates into separate stories if estimation exceeds limits"
+    - id: PROD-002
+      source: product
+      issue: "WISH-2006 accessibility scope is ambitious (live regions, roving tabindex, keyboard shortcuts)"
+      stories: [WISH-2006]
+      action: "Ensure accessibility story has clear ACs and phased approach if needed"
+    - id: QA-002
+      source: qa
+      issue: "WISH-2006 accessibility testing cannot be fully automated - manual testing required"
+      stories: [WISH-2006]
+      action: "Define manual test plan with VoiceOver, NVDA, and keyboard-only navigation"
+    - id: QA-003
+      source: qa
+      issue: "WISH-2001 filtering and pagination edge cases need explicit test coverage"
+      stories: [WISH-2001]
+      action: "Test empty results, single page, last page pagination, concurrent filter changes"
+    - id: QA-004
+      source: qa
+      issue: "WISH-2002 S3 upload failures need comprehensive error scenario testing"
+      stories: [WISH-2002]
+      action: "Test network timeout, size limit exceeded, invalid file type, presigned URL expiration"
+    - id: UX-001
+      source: ux
+      issue: "Gallery filtering/pagination keyboard navigation not specified in WISH-2001"
+      stories: [WISH-2001]
+      action: "Add keyboard navigation acceptance criteria for all interactive controls (filter tabs, sorting)"
+    - id: UX-002
+      source: ux
+      issue: "Image upload form requires comprehensive error handling and retry UX in WISH-2002"
+      stories: [WISH-2002]
+      action: "Document progressive enhancement and fallback states for upload failures"
+    - id: UX-003
+      source: ux
+      issue: "Modal focus management and screen reader announcements unclear in WISH-2004"
+      stories: [WISH-2004]
+      action: "Clarify modal focus trapping, return focus, and announcement expectations"
+    - id: UX-004
+      source: ux
+      issue: "Drag-and-drop accessibility in WISH-2005 needs keyboard alternative"
+      stories: [WISH-2005]
+      action: "Specify keyboard alternative for reordering (e.g., keyboard shortcuts or form interface)"
+    - id: PLAT-002
+      source: platform
+      issue: "WISH-2001 pagination performance needs database index strategy"
+      stories: [WISH-2001]
+      action: "Create indexes on userId, createdAt, and sortOrder for efficient filtering/sorting"
+    - id: PLAT-003
+      source: platform
+      issue: "WISH-2004 transaction consistency between Wishlist and Sets requires explicit rollback plan"
+      stories: [WISH-2004]
+      action: "Document transaction isolation level, error handling, and automatic retry strategy"
+    - id: PLAT-004
+      source: platform
+      issue: "WISH-2005 frequent PATCH requests may cause database contention"
+      stories: [WISH-2005]
+      action: "Evaluate database connection pool sizing, rate limiting, and query batching strategy"
+    - id: SEC-003
+      source: security
+      issue: "S3 presigned URL security - TTL and permissions not documented"
+      stories: [WISH-2002]
+      action: "Set presigned URL TTL to 15 minutes max, restrict to specific S3 key prefix, verify bucket policies"
+    - id: SEC-005
+      source: security
+      issue: "Input validation framework not specified for all form endpoints"
+      stories: [WISH-2002, WISH-2003, WISH-2004]
+      action: "Use Zod schemas server-side (already planned) and validate all user inputs (name, description, price, URL)"
+
+  medium:
+    - id: ENG-005
+      source: engineering
+      issue: "WISH-2006 accessibility routing (keyboard shortcuts A, G, Delete) may conflict with browser defaults"
+      stories: [WISH-2006]
+      action: "Verify keyboard shortcut choices don't conflict with browser, OS, or screen reader shortcuts"
+    - id: ENG-006
+      source: engineering
+      issue: "Pagination state management in WISH-2001 needs careful handling with filtering"
+      stories: [WISH-2001]
+      action: "Define how pagination state resets when filters change"
+    - id: ENG-007
+      source: engineering
+      issue: "Drag-and-drop reorder endpoint needs pagination awareness in WISH-2005"
+      stories: [WISH-2005]
+      action: "Clarify if reordering works across pages or within current page only"
+    - id: QA-005
+      source: qa
+      issue: "WISH-2005 optimistic update state rollback needs state machine verification tests"
+      stories: [WISH-2005]
+      action: "Create test scenarios for network failures during drag-drop, undo, and refresh"
+    - id: QA-006
+      source: qa
+      issue: "Authentication context not documented - unclear if all endpoints need user verification"
+      stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      action: "Document auth requirements for each endpoint and test unauthorized access scenarios"
+    - id: QA-007
+      source: qa
+      issue: "Concurrent user modifications (same item edited by multiple users) not addressed"
+      stories: [WISH-2003, WISH-2004, WISH-2005]
+      action: "Define optimistic concurrency control strategy (version numbers, timestamps, or last-write-wins)"
+    - id: UX-005
+      source: ux
+      issue: "Undo toast notification timing and screen reader announcement not detailed"
+      stories: [WISH-2005]
+      action: "Define 5-second window clarity and accessible undo interaction pattern"
+    - id: UX-006
+      source: ux
+      issue: "Loading skeleton states need clear accessible structure"
+      stories: [WISH-2005]
+      action: "Ensure skeletons are hidden from screen readers and announce loading status"
+    - id: PLAT-006
+      source: platform
+      issue: "Logging strategy unclear - need structured logging for S3, API, and database operations"
+      stories: [WISH-2002, WISH-2001, WISH-2004]
+      action: "Use @repo/logger with structured fields (userId, itemId, operation) for debugging"
+    - id: PLAT-007
+      source: platform
+      issue: "Metrics gaps - no CloudWatch or monitoring dashboard defined"
+      stories: [WISH-2001, WISH-2002, WISH-2004, WISH-2005]
+      action: "Define key metrics (latency percentiles, error rates, S3 costs) and alerting thresholds"
+    - id: PLAT-008
+      source: platform
+      issue: "Alerting strategy undefined for S3 failures and transaction errors"
+      stories: [WISH-2002, WISH-2004]
+      action: "Create CloudWatch alarms for upload failures, transaction rollbacks, and API error rates"
+    - id: PLAT-009
+      source: platform
+      issue: "Database migration rollback plan not documented"
+      stories: [WISH-2000]
+      action: "Script down migration for wishlist_items table, test rollback procedure"
+    - id: SEC-006
+      source: security
+      issue: "Rate limiting not documented for image upload endpoint"
+      stories: [WISH-2002]
+      action: "Implement rate limiting on image upload (e.g., 10 requests per minute per user) to prevent abuse"
+    - id: SEC-007
+      source: security
+      issue: "Error messages may leak sensitive information"
+      stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      action: "Return generic error messages to client, log detailed errors server-side only"
+    - id: SEC-008
+      source: security
+      issue: "WISH-2005 reorder endpoint vulnerable to race conditions with concurrent requests"
+      stories: [WISH-2005]
+      action: "Implement optimistic locking (version field) or database constraints to prevent lost updates"
+    - id: SEC-009
+      source: security
+      issue: "No CSRF protection documented for state-changing operations"
+      stories: [WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      action: "Verify CSRF token validation is implemented for POST/PATCH/DELETE endpoints"
+    - id: SEC-010
+      source: security
+      issue: "Data retention policy for deleted wishlist items not documented"
+      stories: [WISH-2004]
+      action: "Define soft delete vs hard delete strategy and retention period for compliance"
+
+new_stories:
+  - title: "Authorization layer testing and policy documentation"
+    source: security
+    priority: P0
+    reason: "No explicit authorization tests for multi-user scenarios; critical security gap across all core endpoints"
+  - title: "Feature flag infrastructure setup for gradual wishlist rollout"
+    source: platform
+    priority: P0
+    reason: "No feature flag system defined for canary deployment; blocks safe rollout of WISH-2001-2005"
+  - title: "Shared Zod schemas and types setup"
+    source: engineering
+    priority: P0
+    reason: "Multiple stories need form validation - centralize schema definitions for consistency"
+  - title: "Test infrastructure for MSW mocking of S3 and API calls"
+    source: qa
+    priority: P0
+    reason: "WISH-2001, WISH-2002, WISH-2005 need consistent API mocking for reliable integration tests"
+  - title: "Accessibility testing harness setup"
+    source: qa
+    priority: P0
+    reason: "Keyboard testing utilities and screen reader testing documentation needed for WISH-2006"
+  - title: "File upload security hardening"
+    source: security
+    priority: P0
+    reason: "Virus scanning, file type validation, size limits need testing story for WISH-2002"
+  - title: "Database backup and disaster recovery plan"
+    source: platform
+    priority: P1
+    reason: "Aurora backup retention, point-in-time recovery testing needed for compliance"
+  - title: "Database index strategy for wishlist_items"
+    source: engineering
+    priority: P1
+    reason: "WISH-2001 filtering and sorting performance needs documented index usage"
+  - title: "Error boundary and logging strategy"
+    source: engineering
+    priority: P1
+    reason: "Consistent error handling across API and frontend components needed"
+  - title: "Observability baseline (logging, metrics, alerting)"
+    source: platform
+    priority: P1
+    reason: "Monitoring and alerting not documented for production readiness"
+  - title: "Load testing and capacity planning"
+    source: platform
+    priority: P1
+    reason: "Baseline performance under realistic load not documented"
+  - title: "Manual accessibility testing report template"
+    source: qa
+    priority: P1
+    reason: "WISH-2006 requires formalized manual testing documentation"
+  - title: "Security baseline and penetration testing checklist"
+    source: security
+    priority: P1
+    reason: "No documented security testing plan or baseline"
+  - title: "Image preview and crop experience"
+    source: ux
+    priority: P1
+    reason: "User needs visual feedback before uploading large images in WISH-2002"
+  - title: "Mobile-optimized sorting and filtering UI"
+    source: ux
+    priority: P1
+    reason: "Gallery controls may lack mobile-friendly interaction patterns in WISH-2001"
+  - title: "Data retention and GDPR compliance documentation"
+    source: security
+    priority: P1
+    reason: "Delete, export, and retention policies not defined"
+  - title: "S3 bucket disaster recovery and encryption"
+    source: platform
+    priority: P2
+    reason: "Encryption, versioning, and cross-region replication strategy needed"
+  - title: "Input validation test fixtures"
+    source: security
+    priority: P1
+    reason: "Security test cases for SQL injection, XSS, path traversal needed"
+  - title: "Empty state guidance and onboarding"
+    source: ux
+    priority: P2
+    reason: "New users need clear instruction on how to use wishlist feature"
+
+stories_to_split:
+  - story: WISH-2005
+    reason: "Drag-and-drop complexity (XL sizing) combines multiple concerns: drag-and-drop UI, optimistic updates with undo, accessibility"
+    suggested_split:
+      - title: "Implement drag-and-drop reordering with dnd-kit"
+        scope: "Core drag-and-drop functionality, re-order persistence, pagination awareness"
+        estimated_complexity: "L"
+      - title: "Add optimistic updates and undo flow"
+        scope: "Client-side optimistic updates, 5-second undo window, toast notifications"
+        estimated_complexity: "M"
+
+stories_to_defer:
+  - story: WISH-2006
+    reason: "Comprehensive accessibility implementation (keyboard shortcuts, live regions, roving tabindex) is ambitious alongside other critical stories; recommend deferring to Phase 2 of product"
+    recommendation: "Complete core wishlist functionality (WISH-2000-2005) first, then tackle comprehensive accessibility in dedicated phase"
+
+cross_cutting_concerns:
+  - concern: "Authorization and Access Control"
+    impact: "5 stories (WISH-2001-2005)"
+    severity: "CRITICAL"
+    details: "Missing authorization checks could expose user data; requires centralized auth validation pattern"
+  - concern: "Data Validation and Input Sanitization"
+    impact: "5 stories (WISH-2000-2004)"
+    severity: "HIGH"
+    details: "Zod schema plan exists but not documented for all endpoints; forms, file uploads, and API inputs all need validation"
+  - concern: "Testing Infrastructure"
+    impact: "6 stories (all except WISH-2007)"
+    severity: "HIGH"
+    details: "MSW mocking, S3 test doubles, transaction rollback tests, and accessibility testing infrastructure all needed"
+  - concern: "Accessibility"
+    impact: "6 stories (WISH-2001-2006)"
+    severity: "HIGH"
+    details: "Keyboard navigation, screen reader support, and focus management gaps across multiple stories; WISH-2006 is ambitious scope"
+  - concern: "Security (S3 and File Handling)"
+    impact: "WISH-2002 primarily"
+    severity: "HIGH"
+    details: "File type validation, size limits, presigned URL security, rate limiting all require explicit implementation"
+  - concern: "Transaction and Concurrency Safety"
+    impact: "WISH-2003-2005"
+    severity: "HIGH"
+    details: "Concurrent modifications, transaction rollback, optimistic locking all needed for data consistency"
+  - concern: "Observability and Monitoring"
+    impact: "WISH-2001-2005"
+    severity: "MEDIUM"
+    details: "Structured logging, metrics, and alerting not documented; feature flags needed for safe rollout"
+
+priority_action_sequence:
+  phase_0_blockers:
+    - "Define and document authorization pattern for all endpoints (SEC-001)"
+    - "Implement S3 security baseline: presigned URL TTL, file validation, bucket policies (PLAT-001, SEC-002, SEC-003)"
+    - "Create Zod schema centralization package for shared form validation"
+    - "Set up feature flag infrastructure for safe rollout"
+  phase_1_foundations:
+    - "Build MSW mocking infrastructure for API and S3"
+    - "Create accessibility testing harness"
+    - "Document transaction isolation and rollback strategy for WISH-2004"
+    - "Set up database indexes for pagination performance"
+  phase_2_qa_readiness:
+    - "Complete authorization testing across all endpoints"
+    - "Establish file upload security testing (virus scan, type validation, size limits)"
+    - "Manual accessibility testing for WISH-2006"
+    - "Transaction rollback test scenarios"
+
+metrics:
+  total_findings: 37
+  critical_count: 7
+  high_count: 17
+  medium_count: 13
+  total_stories_affected: 7
+  perspectives_with_concerns: 5
+  stories_with_3plus_findings: [WISH-2001, WISH-2002, WISH-2004, WISH-2005]
+  estimated_remediation_stories: 19

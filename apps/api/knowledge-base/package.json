@@ -35,7 +35,8 @@
     "db:seed": "tsx src/scripts/db-seed.ts",
     "db:analyze": "tsx src/scripts/db-analyze.ts",
     "db:studio": "drizzle-kit studio",
-    "validate:env": "tsx src/scripts/validate-env.ts"
+    "validate:env": "tsx src/scripts/validate-env.ts",
+    "mcp:start": "node dist/mcp-server/index.js"
   },
   "keywords": [
     "knowledge-base",
@@ -48,12 +49,15 @@
   "author": "LEGO MOC Platform Team",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@repo/logger": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.44.0",
     "openai": "6.16.0",
     "pg": "^8.12.0",
     "tiktoken": "1.0.22",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

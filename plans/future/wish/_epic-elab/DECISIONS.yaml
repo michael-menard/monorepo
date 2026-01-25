@@ -1,0 +1,75 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/wish"
+prefix: "WISH"
+decided: "2026-01-25T23:45:00Z"
+
+critical_findings:
+  - id: SEC-001
+    decision: ACCEPT
+    action: "Add authorization checks to all endpoints WISH-2001-2005"
+  - id: ENG-001
+    decision: ACCEPT
+    action: "Implement atomic transaction for WISH-2004 Got it flow"
+  - id: SEC-002
+    decision: ACCEPT
+    action: "Add file type/size validation and malware scanning for S3 uploads"
+  - id: PLAT-001
+    decision: ACCEPT
+    action: "Document S3 infrastructure: IAM, bucket policy, CORS, presigned URL TTL"
+  - id: SEC-004
+    decision: ACCEPT
+    action: "Add ownership verification to WISH-2004 purchased endpoint"
+  - id: QA-001
+    decision: ACCEPT
+    action: "Add transaction rollback tests for WISH-2004"
+  - id: PLAT-005
+    decision: ACCEPT
+    action: "Implement feature flag infrastructure for gradual rollout"
+
+story_splits:
+  - story: WISH-2005
+    decision: SPLIT
+    new_stories:
+      - id: WISH-2005a
+        title: "Drag-and-drop reordering with dnd-kit"
+        complexity: L
+        scope: "Core drag-and-drop functionality, re-order persistence, pagination awareness"
+      - id: WISH-2005b
+        title: "Optimistic updates and undo flow"
+        complexity: M
+        scope: "Client-side optimistic updates, 5-second undo window, toast notifications"
+
+story_deferrals:
+  - story: WISH-2006
+    decision: DEFER
+    reason: "Comprehensive accessibility scope is ambitious; defer to Phase 2 after core functionality complete"
+    recommendation: "Complete WISH-2000-2005 first, then tackle accessibility in dedicated phase"
+
+new_stories_added:
+  - title: "Authorization layer testing and policy documentation"
+    priority: P0
+    reason: "Critical security gap across all core endpoints"
+  - title: "Feature flag infrastructure setup for gradual wishlist rollout"
+    priority: P0
+    reason: "Blocks safe rollout of WISH-2001-2005"
+  - title: "Shared Zod schemas and types setup"
+    priority: P0
+    reason: "Centralize schema definitions for consistency"
+  - title: "Test infrastructure for MSW mocking of S3 and API calls"
+    priority: P0
+    reason: "Needed for reliable integration tests"
+  - title: "Accessibility testing harness setup"
+    priority: P0
+    reason: "Needed for WISH-2006 when resumed"
+  - title: "File upload security hardening"
+    priority: P0
+    reason: "Virus scanning, file type validation, size limits for WISH-2002"
+
+summary:
+  critical_findings_accepted: 7
+  critical_findings_deferred: 0
+  critical_findings_rejected: 0
+  stories_split: 1
+  stories_deferred: 1
+  new_p0_stories_added: 6
+  verdict: CONCERNS_ADDRESSED

@@ -1,0 +1,190 @@
+---
+perspective: security
+verdict: CONCERNS
+completed: 2026-01-25T23:35:00Z
+
+security_assessment:
+  - story: WISH-2000
+    auth_required: false
+    data_sensitivity: none
+    risk_level: low
+  - story: WISH-2001
+    auth_required: true
+    data_sensitivity: sensitive
+    risk_level: medium
+  - story: WISH-2002
+    auth_required: true
+    data_sensitivity: sensitive
+    risk_level: high
+  - story: WISH-2003
+    auth_required: true
+    data_sensitivity: sensitive
+    risk_level: medium
+  - story: WISH-2004
+    auth_required: true
+    data_sensitivity: sensitive
+    risk_level: high
+  - story: WISH-2005
+    auth_required: true
+    data_sensitivity: sensitive
+    risk_level: medium
+  - story: WISH-2006
+    auth_required: true
+    data_sensitivity: sensitive
+    risk_level: medium
+
+owasp_coverage:
+  - risk: A01 Broken Access Control
+    stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    gap: true
+  - risk: A02 Cryptographic Failures
+    stories: [WISH-2002]
+    gap: true
+  - risk: A03 Injection
+    stories: [WISH-2000, WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    gap: false
+  - risk: A04 Insecure Design
+    stories: [WISH-2002, WISH-2004]
+    gap: true
+  - risk: A05 Security Misconfiguration
+    stories: [WISH-2002]
+    gap: true
+
+input_validation:
+  - story: WISH-2000
+    user_inputs: none
+    validation_planned: true
+    issue: null
+  - story: WISH-2001
+    user_inputs: filter parameters, pagination parameters, sort order
+    validation_planned: true
+    issue: null
+  - story: WISH-2002
+    user_inputs: file upload, wishlist item fields (name, description, price, URL, image)
+    validation_planned: true
+    issue: null
+  - story: WISH-2003
+    user_inputs: wishlist item fields for update
+    validation_planned: true
+    issue: null
+  - story: WISH-2004
+    user_inputs: purchase details form fields
+    validation_planned: true
+    issue: null
+  - story: WISH-2005
+    user_inputs: sort order array
+    validation_planned: unclear
+    issue: null
+  - story: WISH-2006
+    user_inputs: none
+    validation_planned: true
+    issue: null
+
+data_handling:
+  - story: WISH-2000
+    data_type: Wishlist item metadata
+    storage: PostgreSQL Aurora
+    encryption: true
+  - story: WISH-2001
+    data_type: Wishlist items (user preference data)
+    storage: PostgreSQL Aurora
+    encryption: true
+  - story: WISH-2002
+    data_type: Images, wishlist item details
+    storage: S3, PostgreSQL Aurora
+    encryption: true
+  - story: WISH-2003
+    data_type: Wishlist item details
+    storage: PostgreSQL Aurora
+    encryption: true
+  - story: WISH-2004
+    data_type: Purchase details, transaction records
+    storage: PostgreSQL Aurora
+    encryption: true
+  - story: WISH-2005
+    data_type: Sort order preferences
+    storage: PostgreSQL Aurora
+    encryption: true
+  - story: WISH-2006
+    data_type: Accessibility preferences (stored client-side)
+    storage: LocalStorage / browser
+    encryption: false
+
+high:
+  - id: SEC-001
+    issue: Authorization check missing for all WISH-2001 through WISH-2005 endpoints
+    stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    action: Verify userId from JWT token matches requested resource owner in all GET/POST/PATCH/DELETE operations
+  - id: SEC-002
+    issue: WISH-2002 S3 file upload has no documented validation for file type, size, or content
+    stories: [WISH-2002]
+    action: Implement client-side and server-side file type validation, size limits, and malware scanning considerations
+  - id: SEC-003
+    issue: S3 presigned URL security - TTL and permissions not documented
+    stories: [WISH-2002]
+    action: Set presigned URL TTL to 15 minutes max, restrict to specific S3 key prefix, verify bucket policies
+  - id: SEC-004
+    issue: WISH-2004 "Got it" flow lacks isolation - users could access other users' purchase details
+    stories: [WISH-2004]
+    action: Verify POST /wishlist/:id/purchased validates ownership before creating Set record
+  - id: SEC-005
+    issue: Input validation framework not specified for all form endpoints
+    stories: [WISH-2002, WISH-2003, WISH-2004]
+    action: Use Zod schemas server-side (already planned) and validate all user inputs (name, description, price, URL)
+
+medium:
+  - id: SEC-006
+    issue: Rate limiting not documented for image upload endpoint
+    stories: [WISH-2002]
+    action: Implement rate limiting on image upload (e.g., 10 requests per minute per user) to prevent abuse
+  - id: SEC-007
+    issue: Error messages may leak sensitive information
+    stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    action: Return generic error messages to client, log detailed errors server-side only
+  - id: SEC-008
+    issue: WISH-2005 reorder endpoint vulnerable to race conditions with concurrent requests
+    stories: [WISH-2005]
+    action: Implement optimistic locking (version field) or database constraints to prevent lost updates
+  - id: SEC-009
+    issue: No CSRF protection documented for state-changing operations
+    stories: [WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    action: Verify CSRF token validation is implemented for POST/PATCH/DELETE endpoints (check framework defaults)
+  - id: SEC-010
+    issue: Data retention policy for deleted wishlist items not documented
+    stories: [WISH-2004]
+    action: Define soft delete vs hard delete strategy and retention period for compliance
+
+compliance:
+  gdpr: gaps
+  soc2: gaps
+
+missing_stories:
+  - title: Authorization layer testing and policy documentation
+    gap: No explicit authorization tests for multi-user scenarios
+    priority: P0
+  - title: File upload security hardening
+    gap: Virus scanning, file type validation, size limits need testing story
+    priority: P0
+  - title: Security baseline and penetration testing checklist
+    gap: No documented security testing plan or baseline
+    priority: P1
+  - title: Data retention and GDPR compliance documentation
+    gap: Delete, export, and retention policies not defined
+    priority: P1
+  - title: Input validation test fixtures
+    gap: Security test cases for SQL injection, XSS, path traversal needed
+    priority: P1
+
+recommendations:
+  - Implement row-level security (RLS) in PostgreSQL to enforce userId isolation at database level
+  - Document authorization policy: only owner can read/modify their wishlist items
+  - Create test scenarios for broken access control: attempt to access other users' items, delete others' items
+  - Implement file type validation (whitelist image formats: jpg, png, webp) and size limits (max 10MB)
+  - Set S3 bucket policies to restrict presigned URLs to specific object prefixes, implement object tagging for user tracking
+  - Add rate limiting middleware on S3 upload endpoint (10 requests per minute per user)
+  - Implement security headers: CSP (restrict image sources to S3), X-Content-Type-Options: nosniff
+  - Log all data access operations (GET) for audit trail in compliance-sensitive environments
+  - Test concurrent modification scenarios: implement version field or database-level locking for reorder safety
+  - Create GDPR compliance checklist: data export, deletion, and retention timelines
+
+SECURITY REVIEW COMPLETE

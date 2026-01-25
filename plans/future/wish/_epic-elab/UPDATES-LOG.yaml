@@ -1,0 +1,236 @@
+---
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/wish"
+prefix: "WISH"
+updated: "2026-01-25T23:50:00Z"
+phase: 4
+agent: elab-epic-updates-leader
+
+summary:
+  changes_applied: 14
+  files_modified: 3
+  critical_findings_integrated: 7
+  stories_split: 1
+  stories_deferred: 1
+  new_stories_added: 6
+  risk_notes_added: 4
+
+stories_index:
+  stories_added: 6
+  stories_split: 1
+  stories_deferred: 1
+  risk_notes_added: 4
+
+  new_stories:
+    - id: "WISH-2008"
+      title: "Authorization layer testing and policy documentation"
+      priority: "P0"
+      phase: "3+ - Security & Testing"
+      depends_on: ["WISH-2001", "WISH-2002", "WISH-2003", "WISH-2004", "WISH-2005"]
+      critical_finding: "SEC-001, SEC-004"
+
+    - id: "WISH-2009"
+      title: "Feature flag infrastructure setup for gradual wishlist rollout"
+      priority: "P0"
+      phase: "2+ - Infrastructure"
+      depends_on: ["WISH-2007"]
+      critical_finding: "PLAT-005"
+
+    - id: "WISH-2010"
+      title: "Shared Zod schemas and types setup"
+      priority: "P0"
+      phase: "2 - Foundation"
+      depends_on: ["WISH-2007"]
+
+    - id: "WISH-2011"
+      title: "Test infrastructure for MSW mocking of S3 and API calls"
+      priority: "P0"
+      phase: "2 - Infrastructure"
+      depends_on: ["WISH-2007"]
+
+    - id: "WISH-2012"
+      title: "Accessibility testing harness setup"
+      priority: "P0"
+      phase: "2 - Infrastructure"
+      depends_on: ["WISH-2001"]
+
+    - id: "WISH-2013"
+      title: "File upload security hardening"
+      priority: "P0"
+      phase: "3 - Security"
+      depends_on: ["WISH-2007", "WISH-2002"]
+      critical_finding: "SEC-002, PLAT-001"
+
+  split_stories:
+    - id: "WISH-2005"
+      split_into: ["WISH-2005a", "WISH-2005b"]
+      reason: "Original story combined drag-and-drop interaction complexity with optimistic state management - too much scope"
+
+      - id: "WISH-2005a"
+        title: "Drag-and-drop reordering with dnd-kit"
+        complexity: "Large"
+        scope: "Core drag-and-drop functionality, re-order persistence, pagination awareness"
+        depends_on: ["WISH-2002", "WISH-2003", "WISH-2004"]
+
+      - id: "WISH-2005b"
+        title: "Optimistic updates and undo flow"
+        complexity: "Medium"
+        scope: "Client-side optimistic updates, 5-second undo window, toast notifications"
+        depends_on: ["WISH-2005a"]
+
+  deferred_stories:
+    - id: "WISH-2006"
+      title: "Accessibility"
+      reason: "Comprehensive accessibility scope is ambitious; defer to Phase 2 after core functionality complete"
+      recommendation: "Complete WISH-2000-2005 first, then tackle accessibility in dedicated phase"
+      original_phase: "5 - Accessibility"
+      deferred_to: "5 - Accessibility (Phase 2)"
+
+  risk_notes_added:
+    - story: "WISH-2001"
+      note: "Must implement authorization checks (see WISH-2008)."
+
+    - story: "WISH-2002"
+      note: "Must implement file type/size validation and virus scanning (see WISH-2013). Must implement authorization checks (see WISH-2008)."
+
+    - story: "WISH-2003"
+      note: "Must implement authorization checks and ownership verification (see WISH-2008)."
+
+    - story: "WISH-2004"
+      note: "Must implement ownership verification on purchased endpoint (see WISH-2008). Must add transaction rollback tests (see WISH-2008)."
+
+roadmap:
+  files_modified: 1
+  changes:
+    - item: "Dependency graph"
+      change: "Added 6 new stories and split WISH-2005 into 2005a/2005b. Marked WISH-2006 deferred."
+      impact: "Updated Mermaid diagram with new Phase 2 infrastructure stories"
+
+    - item: "Critical path"
+      change: "Extended from 6 to 8 stories"
+      before: "WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002 → WISH-2005 → WISH-2006"
+      after: "WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002 → WISH-2013 → WISH-2008 → WISH-2005a → WISH-2005b"
+
+    - item: "Gantt view"
+      change: "Updated with new Phase 2 infrastructure stories and Phase 4 split"
+      impact: "Now shows 5 Phase 2 stories vs original 1"
+
+    - item: "Parallel opportunities"
+      change: "Increased max parallelization from 3 to 5 stories"
+      detail: "Phase 2 now allows WISH-2001, WISH-2009, WISH-2010, WISH-2011 to start in parallel after WISH-2007"
+
+    - item: "Risk indicators"
+      change: "Recalculated for all stories, added critical-risk category"
+      new_critical_risk: ["WISH-2008", "WISH-2013"]
+      new_high_risk: ["WISH-2005a", "WISH-2005b"]
+
+    - item: "Swimlane view"
+      change: "Added Infrastructure and Security domains"
+      new_domains: ["Infrastructure (WISH-2009, 2010, 2011, 2012)", "Security (WISH-2008, 2013)"]
+
+    - item: "Quick reference metrics"
+      changes:
+        total_stories: "7 → 14"
+        mvp_stories: "6 → 13"
+        deferred_stories: "0 → 1"
+        p0_priority_stories: "0 → 6"
+        critical_risk_stories: "0 → 2"
+        high_risk_stories: "1 → 3"
+        critical_path_length: "6 → 8"
+        max_parallel: "3 → 5"
+
+files_modified:
+  - file: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/stories.index.md"
+    changes: 6
+    details:
+      - "Updated progress summary: 13 pending + 1 deferred"
+      - "Split WISH-2005 into WISH-2005a and WISH-2005b with separate complexity/scope"
+      - "Marked WISH-2006 as deferred with rationale"
+      - "Added 6 new P0 stories (WISH-2008 through WISH-2013) with full descriptions"
+      - "Added risk notes to WISH-2001, 2002, 2003, 2004 referencing security/validation stories"
+
+  - file: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/WISH.roadmap.md"
+    changes: 7
+    details:
+      - "Updated dependency graph with new stories and WISH-2005 split"
+      - "Extended critical path from 6 to 8 stories"
+      - "Updated Gantt view showing parallel Phase 2 infrastructure"
+      - "Enhanced parallel opportunities analysis (3 → 5 max)"
+      - "Recalculated risk indicators with critical-risk category"
+      - "Updated swimlane view with Infrastructure and Security domains"
+      - "Updated quick reference metrics and timestamp"
+
+  - file: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/_epic-elab/CHECKPOINT.md"
+    changes: 2
+    details:
+      - "Marked Phase 4 (Updates) as complete"
+      - "Added comprehensive Phase 3 and Phase 4 completion details"
+      - "Provided resume instructions for story-level elaboration"
+
+artifacts_created:
+  - file: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/_epic-elab/EPIC-ELAB-COMPLETE.yaml"
+    type: "Final Summary"
+    content: "Comprehensive summary of entire elaboration process, decisions applied, and updated portfolio"
+
+  - file: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/_epic-elab/UPDATES-LOG.yaml"
+    type: "Change Log"
+    content: "Detailed record of Phase 4 updates and all changes made to artifacts"
+
+decision_integration:
+  critical_findings:
+    total_accepted: 7
+    total_deferred: 0
+    total_rejected: 0
+
+    integrated_findings:
+      - id: "SEC-001"
+        finding: "Missing authorization on core endpoints"
+        integration: "WISH-2008: Authorization layer testing"
+        action: "Added risk notes to WISH-2001 through WISH-2004"
+
+      - id: "SEC-002"
+        finding: "Missing file upload security"
+        integration: "WISH-2013: File upload security hardening"
+        action: "Added risk note to WISH-2002"
+
+      - id: "SEC-004"
+        finding: "Missing ownership verification"
+        integration: "WISH-2008: Authorization layer testing"
+        action: "Added risk note to WISH-2004"
+
+      - id: "ENG-001"
+        finding: "Transaction safety in Got it flow"
+        integration: "WISH-2004 enhancement + WISH-2008"
+        action: "Added risk note to WISH-2004"
+
+      - id: "PLAT-005"
+        finding: "Missing feature flag infrastructure"
+        integration: "WISH-2009: Feature flag infrastructure"
+        action: "New P0 story added"
+
+      - id: "PLAT-001"
+        finding: "Missing S3 infrastructure docs"
+        integration: "WISH-2013: File upload security hardening"
+        action: "Integrated into security hardening story"
+
+      - id: "QA-001"
+        finding: "Missing transaction rollback tests"
+        integration: "WISH-2008: Authorization layer testing"
+        action: "Added risk note to WISH-2004"
+
+validation:
+  stories_index_valid: true
+  roadmap_valid: true
+  checkpoint_valid: true
+  summary_created: true
+  all_decisions_applied: true
+
+signals:
+  status: "UPDATES COMPLETE"
+  verdict: "READY"
+  next_step: "/elab-story WISH-2000"
+
+elapsed_time:
+  started: "2026-01-25T23:45:00Z"
+  completed: "2026-01-25T23:50:00Z"
+  duration_minutes: 5

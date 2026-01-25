@@ -1,0 +1,96 @@
+---
+perspective: engineering
+verdict: CONCERNS
+completed: 2026-01-25T23:35:00Z
+
+feasibility:
+  - story: WISH-2000
+    complexity: S
+    feasible: true
+    concerns: null
+  - story: WISH-2001
+    complexity: M
+    feasible: true
+    concerns: Gallery package integration requires careful consistency
+  - story: WISH-2002
+    complexity: M
+    feasible: true
+    concerns: S3 presigned URL generation and error handling
+  - story: WISH-2003
+    complexity: S
+    feasible: true
+    concerns: null
+  - story: WISH-2004
+    complexity: M
+    feasible: true
+    concerns: Atomic transaction for Got it flow is critical
+  - story: WISH-2005
+    complexity: XL
+    feasible: true
+    concerns: dnd-kit state management with optimistic updates complexity
+  - story: WISH-2006
+    complexity: L
+    feasible: true
+    concerns: Comprehensive accessibility testing and implementation
+
+architecture:
+  separation_of_concerns: true
+  package_boundaries: true
+  circular_deps_risk: false
+  reuse_opportunities:
+    - Gallery component library for WISH-2001 (use @repo/gallery.GalleryCard)
+    - Form validation with Zod across WISH-2002 and WISH-2003
+    - Modal patterns from @repo/app-component-library for WISH-2004
+    - Drag-and-drop patterns from dnd-kit (already in monorepo ecosystem)
+
+high:
+  - id: ENG-001
+    issue: WISH-2004 "Got it" flow requires atomic transaction between Sets and Wishlist tables
+    stories: [WISH-2004]
+    action: Define explicit transaction boundary - create Set record before deleting Wishlist item to prevent orphaned data
+  - id: ENG-002
+    issue: WISH-2005 sizing warning indicates complexity - optimistic updates + undo + dnd-kit state management
+    stories: [WISH-2005]
+    action: Consider splitting into substories if estimation exceeds 13 points (drag-and-drop vs optimistic updates)
+  - id: ENG-003
+    issue: WISH-2001 GalleryCard integration needs clear API contract with @repo/gallery package
+    stories: [WISH-2001]
+    action: Verify @repo/gallery exports GalleryCard component and supports custom data structures
+  - id: ENG-004
+    issue: WISH-2002 S3 presigned URL generation needs proper error boundaries and retry logic
+    stories: [WISH-2002]
+    action: Document presigned URL expiration handling, size limits, and upload failure recovery
+
+medium:
+  - id: ENG-005
+    issue: WISH-2006 accessibility routing (keyboard shortcuts A, G, Delete) may conflict with browser defaults
+    stories: [WISH-2006]
+    action: Verify keyboard shortcut choices don't conflict with browser, OS, or screen reader shortcuts
+  - id: ENG-006
+    issue: Pagination state management in WISH-2001 needs careful handling with filtering
+    stories: [WISH-2001]
+    action: Define how pagination state resets when filters change
+  - id: ENG-007
+    issue: Drag-and-drop reorder endpoint needs pagination awareness in WISH-2005
+    stories: [WISH-2005]
+    action: Clarify if reordering works across pages or within current page only
+
+missing_stories:
+  - title: Shared Zod schemas and types setup
+    reason: Multiple stories need form validation - centralize schema definitions
+    priority: P0
+  - title: Database index strategy for wishlist_items
+    reason: WISH-2001 filtering and sorting performance needs documented index usage
+    priority: P1
+  - title: Error boundary and logging strategy
+    reason: Consistent error handling across API and frontend components needed
+    priority: P1
+
+recommendations:
+  - Create shared validation schema package (@repo/wishlist-schemas) before WISH-2002
+  - Establish database query optimization plan (indexes, query strategy) for filtering in WISH-2001
+  - Document API error response format and frontend error handling strategy
+  - Define S3 integration configuration (bucket permissions, presigned URL TTL, size limits)
+  - Create internal dnd-kit wrapper component to encapsulate drag-and-drop complexity
+
+ENGINEERING REVIEW COMPLETE

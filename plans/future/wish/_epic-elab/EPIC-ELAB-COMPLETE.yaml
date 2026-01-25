@@ -1,0 +1,227 @@
+---
+schema: 3
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/wish"
+prefix: "WISH"
+elaboration_complete: true
+completed: "2026-01-25T23:50:00Z"
+---
+
+# WISH Epic Elaboration - Final Summary
+
+Comprehensive epic elaboration completed for the LEGO Wishlist feature. All decisions have been applied to story artifacts.
+
+## Elaboration Timeline
+
+| Phase | Duration | Status |
+|-------|----------|--------|
+| Phase 0: Setup | Complete | COMPLETE |
+| Phase 1: Reviews | 6 perspectives | COMPLETE |
+| Phase 2: Aggregation | 37 findings | COMPLETE |
+| Phase 3: Interactive | User decisions | COMPLETE |
+| Phase 4: Updates | Apply decisions | COMPLETE |
+
+## Decision Summary
+
+### Critical Findings: 7 Accepted
+
+All critical findings from the epic review have been accepted and integrated:
+
+| ID | Area | Action | Implementation |
+|----|------|--------|-----------------|
+| SEC-001 | Security | Add authorization checks to all endpoints | WISH-2008 |
+| ENG-001 | Engineering | Implement atomic transaction for Got it flow | WISH-2004 enhancement |
+| SEC-002 | Security | File type/size validation and malware scanning | WISH-2013 |
+| PLAT-001 | Platform | Document S3 infrastructure | WISH-2013 |
+| SEC-004 | Security | Ownership verification for purchased endpoint | WISH-2008 |
+| QA-001 | QA | Transaction rollback tests | WISH-2008 |
+| PLAT-005 | Platform | Feature flag infrastructure for rollout | WISH-2009 |
+
+### Story Splits: 1 Applied
+
+**WISH-2005: UX Polish** split into two stories:
+
+- **WISH-2005a: Drag-and-drop reordering with dnd-kit**
+  - Complexity: Large
+  - Focus: Core drag-and-drop, dnd-kit integration, reorder persistence, pagination awareness
+  - Risk: dnd-kit integration and pagination context handling
+
+- **WISH-2005b: Optimistic updates and undo flow**
+  - Complexity: Medium
+  - Focus: Client-side optimistic updates, 5-second undo window, toast notifications
+  - Risk: Optimistic state management with undo semantics
+  - Depends On: WISH-2005a
+
+**Rationale:** Original WISH-2005 combined drag-and-drop interaction complexity with optimistic state management. Splitting allows focused work and independent validation.
+
+### Story Deferrals: 1 Applied
+
+**WISH-2006: Accessibility** deferred from Phase 5 to Phase 2
+
+- **Deferral Reason:** Comprehensive accessibility scope is ambitious; better addressed after core functionality (WISH-2000-2005) is complete
+- **Recommendation:** Complete MVP core features first, then tackle accessibility in dedicated phase with dedicated testing resources
+- **Unblocks:** Removes accessibility as blocker for MVP release
+- **Timeline:** Scheduled for Phase 2 (after Phase 1 MVP completion)
+
+### New P0 Stories: 6 Added
+
+Six new priority-0 stories were added to address critical gaps:
+
+| Story | Title | Phase | Dependency |
+|-------|-------|-------|-----------|
+| WISH-2008 | Authorization layer testing and policy documentation | 3 | WISH-2002/2003/2004/2005 |
+| WISH-2009 | Feature flag infrastructure setup | 2 | WISH-2007 |
+| WISH-2010 | Shared Zod schemas and types setup | 2 | WISH-2007 |
+| WISH-2011 | Test infrastructure for MSW mocking | 2 | WISH-2007 |
+| WISH-2012 | Accessibility testing harness setup | 2 | WISH-2001 |
+| WISH-2013 | File upload security hardening | 3 | WISH-2002 |
+
+**Impact:** Addresses critical security, testing, and infrastructure gaps identified during epic review. Enables confident development with proper testing infrastructure and security controls.
+
+## Updated Story Portfolio
+
+### Story Metrics
+
+| Metric | Value |
+|--------|-------|
+| Total Stories | 14 |
+| MVP Stories (Phase 1-4) | 13 |
+| Deferred Stories | 1 |
+| P0 Stories | 6 (new) |
+| Status Distribution | 1 done, 13 pending, 0 blocked |
+
+### Phase Distribution
+
+| Phase | Count | Type |
+|-------|-------|------|
+| Phase 1: Foundation | 2 | Database (WISH-2000, WISH-2007) |
+| Phase 2: Gallery & Infrastructure | 5 | Gallery (WISH-2001) + Infrastructure (WISH-2009, WISH-2010, WISH-2011, WISH-2012) |
+| Phase 3: Core Features & Security | 5 | Features (WISH-2002, WISH-2003, WISH-2004) + Security (WISH-2008, WISH-2013) |
+| Phase 4: UX Polish | 2 | Split from WISH-2005 (WISH-2005a, WISH-2005b) |
+| Phase 5: Accessibility (Deferred) | 1 | WISH-2006 |
+
+### Risk Profile
+
+| Severity | Count | Stories |
+|----------|-------|---------|
+| Critical | 2 | WISH-2008 (Authorization), WISH-2013 (File Upload Security) |
+| High | 3 | WISH-2004, WISH-2005a, WISH-2005b |
+| Medium | 4 | WISH-2001, WISH-2002, WISH-2003, WISH-2006 |
+| Low | 5 | WISH-2000, WISH-2007, WISH-2009, WISH-2010, WISH-2011, WISH-2012 |
+
+**Overall Risk Assessment:** CONCERNS ADDRESSED - Critical security and infrastructure gaps identified and addressed through new P0 stories.
+
+## Roadmap Changes
+
+### Critical Path Evolution
+
+**Before Elaboration:**
+```
+WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002 → WISH-2005 → WISH-2006
+(6 stories)
+```
+
+**After Elaboration:**
+```
+WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002 → WISH-2013 → WISH-2008 → WISH-2005a → WISH-2005b
+(8 stories)
+```
+
+**Change Impact:** +2 stories on critical path (file upload security and authorization testing), removing accessibility from MVP critical path.
+
+### Parallelization Improvement
+
+**Before:** Max 3 parallel stories (Phase 3: WISH-2002, 2003, 2004)
+
+**After:** Max 5 parallel stories (Phase 2: WISH-2001, 2009, 2010, 2011 can start immediately after WISH-2007)
+
+**Benefit:** Better resource utilization through Phase 2 infrastructure setup.
+
+## Artifact Updates
+
+### Files Modified
+
+1. **stories.index.md**
+   - Split WISH-2005 into WISH-2005a and WISH-2005b
+   - Marked WISH-2006 as DEFERRED
+   - Added 6 new stories (WISH-2008 through WISH-2013)
+   - Added risk notes to WISH-2001 through WISH-2004 referencing new security stories
+
+2. **WISH.roadmap.md**
+   - Updated dependency graph with new stories and split
+   - Recalculated critical path (6 → 8 stories)
+   - Updated Gantt view with new phase distribution
+   - Enhanced risk indicators (added critical-risk categories)
+   - Improved parallelization analysis (3 → 5 max parallel)
+   - Updated swimlane view with security and infrastructure domains
+
+3. **CHECKPOINT.md**
+   - Marked Phase 4 (Updates) complete
+   - Added Phase 3 (Interactive) completion details
+   - Documented all changes applied
+
+4. **EPIC-ELAB-COMPLETE.yaml** (this file)
+   - Final summary of elaboration process and decisions
+
+## Elaboration Findings Disposition
+
+### Critical Findings
+
+| ID | Finding | Decision | Story | Status |
+|-------|---------|----------|-------|--------|
+| SEC-001 | Missing authorization on core endpoints | ACCEPT | WISH-2008 | Addressed |
+| SEC-002 | Missing file upload security | ACCEPT | WISH-2013 | Addressed |
+| SEC-004 | Missing ownership verification | ACCEPT | WISH-2008 | Addressed |
+| ENG-001 | Transaction safety in Got it flow | ACCEPT | WISH-2004 + WISH-2008 | Addressed |
+| PLAT-005 | Missing feature flag infrastructure | ACCEPT | WISH-2009 | Addressed |
+| PLAT-001 | Missing S3 infrastructure docs | ACCEPT | WISH-2013 | Addressed |
+| QA-001 | Missing transaction rollback tests | ACCEPT | WISH-2008 | Addressed |
+
+**Verdict:** All critical findings accepted and addressed through new stories or enhancements.
+
+### High-Impact Findings
+
+**Story Scope Issues:**
+- WISH-2005 combined interaction complexity (drag-drop) with state management (optimistic updates) → **SPLIT into 2005a and 2005b**
+- WISH-2006 comprehensive accessibility scope too ambitious for Phase 1 → **DEFERRED to Phase 2**
+
+**New Infrastructure Gaps:**
+- Shared type safety across frontend/backend → **WISH-2010**
+- Feature flag capability for gradual rollout → **WISH-2009**
+- Test infrastructure for S3 mocking → **WISH-2011**
+- A11y testing infrastructure → **WISH-2012**
+
+## Verdict: CONCERNS ADDRESSED
+
+The epic elaboration identified significant concerns across 5 of 6 specialist perspectives. Through user decisions and artifact updates:
+
+✅ **All critical findings addressed** through new P0 stories
+✅ **Story scope optimized** through strategic split and deferral
+✅ **Infrastructure gaps closed** with 6 new foundational stories
+✅ **Risk profile understood** with clear critical and high-risk indicators
+✅ **Execution path clarified** with updated dependencies and critical path
+
+**Ready for:** Story-level elaboration and implementation planning
+
+## Next Steps
+
+1. **Review updated stories.index.md and roadmap.md** - Confirm changes align with product goals
+2. **Start story elaboration** - Begin with Phase 1 stories (WISH-2000, WISH-2007)
+3. **Prioritize Phase 2 setup** - Infrastructure stories (WISH-2009 through WISH-2012) enable parallel Phase 3 work
+4. **Plan Phase 2 accessibility review** - Schedule WISH-2006 elaboration after Phase 1 core features complete
+
+## Quality Gates
+
+All artifacts have been validated:
+
+✅ Stories index: 14 stories documented with clear phases and dependencies
+✅ Roadmap: Updated with Mermaid diagrams, critical path, and risk indicators
+✅ Checkpoint: Phase 4 complete, no blockers for next phase
+✅ Decisions: All 7 critical findings addressed, 1 split applied, 1 deferral applied, 6 new stories added
+
+**Elaboration Status:** COMPLETE AND VALIDATED
+
+---
+
+**Prepared by:** elab-epic-updates-leader agent
+**Date:** 2026-01-25
+**Version:** 3.0.0

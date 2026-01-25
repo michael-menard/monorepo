@@ -1,13 +1,13 @@
 ---
 doc_type: roadmap
-title: "WISH — Wishlist Story Roadmap"
+title: "WISH — Story Roadmap"
 status: active
-story_prefix: WISH
-created_at: "2026-01-24T02:00:00-07:00"
-updated_at: "2026-01-24T02:00:00-07:00"
+story_prefix: "WISH"
+created_at: "2026-01-25T23:20:00Z"
+updated_at: "2026-01-25T23:20:00Z"
 ---
 
-# WISH — Wishlist Story Roadmap
+# WISH — Story Roadmap
 
 Visual representation of story dependencies and execution order.
 
@@ -20,47 +20,61 @@ Shows which stories block downstream work.
 ```mermaid
 flowchart LR
     subgraph Phase1["Phase 1: Foundation"]
-        S001["WISH-2000<br/>DB Schema<br/>& Types"]
-        S007["WISH-2007<br/>Run<br/>Migration"]
+        S001["{WISH-2000<br/>Database Schema &<br/>Types"]
+        S007["{WISH-2007<br/>Run Migration"]
     end
 
-    subgraph Phase2["Phase 2: Gallery MVP"]
-        S002["WISH-2001<br/>Gallery MVP<br/>(Vertical Slice)"]
+    subgraph Phase2["Phase 2: Gallery & Infrastructure"]
+        S002["{WISH-2001<br/>Gallery MVP"]
+        S009["{WISH-2009<br/>Feature Flags"]
+        S010["{WISH-2010<br/>Shared Schemas"]
+        S011["{WISH-2011<br/>MSW Test Infra"]
+        S012["{WISH-2012<br/>A11y Harness"]
     end
 
-    subgraph Phase3["Phase 3: Core Features"]
-        S003["WISH-2002<br/>Add Item<br/>Flow"]
-        S004["WISH-2003<br/>Detail & Edit<br/>Pages"]
-        S005["WISH-2004<br/>Modals<br/>& Transitions"]
+    subgraph Phase3["Phase 3: Core Features & Security"]
+        S003["{WISH-2002<br/>Add Item Flow"]
+        S004["{WISH-2003<br/>Detail & Edit<br/>Pages"]
+        S005["{WISH-2004<br/>Modals &<br/>Transitions"]
+        S013["{WISH-2013<br/>File Upload<br/>Security"]
+        S008["{WISH-2008<br/>Authorization<br/>Testing"]
     end
 
     subgraph Phase4["Phase 4: UX Polish"]
-        S006["WISH-2005<br/>Drag-Drop<br/>& Empty States"]
+        S006a["{WISH-2005a<br/>Drag-and-drop<br/>with dnd-kit"]
+        S006b["{WISH-2005b<br/>Optimistic<br/>Updates"]
     end
 
     subgraph Phase5["Phase 5: Accessibility"]
-        S008["WISH-2006<br/>Keyboard Nav<br/>& A11y"]
+        S006c["(WISH-2006<br/>Deferred)"]
     end
 
     %% Dependencies
     S001 --> S007
-    S001 --> S002
     S007 --> S002
+    S007 --> S009
+    S007 --> S010
+    S007 --> S011
+    S002 --> S012
     S002 --> S003
     S002 --> S004
     S002 --> S005
-    S003 --> S006
-    S004 --> S006
-    S005 --> S006
-    S006 --> S008
+    S003 --> S013
+    S013 --> S008
+    S004 --> S008
+    S005 --> S008
+    S008 --> S006a
+    S006a --> S006b
 
     %% Styling
-    classDef ready fill:#90EE90,stroke:#228B22,stroke-width:2px
-    classDef blocked fill:#FFE4B5,stroke:#FFA500,stroke-width:2px
-    classDef done fill:#87CEEB,stroke:#4682B4,stroke-width:2px
+    classDef ready fill:#90EE90,stroke:#228B22
+    classDef blocked fill:#FFE4B5,stroke:#FFA500
+    classDef done fill:#87CEEB,stroke:#4682B4
+    classDef deferred fill:#D3D3D3,stroke:#A9A9A9
 
-    class S001,S002 ready
-    class S003,S004,S005,S006,S008 blocked
+    class S001,S007 ready
+    class S002,S003,S004,S005,S009,S010,S011,S012,S013,S008,S006a,S006b blocked
+    class S006c deferred
 ```
 
 **Legend:** Green = Ready | Yellow = Blocked | Blue = Done
@@ -71,97 +85,106 @@ flowchart LR
 
 ```mermaid
 gantt
-    title WISH Story Execution Order
+    title WISH Story Execution Order (Updated)
     dateFormat X
     axisFormat %s
 
     section Phase 1
-    WISH-2000 DB Schema    :s001, 0, 1
-    WISH-2007 Migration    :s007, after s001, 1
+    WISH-2000 Schema    :s001, 0, 1
+    WISH-2007 Migration :s007, 1, 1
 
     section Phase 2
-    WISH-2001 Gallery MVP  :s002, after s007, 1
+    WISH-2001 Gallery   :s002, 2, 1
+    WISH-2009 Feature Flags :s009, 2, 1
+    WISH-2010 Schemas   :s010, 2, 1
+    WISH-2011 MSW Infra :s011, 2, 1
+    WISH-2012 A11y Harness :s012, 2, 1
 
     section Phase 3
-    WISH-2002 Add Flow     :s003, after s002, 1
-    WISH-2003 Detail/Edit  :s004, after s002, 1
-    WISH-2004 Modals       :s005, after s002, 1
+    WISH-2002 Add Item  :s003, 3, 1
+    WISH-2003 Detail    :s004, 3, 1
+    WISH-2004 Modals    :s005, 3, 1
+    WISH-2013 Upload Security :s013, 3, 1
+    WISH-2008 Authorization :s008, 3, 1
 
     section Phase 4
-    WISH-2005 UX Polish    :s006, after s003 s004 s005, 1
+    WISH-2005a Drag-drop :s006a, 4, 1
+    WISH-2005b Optimistic :s006b, 5, 1
 
     section Phase 5
-    WISH-2006 Accessibility :s008, after s006, 1
+    WISH-2006 A11y (Deferred) :crit, s006c, 6, 1
 ```
 
 ---
 
 ## Critical Path
 
-The longest chain of dependent stories that cannot be parallelized:
+The longest chain of dependent stories:
 
 ```
-WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002/WISH-2003/WISH-2004 → WISH-2005 → WISH-2006
+WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002 → WISH-2013 → WISH-2008 → WISH-2005a → WISH-2005b
 ```
 
-**Critical path length:** 6 stories (sequential)
-**Minimum timeline:** 6 development phases
+**Critical path length:** 8 stories
+
+Note: WISH-2006 (Accessibility) is now deferred and not on the critical path for MVP.
 
 ---
 
 ## Parallel Opportunities
 
-| Parallel Group | Stories | After | Notes |
-|---|---|---|---|
-| Group 1 | WISH-2000 | — (start) | Foundation - schema |
-| Group 2 | WISH-2007 | Group 1 | Foundation - migration |
-| Group 3 | WISH-2001 | Group 2 | Gallery MVP - vertical slice |
-| Group 4 | WISH-2002, WISH-2003, WISH-2004 | Group 3 | Core CRUD - 3 parallel tracks |
-| Group 5 | WISH-2005 | Group 4 | UX Polish |
-| Group 6 | WISH-2006 | Group 5 | Accessibility |
+| Parallel Group | Stories | After |
+|----------------|---------|-------|
+| Group 1 | WISH-2000 | — (start) |
+| Group 2 | WISH-2007 | Group 1 |
+| Group 3 | WISH-2001, WISH-2009, WISH-2010, WISH-2011 | Group 2 |
+| Group 4 | WISH-2012 | WISH-2001 |
+| Group 5 | WISH-2002, WISH-2003, WISH-2004 | Group 3 |
+| Group 6 | WISH-2013 | WISH-2002 |
+| Group 7 | WISH-2008 | WISH-2013, WISH-2003, WISH-2004 |
+| Group 8 | WISH-2005a | Group 7 |
+| Group 9 | WISH-2005b | Group 8 |
+| Group 10 | WISH-2006 (Deferred) | — |
 
-**Maximum parallelization:** 3 stories at once (Phase 3 tracks: Add, Edit, Delete/Purchase)
+**Maximum parallelization:** 5 stories at once (in Phase 2: WISH-2009, WISH-2010, WISH-2011 + WISH-2001 prep parallel)
 
 ---
 
 ## Risk Indicators
 
-| Story | Risk Level | Reason | Mitigation |
-|-------|-----------|--------|-----------|
-| WISH-2000 | HIGH | Schema changes after migration are costly | Thorough PRD review before approval; capture all optional fields upfront |
-| WISH-2001 | MEDIUM | First vertical slice; integration issues likely | Allocate extra debugging time; validate RTK Query setup early |
-| WISH-2002 | MEDIUM | S3 image upload can fail/timeout | Implement presigned URL expiry handling; clear error messages; allow retry |
-| WISH-2003 | MEDIUM | Partial updates need careful validation | Test all field combinations; validate on both client and server |
-| WISH-2004 | HIGH | "Got It" transaction must be atomic | Use DB transaction; test rollback scenarios; never delete Wishlist if Set creation fails |
-| WISH-2005 | MEDIUM | dnd-kit integration complexity | Start with desktop; add touch support incrementally; test on real mobile devices |
-| WISH-2006 | MEDIUM | Roving tabindex is complex; screen reader testing requires specific tools | Use @repo/accessibility patterns; manual VoiceOver/NVDA testing; automated axe checks |
+| Story | Risk Level | Reason |
+|-------|------------|--------|
+| WISH-2008 | Critical | Authorization layer must be implemented across all endpoints. Security-critical. |
+| WISH-2013 | Critical | File upload security: virus scanning, type validation, S3 hardening required. |
+| WISH-2004 | High | Got it flow data loss - transaction must create Set before deleting Wishlist item |
+| WISH-2005a | High | dnd-kit integration and pagination awareness with optimistic updates |
+| WISH-2005b | High | Optimistic state management with undo semantics across out-of-order operations |
+| WISH-2001 | Medium | Integration with shared gallery package must maintain consistency |
+| WISH-2002 | Medium | Depends on WISH-2013 for file upload security |
+| WISH-2003 | Medium | Must implement authorization checks (WISH-2008) |
+| WISH-2006 | Medium | Comprehensive accessibility testing requires VoiceOver and keyboard testing (Deferred) |
+| WISH-2000 | Low | Schema definition is straightforward |
+| WISH-2007 | Low | Migration must be run after schema is approved |
+| WISH-2009 | Low | Standard feature flag infrastructure |
+| WISH-2010 | Low | Standard schema consolidation |
+| WISH-2011 | Low | Standard MSW mock setup |
+| WISH-2012 | Low | Standard test harness |
 
 ---
 
 ## Swimlane View (by Domain)
 
-### Backend Services (API)
-
-| Phase | Stories | Endpoints | Infrastructure |
-|-------|---------|-----------|-----------------|
-| 1 | WISH-2000 | — | wishlist_items table, indexes |
-| 1 | WISH-2007 | — | Database migration |
-| 2 | WISH-2001 | GET /api/wishlist, GET /api/wishlist/:id | RTK Query schemas |
-| 3 | WISH-2002 | POST /api/wishlist | S3 presigned URLs |
-| 3 | WISH-2003 | PATCH /api/wishlist/:id | — |
-| 3 | WISH-2004 | DELETE /api/wishlist/:id, POST /api/wishlist/:id/purchased | Atomic transaction |
-| 4 | WISH-2005 | PATCH /api/wishlist/reorder | — |
-
-### Frontend Services (React)
-
-| Phase | Stories | Pages | Components | Features |
-|-------|---------|-------|------------|----------|
-| 2 | WISH-2001 | Gallery, Detail | WishlistCard, GalleryLayout | Store filters, search, sort, pagination |
-| 3 | WISH-2002 | Add Item | WishlistForm | Image upload, all field types |
-| 3 | WISH-2003 | Edit Item | WishlistForm (pre-populated) | Partial updates, optimistic |
-| 3 | WISH-2004 | — | DeleteConfirmModal, GotItModal | Delete + Purchase modals, undo |
-| 4 | WISH-2005 | Gallery (enhanced) | DraggableWishlistCard, EmptyStates | Drag-and-drop, loading skeletons |
-| 5 | WISH-2006 | All | Accessibility utilities | Keyboard nav, screen reader support |
+| Domain | Stories | Phase |
+|--------|---------|-------|
+| Database | WISH-2000, WISH-2007 | 1 |
+| Infrastructure | WISH-2009, WISH-2010, WISH-2011, WISH-2012 | 2 |
+| Frontend - Gallery | WISH-2001 | 2 |
+| Frontend - Forms | WISH-2002, WISH-2003 | 3 |
+| Frontend - Interactions | WISH-2004 | 3 |
+| Frontend - UX | WISH-2005a, WISH-2005b | 4 |
+| Frontend - A11y | WISH-2006 | 5 (Deferred) |
+| Backend - API | WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005 | 2-4 |
+| Security | WISH-2008, WISH-2013 | 3 |
 
 ---
 
@@ -169,42 +192,17 @@ WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002/WISH-2003/WISH-2004 → WISH
 
 | Metric | Value |
 |--------|-------|
-| Total Stories | 7 |
+| Total Stories | 14 |
+| MVP Stories | 13 |
+| Deferred Stories | 1 (WISH-2006) |
 | Ready to Start | 1 (WISH-2000) |
-| Critical Path Length | 6 stories |
-| Max Parallel | 3 stories |
+| Critical Path Length | 8 stories |
+| Max Parallel | 5 stories |
 | Phases | 5 |
-| Total Estimated Points | 40 |
-| MVP Stories | 5 (phases 1-3 core) |
-
----
-
-## Story Status Summary
-
-| Status | Count | Stories |
-|--------|-------|---------|
-| Done | 1 | WISH-2003 |
-| Approved | 3 | WISH-2000, WISH-2002, WISH-2004, WISH-2007 |
-| Ready for Review | 2 | WISH-2001 |
-| Draft | 2 | WISH-2005, WISH-2006 |
-
----
-
-## Key Success Criteria
-
-### MVP Success (Phases 1-3)
-- [ ] All endpoints deployed and working
-- [ ] Gallery displays wishlist items with filtering
-- [ ] Add, view, and delete flows working end-to-end
-- [ ] "Got it" flow creates Set and removes from Wishlist
-
-### Full Feature Success (Phases 4-5)
-- [ ] Drag-and-drop reordering implemented
-- [ ] All accessibility keyboard shortcuts working
-- [ ] Screen reader support verified
-- [ ] WCAG AA compliance achieved
-- [ ] E2E tests pass
-- [ ] Performance acceptable on mobile
+| P0 Priority Stories | 6 (new security/infra) |
+| Critical-Risk Stories | 2 (WISH-2008, WISH-2013) |
+| High-Risk Stories | 3 (WISH-2004, WISH-2005a, WISH-2005b) |
+| Stories with Sizing Warnings | 2 (WISH-2005a, WISH-2006) |
 
 ---
 
@@ -212,24 +210,5 @@ WISH-2000 → WISH-2007 → WISH-2001 → WISH-2002/WISH-2003/WISH-2004 → WISH
 
 | Date | Change | Stories Affected |
 |------|--------|------------------|
-| 2026-01-24 | Initial roadmap created | All (WISH-2000 through WISH-2006) |
-
----
-
-## Dependencies on Other Epics
-
-| Story | External Dependency | Status | Impact |
-|-------|-------------------|--------|--------|
-| WISH-2004 | Sets Gallery (WISH integration) | Not started | "Got it" flow creates Set item |
-| WISH-2006 | Accessibility patterns | In progress | Roving tabindex utilities |
-
----
-
-## Notes
-
-- WISH-2003 is already done (PR #350), can be skipped to Phase 4
-- WISH-2001 has sizing warning (multiple domains) - allocate extra time
-- WISH-2004 has sizing warning (multiple features) - consider splitting if needed during elaboration
-- All stories should include comprehensive test coverage (unit + E2E)
-- Accessibility requirements are strict (WCAG AA) - plan accordingly
-
+| 2026-01-25 | Initial roadmap | All |
+| 2026-01-25 | Phase 4 Updates: Applied epic elaboration decisions | WISH-2005 split into 2005a/2005b, WISH-2006 deferred, 6 new P0 stories added (WISH-2008 through WISH-2013) |

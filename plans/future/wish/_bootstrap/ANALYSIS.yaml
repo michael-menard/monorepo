@@ -1,0 +1,200 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/wish"
+prefix: "WISH"
+project_name: "wish"
+analyzed: "2026-01-25T23:20:00Z"
+
+overall_goal: |
+  Enable users to track LEGO and alt-brick sets they want to purchase, with a gallery view for easy browsing and a "Got it" flow to transition items to their Sets collection.
+
+phases:
+  - id: 1
+    name: "Foundation"
+    description: "Database schema, types, and migration"
+  - id: 2
+    name: "Vertical Slice - Gallery MVP"
+    description: "Core gallery view with filtering and display"
+  - id: 3
+    name: "Core Features"
+    description: "Add item flow, detail/edit pages, and modal interactions"
+  - id: 4
+    name: "UX Polish"
+    description: "Drag-and-drop reordering, empty states, and loading skeletons"
+  - id: 5
+    name: "Accessibility"
+    description: "Full keyboard navigation and screen reader support"
+
+stories:
+  - id: "WISH-2000"
+    title: "Database Schema & Types"
+    feature: "Drizzle schema for wishlist_items table with Zod schemas and TypeScript types"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "wishlist_items PostgreSQL table"
+      - "Database indexes for userId and sortOrder"
+    goal: "Create foundational data structures for wishlist feature"
+    risk_notes: "None - schema definition is straightforward"
+    sizing_warning: false
+    status: "Ready for Review"
+
+  - id: "WISH-2007"
+    title: "Run Migration"
+    feature: "Execute database migration to create wishlist_items table"
+    phase: 1
+    depends_on: ["WISH-2000"]
+    endpoints: []
+    infrastructure:
+      - "Database migration execution"
+    goal: "Deploy wishlist schema to database"
+    risk_notes: "Migration must be run after WISH-2000 schema is approved"
+    sizing_warning: false
+    status: "Approved"
+
+  - id: "WISH-2001"
+    title: "Gallery MVP"
+    feature: "Gallery view with filtering, pagination, and card display. Store filter tabs, search, sorting by date/price/piece count/priority. WishlistCard component using GalleryCard from @repo/gallery."
+    phase: 2
+    depends_on: ["WISH-2007"]
+    endpoints:
+      - "GET /api/wishlist"
+      - "GET /api/wishlist/:id"
+    infrastructure: []
+    goal: "Enable users to view and filter their wishlist items in a gallery view"
+    risk_notes: "Integration with shared gallery package must maintain consistency"
+    sizing_warning: true
+    status: "Ready for Review"
+
+  - id: "WISH-2002"
+    title: "Add Item Flow"
+    feature: "Add item page with form, image upload with S3 presigned URLs, form validation with Zod. Manual entry for all wishlist item fields."
+    phase: 3
+    depends_on: ["WISH-2001"]
+    endpoints:
+      - "POST /api/wishlist"
+    infrastructure:
+      - "S3 presigned URLs for image upload"
+      - "Image storage in S3 with user-scoped prefix"
+    goal: "Enable users to manually add wishlist items with images"
+    risk_notes: "Image upload and S3 integration requires careful error handling"
+    sizing_warning: false
+    status: "Approved"
+
+  - id: "WISH-2003"
+    title: "Detail & Edit Pages"
+    feature: "Detail page showing full item information and edit page with pre-populated form. PATCH endpoint for updates."
+    phase: 3
+    depends_on: ["WISH-2001"]
+    endpoints:
+      - "PATCH /api/wishlist/:id"
+    infrastructure: []
+    goal: "Enable users to view full item details and edit wishlist items"
+    risk_notes: "None - straightforward CRUD operations"
+    sizing_warning: false
+    status: "Done"
+
+  - id: "WISH-2004"
+    title: "Modals & Transitions"
+    feature: "Delete confirmation modal, 'Got It' modal with purchase details form, toast notifications with undo. Transitions items to Sets collection atomically."
+    phase: 3
+    depends_on: ["WISH-2001"]
+    endpoints:
+      - "DELETE /api/wishlist/:id"
+      - "POST /api/wishlist/:id/purchased"
+    infrastructure: []
+    goal: "Enable users to delete items or transition them to Sets collection with purchase details"
+    risk_notes: "Got it flow must be atomic - create Set before deleting Wishlist item to prevent data loss"
+    sizing_warning: true
+    status: "Approved"
+
+  - id: "WISH-2005"
+    title: "UX Polish"
+    feature: "Drag-and-drop reordering with dnd-kit, optimistic updates, undo functionality (5-second window), empty states (new user, all purchased, no results), loading skeletons."
+    phase: 4
+    depends_on: ["WISH-2002", "WISH-2003", "WISH-2004"]
+    endpoints:
+      - "PATCH /api/wishlist/reorder"
+    infrastructure: []
+    goal: "Provide polished UX with drag-and-drop priority reordering and thoughtful empty states"
+    risk_notes: "dnd-kit integration and optimistic updates require careful state management"
+    sizing_warning: true
+    status: "Draft"
+
+  - id: "WISH-2006"
+    title: "Accessibility"
+    feature: "Full keyboard navigation with roving tabindex, keyboard shortcuts (A, G, Delete), screen reader announcements via live regions, modal focus trap and return, WCAG AA color contrast compliance."
+    phase: 5
+    depends_on: ["WISH-2005"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure wishlist feature is fully accessible to keyboard and screen reader users"
+    risk_notes: "Comprehensive accessibility testing required with VoiceOver and keyboard"
+    sizing_warning: true
+    status: "Draft"
+
+dependencies:
+  graph:
+    "WISH-2000": []
+    "WISH-2007": ["WISH-2000"]
+    "WISH-2001": ["WISH-2007"]
+    "WISH-2002": ["WISH-2001"]
+    "WISH-2003": ["WISH-2001"]
+    "WISH-2004": ["WISH-2001"]
+    "WISH-2005": ["WISH-2002", "WISH-2003", "WISH-2004"]
+    "WISH-2006": ["WISH-2005"]
+
+  critical_path:
+    - "WISH-2000"
+    - "WISH-2007"
+    - "WISH-2001"
+    - "WISH-2002"
+    - "WISH-2005"
+    - "WISH-2006"
+
+  critical_path_length: 6
+
+parallelization:
+  max_parallel: 3
+  groups:
+    - stories: ["WISH-2000"]
+      after: null
+    - stories: ["WISH-2007"]
+      after: "group_1"
+    - stories: ["WISH-2001"]
+      after: "group_2"
+    - stories: ["WISH-2002", "WISH-2003", "WISH-2004"]
+      after: "group_3"
+    - stories: ["WISH-2005"]
+      after: "group_4"
+    - stories: ["WISH-2006"]
+      after: "group_5"
+
+risks:
+  - id: "RISK-001"
+    description: "Got it flow data loss - transaction must create Set before deleting Wishlist item"
+    affected_stories: ["WISH-2004"]
+    severity: high
+  - id: "RISK-002"
+    description: "Large images slow to download and store in S3"
+    affected_stories: ["WISH-2002"]
+    severity: low
+  - id: "RISK-003"
+    description: "Shared gallery package integration may require changes to support wishlist-specific features"
+    affected_stories: ["WISH-2001"]
+    severity: medium
+  - id: "RISK-004"
+    description: "dnd-kit state management complexity with optimistic updates and undo"
+    affected_stories: ["WISH-2005"]
+    severity: medium
+  - id: "RISK-005"
+    description: "Comprehensive accessibility testing requires VoiceOver and keyboard testing across all features"
+    affected_stories: ["WISH-2006"]
+    severity: medium
+
+metrics:
+  total_stories: 7
+  phases: 5
+  max_parallel: 3
+  critical_path_length: 6
+  stories_with_sizing_warnings: 4

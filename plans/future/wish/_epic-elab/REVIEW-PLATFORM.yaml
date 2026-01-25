@@ -1,0 +1,140 @@
+---
+perspective: platform
+verdict: CONCERNS
+completed: 2026-01-25T23:35:00Z
+
+infra_impact:
+  - story: WISH-2000
+    changes: PostgreSQL table creation and indexing
+    deploy_impact: medium
+    monitoring_needs: Database migration execution tracking
+  - story: WISH-2001
+    changes: New API endpoints, increased database query load
+    deploy_impact: medium
+    monitoring_needs: Query performance monitoring, pagination efficiency
+  - story: WISH-2002
+    changes: S3 bucket integration, presigned URL generation
+    deploy_impact: high
+    monitoring_needs: S3 upload success rate, presigned URL errors, storage costs
+  - story: WISH-2003
+    changes: Additional API endpoints
+    deploy_impact: low
+    monitoring_needs: PATCH endpoint latency
+  - story: WISH-2004
+    changes: New endpoint for purchase transition, transaction logging
+    deploy_impact: medium
+    monitoring_needs: Transaction completion rate, Sets collection consistency
+  - story: WISH-2005
+    changes: Increased API calls for reordering, state synchronization
+    deploy_impact: medium
+    monitoring_needs: PATCH /wishlist/reorder latency, concurrent request handling
+  - story: WISH-2006
+    changes: Frontend only, no infrastructure changes
+    deploy_impact: low
+    monitoring_needs: null
+
+deployment_risks:
+  breaking_changes: false
+  feature_flags_needed: true
+  rollback_plan: true
+  db_migrations: true
+
+observability:
+  logging: gaps
+  metrics: gaps
+  alerting: gaps
+
+performance:
+  - story: WISH-2000
+    impact: low
+    bottleneck_risk: null
+  - story: WISH-2001
+    impact: high
+    bottleneck_risk: Gallery view with large result sets may timeout without pagination optimization
+  - story: WISH-2002
+    impact: medium
+    bottleneck_risk: Large image uploads to S3 may cause timeout on slow connections
+  - story: WISH-2003
+    impact: low
+    bottleneck_risk: null
+  - story: WISH-2004
+    impact: medium
+    bottleneck_risk: Transaction between Wishlist and Sets collections must complete within timeout
+  - story: WISH-2005
+    impact: high
+    bottleneck_risk: Frequent PATCH /wishlist/reorder calls with optimistic updates may overwhelm database
+  - story: WISH-2006
+    impact: low
+    bottleneck_risk: null
+
+high:
+  - id: PLAT-001
+    issue: WISH-2002 S3 integration requires IAM role, bucket policy, and CORS configuration
+    stories: [WISH-2002]
+    action: Document S3 setup, presigned URL TTL, max file size, and bucket lifecycle policies
+  - id: PLAT-002
+    issue: WISH-2001 pagination performance needs database index strategy
+    stories: [WISH-2001]
+    action: Create indexes on userId, createdAt, and sortOrder for efficient filtering/sorting
+  - id: PLAT-003
+    issue: WISH-2004 transaction consistency between Wishlist and Sets requires explicit rollback plan
+    stories: [WISH-2004]
+    action: Document transaction isolation level, error handling, and automatic retry strategy
+  - id: PLAT-004
+    issue: WISH-2005 frequent PATCH requests may cause database contention
+    stories: [WISH-2005]
+    action: Evaluate database connection pool sizing, rate limiting, and query batching strategy
+  - id: PLAT-005
+    issue: No feature flags documented for gradual rollout of wishlist functionality
+    stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    action: Implement feature flag infrastructure for safe canary deployment
+
+medium:
+  - id: PLAT-006
+    issue: Logging strategy unclear - need structured logging for S3, API, and database operations
+    stories: [WISH-2002, WISH-2001, WISH-2004]
+    action: Use @repo/logger with structured fields (userId, itemId, operation) for debugging
+  - id: PLAT-007
+    issue: Metrics gaps - no CloudWatch or monitoring dashboard defined
+    stories: [WISH-2001, WISH-2002, WISH-2004, WISH-2005]
+    action: Define key metrics (latency percentiles, error rates, S3 costs) and alerting thresholds
+  - id: PLAT-008
+    issue: Alerting strategy undefined for S3 failures and transaction errors
+    stories: [WISH-2002, WISH-2004]
+    action: Create CloudWatch alarms for upload failures, transaction rollbacks, and API error rates
+  - id: PLAT-009
+    issue: Database migration rollback plan not documented for WISH-2007
+    stories: [WISH-2000, WISH-2007]
+    action: Script down migration for wishlist_items table, test rollback procedure
+
+cost_impact:
+  estimated_monthly: ~$150-300
+  notes: S3 storage and data transfer ($100-200), RDS read/write capacity (~$50-100), API Gateway requests (negligible)
+
+missing_stories:
+  - title: Feature flag infrastructure setup for gradual wishlist rollout
+    gap: No feature flag system defined for canary deployment
+    priority: P0
+  - title: Observability baseline (logging, metrics, alerting)
+    gap: Monitoring and alerting not documented
+    priority: P0
+  - title: Database backup and disaster recovery plan
+    gap: Aurora backup retention, point-in-time recovery testing needed
+    priority: P1
+  - title: Load testing and capacity planning
+    gap: Baseline performance under realistic load not documented
+    priority: P1
+  - title: S3 bucket disaster recovery and encryption
+    gap: Encryption, versioning, and cross-region replication strategy needed
+    priority: P2
+
+recommendations:
+  - Create database schema migration script with explicit indexes for userId, createdAt, sortOrder
+  - Set up feature flags for WISH-2001 through WISH-2005 with canary rollout capability
+  - Document presigned URL TTL (recommended 15 minutes), max file size (e.g., 10MB), and CORS settings
+  - Establish observability baseline: CloudWatch logs (structured JSON), custom metrics, and alerting
+  - Create runbook for common operational issues (S3 failures, transaction timeouts, connection pool exhaustion)
+  - Define database backup retention (minimum 30 days) and test point-in-time recovery
+  - Conduct load test baseline (1000 concurrent users, 100 items per wishlist, pagination at 20 items/page)
+
+PLATFORM REVIEW COMPLETE

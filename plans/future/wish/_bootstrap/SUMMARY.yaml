@@ -1,0 +1,35 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/wish"
+prefix: "WISH"
+completed: "2026-01-25T23:20:00Z"
+
+files_created:
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/stories.index.md"
+    stories: 7
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/WISH.plan.meta.md"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/WISH.plan.exec.md"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/wish/WISH.roadmap.md"
+
+metrics:
+  total_stories: 7
+  ready_to_start: 1
+  critical_path_length: 6
+  max_parallel: 3
+  phases: 5
+  high_risk_stories: 1
+  sizing_warnings: 4
+
+roadmap_highlights:
+  critical_path:
+    - "WISH-2000"
+    - "WISH-2007"
+    - "WISH-2001"
+    - "WISH-2002"
+    - "WISH-2005"
+    - "WISH-2006"
+  parallel_groups: 6
+  high_risk:
+    - story: "WISH-2004"
+      risk: "Got it flow data loss - must create Set before deleting Wishlist item"
+
+next_step: "/elab-epic wish"

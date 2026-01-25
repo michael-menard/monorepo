@@ -15,16 +15,17 @@ All stories in this epic use the `KNOW-XXX` naming convention (starting at 001).
 
 | Status | Count |
 |--------|-------|
-| completed | 6 |
+| completed | 7 |
 | ready-for-code-review | 0 |
-| in-elaboration | 2 |
+| in-elaboration | 4 |
 | generated | 1 |
 | in-progress | 0 |
-| pending | 20 |
+| pending | 17 |
 | deferred | 1 |
-| superseded | 1 |
+| superseded | 2 |
+| cancelled | 2 |
 
-**Last Updated:** 2026-01-25 (KNOW-015 completed QA verification)
+**Last Updated:** 2026-01-25 (KNOW-0051 QA verified and moved to uat)
 
 ---
 
@@ -142,7 +143,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KNOW-005: MCP Server Setup
 
-**Status:** In Elaboration
+**Status:** superseded
+**Superseded By:** KNOW-0051, KNOW-0052, KNOW-0053
 **Depends On:** none
 **Feature:** Configure MCP server using @modelcontextprotocol/sdk, register all 10 tools with schemas, implement handlers, integrate @repo/logger
 **Endpoints:** —
@@ -151,23 +153,97 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Goal:** Expose all knowledge base functionality as MCP tools accessible to Claude Code
 
-**Risk Notes:** MCP SDK integration patterns; Claude Code spawning and communication; error handling across MCP boundary
+**Split Reason:** Story exceeded sizing guidelines with 10 acceptance criteria and 10 tools. Split into Foundation (KNOW-0051), Search Tools (KNOW-0052), and Admin Tool Stubs (KNOW-0053) to improve clarity and testability.
 
-**Findings Applied:**
-- SEC-001: Implement role-based access control for MCP tools before production deployment; design pm/dev/qa role filters for kb_search tool; document access control matrix
-- PLAT-003: Document MCP server deployment topology (embedded vs separate service); clarify how Claude Code spawns and manages MCP server lifecycle; add deployment architecture diagram
-- ENG-004: Add integration tests for MCP spawning errors; test tool invocation failure scenarios
-- SEC-006: Implement per-agent query rate limiting; add rate limit headers; monitor rate limit violations
-- UX-001: Document kb_search usage examples in agent instructions template; create sample queries for common scenarios
-- QA-002: Create integration test harness that simulates Claude Code MCP client; mock MCP protocol requests/responses
-- PLAT-004: Set up CloudWatch alerts for KB unavailability
+**Story Document:** plans/future/knowledgebase-mcp/elaboration/KNOW-005/KNOW-005.md
+
+**Elaboration Document:** plans/future/knowledgebase-mcp/elaboration/KNOW-005/ELAB-KNOW-005.md
+
+---
+
+## KNOW-0051: MCP Server Foundation + CRUD Tools
+
+**Status:** completed
+**Depends On:** none (KNOW-003 already completed)
+**Split From:** KNOW-005
+
+### Scope
+MCP server foundational infrastructure with 5 basic CRUD tools:
+- MCP server setup with @modelcontextprotocol/sdk
+- Tool schema generation from Zod via zod-to-json-schema
+- 5 basic CRUD tools (kb_add, kb_get, kb_update, kb_delete, kb_list)
+- Error sanitization and logging layer with @repo/logger
+- Environment variable validation and connectivity checks (DB + OpenAI)
+- Integration test harness (MCP protocol simulation)
+- Tool discovery metadata with descriptions
+- Graceful shutdown handling (30s timeout)
+- Sensitive data sanitization rules for logging
+- Tool schema versioning policy
+- Stdout/stderr separation for logger (protocol compliance)
+- Retry policy documentation for transient vs permanent failures
+
+### Acceptance Criteria (from parent)
+AC1 (MCP Server Registration and Discovery), AC2 (Tool Schema Generation from Zod), AC3 (Tool Handlers Wrap Existing Functions), AC4 (Error Sanitization Layer), AC5 (Logging with @repo/logger), AC6 (Environment Variable Validation) + 6 new ACs from QA Discovery
+
+**Story Points:** 5
+
+**QA Verification:** PASS - All 9 ACs verified, 71 tests passing (69.1% coverage), architecture compliant
+
+---
+
+## KNOW-0052: MCP Search Tools + Deployment Topology
+
+**Status:** in-elaboration
+**Depends On:** none (KNOW-0051 ✓ completed, KNOW-004 ✓ completed)
+**Split From:** KNOW-005
+
+### Scope
+Search tool integration and deployment documentation:
+- 2 search tools (kb_search, kb_get_related) as thin wrappers over KNOW-004 search functions
+- Performance logging and benchmarking for all search operations
+- Deployment topology documentation (instance-per-session clarification)
+- Connection pooling strategy and validation (5 connections per instance)
+- Per-tool timeout configuration to prevent blocking
+- Correlation IDs for structured logging (multi-tool workflow tracing)
+- Performance targets accounting for MCP protocol overhead
+- Tool composition support (tools calling tools)
+- MCP protocol error test coverage (malformed JSON, invalid tool names)
+
+### Acceptance Criteria (from parent)
+AC7 (Integration Test Harness), AC9 (Performance Logging and Targets) + 7 new ACs from QA Discovery
+
+**Story Points:** 3
+
+---
+
+## KNOW-0053: MCP Admin Tool Stubs
+
+**Status:** in-elaboration
+**Depends On:** none (KNOW-0051 ✓ completed)
+**Split From:** KNOW-005
+
+### Scope
+Admin tool stubs with deferred implementation:
+- kb_bulk_import: Returns "not implemented, defer to KNOW-006" (stub only)
+- kb_rebuild_embeddings: Returns "not implemented, defer to KNOW-007" (stub only)
+- kb_stats: Basic implementation with performance benchmarking
+- kb_health: Server status checking tool for debugging
+- Tool access control stubs with TODOs linking to KNOW-009
+- Result caching stubs for future KNOW-021 integration
+- Transaction semantics documentation for bulk import
+- Embedding regeneration transparency in kb_update responses
+
+### Acceptance Criteria (from parent)
+AC8 (Deployment Topology Documentation), AC10 (Test Coverage) + 4 new ACs from QA Discovery
+
+**Story Points:** 2
 
 ---
 
 ## KNOW-006: Parsers and Seeding
 
 **Status:** pending
-**Depends On:** KNOW-005
+**Depends On:** none (KNOW-0051 ✓ completed - foundation ready)
 **Feature:** Build parsers for LESSONS-LEARNED.md and templates, create seed script for YAML import, implement kb_bulk_import and kb_stats tools
 **Endpoints:** —
 **Infrastructure:** —
@@ -365,9 +441,11 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KNOW-016-A: PostgreSQL Monitoring - Foundation
 
-**Status:** pending
+**Status:** cancelled
 **Depends On:** KNOW-001
 **Split From:** KNOW-016
+**Cancelled Date:** 2026-01-25
+**Cancellation Reason:** Infrastructure change - no longer using AWS/RDS
 
 **Goal:** Implement core monitoring infrastructure setup with CloudWatch dashboard creation, key metrics collection, basic alarm configuration, SNS topic setup, and IaC implementation
 
@@ -384,15 +462,17 @@ Core monitoring infrastructure setup:
 ### Acceptance Criteria (from parent)
 AC1, AC2, AC3, AC4, AC6, AC9, AC12 (7 ACs)
 
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-016-A/KNOW-016-A.md
+**Story Document:** plans/future/knowledgebase-mcp/cancelled/KNOW-016-A/KNOW-016-A.md
 
 ---
 
 ## KNOW-016-B: PostgreSQL Monitoring - Production Readiness
 
-**Status:** pending
+**Status:** cancelled
 **Depends On:** KNOW-016-A
 **Split From:** KNOW-016
+**Cancelled Date:** 2026-01-25
+**Cancellation Reason:** Infrastructure change - no longer using AWS/RDS
 
 **Goal:** Implement production validation, testing, documentation, runbooks, threshold tuning, and multi-environment support for operational readiness
 
@@ -408,7 +488,7 @@ Production validation and operational readiness:
 ### Acceptance Criteria (from parent)
 AC5, AC7, AC8, AC10, AC11, AC13 (6 ACs)
 
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-016-B/KNOW-016-B.md
+**Story Document:** plans/future/knowledgebase-mcp/cancelled/KNOW-016-B/KNOW-016-B.md
 
 ---
 

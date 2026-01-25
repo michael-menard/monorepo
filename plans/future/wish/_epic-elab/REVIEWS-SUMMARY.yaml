@@ -1,0 +1,207 @@
+---
+schema: 1
+epic: WISH
+feature_dir: /Users/michaelmenard/Development/Monorepo/plans/future/wish
+reviewed: 2026-01-25T23:35:00Z
+
+verdict: CONCERNS
+summary: Epic has solid product vision and clear roadmap, but implementation requires careful attention to security, accessibility, and transaction safety. Key concerns around authorization, S3 integration, and accessibility testing need resolution before development begins.
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    critical: 0
+    high: 4
+    medium: 3
+    focus: Transaction safety in Got it flow, dnd-kit complexity, Gallery package integration
+    verdict_detail: Feasibility confirmed for all stories, but WISH-2005 and WISH-2004 require careful architectural design
+
+  product:
+    verdict: READY
+    critical: 0
+    high: 2
+    medium: 0
+    focus: Scope management for UX Polish and Accessibility phases
+    verdict_detail: User value and prioritization strong, but sizing warnings on WISH-2005 and WISH-2006 need validation
+
+  qa:
+    verdict: CONCERNS
+    critical: 0
+    high: 4
+    medium: 3
+    focus: Transaction rollback testing, accessibility manual testing, S3 error scenarios
+    verdict_detail: Testability unclear for WISH-2005 and WISH-2006, need comprehensive manual testing plans
+
+  ux:
+    verdict: CONCERNS
+    critical: 0
+    high: 4
+    medium: 2
+    focus: Keyboard navigation, accessibility, modal focus management
+    verdict_detail: Good design consistency, but accessibility requirements need detailed ACs across all stories
+
+  platform:
+    verdict: CONCERNS
+    critical: 0
+    high: 5
+    medium: 4
+    focus: S3 setup, feature flags, observability, database optimization
+    verdict_detail: No feature flags, logging, or observability strategy defined; infrastructure readiness unclear
+
+  security:
+    verdict: CONCERNS
+    critical: 0
+    high: 5
+    medium: 5
+    focus: Authorization, input validation, S3 security, OWASP A01/A02/A04 coverage
+    verdict_detail: Authorization checks missing from API design; S3 file upload security incomplete
+
+aggregated_findings:
+  critical: []
+  high:
+    - id: HIGH-001
+      severity: high
+      issue: Authorization checks not documented for all API endpoints (WISH-2001 through WISH-2005)
+      stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      perspective: security, engineering
+      action: Add authorization validation to all endpoints before implementation starts
+
+    - id: HIGH-002
+      issue: "Got it" flow transaction safety - create Set before deleting Wishlist item to prevent data loss
+      stories: [WISH-2004]
+      perspective: engineering, security, qa
+      action: Define explicit transaction boundary and test rollback scenarios
+
+    - id: HIGH-003
+      issue: WISH-2005 drag-and-drop complexity may exceed story size limits (dnd-kit + optimistic updates + undo)
+      stories: [WISH-2005]
+      perspective: engineering, product
+      action: Estimate accurately; consider splitting into drag-and-drop vs optimistic updates substories
+
+    - id: HIGH-004
+      issue: Accessibility testing in WISH-2006 cannot be fully automated; manual testing plan required
+      stories: [WISH-2006]
+      perspective: qa, ux
+      action: Define manual test plan with VoiceOver, NVDA, keyboard navigation before development
+
+    - id: HIGH-005
+      issue: S3 file upload security incomplete - no file type validation, size limits, or malware considerations documented
+      stories: [WISH-2002]
+      perspective: security, platform
+      action: Add file type whitelist, size limits, and validation strategy before implementation
+
+    - id: HIGH-006
+      issue: Feature flag infrastructure missing - no canary deployment strategy defined
+      stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+      perspective: platform
+      action: Implement feature flag system before WISH-2001 development
+
+new_stories_required:
+  - title: Shared Zod schemas and types for wishlist validation
+    reason: Multiple stories (WISH-2002, WISH-2003, WISH-2004) need consistent validation
+    priority: P0
+    depends_on: null
+
+  - title: Authorization layer testing and documentation
+    reason: All API endpoints need explicit authorization tests and policy documentation
+    priority: P0
+    depends_on: null
+
+  - title: Feature flag infrastructure for gradual rollout
+    reason: Safe canary deployment needed for WISH-2001 through WISH-2005
+    priority: P0
+    depends_on: null
+
+  - title: Observability baseline (logging, metrics, alerting)
+    reason: No structured logging, CloudWatch metrics, or alerting strategy defined
+    priority: P0
+    depends_on: null
+
+  - title: Database schema optimization and indexing strategy
+    reason: WISH-2001 filtering and sorting needs documented index usage plan
+    priority: P1
+    depends_on: WISH-2000
+
+  - title: S3 security configuration and validation
+    reason: File type validation, size limits, presigned URL policies needed
+    priority: P1
+    depends_on: null
+
+  - title: Accessibility testing harness and manual test plan
+    reason: WISH-2006 requires comprehensive manual testing with assistive tech
+    priority: P1
+    depends_on: null
+
+  - title: Database backup and disaster recovery plan
+    reason: Aurora backup retention, point-in-time recovery testing needed
+    priority: P1
+    depends_on: null
+
+stories_to_split:
+  - story: WISH-2005
+    reason: Drag-and-drop + optimistic updates + undo functionality may exceed story size limits
+    proposal: Split into WISH-2005a (drag-and-drop reordering) and WISH-2005b (optimistic updates and undo)
+    priority: medium
+
+stories_to_defer:
+  - story: WISH-2006
+    reason: Accessibility story depends on stable implementation; defer until WISH-2005 complete and tested
+    current_dependency: WISH-2005
+    recommendation: Keep as Phase 5 but ensure comprehensive manual testing plan is created in earlier phases
+
+stories_to_monitor:
+  - story: WISH-2001
+    risk: Medium - Gallery package integration, pagination performance
+    monitoring: Verify @repo/gallery GalleryCard API; test performance with 100+ items per page
+
+  - story: WISH-2002
+    risk: High - S3 integration, large file uploads, error handling
+    monitoring: Test presigned URL generation, timeout handling, network failure recovery
+
+  - story: WISH-2004
+    risk: High - Transaction safety, data consistency
+    monitoring: Test Set creation failure, Wishlist deletion failure, concurrent modifications
+
+  - story: WISH-2005
+    risk: High - State management complexity, optimistic updates
+    monitoring: Load test with concurrent reorder requests, test undo after network failure
+
+phase_readiness:
+  phase_1_foundation:
+    status: READY
+    notes: WISH-2000 and WISH-2007 are straightforward database operations
+
+  phase_2_gallery_mvp:
+    status: CONCERNS
+    notes: WISH-2001 readiness depends on Gallery package verification and indexing strategy
+
+  phase_3_core_features:
+    status: CONCERNS
+    notes: WISH-2002, WISH-2003, WISH-2004 all need authorization and transaction details
+
+  phase_4_ux_polish:
+    status: CONCERNS
+    notes: WISH-2005 sizing concern; recommend splitting before development
+
+  phase_5_accessibility:
+    status: CONCERNS
+    notes: WISH-2006 manual testing plan must be defined before development starts
+
+token_estimate:
+  total_for_phase_1: ~15k tokens
+  total_for_full_workflow: ~50k tokens
+  estimated_cost: $0.15-0.25
+
+next_steps:
+  - [ ] Create shared Zod schema story (new P0 story)
+  - [ ] Create authorization testing story (new P0 story)
+  - [ ] Create feature flag infrastructure story (new P0 story)
+  - [ ] Create observability baseline story (new P0 story)
+  - [ ] Verify @repo/gallery GalleryCard API and integration requirements
+  - [ ] Define S3 security policy (file types, size limits, presigned URL TTL)
+  - [ ] Create accessibility manual test plan and checklist
+  - [ ] Estimate WISH-2005 accurately; prepare split proposal if needed
+  - [ ] Document authorization requirements for all API endpoints
+  - [ ] Create database index strategy for WISH-2001 filtering and sorting
+
+REVIEWS COMPLETE

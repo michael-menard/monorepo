@@ -1,0 +1,130 @@
+---
+perspective: qa
+verdict: CONCERNS
+completed: 2026-01-25T23:35:00Z
+
+testability:
+  - story: WISH-2000
+    unit: true
+    integration: true
+    e2e: false
+    concern: null
+  - story: WISH-2001
+    unit: partial
+    integration: partial
+    e2e: true
+    concern: Gallery component integration testing needs careful mocking
+  - story: WISH-2002
+    unit: true
+    integration: partial
+    e2e: true
+    concern: S3 upload mocking in tests is complex; presigned URL generation needs test doubles
+  - story: WISH-2003
+    unit: true
+    integration: true
+    e2e: true
+    concern: null
+  - story: WISH-2004
+    unit: true
+    integration: true
+    e2e: true
+    concern: Transaction rollback testing essential for Got it flow
+  - story: WISH-2005
+    unit: partial
+    integration: false
+    e2e: true
+    concern: Optimistic updates and undo state machine complexity needs comprehensive testing
+  - story: WISH-2006
+    unit: partial
+    integration: false
+    e2e: true
+    concern: Keyboard and screen reader testing cannot be fully automated
+
+quality_gates:
+  clear_acs: false
+  test_plan_derivable: true
+  edge_cases_identified: true
+  error_scenarios_covered: false
+
+risk_coverage:
+  - area: Data validation (Zod schemas)
+    stories: [WISH-2000, WISH-2002, WISH-2003]
+    gap: false
+  - area: Authentication and authorization
+    stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005, WISH-2006]
+    gap: true
+  - area: S3 upload error handling
+    stories: [WISH-2002]
+    gap: true
+  - area: Transaction rollback and data consistency
+    stories: [WISH-2004]
+    gap: true
+  - area: State management (optimistic updates)
+    stories: [WISH-2005]
+    gap: true
+  - area: Accessibility with assistive technology
+    stories: [WISH-2006]
+    gap: true
+  - area: Concurrent user modifications
+    stories: [WISH-2001, WISH-2004, WISH-2005]
+    gap: true
+  - area: Edge cases for pagination and filtering
+    stories: [WISH-2001]
+    gap: true
+  - area: Image upload size and format validation
+    stories: [WISH-2002]
+    gap: true
+
+high:
+  - id: QA-001
+    issue: WISH-2004 "Got it" flow needs explicit transaction rollback tests
+    stories: [WISH-2004]
+    action: Add test scenarios for partial failure (Set created but Wishlist delete fails, and vice versa)
+  - id: QA-002
+    issue: WISH-2006 accessibility testing cannot be fully automated - manual testing required
+    stories: [WISH-2006]
+    action: Define manual test plan with VoiceOver, NVDA, and keyboard-only navigation
+  - id: QA-003
+    issue: WISH-2001 filtering and pagination edge cases need explicit test coverage
+    stories: [WISH-2001]
+    action: Test empty results, single page, last page pagination, concurrent filter changes
+  - id: QA-004
+    issue: WISH-2002 S3 upload failures need comprehensive error scenario testing
+    stories: [WISH-2002]
+    action: Test network timeout, size limit exceeded, invalid file type, presigned URL expiration
+
+medium:
+  - id: QA-005
+    issue: WISH-2005 optimistic update state rollback needs state machine verification tests
+    stories: [WISH-2005]
+    action: Create test scenarios for network failures during drag-drop, undo, and refresh
+  - id: QA-006
+    issue: Authentication context not documented - unclear if all endpoints need user verification
+    stories: [WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005]
+    action: Document auth requirements for each endpoint and test unauthorized access scenarios
+  - id: QA-007
+    issue: Concurrent user modifications (same item edited by multiple users) not addressed
+    stories: [WISH-2003, WISH-2004, WISH-2005]
+    action: Define optimistic concurrency control strategy (version numbers, timestamps, or last-write-wins)
+
+missing_stories:
+  - title: Test infrastructure for MSW mocking of S3 and API calls
+    gap: WISH-2001, WISH-2002, WISH-2005 need consistent API mocking
+    priority: P0
+  - title: Accessibility testing harness setup
+    gap: Keyboard testing utilities and screen reader testing documentation needed
+    priority: P0
+  - title: Manual accessibility testing report template
+    gap: WISH-2006 requires formalized manual testing documentation
+    priority: P1
+
+recommendations:
+  - Create MSW request handlers for all API endpoints before starting integration tests
+  - Define authentication mocking strategy for unit/integration tests
+  - Establish baseline accessibility test checklist based on WCAG AA requirements
+  - Document S3 failure scenarios and create test doubles for upload mocking
+  - Implement state machine tests for optimistic update/undo flow
+  - Create test data fixtures for wishlist with various states (empty, paginated, filtered)
+  - Set minimum coverage expectations: unit 85%, integration 70%, e2e critical paths
+
+QA REVIEW COMPLETE

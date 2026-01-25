@@ -1,7 +1,7 @@
 ---
 story_id: KNOW-005
 title: "MCP Server Setup"
-status: backlog
+status: needs-split
 created: 2026-01-25
 updated: 2026-01-25
 assignee: null
@@ -786,6 +786,83 @@ Future stories with UI:
 
 ---
 
+## QA Discovery Notes (for PM Review)
+
+_Added by QA Elaboration on 2026-01-25_
+
+### Critical Scope Issues (User Decisions Applied)
+
+The following critical scope contradictions were identified and resolved:
+
+**kb_bulk_import Tool**: Story defers "complex logic" to KNOW-006 but includes kb_bulk_import in 10 tools. Resolution: Implement as stub returning "not implemented" in KNOW-005-C, with full implementation deferred to KNOW-006.
+
+**kb_rebuild_embeddings Tool**: Story defers implementation to KNOW-007 but includes tool in scope. Resolution: Implement as stub in KNOW-005-C, with full implementation deferred to KNOW-007.
+
+### Gaps Identified
+
+| # | Finding | User Decision | Notes |
+|---|---------|---------------|-------|
+| 1 | No graceful shutdown handling for MCP server | Add as AC - Graceful shutdown with configurable timeout | 30s timeout recommended |
+| 2 | Tool handler logging doesn't sanitize sensitive data | Add as AC - Sensitive data sanitization rules for logging | Truncate content, redact patterns |
+| 3 | No versioning strategy for MCP tool schemas | Add as AC - Tool schema versioning/breaking change policy | Important for future evolution |
+| 4 | MCP server stdout/stderr separation not documented | Add as AC - Logger writes to stderr not stdout | Critical for protocol compliance |
+| 5 | Transaction semantics for bulk import not specified | Add as AC - Transaction semantics for bulk import documented | Partial commit behavior |
+| 6 | No crash detection mechanism documented | Add as AC - Crash detection mechanism documented | How Claude Code detects restart |
+| 7 | kb_stats performance not benchmarked | Add as AC - kb_stats performance target | Set timeout for large datasets |
+| 8 | Tool handler retry policy not documented | Add as AC - Retry policy documented | Distinguish transient vs permanent failures |
+| 9 | No documentation for embedding regeneration transparency | Add as AC - Embedding regeneration transparency in response | Surface kb_update behavior to client |
+| 10 | MCP protocol error test coverage incomplete | Add as AC - MCP protocol error test coverage | Malformed JSON, invalid tool names |
+| 11 | Connection string security in mcp.json | Add as AC - mcp.json security documentation | File permissions, secrets management |
+| 12 | No monitoring for tool invocation patterns | Add as AC - Usage pattern monitoring metrics | Deferred to KNOW-019 (Query Analytics) |
+
+### Enhancement Opportunities
+
+| # | Finding | User Decision | Notes |
+|---|---------|---------------|-------|
+| 1 | Add MCP tool discovery metadata | Add as AC - Tool discovery metadata with descriptions and examples | Improves Claude Code UI discoverability |
+| 2 | Implement tool alias system | Add as AC - Tool alias system for backward compatibility | Gradual migration strategy |
+| 3 | Add dry-run mode flag to mutation tools | Add as AC - Dry-run mode flag on mutation tools | Testing and debugging support |
+| 4 | Implement correlation IDs for structured logging | Add as AC - Correlation IDs for structured logging | Multi-tool workflow tracing |
+| 5 | Add per-tool timeout configuration | Add as AC - Per-tool timeout configuration | Prevents blocking between tools |
+| 6 | Create MCP client library for testing | Add as AC - MCP client library for testing | Enables local dev without full Claude Code |
+| 7 | Add result caching for read operations | Add as AC - Result caching for read operations | Deferred to KNOW-021 (Cost Optimization) |
+| 8 | Implement tool composition support | Add as AC - Tool composition support | Tools calling tools for modularity |
+| 9 | Add telemetry for tool invocations | Add as AC - Telemetry metrics for tool invocations | CloudWatch/Prometheus integration |
+| 10 | Support streaming responses for long operations | Add as AC - Streaming responses for long-running operations | kb_rebuild_embeddings progress updates |
+| 11 | Implement tool access control stubs | Add as AC - Tool access control stubs with TODOs | Links to KNOW-009, reduces refactoring |
+| 12 | Add kb_health tool for server status | Add as AC - kb_health tool for server status | Debugging and monitoring aid |
+
+### Follow-up Stories Suggested
+
+- [x] KNOW-005-A: MCP Server Foundation + CRUD Tools (5 SP) - Create from split
+- [x] KNOW-005-B: MCP Search Tools + Deployment Topology (3 SP) - Create from split
+- [x] KNOW-005-C: MCP Admin Tool Stubs (2 SP) - Create from split
+- [x] KNOW-006: Parsers and Bulk Import (depends on KNOW-005-C)
+- [x] KNOW-007: Admin Tools and Polish (depends on KNOW-005-C)
+- [x] KNOW-008: Workflow Integration (depends on KNOW-005-B)
+- [x] KNOW-009: MCP Tool Authorization (P0, deferred from KNOW-005)
+- [x] KNOW-010: API Rate Limiting (P0, deferred from KNOW-005)
+- [x] KNOW-019: Query Analytics (deferred for usage monitoring)
+- [x] KNOW-021: Cost Optimization (deferred for caching)
+
+### Items Marked Out-of-Scope (for KNOW-005)
+
+- **HTTP Endpoints**: MCP uses stdio, not HTTP. Any future HTTP wrapper is post-MVP.
+- **Authentication/Authorization**: Deferred to KNOW-009. Stubs with TODOs in KNOW-005-C.
+- **Rate Limiting**: Deferred to KNOW-010 for per-agent quota enforcement.
+- **AWS Deployment**: MVP runs locally. Containerization and ECS deployment post-MVP.
+- **Bulk Import Complex Logic**: Parser and validation logic deferred to KNOW-006.
+- **Rebuild Embeddings Implementation**: Full rebuild logic deferred to KNOW-007.
+- **Stats Dashboard/Visualization**: Deferred to KNOW-023.
+- **CloudWatch Alerting**: Deferred to KNOW-016.
+- **Agent Instruction Templates**: Deferred to KNOW-008.
+- **Health Check Endpoint**: Nice-to-have. kb_health tool included in KNOW-005-C instead.
+- **Result Caching Infrastructure**: Deferred to KNOW-021 for optimization.
+- **Tool Composition Framework**: Deferred post-MVP pending design decisions.
+- **Streaming Responses**: Deferred pending MCP protocol support evaluation.
+
+---
+
 ## Token Budget
 
 Phase tracking will be added during implementation.
@@ -800,3 +877,4 @@ Phase tracking will be added during implementation.
 - [@modelcontextprotocol/sdk NPM Package](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
 - [KNOW-003 Story](./KNOW-003/KNOW-003.md) - CRUD Operations
 - [KNOW-004 Story](./KNOW-004/KNOW-004.md) - Search Implementation
+- [ELAB-KNOW-005.md](./ELAB-KNOW-005.md) - Elaboration Report with Split Details

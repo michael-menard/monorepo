@@ -1,0 +1,131 @@
+---
+perspective: ux
+verdict: CONCERNS
+completed: 2026-01-25T23:35:00Z
+
+ux_impact:
+  - story: WISH-2000
+    impact: low
+    consistency: good
+    friction: none
+  - story: WISH-2001
+    impact: high
+    consistency: good
+    friction: medium
+  - story: WISH-2002
+    impact: high
+    consistency: fair
+    friction: medium
+  - story: WISH-2003
+    impact: high
+    consistency: good
+    friction: low
+  - story: WISH-2004
+    impact: high
+    consistency: fair
+    friction: medium
+  - story: WISH-2005
+    impact: high
+    consistency: good
+    friction: low
+  - story: WISH-2006
+    impact: high
+    consistency: good
+    friction: none
+
+design_system:
+  components_referenced: true
+  custom_styling: false
+  responsive_clear: true
+
+accessibility:
+  - story: WISH-2000
+    keyboard_nav: false
+    screen_reader: false
+    wcag_level: AAA
+  - story: WISH-2001
+    keyboard_nav: unclear
+    screen_reader: unclear
+    wcag_level: AA
+  - story: WISH-2002
+    keyboard_nav: unclear
+    screen_reader: unclear
+    wcag_level: AA
+  - story: WISH-2003
+    keyboard_nav: unclear
+    screen_reader: unclear
+    wcag_level: AA
+  - story: WISH-2004
+    keyboard_nav: unclear
+    screen_reader: unclear
+    wcag_level: AA
+  - story: WISH-2005
+    keyboard_nav: true
+    screen_reader: unclear
+    wcag_level: AA
+  - story: WISH-2006
+    keyboard_nav: true
+    screen_reader: true
+    wcag_level: AA
+
+flow_gaps:
+  - flow: Empty wishlist state
+    stories: [WISH-2001, WISH-2005]
+    complete: false
+    friction: User may be confused on initial load without guidance
+  - flow: Image upload failure recovery
+    stories: [WISH-2002]
+    complete: false
+    friction: No documented recovery flow for failed uploads
+  - flow: Keyboard navigation in gallery
+    stories: [WISH-2001]
+    complete: false
+    friction: Filter tabs and sorting controls need keyboard access
+
+high:
+  - id: UX-001
+    issue: Gallery filtering/pagination keyboard navigation not specified in WISH-2001
+    stories: [WISH-2001]
+    action: Add keyboard navigation acceptance criteria for all interactive controls
+  - id: UX-002
+    issue: Image upload form requires comprehensive error handling and retry UX in WISH-2002
+    stories: [WISH-2002]
+    action: Document progressive enhancement and fallback states for upload failures
+  - id: UX-003
+    issue: Modal focus management and screen reader announcements unclear in WISH-2004
+    stories: [WISH-2004]
+    action: Clarify modal focus trapping, return focus, and announcement expectations
+  - id: UX-004
+    issue: Drag-and-drop accessibility in WISH-2005 needs keyboard alternative
+    stories: [WISH-2005]
+    action: Specify keyboard alternative for reordering (e.g., keyboard shortcuts or form interface)
+
+medium:
+  - id: UX-005
+    issue: Undo toast notification timing and screen reader announcement not detailed
+    stories: [WISH-2005]
+    action: Define 5-second window clarity and accessible undo interaction pattern
+  - id: UX-006
+    issue: Loading skeleton states need clear accessible structure
+    stories: [WISH-2005]
+    action: Ensure skeletons are hidden from screen readers and announce loading status
+
+missing_stories:
+  - title: Image preview and crop experience
+    gap: User needs visual feedback before uploading large images
+    priority: P1
+  - title: Mobile-optimized sorting and filtering UI
+    gap: Gallery controls may lack mobile-friendly interaction patterns
+    priority: P1
+  - title: Empty state guidance and onboarding
+    gap: New users need clear instruction on how to use wishlist feature
+    priority: P2
+
+recommendations:
+  - Create wireframes for each user flow with keyboard navigation annotations
+  - Establish color contrast ratios and test with WCAG contrast checker
+  - Define loading and error states with accessible messaging for all interactions
+  - Consider progress indicators for image upload (especially on mobile networks)
+  - Test all modals with keyboard and screen readers before implementation
+
+UX REVIEW COMPLETE
