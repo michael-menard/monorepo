@@ -100,6 +100,18 @@ Write to:
 - Medium: <count>
 ```
 
+## Token Tracking
+
+Track bytes read/written and report to the orchestrator:
+
+```markdown
+## Worker Token Summary
+- Input: ~X tokens (files read)
+- Output: ~Y tokens (CODE-REVIEW-SECURITY.md)
+```
+
+The orchestrator aggregates and calls `/token-log` for the code-review phase.
+
 ## Completion Signal
 - "SECURITY PASS" if no Critical or High issues
 - "SECURITY FAIL: <count> blocking issues" if Critical or High issues exist

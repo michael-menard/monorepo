@@ -1,0 +1,316 @@
+### STORY-009: Image Uploads - Phase 1
+### Base URL: http://localhost:3001
+###
+### Prerequisites:
+### 1. docker-compose up -d (PostgreSQL)
+### 2. pnpm seed (seed data)
+### 3. AUTH_BYPASS=true DEV_USER_SUB=dev-user-00000000-0000-0000-0000-000000000001 vercel dev
+###
+### Test User IDs (from seeds/story-009.ts):
+### - User A: dev-user-00000000-0000-0000-0000-000000000001 (authenticated test user)
+### - User B: dev-user-00000000-0000-0000-0000-000000000002 (other user for permission tests)
+###
+### Entity IDs (from seeds/story-009.ts):
+### - Set (User A): 00000009-0000-0000-0000-000000000001
+### - Set (User B): 00000009-0000-0000-0000-000000000002
+### - Set Image 1: 00000009-0000-0000-0000-000000000011
+### - Set Image 2: 00000009-0000-0000-0000-000000000012
+### - Wishlist Item (User A): 00000009-0000-0000-0000-000000000021
+### - Wishlist Item (User B): 00000009-0000-0000-0000-000000000022
+### - Gallery Album (User A): 00000009-0000-0000-0000-000000000031
+
+@baseUrl = http://localhost:3001
+
+### ============================================================
+### SETS PRESIGN ENDPOINT: /api/sets/:id/images/presign
+### ============================================================
+
+### presignSetImage - Generate presigned URL for set image (HP-PRESIGN-001)
+# @name presignSetImage
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/presign
+Content-Type: application/json
+
+{
+  "filename": "test-image.jpg",
+  "contentType": "image/jpeg"
+}
+
+### Expected: 200 with { uploadUrl, imageUrl, key }
+
+### presignSetImage401 - No auth configured (ERR-AUTH-001)
+### Note: Set AUTH_BYPASS=false to test this case
+# @name presignSetImage401
+# POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/presign
+# Content-Type: application/json
+#
+# {
+#   "filename": "test.jpg",
+#   "contentType": "image/jpeg"
+# }
+
+### presignSetImage403 - Other user's set (ERR-PERM-001)
+### Note: Change DEV_USER_SUB to User B's ID to test, or use this set with User A
+# @name presignSetImage403
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000002/images/presign
+Content-Type: application/json
+
+{
+  "filename": "test.jpg",
+  "contentType": "image/jpeg"
+}
+
+### Expected: 403 Forbidden
+
+### presignSetImage404 - Non-existent set (ERR-404-001)
+# @name presignSetImage404
+POST {{baseUrl}}/api/sets/99999999-9999-9999-9999-999999999999/images/presign
+Content-Type: application/json
+
+{
+  "filename": "test.jpg",
+  "contentType": "image/jpeg"
+}
+
+### Expected: 404 Not Found
+
+### presignSetImage400InvalidUUID - Invalid set ID (ERR-VAL-001)
+# @name presignSetImage400InvalidUUID
+POST {{baseUrl}}/api/sets/not-a-uuid/images/presign
+Content-Type: application/json
+
+{
+  "filename": "test.jpg",
+  "contentType": "image/jpeg"
+}
+
+### Expected: 400 Bad Request
+
+### presignSetImage400MissingBody - Missing request body (ERR-VAL-002)
+# @name presignSetImage400MissingBody
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/presign
+Content-Type: application/json
+
+### Expected: 400 Bad Request
+
+### presignSetImage400MissingFilename - Missing filename (ERR-VAL-004)
+# @name presignSetImage400MissingFilename
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/presign
+Content-Type: application/json
+
+{
+  "contentType": "image/jpeg"
+}
+
+### Expected: 400 VALIDATION_ERROR
+
+### presignSetImage400MissingContentType - Missing contentType (ERR-VAL-005)
+# @name presignSetImage400MissingContentType
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/presign
+Content-Type: application/json
+
+{
+  "filename": "test.jpg"
+}
+
+### Expected: 400 VALIDATION_ERROR
+
+### ============================================================
+### SETS REGISTER ENDPOINT: /api/sets/:id/images
+### ============================================================
+
+### registerSetImage - Register uploaded image (HP-REGISTER-001)
+### Note: Use imageUrl and key from presignSetImage response after actual upload
+# @name registerSetImage
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images
+Content-Type: application/json
+
+{
+  "imageUrl": "https://test-bucket.s3.us-east-1.amazonaws.com/sets/00000009-0000-0000-0000-000000000001/test.webp",
+  "key": "sets/00000009-0000-0000-0000-000000000001/test.webp"
+}
+
+### Expected: 201 with { id, imageUrl, thumbnailUrl, position }
+
+### registerSetImage403 - Other user's set
+# @name registerSetImage403
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000002/images
+Content-Type: application/json
+
+{
+  "imageUrl": "https://test-bucket.s3.us-east-1.amazonaws.com/test.webp",
+  "key": "test.webp"
+}
+
+### Expected: 403 Forbidden
+
+### registerSetImage404 - Non-existent set
+# @name registerSetImage404
+POST {{baseUrl}}/api/sets/99999999-9999-9999-9999-999999999999/images
+Content-Type: application/json
+
+{
+  "imageUrl": "https://test-bucket.s3.us-east-1.amazonaws.com/test.webp",
+  "key": "test.webp"
+}
+
+### Expected: 404 Not Found
+
+### registerSetImage400InvalidURL - Invalid imageUrl format (ERR-VAL-006)
+# @name registerSetImage400InvalidURL
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images
+Content-Type: application/json
+
+{
+  "imageUrl": "not-a-valid-url",
+  "key": "test.webp"
+}
+
+### Expected: 400 VALIDATION_ERROR
+
+### registerSetImage400MissingKey - Missing key
+# @name registerSetImage400MissingKey
+POST {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images
+Content-Type: application/json
+
+{
+  "imageUrl": "https://test-bucket.s3.us-east-1.amazonaws.com/test.webp"
+}
+
+### Expected: 400 VALIDATION_ERROR
+
+### ============================================================
+### SETS DELETE ENDPOINT: /api/sets/:id/images/:imageId
+### ============================================================
+
+### deleteSetImage - Delete existing set image (HP-DELETE-001)
+### Note: Use one of the seeded images or a registered image
+### WARNING: This will delete the seeded image, run after other tests
+# @name deleteSetImage
+# DELETE {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/00000009-0000-0000-0000-000000000011
+
+### Expected: 204 No Content
+
+### deleteSetImage404Image - Image not found (ERR-404-002)
+# @name deleteSetImage404Image
+DELETE {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/99999999-9999-9999-9999-999999999999
+
+### Expected: 404 Not Found
+
+### deleteSetImage404Set - Set not found
+# @name deleteSetImage404Set
+DELETE {{baseUrl}}/api/sets/99999999-9999-9999-9999-999999999999/images/00000009-0000-0000-0000-000000000011
+
+### Expected: 404 Not Found
+
+### deleteSetImage403 - Other user's set
+# @name deleteSetImage403
+DELETE {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000002/images/00000009-0000-0000-0000-000000000011
+
+### Expected: 403 Forbidden
+
+### deleteSetImage400InvalidSetUUID - Invalid set ID
+# @name deleteSetImage400InvalidSetUUID
+DELETE {{baseUrl}}/api/sets/not-a-uuid/images/00000009-0000-0000-0000-000000000011
+
+### Expected: 400 Bad Request
+
+### deleteSetImage400InvalidImageUUID - Invalid image ID
+# @name deleteSetImage400InvalidImageUUID
+DELETE {{baseUrl}}/api/sets/00000009-0000-0000-0000-000000000001/images/not-a-uuid
+
+### Expected: 400 Bad Request
+
+### ============================================================
+### WISHLIST UPLOAD ENDPOINT: /api/wishlist/:id/image
+### NOTE: Multipart form upload - use curl commands below, not .http requests
+### ============================================================
+
+### CURL COMMANDS FOR MULTIPART UPLOAD TESTING:
+###
+### HP-WISHLIST-001 - Successful wishlist image upload:
+### curl -X POST "http://localhost:3001/api/wishlist/00000009-0000-0000-0000-000000000021/image" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg"
+### Expected: 200 with { imageUrl }
+###
+### ERR-PERM-002 - Other user's wishlist item:
+### curl -X POST "http://localhost:3001/api/wishlist/00000009-0000-0000-0000-000000000022/image" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg"
+### Expected: 403 Forbidden
+###
+### ERR-404-003 - Non-existent wishlist item:
+### curl -X POST "http://localhost:3001/api/wishlist/99999999-9999-9999-9999-999999999999/image" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg"
+### Expected: 404 Not Found
+###
+### ERR-VAL-007 - No file in form:
+### curl -X POST "http://localhost:3001/api/wishlist/00000009-0000-0000-0000-000000000021/image" \
+###   -F "other_field=value"
+### Expected: 400 Bad Request (No file uploaded)
+###
+### ERR-VAL-008 - Invalid file type (PDF):
+### curl -X POST "http://localhost:3001/api/wishlist/00000009-0000-0000-0000-000000000021/image" \
+###   -F "file=@/path/to/document.pdf;type=application/pdf"
+### Expected: 400 VALIDATION_ERROR (Invalid file type)
+###
+### ERR-VAL-009 - File > 5MB (wishlist limit):
+### dd if=/dev/zero of=/tmp/large-file.jpg bs=1M count=6
+### curl -X POST "http://localhost:3001/api/wishlist/00000009-0000-0000-0000-000000000021/image" \
+###   -F "file=@/tmp/large-file.jpg;type=image/jpeg"
+### Expected: 400 VALIDATION_ERROR (File size exceeds maximum of 5MB)
+
+### ============================================================
+### GALLERY UPLOAD ENDPOINT: /api/gallery/images/upload
+### NOTE: Multipart form upload - use curl commands below, not .http requests
+### ============================================================
+
+### CURL COMMANDS FOR GALLERY UPLOAD TESTING:
+###
+### HP-GALLERY-001 - Successful gallery image upload (all fields):
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg" \
+###   -F "title=Test Image" \
+###   -F "description=A test image for gallery" \
+###   -F "tags=test,example"
+### Expected: 201 with { id, userId, title, description, tags, imageUrl, thumbnailUrl, albumId, flagged, createdAt, lastUpdatedAt }
+###
+### HP-GALLERY-002 - Gallery upload with minimal fields (file + title only):
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg" \
+###   -F "title=Minimal Image"
+### Expected: 201 with { id, ..., description: null, tags: [], albumId: null, ... }
+###
+### Gallery upload with albumId:
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg" \
+###   -F "title=Album Image" \
+###   -F "albumId=00000009-0000-0000-0000-000000000031"
+### Expected: 201 with { ..., albumId: "00000009-0000-0000-0000-000000000031", ... }
+###
+### ERR-VAL-011 - Missing title:
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg"
+### Expected: 400 VALIDATION_ERROR (Title is required)
+###
+### ERR-VAL-008 - Invalid file type (PDF):
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/path/to/document.pdf;type=application/pdf" \
+###   -F "title=Invalid File"
+### Expected: 400 VALIDATION_ERROR (Invalid file type)
+###
+### ERR-VAL-010 - File > 10MB (gallery limit):
+### dd if=/dev/zero of=/tmp/very-large-file.jpg bs=1M count=11
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/tmp/very-large-file.jpg;type=image/jpeg" \
+###   -F "title=Too Large"
+### Expected: 400 VALIDATION_ERROR (File size exceeds maximum of 10MB)
+###
+### Gallery upload with non-existent albumId:
+### curl -X POST "http://localhost:3001/api/gallery/images/upload" \
+###   -F "file=@/path/to/test-image.jpg;type=image/jpeg" \
+###   -F "title=Bad Album" \
+###   -F "albumId=99999999-9999-9999-9999-999999999999"
+### Expected: 400 Bad Request (Album not found)
+
+### ============================================================
+### END OF STORY-009 HTTP CONTRACT TESTS
+### ============================================================

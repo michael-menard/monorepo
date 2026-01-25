@@ -55,31 +55,15 @@ For each AC:
 # Blockers (if any)
 - Copy from BLOCKERS.md and state status clearly
 
-# Token Log (REQUIRED)
-- Aggregate token usage from all sub-agent logs
-- Include your own read/write operations
+## Token Tracking (REQUIRED)
 
-## Token Logging (REQUIRED)
-
-At the end of PROOF-STORY-XXX.md, include aggregated Token Log:
+At the end of PROOF-STORY-XXX.md, include a Worker Token Summary:
 
 ```markdown
-## Token Summary
-
-### This Agent (Proof Writer)
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: all artifacts | input | — | — |
-| Write: PROOF-STORY-XXX.md | output | — | — |
-| **Total** | — | — | **—** |
-
-### Aggregated from Sub-Agents
-| Agent | Input | Output | Total |
-|-------|-------|--------|-------|
-| Planner | — | — | — |
-| Backend Coder | — | — | — |
-| Verifier | — | — | — |
-| **Grand Total** | **—** | **—** | **—** |
+## Worker Token Summary
+- Input: ~X tokens (all artifacts read)
+- Output: ~Y tokens (PROOF-STORY-XXX.md)
 ```
 
-See `.claude/agents/_token-logging.md` for full specification.
+The Documentation Leader aggregates all worker tokens and calls `/token-log`.
+Estimate: `tokens ≈ bytes / 4`

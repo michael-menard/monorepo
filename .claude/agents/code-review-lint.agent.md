@@ -67,6 +67,18 @@ Append to:
 ```
 ```
 
+## Token Tracking
+
+Track bytes read/written and report to the orchestrator:
+
+```markdown
+## Worker Token Summary
+- Input: ~X tokens (files read)
+- Output: ~Y tokens (CODE-REVIEW-LINT.md)
+```
+
+The orchestrator aggregates and calls `/token-log` for the code-review phase.
+
 ## Completion Signal
 - "LINT PASS" if no errors
 - "LINT FAIL: <count> errors" if errors exist

@@ -56,16 +56,14 @@ Write exactly to:
   - why it blocks implementation
   - what info is needed (from story/PM), without guessing
 
-# Token Log (REQUIRED)
-- Log all file reads and writes with byte counts
-- See `.claude/agents/_token-logging.md` for format
+# Worker Token Summary (REQUIRED)
 
-Example:
+At the end, include:
+```markdown
+## Worker Token Summary
+- Input: ~X tokens (files read)
+- Output: ~Y tokens (IMPLEMENTATION-PLAN.md)
 ```
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: STORY-XXX.md | input | 18,000 | ~4,500 |
-| Read: existing-handlers | input | 15,000 | ~3,750 |
-| Write: IMPLEMENTATION-PLAN.md | output | 8,000 | ~2,000 |
-| **Total** | — | 41,000 | **~10,250** |
-```
+
+The Planning Leader aggregates worker tokens and calls `/token-log`.
+Estimate: `tokens ≈ bytes / 4`

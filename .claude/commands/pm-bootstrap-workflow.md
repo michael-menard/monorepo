@@ -270,7 +270,224 @@ Append-only.
 ```
 
 -------------------------------------------------------------------------------
-STEP 5: OUTPUT SUMMARY
+STEP 5: GENERATE `{PREFIX}.roadmap.md` (VISUALIZATION)
+-------------------------------------------------------------------------------
+
+Create a visual roadmap at `plans/{PREFIX}.roadmap.md` with Mermaid diagrams:
+
+```markdown
+---
+doc_type: roadmap
+title: "{PREFIX} — Story Roadmap"
+status: active
+story_prefix: "{PREFIX}"
+created_at: "[timestamp]"
+updated_at: "[timestamp]"
+---
+
+# {PREFIX} — Story Roadmap
+
+Visual representation of story dependencies and execution order.
+
+---
+
+## Dependency Graph
+
+Shows which stories block downstream work. Stories can be worked when all upstream dependencies are complete.
+
+```mermaid
+flowchart LR
+    subgraph Phase1["Phase 1: Foundation"]
+        S001["{PREFIX}-001<br/>Story Title"]
+        S002["{PREFIX}-002<br/>Story Title"]
+    end
+
+    subgraph Phase2["Phase 2: Core Features"]
+        S003["{PREFIX}-003<br/>Story Title"]
+        S004["{PREFIX}-004<br/>Story Title"]
+    end
+
+    subgraph Phase3["Phase 3: Integration"]
+        S005["{PREFIX}-005<br/>Story Title"]
+    end
+
+    %% Dependencies
+    S001 --> S003
+    S001 --> S004
+    S002 --> S004
+    S003 --> S005
+    S004 --> S005
+
+    %% Styling
+    classDef ready fill:#90EE90,stroke:#228B22
+    classDef blocked fill:#FFE4B5,stroke:#FFA500
+    classDef done fill:#87CEEB,stroke:#4682B4
+
+    class S001,S002 ready
+    class S003,S004 blocked
+    class S005 blocked
+```
+
+**Legend:**
+- 🟢 **Green** = Ready to start (no blockers)
+- 🟡 **Yellow** = Blocked by upstream
+- 🔵 **Blue** = Completed
+
+---
+
+## Completion Order (Gantt View)
+
+Relative sequencing without specific dates. Shows parallelization opportunities.
+
+```mermaid
+gantt
+    title {PREFIX} Story Execution Order
+    dateFormat X
+    axisFormat %s
+
+    section Phase 1: Foundation
+    {PREFIX}-001 Story Title    :s001, 0, 1
+    {PREFIX}-002 Story Title    :s002, 0, 1
+
+    section Phase 2: Core Features
+    {PREFIX}-003 Story Title    :s003, after s001, 1
+    {PREFIX}-004 Story Title    :s004, after s001 s002, 1
+
+    section Phase 3: Integration
+    {PREFIX}-005 Story Title    :s005, after s003 s004, 1
+```
+
+**Reading the Gantt:**
+- Stories on the same row can be worked in parallel
+- Arrows/dependencies show what must complete first
+- Each unit represents one story (not time)
+
+---
+
+## Critical Path
+
+The longest chain of dependent stories (determines minimum completion time):
+
+```
+{PREFIX}-001 → {PREFIX}-003 → {PREFIX}-005
+```
+
+**Critical path length:** 3 stories
+
+Any delay on critical path stories delays the entire project.
+
+---
+
+## Parallel Opportunities
+
+Stories that can be worked simultaneously:
+
+| Parallel Group | Stories | After |
+|----------------|---------|-------|
+| Group 1 | {PREFIX}-001, {PREFIX}-002 | — (start) |
+| Group 2 | {PREFIX}-003, {PREFIX}-004 | Group 1 |
+| Group 3 | {PREFIX}-005 | Group 2 |
+
+**Maximum parallelization:** 2 stories at once
+
+---
+
+## Risk Indicators
+
+| Story | Risk Level | Reason |
+|-------|------------|--------|
+| {PREFIX}-003 | 🔴 High | [risk reason] |
+| {PREFIX}-001 | 🟡 Medium | [risk reason] |
+| {PREFIX}-002 | 🟢 Low | Straightforward |
+
+---
+
+## Swimlane View (By Domain)
+
+```mermaid
+flowchart TB
+    subgraph Backend["Backend"]
+        BE1["{PREFIX}-001"]
+        BE2["{PREFIX}-003"]
+    end
+
+    subgraph Frontend["Frontend"]
+        FE1["{PREFIX}-002"]
+        FE2["{PREFIX}-004"]
+    end
+
+    subgraph Integration["Integration"]
+        INT1["{PREFIX}-005"]
+    end
+
+    BE1 --> BE2
+    FE1 --> FE2
+    BE2 --> INT1
+    FE2 --> INT1
+```
+
+---
+
+## Quick Reference
+
+| Metric | Value |
+|--------|-------|
+| Total Stories | [N] |
+| Ready to Start | [N] |
+| Critical Path Length | [N] stories |
+| Max Parallel | [N] stories |
+| Phases | [N] |
+
+---
+
+## Update Log
+
+| Date | Change | Stories Affected |
+|------|--------|------------------|
+| [created] | Initial roadmap | All |
+
+```
+
+### Dependency Graph Rules
+
+When generating the dependency graph:
+
+1. **Group into phases** based on natural milestones
+2. **Show all dependencies** as arrows (A --> B means A must complete before B)
+3. **Color code by status**:
+   - Ready (no blockers) = green
+   - Blocked = yellow
+   - Done = blue
+4. **Use subgraphs** to group related stories
+
+### Gantt Chart Rules
+
+When generating the Gantt view:
+
+1. **Use relative positioning** (not real dates):
+   - `dateFormat X` uses simple integers
+   - Each story is 1 unit
+2. **Show dependencies** with `after` keyword
+3. **Group into sections** matching the phases
+4. **Parallel stories** appear on same time slice
+
+### Critical Path Identification
+
+1. Find the longest chain of dependent stories
+2. Document it explicitly
+3. Flag critical path stories as high priority
+
+### Swimlane Rules
+
+Group stories by domain/team:
+- Backend
+- Frontend
+- Infrastructure
+- Integration
+- Documentation
+
+-------------------------------------------------------------------------------
+STEP 6: OUTPUT SUMMARY
 -------------------------------------------------------------------------------
 
 After generating all files, provide:
@@ -279,13 +496,33 @@ After generating all files, provide:
    - `plans/stories/{PREFIX}.stories.index.md`
    - `plans/{PREFIX}.plan.meta.md`
    - `plans/{PREFIX}.plan.exec.md`
+   - `plans/{PREFIX}.roadmap.md` ← NEW: Visual roadmap with Mermaid diagrams
    - `plans/stories/LESSONS-LEARNED.md` (if not exists)
    - `plans/stories/TOKEN-BUDGET-TEMPLATE.md` (if not exists)
+
 2. **Story Count** - Total stories identified
+
 3. **Story Prefix** - The prefix used for this project
-4. **Dependency Graph** - Visual representation of story dependencies
-5. **Ready to Start** - Which stories can begin immediately
+
+4. **Roadmap Highlights**:
+   - Critical path (longest dependency chain)
+   - Maximum parallelization (how many stories can run simultaneously)
+   - Phase breakdown
+
+5. **Ready to Start** - Which stories can begin immediately (no blockers)
+
 6. **Risk Summary** - High-risk stories or unknowns
+
+7. **Execution Estimate**:
+   ```
+   | Metric | Value |
+   |--------|-------|
+   | Total Stories | N |
+   | Critical Path | N stories |
+   | Phases | N |
+   | Max Parallel | N stories |
+   | Min Completion Time | N story-cycles (if max parallel) |
+   ```
 
 -------------------------------------------------------------------------------
 SUPPORTING FILES

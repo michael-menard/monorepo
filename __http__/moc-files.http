@@ -1,0 +1,304 @@
+### =============================================================================
+### MOC File Management API Tests (STORY-016)
+### =============================================================================
+### Tests for file upload, delete, parts list, and edit endpoints.
+### Requires AUTH_BYPASS=true in .env.local
+### Run `pnpm seed` first to create test data
+### =============================================================================
+
+@baseUrl = http://localhost:3001
+# Seed data MOC IDs (from mocs.ts seed file)
+@ownedMocId = dddddddd-dddd-dddd-dddd-dddddddd0001
+@otherUserMocId = dddddddd-dddd-dddd-dddd-dddddddd0004
+@nonExistentMocId = 99999999-9999-9999-9999-999999999999
+# Placeholder - replace with actual file ID after upload
+@fileId = ffffffff-ffff-ffff-ffff-ffffffff0001
+
+### =============================================================================
+### 1. DELETE FILE - Happy Path
+### =============================================================================
+
+### Delete a file from a MOC (soft delete) - expect 200
+# @name deleteFile
+DELETE {{baseUrl}}/api/mocs/{{ownedMocId}}/files/{{fileId}}
+Content-Type: application/json
+
+### =============================================================================
+### 2. UPLOAD FILE (multipart) - Requires curl/Postman
+### =============================================================================
+
+### Upload a single file to a MOC - expect 201
+### Note: REST Client doesn't support multipart with binary files well.
+### Use curl for testing:
+#
+# Single file upload:
+# curl -X POST "http://localhost:3001/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/files" \
+#   -F "file=@test.pdf" \
+#   -F "fileType=instruction"
+#
+# Multi-file upload with per-file types:
+# curl -X POST "http://localhost:3001/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/files" \
+#   -F "file=@instructions.pdf" \
+#   -F "file=@thumbnail.jpg" \
+#   -F "fileType_0=instruction" \
+#   -F "fileType_1=thumbnail"
+
+### =============================================================================
+### 3. UPLOAD PARTS LIST (multipart) - Requires curl/Postman
+### =============================================================================
+
+### Upload and parse a parts list CSV - expect 201
+### Use curl for testing:
+#
+# CSV upload:
+# curl -X POST "http://localhost:3001/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/upload-parts-list" \
+#   -F "file=@parts.csv"
+#
+# XML upload:
+# curl -X POST "http://localhost:3001/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/upload-parts-list" \
+#   -F "file=@parts.xml"
+
+### =============================================================================
+### 4. EDIT PRESIGN - Happy Path
+### =============================================================================
+
+### Generate presigned URL for single file - expect 200
+# @name editPresignSingle
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "filename": "new-instructions.pdf",
+      "size": 5242880,
+      "mimeType": "application/pdf"
+    }
+  ]
+}
+
+### Generate presigned URLs for multiple files - expect 200
+# @name editPresignMultiple
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "filename": "new-instructions.pdf",
+      "size": 1024000,
+      "mimeType": "application/pdf"
+    },
+    {
+      "category": "image",
+      "filename": "new-image.jpg",
+      "size": 512000,
+      "mimeType": "image/jpeg"
+    }
+  ]
+}
+
+### =============================================================================
+### 5. EDIT FINALIZE - Happy Path
+### =============================================================================
+
+### Finalize MOC edit with new files - expect 200
+### NOTE: Replace expectedUpdatedAt with actual MOC.updatedAt value from GET /api/mocs/:id
+### NOTE: s3Key must match a file uploaded via presign URL
+# @name editFinalizeWithFiles
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "title": "Updated MOC Title",
+  "description": "Updated description",
+  "tags": ["lego", "moc", "updated"],
+  "newFiles": [
+    {
+      "s3Key": "dev/moc-instructions/dev-user-00000000-0000-0000-0000-000000000001/dddddddd-dddd-dddd-dddd-dddddddd0001/edit/instruction/file123.pdf",
+      "category": "instruction",
+      "filename": "new-instructions.pdf",
+      "size": 1024000,
+      "mimeType": "application/pdf"
+    }
+  ],
+  "removedFileIds": [],
+  "expectedUpdatedAt": "2026-01-15T12:00:00.000Z"
+}
+
+### =============================================================================
+### 6. EDIT FINALIZE - Metadata Only
+### =============================================================================
+
+### Update only metadata without file changes - expect 200
+# @name editFinalizeMetadataOnly
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "title": "New Title Only",
+  "newFiles": [],
+  "removedFileIds": [],
+  "expectedUpdatedAt": "2026-01-15T12:00:00.000Z"
+}
+
+### =============================================================================
+### 7. EDIT FINALIZE - Remove Files Only
+### =============================================================================
+
+### Remove files without adding new ones - expect 200
+# @name editFinalizeRemoveFiles
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "newFiles": [],
+  "removedFileIds": [
+    "{{fileId}}"
+  ],
+  "expectedUpdatedAt": "2026-01-15T12:00:00.000Z"
+}
+
+### =============================================================================
+### ERROR CASES
+### =============================================================================
+
+### Delete file - Invalid MOC ID format - expect 404
+# @name deleteFileInvalidMocId
+DELETE {{baseUrl}}/api/mocs/not-a-uuid/files/{{fileId}}
+Content-Type: application/json
+
+### Delete file - Invalid file ID format - expect 404
+# @name deleteFileInvalidFileId
+DELETE {{baseUrl}}/api/mocs/{{ownedMocId}}/files/not-a-uuid
+Content-Type: application/json
+
+### Delete file - Non-existent file - expect 404
+# @name deleteFileNotFound
+DELETE {{baseUrl}}/api/mocs/{{ownedMocId}}/files/{{nonExistentMocId}}
+Content-Type: application/json
+
+### Delete file - Other user's MOC - expect 403
+# @name deleteFileForbidden
+DELETE {{baseUrl}}/api/mocs/{{otherUserMocId}}/files/{{fileId}}
+Content-Type: application/json
+
+### Edit presign - Empty files array - expect 400
+# @name editPresignEmptyFiles
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": []
+}
+
+### Edit presign - Other user's MOC - expect 403
+# @name editPresignForbidden
+POST {{baseUrl}}/api/mocs/{{otherUserMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "filename": "test.pdf",
+      "size": 1000,
+      "mimeType": "application/pdf"
+    }
+  ]
+}
+
+### Edit presign - Non-existent MOC - expect 404
+# @name editPresignNotFound
+POST {{baseUrl}}/api/mocs/{{nonExistentMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "filename": "test.pdf",
+      "size": 1000,
+      "mimeType": "application/pdf"
+    }
+  ]
+}
+
+### Edit presign - File too large - expect 413
+# @name editPresignFileTooLarge
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "filename": "huge.pdf",
+      "size": 500000000,
+      "mimeType": "application/pdf"
+    }
+  ]
+}
+
+### Edit presign - Invalid MIME type - expect 415
+# @name editPresignInvalidMime
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/presign
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "filename": "test.exe",
+      "size": 1000,
+      "mimeType": "application/x-executable"
+    }
+  ]
+}
+
+### Edit finalize - Missing expectedUpdatedAt - expect 400
+# @name editFinalizeMissingField
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "title": "New Title"
+}
+
+### Edit finalize - Concurrent edit (stale expectedUpdatedAt) - expect 409
+# @name editFinalizeConcurrent
+POST {{baseUrl}}/api/mocs/{{ownedMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "title": "Updated",
+  "newFiles": [],
+  "removedFileIds": [],
+  "expectedUpdatedAt": "2020-01-01T00:00:00.000Z"
+}
+
+### Edit finalize - Other user's MOC - expect 403
+# @name editFinalizeForbidden
+POST {{baseUrl}}/api/mocs/{{otherUserMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "title": "Hacked Title",
+  "newFiles": [],
+  "removedFileIds": [],
+  "expectedUpdatedAt": "2026-01-15T12:00:00.000Z"
+}
+
+### Edit finalize - Non-existent MOC - expect 404
+# @name editFinalizeNotFound
+POST {{baseUrl}}/api/mocs/{{nonExistentMocId}}/edit/finalize
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "newFiles": [],
+  "removedFileIds": [],
+  "expectedUpdatedAt": "2026-01-15T12:00:00.000Z"
+}

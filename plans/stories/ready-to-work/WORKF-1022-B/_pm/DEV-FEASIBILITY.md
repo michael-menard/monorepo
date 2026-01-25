@@ -1,0 +1,142 @@
+# DEV-FEASIBILITY: wrkf-1022-B (Middleware Extensions & Utilities)
+
+## Risk Assessment: LOW
+
+### Overall Feasibility: FEASIBLE
+
+The story is straightforward to implement. It builds on the core middleware infrastructure from wrkf-1022-A and adds utilities that follow well-established patterns.
+
+---
+
+## Code Surface Analysis
+
+### Files to Create
+
+| File | Risk | Complexity | Notes |
+|------|------|------------|-------|
+| `src/runner/middleware/built-in/index.ts` | Low | Low | Module exports |
+| `src/runner/middleware/built-in/logging.ts` | Low | Low | Simple timing + logging |
+| `src/runner/middleware/built-in/validation.ts` | Low | Low | Zod validation wrapper |
+| `src/runner/middleware/utilities/index.ts` | Low | Low | Module exports |
+| `src/runner/middleware/utilities/filter.ts` | Low | Low | Array filtering |
+| `src/runner/middleware/utilities/naming.ts` | Low | Low | Name generation |
+| `src/runner/middleware/utilities/factories.ts` | Low | Medium | Pattern factories |
+| `src/runner/middleware/utilities/testing.ts` | Low | Medium | Mock creation |
+| `src/runner/middleware/__tests__/logging.test.ts` | Low | Low | Unit tests |
+| `src/runner/middleware/__tests__/validation.test.ts` | Low | Low | Unit tests |
+| `src/runner/middleware/__tests__/utilities.test.ts` | Low | Medium | Utility tests |
+
+### Files to Modify
+
+| File | Risk | Change Type | Notes |
+|------|------|-------------|-------|
+| `src/runner/middleware/types.ts` | Low | Add skipClone field | Additive change |
+| `src/runner/middleware/executor.ts` | Low | Support skipClone option | Conditional logic |
+| `src/runner/middleware/index.ts` | Low | Export additions | Add new exports |
+| `src/index.ts` | Low | Re-export | Add new exports |
+
+---
+
+## Dependency Analysis
+
+### Required Dependencies (Must Exist)
+
+| Dependency | Source | Status | Risk |
+|------------|--------|--------|------|
+| `NodeMiddleware` | wrkf-1022-A | generated | **Must be implemented first** |
+| `NodeMiddlewareSchema` | wrkf-1022-A | generated | **Must be implemented first** |
+| `composeMiddleware()` | wrkf-1022-A | generated | **Must be implemented first** |
+| `MiddlewareContext` | wrkf-1022-A | generated | **Must be implemented first** |
+| `GraphStateSchema` | wrkf-1010 | completed | None |
+| `@repo/logger` | packages/core/logger | exists | None |
+
+### Blocking Dependency
+
+**wrkf-1022-A must be implemented before wrkf-1022-B.** This story builds directly on:
+1. `NodeMiddleware` type for creating middleware
+2. `composeMiddleware()` for combining middleware
+3. Core middleware execution infrastructure
+
+**Mitigation:** Story can be generated now but implementation must wait for wrkf-1022-A.
+
+---
+
+## Technical Risks
+
+### 1. skipClone Integration (Risk: Low)
+
+**Risk:** Adding `skipClone` option requires modifying the executor from wrkf-1022-A.
+
+**Mitigation:**
+- Simple conditional: `const stateToPass = skipClone ? state : structuredClone(state)`
+- Test coverage for both paths
+- Clear documentation of performance vs. safety tradeoff
+
+### 2. Auto-Naming Uniqueness (Risk: Low)
+
+**Risk:** Need globally unique names for anonymous middleware.
+
+**Mitigation:**
+- Use simple counter: `middleware-${++counter}`
+- Counter is module-scoped, not persisted
+- Names only need uniqueness within a composition context
+
+### 3. Pattern Factory Complexity (Risk: Low)
+
+**Risk:** `forNodes` and `whenFlag` factories need to correctly set `shouldRun`.
+
+**Mitigation:**
+- Factories return middleware with pre-configured `shouldRun`
+- Test coverage for all combinations
+- Clear TypeScript signatures
+
+---
+
+## Hidden Dependencies
+
+| Item | Type | Impact | Notes |
+|------|------|--------|-------|
+| @repo/logger API | Library | Low | Must match existing logger interface |
+| RoutingFlag enum | wrkf-1010 | Low | For `whenFlag` factory |
+
+---
+
+## Missing AC Analysis
+
+All required acceptance criteria appear to be present based on ELAB-WRKF-1022.md split allocation.
+
+### AC Coverage Check
+
+| ELAB AC | Story AC | Status |
+|---------|----------|--------|
+| AC-B1 (Built-in middleware) | AC-1, AC-2 | Covered |
+| AC-B2 (filterMiddleware) | AC-3 | Covered |
+| AC-B3 (Middleware naming) | AC-4 | Covered |
+| AC-B4 (skipClone) | AC-5 | Covered |
+| AC-B5 (Pattern factories) | AC-6 | Covered |
+| AC-B6 (Testing utilities) | AC-7 | Covered |
+
+---
+
+## Mitigations Recommended for PM
+
+1. **Ensure wrkf-1022-A is complete first** — This story has a hard dependency
+2. **Add explicit import test** — Verify all new exports are accessible
+3. **Add integration test with core middleware** — Verify built-ins work with composeMiddleware
+
+---
+
+## Feasibility Verdict
+
+| Category | Status |
+|----------|--------|
+| Technical feasibility | **PASS** |
+| Dependency availability | **BLOCKED** (wrkf-1022-A not implemented) |
+| Risk level | **LOW** |
+| Implementation clarity | **PASS** |
+
+**Recommendation:** Generate story now. Implementation can begin after wrkf-1022-A is complete.
+
+---
+
+*Generated by PM Agent (pm-dev-feasibility-review sub-agent) | 2026-01-24*

@@ -1,0 +1,250 @@
+### MOC Parts Lists API Contract Tests
+### Base URL: http://localhost:3001
+### Story: STORY-010 - MOC Parts Lists Management
+
+### Use seeded MOC ID (from moc-parts-lists seed):
+@mocId = 88888888-8888-8888-8888-888888888001
+### Use seeded Parts List ID:
+@partsListId = 99999999-9999-9999-9999-999999999001
+
+### ============================================================
+### CREATE OPERATIONS
+### ============================================================
+
+### createPartsList - Create parts list with title only (201)
+# @name createPartsList
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists
+Content-Type: application/json
+
+{
+  "title": "My New Parts List"
+}
+
+### createPartsListWithParts - Create with initial parts array (201)
+# @name createPartsListWithParts
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists
+Content-Type: application/json
+
+{
+  "title": "Castle Tower Parts",
+  "description": "Parts for the main tower section",
+  "built": false,
+  "purchased": true,
+  "parts": [
+    { "partId": "3001", "partName": "Brick 2 x 4", "quantity": 25, "color": "Red" },
+    { "partId": "3002", "partName": "Brick 2 x 3", "quantity": 15, "color": "Blue" },
+    { "partId": "3003", "partName": "Brick 2 x 2", "quantity": 30, "color": "White" }
+  ]
+}
+
+### createPartsListMissingTitle - 400 error case (missing title)
+# @name createPartsListMissingTitle
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists
+Content-Type: application/json
+
+{
+  "description": "No title provided"
+}
+
+### createPartsListNotFound - 404 error case (invalid MOC ID)
+# @name createPartsListNotFound
+POST http://localhost:3001/api/moc-instructions/99999999-9999-9999-9999-999999999999/parts-lists
+Content-Type: application/json
+
+{
+  "title": "Parts for non-existent MOC"
+}
+
+### createPartsListUnauth - 401 error case (no auth - test with AUTH_BYPASS=false)
+### Note: Only test this when AUTH_BYPASS is disabled
+# @name createPartsListUnauth
+# POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists
+# Content-Type: application/json
+#
+# {
+#   "title": "Unauthorized Request"
+# }
+
+### ============================================================
+### GET OPERATIONS
+### ============================================================
+
+### getPartsLists - Get all parts lists for MOC (200)
+# @name getPartsLists
+GET http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists
+
+### getPartsListsNotFound - 404 error case (invalid MOC ID)
+# @name getPartsListsNotFound
+GET http://localhost:3001/api/moc-instructions/99999999-9999-9999-9999-999999999999/parts-lists
+
+### getPartsListsInvalidId - 400 error case (invalid UUID format)
+# @name getPartsListsInvalidId
+GET http://localhost:3001/api/moc-instructions/not-a-uuid/parts-lists
+
+### ============================================================
+### UPDATE METADATA OPERATIONS
+### ============================================================
+
+### updatePartsList - Update parts list metadata (200)
+# @name updatePartsList
+PUT http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}
+Content-Type: application/json
+
+{
+  "title": "Updated Title",
+  "description": "Updated description for this parts list",
+  "notes": "Remember to check BrickLink prices",
+  "costEstimate": "125.00",
+  "actualCost": "118.50"
+}
+
+### updatePartsListTitleOnly - Update just title (200)
+# @name updatePartsListTitleOnly
+PUT http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}
+Content-Type: application/json
+
+{
+  "title": "Just New Title"
+}
+
+### updatePartsListNotFound - 404 error case (invalid parts list ID)
+# @name updatePartsListNotFound
+PUT http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/99999999-9999-9999-9999-999999999999
+Content-Type: application/json
+
+{
+  "title": "Will Not Work"
+}
+
+### updatePartsListMocNotFound - 404 error case (invalid MOC ID)
+# @name updatePartsListMocNotFound
+PUT http://localhost:3001/api/moc-instructions/99999999-9999-9999-9999-999999999999/parts-lists/{{partsListId}}
+Content-Type: application/json
+
+{
+  "title": "MOC Not Found"
+}
+
+### ============================================================
+### UPDATE STATUS OPERATIONS
+### ============================================================
+
+### updatePartsListStatus - Update built/purchased flags (200)
+# @name updatePartsListStatus
+PATCH http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/status
+Content-Type: application/json
+
+{
+  "built": true,
+  "purchased": true
+}
+
+### updatePartsListStatusBuiltOnly - Update built flag only (200)
+# @name updatePartsListStatusBuiltOnly
+PATCH http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/status
+Content-Type: application/json
+
+{
+  "built": true
+}
+
+### updatePartsListStatusPurchasedOnly - Update purchased flag only (200)
+# @name updatePartsListStatusPurchasedOnly
+PATCH http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/status
+Content-Type: application/json
+
+{
+  "purchased": true
+}
+
+### updatePartsListStatusNotFound - 404 error case
+# @name updatePartsListStatusNotFound
+PATCH http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/99999999-9999-9999-9999-999999999999/status
+Content-Type: application/json
+
+{
+  "built": true
+}
+
+### ============================================================
+### CSV PARSE OPERATIONS
+### ============================================================
+
+### parseCsv - Parse valid CSV (200)
+# @name parseCsv
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/parse
+Content-Type: application/json
+
+{
+  "csvContent": "Part ID,Part Name,Quantity,Color\n3001,Brick 2 x 4,25,Red\n3002,Brick 2 x 3,15,Blue\n3003,Brick 2 x 2,30,White\n3004,Brick 1 x 2,50,Black\n3005,Plate 1 x 1,100,Yellow"
+}
+
+### parseCsvInvalid - Parse CSV with missing columns (400)
+# @name parseCsvInvalid
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/parse
+Content-Type: application/json
+
+{
+  "csvContent": "Part ID,Part Name\n3001,Brick 2 x 4"
+}
+
+### parseCsvInvalidQuantity - Parse CSV with invalid quantity (400)
+# @name parseCsvInvalidQuantity
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/parse
+Content-Type: application/json
+
+{
+  "csvContent": "Part ID,Part Name,Quantity,Color\n3001,Brick 2 x 4,abc,Red"
+}
+
+### parseCsvZeroQuantity - Parse CSV with zero quantity (400)
+# @name parseCsvZeroQuantity
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/parse
+Content-Type: application/json
+
+{
+  "csvContent": "Part ID,Part Name,Quantity,Color\n3001,Brick 2 x 4,0,Red"
+}
+
+### parseCsvEmpty - Parse empty CSV (400)
+# @name parseCsvEmpty
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}/parse
+Content-Type: application/json
+
+{
+  "csvContent": ""
+}
+
+### parseCsvNotFound - Parse for non-existent parts list (404)
+# @name parseCsvNotFound
+POST http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/99999999-9999-9999-9999-999999999999/parse
+Content-Type: application/json
+
+{
+  "csvContent": "Part ID,Part Name,Quantity,Color\n3001,Brick 2 x 4,25,Red"
+}
+
+### ============================================================
+### USER SUMMARY OPERATIONS
+### ============================================================
+
+### getUserSummary - Get aggregated user statistics (200)
+# @name getUserSummary
+GET http://localhost:3001/api/user/parts-lists/summary
+
+### ============================================================
+### DELETE OPERATIONS
+### ============================================================
+
+### deletePartsList - Delete existing parts list (204) - RUN LAST
+### Note: This will delete the seeded parts list, run after other tests
+# @name deletePartsList
+# DELETE http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/{{partsListId}}
+
+### deletePartsListNotFound - 404 error case (non-existent parts list)
+# @name deletePartsListNotFound
+DELETE http://localhost:3001/api/moc-instructions/{{mocId}}/parts-lists/99999999-9999-9999-9999-999999999999
+
+### deletePartsListMocNotFound - 404 error case (non-existent MOC)
+# @name deletePartsListMocNotFound
+DELETE http://localhost:3001/api/moc-instructions/99999999-9999-9999-9999-999999999999/parts-lists/{{partsListId}}

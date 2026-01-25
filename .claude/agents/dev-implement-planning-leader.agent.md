@@ -143,26 +143,25 @@ When complete, report:
 
 ---
 
-## Token Log (REQUIRED)
+## Token Tracking (REQUIRED)
 
-Log your own operations plus worker summaries:
+Before reporting completion signal, call the token-log skill:
 
-```markdown
-## Token Log
-
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: dev-implement-planner.md | input | — | — |
-| Read: dev-implement-plan-validator.agent.md | input | — | — |
-| Spawn: Planner worker | — | — | (see worker log) |
-| Spawn: Validator worker | — | — | (see worker log) |
-| **Leader Total** | — | — | **—** |
 ```
+/token-log STORY-XXX dev-planning <input-tokens> <output-tokens>
+```
+
+Aggregate token usage from:
+- Leader reads: agent files, story context
+- Worker outputs: Planner tokens + Validator tokens
+
+Workers should report their token usage in their output summaries.
 
 ---
 
 ## Non-Negotiables
 
+- MUST call `/token-log` before reporting completion signal
 - Do NOT implement code
 - Do NOT modify story files
 - Do NOT skip validation step

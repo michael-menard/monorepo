@@ -97,6 +97,18 @@ Date: <timestamp>
 
 ---
 
+## Worker Token Summary (REQUIRED)
+
+At the end, report to the Documentation Leader:
+
+```markdown
+## Worker Token Summary
+- Input: ~X tokens (artifacts read)
+- Output: ~Y tokens (LESSONS-LEARNED.md updates)
+```
+
+The Documentation Leader aggregates worker tokens and calls `/token-log`.
+
 ## Completion Signal
 End with "LEARNINGS CAPTURED".
 

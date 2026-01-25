@@ -94,39 +94,31 @@ Task tool:
 
 Wait for `LEARNINGS CAPTURED` signal.
 
-### Step 4: Aggregate Token Usage
+### Step 4: Log Documentation Phase Tokens
 
-Read token logs from all artifact files and create `TOKEN-SUMMARY.md`:
+Before proceeding, call the token-log skill for this phase:
 
-```markdown
-# Token Summary - STORY-XXX
-
-## Sub-Agent Token Usage
-
-| Phase | Agent | Input Tokens | Output Tokens | Total |
-|-------|-------|--------------|---------------|-------|
-| 0: Setup | Setup Leader | — | — | — |
-| 1A: Plan | Planner | — | — | — |
-| 1B: Validate | Validator | — | — | — |
-| 2: Backend | Backend Coder | — | — | — |
-| 2: Frontend | Frontend Coder | — | — | — |
-| 2B: Contracts | Contracts | — | — | — |
-| 3: Verify | Verifier | — | — | — |
-| 3B: Playwright | Playwright | — | — | — |
-| 4: Proof | Proof Writer | — | — | — |
-| 5: Learnings | Learnings | — | — | — |
-| **Total** | — | **—** | **—** | **—** |
-
-## High-Cost Operations
-
-<list any operations that consumed >10k tokens>
-
-## Optimization Notes
-
-<observations for future stories>
+```
+/token-log STORY-XXX dev-documentation <input-tokens> <output-tokens>
 ```
 
-Write to `_implementation/TOKEN-SUMMARY.md`.
+Aggregate token usage from:
+- Leader reads: all artifacts, agent files
+- Worker outputs: Proof Writer + Learnings
+
+### Step 4b: Generate Token Report
+
+Call the token-report skill to generate the full summary:
+
+```
+/token-report STORY-XXX
+```
+
+This reads TOKEN-LOG.md and generates TOKEN-SUMMARY.md with:
+- Phase breakdown table
+- Cost estimates
+- High-cost operations
+- Comparison to typical budget
 
 ### Step 5: Update Story Token Budget
 
@@ -186,30 +178,22 @@ When complete, report:
 
 ---
 
-## Token Log (REQUIRED)
+## Token Tracking (REQUIRED)
 
-```markdown
-## Token Log
+This phase MUST:
+1. Call `/token-log STORY-XXX dev-documentation` for this phase's tokens
+2. Call `/token-report STORY-XXX` to generate the full story summary
 
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: all artifacts | input | — | — |
-| Read: agent files | input | — | — |
-| Spawn: Proof Writer | — | — | (see worker log) |
-| Spawn: Learnings | — | — | (see worker log) |
-| Write: TOKEN-SUMMARY.md | output | — | — |
-| Edit: STORY-XXX.md | output | — | — |
-| Edit: stories.index.md | output | — | — |
-| **Leader Total** | — | — | **—** |
-```
+Workers should report their token usage in their output summaries.
 
 ---
 
 ## Non-Negotiables
 
+- MUST call `/token-log` before reporting completion signal
+- MUST call `/token-report` to generate TOKEN-SUMMARY.md
 - Do NOT skip any step
 - Do NOT modify story content (only status in frontmatter)
 - Do NOT create proof yourself (delegate to Proof Writer)
-- ALWAYS aggregate token usage from all phases
 - ALWAYS update both story and index status
 - ALWAYS report next step: `/dev-code-review STORY-XXX`

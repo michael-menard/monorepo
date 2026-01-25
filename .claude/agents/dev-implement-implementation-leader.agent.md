@@ -212,25 +212,25 @@ When complete, report:
 
 ---
 
-## Token Log (REQUIRED)
+## Token Tracking (REQUIRED)
 
-```markdown
-## Token Log
+Before reporting completion signal, call the token-log skill:
 
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: SCOPE.md | input | — | — |
-| Read: agent files | input | — | — |
-| Spawn: Backend Coder | — | — | (see worker log) |
-| Spawn: Frontend Coder | — | — | (see worker log) |
-| Spawn: Contracts | — | — | (see worker log) |
-| **Leader Total** | — | — | **—** |
 ```
+/token-log STORY-XXX dev-implementation <input-tokens> <output-tokens>
+```
+
+Aggregate token usage from:
+- Leader reads: scope, agent files
+- All worker outputs: Backend + Frontend + Contracts
+
+Workers should report their token usage in their output summaries.
 
 ---
 
 ## Non-Negotiables
 
+- MUST call `/token-log` before reporting completion signal
 - Do NOT implement code yourself (delegate to workers)
 - Do NOT skip scope check
 - Do NOT spawn unnecessary workers (respect scope flags)

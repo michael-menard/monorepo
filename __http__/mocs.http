@@ -1,0 +1,798 @@
+### MOC Instructions API - STORY-011 Read Operations
+### Vercel local dev: http://localhost:3001
+### Requires AUTH_BYPASS=true in .env.local
+
+@baseUrl = http://localhost:3001
+@devUserId = dev-user-00000000-0000-0000-0000-000000000001
+
+# ==============================================================================
+# GET /api/mocs - List MOCs
+# ==============================================================================
+
+### List all MOCs for authenticated user (default pagination)
+GET {{baseUrl}}/api/mocs
+Content-Type: application/json
+
+### List MOCs with pagination
+GET {{baseUrl}}/api/mocs?page=1&limit=10
+Content-Type: application/json
+
+### List MOCs with search
+GET {{baseUrl}}/api/mocs?search=castle
+Content-Type: application/json
+
+### List MOCs with tag filter
+GET {{baseUrl}}/api/mocs?tag=medieval
+Content-Type: application/json
+
+### List MOCs with combined filters
+GET {{baseUrl}}/api/mocs?page=1&limit=5&search=castle&tag=modular
+Content-Type: application/json
+
+### Invalid pagination - page < 1 (expect 422)
+GET {{baseUrl}}/api/mocs?page=0
+Content-Type: application/json
+
+### Invalid pagination - limit > 100 (expect 422)
+GET {{baseUrl}}/api/mocs?limit=200
+Content-Type: application/json
+
+# ==============================================================================
+# GET /api/mocs/:id - Get Single MOC
+# ==============================================================================
+
+### Get published MOC (King's Castle) - should return with isOwner: true
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001
+Content-Type: application/json
+
+### Get draft MOC (Space Station) - should return with isOwner: true (owner access)
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0002
+Content-Type: application/json
+
+### Get archived MOC (Old Pirate Ship) - should return with isOwner: true (owner access)
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0003
+Content-Type: application/json
+
+### Get published MOC owned by other user (Technic Supercar) - should return with isOwner: false
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0004
+Content-Type: application/json
+
+### Get draft MOC owned by other user (Secret Project) - should return 404 (non-owner)
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0005
+Content-Type: application/json
+
+### Get non-existent MOC - should return 404
+GET {{baseUrl}}/api/mocs/99999999-9999-9999-9999-999999999999
+Content-Type: application/json
+
+### Get invalid UUID format - should return 404
+GET {{baseUrl}}/api/mocs/invalid-uuid
+Content-Type: application/json
+
+# ==============================================================================
+# GET /api/mocs/stats/by-category - Category Statistics
+# ==============================================================================
+
+### Get MOC statistics by category (theme/tags)
+GET {{baseUrl}}/api/mocs/stats/by-category
+Content-Type: application/json
+
+# ==============================================================================
+# GET /api/mocs/stats/uploads-over-time - Upload Time Series
+# ==============================================================================
+
+### Get MOC uploads over time (last 12 months)
+GET {{baseUrl}}/api/mocs/stats/uploads-over-time
+Content-Type: application/json
+
+# ==============================================================================
+# Error Cases
+# ==============================================================================
+
+### Invalid HTTP method on list endpoint
+POST {{baseUrl}}/api/mocs
+Content-Type: application/json
+
+{
+  "title": "Test"
+}
+
+### Invalid HTTP method on detail endpoint
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001
+Content-Type: application/json
+
+{
+  "title": "Test"
+}
+
+# ==============================================================================
+# STORY-012: Gallery Linking Endpoints
+# ==============================================================================
+
+# ==============================================================================
+# GET /api/mocs/:id/gallery-images - List Linked Gallery Images
+# ==============================================================================
+
+### Get gallery images for King's Castle (has 2 linked images) - expect 200
+# @name getMocGalleryImages
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images
+Content-Type: application/json
+
+### Get gallery images for Space Station (draft MOC with 1 cross-user link) - expect 200
+# @name getMocGalleryImagesCrossUser
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0002/gallery-images
+Content-Type: application/json
+
+### Get gallery images for Old Pirate Ship (archived, no links) - expect 200 with empty array
+# @name getMocGalleryImagesEmpty
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0003/gallery-images
+Content-Type: application/json
+
+### Get gallery images for Technic Supercar (other user's MOC) - expect 403
+# @name getMocGalleryImages403
+GET {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0004/gallery-images
+Content-Type: application/json
+
+### Get gallery images for non-existent MOC - expect 404
+# @name getMocGalleryImages404
+GET {{baseUrl}}/api/mocs/99999999-9999-9999-9999-999999999999/gallery-images
+Content-Type: application/json
+
+### Get gallery images with invalid UUID - expect 400
+# @name getMocGalleryImages400
+GET {{baseUrl}}/api/mocs/invalid-uuid/gallery-images
+Content-Type: application/json
+
+# ==============================================================================
+# POST /api/mocs/:id/gallery-images - Link Gallery Image
+# ==============================================================================
+
+### Link Space Station Build image to King's Castle - expect 201
+# NOTE: Run this ONCE, then it will return 409 on subsequent runs
+# @name linkGalleryImage
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "22222222-2222-2222-2222-222222222222"
+}
+
+### Link already-linked image (Castle Tower) to King's Castle - expect 409
+# @name linkGalleryImage409
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "11111111-1111-1111-1111-111111111111"
+}
+
+### Link non-existent gallery image - expect 404
+# @name linkGalleryImage404Image
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "00000000-0000-0000-0000-000000000000"
+}
+
+### Link to non-existent MOC - expect 404
+# @name linkGalleryImage404Moc
+POST {{baseUrl}}/api/mocs/99999999-9999-9999-9999-999999999999/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "22222222-2222-2222-2222-222222222222"
+}
+
+### Link to other user's MOC - expect 403
+# @name linkGalleryImage403
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0004/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "22222222-2222-2222-2222-222222222222"
+}
+
+### Link without galleryImageId - expect 400
+# @name linkGalleryImage400Missing
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images
+Content-Type: application/json
+
+{}
+
+### Link with invalid MOC ID format - expect 400
+# @name linkGalleryImage400InvalidMoc
+POST {{baseUrl}}/api/mocs/invalid-uuid/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "22222222-2222-2222-2222-222222222222"
+}
+
+### Link with invalid galleryImageId format - expect 400
+# @name linkGalleryImage400InvalidImage
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images
+Content-Type: application/json
+
+{
+  "galleryImageId": "invalid-uuid"
+}
+
+# ==============================================================================
+# DELETE /api/mocs/:id/gallery-images/:galleryImageId - Unlink Gallery Image
+# ==============================================================================
+
+### Unlink Medieval Knight from King's Castle - expect 200
+# NOTE: Run this ONCE, then it will return 404 on subsequent runs
+# @name unlinkGalleryImage
+DELETE {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images/33333333-3333-3333-3333-333333333333
+Content-Type: application/json
+
+### Unlink non-linked image - expect 404
+# @name unlinkGalleryImage404
+DELETE {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images/77777777-7777-7777-7777-777777777777
+Content-Type: application/json
+
+### Unlink from non-existent MOC - expect 404
+# @name unlinkGalleryImage404Moc
+DELETE {{baseUrl}}/api/mocs/99999999-9999-9999-9999-999999999999/gallery-images/11111111-1111-1111-1111-111111111111
+Content-Type: application/json
+
+### Unlink from other user's MOC - expect 403
+# @name unlinkGalleryImage403
+DELETE {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0004/gallery-images/11111111-1111-1111-1111-111111111111
+Content-Type: application/json
+
+### Unlink with invalid MOC ID format - expect 400
+# @name unlinkGalleryImage400InvalidMoc
+DELETE {{baseUrl}}/api/mocs/invalid-uuid/gallery-images/11111111-1111-1111-1111-111111111111
+Content-Type: application/json
+
+### Unlink with invalid galleryImageId format - expect 400
+# @name unlinkGalleryImage400InvalidImage
+DELETE {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/gallery-images/invalid-uuid
+Content-Type: application/json
+
+# ==============================================================================
+# STORY-013: PATCH /api/mocs/:id/edit - Edit MOC Metadata
+# ==============================================================================
+
+### Update title only - expect 200
+# @name patchMocTitle
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{
+  "title": "King's Castle - Updated"
+}
+
+### Update multiple fields - expect 200
+# @name patchMocMultipleFields
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{
+  "title": "Updated Castle",
+  "description": "A medieval castle MOC",
+  "tags": ["castle", "medieval"]
+}
+
+### Update slug - expect 200
+# @name patchMocSlug
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0002/edit
+Content-Type: application/json
+
+{
+  "slug": "space-station-v2"
+}
+
+### Set description to null - expect 200
+# @name patchMocNullDescription
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{
+  "description": null
+}
+
+### Set tags to null - expect 200
+# @name patchMocNullTags
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{
+  "tags": null
+}
+
+### Edit other user's MOC - expect 403
+# @name patchMoc403
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0004/edit
+Content-Type: application/json
+
+{
+  "title": "Hacked Title"
+}
+
+### Non-existent MOC - expect 404
+# @name patchMoc404
+PATCH {{baseUrl}}/api/mocs/99999999-9999-9999-9999-999999999999/edit
+Content-Type: application/json
+
+{
+  "title": "Test"
+}
+
+### Empty body - expect 400
+# @name patchMocEmptyBody
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{}
+
+### Conflicting slug (already used by MOC 0001) - expect 409
+# @name patchMocSlugConflict
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0002/edit
+Content-Type: application/json
+
+{
+  "slug": "kings-castle"
+}
+
+### Invalid slug format - expect 400
+# @name patchMocInvalidSlug
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{
+  "slug": "Invalid Slug!"
+}
+
+### Title exceeds 100 characters - expect 400
+# @name patchMocTitleTooLong
+PATCH {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/edit
+Content-Type: application/json
+
+{
+  "title": "This is an extremely long title that exceeds the maximum allowed length of one hundred characters for MOC titles"
+}
+
+### Invalid UUID format - expect 404
+# @name patchMoc404InvalidUuid
+PATCH {{baseUrl}}/api/mocs/invalid-uuid/edit
+Content-Type: application/json
+
+{
+  "title": "Test"
+}
+
+# ==============================================================================
+# STORY-014: POST /api/mocs/import-from-url - Import MOC from External URL
+# ==============================================================================
+
+# ==============================================================================
+# Happy Path Requests
+# ==============================================================================
+
+### Import from Rebrickable MOC URL - expect 200
+# @name importFromUrl
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://rebrickable.com/mocs/MOC-29532/Rebrickable/rebrickable-hover-car/"
+}
+
+### Import from Rebrickable Set URL - expect 200
+# @name importFromUrlSet
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://rebrickable.com/sets/75192-1/millennium-falcon/"
+}
+
+### Import from BrickLink Studio URL - expect 200
+# @name importFromUrlBrickLink
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://www.bricklink.com/v3/studio/design.page?idModel=1"
+}
+
+# ==============================================================================
+# Error Cases
+# ==============================================================================
+
+### Missing URL field - expect 400
+# @name importFromUrl400Missing
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{}
+
+### Invalid URL format - expect 400
+# @name importFromUrl400Invalid
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "not-a-valid-url"
+}
+
+### Unsupported platform - expect 400
+# @name importFromUrl400Unsupported
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://example.com/mocs/some-moc"
+}
+
+### Non-existent MOC on Rebrickable - expect 404
+# @name importFromUrl404
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://rebrickable.com/mocs/MOC-99999999/nonexistent-moc/"
+}
+
+### URL too long (> 2000 chars) - expect 400
+# @name importFromUrl400TooLong
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://rebrickable.com/mocs/MOC-12345/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/"
+}
+
+### Invalid JSON body - expect 400
+# @name importFromUrl400Json
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{ invalid json }
+
+### Invalid method (GET) - expect 405
+# @name importFromUrl405
+GET {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+# ==============================================================================
+# Edge Cases
+# ==============================================================================
+
+### URL with query parameters - expect 200
+# @name importFromUrlWithParams
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://rebrickable.com/mocs/MOC-29532/Rebrickable/rebrickable-hover-car/?inventory=1"
+}
+
+### URL with trailing slash - expect 200
+# @name importFromUrlTrailingSlash
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://rebrickable.com/mocs/MOC-29532/"
+}
+
+### Uppercase domain - expect 200
+# @name importFromUrlUppercase
+POST {{baseUrl}}/api/mocs/import-from-url
+Content-Type: application/json
+
+{
+  "url": "https://REBRICKABLE.COM/mocs/MOC-29532/"
+}
+
+# ==============================================================================
+# STORY-015: MOC Instructions Initialize & Finalize
+# ==============================================================================
+# Test execution order:
+# 1. Run happy path initialize tests first to get mocId and fileId values
+# 2. Run error cases in any order
+# 3. Use captured values from initialize for finalize tests
+# ==============================================================================
+
+# ==============================================================================
+# Initialize Endpoint - Happy Path
+# ==============================================================================
+
+### Initialize MOC with single instruction file - expect 201
+# @name initializeMocSingleFile
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC Single File",
+  "type": "moc",
+  "files": [
+    {
+      "filename": "instructions.pdf",
+      "fileType": "instruction",
+      "mimeType": "application/pdf",
+      "size": 5242880
+    }
+  ]
+}
+
+### Initialize MOC with multiple files - expect 201
+# @name initializeMocMultipleFiles
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC Multiple Files",
+  "type": "moc",
+  "description": "A test MOC with multiple files",
+  "files": [
+    {
+      "filename": "instructions.pdf",
+      "fileType": "instruction",
+      "mimeType": "application/pdf",
+      "size": 10485760
+    },
+    {
+      "filename": "parts.csv",
+      "fileType": "parts-list",
+      "mimeType": "text/csv",
+      "size": 102400
+    },
+    {
+      "filename": "thumbnail.jpg",
+      "fileType": "thumbnail",
+      "mimeType": "image/jpeg",
+      "size": 512000
+    }
+  ]
+}
+
+### Initialize MOC with all optional fields - expect 201
+# @name initializeMocFullSchema
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Full Featured MOC",
+  "type": "moc",
+  "description": "A fully detailed MOC with all fields populated",
+  "tags": ["castle", "medieval", "modular"],
+  "author": "Test Builder",
+  "theme": "Castle",
+  "subtheme": "Fantasy",
+  "partsCount": 2500,
+  "mocId": "MOC-TEST-001",
+  "slug": "full-featured-moc",
+  "files": [
+    {
+      "filename": "instructions.pdf",
+      "fileType": "instruction",
+      "mimeType": "application/pdf",
+      "size": 5242880
+    }
+  ]
+}
+
+### Initialize set (not MOC) - expect 201
+# @name initializeMocTypeSet
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test Set Upload",
+  "type": "set",
+  "brand": "LEGO",
+  "setNumber": "12345-1",
+  "releaseYear": 2024,
+  "retired": false,
+  "files": [
+    {
+      "filename": "instructions.pdf",
+      "fileType": "instruction",
+      "mimeType": "application/pdf",
+      "size": 5242880
+    }
+  ]
+}
+
+# ==============================================================================
+# Initialize Endpoint - Error Cases
+# ==============================================================================
+
+### Initialize without auth - expect 401
+# @name initializeNoAuth
+# NOTE: AUTH_BYPASS must be false for this test to work
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "type": "moc",
+  "files": [
+    { "filename": "test.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 }
+  ]
+}
+
+### Initialize with empty body - expect 400
+# @name initializeEmptyBody
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{}
+
+### Initialize with no files array - expect 400
+# @name initializeNoFiles
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC No Files",
+  "type": "moc"
+}
+
+### Initialize with no instruction file - expect 400
+# @name initializeNoInstruction
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC No Instruction",
+  "type": "moc",
+  "files": [
+    { "filename": "parts.csv", "fileType": "parts-list", "mimeType": "text/csv", "size": 1000 }
+  ]
+}
+
+### Initialize with >10 instruction files - expect 400
+# @name initializeTooManyInstructions
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC Too Many Instructions",
+  "type": "moc",
+  "files": [
+    { "filename": "inst1.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst2.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst3.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst4.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst5.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst6.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst7.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst8.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst9.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst10.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 },
+    { "filename": "inst11.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 }
+  ]
+}
+
+### Initialize with file too large - expect 400
+# @name initializeFileTooLarge
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC File Too Large",
+  "type": "moc",
+  "files": [
+    { "filename": "huge.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 100000000 }
+  ]
+}
+
+### Initialize with invalid MIME type - expect 400
+# @name initializeInvalidMime
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC Invalid MIME",
+  "type": "moc",
+  "files": [
+    { "filename": "test.exe", "fileType": "instruction", "mimeType": "application/x-executable", "size": 1000 }
+  ]
+}
+
+### Initialize duplicate title - expect 409
+# Requires seed data: MOC with title "Test MOC Duplicate Title"
+# @name initializeDuplicateTitle
+POST {{baseUrl}}/api/mocs/with-files/initialize
+Content-Type: application/json
+
+{
+  "title": "Test MOC Duplicate Title",
+  "type": "moc",
+  "files": [
+    { "filename": "test.pdf", "fileType": "instruction", "mimeType": "application/pdf", "size": 1000 }
+  ]
+}
+
+# ==============================================================================
+# Finalize Endpoint - Happy Path
+# ==============================================================================
+# NOTE: These require a valid mocId and fileId from a successful initialize call.
+# Replace {{mocId}} and {{fileId}} with actual values from initializeMocSingleFile response.
+
+### Finalize MOC after successful upload - expect 200
+# @name finalizeMocSuccess
+# Replace with actual mocId from initializeMocSingleFile response
+POST {{baseUrl}}/api/mocs/{{mocId}}/finalize
+Content-Type: application/json
+
+{
+  "uploadedFiles": [
+    { "fileId": "{{fileId}}", "success": true }
+  ]
+}
+
+### Finalize idempotent retry (call again on already-finalized MOC) - expect 200 with idempotent: true
+# @name finalizeMocIdempotent
+# Use same mocId as finalizeMocSuccess
+POST {{baseUrl}}/api/mocs/{{mocId}}/finalize
+Content-Type: application/json
+
+{
+  "uploadedFiles": [
+    { "fileId": "{{fileId}}", "success": true }
+  ]
+}
+
+# ==============================================================================
+# Finalize Endpoint - Error Cases
+# ==============================================================================
+
+### Finalize non-existent MOC - expect 404
+# @name finalizeNotFound
+POST {{baseUrl}}/api/mocs/99999999-9999-9999-9999-999999999999/finalize
+Content-Type: application/json
+
+{
+  "uploadedFiles": [
+    { "fileId": "00000000-0000-0000-0000-000000000001", "success": true }
+  ]
+}
+
+### Finalize other user's MOC - expect 403
+# Requires seed data: MOC eeeeeeee-eeee-eeee-eeee-eeeeeeee0001 owned by other user
+# @name finalizeForbidden
+POST {{baseUrl}}/api/mocs/eeeeeeee-eeee-eeee-eeee-eeeeeeee0001/finalize
+Content-Type: application/json
+
+{
+  "uploadedFiles": [
+    { "fileId": "00000000-0000-0000-0000-000000000001", "success": true }
+  ]
+}
+
+### Finalize with empty body - expect 400
+# @name finalizeEmptyBody
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/finalize
+Content-Type: application/json
+
+{}
+
+### Finalize with no successful uploads - expect 400
+# @name finalizeNoSuccessfulUploads
+POST {{baseUrl}}/api/mocs/dddddddd-dddd-dddd-dddd-dddddddd0001/finalize
+Content-Type: application/json
+
+{
+  "uploadedFiles": [
+    { "fileId": "eeeeeeee-eeee-eeee-eeee-eeeeeeee0001", "success": false }
+  ]
+}
+
+### Finalize with invalid MOC ID - expect 404
+# @name finalizeInvalidMocId
+POST {{baseUrl}}/api/mocs/invalid-uuid/finalize
+Content-Type: application/json
+
+{
+  "uploadedFiles": [
+    { "fileId": "00000000-0000-0000-0000-000000000001", "success": true }
+  ]
+}

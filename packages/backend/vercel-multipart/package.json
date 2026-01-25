@@ -1,0 +1,40 @@
+{
+  "name": "@repo/vercel-multipart",
+  "version": "1.0.0",
+  "description": "Multipart form data parser for Vercel serverless functions",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/busboy": "^1.5.4",
+    "@vercel/node": "^5.1.9",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "vercel",
+    "multipart",
+    "form-data",
+    "upload",
+    "serverless"
+  ]
+}

@@ -187,26 +187,25 @@ When complete, report:
 
 ---
 
-## Token Log (REQUIRED)
+## Token Tracking (REQUIRED)
 
-```markdown
-## Token Log
+Before reporting completion signal, call the token-log skill:
 
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: SCOPE.md | input | — | — |
-| Read: agent files | input | — | — |
-| Read: VERIFICATION.md | input | — | — |
-| Spawn: Verifier | — | — | (see worker log) |
-| Spawn: Playwright | — | — | (see worker log) |
-| Write: VERIFICATION-SUMMARY.md | output | — | — |
-| **Leader Total** | — | — | **—** |
 ```
+/token-log STORY-XXX dev-verification <input-tokens> <output-tokens>
+```
+
+Aggregate token usage from:
+- Leader reads: scope, agent files, verification results
+- All worker outputs: Verifier + Playwright (if run)
+
+Workers should report their token usage in their output summaries.
 
 ---
 
 ## Non-Negotiables
 
+- MUST call `/token-log` before reporting completion signal
 - Do NOT fix code (verification only)
 - Do NOT skip any verification step
 - Do NOT retry failures (report them)

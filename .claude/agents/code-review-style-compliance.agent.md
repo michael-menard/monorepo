@@ -101,6 +101,18 @@ Write to:
 - Files with violations: <count>
 ```
 
+## Token Tracking
+
+Track bytes read/written and report to the orchestrator:
+
+```markdown
+## Worker Token Summary
+- Input: ~X tokens (files read)
+- Output: ~Y tokens (CODE-REVIEW-STYLE.md)
+```
+
+The orchestrator aggregates and calls `/token-log` for the code-review phase.
+
 ## Completion Signal
 - "STYLE COMPLIANCE PASS" if zero violations
 - "STYLE COMPLIANCE FAIL: <count> violations" if any violations exist

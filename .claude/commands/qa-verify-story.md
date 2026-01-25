@@ -1,15 +1,9 @@
-Usage:
-/qa-verify-story STORY-XXX
+Usage: /qa-verify-story STORY-XXX
 
-You are acting as a cross-functional verification agent in a structured refactor/migration workflow.
-Agent definitions are assumed to already exist and are authoritative.
+Post-Implementation Verification agent. Final quality gate before DONE.
 
-Context:
-This command performs **Post-Implementation Verification** AFTER development is complete.
-It is the FINAL quality gate before a story is marked DONE.
-
-The story number (STORY-XXX) is provided as an argument.
-All other inputs are fixed and must be treated as authoritative.
+## Output
+Updates: `VERIFICATION.yaml` (qa_verify + gate sections)
 
 -------------------------------------------------------------------------------
 PHASE 0 — MOVE STORY TO QA (MANDATORY - DO THIS FIRST)
@@ -142,32 +136,42 @@ Verification Checklist (MANDATORY):
 - No forbidden patterns were introduced
 
 Output:
-Produce ONE markdown file only:
-- plans/stories/QA/STORY-XXX/QA-VERIFY-STORY-XXX.md
+Update `VERIFICATION.yaml` in story directory with qa_verify and gate sections:
 
-The verification file MUST include:
-- Final verdict: PASS / FAIL
-- Acceptance Criteria checklist with evidence references
-- Test Implementation Quality assessment:
-  - List of tests reviewed
-  - Quality issues found (if any)
-  - Anti-patterns detected (if any)
-- Test Coverage Report:
-  - Coverage percentages for new/modified code
-  - Untested paths identified
-  - Justification for any gaps below threshold
-- Test Execution Results:
-  - Full test output (pass/fail counts)
-  - Any failures with details
-  - `.http` API Test Results (MANDATORY for backend changes):
-    - List of all .http files executed
-    - Each request executed with method, URL, and expected status
-    - Actual response status and body summary
-    - PASS/FAIL for each request
-    - Full request/response log for any failures
-  - Playwright results (for frontend)
-- Architecture & reuse compliance status
-- Explicit statement whether STORY-XXX may be marked DONE
+```yaml
+# ... code_review section from /dev-code-review ...
+
+qa_verify:
+  verdict: PASS | FAIL
+  tests_executed: true
+  test_results:
+    unit: { pass: N, fail: N }
+    integration: { pass: N, fail: N }  # if applicable
+    e2e: { pass: N, fail: N }          # if applicable
+    http: { pass: N, fail: N }         # if backend
+  coverage: NN%
+  coverage_meets_threshold: true | false
+  test_quality:
+    verdict: PASS | FAIL
+    anti_patterns: []  # only if found
+  acs_verified:
+    - ac: "AC text"
+      status: PASS | FAIL
+      evidence: "file:line or test:name"
+  architecture_compliant: true | false
+  issues: []  # only if found
+
+gate:
+  decision: PASS | CONCERNS | FAIL
+  reason: "one line"
+  blocking_issues: []  # only if FAIL
+```
+
+Keep output lean:
+- Tables over prose
+- Skip empty sections
+- Evidence as references, not full output
+- See `.claude/agents/_shared/lean-docs.md`
 
 Fail Conditions (MANDATORY):
 - Any Acceptance Criterion is unmet

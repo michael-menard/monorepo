@@ -93,22 +93,15 @@ If unable to run verification, write details to:
 - STORY-XXX/_implementation/BLOCKERS.md
 and end with "BLOCKED: <reason>".
 
-## Token Logging (REQUIRED)
+## Token Tracking (REQUIRED)
 
-At the end of VERIFICATION.md, include a Token Log section:
+At the end of VERIFICATION.md, include a Worker Token Summary:
 
 ```markdown
-## Token Log
-
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: STORY-XXX.md | input | — | — |
-| Read: IMPLEMENTATION-PLAN.md | input | — | — |
-| Read: BACKEND-LOG.md | input | — | — |
-| Bash: pnpm build (output) | input | — | — |
-| Write: VERIFICATION.md | output | — | — |
-| **Total Input** | — | — | **—** |
-| **Total Output** | — | — | **—** |
+## Worker Token Summary
+- Input: ~X tokens (files read + command outputs)
+- Output: ~Y tokens (VERIFICATION.md)
 ```
 
-See `.claude/agents/_token-logging.md` for full specification.
+The Verification Leader aggregates all worker tokens and calls `/token-log`.
+Estimate: `tokens ≈ bytes / 4`

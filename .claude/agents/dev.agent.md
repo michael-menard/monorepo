@@ -75,25 +75,20 @@ Running `pnpm seed` without seed code ownership is not allowed.
 - Ask ONE concrete question
 - Do not invent or fake behavior
 
-## Token Logging (REQUIRED)
+## Token Tracking (REQUIRED)
 
-Every Dev agent output MUST include a Token Log section.
-See: `.claude/agents/_token-logging.md` for format.
+Dev phase leaders call `/token-log` after completing their phase:
 
-Append to `proof.md`:
-
-```markdown
-## Token Log
-
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: STORY-XXX.md | input | X | ~Y |
-| Read: existing-code/* | input | X | ~Y |
-| Write: new-handler.ts | output | X | ~Y |
-| Edit: schema.ts | output | X | ~Y |
-| **Total Input** | — | X | **~Y** |
-| **Total Output** | — | X | **~Y** |
 ```
+/token-log STORY-XXX dev-setup <input> <output>
+/token-log STORY-XXX dev-planning <input> <output>
+/token-log STORY-XXX dev-implementation <input> <output>
+/token-log STORY-XXX dev-verification <input> <output>
+/token-log STORY-XXX dev-documentation <input> <output>
+```
+
+Workers report token summaries to their leaders for aggregation.
+Estimate: `tokens ≈ bytes / 4`
 
 ## Definition of Done
 - Feature runs end-to-end

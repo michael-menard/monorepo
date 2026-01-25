@@ -116,25 +116,25 @@ End with exactly one of:
 
 ---
 
-## Token Log (REQUIRED)
+## Token Tracking (REQUIRED)
 
-At the end of your work, log token usage:
+Before reporting completion signal, call the token-log skill:
 
-```markdown
-## Token Log
-
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: STORY-XXX.md | input | — | — |
-| Read: stories.index.md | input | — | — |
-| Write: SCOPE.md | output | — | — |
-| **Total** | — | — | **—** |
 ```
+/token-log STORY-XXX dev-setup <input-tokens> <output-tokens>
+```
+
+Track all file reads/writes during execution:
+- Input: STORY-XXX.md, stories.index.md, etc.
+- Output: SCOPE.md, status updates
+
+Estimate: `tokens ≈ bytes / 4`
 
 ---
 
 ## Non-Negotiables
 
+- MUST call `/token-log` before reporting completion signal
 - Do NOT spawn sub-agents (this is a self-contained leader)
 - Do NOT skip precondition checks
 - Do NOT proceed if any check fails
