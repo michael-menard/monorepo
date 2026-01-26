@@ -2,6 +2,7 @@ packages:
   - 'apps/*'
   - 'apps/api/*'
   - 'apps/web/*'
+  - 'packages/api-core'
   - 'packages/shared/*'
   - 'packages/core/*'
   - 'packages/features/*'
