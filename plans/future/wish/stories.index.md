@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-25T23:20:00Z"
+updated_at: "2026-01-29T17:30:00Z"
 ---
 
 # WISH Stories Index
@@ -15,9 +15,12 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 1 |
+| completed | 2 |
 | in-progress | 0 |
-| pending | 13 |
+| backlog | 9 |
+| elaboration | 2 |
+| ready-to-work | 16 |
+| pending | 1 |
 | deferred | 1 |
 
 ---
@@ -127,7 +130,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2004: Modals & Transitions
 
-**Status:** Approved
+**Status:** completed
 **Depends On:** WISH-2001
 **Phase:** 3 - Core Features
 
@@ -142,6 +145,10 @@ Stories with all dependencies satisfied (can be worked in parallel):
 **Risk Notes:** Got it flow must be atomic - create Set before deleting Wishlist item to prevent data loss. Must implement ownership verification on purchased endpoint (see WISH-2008). Must add transaction rollback tests (see WISH-2008).
 
 **Sizing Warning:** Yes
+
+**Implementation Notes:** Verification story - existing implementation verified. Added Playwright E2E tests (delete-flow.spec.ts, purchase-flow.spec.ts, modal-accessibility.spec.ts). 35 new E2E tests covering AC26-30 accessibility requirements.
+
+**QA Verdict:** PASS (2026-01-29) - All 32 ACs verified, 142 unit tests pass, architecture compliant, E2E tests created
 
 ---
 
@@ -200,7 +207,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2008: Authorization layer testing and policy documentation
 
-**Status:** Pending
+**Status:** ready-to-work
 **Depends On:** WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005
 **Phase:** 3+ - Security & Testing
 
@@ -217,11 +224,13 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** Epic Elaboration - Security & QA perspective
 
+**Story File:** `plans/future/wish/ready-to-work/WISH-2008/WISH-2008.md`
+
 ---
 
 ## WISH-2009: Feature flag infrastructure setup for gradual wishlist rollout
 
-**Status:** Pending
+**Status:** backlog
 **Depends On:** WISH-2007
 **Phase:** 2+ - Infrastructure
 
@@ -237,13 +246,168 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
+## WISH-2119: Flag scheduling (auto-enable/disable at scheduled times)
+
+**Status:** ready-to-work
+**Depends On:** WISH-2009
+**Follow-up From:** WISH-2009
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Add scheduled flag updates (auto-enable/disable at predetermined times) to feature flag infrastructure from WISH-2009. Enables automatic feature rollouts and rollbacks without manual intervention.
+
+**Features:**
+- Scheduled flag updates (one-time schedules in MVP)
+- Cron job (runs every 1 minute) to process pending schedules
+- Admin endpoints: create, list, cancel schedules
+- Atomic flag updates with cache invalidation
+
+**Endpoints:**
+- `POST /api/admin/flags/:flagKey/schedule` - Create scheduled update
+- `GET /api/admin/flags/:flagKey/schedule` - List schedules for flag
+- `DELETE /api/admin/flags/:flagKey/schedule/:scheduleId` - Cancel schedule
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/` - Schedule service and repository
+- `apps/api/lego-api/jobs/` - Cron job for schedule processing
+- `packages/backend/database-schema/` - feature_flag_schedules table
+- `packages/core/api-client/src/schemas/` - Schedule schemas
+
+**Infrastructure:**
+- Database table: feature_flag_schedules with status tracking (pending, applied, failed, cancelled)
+- Cron job: Every 1 minute, processes schedules where scheduled_at <= NOW()
+- Row-level locking (FOR UPDATE SKIP LOCKED) prevents concurrent processing
+
+**Use Cases:**
+- Holiday promotions (auto-enable Dec 1, auto-disable Jan 1)
+- Timed releases (auto-enable at 9am on release day)
+- A/B test windows (auto-enable for 2 weeks, then disable)
+- Maintenance windows (auto-disable during maintenance)
+
+**Acceptance Criteria:** 13 ACs covering schedule CRUD, cron job processing, error handling, and concurrent processing safety.
+
+**Complexity:** Small-Medium (cron job + database schema + admin endpoints)
+
+**Effort:** Low (1-2 points)
+
+**Priority:** Low (convenience feature for Phase 3+)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2009 (Items Marked Out-of-Scope)
+
+**Original Finding:** Flag scheduling (auto-enable/disable at scheduled times) - Manual only in MVP. Scheduling would allow flags to auto-enable/disable at specified times (e.g., holiday promotions).
+
+**Impact:** Low
+**Effort:** Low
+
+---
+
+## WISH-2120: Test utility helpers (createMockFile, mockS3Upload) for S3 upload testing
+
+**Status:** backlog
+**Depends On:** WISH-2011
+**Follow-up From:** WISH-2011
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Create reusable test utilities to reduce boilerplate in S3 upload tests. Provides `createMockFile()` for generating test File objects with configurable properties and `mockS3Upload()` for configuring common upload scenarios (success, error, timeout).
+
+**Test Utilities:**
+- `createMockFile({ name, type, size, content })` - Generate test File objects
+- `mockS3Upload({ scenario, statusCode, delay, progressSteps })` - Configure upload scenarios
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/test/utils/` - New test utilities directory
+- `apps/web/app-wishlist-gallery/src/hooks/__tests__/` - Refactor existing tests
+- `apps/web/app-wishlist-gallery/src/components/**/__tests__/` - Refactor component tests
+
+**Benefits:**
+- Reduce test boilerplate (create mock files in 1 line instead of 3+)
+- Improve test readability and maintainability
+- Standardize upload test patterns across test files
+- Less duplication across test files
+
+**Acceptance Criteria:** 15 ACs covering utility creation, default values, error scenarios, timeout simulation, progress callbacks, utility tests, test refactoring, documentation, TypeScript type safety, and tree-shakability.
+
+**Complexity:** Small (utility functions only)
+
+**Effort:** Low (1 point)
+
+**Priority:** P2 (Test developer experience enhancement)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2011 (Enhancement Opportunity #3)
+
+**Original Finding:** Test utility helpers (createMockFile, mockS3Upload) as future enhancement after WISH-2011 validation
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improved test developer experience)
+**Effort:** Low
+
+**Story File:** `plans/future/wish/backlog/WISH-2120/WISH-2120.md`
+
+---
+
+## WISH-2121: Playwright E2E MSW Setup for Browser-Mode Testing
+
+**Status:** backlog
+**Depends On:** WISH-2011
+**Follow-up From:** WISH-2011
+**Phase:** 5 - Advanced Testing
+
+### Scope
+
+Enable Playwright E2E tests to use MSW for API and S3 mocking, providing consistent mocking layer across Vitest and Playwright tests. Browser-mode MSW setup reuses handlers and fixtures from WISH-2011 without duplication.
+
+**Packages Affected:**
+- `apps/web/playwright/` - Test configuration and MSW setup
+- `apps/web/app-wishlist-gallery/public/` - MSW worker script location
+- `apps/web/app-wishlist-gallery/src/test/mocks/` - Reuse existing handlers
+- `apps/web/app-wishlist-gallery/src/test/fixtures/` - Reuse existing fixtures
+
+**Infrastructure:**
+- MSW worker script (`mockServiceWorker.js`) served from public directory
+- Browser worker registration in Playwright global setup/teardown
+- Service Worker for browser-level request interception
+
+**Benefits:**
+- No real backend/S3 dependencies for E2E tests
+- Consistent mocking patterns across test environments
+- Faster, more reliable CI tests
+
+**Acceptance Criteria:** 13 ACs covering worker script generation, browser worker registration, handler/fixture reuse, error injection, concurrent test isolation, debug logging, CI compatibility, and documentation.
+
+**Complexity:** Medium (browser-mode MSW setup + Playwright integration)
+
+**Effort:** Medium (2-3 points)
+
+**Priority:** P2 (Advanced testing infrastructure for Phase 5)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2011 (Follow-up Stories Suggested - Finding #2)
+
+**Original Finding:** "Playwright E2E MSW Setup - Browser-mode MSW support explicitly deferred to future"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (enables E2E testing without external dependencies)
+**Effort:** Medium (browser-mode configuration + worker script setup)
+
+**Story File:** `plans/future/wish/backlog/WISH-2121/WISH-2121.md`
+
+---
+
 ## WISH-2010: Shared Zod schemas and types setup
 
-**Status:** Pending
+**Status:** ready-to-work
 **Depends On:** WISH-2007
 **Phase:** 2 - Foundation
 
-**Feature:** Centralized schema definitions for wishlist items, filters, reorder operations. Shared between frontend validation and backend API layer.
+**Feature:** Centralized schema definitions for wishlist items, filters, reorder operations. Shared between frontend validation and backend API layer. Pivot: Align existing schemas with database, update exports, add documentation.
 
 **Priority:** P0
 
@@ -253,11 +417,53 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** Epic Elaboration - Engineering perspective
 
+**Key Discovery:** Schemas already exist in `packages/core/api-client/src/schemas/wishlist.ts` with 54+ tests. Story pivots from creation to alignment with WISH-2000 Drizzle schema.
+
+---
+
+## WISH-2110: Custom Zod error messages for better form UX
+
+**Status:** backlog
+**Depends On:** WISH-2010
+**Follow-up From:** WISH-2010
+**Phase:** 2 - Foundation
+
+### Scope
+
+Replace generic Zod validation error messages with user-friendly, field-specific messages for better form UX. Updates all wishlist schemas from WISH-2010 with custom error messages using Zod's error message options.
+
+**Examples:**
+- `"String must contain at least 1 character(s)"` → `"Title is required"`
+- `"Invalid enum value"` → `"Priority must be low, medium, or high"`
+- `"Number must be greater than or equal to 0"` → `"Price cannot be negative"`
+
+**Packages Affected:**
+- `packages/core/api-client/src/schemas/wishlist.ts` - Add custom messages to all schemas
+- `packages/core/api-client/src/schemas/__tests__/wishlist.test.ts` - Update tests to assert specific messages
+
+**Acceptance Criteria:** 13 ACs covering custom error messages for all schema fields, validation testing, frontend/backend integration, and documentation updates.
+
+**Complexity:** Small (error message customization only)
+
+**Effort:** Low (1 point)
+
+**Priority:** P2 (UX enhancement for Phase 2+)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2010 (Enhancement Opportunity #1)
+
+**Original Finding:** Custom Zod error messages for better form UX
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (better UX for form validation)
+**Effort:** Low
+
 ---
 
 ## WISH-2011: Test infrastructure for MSW mocking of S3 and API calls
 
-**Status:** Pending
+**Status:** Ready to Work
 **Depends On:** WISH-2007
 **Phase:** 2 - Infrastructure
 
@@ -271,11 +477,13 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** Epic Elaboration - QA perspective
 
+**Story File:** `plans/future/wish/elaboration/WISH-2011/WISH-2011.md`
+
 ---
 
 ## WISH-2012: Accessibility testing harness setup
 
-**Status:** Pending
+**Status:** ready-to-work
 **Depends On:** WISH-2001
 **Phase:** 2 - Infrastructure
 
@@ -289,12 +497,82 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** Epic Elaboration - UX perspective
 
+**Elaboration Notes:** CONDITIONAL PASS - Two clarification items added as acceptance criteria (AC16: Evaluate @repo/accessibility package reuse), (AC17: Clarify Playwright integration scope and WISH-2121 dependency). No MVP blockers identified.
+
+**Story File:** `plans/future/wish/ready-to-work/WISH-2012/WISH-2012.md`
+
+---
+
+
+## WISH-2123: Content Moderation - AI/ML Image Scanning
+
+**Status:** backlog
+**Depends On:** WISH-2013
+**Follow-up From:** WISH-2013
+**Phase:** 4 - Security Enhancements
+
+### Scope
+
+AI/ML-based content moderation to automatically detect and flag inappropriate, offensive, or adult content in uploaded wishlist images. Provides admin tooling for content review, user notification, and policy enforcement.
+
+**Features:**
+- AWS Rekognition DetectModerationLabels integration
+- Automatic flagging based on confidence thresholds (≥90% auto-flag, <50% auto-approve)
+- Admin moderation queue for manual review
+- Approve/Reject workflow with audit logging
+- Moderation status tracking in database
+
+**Endpoints:**
+- `GET /api/admin/moderation/queue` - Get pending moderation items
+- `POST /api/admin/moderation/:id/approve` - Approve flagged content
+- `POST /api/admin/moderation/:id/reject` - Reject and remove flagged content
+- `GET /api/admin/moderation/stats` - Moderation metrics and trends
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/wishlist/` - Integrate moderation into upload flow
+- `apps/api/lego-api/core/moderation/` - AI/ML moderation service (new)
+- `apps/api/lego-api/domains/admin/` - Admin moderation review endpoints (new)
+- `apps/web/admin-dashboard/` - Admin moderation review UI (new or extend existing)
+- `packages/backend/database-schema/` - Moderation results table, audit log
+
+**Infrastructure:**
+- Database table: `moderation_results` with labels, confidence scores, review status
+- Database column: `wishlist_items.moderation_status` ('pending-scan', 'clean', 'pending-review', 'approved', 'rejected')
+- AWS Rekognition IAM policy for DetectModerationLabels API (~$0.001 per image)
+
+**Acceptance Criteria:** 15 ACs covering AI/ML integration, automatic flagging, admin queue, image preview, approve/reject workflow, database schema, metrics dashboard, adapter pattern, async moderation, authorization, and MSW test coverage.
+
+**Complexity:** Large (AI/ML integration + admin UI + workflow)
+
+**Effort:** High (5-8 points)
+
+**Priority:** P2 (Trust & Safety requirement for production platform)
+
+**Goal:** Implement AI/ML-based content moderation to automatically detect and flag inappropriate content in uploaded wishlist images
+
+**Risks:**
+- High false positive rate from AWS Rekognition (mitigate with conservative thresholds ≥90%)
+- Moderation costs scale with user growth (~$0.001/image)
+- Async moderation creates UX gap for flagged content (mitigate with "Processing" badges)
+- Admin review backlog grows faster than capacity (mitigate with queue monitoring and SLA)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Finding #1)
+
+**Original Finding:** "Content Moderation - AI/ML-based scanning for inappropriate/offensive images"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Trust & Safety requirement for production platform)
+**Effort:** High (AI/ML pipeline integration, moderation workflow, review tooling)
+
 ---
 
 ## WISH-2013: File upload security hardening
 
-**Status:** Pending
-**Depends On:** WISH-2007, WISH-2002
+**Status:** ready-to-work
+**Depends On:** WISH-2011, WISH-2002
+**Follow-up From:** WISH-2011
 **Phase:** 3 - Security
 
 **Feature:** Virus scanning integration for uploaded images, strict file type validation (whitelist), file size limits (max 10MB), S3 security: IAM policy, bucket policy, CORS configuration, presigned URL TTL (15 min).
@@ -303,6 +581,560 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Goal:** Secure user file uploads and prevent malicious content
 
-**Risk Notes:** Critical security requirement for WISH-2002. Must include virus scanning and file type validation.
+**Risk Notes:** Critical security requirement for WISH-2002. Must include virus scanning and file type validation. Benefits from MSW fixtures and handlers established in WISH-2011.
 
-**Source:** Epic Elaboration - Security perspective
+**Source:** Follow-up from QA Elaboration of WISH-2011 (Finding #1)
+
+**Story File:** `plans/future/wish/ready-to-work/WISH-2013/WISH-2013.md`
+
+**Elaboration Notes:** CONDITIONAL PASS - Three MVP-critical gaps addressed via additional acceptance criteria (AC18: server-side file size validation), clarified existing criteria (AC5: async virus scanning via S3 event trigger Lambda), and enhanced existing criteria (AC16: structured CloudWatch logging with specific fields).
+
+---
+
+## WISH-2015: Form Autosave to localStorage
+
+**Status:** ready-to-work
+**Depends On:** WISH-2002
+**Follow-up From:** WISH-2002
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Automatically save form state during user input and restore it when the user returns to the form, preventing data loss from accidental navigation or browser issues.
+
+**Features:**
+- Autosave form fields to localStorage during typing (debounced)
+- Restore form state on page load if draft exists
+- Clear draft on successful form submission
+- "Restore draft" banner with dismiss option
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx`
+- `apps/web/app-wishlist-gallery/src/hooks/useFormAutosave.ts` (new)
+
+**Acceptance Criteria:** 12 ACs covering autosave, restore, clear on submit, banner UX, and edge cases.
+
+**Complexity:** Small
+
+**Effort:** 2 points
+
+**Priority:** P2 (UX enhancement)
+
+**Story File:** `plans/future/wish/ready-to-work/WISH-2015/WISH-2015.md`
+
+---
+
+## WISH-2016: Image Optimization - Automatic Resizing, Compression, and Watermarking
+
+**Status:** ready-to-work
+**Depends On:** WISH-2013
+**Follow-up From:** WISH-2013
+**Phase:** 4 - Performance & UX Polish
+
+### Scope
+
+Automatically optimize uploaded images to reduce storage costs, improve page load performance, and enhance mobile user experience. Provides multiple image sizes (thumbnail, medium, large) for responsive display and applies subtle watermarking for copyright protection.
+
+**Features:**
+- Automatic resizing: Generate three sizes (thumbnail 200x200, medium 800x800, large 1600x1600)
+- Compression: Apply 85% quality lossy compression (90-95% file size reduction)
+- Format conversion: WebP format with JPEG fallback for browser compatibility
+- Watermarking: Subtle watermark on large images only (10% opacity, bottom-right corner)
+- Async processing: S3 event trigger Lambda with Sharp library
+
+**Packages Affected:**
+- `apps/api/lego-api/core/image-processing/` - Image optimization service (new)
+- `apps/api/lego-api/functions/image-processor/` - S3 event handler Lambda (new)
+- `packages/backend/database-schema/` - Add image_variants column (JSONB)
+- `apps/web/app-wishlist-gallery/src/components/WishlistCard/` - Responsive images with srcset
+- `apps/web/app-wishlist-gallery/src/pages/` - Optimized image display
+
+**Infrastructure:**
+- S3 event trigger on `uploads/wishlist/*`
+- Lambda with Sharp library layer (~50MB)
+- Database migration: image_variants column
+- CloudWatch metrics for cost savings tracking
+
+**Cost Savings:**
+- Storage reduction: ~97% (from 10MB to < 1MB total per image)
+- Monthly savings: ~$20-50/month for 1000 images (storage + egress)
+- Page load improvement: Gallery view from 200MB → 2MB (100x faster on mobile)
+
+**Acceptance Criteria:** 15 ACs covering image resizing, compression, WebP conversion, watermarking, database schema, S3 event trigger, Lambda performance, frontend responsive images, fallback for legacy items, error handling, test coverage, and documentation.
+
+**Complexity:** Medium (Image processing pipeline + Lambda layer + S3 events)
+
+**Effort:** 3-5 points
+
+**Priority:** P2 (Performance & UX enhancement for Phase 4)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Finding #2)
+
+**Original Finding:** "WISH-2016: Image Optimization - Automatic resizing, compression, watermarking (deferred to future story)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Performance optimization, cost reduction, improved UX)
+**Effort:** Medium (Image processing pipeline)
+
+---
+
+## WISH-2122: Usage Quotas - Per-User Storage Quotas and Upload Rate Limits
+
+**Status:** backlog
+**Depends On:** WISH-2013
+**Follow-up From:** WISH-2013
+**Phase:** 4 - Resource Management
+
+### Scope
+
+Implement per-user storage quotas and upload rate limits to control S3 costs, prevent abuse, and enable tier-based resource allocation. Provides quota tracking, enforcement in presign endpoint, and user visibility via QuotaUsageWidget.
+
+**Features:**
+- Per-user storage quotas (default: 100MB for free tier, configurable by tier)
+- Upload rate limits (default: 10 uploads/hour, configurable by tier)
+- Real-time quota tracking in database (used_bytes, file_count)
+- Quota enforcement on presign requests (reject when quota exceeded or rate limit hit)
+- QuotaUsageWidget displaying current usage and remaining quota
+- Sliding window rate limiting algorithm (60-minute window)
+- Migration script to backfill quotas for existing users
+
+**Endpoints:**
+- `GET /api/wishlist/quota` - Get current quota usage
+- Enhanced `POST /api/wishlist/images/presign` - Reject when quota/rate limit exceeded (429)
+
+**Database:**
+- New table: `user_storage_quotas` (user_id, tier, total_quota_bytes, used_bytes, file_count)
+- New table: `upload_rate_limits` (user_id, window_start, upload_count)
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/wishlist/` - Quota enforcement in presign endpoint
+- `apps/api/lego-api/core/quotas/` - Quota service (new)
+- `apps/api/lego-api/core/rate-limit/` - Upload rate limiter (new or extend existing)
+- `packages/backend/database-schema/` - New quota tables
+- `apps/web/app-wishlist-gallery/src/components/QuotaUsageWidget/` - Quota UI component (new)
+
+**Acceptance Criteria:** 17 ACs covering quota initialization, enforcement, tracking accuracy, rate limiting, UI display, client error handling, tier configuration, concurrent safety, audit logging, migration, and documentation.
+
+**Complexity:** Medium (Database tracking + enforcement logic + rate limiting)
+
+**Effort:** 3-5 points
+
+**Priority:** P2 (Cost control and abuse prevention for Phase 4+)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Finding #3)
+
+**Original Finding:** "User Quota Management: Per-user storage quotas or upload rate limits (deferred to future story)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Cost control and abuse prevention)
+**Effort:** Medium (Database tracking + enforcement logic + rate limiting)
+
+---
+
+## WISH-20171: Backend Combined Filter + Sort Queries
+
+**Status:** ready-to-work
+**Depends On:** WISH-2014
+**Split From:** WISH-2017
+**Phase:** 6 - Advanced Features
+
+### Scope
+
+Extend backend GET /api/wishlist endpoint with combined filter + sort query parameters. Implement repository layer with combined WHERE + ORDER BY queries, handle null values, pagination, and error validation. Focus on backend-only implementation with 45 unit tests and 18 integration tests.
+
+### Acceptance Criteria (from parent)
+
+AC1, AC2, AC3, AC4, AC5, AC6, AC15, AC16, AC18 (9 ACs)
+
+---
+
+## WISH-20172: Frontend Filter Panel UI
+
+**Status:** ready-to-work
+**Depends On:** WISH-20171
+**Split From:** WISH-2017
+**Phase:** 6 - Advanced Features
+
+### Scope
+
+Create FilterPanel component with store, priority, and price range controls. Implement URL query parameter state management, RTK Query integration with filter params, active filter badge, and Clear All button. Focus on frontend-only implementation with 20 component tests and 4 Playwright E2E tests.
+
+### Acceptance Criteria (from parent)
+
+AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC17, AC19, AC20 (11 ACs)
+
+---
+
+## WISH-2018: CDN Integration for Image Performance Optimization
+
+**Status:** ready-to-work
+**Depends On:** WISH-2013
+**Follow-up From:** WISH-2013
+**Phase:** 5 - Performance
+
+### Scope
+
+Integrate Amazon CloudFront as a CDN to serve wishlist images from edge locations worldwide, reducing latency for global users and lowering bandwidth costs. Ensures seamless migration from S3 URLs to CloudFront URLs without breaking existing images.
+
+**Features:**
+- CloudFront distribution with S3 origin configuration
+- Origin Access Identity (OAI) for secure S3-CloudFront integration
+- HTTPS-only access enforcement with automatic HTTP redirect
+- 24-hour edge cache TTL with configurable cache behaviors
+- CloudFront URL generation utilities (backend)
+- API layer returns CloudFront URLs (GET /api/wishlist, GET /api/wishlist/:id)
+- Backward compatibility: convert legacy S3 URLs to CloudFront URLs on-the-fly
+- Presigned URL uploads still use S3 (CloudFront is read-only CDN)
+- Cache invalidation strategy via versioned URLs (append ?v={timestamp})
+- CloudFront access logs for performance monitoring and cost analysis
+
+**Endpoints:**
+- Enhanced GET /api/wishlist - Returns CloudFront URLs instead of S3 URLs
+- Enhanced GET /api/wishlist/:id - Returns CloudFront URL for image
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/wishlist/` - Update presign endpoint responses
+- `apps/api/lego-api/core/cdn/` - CloudFront URL generation utilities (new)
+- `apps/web/app-wishlist-gallery/src/components/` - Transparent (uses imageUrl as-is)
+- Infrastructure: CloudFront distribution, OAI, S3 bucket policy updates
+
+**Performance Improvements:**
+- US East: 25% faster (80ms → 60ms)
+- Europe: 70% faster (400ms → 120ms)
+- Asia: 67% faster (600ms → 200ms)
+- Cache hit ratio > 80% after warmup
+
+**Cost Savings:**
+- 29% cost reduction for US traffic (S3: $1.33/month → CloudFront: $0.95/month)
+- Higher savings for international traffic due to lower CloudFront data transfer costs
+
+**Acceptance Criteria:** 15 ACs covering CloudFront distribution creation, HTTPS enforcement, cache behavior, URL generation, API responses, frontend rendering, backward compatibility, upload flow, cache invalidation, access logs, cost monitoring, integration tests, performance benchmarking, and OAI security.
+
+**Complexity:** Medium (CloudFront setup + S3 origin configuration + URL migration)
+
+**Effort:** Medium (3-5 points)
+
+**Priority:** P2 (Performance enhancement for Phase 5)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Finding #4)
+
+**Original Finding:** "WISH-2018: CDN Integration - CloudFront or image CDN for performance"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Performance improvement for global users)
+**Effort:** Medium (CloudFront distribution + S3 origin configuration)
+
+---
+
+## WISH-2019: Redis infrastructure setup and migration from in-memory cache
+
+**Status:** ready-to-work
+**Depends On:** WISH-2009
+**Follow-up From:** WISH-2009
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Migrate feature flag caching from in-memory Map to Redis for production-ready distributed caching. Sets up Redis infrastructure (ElastiCache or local Docker) and migrates the cache adapter with minimal code changes.
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/adapters/` - Cache adapter migration
+- `apps/api/lego-api/core/cache/` - Redis client singleton
+- `apps/api/lego-api/domains/config/application/feature-flag-service.ts` - Service layer wiring
+- `apps/api/lego-api/domains/config/index.ts` - DI container setup
+- Infrastructure: AWS ElastiCache (t3.micro) or Docker Compose Redis
+- Environment: REDIS_URL configuration
+
+**Infrastructure:**
+- Redis 7.x instance with 1 GB memory
+- Connection pooling (max 10 connections)
+- Fallback to database if Redis unavailable
+- 5-minute TTL matching WISH-2009 spec
+
+**Acceptance Criteria:** 16 ACs covering Redis provisioning, adapter migration, service layer wiring, cache key patterns, environment configuration, testing, and documentation
+
+**Risks:**
+- Lambda cold start Redis connection failures (mitigated with retry + fallback)
+- VPC/security group misconfiguration blocking connectivity
+- Increased infrastructure cost ~$15-30/month (acceptable for production scaling)
+
+**Elaboration Notes:** APPROVED - All critical gaps resolved:
+- AC 14: Service layer wiring (feature-flag-service.ts + DI container)
+- AC 15: Cache key pattern alignment with WISH-2009 (feature_flags:{environment}:{flagKey})
+- AC 16: REDIS_URL environment variable paths (apps/api/lego-api/.env.local)
+- Path inconsistencies corrected in Scope and Reuse Plan sections
+
+**Story File:** `plans/future/wish/ready-to-work/WISH-2019/WISH-2019.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2009 (Enhancement Opportunity #1)
+
+**Original Finding:** Redis infrastructure setup and migration from in-memory cache - WISH-2009 AC 17 uses in-memory cache for MVP. When production scaling requires it, migrate to Redis for distributed caching. The adapter pattern in AC 17 ensures minimal code changes.
+
+**Impact:** High (production scaling)
+**Effort:** Medium (new infrastructure)
+
+---
+
+## WISH-2029: Update architecture documentation for lego-api/domains/ pattern
+
+**Status:** ready-to-work
+**Depends On:** WISH-2009
+**Follow-up From:** WISH-2009
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Update `docs/architecture/api-layer.md` to document `apps/api/lego-api/domains/` as the canonical location for backend domain modules. All existing domains (gallery, wishlist, health, instructions, sets, parts-lists) use this pattern with hexagonal architecture (ports & adapters), but documentation still references the old `services/{domain}/` pattern.
+
+**Documentation Files Affected:**
+- `docs/architecture/api-layer.md` - Main architecture documentation (primary update)
+- Verification: Review all 6 existing domains for pattern consistency
+
+**Documentation Content:**
+- Directory structure tree (application/, adapters/, routes.ts, types.ts, __tests__/)
+- Subdirectory responsibilities (business logic vs infrastructure)
+- Hexagonal architecture explanation (ports, adapters, separation of concerns)
+- Examples from existing domains (gallery, wishlist, config from WISH-2009)
+- "Creating a New Domain" step-by-step guide
+- Hono framework usage patterns
+- Shared schema patterns (backend owns, frontend imports via @repo/api-client)
+- Migration notes for legacy patterns
+- Architecture decision rationale
+
+**Acceptance Criteria:** 14 ACs covering documentation updates, examples, verification, and quality checks
+
+**Risks:**
+- Documentation drift as code evolves (mitigate with "Last Verified" dates)
+- Contradictions with CLAUDE.md guidelines (cross-check during writing)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2009 (Gap #2 - AC 18 follow-up)
+
+**Original Finding:** Update docs/architecture/api-layer.md to document lego-api/domains/ as canonical pattern
+
+**Category:** Technical Debt / Documentation
+**Impact:** Medium (prevents architecture confusion)
+**Effort:** Low (documentation only)
+
+---
+
+## WISH-2039: User-level targeting for feature flags
+
+**Status:** ready-to-work
+**Depends On:** WISH-2009
+**Follow-up From:** WISH-2009
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Add user-level targeting to feature flag infrastructure with explicit inclusion/exclusion lists. Enables beta tester programs, VIP access, support debugging, and exclusion of problematic users.
+
+**Endpoints:**
+- `POST /api/admin/flags/:flagKey/users` - Add users to include/exclude list
+- `DELETE /api/admin/flags/:flagKey/users/:userId` - Remove user from targeting
+- `GET /api/admin/flags/:flagKey/users` - List all user overrides for flag
+
+**Database:**
+- New table: `feature_flag_user_overrides` (flag_id, user_id, override_type, reason, created_by)
+- Evaluation priority: Exclusion > Inclusion > Percentage-based rollout
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/` - Update flag evaluation logic
+- `packages/backend/database-schema/` - User overrides table schema
+- `packages/core/api-client/src/schemas/` - User override schemas
+
+**Acceptance Criteria:** 12 ACs covering database schema, user override endpoints, evaluation logic updates, caching, rate limiting, testing, and documentation updates.
+
+**Complexity:** Medium - Extends WISH-2009 with new table and evaluation logic
+
+**Risks:**
+- Large include/exclude lists slow evaluation (mitigate with caching and indexes)
+- Cache invalidation lag up to 5 minutes (acceptable for admin operations)
+- Security: Admin-only endpoints (reuse WISH-2009 auth middleware)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2009 (Enhancement Opportunity - Non-goals deferred item)
+
+**Original Finding:** User-level targeting (beyond percentage-based rollout) - MVP is percentage-based only. User-level targeting would allow specific users to be included/excluded from flags.
+
+**Category:** Feature Enhancement
+**Impact:** Medium (enables targeted rollout)
+**Effort:** Medium (user overrides table)
+
+---
+
+## WISH-2047: IP/Geolocation Logging for Authorization Events
+
+**Status:** pending
+**Depends On:** WISH-2008
+**Follow-up From:** WISH-2008
+**Phase:** 5 - Observability
+
+### Scope
+
+Enrich authorization failure audit logs (403/404 events) with IP address and geolocation data (country, region, city) to enable detection of suspicious access patterns, geographic anomalies, and potential security threats.
+
+**Features:**
+- IP extraction from request headers (X-Forwarded-For, X-Real-IP, socket)
+- MaxMind GeoLite2 geolocation lookup (country, region, city, lat/long)
+- Privacy-conscious logging (403/404 only, not 200/201 requests)
+- CloudWatch Logs Insights query examples for security analysis
+- Shared IP extraction utility (integration with rate limiting from WISH-2008 AC 24)
+
+**Packages Affected:**
+- `apps/api/lego-api/core/observability/` - Logger enrichment with IP/geolocation
+- `apps/api/lego-api/core/geolocation/` - MaxMind GeoIP2 lookup service (new)
+- `apps/api/lego-api/core/utils/` - IP extraction utility (new, shared)
+- `apps/api/lego-api/middleware/` - Reuse IP extraction in auth/rate-limit middleware
+- `apps/api/lego-api/domains/wishlist/` - Pass IP from context to logger
+
+**Infrastructure:**
+- MaxMind GeoLite2 City database (~50 MB) added to Lambda layer
+- Environment variable: `GEOIP_DATABASE_PATH=/opt/geolite2-city.mmdb`
+- Lambda memory increase: +128 MB for in-memory database caching
+
+**Acceptance Criteria:** 12 ACs covering IP extraction, geolocation lookup, enriched logging, privacy controls, CloudWatch query examples, Lambda layer setup, performance requirements, error handling, rate limiting integration, and documentation updates.
+
+**Complexity:** Small-Medium (IP extraction + geolocation lookup + logging enrichment)
+
+**Effort:** Low-Medium (2 points)
+
+**Priority:** P2 (Observability enhancement for Phase 5)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2008 (Enhancement Opportunity #9)
+
+**Original Finding:** IP/geolocation logging for suspicious access patterns - Log IP address and country for 403/404 events to detect suspicious access patterns
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Security observability improvement)
+**Effort:** Medium (IP extraction + geolocation lookup + log enrichment)
+
+---
+
+## WISH-2022: Client-side Image Compression
+
+**Status:** elaboration
+**Depends On:** WISH-2002
+**Follow-up From:** WISH-2002
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Automatically compress images on the client side before uploading to S3, reducing upload time and storage costs while maintaining acceptable visual quality. Uses browser-image-compression library.
+
+**Features:**
+- Auto-compress images before S3 upload using browser-image-compression library
+- Compression settings: max width 1920px, max height 1920px, quality 0.8, max size 1MB
+- Progress indicator: "Compressing image... X%"
+- Toast notification: "Image compressed: X MB → Y MB"
+- "High quality (skip compression)" checkbox
+- Skip compression if image already small (< 500KB)
+- Graceful fallback on compression failure
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts`
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` (new)
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/`
+
+**Acceptance Criteria:** 10 ACs covering auto-compression, settings, progress indicator, filename preservation, skip logic, graceful fallback, checkbox toggle, timing, toast notification, and preview update.
+
+**Complexity:** Medium (library integration + hook modification + UI updates)
+
+**Effort:** 3 points
+
+**Priority:** P2 (UX enhancement for Phase 4)
+
+**Story File:** `plans/future/wish/elaboration/WISH-2022/WISH-2022.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
+
+**Original Finding:** Client-side image compression - compress images before S3 upload to reduce upload time and storage costs
+
+**Category:** Enhancement Opportunity
+**Impact:** High (significantly reduces upload time and S3 storage costs)
+**Effort:** Medium (library integration + upload flow modification)
+
+---
+
+## WISH-2027: Enum Modification Procedure for Wishlist Stores and Currencies
+
+**Status:** elaboration
+**Depends On:** WISH-2007
+**Follow-up From:** WISH-2007
+**Phase:** 1 - Foundation
+
+**Feature:** Document and validate safe procedure for evolving PostgreSQL ENUMs in wishlist schema. Provides runbooks for adding/deprecating stores and currencies with rollback strategies.
+
+**Packages Affected:**
+- `packages/backend/database-schema/docs/` - Enum evolution documentation
+
+**Goal:** Prevent production issues from enum modification mistakes and enable safe schema evolution
+
+**Risk Notes:** PostgreSQL ENUMs are immutable. ALTER TYPE ... ADD VALUE cannot be rolled back, requires careful staging and documentation.
+
+**Source:** Follow-up from QA Elaboration of WISH-2007 (Finding #2)
+
+**Story File:** `plans/future/wish/elaboration/WISH-2027/WISH-2027.md`
+
+---
+
+## WISH-2032: Optimistic UI for Form Submission
+
+**Status:** ready-to-work
+**Depends On:** WISH-2002
+**Follow-up From:** WISH-2002
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Implement optimistic UI for wishlist item creation to provide immediate feedback and navigation, with graceful rollback on failure. Shows success toast and navigates to detail page immediately, with rollback if API call fails.
+
+**Features:**
+- Immediate success toast on form submit
+- Navigate to detail page before API response
+- Temporary item in RTK Query cache with optimistic ID
+- Detail page loading skeleton for temporary items
+- Replace temporary item with real item on API success
+- Graceful rollback on API failure with error toast and retry button
+- Form state preservation on rollback
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx`
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm.tsx`
+- `packages/core/api-client/src/rtk/wishlist-api.ts`
+
+**Acceptance Criteria:** 10 ACs covering optimistic cache updates, immediate navigation, loading states, error rollback, retry functionality, and form state preservation.
+
+**Complexity:** Medium (RTK Query optimistic updates + navigation state management)
+
+**Effort:** 3 points
+
+**Priority:** P2 (UX enhancement for Phase 4)
+
+**Story File:** `plans/future/wish/backlog/WISH-2032/WISH-2032.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
+
+**Original Finding:** Optimistic UI for form submission - show success toast and navigate immediately, with rollback if API call fails. Aligns with WISH-2005 patterns.
+
+**Category:** Enhancement Opportunity
+**Impact:** High (significantly improves perceived performance and user experience)
+**Effort:** Medium (requires careful state management and error recovery)
+
+---

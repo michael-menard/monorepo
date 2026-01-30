@@ -1,22 +1,49 @@
 {
   "name": "@repo/database-schema",
-  "version": "0.0.1",
-  "description": "Drizzle ORM database schema definitions",
+  "version": "1.0.0",
+  "description": "LEGO Platform Database Schema, Migrations, and Seeds",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "import": "./src/schema/index.ts",
+      "types": "./src/schema/index.ts"
     },
-    "./sets": {
-      "import": "./src/sets.ts",
-      "types": "./src/sets.ts"
+    "./schema": {
+      "import": "./src/schema/index.ts",
+      "types": "./src/schema/index.ts"
+    },
+    "./schema/sets": {
+      "import": "./src/schema/sets.ts",
+      "types": "./src/schema/sets.ts"
+    },
+    "./schema/umami": {
+      "import": "./src/schema/umami.ts",
+      "types": "./src/schema/umami.ts"
     }
   },
-  "dependencies": {
-    "drizzle-orm": "^0.38.3"
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/seeds/index.ts",
+    "db:status": "drizzle-kit status",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "clean": "rm -rf dist node_modules .turbo"
   },
-  "peerDependencies": {
-    "drizzle-orm": "^0.38.0"
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.3",
+    "pg": "^8.16.3",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14",
+    "@types/pg": "^8.15.4",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.1",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
