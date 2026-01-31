@@ -1,0 +1,246 @@
+### Wishlist Purchase Endpoint Tests - WISH-2042
+### POST /api/wishlist/:id/purchased
+### Marks a wishlist item as purchased and creates a Set item
+
+@baseUrl = http://localhost:3001/api
+@contentType = application/json
+
+### Variables (update these with actual IDs)
+@wishlistItemId = 123e4567-e89b-12d3-a456-426614174000
+
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Happy Path Tests
+### ─────────────────────────────────────────────────────────────────────────────
+
+### Purchase with minimal data (defaults)
+### Expects: 201 Created with Set item
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Purchase with all optional fields
+### Expects: 201 Created with Set item including purchase details
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "799.99",
+  "tax": "64.00",
+  "shipping": "12.99",
+  "quantity": 1,
+  "purchaseDate": "2026-01-15T00:00:00.000Z",
+  "keepOnWishlist": false
+}
+
+###
+
+### Purchase with keepOnWishlist=true
+### Expects: 201 Created with Set item, wishlist item NOT deleted
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "quantity": 1,
+  "keepOnWishlist": true
+}
+
+###
+
+### Purchase with quantity > 1
+### Expects: 201 Created with Set item having quantity=3
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "2399.97",
+  "quantity": 3,
+  "keepOnWishlist": false
+}
+
+###
+
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Validation Error Tests (AC 16)
+### ─────────────────────────────────────────────────────────────────────────────
+
+### Invalid price (negative) - Should fail validation
+### Expects: 400 Bad Request with validation error
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "-50.00",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Invalid tax (negative) - Should fail validation
+### Expects: 400 Bad Request with validation error
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "tax": "-10.00",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Invalid shipping (negative) - Should fail validation
+### Expects: 400 Bad Request with validation error
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "shipping": "-5.00",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Invalid quantity (0) - Should fail validation
+### Expects: 400 Bad Request with validation error
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "quantity": 0,
+  "keepOnWishlist": false
+}
+
+###
+
+### Invalid quantity (negative) - Should fail validation
+### Expects: 400 Bad Request with validation error
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "quantity": -1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Invalid purchase date (future) - Should fail validation
+### Expects: 400 Bad Request with validation error
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "purchaseDate": "2030-01-01T00:00:00.000Z",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Error Response Tests
+### ─────────────────────────────────────────────────────────────────────────────
+
+### Item not found (AC 23)
+### Expects: 404 Not Found
+POST {{baseUrl}}/wishlist/00000000-0000-0000-0000-000000000000/purchased
+Content-Type: {{contentType}}
+
+{
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Forbidden - Item belongs to another user (AC 22)
+### Note: This test requires authentication bypass or admin token to test
+### Expects: 403 Forbidden
+# POST {{baseUrl}}/wishlist/{{otherUserItemId}}/purchased
+# Content-Type: {{contentType}}
+#
+# {
+#   "quantity": 1,
+#   "keepOnWishlist": false
+# }
+
+###
+
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Price Format Tests
+### ─────────────────────────────────────────────────────────────────────────────
+
+### Integer price (valid)
+### Expects: 201 Created
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "100",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Price with one decimal (valid)
+### Expects: 201 Created
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "99.5",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Price with two decimals (valid)
+### Expects: 201 Created
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "99.99",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Invalid price format (three decimals) - Should fail
+### Expects: 400 Bad Request
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "99.999",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+###
+
+### Zero price (valid - free item)
+### Expects: 201 Created
+POST {{baseUrl}}/wishlist/{{wishlistItemId}}/purchased
+Content-Type: {{contentType}}
+
+{
+  "pricePaid": "0.00",
+  "quantity": 1,
+  "keepOnWishlist": false
+}

@@ -5,13 +5,23 @@
  * This module is designed to be lazy-loaded by the shell app.
  *
  * Story wish-2001: Wishlist Gallery MVP
+ * Story wish-2002: Add Item Flow
  */
 
 import { z } from 'zod'
 import { Provider } from 'react-redux'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+  Outlet,
+} from '@tanstack/react-router'
 import { store } from './store'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
+import { AddItemPage } from './pages/AddItemPage'
 
 /**
  * Module props schema - validated at runtime
@@ -24,17 +34,58 @@ const AppWishlistGalleryModulePropsSchema = z.object({
 export type AppWishlistGalleryModuleProps = z.infer<typeof AppWishlistGalleryModulePropsSchema>
 
 /**
+ * Root layout component
+ */
+function RootLayout({ className }: { className?: string }) {
+  return (
+    <ModuleLayout className={className}>
+      <Outlet />
+    </ModuleLayout>
+  )
+}
+
+/**
+ * Create router with routes
+ */
+function createAppRouter(className?: string) {
+  const rootRoute = createRootRoute({
+    component: () => <RootLayout className={className} />,
+  })
+
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: MainPage,
+  })
+
+  const addRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/add',
+    component: AddItemPage,
+  })
+
+  const routeTree = rootRoute.addChildren([indexRoute, addRoute])
+
+  return createRouter({
+    routeTree,
+    history: createMemoryHistory({
+      initialEntries: ['/'],
+    }),
+  })
+}
+
+/**
  * AppWishlistGallery Module Component
  *
  * This is the main export that the shell app will lazy-load.
  * Includes Redux Provider for RTK Query wishlist API.
  */
 export function AppWishlistGalleryModule({ className }: AppWishlistGalleryModuleProps) {
+  const router = createAppRouter(className)
+
   return (
     <Provider store={store}>
-      <ModuleLayout className={className}>
-        <MainPage />
-      </ModuleLayout>
+      <RouterProvider router={router} />
     </Provider>
   )
 }

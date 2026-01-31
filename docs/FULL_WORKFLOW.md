@@ -1,6 +1,6 @@
 ---
 title: "Unified Development Flow"
-version: "2.15.0"
+version: "2.19.0"
 created_at: "2026-01-22T10:00:00-07:00"
 updated_at: "2026-01-25T12:00:00-07:00"
 status: active
@@ -308,12 +308,31 @@ The `{PREFIX}.stories.index.md` file contains:
 - Progress summary (counts by status)
 - Ready-to-start list (stories with no blockers)
 - Per-story entries with:
-  - Status (pending, generated, in-progress, completed)
+  - Status (see lifecycle below)
   - Dependencies
   - Feature description
   - Endpoints (if applicable)
   - Infrastructure requirements
   - Risk notes
+
+### Story Status Lifecycle
+
+| Status | Directory | Meaning |
+|--------|-----------|---------|
+| `pending` | `backlog/` | Not yet generated, just an entry in index |
+| `generated` | `backlog/` | Story file created by PM |
+| `in-elaboration` | `elaboration/` | QA audit in progress |
+| `needs-refinement` | `elaboration/` | Failed elab, needs PM fixes |
+| `needs-split` | `elaboration/` | Too large, requires splitting |
+| `ready-to-work` | `ready-to-work/` | Passed elab, awaiting development |
+| `in-progress` | `in-progress/` | Dev actively implementing |
+| `ready-for-code-review` | `in-progress/` | Implementation done, awaiting review |
+| `ready-for-qa` | `ready-for-qa/` | Dev complete, awaiting QA verification |
+| `in-qa` | `UAT/` | QA verification in progress |
+| `uat` | `UAT/` | QA passed, awaiting gate |
+| `completed` | `UAT/` | QA gate passed, ready to merge |
+| `blocked` | varies | Waiting on external dependency |
+| `cancelled` | `cancelled/` | No longer needed |
 
 ---
 
@@ -650,7 +669,17 @@ The elaboration phase determines whether the story is:
 | CONDITIONAL PASS | Minor fixes needed, then proceed | → `ready-to-work` (after fixes) |
 | NEEDS REFINEMENT | Gaps identified, needs elicitation | → `needs-refinement` |
 | FAIL | Significant issues, needs PM revision | → `needs-refinement` |
-| SPLIT REQUIRED | Story too large, must be split | → `needs-split` |
+| SPLIT REQUIRED | Story too large, must be split | → `needs-split` (then prompts for split) |
+
+### Split Handling
+
+When verdict is `SPLIT REQUIRED`, the command:
+1. Updates story status to `needs-split`
+2. Asks user: "Would you like to split now?"
+3. If yes: Chains to `/pm-story split` which creates splits and **deletes the original**
+4. If no: Leaves story for manual split later
+
+This streamlines the workflow by allowing immediate continuation after split.
 
 ---
 
@@ -1055,7 +1084,8 @@ Reusable templates are available in `plans/stories/WRKF-000/_templates/`:
 /pm-story followup STORY-XXX - from QA findings
     ↓ creates: STORY-NNN.md, updates index
 /pm-story split STORY-XXX - for oversized stories
-    ↓ creates: STORY-XXX-A.md, STORY-XXX-B.md, updates index
+    ↓ creates: STORY-XXX-A.md, STORY-XXX-B.md
+    ↓ DELETES: original STORY-XXX directory (superseded stories are removed)
 /elab-story {PREFIX}-XXX
     ↓ creates: ELAB-{PREFIX}-XXX.md
 /dev-implement-story {PREFIX}-XXX [--max-iterations=N] [--force-continue]
@@ -1378,6 +1408,57 @@ When extending the workflow:
 ## Changelog
 
 All notable changes to this workflow are documented here.
+
+### [2.19.0] - 2026-01-25 MST
+
+#### Added
+- **`ready-for-qa/` directory** - Dedicated directory for stories awaiting QA verification
+- `/dev-implement-story` now moves completed stories to `ready-for-qa/` directory
+
+#### Changed
+- `/story-status` command displays `ready-for-qa` count in all views
+- Swimlane view now has separate READY-QA and IN-QA columns
+- Feature summary table includes "Ready-QA" column
+- Status lifecycle table updated with `ready-for-qa` → `ready-for-qa/` mapping
+
+---
+
+### [2.18.0] - 2026-01-25 MST
+
+#### Added
+- **Story Status Lifecycle** - New comprehensive table documenting all story statuses
+- `ready-to-work` status for stories that passed elaboration and await development
+- Status-to-directory mapping for all workflow stages
+
+#### Changed
+- `/story-status` command now displays `ready-to-work` count in all views
+- Feature summary table includes "Ready" column
+- Swimlane view groups `ready-to-work` stories in READY column
+
+---
+
+### [2.17.0] - 2026-01-25 MST
+
+#### Changed
+- **Story Elaboration** (`/elab-story`) - Now offers to chain to split on SPLIT REQUIRED verdict
+- User prompted: "Would you like to split now?"
+- If yes: Chains to `/pm-story split` automatically
+- Streamlines workflow by allowing immediate continuation after split
+
+---
+
+### [2.16.0] - 2026-01-25 MST
+
+#### Changed
+- **Story Split** (`/pm-story split`) - Superseded stories are now deleted instead of marked
+- Original story directory is removed after splits are created
+- Index entry for original story is removed (not marked as superseded)
+- Split stories contain lineage in "Split Context" section
+
+#### Rationale
+Superseded stories created confusion and stale references. The split context in each child story provides lineage tracking without keeping dead artifacts.
+
+---
 
 ### [2.15.0] - 2026-01-25 MST
 

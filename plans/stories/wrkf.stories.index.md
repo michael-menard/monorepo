@@ -8,9 +8,13 @@ All stories in this epic use the `wrkf-XXXX` naming convention starting at 1000 
 |--------|-------|
 | completed | 4 |
 | generated | 4 |
+| Created | 0 |
+| In Elaboration | 0 |
+| ready-to-work | 1 |
+| backlog | 5 |
 | ready-for-code-review | 0 |
-| pending | 10 |
-| superseded | 1 |
+| pending | 8 |
+| superseded | 2 |
 
 ---
 
@@ -22,8 +26,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 |-------|---------|--------|
 | wrkf-1022-A | Core Middleware Infrastructure | generated |
 | wrkf-1030 | bootstrap_graph Subgraph | generated |
-| wrkf-1040 | pm_generate_graph Subgraph | pending |
-| wrkf-1050 | elab_graph Subgraph | pending |
+| wrkf-1041 | pm_generate_graph - Core Infrastructure | backlog |
+| wrkf-1051 | elab_graph MVP (Core Implementation) | ready-to-work |
 | wrkf-1090 | uiux_review_graph Subgraph | pending |
 | wrkf-1110 | OpenCode Adapter | pending |
 | wrkf-1120 | MCP Read Tools | pending |
@@ -37,6 +41,11 @@ Stories with all dependencies satisfied (can be worked in parallel):
 |-------|---------|
 | wrkf-1022-B | Middleware Extensions & Utilities |
 
+### Waiting on wrkf-1041
+| Story | Feature |
+|-------|---------|
+| wrkf-1042 | pm_generate_graph - Advanced Features |
+
 ### Waiting on wrkf-1110
 | Story | Feature |
 |-------|---------|
@@ -46,6 +55,13 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | Story | Feature |
 |-------|---------|
 | wrkf-1130 | MCP Write Tools (Gated) |
+
+### Waiting on wrkf-1051
+| Story | Feature |
+|-------|---------|
+| wrkf-1052 | elab_graph Observability & Quality |
+| wrkf-1053 | elab_graph Advanced Features |
+| wrkf-1054 | elab_graph Metadata & Linking |
 
 ### Waiting on wrkf-1060
 | Story | Feature |
@@ -136,37 +152,159 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
-## wrkf-1040: pm_generate_graph Subgraph
-**Status:** pending
-**Depends On:** none
-**Feature:** Subgraph for `/pm-generate-story` command
-
-**Nodes:**
-- Story template loader
-- Context gatherer node
-- Story writer node (Claude)
-- Validation node
-
-**Goal:** Generate individual story documents from index entries
-
-**Risk Notes:** LLM node integration patterns established here
+## wrkf-1040: pm_generate_graph Subgraph (SUPERSEDED)
+**Status:** superseded
+**Superseded By:** wrkf-1041, wrkf-1042
+**Split Reason:** Elaboration identified 15 additional gaps and enhancements (from 8 to 23 ACs), exceeding sustainable scope. Split into Core (wrkf-1041) and Advanced (wrkf-1042).
 
 ---
 
-## wrkf-1050: elab_graph Subgraph
-**Status:** pending
+## wrkf-1041: pm_generate_graph Subgraph - Core Infrastructure
+**Status:** backlog
 **Depends On:** none
-**Feature:** Subgraph for `/elab-story` command
+**Split From:** wrkf-1040
+**Feature:** Core subgraph for `/pm-generate-story` command with critical quality gates
+
+### Scope
+Foundational pm_generate_graph subgraph implementing all essential nodes and critical quality gates for production-ready story generation.
+
+### Acceptance Criteria (from parent)
+- AC1: Template loader with versioning
+- AC2: Context gatherer with index validation (fail-fast before LLM)
+- AC3: Story writer (LLM) with retry logic
+- AC4: Structural validation
+- AC5: Placeholder content detection
+- AC6: LLM error classification and targeted retry
+- AC7: Story regeneration workflow (--force flag)
+- AC8: Atomic file writes
+- AC9: GraphState extensions
+- AC10: Error handling and fail-fast
+- AC11: Node Runner integration
+- AC12: CLI command integration
+- AC13: Template versioning validation on regeneration
 
 **Nodes:**
-- Story reader node
-- Codebase explorer node
-- Elaboration writer node (Claude)
-- Acceptance criteria validator
+- Template loader (with version extraction)
+- Context gatherer (with Zod validation)
+- Story writer (Claude with error classification)
+- Validator (structural + placeholder detection)
 
-**Goal:** Produce detailed elaboration documents with implementation guidance
+**Goal:** Implement core pm_generate_graph with all essential nodes and critical quality gates to ensure story generation is production-ready.
 
-**Risk Notes:** Requires codebase exploration - MCP read tools integration
+**Risk Notes:** LLM node integration patterns established here. Template versioning critical for evolution management.
+
+---
+
+## wrkf-1042: pm_generate_graph Subgraph - Advanced Features
+**Status:** backlog
+**Depends On:** wrkf-1041
+**Split From:** wrkf-1040
+**Feature:** Advanced features for story generation (batch, quality scoring, refinement, evidence integration)
+
+### Scope
+Extends core pm_generate_graph with batch generation, quality scoring agent, interactive refinement, context overflow handling, and evidence bundle integration.
+
+### Acceptance Criteria (from parent)
+- AC1: Batch story generation with rate limiting
+- AC2: Quality scoring agent evaluates generated stories
+- AC3: Interactive refinement loop for story improvement
+- AC4: Context window overflow detection and handling
+- AC5: Evidence bundle integration for context enrichment
+- AC6: GraphState extensions for advanced features
+
+**Nodes:**
+- Batch orchestrator (parallel generation with concurrency limit)
+- Quality scorer (evaluates AC concreteness, test plan, risks, reuse)
+- Refinement coordinator (multi-turn improvement with PM feedback)
+- Context overflow handler (detect and handle large context)
+- Evidence integrator (include evidence from completed stories)
+
+**Goal:** Add advanced features to improve story quality, efficiency, and integration with orchestrator ecosystem.
+
+**Risk Notes:** Depends on wrkf-1140 for evidence integration. Rate limiting complexity. Quality scoring may have false positives.
+
+---
+
+## wrkf-1051: elab_graph MVP (Core Implementation)
+**Status:** ready-to-work
+**Depends On:** none
+**Split From:** wrkf-1050
+
+### Scope
+Implement basic elaboration generation pipeline with Story Reader, Codebase Explorer, Elaboration Writer (LLM), AC Validator, and File Write nodes. Includes essential MVP features: cost tracking, quality metrics, minimum context requirements, and error handling.
+
+### Acceptance Criteria (from parent)
+Original 8 AC + 7 MVP essentials = 15 AC total
+- Story Reader, Codebase Explorer, Elaboration Writer, AC Validator nodes
+- GraphState extensions, Node Runner integration, error handling
+- LLM cost tracking, quality metrics, minimum context validation
+- Temp file cleanup, MCP integration pathway, context extraction strategy
+
+**Goal:** Production-ready elaboration generation with core quality gates
+
+**Risk Notes:** LLM API integration, filesystem I/O, codebase exploration patterns
+
+---
+
+## wrkf-1052: elab_graph Observability & Quality
+**Status:** backlog
+**Depends On:** wrkf-1051
+**Split From:** wrkf-1050
+
+### Scope
+Add comprehensive observability, quality metrics, and debugging capabilities including prompt logging, quality scoring, standardized error messages, dry-run mode, and interactive refinement.
+
+### Acceptance Criteria (from parent)
+5 AC focused on observability:
+- Prompt observability (full prompt logging for debugging)
+- Error message standardization (what/why/how format)
+- Dry-run mode (preview without writing)
+- Quality scoring (0-100 based on completeness, coverage, specificity)
+- Interactive refinement (PM feedback and section regeneration)
+
+**Goal:** Enable debugging, monitoring, and quality improvement workflows
+
+**Risk Notes:** Interactive refinement adds complexity, quality scoring requires tuning
+
+---
+
+## wrkf-1053: elab_graph Advanced Features
+**Status:** backlog
+**Depends On:** wrkf-1051
+**Split From:** wrkf-1050
+
+### Scope
+Performance and feature enhancements including parallel codebase exploration, embeddings-based context selection, semantic AC validation, and incremental section updates.
+
+### Acceptance Criteria (from parent)
+4 AC for advanced capabilities:
+- Parallel codebase exploration (Promise.all for multi-package reads)
+- Embeddings-based context selection (semantic similarity for relevance)
+- Semantic AC validation (LLM-based validation beyond keyword matching)
+- Incremental section updates (regenerate specific sections only)
+
+**Goal:** Improve performance, context quality, and validation accuracy
+
+**Risk Notes:** Embeddings integration, LLM-based validation costs, incremental update complexity
+
+---
+
+## wrkf-1054: elab_graph Metadata & Linking
+**Status:** backlog
+**Depends On:** wrkf-1051
+**Split From:** wrkf-1050
+
+### Scope
+Add template versioning and story-elaboration linking for better tracking and navigation across the workflow ecosystem.
+
+### Acceptance Criteria (from parent)
+2 AC for metadata features:
+- Template versioning (template_version field in elaboration frontmatter)
+- Story-elaboration linking (bidirectional YAML references)
+
+**Goal:** Enable template evolution tracking and seamless navigation
+
+**Risk Notes:** Low risk, primarily metadata enhancements
 
 ---
 

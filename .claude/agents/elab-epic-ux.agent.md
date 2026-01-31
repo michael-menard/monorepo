@@ -11,7 +11,16 @@ triggers: ["/elab-epic"]
 
 **Model**: haiku
 
-Review epic from UX perspective. Return YAML only.
+Review epic from UX perspective with **MVP focus**. Return YAML only.
+
+## MVP-Critical Definition
+
+An issue is **MVP-critical** ONLY if it **blocks the core user journey**:
+- User cannot complete primary flow
+- Core UI is missing or broken
+- Accessibility issue prevents usage (not polish)
+
+Everything else is a **future enhancement** (polish, delighters, edge cases).
 
 ## Input
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
@@ -24,7 +33,7 @@ Read from `{FEATURE_DIR}/`:
 - `roadmap.md`
 
 ## Task
-Analyze user experience, accessibility, design consistency.
+Analyze core user flow UX - **MVP-critical items only in main findings**.
 
 ## Output Format (YAML only)
 
@@ -32,45 +41,39 @@ Analyze user experience, accessibility, design consistency.
 perspective: ux
 verdict: READY | CONCERNS | BLOCKED
 
-ux_impact:
-  - story: PREFIX-XXX
-    impact: high | medium | low
-    consistency: good | fair | poor
-    friction: high | medium | low | none
+core_flow:
+  complete: true | false
+  usable: true | false
 
-design_system:
-  components_referenced: true | false
-  custom_styling: true | false
-  responsive_clear: true | false
-
-accessibility:
-  - story: PREFIX-XXX
-    keyboard_nav: true | false | unclear
-    screen_reader: true | false | unclear
-    wcag_level: A | AA | AAA | unclear
-
-flow_gaps:
-  - flow: "user flow name"
-    stories: [PREFIX-XXX]
-    complete: true | false
-    friction: "one line or null"
-
-critical: []
-high:
+# MVP-CRITICAL ONLY - blocks core user journey
+mvp_blockers:
   - id: UX-001
-    issue: "one line"
+    issue: "user cannot complete core flow because..."
     stories: [PREFIX-XXX]
-    action: "one line"
+    action: "required fix"
 
-medium: []
+missing_mvp_stories:
+  - title: "required for core flow"
+    gap: "core flow step X is missing"
 
-missing_stories:
-  - title: "suggested UX story"
-    gap: "what flow is missing"
-    priority: P0 | P1 | P2
+# FUTURE (polish and enhancements, tracked separately by aggregator)
+future:
+  ux_polish:
+    - story: PREFIX-XXX
+      suggestion: "one line"
+      impact: high | medium | low
 
-recommendations:
-  - "one line recommendation"
+  accessibility_improvements:
+    - story: PREFIX-XXX
+      suggestion: "one line"
+
+  suggested_stories:
+    - title: "UX enhancement story"
+      gap: "what flow could be better"
+      priority: P1 | P2
+
+  recommendations:
+    - "one line recommendation"
 ```
 
 ## Rules

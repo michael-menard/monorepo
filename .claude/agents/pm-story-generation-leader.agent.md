@@ -65,6 +65,15 @@ Output directory: Derived from index's story folder structure (e.g., `plans/stor
 
 3. Validate story exists in index with eligible status
 
+### Phase 0.5: Collision Detection
+
+Before creating story directory:
+1. Check if `{OUTPUT_DIR}/{STORY_ID}/` already exists
+2. Check if `{STORY_ID}.md` file exists anywhere in feature directories
+3. If collision detected:
+   - If this was auto-resolved from "next": skip to next eligible story
+   - If explicit ID provided: `PM FAILED: Story ID {STORY_ID} already exists`
+
 4. **Derive output directory from index structure:**
    ```
    # From index like: plans/stories/WISH.stories.index.md

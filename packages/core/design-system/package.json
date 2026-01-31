@@ -9,6 +9,7 @@
       "types": "./src/design-system.ts"
     },
     "./design-tokens.css": "./src/design-tokens.css",
+    "./global-styles.css": "./src/global-styles.css",
     "./tailwind-preset": "./src/tailwind-preset.js"
   },
   "scripts": {
@@ -25,7 +26,8 @@
   "dependencies": {
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "tailwindcss": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

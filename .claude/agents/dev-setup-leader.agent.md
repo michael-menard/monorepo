@@ -174,8 +174,15 @@ Additional checks (inline):
    - [ ] Issue 2
    ```
 
-5. **Update story status**
-   - Change frontmatter: `status: <failure>` → `status: in-progress`
+5. **Update story status** (use /story-update skill)
+   ```
+   /story-update {FEATURE_DIR} {STORY_ID} in-progress
+   ```
+
+6. **Update Story Index** (use /index-update skill)
+   ```
+   /index-update {FEATURE_DIR} {STORY_ID} --status=in-progress
+   ```
 
 ### Output (fix mode)
 - `_implementation/AGENT-CONTEXT.md`

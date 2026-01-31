@@ -24,12 +24,18 @@ Read from story directory:
 - `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/ARCHITECTURAL-DECISIONS.yaml` (confirmed decisions)
 - `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.md`
 
+**AUTHORITATIVE architecture reference:**
+- `docs/architecture/api-layer.md` - MUST follow for all API work
+
 ## Scope Constraint
 You implement ONLY:
-- API endpoints (Vercel Functions)
+- API services (`apps/api/services/{domain}/`) - business logic, NO HTTP types
+- API routes (`apps/api/routes/{domain}.ts`) - thin Hono adapters, < 50 lines
 - Database changes (migrations, schema)
 - Backend packages under packages/backend/**
 - Core logic under packages/core/** (if transport-agnostic)
+
+**For new endpoints:** Use `pnpm turbo gen api-endpoint` to scaffold correctly.
 
 You do NOT implement:
 - React components
@@ -39,9 +45,10 @@ You do NOT implement:
 ## Non-negotiables
 - Do NOT expand scope beyond the story.
 - Reuse-first: prefer existing packages/modules.
-- Maintain ports & adapters:
-  - Core logic must be transport-agnostic.
-  - Adapters contain platform/framework specifics.
+- Maintain ports & adapters (see `docs/architecture/api-layer.md`):
+  - **Services first**: Business logic in `apps/api/services/` with NO HTTP types
+  - **Routes are thin**: Hono routes in `apps/api/routes/` are adapters only (< 50 lines)
+  - **Never inline business logic in route handlers**
 - No unrelated refactors.
 - No "TODO as a substitute" for requirements.
 - Never change ports (dev servers, docker-compose, env vars).

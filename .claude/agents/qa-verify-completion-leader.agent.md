@@ -31,13 +31,14 @@ Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 Read from `VERIFICATION.yaml`:
 - `qa_verify.verdict` (PASS or FAIL)
 
-## Steps
+## Steps (using skills)
 
 ### If verdict is PASS:
 
-1. **Update status to uat**
-   - Open `{base_path}/{STORY_ID}.md`
-   - Change `status: in-qa` to `status: uat`
+1. **Update status to uat** (use /story-update skill)
+   ```
+   /story-update {FEATURE_DIR} {STORY_ID} uat
+   ```
 
 2. **Write gate section to VERIFICATION.yaml**
    ```yaml
@@ -49,34 +50,16 @@ Read from `VERIFICATION.yaml`:
 
 3. **Story stays in UAT** (already moved during setup)
 
-4. **Spawn Index Updater Sub-Agent**
-   Use Task tool with this prompt:
+4. **Update Story Index** (use /index-update skill)
    ```
-   You are the Story Index Updater agent. Update the story index
-   after {STORY_ID} has passed QA verification.
-
-   Note: The story is now located at {FEATURE_DIR}/UAT/{STORY_ID}/
-
-   File to update: {FEATURE_DIR}/stories.index.md
-
-   Tasks:
-   1. Find {STORY_ID} in the index and change its status to `completed`
-
-   2. Clear satisfied dependencies from downstream stories:
-      - Find all stories that list {STORY_ID} in their `**Depends On:**` field
-      - Remove {STORY_ID} from their dependency list
-      - If the dependency list becomes empty, set it to `none`
-
-   3. Update the Progress Summary counts at the top of the file
-
-   4. Recalculate the "Ready to Start" section:
-      - A story is READY if status is `pending` AND `**Depends On:**` is `none`
-      - A story is BLOCKED if `**Depends On:**` lists any story IDs
-
-   5. Update the "Waiting on" sections to show blocking chains
-
-   Emit: INDEX UPDATE COMPLETE
+   /index-update {FEATURE_DIR} {STORY_ID} --status=completed --clear-deps
    ```
+
+   The `--clear-deps` flag:
+   - Sets story status to `completed`
+   - Removes {STORY_ID} from downstream stories' `**Depends On:**` lists
+   - Updates Progress Summary counts
+   - Recalculates "Ready to Start" section
 
 5. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
@@ -85,9 +68,10 @@ Read from `VERIFICATION.yaml`:
 
 ### If verdict is FAIL:
 
-1. **Update status to needs-work**
-   - Open `{base_path}/{STORY_ID}.md`
-   - Change `status: in-qa` to `status: needs-work`
+1. **Update status to needs-work** (use /story-update skill)
+   ```
+   /story-update {FEATURE_DIR} {STORY_ID} needs-work
+   ```
 
 2. **Write gate section to VERIFICATION.yaml**
    ```yaml
@@ -99,15 +83,20 @@ Read from `VERIFICATION.yaml`:
        - "<issue 2>"
    ```
 
-3. **Move story back to in-progress**
-   ```bash
-   mv {FEATURE_DIR}/UAT/{STORY_ID} {FEATURE_DIR}/in-progress/{STORY_ID}
+3. **Move story back to in-progress** (use /story-move skill)
+   ```
+   /story-move {FEATURE_DIR} {STORY_ID} in-progress
    ```
 
-4. **Log tokens**
+4. **Update Story Index** (use /index-update skill)
+   ```
+   /index-update {FEATURE_DIR} {STORY_ID} --status=needs-work
+   ```
+
+5. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-5. **Emit signal**: `QA FAIL`
+6. **Emit signal**: `QA FAIL`
 
 ## Output Format
 

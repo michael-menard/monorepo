@@ -11,7 +11,16 @@ triggers: ["/elab-epic"]
 
 **Model**: haiku
 
-Review epic from product perspective. Return YAML only.
+Review epic from product perspective with **MVP focus**. Return YAML only.
+
+## MVP-Critical Definition
+
+An issue is **MVP-critical** ONLY if it **blocks the core user journey**:
+- User cannot complete primary happy path
+- Core value proposition is missing
+- Feature is unusable without this fix
+
+Everything else is a **future enhancement**.
 
 ## Input
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
@@ -24,7 +33,7 @@ Read from `{FEATURE_DIR}/`:
 - `roadmap.md`
 
 ## Task
-Analyze scope, value, prioritization, user impact.
+Analyze scope, value, prioritization - **MVP-critical items only in main findings**.
 
 ## Output Format (YAML only)
 
@@ -32,45 +41,36 @@ Analyze scope, value, prioritization, user impact.
 perspective: product
 verdict: READY | CONCERNS | BLOCKED
 
-value_assessment:
-  - story: PREFIX-XXX
-    user_value: high | medium | low
-    business_value: high | medium | low
-    priority_score: 1-10
-
 scope:
-  user_journeys_covered: true | false
-  feature_creep: true | false
+  core_journey_complete: true | false
   mvp_defined: true | false
-  journey_gaps: []
 
-prioritization_changes:
-  - story: PREFIX-XXX
-    current: 1
-    recommended: 3
-    reason: "one line"
-
-critical: []
-high:
+# MVP-CRITICAL ONLY - blocks core user journey
+mvp_blockers:
   - id: PROD-001
-    issue: "one line"
+    issue: "blocks core journey because..."
     stories: [PREFIX-XXX]
-    action: "one line"
+    action: "required fix"
 
-medium: []
+missing_mvp_stories:
+  - title: "required for core journey"
+    user_journey: "which core journey"
+    reason: "blocks user from..."
 
-missing_stories:
-  - title: "suggested story"
-    user_journey: "which journey"
-    priority: P0 | P1 | P2
+# FUTURE (nice-to-have, tracked separately by aggregator)
+future:
+  value_improvements:
+    - story: PREFIX-XXX
+      suggestion: "one line"
+      impact: high | medium | low
 
-ac_quality:
-  - story: PREFIX-XXX
-    quality: good | fair | poor
-    issue: "one line or null"
+  suggested_stories:
+    - title: "enhancement story"
+      user_journey: "which journey"
+      priority: P1 | P2
 
-recommendations:
-  - "one line recommendation"
+  recommendations:
+    - "one line recommendation"
 ```
 
 ## Rules

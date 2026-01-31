@@ -33,6 +33,7 @@ That's it! See below for detailed documentation.
 - [Architecture](#architecture)
 - [Detailed Setup](#detailed-setup)
 - [Scripts](#scripts)
+- [Claude Code Integration](#claude-code-integration)
 - [Database Schema](#database-schema)
 - [Vector Embeddings](#vector-embeddings)
 - [Troubleshooting](#troubleshooting)
@@ -214,6 +215,146 @@ pnpm db:studio
 | `pnpm test` | Run smoke tests |
 | `pnpm build` | Build TypeScript |
 | `pnpm check-types` | Type check without emit |
+| `pnpm kb:generate-config` | Generate ~/.claude/mcp.json for Claude Code |
+| `pnpm kb:validate-connection` | Validate all MCP server prerequisites |
+
+---
+
+## Claude Code Integration
+
+Register the Knowledge Base MCP server with Claude Code for seamless access to kb_* tools.
+
+### Prerequisites
+
+Before setting up Claude Code integration:
+
+1. **Docker running** - Knowledge Base requires PostgreSQL with pgvector
+2. **Database initialized** - Run `pnpm db:init` first
+3. **Environment variables set** - `DATABASE_URL` and `OPENAI_API_KEY`
+4. **MCP server built** - Run `pnpm build`
+
+### Quick Setup (30 seconds)
+
+```bash
+# 1. Generate Claude Code config
+pnpm kb:generate-config
+
+# 2. Validate everything works
+pnpm kb:validate-connection
+
+# 3. Restart Claude Code to load the MCP server
+```
+
+### Manual Setup
+
+If you prefer manual configuration or need to merge with existing config:
+
+1. Open `~/.claude/mcp.json`
+2. Add the following under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "node",
+      "args": ["/path/to/monorepo/apps/api/knowledge-base/dist/mcp-server/index.js"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+3. Set environment variables in your shell profile:
+
+```bash
+export DATABASE_URL="postgresql://kbuser:password@localhost:5433/knowledgebase"
+export OPENAI_API_KEY="sk-..."
+```
+
+4. Restart Claude Code
+
+### Validate Connection
+
+Run the connection validator to check all prerequisites:
+
+```bash
+pnpm kb:validate-connection
+```
+
+Expected output when everything is working:
+
+```
+MCP Connection Validator
+Checking all prerequisites for Knowledge Base MCP server
+
+Monorepo root: /path/to/monorepo
+Docker platform: Docker Desktop
+
+Running checks...
+
+OK Docker daemon running
+OK KB database container healthy
+OK MCP server built
+OK Build freshness
+OK DATABASE_URL set (postgresql://...)
+OK OPENAI_API_KEY set (sk-proj...)
+OK Database connectivity
+OK OpenAI API key valid
+OK No conflicting MCP process
+OK MCP server responds
+
+All 10 checks passed!
+
+The Knowledge Base MCP server is ready to use with Claude Code.
+```
+
+### Available MCP Tools
+
+Once connected, Claude Code can use these tools:
+
+| Tool | Description |
+|------|-------------|
+| `kb_add` | Add knowledge entry |
+| `kb_get` | Get entry by ID |
+| `kb_update` | Update entry |
+| `kb_delete` | Delete entry |
+| `kb_list` | List entries with filters |
+| `kb_search` | Hybrid semantic + keyword search |
+| `kb_get_related` | Find related entries |
+| `kb_bulk_import` | Bulk import entries |
+| `kb_rebuild_embeddings` | Rebuild embedding cache |
+| `kb_stats` | Get KB statistics |
+| `kb_health` | Check server health |
+
+### Health Check
+
+Check MCP server health from Claude Code:
+
+```
+Use kb_health to check the server status
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "db": { "status": "pass", "latency_ms": 5 },
+    "openai_api": { "status": "pass", "latency_ms": 200 },
+    "mcp_server": { "status": "pass", "uptime_ms": 3600000 }
+  },
+  "uptime_ms": 3600000,
+  "version": "1.0.0"
+}
+```
+
+Status values:
+- **healthy**: All checks pass
+- **degraded**: Non-critical check failed (OpenAI unavailable but fallback mode works)
+- **unhealthy**: Critical check failed (database down)
 
 ---
 
@@ -405,6 +546,126 @@ Connection timeout
 1. Ensure Docker is running: `docker-compose up -d`
 2. Wait for healthy status: `docker-compose ps`
 3. Check database is accessible: `pnpm validate:env`
+
+---
+
+## Claude Code Troubleshooting
+
+### MCP server not appearing in Claude Code
+
+**Symptoms:**
+- kb_* tools not available after restart
+- "Unknown tool" errors
+
+**Solutions:**
+1. Verify config exists: `cat ~/.claude/mcp.json`
+2. Check config is valid JSON: `jq . ~/.claude/mcp.json`
+3. Ensure absolute path to index.js is correct
+4. Restart Claude Code (not just refresh)
+5. Run: `pnpm kb:validate-connection`
+
+### Environment variables not loaded
+
+**Error:**
+```
+DATABASE_URL is required
+```
+
+**Solutions:**
+1. Ensure variables are set in your shell profile (`~/.zshrc` or `~/.bashrc`)
+2. Verify with: `echo $DATABASE_URL`
+3. If using dotenv, ensure .env file is in correct location
+4. Claude Code inherits env from your terminal - restart terminal first
+
+### MCP server crashes on startup
+
+**Symptoms:**
+- Tools appear briefly then disappear
+- "Server disconnected" errors
+
+**Solutions:**
+1. Check server logs: Run MCP server directly to see errors
+   ```bash
+   node dist/mcp-server/index.js
+   ```
+2. Verify database is running and accessible
+3. Check for port conflicts with existing MCP server
+4. Run: `pnpm kb:validate-connection` to diagnose
+
+### Invalid OpenAI API key
+
+**Error:**
+```
+OpenAI API key invalid (status 401)
+```
+
+**Solutions:**
+1. Verify key is correct: Check OpenAI dashboard
+2. Check key hasn't expired or been revoked
+3. Ensure key has correct permissions for embeddings
+4. Try: `curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models`
+
+### Stale build
+
+**Error:**
+```
+Build freshness check failed: Source files are newer than build
+```
+
+**Solution:**
+```bash
+cd apps/api/knowledge-base
+pnpm build
+pnpm kb:validate-connection
+```
+
+### Existing config conflicts
+
+**Error:**
+```
+Config file already exists: ~/.claude/mcp.json
+```
+
+**Solutions:**
+1. Use `--force` flag to overwrite: `pnpm kb:generate-config -- --force`
+2. Or manually merge configs:
+   ```bash
+   pnpm kb:generate-config -- --dry-run  # See what would be generated
+   # Then manually add to existing config
+   ```
+
+### Backup recovery
+
+If you accidentally overwrote a config:
+```bash
+# Restore from backup
+cp ~/.claude/mcp.json.backup ~/.claude/mcp.json
+
+# Restart Claude Code
+```
+
+### kb_health shows degraded
+
+**Symptoms:**
+- `"status": "degraded"` in health check
+
+**Causes and solutions:**
+1. **OpenAI API unavailable**: Check internet connection, API key validity
+2. **High database latency**: Check database performance, connection count
+3. **Non-critical service down**: System is still functional, search uses fallback mode
+
+### kb_health shows unhealthy
+
+**Symptoms:**
+- `"status": "unhealthy"` in health check
+
+**Causes and solutions:**
+1. **Database connection failed**: Restart database container
+   ```bash
+   docker-compose restart kb-postgres
+   ```
+2. **Database credentials wrong**: Verify DATABASE_URL matches container config
+3. **Container crashed**: Check container logs and restart
 
 ---
 

@@ -77,9 +77,11 @@ All leaders follow `.claude/agents/_shared/lean-docs.md`:
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `STORY-XXX-A.md` | `plans/stories/backlog/STORY-XXX-A/` | First split |
-| `STORY-XXX-B.md` | `plans/stories/backlog/STORY-XXX-B/` | Second split |
+| `{PREFIX}-XX1Z.md` | `plans/stories/backlog/{PREFIX}-XX1Z/` | First split (Y=1) |
+| `{PREFIX}-XX2Z.md` | `plans/stories/backlog/{PREFIX}-XX2Z/` | Second split (Y=2) |
 | Index updates | `plans/stories/*.stories.index.md` | Original superseded, splits added |
+
+**Note:** Splits increment the Y digit (3rd position), keeping Z unchanged. Example: `WISH-0100` splits into `WISH-0110`, `WISH-0120`.
 
 ## Signals
 
@@ -122,6 +124,21 @@ Leaders call `/token-log` before completion:
 | "No follow-ups found" | Verify `## QA Discovery Notes` exists |
 | "Missing SPLIT REQUIRED" | Verify ELAB verdict is SPLIT REQUIRED |
 | "AC not allocated" | Ensure all ACs assigned to splits |
+| "Story ID already exists" | Collision detected - directory or index entry exists |
+| "No available split IDs" | Y range 1-9 exhausted for parent story |
+| "No available follow-up IDs" | Z range 1-9 exhausted for parent story |
+
+## Collision Detection
+
+All story generation operations perform collision detection before creating IDs:
+
+1. **Directory check**: Verifies `{OUTPUT_DIR}/{STORY_ID}/` doesn't already exist
+2. **Index check**: Verifies `stories.index.md` doesn't already contain the ID
+
+If collision detected:
+- **Splits**: Increment Y until unique (Y=1→2→3...)
+- **Follow-ups**: Increment Z until unique (Z=1→2→3...)
+- **New stories**: Either skip to next eligible story or fail if explicit ID provided
 
 ## Shared Constraints (All Actions)
 
@@ -149,5 +166,5 @@ Leaders call `/token-log` before completion:
 | generate | `/elab-story STORY-XXX` |
 | generate --ad-hoc | `/elab-story {STORY_ID}` |
 | bug | `/elab-story {BUG_ID}` |
-| followup | `/elab-story STORY-NNN` |
-| split | `/elab-story STORY-XXX-A` (first split) |
+| followup | `/elab-story {PREFIX}-XXY(Z+1)` (Z incremented) |
+| split | `/elab-story {PREFIX}-XX1Z` (first split, Y=1) |

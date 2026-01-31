@@ -1146,4 +1146,93 @@ module.exports = function generator(plop) {
       },
     ],
   })
+
+  // API Endpoint generator (Ports & Adapters pattern)
+  plop.setGenerator('api-endpoint', {
+    description: 'Generate a new API endpoint with service layer (ports & adapters)',
+    prompts: [
+      {
+        type: 'input',
+        name: 'domain',
+        message: 'Domain (e.g., gallery, moc, wishlist):',
+        validate: input => {
+          if (!input) return 'Domain is required'
+          if (input.includes(' ')) return 'Domain cannot include spaces'
+          return true
+        },
+      },
+      {
+        type: 'input',
+        name: 'operation',
+        message: 'Operation name (e.g., upload-image, create, list):',
+        validate: input => {
+          if (!input) return 'Operation name is required'
+          if (input.includes(' ')) return 'Operation name cannot include spaces'
+          return true
+        },
+      },
+      {
+        type: 'list',
+        name: 'method',
+        message: 'HTTP method:',
+        choices: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        default: 'GET',
+      },
+      {
+        type: 'confirm',
+        name: 'requiresAuth',
+        message: 'Requires authentication?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'hasRequestBody',
+        message: 'Has request body?',
+        default: answers => ['POST', 'PUT', 'PATCH'].includes(answers.method),
+        when: answers => ['POST', 'PUT', 'PATCH'].includes(answers.method),
+      },
+      {
+        type: 'confirm',
+        name: 'createNewDomainRoute',
+        message: 'Create new domain route file? (No if adding to existing domain)',
+        default: true,
+      },
+    ],
+    actions: data => {
+      const actions = []
+
+      // Always create service
+      actions.push({
+        type: 'add',
+        path: 'apps/api/services/{{kebabCase domain}}/{{kebabCase operation}}.ts',
+        templateFile: 'templates/api-endpoint-service.ts.hbs',
+      })
+
+      // Create service test
+      actions.push({
+        type: 'add',
+        path: 'apps/api/services/{{kebabCase domain}}/__tests__/{{kebabCase operation}}.test.ts',
+        templateFile: 'templates/api-endpoint-service-test.ts.hbs',
+      })
+
+      // Create domain route file if new domain
+      if (data.createNewDomainRoute) {
+        actions.push({
+          type: 'add',
+          path: 'apps/api/routes/{{kebabCase domain}}.ts',
+          templateFile: 'templates/api-endpoint-route.ts.hbs',
+        })
+      }
+
+      // Add instructions for manual steps
+      actions.push({
+        type: 'add',
+        path: 'apps/api/services/{{kebabCase domain}}/SETUP-INSTRUCTIONS.md',
+        templateFile: 'templates/api-endpoint-instructions.md.hbs',
+        force: true,
+      })
+
+      return actions
+    },
+  })
 }

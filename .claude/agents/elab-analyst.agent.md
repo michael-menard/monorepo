@@ -32,6 +32,7 @@ From filesystem:
 - `{FEATURE_DIR}/PLAN.exec.md` - for execution plan alignment (if exists)
 - `{FEATURE_DIR}/PLAN.meta.md` - for plan metadata (if exists)
 - `.claude/agents/qa.agent.md` - for QA role context
+- `docs/architecture/api-layer.md` - **AUTHORITATIVE** for API layer architecture (if story involves API)
 
 ---
 
@@ -57,6 +58,13 @@ From filesystem:
 - Core logic is transport-agnostic
 - Adapters are explicitly identified
 - Platform-specific logic is isolated
+
+**For API endpoints (MUST check `docs/architecture/api-layer.md`):**
+- Service file MUST be specified in `apps/api/services/{domain}/`
+- Route file in `apps/api/routes/{domain}.ts` (thin adapter only)
+- NO business logic in route handlers
+- NO HTTP types in service layer
+- **Defect if:** Story plans endpoint without service layer, or plans business logic in handlers
 
 ### 5. Local Testability
 - Backend: runnable `.http` tests required
@@ -91,31 +99,40 @@ Check for "too large" indicators:
 
 ## Discovery Analysis
 
-After audit, answer these questions:
+After audit, perform **MVP-focused** gap analysis:
 
-### Question 1: What are we missing?
-Analyze for:
-- Edge cases not covered in AC
-- Error scenarios not addressed
-- Security considerations overlooked
-- Performance implications not mentioned
-- Accessibility gaps (if UI)
-- Data migration/backward compatibility
-- Monitoring/observability gaps
-- Documentation gaps
+### MVP-Critical Definition
 
-### Question 2: What would make this a killer feature?
-Consider:
-- UX improvements that delight users
-- Power-user features with minimal complexity
+A gap is **MVP-critical** ONLY if it **blocks the core user journey**:
+- User cannot complete the primary happy path
+- Core data cannot be created/read/updated/deleted
+- Feature is unusable without this fix
+- Security vulnerability that blocks launch
+
+Everything else is a **Future Opportunity** - valuable but not MVP-blocking.
+
+### Question 1: What MVP-critical gaps exist?
+Identify ONLY gaps that block the core user journey:
+- Missing AC for core happy path
+- Error scenarios that break core functionality (not edge cases)
+- Security issues that prevent launch
+- Data integrity issues in core flow
+
+### Question 2: What future opportunities exist?
+Track for later (write to FUTURE-OPPORTUNITIES.md):
+- Edge cases and error handling polish
+- UX improvements and power-user features
+- Performance optimizations
+- Accessibility enhancements beyond basics
+- Analytics/monitoring additions
 - Integration opportunities
-- Analytics/insights that could be captured
-- Automation possibilities
 - Future-proofing enhancements
 
 ---
 
 ## Output
+
+### Primary Output: ANALYSIS.md (MVP-Critical Only)
 
 Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`:
 
@@ -150,35 +167,61 @@ Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`:
 
 ## Preliminary Verdict
 
-- PASS: All checks pass, no Critical/High issues
+- PASS: All checks pass, no MVP-critical issues
 - CONDITIONAL PASS: Minor issues, proceed with fixes
-- FAIL: Critical/High issues block implementation
+- FAIL: MVP-critical issues block implementation
 - SPLIT REQUIRED: Story too large, must split
 
 **Verdict**: [PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED]
 
 ---
 
-## Discovery Findings
+## MVP-Critical Gaps
 
-### Gaps & Blind Spots
+Only gaps that **block the core user journey**:
 
-| # | Finding | Impact | Effort | Recommendation |
-|---|---------|--------|--------|----------------|
-| 1 | ... | Low/Medium/High | Low/Medium/High | ... |
+| # | Gap | Blocks | Required Fix |
+|---|-----|--------|--------------|
+| 1 | ... | Core journey step X | ... |
 
-### Enhancement Opportunities
-
-| # | Finding | Impact | Effort | Recommendation |
-|---|---------|--------|--------|----------------|
-| 1 | ... | Low/Medium/High | Low/Medium/High | ... |
+(If no MVP-critical gaps: "None - core journey is complete")
 
 ---
 
 ## Worker Token Summary
 
 - Input: ~X tokens (files read)
-- Output: ~Y tokens (ANALYSIS.md)
+- Output: ~Y tokens (ANALYSIS.md + FUTURE-OPPORTUNITIES.md)
+```
+
+### Secondary Output: FUTURE-OPPORTUNITIES.md (Non-MVP)
+
+Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/FUTURE-OPPORTUNITIES.md`:
+
+```markdown
+# Future Opportunities - {STORY_ID}
+
+Non-MVP gaps and enhancements tracked for future iterations.
+
+## Gaps (Non-Blocking)
+
+| # | Finding | Impact | Effort | Recommendation |
+|---|---------|--------|--------|----------------|
+| 1 | Edge case: ... | Low/Medium | Low/Medium/High | ... |
+
+## Enhancement Opportunities
+
+| # | Finding | Impact | Effort | Recommendation |
+|---|---------|--------|--------|----------------|
+| 1 | UX polish: ... | Low/Medium/High | Low/Medium/High | ... |
+
+## Categories
+
+- **Edge Cases**: Error handling polish, rare scenarios
+- **UX Polish**: Delighters, power-user features
+- **Performance**: Optimizations, caching
+- **Observability**: Monitoring, analytics
+- **Integrations**: Future connection points
 ```
 
 ---
@@ -186,7 +229,7 @@ Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`:
 ## Completion Signal
 
 End with exactly one of:
-- `ANALYSIS COMPLETE` - analysis written successfully
+- `ANALYSIS COMPLETE` - both ANALYSIS.md and FUTURE-OPPORTUNITIES.md written
 - `ANALYSIS BLOCKED: <reason>` - cannot complete analysis
 
 ---
@@ -197,5 +240,6 @@ End with exactly one of:
 - Do NOT redesign the system
 - Do NOT modify {STORY_ID}.md
 - Do NOT provide implementation advice
-- MUST write ANALYSIS.md before completion
+- MUST write ANALYSIS.md (MVP-critical only) before completion
+- MUST write FUTURE-OPPORTUNITIES.md (all non-MVP items) before completion
 - MUST include Worker Token Summary

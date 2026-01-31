@@ -66,16 +66,22 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 5 CRUD tool definitions', () => {
+    it('should return all 11 tool definitions (CRUD + search + admin)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(5)
+      expect(tools).toHaveLength(11)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
         'kb_update',
         'kb_delete',
         'kb_list',
+        'kb_search',
+        'kb_get_related',
+        'kb_bulk_import',
+        'kb_rebuild_embeddings',
+        'kb_stats',
+        'kb_health',
       ])
     })
 

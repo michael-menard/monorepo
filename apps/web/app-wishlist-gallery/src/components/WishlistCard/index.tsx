@@ -5,12 +5,13 @@
  * price display, piece count, and priority indicators.
  *
  * Story wish-2001: Wishlist Gallery MVP
+ * Story WISH-2042: Purchase/Got It Flow
  */
 
 import { z } from 'zod'
 import { GalleryCard } from '@repo/gallery'
-import { Badge } from '@repo/app-component-library'
-import { Star, Puzzle } from 'lucide-react'
+import { Badge, Button } from '@repo/app-component-library'
+import { Star, Puzzle, Check, Trash2 } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 
 /**
@@ -21,6 +22,10 @@ export const WishlistCardPropsSchema = z.object({
   item: z.custom<WishlistItem>(),
   /** Click handler */
   onClick: z.function().optional(),
+  /** Got It button handler (WISH-2042) */
+  onGotIt: z.function().optional(),
+  /** Delete button handler (WISH-2041) */
+  onDelete: z.function().optional(),
   /** Additional CSS classes */
   className: z.string().optional(),
 })
@@ -77,8 +82,9 @@ const formatPrice = (price: string | null, currency: string): string => {
  * - Price display
  * - Piece count with icon
  * - Priority stars indicator
+ * - Got It button (WISH-2042)
  */
-export function WishlistCard({ item, onClick, className }: WishlistCardProps) {
+export function WishlistCard({ item, onClick, onGotIt, onDelete, className }: WishlistCardProps) {
   const { id, title, setNumber, store, imageUrl, price, currency, pieceCount, priority } = item
 
   // Build subtitle with set number
@@ -125,6 +131,43 @@ export function WishlistCard({ item, onClick, className }: WishlistCardProps) {
           ))}
         </span>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-1 ml-auto">
+        {/* Delete Button (WISH-2041) */}
+        {onDelete ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+            data-testid="wishlist-card-delete"
+            aria-label={`Delete ${title}`}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3 w-3" aria-hidden="true" />
+          </Button>
+        ) : null}
+
+        {/* Got It Button (WISH-2042) */}
+        {onGotIt ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              onGotIt()
+            }}
+            data-testid="wishlist-card-got-it"
+            aria-label={`Mark ${title} as purchased`}
+          >
+            <Check className="h-3 w-3 mr-1" aria-hidden="true" />
+            Got It
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 
@@ -144,5 +187,3 @@ export function WishlistCard({ item, onClick, className }: WishlistCardProps) {
     />
   )
 }
-
-export default WishlistCard

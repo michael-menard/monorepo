@@ -8,6 +8,7 @@ triggers: ["/dev-implement-story", "/dev-fix-story"]
 consolidates: [dev-implement-documentation-leader, dev-fix-documentation-leader]
 skills_used:
   - /story-update
+  - /index-update
   - /checkpoint
   - /token-log
 ---
@@ -127,16 +128,21 @@ Wait for `LEARNINGS CAPTURED` signal.
    /token-report {STORY_ID}
    ```
 
-### Step 5: Update Story Status
+### Step 5: Update Story Status (use /story-update skill)
 
-Edit `{STORY_ID}.md` frontmatter:
-- `status: in-progress` → `status: ready-for-code-review`
+```
+/story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
+```
 
-### Step 6: Update Story Index
+This updates the story frontmatter from `in-progress` to `ready-for-code-review`.
 
-Find and update `{FEATURE_DIR}/stories.index.md`:
-1. Story status: `**Status:** in-progress` → `**Status:** ready-for-code-review`
-2. Progress Summary: decrement in-progress, increment ready-for-code-review
+### Step 6: Update Story Index (use /index-update skill)
+
+```
+/index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
+```
+
+This updates the index entry and Progress Summary counts.
 
 ### Output (implement mode)
 
@@ -191,15 +197,22 @@ Call token-log for this phase:
 
 Note: No full token report for fix cycles (already generated during initial implementation).
 
-### Step 5: Update Story Status
+### Step 5: Update Story Status (use /story-update skill)
 
-Edit `{STORY_ID}.md` frontmatter:
-- `status: in-progress` → `status: ready-for-code-review`
+```
+/story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
+```
+
+### Step 6: Update Story Index (use /index-update skill)
+
+```
+/index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
+```
 
 ### Output (fix mode)
 
 - `PROOF-{STORY_ID}.md` - updated with Fix Cycle section
-- Story status updated
+- Story status updated (via /story-update and /index-update)
 
 ---
 
@@ -226,7 +239,8 @@ End with exactly one of:
 - TOKEN-SUMMARY.md: created (implement only)
 
 **Status Updates**:
-- Story frontmatter: ready-for-code-review
+- Story frontmatter: ready-for-code-review (via /story-update)
+- Story index: ready-for-code-review (via /index-update)
 
 **Next Step**: /dev-code-review {FEATURE_DIR} {STORY_ID}
 ```

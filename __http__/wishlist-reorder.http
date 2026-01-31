@@ -1,0 +1,152 @@
+### Wishlist Reorder API Tests
+### Story WISH-2005a: Drag-and-drop reordering with dnd-kit
+### Endpoint: PUT /api/wishlist/reorder
+
+# Variables
+@baseUrl = http://localhost:3001/api
+@contentType = application/json
+
+### ============================================================
+### Happy Path: Reorder items successfully
+### ============================================================
+
+### Reorder 3 items (swap first and second)
+# Expected: 200 OK with { "updated": 3 }
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "{{$guid}}", "sortOrder": 0 },
+    { "id": "{{$guid}}", "sortOrder": 1 },
+    { "id": "{{$guid}}", "sortOrder": 2 }
+  ]
+}
+
+### ============================================================
+### Validation Errors (400)
+### ============================================================
+
+### Empty items array
+# Expected: 400 Bad Request - Validation error
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": []
+}
+
+### Missing items field
+# Expected: 400 Bad Request - Validation error
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+}
+
+### Invalid UUID format
+# Expected: 400 Bad Request - Validation error
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "not-a-uuid", "sortOrder": 0 }
+  ]
+}
+
+### Negative sortOrder
+# Expected: 400 Bad Request - Validation error
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "{{$guid}}", "sortOrder": -1 }
+  ]
+}
+
+### Missing sortOrder field
+# Expected: 400 Bad Request - Validation error
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "{{$guid}}" }
+  ]
+}
+
+### ============================================================
+### Not Found (404)
+### ============================================================
+
+### Item does not exist
+# Expected: 404 Not Found OR 400 Validation error
+# Note: Depends on implementation - some APIs return 400 for invalid items
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "00000000-0000-0000-0000-000000000000", "sortOrder": 0 }
+  ]
+}
+
+### ============================================================
+### Forbidden (403)
+### ============================================================
+
+### Item belongs to another user
+# Expected: 403 Forbidden
+# Note: This requires being authenticated as a different user
+# The API should reject reordering items you don't own
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "{{$guid}}", "sortOrder": 0 }
+  ]
+}
+
+### ============================================================
+### Authentication Required (401)
+### ============================================================
+
+### No authentication cookie
+# Expected: 401 Unauthorized
+# Note: This test assumes no auth cookie is sent
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "{{$guid}}", "sortOrder": 0 }
+  ]
+}
+
+### ============================================================
+### Performance Test (Large Payload)
+### ============================================================
+
+### Reorder 100 items
+# Expected: 200 OK within 3 seconds
+# Note: Generate 100 item entries for testing
+PUT {{baseUrl}}/wishlist/reorder
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    { "id": "{{$guid}}", "sortOrder": 0 },
+    { "id": "{{$guid}}", "sortOrder": 1 },
+    { "id": "{{$guid}}", "sortOrder": 2 },
+    { "id": "{{$guid}}", "sortOrder": 3 },
+    { "id": "{{$guid}}", "sortOrder": 4 },
+    { "id": "{{$guid}}", "sortOrder": 5 },
+    { "id": "{{$guid}}", "sortOrder": 6 },
+    { "id": "{{$guid}}", "sortOrder": 7 },
+    { "id": "{{$guid}}", "sortOrder": 8 },
+    { "id": "{{$guid}}", "sortOrder": 9 }
+  ]
+}

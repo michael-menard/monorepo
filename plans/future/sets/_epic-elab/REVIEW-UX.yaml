@@ -1,0 +1,290 @@
+perspective: ux
+reviewer: ux-agent
+reviewed_at: "2026-01-25T00:00:00Z"
+verdict: READY
+
+findings:
+  critical: []
+  high:
+    - id: "H001"
+      category: "interaction-consistency"
+      issue: "Build status toggle interaction differs between card and detail view: card uses small button, detail uses segmented control"
+      affected_stories: [SETS-009, SETS-020]
+      severity: high
+      recommendation: "Standardize on segmented control or toggle button. Ensure both have consistent visual language and animation behavior. Consider card view using icon button with label."
+
+    - id: "H002"
+      category: "error-recovery"
+      issue: "Optimistic update failures (SETS-009, SETS-010) use 'Retry' toast but don't specify what will happen. User confusion if retry fails again or data integrity."
+      affected_stories: [SETS-009, SETS-010]
+      severity: high
+      recommendation: "Show clear error state before retry. Include explanation of why action failed. Consider: 'Marked as built locally. Sync failed (No connection). [Retry] [Cancel]'."
+
+    - id: "H003"
+      category: "transaction-safety"
+      issue: "SETS-008 'Got it' flow mentions undo but atomic transaction design creates implicit rollback complexity. Unclear how undo works if half-succeeded."
+      affected_stories: [SETS-008, SETS-021]
+      severity: high
+      recommendation: "Document explicit undo mechanism: (1) Create Set, (2) Delete Wishlist on success, (3) If either fails, full rollback. Undo should reverse the entire atomic operation."
+
+  medium:
+    - id: "M001"
+      category: "quantity-edge-case"
+      issue: "SETS-010 mentions 'Delete this set instead?' prompt when user tries to decrement below 1, but dialog copy is not specified. Risk of unclear language."
+      affected_stories: [SETS-010]
+      severity: medium
+      recommendation: "Define exact dialog: 'Quantity is already 1. Delete this set?' or 'Can't go below 1. Delete this set instead?' Test with users for clarity."
+
+    - id: "M002"
+      category: "duplicate-detection-ux"
+      issue: "SETS-018 duplicate detection modal shows two radio options but doesn't explain purchase detail handling clearly. 'Add as new entry' implies separate tracking but implications aren't clear."
+      affected_stories: [SETS-018]
+      severity: medium
+      recommendation: "Enhance modal body: Add explanatory text. 'Add as new entry: Track separate purchase date, price, and build status for this copy.' Show visual indicator (e.g., quantity badge) in existing quantity option."
+
+    - id: "M003"
+      category: "focus-management"
+      issue: "SETS-008 'Got it' success experience mentions scrolling to new item but focus management behavior not specified. Could break keyboard navigation flow."
+      affected_stories: [SETS-008, SETS-021, SETS-019]
+      severity: medium
+      recommendation: "Define focus behavior: After 'View' navigates to gallery, focus should move to newly added set card. Ensure highlight animation doesn't interfere with focus ring visibility."
+
+    - id: "M004"
+      category: "mobile-touch-targets"
+      issue: "SETS-020 mentions 44px touch targets for quantity stepper but doesn't specify spacing. Risk of accidental taps on adjacent elements."
+      affected_stories: [SETS-020]
+      severity: medium
+      recommendation: "Define touch target spacing: 44px minimum with 8px padding between interactive elements. Test on actual devices (4-6 inch screens)."
+
+    - id: "M005"
+      category: "scraper-error-handling"
+      issue: "SETS-005 URL scrape flow mentions 'handle scraper failures gracefully' but no error state design specified. How does user know scrape failed?"
+      affected_stories: [SETS-005, SETS-013]
+      severity: medium
+      recommendation: "Design scraper error states: (1) Connection error, (2) Unsupported URL, (3) No product found. Each should show next action: retry, manual entry link, or specific guidance."
+
+  low:
+    - id: "L001"
+      category: "animation-timing"
+      issue: "SETS-009 celebrates 'Built' with animation but timing not specified. Celebration should be brief (not distract) but visible."
+      affected_stories: [SETS-009]
+      severity: low
+      recommendation: "Define celebration animation: 200-300ms duration, subtle particles or glow effect. Ensure it doesn't block interaction or create motion sensitivity issues."
+
+    - id: "L002"
+      category: "empty-state-actions"
+      issue: "SETS-017 empty states define designs but CTA placement and hierarchy not specified. Some states have multiple actions (e.g., Add, Browse Wishlist)."
+      affected_stories: [SETS-017]
+      severity: low
+      recommendation: "Clarify CTA hierarchy: Primary action prominent (Add), secondary action as link (Browse Wishlist). Ensure secondary action doesn't distract from primary."
+
+    - id: "L003"
+      category: "form-validation"
+      issue: "SETS-006 purchase details form doesn't specify validation rules. Are currency values required? Can user save with all optional fields empty?"
+      affected_stories: [SETS-006]
+      severity: low
+      recommendation: "Define field requirements: Purchase price optional but recommended. Tax, shipping optional. Date defaults to today. Validate currency format on input."
+
+user_flow_concerns:
+  - flow: "URL Scrape → Review → Purchase Details → Save"
+    issue: "Step 2 (Review/Edit) only shows for URL flow. Manual entry skips review. Creates inconsistent data quality expectation."
+    suggestion: "Consider requiring review step for manual entry too, or make review optional for both flows with clear indicators of auto-filled vs. manual fields."
+    affected_stories: [SETS-005, SETS-013]
+
+  - flow: "Wishlist 'Got it' → Purchase Modal → Sets Gallery"
+    issue: "Modal pre-fills from Wishlist but doesn't show which fields came from Wishlist vs. what's required. User might miss editing critical fields."
+    suggestion: "Add visual indicators (e.g., pill badges) on pre-filled fields: 'From Wishlist'. Highlight required fields (purchase price, date) differently."
+    affected_stories: [SETS-008]
+
+  - flow: "Add Set → Duplicate Detected → Quantity vs. New Entry Choice"
+    issue: "Decision point adds complexity. User might not understand implications (separate build status tracking, separate purchase records)."
+    suggestion: "Add help text inline: 'Each entry has its own purchase date, price, and build status. Use quantity if items were purchased together.'"
+    affected_stories: [SETS-018]
+
+  - flow: "Build Status Toggle → Optimistic Update → Success Toast"
+    issue: "Toast dismisses after 5 seconds, but undo is time-bound. User might not see [Undo] button in time, especially on mobile."
+    suggestion: "Extend toast timeout to 8-10 seconds for toggle action. Or add persistent undo in detail view (e.g., 'Last action: marked as built [Undo]')."
+    affected_stories: [SETS-009]
+
+  - flow: "Gallery Load → Empty State → Add First Set"
+    issue: "Empty state suggests adding first set or browsing Wishlist but doesn't explain difference. New user might not understand Sets vs. Wishlist."
+    suggestion: "Empty state body: 'Sets = what you own. Wishlist = what you want. Add your first set or see what's in your Wishlist.' Make Wishlist link secondary."
+    affected_stories: [SETS-017]
+
+accessibility_gaps:
+  - gap: "SETS-009 build status toggle uses color (blue built, gray in pieces) without icon backup when toggle is small"
+    wcag_criteria: "WCAG 2.1 Level AA - 1.4.3 Contrast (minimum) and non-color dependent information"
+    affected_stories: [SETS-009]
+    recommendation: "Plan specifies icon use (✓ and 🧱) but detail view design unclear. Confirm all toggle states show both color AND icon/label. Test contrast ratios in both modes."
+
+  - gap: "SETS-010 quantity stepper minus button disables at minimum (1) but disabled button styling not defined"
+    wcag_criteria: "WCAG 2.1 Level AA - 1.4.3 Contrast and 2.1.1 Keyboard"
+    affected_stories: [SETS-010]
+    recommendation: "Define disabled button appearance: Lower opacity? Different color? Ensure disabled state has sufficient contrast. Disabled button should skip in tab order or remain focusable with 'cannot decrease' message."
+
+  - gap: "SETS-019 keyboard shortcuts (B, +/-, M, A) not defined for focus management during modals"
+    wcag_criteria: "WCAG 2.1 Level AA - 2.1.1 Keyboard and 2.4.3 Focus Order"
+    affected_stories: [SETS-019]
+    recommendation: "Clarify: When Add modal is open, should A (add) shortcut be disabled? Should gallery shortcuts work during detail sheet? Define focus trap behavior for modals."
+
+  - gap: "SETS-011 MOC picker modal mentions searchable list but search interaction not specified"
+    wcag_criteria: "WCAG 2.1 Level AA - 3.3.2 Labels or Instructions and 2.1.1 Keyboard"
+    affected_stories: [SETS-011]
+    recommendation: "Define: Focus moves to search field on open. Search field labeled 'Search MOCs'. Results update as user types (no button). Arrow keys navigate results. Enter selects. Escape closes."
+
+  - gap: "SETS-020 swipe gestures (build status toggle) not compatible with screen reader or keyboard users"
+    wcag_criteria: "WCAG 2.1 Level AA - 2.1.3 Keyboard (No Exception) and 2.5.1 Pointer Gestures"
+    affected_stories: [SETS-020]
+    recommendation: "Swipe is mobile enhancement only. Ensure keyboard and tap alternatives exist. On mobile: offer button + swipe. On touch devices with screen reader: button-only interaction should work."
+
+  - gap: "SETS-008 undo toast behavior might be missed by screen reader users if toast announces too quickly"
+    wcag_criteria: "WCAG 2.1 Level AA - 4.1.3 Status Messages"
+    affected_stories: [SETS-008, SETS-009, SETS-010]
+    recommendation: "Define aria-live region: Use 'polite' for toasts so they don't interrupt reading. Include full message: 'Added to Sets. [View] button and [Undo] button available.' Don't rely on time limit for action."
+
+interaction_patterns:
+  - pattern: "Optimistic UI Updates with Undo (SETS-009, SETS-010, SETS-008)"
+    consistency_issue: "Undo behavior inconsistent: SETS-009 uses toast, SETS-010 uses toast, SETS-008 uses toast + navigation. Undo timeout differs by context. No persistent record of recent actions."
+    recommendation: "Standardize: All optimistic updates use toast with [Undo] for 8 seconds. For critical operations (delete, wishlist transfer), add persistent undo button in detail view ('Last action: deleted from wishlist [Undo]')."
+
+  - pattern: "Modal Workflows (Add Modal SETS-005/006, MOC Picker SETS-011, Duplicate Detection SETS-018)"
+    consistency_issue: "Add Modal has 3 steps (URL → Review → Purchase). MOC Picker is single step. Duplicate detection is single decision. No consistent modal terminology."
+    recommendation: "Define modal types: (1) Single-step (confirmation, picker), (2) Multi-step (add flow). Use consistent header, footer buttons ([Back], [Continue], [Cancel]). Breadcrumb or step indicator for multi-step."
+
+  - pattern: "Form Input Fields (SETS-006 Purchase Details, SETS-013 Manual Entry, SETS-011 MOC Search)"
+    consistency_issue: "Fields documented with field names but no specification of inline help, placeholder text, error messages, or auto-complete behavior."
+    recommendation: "Document: For each form, specify (1) Placeholder or hint text, (2) Required vs. optional indicators, (3) Validation error messages, (4) Help text for complex fields (e.g., tax calculation)."
+
+  - pattern: "Loading States (Gallery Load, Scraper Running, MOC Picker Loading)"
+    consistency_issue: "Skeleton cards specified for gallery but no loading state defined for forms, modals, or async operations like scraping."
+    recommendation: "Define: (1) Gallery: skeleton cards, (2) Forms with async (scraper, MOC fetch): button loader or spinner overlay, (3) Picker: skeleton list items. All should allow cancel if applicable."
+
+  - pattern: "Empty States (SETS-017)"
+    consistency_issue: "Design defined but inconsistent depth. 'Empty collection' and 'no search results' have different structures and guidance."
+    recommendation: "Create empty state pattern: (1) Icon, (2) Heading, (3) Description, (4) Primary CTA, (5) Optional secondary link. Apply consistently across all 4 empty scenarios."
+
+mobile_concerns:
+  - concern: "SETS-020 swipe gesture on card might conflict with native mobile gestures (pull-to-refresh, horizontal swipe navigation)"
+    affected_stories: [SETS-020]
+    recommendation: "Define swipe direction clearly: vertical swipe only for build status (up = built, down = in pieces)? Or horizontal (left = toggle)? Test conflict with platform nav patterns. Provide non-swipe alternative always available."
+
+  - concern: "SETS-006 and SETS-013 forms with many input fields might create tall scroll on mobile. Date picker dropdown could go off-screen on small devices."
+    affected_stories: [SETS-006, SETS-013, SETS-020]
+    recommendation: "Test form height on 375px width screens. Consider: stacking layout, collapsible sections, native date picker on mobile. Ensure all inputs fit within viewport height to prevent stuck fixed buttons."
+
+  - concern: "SETS-011 MOC picker (multi-select list) might be unwieldy on mobile with many MOCs. Search becomes critical."
+    affected_stories: [SETS-011, SETS-020]
+    recommendation: "Mobile enhancement: Search field always visible and sticky at top. Consider chips at bottom showing selected MOCs. Limit initial render to 10 items with 'Load more'. Test with 50+ MOCs."
+
+  - concern: "Detail view as 'bottom sheet style' (SETS-020) but interaction with long content unclear. Can user scroll sheet and close simultaneously?"
+    affected_stories: [SETS-020]
+    recommendation: "Define behavior: Sheet scrolls internally. Header (with close X) remains sticky. User can swipe down on header to close or tap X. Ensure scroll doesn't activate close gesture accidentally."
+
+  - concern: "SETS-009 celebration animation on 'Built' might trigger motion sensitivity issues. No mention of prefers-reduced-motion"
+    affected_stories: [SETS-009, SETS-020]
+    recommendation: "Respect @media (prefers-reduced-motion: reduce). Remove animation entirely or use subtle opacity/scale. Test with users who have vestibular disorders."
+
+empty_error_states:
+  - state: "Empty Gallery (New Collection)"
+    coverage: complete
+    notes: "Design: 'Your collection is empty. Add your first set!' with Add CTA and Wishlist link. Good guidance. Icon/illustration not mentioned—consider adding to improve visual appeal."
+
+  - state: "Empty Gallery (After Filter/Search)"
+    coverage: complete
+    notes: "Design: 'No sets match your filters.' with clear filters button. Considers user might have applied incompatible filters. Good recovery path."
+
+  - state: "Empty Search Results (within full collection)"
+    coverage: partial
+    notes: "Not explicitly mentioned. Design might be same as filter, but distinct scenarios could benefit from different messaging: 'No results for \"[search]\". Try different keywords or clear search.'"
+
+  - state: "No MOC Links (Detail View)"
+    coverage: complete
+    notes: "Design: 'This set isn't linked to any MOCs. [Link to MOC]' in detail view. Clear and actionable."
+
+  - state: "Scraper Error (URL Invalid or Connection Failed)"
+    coverage: missing
+    notes: "Not documented. SETS-005 mentions 'handle scraper failures gracefully' but no error state design. High priority: user needs clear guidance on how to retry or use manual entry."
+
+  - state: "Form Submission Failure (API Error)"
+    coverage: partial
+    notes: "Only mentioned for toggle/quantity failures as toast + retry. No design for form submission failures (add, edit, delete). Consider: toast vs. inline error, retry placement, error message clarity."
+
+  - state: "Quantity Stepper Below Minimum (1)"
+    coverage: partial
+    notes: "Minus button disables at minimum, but no confirmation modal specified. SETS-010 mentions 'prompt to delete instead' but exact design not shown. Define dialog text and CTA layout."
+
+  - state: "Duplicate Set Detected (Add Same Set Number)"
+    coverage: complete
+    notes: "Design specified with two options and decision modal. Clear and explains implications. Could benefit from quantity badge showing existing copies."
+
+  - state: "Loading States (Gallery, Forms, Async Operations)"
+    coverage: partial
+    notes: "Skeleton cards for gallery loading specified. No design for modal loading (scraper, MOC picker fetch). Forms with validation shouldn't show loading but API errors should."
+
+  - state: "Undo Timeout (Toast Dismissed Before User Taps Undo)"
+    coverage: missing
+    notes: "Toast dismisses after 5-8 seconds but no fallback if user misses [Undo] button. Consider: permanent action record in detail view, or redo possibility. Define user expectation."
+
+recommendations_summary:
+  - title: "Priority 1: Standardize Optimistic Update Patterns"
+    items:
+      - "Define consistent timeout (8-10 seconds for user to act), toast placement, and undo recovery flow across SETS-008, SETS-009, SETS-010."
+      - "For critical operations (wishlist transfer, delete), add persistent undo record in detail view."
+      - "Test undo button visibility on mobile (not covered by bottom sheet)."
+
+  - title: "Priority 2: Clarify Scraper Error Handling (SETS-005)"
+    items:
+      - "Design error states for: connection failure, unsupported URL, no product found, timeout."
+      - "Define next actions: retry, manual entry fallback, specific error guidance."
+      - "Test with real URLs to LEGO.com and alt-brick stores."
+
+  - title: "Priority 3: Accessibility Pass (SETS-019 Preparation)"
+    items:
+      - "Lock down keyboard shortcut behavior during modals and form focus."
+      - "Test disabled button states (quantity stepper at minimum) for sufficient contrast and keyboard access."
+      - "Verify toast announcements with screen reader (use aria-live=polite, include all interactive elements in announcement)."
+      - "Test swipe gesture conflict with native mobile navigation."
+
+  - title: "Priority 4: Form Field Specification"
+    items:
+      - "Document all form fields (SETS-006, SETS-013): placeholder text, validation, error messages, help text."
+      - "Define which fields auto-populate from scraper (SETS-005) and how to indicate them visually."
+      - "Specify currency input behavior (format, symbol, decimal places)."
+
+  - title: "Priority 5: Mobile Testing Plan (SETS-020 Preparation)"
+    items:
+      - "Test swipe gesture on actual devices. Ensure non-swipe alternative (button) always available."
+      - "Test form height on 375px screens. Ensure sticky headers don't cover inputs."
+      - "Test bottom sheet scroll behavior with long content."
+      - "Test 44px touch targets with actual user input (not just visual inspection)."
+
+deliverables_checklist:
+  - id: "D001"
+    item: "Interaction Pattern Documentation: Standardized specs for optimistic updates, modals, forms, and empty states"
+    status: pending
+    owner: ux
+
+  - id: "D002"
+    item: "Scraper Error State Designs: 4 main error scenarios with user guidance and recovery paths"
+    status: pending
+    owner: ux
+
+  - id: "D003"
+    item: "Form Field Specification: All form fields documented with labels, placeholders, validation, and help text"
+    status: pending
+    owner: ux
+
+  - id: "D004"
+    item: "Accessibility Audit for SETS-019: Keyboard shortcuts, focus management, and screen reader testing"
+    status: pending
+    owner: qa
+
+  - id: "D005"
+    item: "Mobile Testing Report for SETS-020: Swipe gestures, touch targets, form height, bottom sheet behavior"
+    status: pending
+    owner: qa
+
+  - id: "D006"
+    item: "Animation Specification: Celebration effect timing, transition timings, and prefers-reduced-motion compliance"
+    status: pending
+    owner: ux

@@ -11,7 +11,16 @@ triggers: ["/elab-epic"]
 
 **Model**: haiku
 
-Review epic from platform perspective. Return YAML only.
+Review epic from platform perspective with **MVP focus**. Return YAML only.
+
+## MVP-Critical Definition
+
+An issue is **MVP-critical** ONLY if it **blocks the core user journey**:
+- Infrastructure prevents core feature from running
+- Deployment blocker for core functionality
+- Missing database/storage for core data
+
+Everything else is a **future improvement** (observability, optimization, scaling).
 
 ## Input
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
@@ -24,7 +33,7 @@ Read from `{FEATURE_DIR}/`:
 - `roadmap.md`
 
 ## Task
-Analyze infrastructure, deployment, observability.
+Analyze platform needs for core journey - **MVP-critical items only in main findings**.
 
 ## Output Format (YAML only)
 
@@ -32,48 +41,38 @@ Analyze infrastructure, deployment, observability.
 perspective: platform
 verdict: READY | CONCERNS | BLOCKED
 
-infra_impact:
-  - story: PREFIX-XXX
-    changes: "one line or none"
-    deploy_impact: high | medium | low | none
-    monitoring_needs: "one line or none"
+infra:
+  core_infra_exists: true | false
+  deploy_path_clear: true | false
 
-deployment_risks:
-  breaking_changes: true | false
-  feature_flags_needed: true | false
-  rollback_plan: true | false
-  db_migrations: true | false
-
-observability:
-  logging: adequate | gaps | missing
-  metrics: adequate | gaps | missing
-  alerting: adequate | gaps | missing
-
-performance:
-  - story: PREFIX-XXX
-    impact: high | medium | low | none
-    bottleneck_risk: "one line or null"
-
-critical: []
-high:
+# MVP-CRITICAL ONLY - blocks core journey deployment
+mvp_blockers:
   - id: PLAT-001
-    issue: "one line"
+    issue: "core feature cannot deploy because..."
     stories: [PREFIX-XXX]
-    action: "one line"
+    action: "required fix"
 
-medium: []
+missing_mvp_stories:
+  - title: "required infra setup"
+    gap: "core feature needs..."
 
-cost_impact:
-  estimated_monthly: "$X or negligible"
-  notes: "one line or null"
+# FUTURE (observability, optimization, tracked separately by aggregator)
+future:
+  platform_improvements:
+    - suggestion: "one line"
+      impact: high | medium | low
 
-missing_stories:
-  - title: "suggested infra story"
-    gap: "what's needed"
-    priority: P0 | P1 | P2
+  observability_gaps:
+    - area: "logging | metrics | alerting"
+      suggestion: "one line"
 
-recommendations:
-  - "one line recommendation"
+  suggested_stories:
+    - title: "platform enhancement"
+      gap: "what's needed"
+      priority: P1 | P2
+
+  recommendations:
+    - "one line recommendation"
 ```
 
 ## Rules

@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-29T17:30:00Z"
+updated_at: "2026-01-30T22:22:00Z"
 ---
 
 # WISH Stories Index
@@ -15,13 +15,18 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 2 |
+| completed | 6 |
 | in-progress | 0 |
-| backlog | 9 |
-| elaboration | 2 |
-| ready-to-work | 16 |
-| pending | 1 |
-| deferred | 1 |
+| review | 0 |
+| ready-for-qa | 1 |
+| uat | 1 |
+| in-qa | 0 |
+| backlog | 13 |
+| elaboration | 0 |
+| ready-to-work | 15 |
+| pending | 10 |
+| deferred | 2 |
+| BLOCKED | 1 |
 
 ---
 
@@ -154,7 +159,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005a: Drag-and-drop reordering with dnd-kit
 
-**Status:** Draft
+**Status:** completed
 **Depends On:** WISH-2002, WISH-2003, WISH-2004
 **Phase:** 4 - UX Polish
 
@@ -173,7 +178,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005b: Optimistic updates and undo flow
 
-**Status:** Draft
+**Status:** uat
 **Depends On:** WISH-2005a
 **Phase:** 4 - UX Polish
 
@@ -184,6 +189,12 @@ Stories with all dependencies satisfied (can be worked in parallel):
 **Goal:** Provide immediate visual feedback and recovery mechanism for reorder operations
 
 **Risk Notes:** Optimistic state management requires careful handling of out-of-order operations and undo semantics
+
+**Code Review Verdict:** PASS (2026-01-30) - All 6 review workers passed (lint, style, syntax, security, typecheck, build). 24 unit tests passed. Zod schema compliance verified.
+
+**QA Verdict:** PASS (2026-01-31) - All 20 acceptance criteria verified, 24 unit tests pass, 12 E2E tests pass, architecture compliant with CLAUDE.md
+
+**Story File:** `plans/future/wish/UAT/WISH-2005b/WISH-2005b.md`
 
 ---
 
@@ -207,7 +218,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2008: Authorization layer testing and policy documentation
 
-**Status:** ready-to-work
+**Status:** completed
 **Depends On:** WISH-2001, WISH-2002, WISH-2003, WISH-2004, WISH-2005
 **Phase:** 3+ - Security & Testing
 
@@ -224,7 +235,13 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** Epic Elaboration - Security & QA perspective
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2008/WISH-2008.md`
+**Story File:** `plans/future/wish/UAT/WISH-2008/WISH-2008.md`
+
+**Implementation Notes:** Verification story completed 2026-01-29. Added 42 middleware tests (auth + rate limiting), rate limiting middleware (10 failures/5 min per IP), audit logging for 403/404 events, security policy documentation, and HTTP test file with 24+ scenarios.
+
+**Code Review Verdict:** PASS (2026-01-29) - All 6 review workers passed (lint, style, syntax, security, typecheck, build). 217 tests passed including 42 new WISH-2008 tests.
+
+**QA Verdict:** PASS (2026-01-30) - All 24 acceptance criteria verified with concrete evidence, 217 tests passed (42 new), security policy documented, architecture compliant, rate limiting prevents brute-force attacks.
 
 ---
 
@@ -304,9 +321,63 @@ Follow-up from QA Elaboration of WISH-2009 (Items Marked Out-of-Scope)
 
 ---
 
+## WISH-20260: Automatic Retry Mechanism for Failed Flag Schedules
+
+**Status:** pending
+**Depends On:** WISH-2119
+**Follow-up From:** WISH-2119
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Add automatic retry mechanism with exponential backoff to flag scheduling infrastructure from WISH-2119. Failed schedules will automatically retry up to 3 times with increasing delays (2, 4, 8 minutes) before requiring manual intervention.
+
+**Features:**
+- Exponential backoff retry logic (2^(retry_count + 1) minutes)
+- Configurable max retries (default: 3, via environment variable)
+- Jitter to prevent thundering herd (0-30 seconds)
+- Retry metadata tracking in database (retry_count, next_retry_at, last_error)
+- CloudWatch logging for retry attempts and final failures
+
+**Database Schema:**
+- Add retry columns to feature_flag_schedules table: retry_count, max_retries, next_retry_at, last_error
+- Index on next_retry_at for efficient cron job queries
+
+**Packages Affected:**
+- `apps/api/lego-api/jobs/` - Enhanced cron job with retry logic
+- `packages/backend/database-schema/` - Migration for retry columns
+- `apps/api/lego-api/domains/config/adapters/` - Schedule repository updates
+
+**Benefits:**
+- Reduces admin toil for transient failures (database errors, network issues)
+- Improves reliability of critical scheduled flag updates (holiday promotions, maintenance windows)
+- Prevents delays in flag updates requiring manual intervention
+
+**Acceptance Criteria:** 10 ACs covering database migration, exponential backoff calculation, retry query logic, max retries enforcement, successful retry handling, CloudWatch logging, and comprehensive test coverage.
+
+**Complexity:** Medium (cron job enhancement + database schema + retry logic)
+
+**Effort:** Medium (2-3 points)
+
+**Priority:** P2 (Operational enhancement for Phase 3+)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #4)
+
+**Original Finding:** "Automatic retry for failed schedules - Manual intervention required for failed schedules in MVP"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves reliability and reduces admin toil)
+**Effort:** Medium (retry logic + database schema + backoff calculation)
+
+**Story File:** `plans/future/wish/backlog/WISH-20260/WISH-20260.md`
+
+---
+
 ## WISH-2120: Test utility helpers (createMockFile, mockS3Upload) for S3 upload testing
 
-**Status:** backlog
+**Status:** ready-to-work
 **Depends On:** WISH-2011
 **Follow-up From:** WISH-2011
 **Phase:** 2 - Infrastructure
@@ -348,7 +419,7 @@ Follow-up from QA Elaboration of WISH-2011 (Enhancement Opportunity #3)
 **Impact:** Medium (improved test developer experience)
 **Effort:** Low
 
-**Story File:** `plans/future/wish/backlog/WISH-2120/WISH-2120.md`
+**Story File:** `plans/future/wish/elaboration/WISH-2120/WISH-2120.md`
 
 ---
 
@@ -403,8 +474,8 @@ Follow-up from QA Elaboration of WISH-2011 (Follow-up Stories Suggested - Findin
 
 ## WISH-2010: Shared Zod schemas and types setup
 
-**Status:** ready-to-work
-**Depends On:** WISH-2007
+**Status:** completed
+**Depends On:** none
 **Phase:** 2 - Foundation
 
 **Feature:** Centralized schema definitions for wishlist items, filters, reorder operations. Shared between frontend validation and backend API layer. Pivot: Align existing schemas with database, update exports, add documentation.
@@ -424,7 +495,7 @@ Follow-up from QA Elaboration of WISH-2011 (Follow-up Stories Suggested - Findin
 ## WISH-2110: Custom Zod error messages for better form UX
 
 **Status:** backlog
-**Depends On:** WISH-2010
+**Depends On:** none
 **Follow-up From:** WISH-2010
 **Phase:** 2 - Foundation
 
@@ -591,28 +662,30 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 
 ---
 
-## WISH-2015: Form Autosave to localStorage
+## WISH-2015: Sort Mode Persistence (localStorage)
 
-**Status:** ready-to-work
-**Depends On:** WISH-2002
-**Follow-up From:** WISH-2002
+**Status:** completed
+**Depends On:** WISH-2001
+**Follow-up From:** WISH-2001
 **Phase:** 4 - UX Polish
 
 ### Scope
 
-Automatically save form state during user input and restore it when the user returns to the form, preventing data loss from accidental navigation or browser issues.
+Automatically persist wishlist sort mode preference to localStorage and restore it when users return, providing personalized sorting experience across sessions.
 
 **Features:**
-- Autosave form fields to localStorage during typing (debounced)
-- Restore form state on page load if draft exists
-- Clear draft on successful form submission
-- "Restore draft" banner with dismiss option
+- Save sort preference to localStorage on user selection
+- Restore sort mode on page load if previously set
+- Clear localStorage on logout
+- Handle invalid values gracefully with Zod validation
+- Support incognito mode with fallback
 
 **Packages Affected:**
-- `apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx`
-- `apps/web/app-wishlist-gallery/src/hooks/useFormAutosave.ts` (new)
+- `apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts` (created)
+- `apps/web/app-wishlist-gallery/src/hooks/useWishlistSortPersistence.ts` (created)
+- `apps/web/app-wishlist-gallery/src/pages/main-page.tsx` (modified)
 
-**Acceptance Criteria:** 12 ACs covering autosave, restore, clear on submit, banner UX, and edge cases.
+**Acceptance Criteria:** 14 ACs covering persistence, restoration, error handling, accessibility, and test coverage.
 
 **Complexity:** Small
 
@@ -620,7 +693,9 @@ Automatically save form state during user input and restore it when the user ret
 
 **Priority:** P2 (UX enhancement)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2015/WISH-2015.md`
+**QA Verdict:** PASS (2026-01-29) - All 11/14 ACs verified. 2 ACs acceptable partial (logout integration, E2E tests). 33 unit tests pass, TypeScript compilation pass, architecture compliant.
+
+**Story File:** `plans/future/wish/UAT/WISH-2015/WISH-2015-new/WISH-2015.md`
 
 ---
 
@@ -929,7 +1004,7 @@ Follow-up from QA Elaboration of WISH-2009 (Gap #2 - AC 18 follow-up)
 
 ## WISH-2039: User-level targeting for feature flags
 
-**Status:** ready-to-work
+**Status:** BLOCKED
 **Depends On:** WISH-2009
 **Follow-up From:** WISH-2009
 **Phase:** 3 - Infrastructure
@@ -975,7 +1050,8 @@ Follow-up from QA Elaboration of WISH-2009 (Enhancement Opportunity - Non-goals 
 
 ## WISH-2047: IP/Geolocation Logging for Authorization Events
 
-**Status:** pending
+**Status:** deferred
+**Deferral Reason:** Not MVP - observability enhancement, defer to post-launch
 **Depends On:** WISH-2008
 **Follow-up From:** WISH-2008
 **Phase:** 5 - Observability
@@ -1025,7 +1101,7 @@ Follow-up from QA Elaboration of WISH-2008 (Enhancement Opportunity #9)
 
 ## WISH-2022: Client-side Image Compression
 
-**Status:** elaboration
+**Status:** ready-to-work
 **Depends On:** WISH-2002
 **Follow-up From:** WISH-2002
 **Phase:** 4 - UX Polish
@@ -1070,9 +1146,102 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 
 ---
 
+
+## WISH-2023: Add Compression Failure Telemetry
+
+**Status:** backlog
+**Depends On:** WISH-2022
+**Follow-up From:** WISH-2022
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Track compression failures via CloudWatch metrics and structured logs to identify patterns by format, size, browser, and error type. Enables data-driven improvements to compression logic and fallback behavior from WISH-2022.
+
+**Features:**
+- Compression failure logging with structured metadata (format, size, browser, error type)
+- Backend telemetry endpoint `POST /api/observability/compression-failures`
+- CloudWatch Metrics namespace: `Wishlist/ImageCompression`
+- Metrics: `CompressionFailureCount`, `CompressionFailureRate`
+- Dimensions: `Format`, `SizeBucket`, `Browser`, `ErrorType`
+- CloudWatch Logs structured JSON format
+- Fire-and-forget telemetry (non-blocking, 2-second timeout)
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/compressionTelemetry.ts` (new) - Frontend telemetry helpers
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Add error logging
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Instrument failures
+- `apps/api/lego-api/domains/observability/routes.ts` - Telemetry endpoint
+- `apps/api/lego-api/core/observability/metrics.ts` - CloudWatch metrics publisher
+
+**Acceptance Criteria:** 12 ACs covering error logging, telemetry endpoint, CloudWatch Metrics/Logs, size bucketing, browser detection, error classification, privacy compliance, and documentation.
+
+**Complexity:** Small-Medium (telemetry endpoint + CloudWatch integration)
+
+**Effort:** 2 points
+
+**Priority:** P2 (Observability enhancement for Phase 4)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2022 (Gaps Identified - Finding #3)
+
+**Original Finding:** Compression failure telemetry - Track compression failures (format, size, browser, error) via CloudWatch/analytics to identify patterns and improve fallback logic
+
+**Category:** Gap
+**Impact:** Medium (Observability improvement for compression failures)
+**Effort:** Low (CloudWatch metrics + error logging)
+
+**Story File:** `plans/future/wish/backlog/WISH-2023/WISH-2023.md`
+
+---
+## WISH-2046: Client-side Image Compression Quality Presets
+
+**Status:** pending
+**Depends On:** WISH-2022
+**Follow-up From:** WISH-2022
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Add user-selectable compression quality presets to the client-side image compression feature from WISH-2022. Enables users to choose between "Low bandwidth" (0.6 quality, 1200px), "Balanced" (0.8 quality, 1920px - default), and "High quality" (0.9 quality, 2400px) presets based on their needs.
+
+**Features:**
+- Three compression quality presets: Low bandwidth, Balanced (default), High quality
+- Preset selector UI in upload form (radio buttons or dropdown)
+- Estimated file size display for each preset
+- localStorage persistence of selected preset
+- Toast notification showing which preset was used
+- "Skip compression" checkbox overrides preset selection
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Preset definitions
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/` - Preset selector UI
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Pass preset to compression
+
+**Acceptance Criteria:** 14 ACs covering preset definitions, UI selector, localStorage persistence, compression settings application, toast notifications, and test coverage
+
+**Complexity:** Small (extends WISH-2022 compression logic)
+
+**Effort:** 2 points
+
+**Priority:** P2 (UX enhancement for Phase 4)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2022 (Gaps Identified - Finding #2)
+
+**Original Finding:** Compression quality presets - Add user-selectable presets for different use cases (mobile data plans, quality prioritization, slow connections)
+
+**Category:** Gap
+**Impact:** Medium (enables user control over quality/size trade-offs)
+**Effort:** Low (extends existing compression logic)
+
+---
+
 ## WISH-2027: Enum Modification Procedure for Wishlist Stores and Currencies
 
-**Status:** elaboration
+**Status:** ready-to-work
 **Depends On:** WISH-2007
 **Follow-up From:** WISH-2007
 **Phase:** 1 - Foundation
@@ -1088,7 +1257,179 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 
 **Source:** Follow-up from QA Elaboration of WISH-2007 (Finding #2)
 
-**Story File:** `plans/future/wish/elaboration/WISH-2027/WISH-2027.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-2027/WISH-2027.md`
+
+**Elaboration Notes:** PASS - Story is well-structured documentation task with 15 acceptance criteria. All audit checks pass, no MVP blockers identified, scope boundaries clear.
+
+---
+
+## WISH-2057: Schema Evolution Policy and Versioning Strategy
+
+**Status:** ready-to-work
+**Depends On:** WISH-2007
+**Follow-up From:** WISH-2007
+**Phase:** 1 - Foundation
+
+**Feature:** Document comprehensive schema evolution policies, versioning strategy, and procedures for safe database schema modifications across all environments. Establish governance for schema changes and provide runbooks for common scenarios.
+
+**Packages Affected:**
+- `packages/backend/database-schema/docs/` - 4 new documentation files (SCHEMA-EVOLUTION-POLICY.md, ENUM-MODIFICATION-RUNBOOK.md, SCHEMA-VERSIONING.md, SCHEMA-CHANGE-SCENARIOS.md)
+
+**Goal:** Document comprehensive schema evolution policies and procedures before any future schema modifications occur to prevent production issues and ensure safe schema evolution.
+
+**Risk Notes:** PostgreSQL enums are immutable and present unique challenges. Without documented strategy, developers may introduce breaking changes or require emergency rollbacks.
+
+**Source:** QA Discovery Notes from WISH-2007 Elaboration (Enhancement Opportunity #6)
+
+**Story File:** `plans/future/wish/ready-to-work/WISH-2057/WISH-2057.md`
+
+**Elaboration Notes:** CONDITIONAL PASS (2026-01-29) - Story is well-structured with clear scope and 20 acceptance criteria. All audit checks pass. One minor issue identified: existing `packages/backend/database-schema/docs/WISHLIST-SCHEMA-EVOLUTION.md` (155 lines) already addresses some schema evolution concerns. Implementation should clarify relationship (replace, extend, or coexist).
+
+**Sizing:** 20 Acceptance Criteria covering policy documentation, enum modification runbooks, versioning strategy, common scenarios, and governance
+
+---
+
+## WISH-20180: CI Job to Validate Schema Changes Against Policy
+
+**Status:** pending
+**Depends On:** WISH-2057
+**Follow-up From:** WISH-2057
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Implement automated CI validation of database schema changes against schema evolution policies from WISH-2057. Provide developers with immediate feedback on policy violations during PR submission, reducing manual review burden and preventing policy violations from reaching production.
+
+**Features:**
+- GitHub Actions workflow triggered on schema changes
+- Validation script for migration naming, breaking changes, and policy compliance
+- PR comment with validation results
+- CI pass/fail based on violation severity
+- Breaking change detection (column/table drops, enum removals, type changes)
+- Non-breaking change validation (optional columns, enum additions, indexes)
+- Migration journal validation
+
+**Packages Affected:**
+- `.github/workflows/` - New CI workflow for schema validation
+- `packages/backend/database-schema/scripts/` - Validation script implementation
+- `packages/backend/database-schema/docs/` - CI validation documentation
+
+**Acceptance Criteria:** 20 ACs covering CI workflow setup, migration file validation, breaking change detection, non-breaking change validation, and governance documentation
+
+**Complexity:** Medium (CI workflow + SQL parsing + validation logic)
+
+**Effort:** 3 points
+
+**Priority:** P1 (Automated governance for Phase 2)
+
+**Story File:** `plans/future/wish/backlog/WISH-20180/WISH-20180.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Finding #1)
+
+**Original Finding:** "CI job to validate schema changes against policy (automated governance)"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (prevents policy violations from reaching production)
+**Effort:** Medium (CI workflow + validation script)
+
+---
+
+## WISH-20190: Schema Drift Detection Tool (db:check command)
+
+**Status:** pending
+**Depends On:** WISH-2057
+**Follow-up From:** WISH-2057
+**Phase:** 1 - Foundation
+
+### Scope
+
+Implement a `db:check` command that compares the current database schema against the expected schema from Drizzle migrations, detecting drift and reporting mismatches for manual review and remediation. Provides proactive detection of schema inconsistencies across development, staging, and production environments.
+
+**Features:**
+- CLI command `pnpm db:check` with environment flag support
+- Schema introspection using Drizzle introspection API
+- Drift detection categories: missing/extra tables, column mismatches, type differences, constraint differences, enum value differences, index differences
+- Human-readable and JSON output modes for CI integration
+- Exit code 0 for no drift, exit code 1 for drift detected
+- Remediation suggestions in output
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/check-schema-drift.ts` - Main drift detection script (new)
+- `packages/backend/database-schema/src/drift-detector/` - Drift detection utilities (new)
+- `packages/backend/database-schema/docs/SCHEMA-DRIFT-DETECTION.md` - Usage documentation (new)
+- `packages/backend/database-schema/package.json` - Add `db:check` script
+
+**Acceptance Criteria:** 20 ACs covering core functionality, output formatting, enum/constraint detection, error handling, edge cases, documentation, and testing
+
+**Complexity:** Medium (CLI script + Drizzle introspection + schema comparison)
+
+**Effort:** 3 points
+
+**Priority:** P1 (Critical operational tool for Phase 1)
+
+**Story File:** `plans/future/wish/backlog/WISH-20190/WISH-20190.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Finding #2)
+
+**Original Finding:** "Schema drift detection tool (`db:check` command from WISH-2007 Enhancement #3)"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (proactive detection of schema inconsistencies)
+**Effort:** Medium (CLI script + introspection + comparison logic)
+
+---
+
+## WISH-20200: Automated Rollback Script Generation
+
+**Status:** pending
+**Depends On:** WISH-2057
+**Follow-up From:** WISH-2057
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Automate the generation of rollback scripts from migration metadata to reduce manual error risks, improve incident response time, and ensure consistent rollback procedures across all environments. Extends the `schema_versions` metadata table from WISH-2057 with rollback script storage and provides CLI commands for preview and execution.
+
+**Features:**
+- PostgreSQL AST parser to analyze migration SQL and generate inverse operations
+- Rollback script generation for supported operations (ADD COLUMN → DROP COLUMN, CREATE INDEX → DROP INDEX, etc.)
+- Storage of generated scripts in `schema_versions.rollback_script` column
+- CLI commands: `pnpm db:rollback --version=X.Y.Z` (preview), `pnpm db:rollback --version=X.Y.Z --execute` (execute)
+- Safety validations: rollback_safe boolean, confirmation prompts, error handling
+- Warnings for unsafe migrations (DROP COLUMN, enum modifications, etc.)
+
+**Packages Affected:**
+- `packages/backend/database-schema/src/rollback/` - Rollback generator (new)
+- `packages/backend/database-schema/src/cli/` - Rollback CLI command (new)
+- `packages/backend/database-schema/src/migrations/` - Schema updates for rollback metadata
+
+**Infrastructure:**
+- Database schema: Add `rollback_script` (TEXT) and `rollback_applied_at` (TIMESTAMP) columns to `schema_versions` table
+- npm dependency: `pgsql-parser` for PostgreSQL SQL parsing
+
+**Acceptance Criteria:** 20 ACs covering rollback script generation, CLI commands, database schema updates, integration with migration flow, safety validations, and comprehensive test coverage
+
+**Complexity:** Medium (AST parsing + CLI tooling + database schema updates)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Infrastructure enhancement for Phase 2)
+
+**Story File:** `plans/future/wish/backlog/WISH-20200/WISH-20200.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Finding #3)
+
+**Original Finding:** "Automated rollback script generation based on migration metadata"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (reduces manual error risks, improves incident response time)
+**Effort:** Medium (AST parser integration + CLI + database schema)
 
 ---
 
@@ -1136,5 +1477,581 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 **Category:** Enhancement Opportunity
 **Impact:** High (significantly improves perceived performance and user experience)
 **Effort:** Medium (requires careful state management and error recovery)
+
+---
+
+## WISH-2045: HEIC/HEIF Image Format Support
+
+**Status:** backlog
+**Depends On:** WISH-2022
+**Follow-up From:** WISH-2022
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Enable HEIC/HEIF image uploads with automatic conversion to JPEG during the compression workflow. Modern iPhones (iOS 11+) default to HEIC format, which is not supported by browser-image-compression library from WISH-2022.
+
+**Features:**
+- HEIC/HEIF file detection by MIME type and file extension
+- Automatic HEIC to JPEG conversion using `heic2any` library
+- Conversion progress indicator: "Converting HEIC to JPEG... X%"
+- Seamless integration with existing compression workflow from WISH-2022
+- Fallback to original HEIC upload on conversion failure
+- Browser compatibility detection and graceful degradation
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Add HEIC detection and conversion
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Update upload flow
+
+**Infrastructure:**
+- New dependency: `heic2any` npm package (MIT license, 500KB)
+
+**Acceptance Criteria:** 16 ACs covering HEIC detection, conversion workflow, error handling, browser compatibility, progress indicators, filename preservation, test coverage, and documentation.
+
+**Complexity:** Medium (library integration + conversion workflow + error handling)
+
+**Effort:** 3 points
+
+**Priority:** P1 (Blocks iPhone users from compression benefits in WISH-2022)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2022 (Gap #1)
+
+**Original Finding:** Modern iPhones use HEIC by default; browser-image-compression needs plugin or server fallback for HEIC conversion
+
+**Category:** Gap
+**Impact:** High (Modern iPhone users cannot use compression workflow)
+**Effort:** Medium (requires additional library integration)
+
+**Story File:** `plans/future/wish/backlog/WISH-2045/WISH-2045.md`
+
+---
+
+## WISH-2049: Background Compression for Perceived Performance
+
+**Status:** backlog
+**Depends On:** WISH-2022
+**Follow-up From:** WISH-2022
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Start compressing images immediately when selected (before form is filled), so compression runs in background while user fills form. By the time user submits, compression is already complete, eliminating compression wait time from the critical path.
+
+**Features:**
+- Compression starts on image selection (onChange event)
+- Background compression using web worker (non-blocking)
+- Form remains interactive during compression
+- Preview updates when compression completes
+- Skip compression step during upload if already complete
+- Toast notification when background compression completes
+- Cancellation logic for image changes
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts`
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/`
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts`
+
+**Acceptance Criteria:** 13 ACs covering background compression trigger, web worker integration, compression state management, image change handling, preview updates, toast notifications, and E2E test coverage.
+
+**Complexity:** Small-Medium (Refactor compression timing + state management)
+
+**Effort:** 2 points
+
+**Priority:** P2 (UX enhancement for Phase 4)
+
+**Story File:** `plans/future/wish/backlog/WISH-2049/WISH-2049.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunity #2)
+
+**Original Finding:** Background compression - Start compressing image as soon as selected (before form is filled). By the time user submits, compression is already complete. Reduces perceived latency.
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (62% reduction in perceived latency for typical 5MB images)
+**Effort:** Low (Minor refactoring of compression timing from WISH-2022)
+
+---
+
+## WISH-2050: Compression Preview Comparison
+
+**Status:** backlog
+**Depends On:** WISH-2022
+**Follow-up From:** WISH-2022
+**Phase:** 5 - UX Polish
+
+### Scope
+
+Provide a visual comparison of original vs. compressed images to help users understand quality trade-offs and build trust in the compression feature. Implements side-by-side or slider comparison UI after compression completes.
+
+**Features:**
+- Slider comparison UI showing original (left) vs. compressed (right) images
+- File size and dimensions labels for both versions
+- Keyboard-accessible slider with arrow key control
+- Toggle on/off with "Show comparison" checkbox (localStorage preference)
+- Responsive layout: vertical stack on mobile (< 768px)
+- Tooltips explaining quality trade-offs
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/components/ImageComparisonPreview/` (new)
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx`
+- `apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx`
+
+**Acceptance Criteria:** 12 ACs covering comparison UI rendering, slider interaction, file size/dimension labels, keyboard accessibility, localStorage preference persistence, responsive layout, and test coverage.
+
+**Complexity:** Medium (Comparison UI + responsive design + preference persistence)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Trust-building UX enhancement for Phase 5)
+
+**Story File:** `plans/future/wish/backlog/WISH-2050/WISH-2050.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunities - Finding #3)
+
+**Original Finding:** Compression preview comparison - Side-by-side or slider comparison of original vs compressed image. Helps users understand quality trade-offs and builds trust in compression feature.
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves user understanding and trust in compression)
+**Effort:** Medium (dual image preview and comparison UI)
+
+**Note:** Marked out-of-scope during WISH-2022 elaboration due to UI complexity, but documented as follow-up for future consideration.
+
+---
+
+## WISH-2048: WebP Format Conversion
+
+**Status:** pending
+**Depends On:** WISH-2022
+**Follow-up From:** WISH-2022
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Convert compressed images to WebP format instead of JPEG to achieve 25-35% additional size savings while maintaining acceptable visual quality. Simple configuration change to browser-image-compression library from WISH-2022.
+
+**Features:**
+- Change output format from JPEG to WebP in compression settings
+- Maintain existing compression quality (0.8) and dimensions (1920px)
+- 25-35% smaller file sizes compared to JPEG at equivalent visual quality
+- Browser compatibility check with fallback to JPEG for Safari < 14
+- WebP support: Chrome 32+, Firefox 65+, Safari 14+, Edge 18+ (97%+ coverage)
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Update fileType to 'image/webp'
+
+**Benefits:**
+- Additional storage cost savings (25-35% beyond WISH-2022's compression)
+- Faster page loads with smaller image files
+- Better compression efficiency than JPEG
+- Already supported by browser-image-compression library
+
+**Acceptance Criteria:** 14 ACs covering WebP conversion, quality settings, file size comparison, toast notifications, filename handling, browser compatibility, fallback logic, and test coverage.
+
+**Complexity:** Small (configuration change only)
+
+**Effort:** Low (2 points)
+
+**Priority:** P2 (Performance enhancement for Phase 4)
+
+**Story File:** `plans/future/wish/backlog/WISH-2048/WISH-2048.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunity #1)
+
+**Original Finding:** WebP format conversion - Convert to WebP instead of JPEG for 25-35% additional size savings; supported by browser-image-compression library
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (additional storage and bandwidth savings)
+**Effort:** Low (simple configuration change)
+
+---
+
+## WISH-20210: Schema Change Impact Analysis Tool
+
+**Status:** pending
+**Depends On:** WISH-2057
+**Follow-up From:** WISH-2057
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Build an automated CLI tool (`pnpm db:impact-analysis`) that analyzes proposed database schema changes and generates comprehensive impact reports identifying all affected services, endpoints, frontend components, and test files across the monorepo.
+
+**Features:**
+- CLI tool accepting `--table`, `--enum`, and `--change` flags
+- AST-based code analysis using TypeScript Compiler API (ts-morph)
+- Analyzes column changes (add, remove, rename, type change)
+- Analyzes enum changes (add value, remove value, rename value)
+- Generates Markdown impact reports with categorized findings
+- Risk assessment (Breaking/Non-breaking, Rollback Safety)
+- Actionable recommendations for each affected file
+
+**Analysis Categories:**
+- Backend Services (application layer, repositories, routes)
+- Zod Schemas (shared validation logic)
+- Frontend Components (React components, pages)
+- API Hooks (RTK Query definitions)
+- Test Files (unit tests, integration tests)
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/` - New `impact-analysis.ts` CLI tool
+- `packages/backend/database-schema/src/` - Drizzle schema introspection utilities
+
+**Infrastructure:**
+- Reports stored in `packages/backend/database-schema/impact-reports/`
+- Exit code 0 for low-impact changes, code 1 for high-impact (CI integration)
+
+**Benefits:**
+- Prevents missed dependencies during schema migrations
+- Provides confidence before applying schema changes
+- Complements WISH-2057 policies with automated verification
+- Reduces manual code review burden
+
+**Acceptance Criteria:** 22 ACs covering CLI tool basics, column/enum analysis, impact report quality, test coverage, and documentation.
+
+**Complexity:** Medium (CLI tool + AST analysis + report generation)
+
+**Effort:** 5 points
+
+**Priority:** P2 (Developer productivity enhancement for Phase 3)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Finding #4)
+
+**Original Finding:** "Schema change impact analysis tool (which services/endpoints affected?)"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (prevents missed dependencies and runtime failures)
+**Effort:** Medium (CLI tool development + AST parsing)
+
+**Story File:** `plans/future/wish/backlog/WISH-20210/WISH-20210.md`
+
+
+## WISH-20220: Schedule UI/UX (admin dashboard for schedule management)
+
+**Status:** backlog
+**Depends On:** WISH-2119
+**Follow-up From:** WISH-2119
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Provide admins with a visual, user-friendly dashboard for creating, viewing, and canceling scheduled flag updates. Implements calendar view, timeline visualization, schedule creation forms, and real-time status updates with polling.
+
+**Features:**
+- Schedule management dashboard page at `/admin/feature-flags/:flagKey/schedules`
+- Calendar view showing all schedules with color-coded markers (pending, applied, failed, cancelled)
+- Timeline view with chronological schedule list and countdown timers
+- CreateScheduleForm modal with date/time picker and validation
+- Schedule cards with cancel functionality for pending schedules
+- Auto-refresh polling (60-second interval) for real-time status updates
+
+**Pages Affected:**
+- `/admin/feature-flags/:flagKey/schedules` - Schedule management dashboard (new)
+- `/admin/feature-flags/:flagKey` - Add "Schedules" tab to flag detail page
+- `/admin/feature-flags` - Add "Manage Schedules" button to flag list
+
+**Packages Affected:**
+- `apps/web/admin-dashboard/src/pages/ScheduleManagementPage.tsx` - Main dashboard page (new)
+- `apps/web/admin-dashboard/src/components/ScheduleCalendar/` - Calendar view component (new)
+- `apps/web/admin-dashboard/src/components/ScheduleTimeline/` - Timeline visualization (new)
+- `apps/web/admin-dashboard/src/components/CreateScheduleForm/` - Schedule form (new)
+- `apps/web/admin-dashboard/src/components/ScheduleCard/` - Schedule card (new)
+- `packages/core/api-client/src/rtk/feature-flags-api.ts` - RTK Query endpoints (extend)
+
+**Acceptance Criteria:** 20 ACs covering dashboard navigation, calendar/timeline views, schedule creation, cancel functionality, auto-refresh, authorization, and accessibility.
+
+**Complexity:** Medium (UI components + calendar/timeline + forms + RTK Query integration)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Admin UX enhancement for Phase 3)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #6)
+
+**Original Finding:** "Admin dashboard for schedule management - Deferred to Phase 3+ follow-up story"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves admin experience for managing scheduled flag updates)
+**Effort:** Medium (admin UI components + calendar/timeline views + integration with backend endpoints)
+
+**Story File:** `plans/future/wish/backlog/WISH-20220/WISH-20220.md`
+
+---
+
+## WISH-20230: Recurring schedules (cron-like syntax for automated recurring flag updates)
+
+**Status:** pending
+**Depends On:** WISH-2119
+**Follow-up From:** WISH-2119
+**Phase:** 4 - Infrastructure
+
+### Scope
+
+Extend WISH-2119's one-time flag scheduling with cron-like recurring schedules for automated periodic flag updates. Enables weekly A/B tests, seasonal features, maintenance windows, and business hours restrictions without manual intervention.
+
+**Features:**
+- Cron expression syntax for recurring schedules (standard 5-field format)
+- Automatic next execution calculation using `cron-parser` library
+- Recurring schedule creation, listing, and cancellation via admin endpoints
+- Extended cron job to process recurring schedules and recalculate nextExecutionAt
+- Database columns: `recurrence` (cron expression), `nextExecutionAt` (next execution timestamp)
+
+**Endpoints:**
+- `POST /api/admin/flags/:flagKey/schedule` - Add optional `recurrence` field with cron expression
+- `GET /api/admin/flags/:flagKey/schedule` - Include `recurrence`, `nextExecutionAt` in response
+- `DELETE /api/admin/flags/:flagKey/schedule/:scheduleId` - Cancel recurring schedule (stops future executions)
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/` - Extend schedule service and repository
+- `apps/api/lego-api/jobs/process-flag-schedules.ts` - Generate next execution for recurring schedules
+- `packages/backend/database-schema/` - Add `recurrence`, `nextExecutionAt` columns to feature_flag_schedules table
+- `packages/core/api-client/src/schemas/feature-flags.ts` - Add RecurringScheduleSchema
+
+**Infrastructure:**
+- Database migration: Add `recurrence` (VARCHAR 100), `nextExecutionAt` (TIMESTAMP WITH TIME ZONE) columns
+- npm dependency: `cron-parser` library (MIT license)
+- Index on `nextExecutionAt` for fast cron job queries
+
+**Use Cases:**
+- Weekly A/B tests (auto-enable every Monday 9am, auto-disable Friday 5pm)
+- Seasonal features (auto-enable winter theme Dec 1-Feb 28 every year)
+- Maintenance windows (auto-disable features every Sunday 2am-4am)
+- Business hours restrictions (auto-enable features Monday-Friday 9am-5pm only)
+- Monthly promotions (auto-enable discount features on 1st day of each month)
+
+**Acceptance Criteria:** 16 ACs covering cron expression validation, recurring schedule creation, next execution calculation, cron job processing, cancellation, and testing
+
+**Complexity:** Medium (cron expression parsing + recurring schedule generation + next execution calculation)
+
+**Effort:** 5 points
+
+**Priority:** P2 (Infrastructure enhancement for Phase 4)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #1)
+
+**Original Finding:** "Recurring schedules (cron-like syntax) - Deferred to Phase 4+ follow-up story"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (enables automated recurring flag operations without manual intervention)
+**Effort:** Medium (cron expression parsing + recurring schedule generation + next execution calculation)
+
+**Story File:** `plans/future/wish/backlog/WISH-20230/WISH-20230.md`
+
+---
+---
+
+## WISH-20240: Schedule preview endpoint (simulate flag state before schedule applies)
+
+**Status:** pending
+**Depends On:** WISH-2119
+**Follow-up From:** WISH-2119
+**Phase:** 4 - Infrastructure Enhancements
+
+### Scope
+
+Enable admins to preview the exact flag state that will result from a scheduled update before it executes. Read-only endpoint simulates applying pending schedules in chronological order and returns the resulting flag state without modifying flags or schedules.
+
+**Features:**
+- GET /api/admin/flags/:flagKey/schedule/preview endpoint (admin only)
+- Fetches current flag state and all pending schedules
+- Simulates applying schedules in chronological order
+- Returns currentState, previewedState, pendingSchedules array, stateChanged boolean
+- Handles partial updates (enabled or rolloutPercentage only)
+- Read-only operation (no side effects)
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/` - Add previewSchedules method to schedule service
+- `packages/core/api-client/src/schemas/` - Preview response schema
+
+**Use Cases:**
+- Verify complex scheduling scenarios before execution
+- Identify conflicting schedules that may produce unexpected flag states
+- Build admin confidence when scheduling critical flag changes
+- Debug scheduling issues without affecting live flags
+
+**Acceptance Criteria:** 12 ACs covering preview endpoint, simulation logic, schema alignment, and testing
+
+**Complexity:** Small (read-only simulation logic)
+
+**Effort:** 2 points
+
+**Priority:** P2 (Admin tooling enhancement for Phase 4)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #2)
+
+**Original Finding:** "Schedule preview endpoint (simulate flag state before schedule applies)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves admin confidence and reduces configuration errors)
+**Effort:** Low (2 points - read-only simulation logic)
+
+**Story File:** `plans/future/wish/backlog/WISH-20240/WISH-20240.md`
+
+---
+
+## WISH-20250: Bulk schedule creation (multiple schedules in single API call)
+
+**Status:** pending
+**Depends On:** WISH-2119
+**Follow-up From:** WISH-2119
+**Phase:** 4 - Infrastructure
+
+### Scope
+
+Enable admins to create multiple flag schedules in a single atomic API call, reducing operational overhead and ensuring consistency for coordinated rollout scenarios.
+
+**Features:**
+- Bulk schedule creation endpoint accepting array of schedules
+- Atomic transaction processing (all-or-nothing)
+- Duplicate time detection within batch
+- Maximum batch size: 50 schedules per request
+- Batch INSERT for database efficiency
+
+**Endpoints:**
+- `POST /api/admin/flags/:flagKey/schedule/bulk` - Create multiple schedules atomically
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/` - Extend schedule service with bulk creation
+- `packages/core/api-client/src/schemas/` - Bulk schedule schemas
+
+**Use Cases:**
+- Phased rollouts: Create 5 schedules to gradually increase rollout percentage (0% → 25% → 50% → 75% → 100%)
+- Multi-flag coordination: Enable multiple related flags simultaneously
+- Time-windowed features: Create enable/disable schedule pairs for temporary features
+- Multi-environment rollouts: Schedule same flag changes across dev/staging/production
+
+**Acceptance Criteria:** 10 ACs covering bulk endpoint validation, atomic batch creation, duplicate detection, authorization, schema alignment, and comprehensive test coverage.
+
+**Complexity:** Small (Extension of existing schedule creation endpoint)
+
+**Effort:** 2 points
+
+**Priority:** P2 (Operational efficiency enhancement for Phase 4)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #3)
+
+**Original Finding:** "Bulk schedule creation (multiple schedules in single API call)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Operational efficiency for admins managing complex rollout schedules)
+**Effort:** Low (Extension of existing schedule creation endpoint)
+
+**Story File:** `plans/future/wish/backlog/WISH-20250/WISH-20250.md`
+
+---
+
+## WISH-20280: Audit Logging for Flag Schedule Operations
+
+**Status:** backlog
+**Depends On:** WISH-2119, WISH-2019
+**Follow-up From:** WISH-2119
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Add comprehensive audit logging to flag schedule operations (create, cancel) to provide security observability and admin accountability. Integrates WISH-2119 schedule operations into WISH-2019 audit logging infrastructure, tracking which admin performed each action with timestamps and context.
+
+**Features:**
+- Audit logging for schedule creation (created_by field)
+- Audit logging for schedule cancellation (cancelled_by, cancelled_at fields)
+- Audit logging for automatic schedule application (cron job events)
+- CloudWatch structured logging with admin context
+- Database schema updates for admin tracking
+
+**Database Schema:**
+- Add created_by, cancelled_by, cancelled_at columns to feature_flag_schedules table
+- Audit event types: flag_schedule.created, flag_schedule.cancelled, flag_schedule.applied, flag_schedule.failed
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/` - Schedule service and routes updates
+- `apps/api/lego-api/core/audit/` - Audit logging integration
+- `packages/backend/database-schema/` - Migration for admin tracking columns
+- `packages/core/api-client/src/schemas/` - Schema updates for admin fields
+
+**Acceptance Criteria:** 15 ACs covering database schema updates, audit logging integration, service layer updates, API response updates, schema alignment, testing, and documentation.
+
+**Complexity:** Small (extends existing audit patterns from WISH-2019)
+
+**Effort:** 2 points
+
+**Priority:** P1 (Security and compliance requirement for Phase 3)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Follow-up Stories Suggested - Finding #7)
+
+**Original Finding:** "Integration with WISH-2019 (audit logging: track which admin created/cancelled schedules)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (security observability and admin accountability)
+**Effort:** Low (extends existing audit infrastructure)
+
+**Story File:** `plans/future/wish/backlog/WISH-20280/WISH-20280.md`
+
+---
+
+## WISH-20270: Schedule cleanup cron job (retention policy enforcement)
+
+**Status:** backlog
+**Depends On:** WISH-2119
+**Follow-up From:** WISH-2119
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Implement automated retention policy enforcement for feature flag schedules through a nightly cron job, preventing unbounded table growth while preserving failed schedules for manual review. Enforces WISH-2119's retention policies automatically.
+
+**Features:**
+- Nightly cron job (2:00 AM UTC) to delete expired schedules
+- Delete applied schedules older than 90 days
+- Delete cancelled schedules older than 30 days
+- Preserve failed schedules indefinitely for manual review
+- CloudWatch metrics for deleted count and execution time
+- Structured logging with deletion counts and error handling
+
+**Packages Affected:**
+- `apps/api/lego-api/jobs/cleanup-flag-schedules.ts` - Cron job handler (new)
+- `apps/api/lego-api/domains/config/adapters/schedule-repository.ts` - deleteExpiredSchedules() method
+
+**Infrastructure:**
+- Lambda function triggered by EventBridge (daily cron)
+- CloudWatch Metrics: SchedulesDeletedCount, CleanupExecutionTime
+- CloudWatch Logs: Deletion audit trail
+
+**Acceptance Criteria:** 13 ACs covering repository deletion logic, cron job implementation, monitoring, testing, and documentation
+
+**Complexity:** Small (cron job + repository method)
+
+**Effort:** 1 point
+
+**Priority:** P2 (Operational housekeeping for Phase 3)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2119 (Follow-up Stories Suggested - Finding #6)
+
+**Original Finding:** "Schedule cleanup cron job (retention policy enforcement, automatic purging of old schedules)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Low (operational housekeeping, prevents unbounded table growth)
+**Effort:** Low (1 point - simple cron job reusing existing patterns)
+
+**Story File:** `plans/future/wish/backlog/WISH-20270/WISH-20270.md`
 
 ---

@@ -1,27 +1,115 @@
 # Knowledgebase Seed Strategy
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created:** 2026-01-24
-**Status:** Draft
+**Updated:** 2026-01-25
+**Status:** Active
 
 This document defines what knowledge to seed into the knowledgebase, organized by source and priority.
 
 ---
 
+## Key Insight: KB vs SQL
+
+**The KB is for retrieval, not analytics.**
+
+| Question Type | Tool | Example |
+|---------------|------|---------|
+| "Find similar" | KB | "What patterns exist for error handling?" |
+| "What did we learn about X" | KB | "What issues emerged with MCP setup?" |
+| "Count/aggregate" | SQL | "What's the most expensive workflow phase?" |
+| "Compare metrics" | SQL | "Token usage by story over time?" |
+
+**Rule of thumb:** If the answer requires math across multiple entries, it needs SQL.
+
+---
+
 ## Seed Principles
 
-### Include
+### Include (Good for KB)
 - Project-specific conventions the model can't infer
 - Hard-won learnings from completed stories
 - Non-obvious patterns unique to this codebase
 - Token optimization discoveries
 - Validated decisions with rationale
+- Architecture Decision Records (ADRs)
+- User flow descriptions
+- Discovery findings (gaps, blind spots, enhancement opportunities)
 
-### Exclude
+### Exclude (Bad for KB)
 - Content already in CLAUDE.md (agents read it at startup)
 - General programming knowledge
 - Full documents (extract specific facts instead)
 - Speculative/unvalidated patterns
+- **Structured metrics** (token costs, test counts, coverage %) → Use SQL
+- **Status tracking** (checkpoints, verification results) → Use SQL
+- **Raw logs** (token logs, event logs) → Use SQL
+
+---
+
+## Priority 0: Story Implementation Outputs
+
+**Source:** `plans/**/UAT/*/_implementation/` and `plans/**/done/*/_implementation/`
+
+Each completed story generates artifacts. Extract the high-value prose, ignore the metrics.
+
+### ANALYSIS.md - Gaps & Blind Spots (HIGH VALUE)
+
+These are real discoveries that prevent future mistakes.
+
+```yaml
+entries:
+  - content: "MCP Setup: If MCP server already running, validator may conflict. Add check for existing MCP server process before starting new one."
+    entry_type: lesson
+    roles: [dev]
+    tags: [mcp, validation, setup, port-conflict]
+    source_story: KNOW-039
+    source_file: plans/future/knowledgebase-mcp/UAT/KNOW-039/_implementation/ANALYSIS.md
+    confidence: 1.0
+
+  - content: "Config file writes: Use atomic write pattern - write to temp file, validate, then move to target. Prevents leaving user with broken config if generation fails midway."
+    entry_type: pattern
+    roles: [dev]
+    tags: [reliability, file-operations, atomic-write]
+    source_story: KNOW-039
+    source_file: plans/future/knowledgebase-mcp/UAT/KNOW-039/_implementation/ANALYSIS.md
+    confidence: 1.0
+
+  - content: "Build staleness: Validator should check if dist/ is stale compared to src/ file modification times. Warn if dist/ older than src/ files."
+    entry_type: lesson
+    roles: [dev]
+    tags: [build, validation, dx]
+    source_story: KNOW-039
+    source_file: plans/future/knowledgebase-mcp/UAT/KNOW-039/_implementation/ANALYSIS.md
+    confidence: 1.0
+```
+
+### ANALYSIS.md - Enhancement Opportunities (MEDIUM VALUE)
+
+Ideas deferred for future. Import selectively.
+
+```yaml
+entries:
+  - content: "DX Enhancement: Add --dry-run flag to config generator that outputs diff without writing. Good for previewing changes before applying."
+    entry_type: enhancement
+    roles: [dev]
+    tags: [dx, cli, config, deferred]
+    source_story: KNOW-039
+    source_file: plans/future/knowledgebase-mcp/UAT/KNOW-039/_implementation/ANALYSIS.md
+    confidence: 0.8
+    metadata:
+      deferred_reason: "Nice-to-have, not MVP"
+```
+
+### DO NOT IMPORT from Story Outputs
+
+| File | Why Skip | Better Approach |
+|------|----------|-----------------|
+| TOKEN-SUMMARY.md | Tabular metrics | SQL: `story_token_usage` table |
+| TOKEN-LOG.md | Raw event logs | SQL: `token_events` table |
+| VERIFICATION.md | Test counts, AC status | SQL: `story_verification` table |
+| CHECKPOINT.md | Status tracking | SQL: `story_checkpoints` table |
+| VERIFICATION.yaml | Structured verification data | SQL or keep as YAML |
 
 ---
 
@@ -235,6 +323,488 @@ entries:
       stability: evolving
       last_verified: "2026-01-24"
 ```
+
+---
+
+## Priority 1.5: Architecture Decision Records (ADRs)
+
+**Source:** `docs/architecture/decisions/` or inline in story docs
+
+ADRs are perfect for KB - they answer "why did we choose X over Y?"
+
+```yaml
+entries:
+  - content: |
+      ADR: Use pgvector over Pinecone for vector storage.
+      Context: Need vector similarity search for knowledge base.
+      Decision: pgvector (PostgreSQL extension)
+      Rationale: (1) Single database for all data - no service sprawl, (2) Local Docker deployment - no external API costs, (3) Simpler ops - no separate vector DB to manage.
+      Trade-offs: May need to migrate if scale exceeds PostgreSQL limits (unlikely for this use case).
+    entry_type: decision
+    roles: [dev, pm]
+    tags: [adr, architecture, vector-search, database]
+    source_story: KNOW-001
+    confidence: 1.0
+    metadata:
+      decision_date: "2026-01-20"
+      status: accepted
+
+  - content: |
+      ADR: Use OpenAI text-embedding-3-small over alternatives.
+      Context: Need embedding model for semantic search.
+      Decision: OpenAI text-embedding-3-small (1536 dimensions)
+      Rationale: (1) Good quality/cost balance, (2) Well-documented API, (3) No self-hosting complexity.
+      Trade-offs: External API dependency, per-token cost. Acceptable for MVP scale.
+    entry_type: decision
+    roles: [dev]
+    tags: [adr, architecture, embeddings, openai]
+    source_story: KNOW-006
+    confidence: 1.0
+```
+
+---
+
+## Priority 1.6: User Flows
+
+**Source:** `docs/user-flows/` or feature documentation
+
+User flows provide context for development decisions.
+
+```yaml
+entries:
+  - content: |
+      User Flow: Upload MOC Instructions
+      1. User clicks "Upload Instructions" on MOC detail page
+      2. System shows file picker (accepts PDF, images)
+      3. User selects files (max 50MB total)
+      4. System uploads to S3 with presigned URL
+      5. User sees progress indicator
+      6. On completion, files appear in instructions list
+      7. User can reorder, delete, or add more files
+      Error states: File too large, unsupported format, upload timeout, S3 error
+    entry_type: user_flow
+    roles: [dev, pm, qa]
+    tags: [user-flow, moc, upload, instructions]
+    source_file: docs/user-flows/moc-instructions-upload.md
+    confidence: 1.0
+
+  - content: |
+      User Flow: Search Knowledge Base (Agent)
+      1. Agent receives task requiring codebase knowledge
+      2. Agent calls kb_search with natural language query
+      3. KB returns top-k relevant entries with scores
+      4. Agent uses entries to inform response
+      5. If insufficient results, agent may refine query or use fallback search
+      Note: Agent never sees raw SQL, only MCP tool interface.
+    entry_type: user_flow
+    roles: [dev]
+    tags: [user-flow, kb, mcp, agent]
+    source_file: plans/future/knowledgebase-mcp/docs/agent-integration.md
+    confidence: 1.0
+```
+
+---
+
+## Priority 1.7: Runbooks (Already Done)
+
+**Source:** `plans/future/knowledgebase-mcp/runbooks.yaml`
+
+You already have 25+ runbooks covering:
+- KB MCP setup and troubleshooting
+- Local development
+- Deployment (staging, production, rollback)
+- Database operations
+- Incident response
+- Maintenance
+- Monitoring
+
+These are already in KB-ready YAML format. Import directly with `kb_bulk_import`.
+
+---
+
+## Priority 1.8: Workflow Phases (Chunked)
+
+**Source:** `docs/FULL_WORKFLOW.md`
+
+The workflow doc is ~2000 lines. Don't import the whole thing. Chunk by phase.
+
+```yaml
+entries:
+  - content: |
+      **Workflow Phase: Story Generation (PM)**
+
+      Trigger: PM runs /pm-story generate
+
+      Steps:
+      1. PM provides feature description
+      2. System generates story with ACs
+      3. PM reviews and refines
+      4. Story saved to backlog/
+
+      Output: {PREFIX}-XXX.md in backlog/
+      Next: Elaboration
+
+      Commands: /pm-story generate, /pm-story refine
+    entry_type: workflow
+    roles: [pm]
+    tags: [workflow, pm, story-generation, phase]
+    source_file: docs/FULL_WORKFLOW.md
+    confidence: 1.0
+
+  - content: |
+      **Workflow Phase: Elaboration (QA/Dev)**
+
+      Trigger: Story moves to elaboration/ or /elab-story command
+
+      Steps:
+      1. Read story and dependencies
+      2. Audit against 8 checks (scope, consistency, reuse, etc.)
+      3. Identify gaps, blind spots, enhancements
+      4. Write ELAB-{PREFIX}-XXX.md
+      5. Verdict: PASS, CONDITIONAL PASS, NEEDS REFINEMENT, FAIL
+
+      Output: ELAB document, ANALYSIS.md
+      Next: If PASS → ready-to-work/
+
+      Commands: /elab-story {FEATURE_DIR} {STORY_ID}
+    entry_type: workflow
+    roles: [qa, dev]
+    tags: [workflow, elaboration, phase]
+    source_file: docs/FULL_WORKFLOW.md
+    confidence: 1.0
+
+  - content: |
+      **Workflow Phase: Implementation (Dev)**
+
+      Trigger: Story in ready-to-work/, /dev-implement-story command
+
+      Steps:
+      1. Read story, ELAB, existing code
+      2. Create implementation plan
+      3. Write code following ACs
+      4. Run scoped verification (lint, types, tests)
+      5. Write PROOF-{PREFIX}-XXX.md
+
+      Output: Code changes, PROOF document
+      Next: ready-for-qa/
+
+      Commands: /dev-implement-story {FEATURE_DIR} {STORY_ID}
+    entry_type: workflow
+    roles: [dev]
+    tags: [workflow, implementation, dev, phase]
+    source_file: docs/FULL_WORKFLOW.md
+    confidence: 1.0
+
+  - content: |
+      **Workflow Phase: QA Verification**
+
+      Trigger: Story in ready-for-qa/, /qa-verify-story command
+
+      Steps:
+      1. Read story, PROOF, code changes
+      2. Run 6 hard gates (AC verification, test quality, coverage, execution, proof quality, architecture)
+      3. Write VERIFICATION.md
+      4. Verdict: PASS or FAIL with specific issues
+
+      Output: VERIFICATION.md, VERIFICATION.yaml
+      Next: If PASS → UAT/
+
+      Commands: /qa-verify-story {FEATURE_DIR} {STORY_ID}
+    entry_type: workflow
+    roles: [qa]
+    tags: [workflow, qa, verification, phase]
+    source_file: docs/FULL_WORKFLOW.md
+    confidence: 1.0
+
+  - content: |
+      **Workflow Phase: Fix (Dev)**
+
+      Trigger: QA FAIL verdict, /dev-fix-story command
+
+      Steps:
+      1. Read VERIFICATION.md for specific failures
+      2. Address each issue
+      3. Update PROOF document
+      4. Re-run scoped verification
+
+      Output: Fixed code, updated PROOF
+      Next: ready-for-qa/ (re-verification)
+
+      Commands: /dev-fix-story {FEATURE_DIR} {STORY_ID}
+    entry_type: workflow
+    roles: [dev]
+    tags: [workflow, fix, rework, phase]
+    source_file: docs/FULL_WORKFLOW.md
+    confidence: 1.0
+
+  - content: |
+      **Workflow: What's Next After Each Phase?**
+
+      After story-generation → Elaboration
+      After elaboration PASS → ready-to-work, Implementation
+      After elaboration FAIL → Back to PM for refinement
+      After implementation → ready-for-qa, QA Verification
+      After QA PASS → UAT
+      After QA FAIL → Fix phase, then re-verify
+      After UAT approval → done/
+
+      Status flow: pending → generated → ready-to-work → in-progress → ready-for-qa → in-qa → uat → done
+    entry_type: workflow
+    roles: [pm, dev, qa]
+    tags: [workflow, status, transitions, navigation]
+    source_file: docs/FULL_WORKFLOW.md
+    confidence: 1.0
+```
+
+This enables queries like:
+- "What's the next step after elaboration?"
+- "What does the QA phase involve?"
+- "What command do I use for implementation?"
+
+---
+
+## Priority 1.9: Commands (For User Reference)
+
+**Source:** `.claude/commands/*.md`
+
+**Use case:** You (the user) forget which command does what. The KB helps you find the right command.
+
+**Approach:** Import command summaries organized by task, not full command files.
+
+```yaml
+entries:
+  # === STORY CREATION ===
+  - content: |
+      **How to: Generate a new story**
+
+      Command: `/pm-story generate` or `/pm-generate-story`
+      Usage: `/pm-story {FEATURE_DIR} generate`
+
+      What it does:
+      - Creates new story file in backlog/
+      - Generates ACs from your description
+      - Assigns story ID automatically
+
+      Example: `/pm-story plans/future/knowledgebase-mcp generate`
+      Then describe what you want to build.
+    entry_type: command
+    roles: [pm]
+    tags: [command, pm, story, generate, create]
+    source_file: .claude/commands/pm-story.md
+    confidence: 1.0
+
+  - content: |
+      **How to: Refine an existing story**
+
+      Command: `/pm-refine-story`
+      Usage: `/pm-refine-story {STORY_ID}`
+
+      What it does:
+      - Reviews story for gaps
+      - Suggests AC improvements
+      - Checks sizing and dependencies
+
+      Use when: Story feels incomplete or too large
+    entry_type: command
+    roles: [pm]
+    tags: [command, pm, story, refine, improve]
+    source_file: .claude/commands/pm-refine-story.md
+    confidence: 1.0
+
+  # === ELABORATION ===
+  - content: |
+      **How to: Elaborate a story (pre-implementation analysis)**
+
+      Command: `/elab-story`
+      Usage: `/elab-story {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Analyzes story against 8 quality checks
+      - Identifies gaps, risks, blind spots
+      - Creates ELAB document with verdict
+      - Moves story to ready-to-work if PASS
+
+      Example: `/elab-story plans/future/knowledgebase-mcp KNOW-039`
+    entry_type: command
+    roles: [qa, dev]
+    tags: [command, elaboration, analysis, qa]
+    source_file: .claude/commands/elab-story.md
+    confidence: 1.0
+
+  # === IMPLEMENTATION ===
+  - content: |
+      **How to: Implement a story**
+
+      Command: `/dev-implement-story`
+      Usage: `/dev-implement-story {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Reads story and ELAB document
+      - Creates implementation plan
+      - Writes code following ACs
+      - Runs verification (lint, types, tests)
+      - Creates PROOF document
+
+      Example: `/dev-implement-story plans/future/knowledgebase-mcp KNOW-039`
+    entry_type: command
+    roles: [dev]
+    tags: [command, dev, implement, code]
+    source_file: .claude/commands/dev-implement-story.md
+    confidence: 1.0
+
+  - content: |
+      **How to: Fix QA failures**
+
+      Command: `/dev-fix-story`
+      Usage: `/dev-fix-story {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Reads VERIFICATION.md for specific failures
+      - Addresses each issue
+      - Updates PROOF document
+      - Re-runs verification
+
+      Use when: QA verification returned FAIL
+    entry_type: command
+    roles: [dev]
+    tags: [command, dev, fix, rework, qa-failure]
+    source_file: .claude/commands/dev-fix-story.md
+    confidence: 1.0
+
+  # === QA ===
+  - content: |
+      **How to: Verify implementation (QA)**
+
+      Command: `/qa-verify-story`
+      Usage: `/qa-verify-story {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Runs 6 hard gates (AC verification, test quality, coverage, etc.)
+      - Creates VERIFICATION.md with PASS/FAIL
+      - Moves story to UAT if PASS
+
+      Example: `/qa-verify-story plans/future/knowledgebase-mcp KNOW-039`
+    entry_type: command
+    roles: [qa]
+    tags: [command, qa, verify, test]
+    source_file: .claude/commands/qa-verify-story.md
+    confidence: 1.0
+
+  # === STATUS & NAVIGATION ===
+  - content: |
+      **How to: Check story status**
+
+      Command: `/story-status`
+      Usage: `/story-status {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Shows current status and location
+      - Lists completed phases
+      - Shows what's next
+
+      Also: `/story-status {FEATURE_DIR}` to see all stories in a feature
+    entry_type: command
+    roles: [pm, dev, qa]
+    tags: [command, status, check, where]
+    source_file: .claude/commands/story-status.md
+    confidence: 1.0
+
+  - content: |
+      **How to: Move story between stages**
+
+      Command: `/story-move`
+      Usage: `/story-move {FEATURE_DIR} {STORY_ID} {TO_STAGE}`
+
+      Stages: backlog, elaboration, ready-to-work, in-progress, ready-for-qa, in-qa, uat, done
+
+      Example: `/story-move plans/stories STORY-017 ready-to-work`
+    entry_type: command
+    roles: [pm, dev, qa]
+    tags: [command, move, stage, transition]
+    source_file: .claude/commands/story-move.md
+    confidence: 1.0
+
+  # === ORCHESTRATION ===
+  - content: |
+      **How to: Run full workflow automatically**
+
+      Command: `/scrum-master`
+      Usage: `/scrum-master {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Orchestrates story through all phases
+      - Runs elaboration → implementation → QA
+      - Handles failures and retries
+      - Tracks progress in CHECKPOINT.md
+
+      Options:
+      - `--from=<phase>` - Start from specific phase
+      - `--to=<phase>` - Stop at specific phase
+      - `--approve=<phases>` - Auto-approve phases
+    entry_type: command
+    roles: [pm, dev, qa]
+    tags: [command, scrum-master, orchestrate, automation, workflow]
+    source_file: .claude/commands/scrum-master.md
+    confidence: 1.0
+
+  # === CODE REVIEW ===
+  - content: |
+      **How to: Review code changes**
+
+      Command: `/dev-code-review`
+      Usage: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
+
+      What it does:
+      - Reviews code against story ACs
+      - Checks architecture compliance
+      - Identifies potential issues
+      - Creates review feedback
+
+      Use when: Before QA, or for PR review
+    entry_type: command
+    roles: [dev]
+    tags: [command, review, code-review, pr]
+    source_file: .claude/commands/dev-code-review.md
+    confidence: 1.0
+
+  # === QUICK REFERENCE ===
+  - content: |
+      **Command Quick Reference by Task**
+
+      "I want to create a new story" → /pm-story generate
+      "I want to improve a story" → /pm-refine-story
+      "I want to analyze before coding" → /elab-story
+      "I want to implement a story" → /dev-implement-story
+      "I want to fix QA failures" → /dev-fix-story
+      "I want to verify implementation" → /qa-verify-story
+      "I want to check status" → /story-status
+      "I want to move a story" → /story-move
+      "I want to run everything" → /scrum-master
+      "I want to review code" → /dev-code-review
+    entry_type: reference
+    roles: [pm, dev, qa]
+    tags: [command, reference, quick-reference, cheatsheet]
+    source_file: .claude/commands
+    confidence: 1.0
+```
+
+This enables queries like:
+- "How do I create a new story?"
+- "What command for QA verification?"
+- "I want to implement a story"
+- "How do I fix QA failures?"
+
+---
+
+## DO NOT Import: Full Command/Agent Files
+
+**Why:** Full command files are 1000+ lines each. Agents read them directly at startup anyway.
+
+| Import This | Not This |
+|-------------|----------|
+| Command summaries (~200 tokens each) | Full command files (~2000 tokens each) |
+| "What it does" + usage examples | Implementation details, edge cases |
+| Task-oriented ("how do I...") | Technical internals |
 
 ---
 
@@ -571,7 +1141,7 @@ entries:
 
 ## Do NOT Seed
 
-These are already available to agents through normal file reading:
+### Already Available to Agents
 
 | Source | Reason |
 |--------|--------|
@@ -581,37 +1151,184 @@ These are already available to agents through normal file reading:
 | Git workflow basics | Model knows these |
 | Full file contents | Too large, extract facts instead |
 
+### Needs SQL, Not KB
+
+| Source | Why SQL | Table Suggestion |
+|--------|---------|------------------|
+| Token costs by story | Aggregation queries | `story_token_usage(story_id, phase, input_tokens, output_tokens, cost, timestamp)` |
+| Token costs by phase | Aggregation queries | Same table, query by phase |
+| Test counts/coverage | Numeric comparisons | `story_verification(story_id, test_count, coverage_pct, pass_fail, timestamp)` |
+| Story status history | Timeline queries | `story_status_log(story_id, old_status, new_status, timestamp)` |
+| AC completion tracking | Progress metrics | `story_ac_status(story_id, ac_id, status, verified_at)` |
+
+### Example Analytics Queries (SQL)
+
+```sql
+-- Most expensive phase across all stories
+SELECT phase, SUM(input_tokens + output_tokens) as total_tokens
+FROM story_token_usage
+GROUP BY phase
+ORDER BY total_tokens DESC;
+
+-- Stories with highest rework (fix phase tokens)
+SELECT story_id, SUM(output_tokens) as fix_tokens
+FROM story_token_usage
+WHERE phase LIKE '%fix%'
+GROUP BY story_id
+ORDER BY fix_tokens DESC
+LIMIT 10;
+
+-- Average tokens by story type
+SELECT
+  CASE
+    WHEN story_id LIKE 'KNOW%' THEN 'KB'
+    WHEN story_id LIKE 'WRKF%' THEN 'Workflow'
+    ELSE 'Other'
+  END as story_type,
+  AVG(input_tokens + output_tokens) as avg_tokens
+FROM story_token_usage
+GROUP BY story_type;
+```
+
 ---
 
-## Seed Script Pseudocode
+## Extraction Scripts
+
+### Script 1: Extract Learnings from Story Outputs
 
 ```typescript
-// scripts/seed.ts
+// scripts/extract-story-learnings.ts
+// Extracts high-value prose from completed story _implementation folders
+
+import { glob } from 'glob'
+import { readFile, writeFile } from 'fs/promises'
+
+interface ExtractedLearning {
+  content: string
+  entry_type: 'lesson' | 'pattern' | 'enhancement' | 'gap'
+  roles: string[]
+  tags: string[]
+  source_story: string
+  source_file: string
+  confidence: number
+}
+
+async function extractFromAnalysis(analysisPath: string): Promise<ExtractedLearning[]> {
+  const content = await readFile(analysisPath, 'utf-8')
+  const storyId = analysisPath.match(/\/(KNOW-\d+|STORY-\d+|WRKF-\d+)\//)?.[1] || 'unknown'
+  const entries: ExtractedLearning[] = []
+
+  // Extract "Gaps & Blind Spots" section
+  const gapsMatch = content.match(/### Gaps & Blind Spots\n\n\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|\n\|[-|]+\|\n([\s\S]*?)(?=\n###|\n---|\n## |$)/i)
+  if (gapsMatch) {
+    const rows = gapsMatch[1].split('\n').filter(row => row.startsWith('|'))
+    for (const row of rows) {
+      const cells = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cells.length >= 4 && cells[1]) {
+        entries.push({
+          content: `${cells[1]}: ${cells[4] || cells[1]}`, // Finding + Recommendation
+          entry_type: 'gap',
+          roles: ['dev'],
+          tags: inferTags(cells[1]),
+          source_story: storyId,
+          source_file: analysisPath,
+          confidence: 1.0,
+        })
+      }
+    }
+  }
+
+  // Extract "Enhancement Opportunities" section
+  const enhanceMatch = content.match(/### Enhancement Opportunities\n\n\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|\n\|[-|]+\|\n([\s\S]*?)(?=\n###|\n---|\n## |$)/i)
+  if (enhanceMatch) {
+    const rows = enhanceMatch[1].split('\n').filter(row => row.startsWith('|'))
+    for (const row of rows) {
+      const cells = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cells.length >= 4 && cells[1]) {
+        entries.push({
+          content: `Enhancement: ${cells[1]} - ${cells[4] || ''}`.trim(),
+          entry_type: 'enhancement',
+          roles: ['dev'],
+          tags: [...inferTags(cells[1]), 'deferred'],
+          source_story: storyId,
+          source_file: analysisPath,
+          confidence: 0.8, // Lower confidence for deferred enhancements
+        })
+      }
+    }
+  }
+
+  return entries
+}
+
+function inferTags(text: string): string[] {
+  const tagPatterns: Record<string, RegExp> = {
+    mcp: /mcp|protocol/i,
+    validation: /valid|check|verify/i,
+    config: /config|setting/i,
+    build: /build|compile|dist/i,
+    docker: /docker|container/i,
+    database: /database|db|postgres|sql/i,
+    api: /api|endpoint|handler/i,
+    testing: /test|coverage|mock/i,
+    security: /auth|secret|sanitiz/i,
+    dx: /dx|developer experience|cli/i,
+  }
+
+  return Object.entries(tagPatterns)
+    .filter(([_, regex]) => regex.test(text))
+    .map(([tag]) => tag)
+}
+
+async function main() {
+  // Find all ANALYSIS.md files in completed stories
+  const analysisPaths = await glob('plans/**/+(UAT|done)/*/_implementation/ANALYSIS.md')
+
+  const allEntries: ExtractedLearning[] = []
+  for (const path of analysisPaths) {
+    const entries = await extractFromAnalysis(path)
+    allEntries.push(...entries)
+    console.log(`Extracted ${entries.length} learnings from ${path}`)
+  }
+
+  // Output as YAML for kb_bulk_import
+  const yaml = allEntries.map(e => `
+- content: |
+    ${e.content.split('\n').join('\n    ')}
+  entry_type: ${e.entry_type}
+  roles: [${e.roles.join(', ')}]
+  tags: [${e.tags.join(', ')}]
+  source_story: ${e.source_story}
+  source_file: ${e.source_file}
+  confidence: ${e.confidence}
+`).join('')
+
+  await writeFile('extracted-learnings.yaml', `entries:${yaml}`)
+  console.log(`\nTotal: ${allEntries.length} learnings extracted to extracted-learnings.yaml`)
+}
+
+main()
+```
+
+### Script 2: Seed from LESSONS-LEARNED.md
+
+```typescript
+// scripts/seed-lessons-learned.ts
 
 import { parseStorySections } from './parsers/lessons-learned'
-import { parseTemplates } from './parsers/templates'
 import { bulkImport } from '../src/db/queries'
 
 async function seed() {
   const entries: KnowledgeEntry[] = []
 
-  // Priority 1: LESSONS-LEARNED.md
+  // Priority 1: LESSONS-LEARNED.md (prose only, skip token tables)
   const lessonsPath = 'plans/stories/LESSONS-LEARNED.md'
   const lessons = await parseStorySections(lessonsPath)
 
   for (const story of lessons) {
-    // Create story summary
-    entries.push({
-      content: summarizeStory(story),
-      entry_type: 'summary',
-      roles: ['pm', 'dev', 'qa'],
-      tags: ['story', story.type],
-      source_story: story.id,
-      source_file: lessonsPath,
-      confidence: 1.0,
-    })
+    // Skip token cost tables - those go to SQL
+    // Extract only: recommendations, discoveries, patterns
 
-    // Extract atomic facts
     for (const discovery of story.reuseDiscoveries) {
       entries.push({
         content: discovery,
@@ -633,30 +1350,6 @@ async function seed() {
         confidence: 1.0,
       })
     }
-  }
-
-  // Priority 2: Templates
-  const templatePaths = [
-    'plans/stories/UAT/WRKF-000/_templates/PROOF-TEMPLATE.md',
-    'plans/stories/UAT/WRKF-000/_templates/QA-VERIFY-TEMPLATE.md',
-    'plans/stories/UAT/WRKF-000/_templates/ELAB-TEMPLATE.md',
-    'docs/architecture/ADR-TEMPLATE.md',
-    'docs/RFC-TEMPLATE.md',
-    'docs/operations/RUNBOOK-TEMPLATE.md',
-    'docs/operations/PLAYBOOK-TEMPLATE.md',
-    'docs/operations/POST-MORTEM-TEMPLATE.md',
-  ]
-
-  for (const path of templatePaths) {
-    const template = await parseTemplate(path)
-    entries.push({
-      content: template.content,
-      entry_type: 'template',
-      roles: template.roles,
-      tags: template.tags,
-      source_file: path,
-      confidence: 1.0,
-    })
   }
 
   // Import all
@@ -691,6 +1384,12 @@ The `dev-implement-learnings.agent.md` will:
 
 | Category | Entries | Avg Tokens/Entry | Total Tokens |
 |----------|---------|------------------|--------------|
+| **Story outputs (gaps/enhancements)** | 30 | 150 | 4,500 |
+| **ADRs** | 10 | 200 | 2,000 |
+| **User flows** | 10 | 200 | 2,000 |
+| **Runbooks** | 25 | 300 | 7,500 |
+| **Workflow phases** | 6 | 200 | 1,200 |
+| **Command summaries** | 11 | 150 | 1,650 |
 | Token optimizations | 10 | 100 | 1,000 |
 | Backend patterns | 15 | 150 | 2,250 |
 | Vercel patterns | 8 | 100 | 800 |
@@ -700,8 +1399,115 @@ The `dev-implement-learnings.agent.md` will:
 | Templates | 8 | 500 | 4,000 |
 | Package patterns | 5 | 200 | 1,000 |
 | API patterns | 5 | 200 | 1,000 |
-| Workflow knowledge | 5 | 100 | 500 |
 | Codebase map | 5 | 150 | 750 |
-| **Total** | **~81** | — | **~13,200** |
+| **Total** | **~168** | — | **~31,550** |
 
 This is a lean, high-signal knowledgebase focused on actionable, validated knowledge.
+
+---
+
+## What to Query vs What to Aggregate
+
+### Good KB Queries (Retrieval)
+
+```
+"What patterns exist for error handling in this codebase?"
+→ Returns: Backend patterns, Vercel patterns with error handling tags
+
+"What issues came up during MCP implementation?"
+→ Returns: Gaps & blind spots from KNOW-* story outputs
+
+"How do we structure a new backend package?"
+→ Returns: Package structure template, moc-parts-lists-core reference
+
+"What did we learn about story sizing?"
+→ Returns: Story sizing facts from LESSONS-LEARNED
+
+"Why did we choose pgvector?"
+→ Returns: ADR for vector storage decision
+
+"What's the next step after elaboration?"
+→ Returns: Workflow phase entry showing "If PASS → ready-to-work, Implementation"
+
+"How do I deploy to staging?"
+→ Returns: runbook-deploy-001 with step-by-step commands
+
+"What command do I use for QA verification?"
+→ Returns: Command quick-ref showing "/qa-verify-story"
+
+"How do I troubleshoot KB connection issues?"
+→ Returns: runbook-kb-005 with troubleshooting steps
+
+"What's the rollback procedure?"
+→ Returns: runbook-deploy-003 with rollback commands
+
+"How do I create a new story?"
+→ Returns: Command summary for /pm-story generate
+
+"I want to implement a story"
+→ Returns: Command summary for /dev-implement-story with usage example
+
+"What command fixes QA failures?"
+→ Returns: Command summary for /dev-fix-story
+```
+
+### Bad KB Queries (Need SQL)
+
+```
+"What's the most expensive workflow phase?"
+→ Needs: SUM(tokens) GROUP BY phase → SQL
+
+"Which stories had the most rework?"
+→ Needs: Comparison of fix phase tokens → SQL
+
+"What's our average token usage per story?"
+→ Needs: AVG(tokens) → SQL
+
+"How has our test coverage changed over time?"
+→ Needs: Timeline query on coverage_pct → SQL
+
+"Which ACs fail most often?"
+→ Needs: COUNT of failures by AC → SQL
+```
+
+---
+
+## Future: Metrics Database Schema
+
+When you're ready to answer analytics questions, create these tables:
+
+```sql
+-- Token usage by story and phase
+CREATE TABLE story_token_usage (
+  id SERIAL PRIMARY KEY,
+  story_id VARCHAR(20) NOT NULL,
+  phase VARCHAR(50) NOT NULL,
+  input_tokens INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  cost_usd DECIMAL(10,4),
+  recorded_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Story verification results
+CREATE TABLE story_verification (
+  id SERIAL PRIMARY KEY,
+  story_id VARCHAR(20) NOT NULL,
+  test_count INTEGER,
+  tests_passed INTEGER,
+  coverage_pct DECIMAL(5,2),
+  build_status VARCHAR(10),
+  lint_status VARCHAR(10),
+  verified_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Story status transitions
+CREATE TABLE story_status_log (
+  id SERIAL PRIMARY KEY,
+  story_id VARCHAR(20) NOT NULL,
+  old_status VARCHAR(30),
+  new_status VARCHAR(30) NOT NULL,
+  changed_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+This separates concerns: KB for **knowledge retrieval**, SQL for **metrics analytics**.

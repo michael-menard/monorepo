@@ -36,7 +36,9 @@
     "db:analyze": "tsx src/scripts/db-analyze.ts",
     "db:studio": "drizzle-kit studio",
     "validate:env": "tsx src/scripts/validate-env.ts",
-    "mcp:start": "node dist/mcp-server/index.js"
+    "mcp:start": "node dist/mcp-server/index.js",
+    "kb:generate-config": "tsx scripts/generate-config.ts",
+    "kb:validate-connection": "tsx scripts/validate-connection.ts"
   },
   "keywords": [
     "knowledge-base",
@@ -53,6 +55,7 @@
     "@repo/logger": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.44.0",
+    "js-yaml": "4.1.1",
     "openai": "6.16.0",
     "pg": "^8.12.0",
     "tiktoken": "1.0.22",
@@ -60,6 +63,7 @@
     "zod-to-json-schema": "^3.24.0"
   },
   "devDependencies": {
+    "@types/js-yaml": "4.0.9",
     "@types/node": "^20.0.0",
     "@types/pg": "^8.11.0",
     "@vitest/coverage-v8": "^1.0.0",

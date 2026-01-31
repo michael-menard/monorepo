@@ -1,0 +1,299 @@
+---
+perspective: security
+reviewer: security-agent
+reviewed_at: "2026-01-25T18:30:00Z"
+verdict: CONCERNS
+
+findings:
+  critical:
+    - id: "SEC-001"
+      title: "URL Scraping Security - External Data Fetching Risk"
+      description: "SETS-005 and shared scraper service fetch product data from external URLs (LEGO.com). Unvalidated URL input and uncontrolled external requests create attack vectors."
+      stories: ["SETS-005"]
+      severity: critical
+    - id: "SEC-002"
+      title: "Authorization - Missing User Isolation"
+      description: "API endpoints must validate that users can only access/modify their own sets. No authorization checks documented for PATCH/DELETE operations."
+      stories: ["SETS-007", "SETS-008", "SETS-009", "SETS-010", "SETS-011", "SETS-012"]
+      severity: critical
+    - id: "SEC-003"
+      title: "SQL Injection - Input Validation Missing"
+      description: "User input fields (title, notes, store, theme, tags) are stored directly. No input sanitization or parameterized queries documented."
+      stories: ["SETS-005", "SETS-006", "SETS-013"]
+      severity: critical
+
+  high:
+    - id: "SEC-004"
+      title: "SSRF Risk - Unvalidated Image URL Storage"
+      description: "sourceUrl and imageUrl fields accept arbitrary URLs without validation. Could enable Server-Side Request Forgery attacks through shared scraper."
+      stories: ["SETS-005", "SETS-013"]
+      severity: high
+    - id: "SEC-005"
+      title: "Data Leakage - Sensitive Financial Data"
+      description: "purchasePrice, tax, shipping fields store sensitive financial information without documented encryption at rest or in transit."
+      stories: ["SETS-006", "SETS-008"]
+      severity: high
+    - id: "SEC-006"
+      title: "Business Logic Vulnerability - Undo Token Expiry"
+      description: "Undo functionality (SETS-009, SETS-010, SETS-021) lacks documented expiration. Stale undo tokens could cause unintended state changes or be replayed."
+      stories: ["SETS-008", "SETS-009", "SETS-010", "SETS-021"]
+      severity: high
+    - id: "SEC-007"
+      title: "Race Condition - Wishlist to Sets Transaction"
+      description: "SETS-008 'Got it' flow creates Set before deleting Wishlist. Window exists where item exists in both collections. No locking mechanism documented."
+      stories: ["SETS-008"]
+      severity: high
+    - id: "SEC-008"
+      title: "Information Disclosure - Missing Field Validation"
+      description: "pieceCount, releaseDate, setNumber optional fields without length/format constraints. Could accept malicious input or cause database errors."
+      stories: ["SETS-005", "SETS-006", "SETS-013"]
+      severity: high
+
+  medium:
+    - id: "SEC-009"
+      title: "XSS Risk - Display Injection Vectors"
+      description: "User-provided content (title, notes, tags) displayed without documented sanitization. Potential DOM-based XSS in gallery view and detail view."
+      stories: ["SETS-005", "SETS-006", "SETS-013", "SETS-014", "SETS-015"]
+      severity: medium
+    - id: "SEC-010"
+      title: "API Enumeration - Predictable Set IDs"
+      description: "Using sequential UUIDs for set IDs. If UUIDs are predictable, users could enumerate other users' sets via API."
+      stories: ["SETS-007", "SETS-008"]
+      severity: medium
+    - id: "SEC-011"
+      title: "Mass Assignment - No Input Whitelisting"
+      description: "API endpoints accept arbitrary fields. No documented validation of which fields can be updated via PATCH endpoints."
+      stories: ["SETS-007", "SETS-009", "SETS-010", "SETS-011"]
+      severity: medium
+    - id: "SEC-012"
+      title: "Rate Limiting - Missing Scraper Protection"
+      description: "Shared scraper service (SETS-005) lacks documented rate limiting. Could be abused for DoS against LEGO.com or infrastructure."
+      stories: ["SETS-005"]
+      severity: medium
+    - id: "SEC-013"
+      title: "Orphaned References - Wishlist Integrity"
+      description: "wishlistItemId field maintains references to deleted Wishlist items. No cascade delete rules documented."
+      stories: ["SETS-008", "SETS-012"]
+      severity: medium
+
+  low:
+    - id: "SEC-014"
+      title: "Audit Trail Missing"
+      description: "No documented audit logging for set modifications, deletions, or price changes. Makes forensic investigation impossible."
+      stories: ["SETS-007", "SETS-009", "SETS-010", "SETS-012"]
+      severity: low
+    - id: "SEC-015"
+      title: "CSRF Protection - Not Mentioned"
+      description: "State-changing operations (POST/PATCH/DELETE) have no documented CSRF token validation."
+      stories: ["SETS-007", "SETS-008"]
+      severity: low
+    - id: "SEC-016"
+      title: "Backup & Recovery - No Strategy"
+      description: "Hard delete (SETS-012) is permanent with no backup mechanism documented. User error cannot be recovered."
+      stories: ["SETS-012"]
+      severity: low
+
+owasp_assessment:
+  - category: "A01:2021 - Broken Access Control"
+    risk: "API endpoints lack authorization checks. Users could access/modify other users' sets, delete wishlist items belonging to others."
+    affected_stories: ["SETS-007", "SETS-008", "SETS-009", "SETS-010", "SETS-011", "SETS-012"]
+    mitigation: "Implement row-level security on all API endpoints. Validate userId matches authenticated user before any data access. Use database-level constraints."
+
+  - category: "A03:2021 - Injection"
+    risk: "User input fields (title, notes, tags, theme, store) stored without sanitization. SQL injection via ORM, NoSQL injection if MongoDB used."
+    affected_stories: ["SETS-005", "SETS-006", "SETS-013", "SETS-014", "SETS-015"]
+    mitigation: "Use parameterized queries/ORM with input validation. Implement field length limits and character whitelisting. Sanitize on input, not output."
+
+  - category: "A04:2021 - Insecure Design"
+    risk: "Scraper service design allows arbitrary URL fetching without domain validation. Enables SSRF attacks against internal services."
+    affected_stories: ["SETS-005"]
+    mitigation: "Implement URL allowlist (only LEGO.com domains). Add request timeout limits. Use separate rate-limiting service. Log all scraper requests."
+
+  - category: "A05:2021 - Broken Authentication / A07:2021 - Cross-Site Scripting (XSS)"
+    risk: "Gallery and detail views display user-supplied content without sanitization. Stored XSS possible via title/notes fields."
+    affected_stories: ["SETS-005", "SETS-006", "SETS-013", "SETS-014", "SETS-015", "SETS-019"]
+    mitigation: "Use React's built-in XSS protection (auto-escaping). Implement Content Security Policy header. Use DOMPurify for any dynamic HTML. Never dangerouslySetInnerHTML."
+
+  - category: "A06:2021 - Vulnerable and Outdated Components"
+    risk: "Shared scraper service reliability mentioned as risk. Outdated browser automation tools could have security flaws."
+    affected_stories: ["SETS-005"]
+    mitigation: "Maintain scraper dependencies. Use server-side scraping only. Implement allowlist for user agents and browser versions."
+
+  - category: "A08:2021 - Software and Data Integrity Failures"
+    risk: "Undo tokens have no documented expiry or replay protection. Could be used to modify collection state maliciously."
+    affected_stories: ["SETS-008", "SETS-009", "SETS-010", "SETS-021"]
+    mitigation: "Implement time-based token expiry (5-10 seconds max). Use cryptographic signatures for undo tokens. Store request context (IP, session) in token."
+
+  - category: "A09:2021 - Logging and Monitoring"
+    risk: "No audit trail for financial data modifications, deletions, or suspicious access patterns."
+    affected_stories: ["SETS-007", "SETS-009", "SETS-010", "SETS-012"]
+    mitigation: "Log all API operations with user, timestamp, action, and affected data. Alert on bulk deletes or suspicious access patterns."
+
+data_privacy:
+  - concern: "Financial Information Storage"
+    data_type: "purchasePrice, tax, shipping amounts"
+    sensitivity: "high"
+    recommendation: "Encrypt at rest using KMS. Encrypt in transit with TLS 1.3+. Document retention policy. Consider PCI-DSS compliance if storing actual payment methods."
+
+  - concern: "User Collection Enumeration"
+    data_type: "Set ownership via userId"
+    sensitivity: "medium"
+    recommendation: "Implement visibility controls. Add timestamp-based access logging. Prevent timing attacks that reveal collection size via API response times."
+
+  - concern: "URL History Storage"
+    data_type: "sourceUrl field"
+    sensitivity: "medium"
+    recommendation: "URLs may contain session tokens or tracking parameters. Sanitize stored URLs. Consider scrubbing parameters on display. Document data retention for URLs."
+
+  - concern: "Image URL Storage"
+    data_type: "imageUrl pointing to S3"
+    sensitivity: "low-medium"
+    recommendation: "Ensure S3 bucket has ACLs preventing public access. Use signed URLs with expiry. Monitor S3 access logs for unauthorized requests."
+
+  - concern: "Cross-Tenant Data Leakage"
+    data_type: "All set records"
+    sensitivity: "critical"
+    recommendation: "Implement multi-tenancy isolation. Use database row-level security. Filter all queries by userId. Add integration tests verifying isolation."
+
+authorization_gaps:
+  - gap: "Missing Resource-Level Authorization on PATCH /api/sets/:id"
+    story: "SETS-009"
+    risk: "User A could PATCH another user's set by guessing/iterating UUID. Allows unauthorized build status changes."
+    mitigation: "Verify `userId` from JWT token matches set.userId before allowing update. Return 403 Forbidden if mismatch."
+
+  - gap: "Missing Resource-Level Authorization on DELETE /api/sets/:id"
+    story: "SETS-012"
+    risk: "User A could delete User B's sets permanently, causing data loss and denial of service."
+    mitigation: "Add authorization check. Implement soft delete with restore window. Log deletions for audit trail."
+
+  - gap: "Wishlist Integration Authorization"
+    story: "SETS-008"
+    risk: "POST /api/sets/from-wishlist could move other users' wishlist items to target user's collection."
+    mitigation: "Verify both set and wishlist item belong to authenticated user. Use database constraints to prevent orphaned items."
+
+  - gap: "MOC Link Authorization"
+    story: "SETS-011"
+    risk: "User could link to MOCs they don't own or link other users' sets to arbitrary MOCs."
+    mitigation: "Verify both set and MOC belong to authenticated user before creating many-to-many relationship."
+
+  - gap: "Quantity Update Authorization"
+    story: "SETS-010"
+    risk: "PATCH /api/sets/:id/quantity lacks documented user validation. Could modify others' quantities."
+    mitigation: "Validate user ownership. Consider rate limiting quantity changes to prevent rapid state cycling."
+
+  - gap: "Stats Endpoint Authorization"
+    story: "SETS-016"
+    risk: "GET /api/sets/stats could expose aggregated data leaking collection size or total value of other users."
+    mitigation: "Ensure stats endpoint filters by userId. Do not expose aggregate statistics across users."
+
+input_validation:
+  - input: "sourceUrl (URL field)"
+    story: "SETS-005"
+    validation_needed: "Must be valid HTTPS URL (not HTTP). Allowlist domains (LEGO.com only initially). Reject URLs with auth credentials. Prevent SSRF via private IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8)."
+    severity: critical
+
+  - input: "title (string)"
+    story: "SETS-005, SETS-006, SETS-013"
+    validation_needed: "Max 255 characters. Whitelist alphanumeric, spaces, hyphens, parentheses. Reject null bytes. No HTML/scripts. Strip leading/trailing whitespace."
+    severity: high
+
+  - input: "notes (string)"
+    story: "SETS-005, SETS-006, SETS-013"
+    validation_needed: "Max 2000 characters. Same sanitization as title. Validate encoding (UTF-8 only). Reject control characters."
+    severity: high
+
+  - input: "setNumber (string)"
+    story: "SETS-005, SETS-006, SETS-013"
+    validation_needed: "Must match LEGO set number format (5-7 digits, e.g., '75192'). Use regex: ^[0-9]{5,7}$. Reject special characters."
+    severity: medium
+
+  - input: "purchasePrice, tax, shipping (decimal)"
+    story: "SETS-006, SETS-008"
+    validation_needed: "Must be positive numbers. Max 2 decimal places. Range: 0.00 to 999999.99. Validate after parsing to prevent float precision issues."
+    severity: high
+
+  - input: "quantity (integer)"
+    story: "SETS-006, SETS-008, SETS-010"
+    validation_needed: "Must be integer >= 1. Max 10000 (prevent abuse). Enforce minimum of 1 (prevent deletion via decrement)."
+    severity: medium
+
+  - input: "purchaseDate (date)"
+    story: "SETS-006, SETS-008"
+    validation_needed: "Must be valid ISO 8601 date. Cannot be in future. Cannot be before 1970 (LEGO established 1958, but reasonable lower bound). Max 90 days in future (pre-order allowance)."
+    severity: medium
+
+  - input: "theme (string)"
+    story: "SETS-005, SETS-006"
+    validation_needed: "Max 100 characters. Only alphanumeric, spaces, hyphens. Whitelist against known LEGO themes to prevent injection."
+    severity: medium
+
+  - input: "store (string)"
+    story: "SETS-005, SETS-006, SETS-013"
+    validation_needed: "Max 100 characters. Whitelist common retailers (LEGO Store, Barweer, Amazon, etc.). Prevent arbitrary input."
+    severity: medium
+
+  - input: "imageUrl (URL)"
+    story: "SETS-005, SETS-013"
+    validation_needed: "Must be valid HTTPS S3 URL (s3.amazonaws.com or cloudfront). Reject external URLs. Validate image exists and is accessible."
+    severity: medium
+
+  - input: "tags (array of strings)"
+    story: "SETS-015"
+    validation_needed: "Max 10 tags per set. Each tag: max 50 characters, alphanumeric + spaces + hyphens only. Prevent duplicate tags."
+    severity: low-medium
+
+  - input: "mocIds (array of UUIDs)"
+    story: "SETS-011"
+    validation_needed: "Validate each UUID format. Verify all MOCs belong to authenticated user. Limit to 100 MOC links per set to prevent DoS."
+    severity: medium
+
+scraping_security:
+  - concern: "Malicious URL Payload - Code Injection via Web Scraping"
+    story: "SETS-005"
+    risk: "Scraped HTML could contain malicious JavaScript in data attributes (data-* attributes) that runs when parsed by shared scraper."
+    mitigation: "Use HTML sanitization library (DOMPurify) before parsing. Extract only structured data (meta tags, JSON-LD). Never eval() parsed JavaScript. Use strict XPath/CSS selectors."
+
+  - concern: "SSRF Attack - Internal Service Exploitation"
+    story: "SETS-005"
+    risk: "Attacker crafts LEGO.com-like URL pointing to internal services (http://internal-api:8080, http://metadata.aws.internal). Scraper fetches data, exposing internal endpoints."
+    mitigation: "Implement strict URL allowlist (only LEGO.com subdomains). Block private IP ranges. Use separate network segment for scraper. Monitor outbound requests."
+
+  - concern: "Denial of Service - Scraper Amplification"
+    story: "SETS-005"
+    risk: "Attacker submits URLs repeatedly or slow-loris attacks via scraper. Could exhaust bandwidth or CPU."
+    mitigation: "Implement rate limiting (1 scrape per user per 10 seconds). Add timeout (5-10 seconds max). Queue scraper requests. Monitor scraper load."
+
+  - concern: "HTML Parsing Vulnerabilities - XXE Attacks"
+    story: "SETS-005"
+    risk: "If scraper uses XML parser without XXE protection, malicious XML in HTML could trigger entity expansion attacks."
+    mitigation: "Use HTML-specific parsers (Cheerio, JsDOM) not XML parsers. Disable external entity loading. Limit entity expansion depth."
+
+  - concern: "Data Exfiltration - Credential Leakage in URLs"
+    story: "SETS-005"
+    risk: "User pastes URL containing session cookies or auth tokens. Scraper stores URL with credentials in database, leaking them."
+    mitigation: "Strip query parameters from stored sourceUrl (keep only domain/path). Log sanitized URLs only. Warn users about sharing sensitive URLs."
+
+  - concern: "Cache Poisoning - Scraped Image Replacement"
+    story: "SETS-005"
+    risk: "Attacker compromises LEGO.com CDN or MitM attack. Malicious image uploaded to user's S3. User sees replaced set photos."
+    mitigation: "Verify image integrity via hash verification. Use CDN with signature verification. Implement image scanning (NSFW, malware detection)."
+
+  - concern: "Scraper Service Availability - Third-Party Dependency"
+    story: "SETS-005"
+    risk: "Shared scraper service is single point of failure. If scraper is down, all URL-based adds fail."
+    mitigation: "Implement graceful degradation to manual entry form. Cache successful scrapes. Implement retry logic with exponential backoff. Monitor scraper health."
+
+  - concern: "LEGO.com Terms of Service Violation"
+    story: "SETS-005"
+    risk: "Web scraping LEGO.com may violate their Terms of Service. Could result in IP ban or legal action."
+    mitigation: "Add robots.txt check before scraping. Implement User-Agent rotation. Consider using LEGO API if available. Document T.o.S compliance."
+
+  - concern: "User Agent Spoofing - Ban Detection"
+    story: "SETS-005"
+    risk: "Scraper could be detected as bot and blocked by LEGO.com, affecting legitimate users."
+    mitigation: "Use realistic User-Agent headers. Implement randomized delays between requests. Cache successful responses. Monitor for 403/429 responses."
+
+  - concern: "PII Extraction from URLs"
+    story: "SETS-005"
+    risk: "LEGO.com URLs may contain user identifiers or referral codes leaking information across users."
+    mitigation: "Sanitize sourceUrl before storing. Remove query parameters. Hash URLs for deduplication instead of storing full URL."

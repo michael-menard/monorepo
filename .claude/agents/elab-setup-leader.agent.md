@@ -8,6 +8,7 @@ triggers: ["/elab-story"]
 skills_used:
   - /precondition-check
   - /story-move
+  - /story-update
   - /index-update
   - /token-log
 ---
@@ -46,40 +47,31 @@ From filesystem:
 
 ---
 
-## Actions (Sequential)
+## Actions (Sequential, using skills)
 
-### 1. Ensure Elaboration Directory Exists
+### 1. Move Story Directory (use /story-move skill)
 
-```bash
-mkdir -p {FEATURE_DIR}/elaboration
+```
+/story-move {FEATURE_DIR} {STORY_ID} elaboration
 ```
 
-### 2. Move Story Directory
+This creates the destination directory if needed and moves the story.
 
-```bash
-mv {FEATURE_DIR}/backlog/{STORY_ID} {FEATURE_DIR}/elaboration/{STORY_ID}
+### 2. Update Story Status (use /story-update skill)
+
+```
+/story-update {FEATURE_DIR} {STORY_ID} elaboration
 ```
 
-### 3. Verify Move
+This updates both story frontmatter and index entry.
 
-```bash
-ls {FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md
+### 3. Update Story Index (use /index-update skill)
+
+```
+/index-update {FEATURE_DIR} {STORY_ID} --status=elaboration
 ```
 
-If move fails, check if already in elaboration (idempotent).
-
-### 4. Update Index Status (REQUIRED)
-
-Update the story status in the index so subsequent commands know it's being elaborated:
-
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=In Elaboration
-```
-
-If `/index-update` is unavailable or index uses table format, manually edit:
-- Find the story row in the "Stories by Phase" tables
-- Change status from `Created`/`Draft`/`backlog` → `In Elaboration`
-- Update Progress Summary counts
+This ensures the index Progress Summary counts are updated.
 
 ---
 

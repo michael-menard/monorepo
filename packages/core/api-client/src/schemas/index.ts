@@ -21,6 +21,14 @@ export {
   // Reorder schemas
   ReorderWishlistItemSchema,
   BatchReorderSchema,
+  ReorderResponseSchema,
+  // Presign schemas
+  PresignRequestSchema,
+  PresignResponseSchema,
+  // Purchase schemas (WISH-2042)
+  MarkAsPurchasedInputSchema,
+  GotItFormSchema,
+  SetItemSchema,
   // Types
   type WishlistStore,
   type Currency,
@@ -32,6 +40,12 @@ export {
   type WishlistListResponse,
   type ReorderWishlistItem,
   type BatchReorder,
+  type ReorderResponse,
+  type PresignRequest,
+  type PresignResponse,
+  type MarkAsPurchasedInput,
+  type GotItFormValues,
+  type SetItem,
 } from './wishlist'
 
 // Sets schemas
@@ -53,3 +67,17 @@ export {
   type SetListFilters,
   type SetListResponse,
 } from './sets'
+
+// Feature flags schemas (WISH-2009)
+export {
+  FeatureFlagSchema,
+  FeatureFlagsResponseSchema,
+  FeatureFlagDetailResponseSchema,
+  UpdateFeatureFlagInputSchema,
+  WishlistFlagKeys,
+  type FeatureFlag,
+  type FeatureFlagsResponse,
+  type FeatureFlagDetailResponse,
+  type UpdateFeatureFlagInput,
+  type WishlistFlagKey,
+} from './feature-flags'

@@ -1,0 +1,365 @@
+---
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/sets"
+prefix: "SETS"
+reviewed: "2026-01-25T23:30:00Z"
+
+verdict: CONCERNS
+summary: "Epic is well-structured with strong UX/product alignment but faces engineering readiness concerns (cross-epic dependencies, database design, transaction complexity) and security gaps (authorization, input validation, SSRF risks) requiring upfront specification work."
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    findings_count: 13
+  product:
+    verdict: READY
+    findings_count: 10
+  qa:
+    verdict: CONCERNS
+    findings_count: 14
+  ux:
+    verdict: READY
+    findings_count: 9
+  platform:
+    verdict: READY
+    findings_count: 9
+  security:
+    verdict: CONCERNS
+    findings_count: 16
+
+findings:
+  critical:
+    - id: ENG-001
+      source: engineering
+      issue: "SETS-007 (CRUD API) is high-risk foundational blocker for 11 stories with atomic transaction requirement but story has sizing warning and lacks database schema detail"
+      stories: [SETS-007]
+      action: "Finalize Aurora schema, indexes (userId, setNumber), (userId, createdAt), (userId, isBuilt) before development. Document transaction contract upfront."
+    - id: ENG-002
+      source: engineering
+      issue: "SETS-008 (Wishlist integration) requires atomic create-then-delete flow with rollback handling, undo support, cross-epic dependency validation missing"
+      stories: [SETS-008]
+      action: "Define transaction strategy (database ACID vs. saga pattern), rollback scenarios, undo window duration. Validate Wishlist API contract before starting."
+    - id: ENG-003
+      source: engineering
+      issue: "Many-to-many relationship (set_moc_links) underspecified: no cascade delete rules, orphan handling, or referential integrity constraints documented"
+      stories: [SETS-011]
+      action: "Document referential integrity constraints, cascade delete rules, bidirectional update mechanism with MOC Instructions epic."
+    - id: SEC-001
+      source: security
+      issue: "Critical authorization gap: API endpoints lack user isolation checks. Users could access/modify other users' sets."
+      stories: [SETS-007, SETS-008, SETS-009, SETS-010, SETS-011, SETS-012]
+      action: "Add row-level authorization to all endpoints. Validate userId from JWT matches set.userId. Implement database-level constraints."
+    - id: SEC-002
+      source: security
+      issue: "Critical input validation missing: user-provided fields (title, notes, sourceUrl, imageUrl) stored without sanitization enabling SQL injection, SSRF, XSS"
+      stories: [SETS-005, SETS-006, SETS-013]
+      action: "Implement parameterized queries, input whitelisting, length limits, URL allowlist (LEGO.com only). Reject private IP ranges and credentials in URLs."
+    - id: QA-001
+      source: qa
+      issue: "Missing atomic transaction test coverage for SETS-008: no test scenarios for failure modes (Set creation succeeds, Wishlist deletion fails, etc.)"
+      stories: [SETS-008]
+      action: "Define test scenarios for all failure points. Add integration tests with simulated failures at each step. Test undo correctness."
+    - id: QA-002
+      source: qa
+      issue: "Optimistic update rollback scenarios not fully specified (SETS-009, SETS-010): undo window duration, navigation away behavior, API in-flight race conditions unclear"
+      stories: [SETS-009, SETS-010]
+      action: "Specify undo window duration (5-10 seconds), recovery mechanism if expired, handling of rapid concurrent updates. Add state consistency tests."
+
+  high:
+    - id: ENG-004
+      source: engineering
+      issue: "Database schema incomplete: missing indexes, constraints, and duplicate detection (setNumber, userId) unique constraint not specified"
+      stories: [SETS-007, SETS-014, SETS-018]
+      action: "Add unique constraint on (userId, setNumber). Create indexes on (userId, createdAt), (userId, isBuilt). Define duplicate detection algorithm."
+    - id: ENG-005
+      source: engineering
+      issue: "Scraper service dependency shared with Wishlist but no integration plan: error handling contract, rate limiting, retry logic undefined"
+      stories: [SETS-005, SETS-013]
+      action: "Confirm scraper service status and API contract. Document error handling, timeouts (recommend 5s), retry policy, fallback to manual entry."
+    - id: ENG-006
+      source: engineering
+      issue: "Optimistic update pattern needs formal error recovery spec: undo window timing, state consistency if API fails, rollback contract not specified"
+      stories: [SETS-009, SETS-010, SETS-021]
+      action: "Define undo window (8-10s recommended). Specify state consistency on API failure. Add integration tests for network delay scenarios."
+    - id: ENG-007
+      source: engineering
+      issue: "Storage architecture for images underspecified: signed URLs, expiration, CDN caching, optimization, cleanup for deleted sets missing"
+      stories: [SETS-005, SETS-006, SETS-013]
+      action: "Document S3 bucket policy, signed URL expiration, CloudFront cache headers, image optimization (WebP, resize), cleanup on delete."
+    - id: PROD-001
+      source: product
+      issue: "SETS-008 (Wishlist 'Got it' Integration) risk of data loss during purchase transition; Wishlist epic is in-progress, not complete"
+      stories: [SETS-008]
+      action: "Align with Wishlist epic lead. Define transaction contract (which system owns rollback logic). Defer SETS-008 until Wishlist POST endpoint complete."
+    - id: PROD-002
+      source: product
+      issue: "Shared scraper service status unclear. Assumes Wishlist epic will deliver or exists, but SETS-005 and SETS-006 blocked without confirmation"
+      stories: [SETS-005, SETS-006]
+      action: "Confirm scraper service status with architecture team. If not implemented, add to SETS scope or explicitly defer SETS-005."
+    - id: UX-001
+      source: ux
+      issue: "Build status toggle interaction differs between card and detail view: inconsistent visual language and animation behavior"
+      stories: [SETS-009, SETS-020]
+      action: "Standardize on segmented control or toggle button. Ensure consistent visual language, animation, and focus management across views."
+    - id: UX-002
+      source: ux
+      issue: "Optimistic update failures use 'Retry' toast but don't specify what will happen. User confusion if retry fails again or data integrity compromised."
+      stories: [SETS-009, SETS-010]
+      action: "Show clear error state before retry. Include explanation of failure cause. Consider persistent undo in detail view for critical operations."
+    - id: QA-003
+      source: qa
+      issue: "Shared scraper reliability and error handling not defined: timeout, partial data, invalid URLs, network errors, retry logic missing"
+      stories: [SETS-005, SETS-013]
+      action: "Document scraper error scenarios: connection error, unsupported URL, no product found. Define retry logic and manual entry fallback."
+    - id: QA-004
+      source: qa
+      issue: "Cross-epic dependency verification missing: no documented test contracts or API contracts with Wishlist (SETS-008) or MOC (SETS-011) epics"
+      stories: [SETS-008, SETS-011]
+      action: "Create contract tests defining expected API signatures. Add integration tests verifying bi-directional updates before development."
+    - id: QA-005
+      source: qa
+      issue: "Duplicate detection acceptance criteria ambiguous: unclear what constitutes duplicate, fuzzy vs. exact match, quantity vs. new entry implications"
+      stories: [SETS-018]
+      action: "Define duplicate detection algorithm precisely (setNumber exact match, handle missing setNumber, alt-brick sets). Test user choice persistence."
+    - id: SEC-003
+      source: security
+      issue: "SSRF risk: sourceUrl and imageUrl fields accept arbitrary URLs without validation. Enables Server-Side Request Forgery attacks via scraper."
+      stories: [SETS-005, SETS-013]
+      action: "Implement URL allowlist (LEGO.com only). Block private IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8). Validate HTTPS only."
+    - id: SEC-004
+      source: security
+      issue: "High-risk: undo token expiry not documented. Stale tokens could cause unintended state changes or be replayed."
+      stories: [SETS-008, SETS-009, SETS-010, SETS-021]
+      action: "Implement time-based token expiry (5-10 seconds max). Use cryptographic signatures. Store request context (IP, session) in token."
+    - id: SEC-005
+      source: security
+      issue: "High-risk: Wishlist to Sets transaction has race condition window where item exists in both collections. No locking mechanism documented."
+      stories: [SETS-008]
+      action: "Implement distributed transaction pattern with explicit rollback handlers. Add transaction logging to audit trail. Document locking strategy."
+
+  medium:
+    - id: ENG-008
+      source: engineering
+      issue: "SETS-019 (accessibility) deferred to phase 5 but requires phase 1 architectural decisions for keyboard shortcuts and focus management"
+      stories: [SETS-019]
+      action: "Reclassify SETS-019 to Phase 2. Define keyboard shortcuts (B, +/-, M, A, Delete) and focus trapping in modals upfront."
+    - id: ENG-009
+      source: engineering
+      issue: "Mobile-first responsive design deferred to phase 5 but touch targets and swipe gestures require component architecture decisions from phase 1"
+      stories: [SETS-020]
+      action: "Build Phase 1 components mobile-first. Define 44px touch targets and spacing upfront. Phase 5 becomes polish, not overhaul."
+    - id: ENG-010
+      source: engineering
+      issue: "API endpoint design lacks detail: GET /api/sets query parameters for sort/filter undefined. No OpenAPI spec or parameter schema."
+      stories: [SETS-014]
+      action: "Create OpenAPI specification for all SETS endpoints. Document parameter names, allowed values, default sort order, pagination (cursor vs. offset)."
+    - id: ENG-011
+      source: engineering
+      issue: "Gallery and tag integration depend on shared packages (gallery-package, tag-management) with unclear availability and API stability"
+      stories: [SETS-005, SETS-014, SETS-015, SETS-017]
+      action: "Verify shared packages exist. Lock APIs before Phase 2. Create adapter if incompatible. Add interface tests for breaking changes."
+    - id: ENG-012
+      source: engineering
+      issue: "No pagination/virtualization strategy for large collections. Default queries could timeout with 10k+ sets per user."
+      stories: [SETS-014]
+      action: "Specify API pagination limit (recommend max 100 per page). Implement lazy-loading. Create index on (userId, createdAt). Load test at scale."
+    - id: ENG-013
+      source: engineering
+      issue: "SETS-018 duplicate detection logic conflicts with SETS-010 quantity stepper: unclear when to increment quantity vs. create new entry"
+      stories: [SETS-018, SETS-010]
+      action: "Clarify data model: (1) increment quantity on duplicate, or (2) allow multiple entries with different purchase dates. Add database constraint."
+    - id: PROD-003
+      source: product
+      issue: "SETS-018 (duplicate detection) adds UX complexity without blocking MVP. Users may be confused by 'add to quantity vs. create new entry' choice."
+      stories: [SETS-018]
+      action: "Consider deferring to post-MVP Phase 6. Core value achieved with simple quantity increment. If kept, include clear help text and examples."
+    - id: PROD-004
+      source: product
+      issue: "SETS-011 (MOC linking) blocked by MOC Instructions epic timeline. If MOC delayed beyond Phase 4, blocks SETS-019 and SETS-020."
+      stories: [SETS-011]
+      action: "Get MOC epic timeline. If delayed, stub SETS-011 (UI ready, no backend) as post-MVP. Use feature flag to enable when MOC ready."
+    - id: UX-003
+      source: ux
+      issue: "SETS-008 'Got it' flow mentions undo but atomic transaction design creates implicit rollback complexity. Unclear how undo works if half-succeeded."
+      stories: [SETS-008, SETS-021]
+      action: "Document explicit undo mechanism: Create Set → Delete Wishlist on success → Full rollback if either fails. Test all failure scenarios."
+    - id: UX-004
+      source: ux
+      issue: "SETS-010 quantity stepper shows 'Delete instead?' prompt when decrementing below 1 but exact dialog copy not specified"
+      stories: [SETS-010]
+      action: "Define exact dialog text and UX flow. Test clarity with users. Ensure disabled state has sufficient contrast."
+    - id: UX-005
+      source: ux
+      issue: "SETS-005 URL scrape error states not designed: no specification for connection error, unsupported URL, no product found scenarios"
+      stories: [SETS-005]
+      action: "Design 4 error states with clear messaging and recovery paths. Add 'Try Manual Entry' link. Test with real LEGO.com URLs."
+    - id: QA-006
+      source: qa
+      issue: "Quantity minimum edge case handling unclear: button disabled vs. prompt behavior, direct field input to 0 or negative not specified"
+      stories: [SETS-010]
+      action: "Define acceptance criteria for all input paths (stepper buttons, direct edit, paste). Validate state at boundary (quantity=1)."
+    - id: QA-007
+      source: qa
+      issue: "Mobile responsive testing scope not detailed: viewport sizes, swipe thresholds, gesture recognition, touch targets (44px) not testable yet"
+      stories: [SETS-020]
+      action: "Define swipe direction (vertical only?), velocity/distance thresholds. Test on actual devices (iPhone SE, iPhone 14, iPad)."
+    - id: QA-008
+      source: qa
+      issue: "MOC bidirectional update synchronization not specified: if MOC deleted upstream, automatic cleanup unclear. Real-time vs. eventual consistency?"
+      stories: [SETS-011]
+      action: "Define consistency model: immediate or eventual. Add integration tests for MOC deletion propagation to Sets UI."
+    - id: SEC-006
+      source: security
+      issue: "Data leakage: purchasePrice, tax, shipping store sensitive financial information without documented encryption at rest or in transit"
+      stories: [SETS-006, SETS-008]
+      action: "Encrypt financial data at rest using KMS. Ensure TLS 1.3+ in transit. Document data retention policy. Consider PCI-DSS compliance."
+    - id: SEC-007
+      source: security
+      issue: "XSS risk: user-provided content (title, notes, tags) displayed without documented sanitization. Potential DOM-based XSS in gallery and detail views."
+      stories: [SETS-005, SETS-006, SETS-013, SETS-014, SETS-015]
+      action: "Use React's built-in XSS protection (auto-escaping). Implement Content Security Policy header. Never use dangerouslySetInnerHTML."
+    - id: SEC-008
+      source: security
+      issue: "Mass assignment vulnerability: API endpoints accept arbitrary fields without documented validation of which fields can be updated via PATCH"
+      stories: [SETS-007, SETS-009, SETS-010, SETS-011]
+      action: "Document whitelist of updateable fields per endpoint. Implement input validation rejecting unknown fields."
+
+new_stories:
+  - title: "Database Migration Story"
+    source: engineering
+    priority: P0
+    reason: "SETS-007 assumes Aurora schema exists but no migration story documented. Need authorship, testing, rollback procedure."
+  - title: "API Documentation & OpenAPI Spec"
+    source: engineering
+    priority: P0
+    reason: "No story for OpenAPI/Swagger generation. Risk of unclear contract between frontend/backend teams and external dependencies."
+  - title: "Error Handling & Logging Strategy"
+    source: engineering
+    priority: P0
+    reason: "No story specifies error codes, logging, monitoring, alerting. Current specs mention handling but lack formal error contract."
+  - title: "Performance & Load Testing Story"
+    source: engineering
+    priority: P0
+    reason: "No story for load testing query performance, pagination limits, or bulk operations. Risk of N+1 queries, slow detail views."
+  - title: "Image Processing & Optimization Story"
+    source: engineering
+    priority: P0
+    reason: "S3 image storage mentioned but no story for resizing, format conversion, CDN setup, cleanup. Risk of storage bloat and unexpected costs."
+  - title: "Scraper Service Integration & Fallback"
+    source: product
+    priority: P0
+    reason: "Shared scraper service dependency not verified. Need explicit story defining API contract, error handling, manual entry fallback."
+  - title: "Set Edit Form - Full Metadata Editing"
+    source: product
+    priority: P1
+    reason: "Users will need to correct scraped data or update notes. Explicit edit story ensures complete UX."
+  - title: "Bulk Actions (Select Multiple, Batch Update Build Status)"
+    source: product
+    priority: P1
+    reason: "Power users with large collections will want batch operations. High-value engagement feature."
+
+stories_to_split:
+  - story_id: SETS-007
+    reason: "Marked with sizing warning but complexity (atomic transactions, indexing, cross-epic integration) suggests 8-13 points, not typical CRUD endpoint effort"
+  - story_id: SETS-008
+    reason: "Wishlist integration flagged high-risk but estimated as standard feature. Atomic transaction + rollback + undo + cross-epic coordination suggests 8-13 points"
+  - story_id: SETS-005
+    reason: "Add modal with URL scrape depends on scraper service reliability. Error handling and fallback flows add complexity. Likely 5-8 points vs. estimated ~3"
+
+stories_to_defer:
+  - story_id: SETS-018
+    reason: "Duplicate detection adds UX complexity without blocking MVP. Core value achieved with quantity increment. Defer to post-MVP Phase 6 to simplify Phase 2."
+  - story_id: SETS-016
+    reason: "Collection stats are engagement booster, not core functionality. Can be added post-MVP or feature-toggled."
+  - story_id: SETS-015
+    reason: "Tag management depends on shared tag package stability. If package unstable, defer to Phase 5+ or stub with local tags."
+  - story_id: SETS-020
+    reason: "Mobile polish Phase 5 appropriate. Ensure Phase 1 components built mobile-first so Phase 5 becomes polish, not overhaul."
+  - story_id: SETS-019
+    reason: "Accessibility deferred to Phase 5 but requires Phase 1 architectural decisions. Recommend reclassifying to Phase 2 after foundational API (SETS-007)."
+
+metrics:
+  total_findings: 75
+  critical_count: 7
+  high_count: 13
+  medium_count: 14
+  low_count: 8
+  new_stories_suggested: 8
+  stories_to_split: 3
+  stories_to_defer: 5
+  perspectives_ready: 3 of 6
+  perspectives_concerns: 3 of 6
+
+blockers_and_dependencies:
+  - blocker: "Wishlist Epic Completion"
+    affected_stories: [SETS-008, SETS-021, SETS-005]
+    status: "In Progress"
+    action: "Validate Wishlist 'Got it' endpoint atomic and well-tested before SETS-008 starts. Confirm scraper service implementation."
+  - blocker: "MOC Instructions Epic Readiness"
+    affected_stories: [SETS-011]
+    status: "Unknown"
+    action: "Get MOC epic timeline. If delayed beyond Phase 4, stub SETS-011 (UI ready) with feature flag for backend integration."
+  - blocker: "Shared Package API Stability"
+    affected_stories: [SETS-005, SETS-014, SETS-015, SETS-017]
+    status: "Unclear"
+    action: "Audit gallery package and tag management package status. Lock APIs before Phase 2 development. Create adapters if needed."
+  - blocker: "Database Schema Finalization"
+    affected_stories: [SETS-007]
+    status: "Incomplete"
+    action: "Finalize Aurora schema with indexes, constraints, cascade delete rules. Define transaction patterns before SETS-007 development."
+  - blocker: "Security Input Validation & Authorization"
+    affected_stories: [SETS-005, SETS-006, SETS-007, SETS-008, SETS-009, SETS-010, SETS-011, SETS-012, SETS-013, SETS-014, SETS-015]
+    status: "Not Documented"
+    action: "Create security specification upfront: authorization checks, input whitelisting, SSRF prevention, encryption strategy."
+
+key_recommendations:
+  - priority: critical
+    description: "Create detailed OpenAPI specification for all SETS endpoints before Phase 1 development. Include error codes, pagination, validation contracts."
+  - priority: critical
+    description: "Define database migration story with schema, indexes (userId, setNumber), (userId, createdAt), cascade delete rules. Test rollback procedure."
+  - priority: critical
+    description: "Establish cross-epic contracts: validate Wishlist 'Got it' endpoint, MOC API schema, scraper service error handling, tag system API."
+  - priority: critical
+    description: "Create security specification upfront: row-level authorization checks, input whitelisting (URLs, fields), encryption strategy, audit logging."
+  - priority: high
+    description: "Clarify duplicate set detection strategy and data model impacts. Decide: (1) increment quantity or (2) separate entries with different purchase dates."
+  - priority: high
+    description: "Define transaction pattern for SETS-008 Wishlist integration: database ACID vs. saga pattern. Document rollback scenarios and undo mechanism."
+  - priority: high
+    description: "Reclassify SETS-019 (Accessibility) to Phase 2. Architect keyboard shortcuts and focus management into components upfront, not retrofitted."
+  - priority: high
+    description: "Confirm scraper service status and API contract. If unavailable, either add to SETS scope or explicitly defer SETS-005."
+
+success_criteria:
+  - "All critical findings resolved before Phase 1 development begins"
+  - "OpenAPI specification completed and reviewed by engineering/platform teams"
+  - "Database schema finalized with indexes, constraints, migration tested"
+  - "Cross-epic API contracts validated and documented"
+  - "Security authorization and input validation specification completed"
+  - "All 3 CONCERNS verdicts (Engineering, QA, Security) converted to READY before kickoff"
+
+conclusion: |
+  The SETS epic is well-structured, strategically aligned, and customer-centric. UX and Product reviews confirm READY verdict with appropriate scope and prioritization. However, engineering readiness has significant CONCERNS preventing immediate development kickoff.
+
+  **Critical path blockers:**
+  1. Database schema design and migration strategy not finalized
+  2. Cross-epic dependencies (Wishlist, MOC, scraper) lack validated API contracts
+  3. Security gaps in authorization and input validation not addressed
+  4. Transaction complexity for atomic Wishlist integration underestimated
+
+  **Recommended approach:**
+  - Phase 0 (2-3 weeks): Specification work
+    * Create OpenAPI specification for all endpoints
+    * Finalize Aurora database design with indexes and constraints
+    * Establish cross-epic API contracts with Wishlist and MOC teams
+    * Create security specification (authorization, input validation, SSRF prevention)
+  - Phase 1 (after Phase 0 complete): SETS-007 (API Endpoints) with confirmed schema and contracts
+  - Phase 2 (parallel to Phase 1): SETS-005, SETS-006, SETS-012, SETS-013, SETS-017 once Phase 1 API structure clear
+
+  **Risk mitigation:**
+  - Use feature flags for dependent services (MOC linking, tag management)
+  - Implement mock APIs for Wishlist and MOC epics for parallel development
+  - Defer SETS-018, SETS-016, SETS-020 to post-MVP to reduce Phase 2 scope
+  - Create comprehensive test infrastructure upfront (mocks, fixtures, load testing)
+
+  **Overall recommendation:** Proceed with Phase 0 specification work immediately. Phase 1 development can begin in 2-3 weeks once contracts and schema finalized.

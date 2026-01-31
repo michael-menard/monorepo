@@ -1,0 +1,76 @@
+/**
+ * {{pascalCase domain}} Service: {{pascalCase operation}}
+ *
+ * Business logic for {{operation}} operation.
+ * This service contains NO HTTP knowledge - it's pure business logic.
+ *
+ * @see docs/architecture/api-layer.md for architectural guidelines
+ */
+
+import { z } from 'zod'
+// import { db } from '../../core/database/client'
+// import { logger } from '../../core/observability/logger'
+
+// ============================================================================
+// Types (Zod-first)
+// ============================================================================
+
+{{#if hasRequestBody}}
+export const {{pascalCase operation}}InputSchema = z.object({
+  // TODO: Define input schema
+  // Example:
+  // title: z.string().min(1).max(200),
+  // description: z.string().optional(),
+})
+
+export type {{pascalCase operation}}Input = z.infer<typeof {{pascalCase operation}}InputSchema>
+{{/if}}
+
+export const {{pascalCase operation}}OutputSchema = z.object({
+  // TODO: Define output schema
+  // Example:
+  // id: z.string().uuid(),
+  // createdAt: z.string().datetime(),
+  success: z.boolean(),
+})
+
+export type {{pascalCase operation}}Output = z.infer<typeof {{pascalCase operation}}OutputSchema>
+
+// ============================================================================
+// Service Function
+// ============================================================================
+
+/**
+ * {{pascalCase operation}}
+ *
+ * TODO: Add description of what this operation does.
+ *
+{{#if requiresAuth}}
+ * @param userId - Authenticated user ID from JWT
+{{/if}}
+{{#if hasRequestBody}}
+ * @param input - Validated input from request body
+{{/if}}
+ * @returns {{pascalCase operation}}Output
+ */
+export async function {{camelCase operation}}(
+{{#if requiresAuth}}
+  userId: string,
+{{/if}}
+{{#if hasRequestBody}}
+  input: {{pascalCase operation}}Input,
+{{/if}}
+): Promise<{{pascalCase operation}}Output> {
+  // TODO: Implement business logic
+  //
+  // Guidelines:
+  // - NO HTTP types (Request, Response, etc.)
+  // - NO framework-specific code (Hono, Express, etc.)
+  // - Use @/core/* for infrastructure (db, s3, redis, etc.)
+  // - Throw domain errors (NotFoundError, ValidationError, etc.)
+  // - Keep functions pure and testable
+
+  return {
+    success: true,
+  }
+}

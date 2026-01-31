@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
+import { TooltipProvider } from '@repo/app-component-library'
 
 import { MainPage } from '../main-page'
 import type { WishlistListResponse } from '@repo/api-client/schemas/wishlist'
@@ -29,6 +30,22 @@ vi.mock('@repo/logger', () => ({
     debug: vi.fn(),
   }),
 }))
+
+// Mock TanStack Router Link component to avoid needing full router context
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual('@tanstack/react-router')
+  return {
+    ...actual,
+    Link: ({ to, children, ...props }: any) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    ),
+    useNavigate: () => vi.fn(),
+    useSearch: () => ({}),
+    useMatch: () => ({ pathname: '/' }),
+  }
+})
 
 // Mock useViewMode from @repo/gallery so that MainPage renders grid view
 vi.mock('@repo/gallery', async () => {
@@ -61,6 +78,8 @@ const mockWishlistResponse: WishlistListResponse = {
       sortOrder: 0,
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z',
+      createdBy: null,
+      updatedBy: null,
     },
   ],
   pagination: {
@@ -95,6 +114,14 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => {
 
   return {
     useGetWishlistQuery: useGetWishlistQueryMock,
+    // WISH-2041: Add mock for delete mutation
+    useRemoveFromWishlistMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+    // WISH-2041: Add mock for add mutation (used for undo)
+    useAddWishlistItemMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+    // WISH-2042: Add mock for purchase mutation
+    useMarkAsPurchasedMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+    // WISH-2005a: Add mock for reorder mutation (used by DraggableWishlistGallery)
+    useReorderWishlistMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
     wishlistGalleryApi: {
       reducerPath: 'wishlistGalleryApi',
       reducer: (state = {}) => state,
@@ -117,7 +144,9 @@ const createTestStore = () =>
 const renderWithProviders = () => {
   return render(
     <Provider store={createTestStore()}>
-      <MainPage />
+      <TooltipProvider>
+        <MainPage />
+      </TooltipProvider>
     </Provider>,
   )
 }
@@ -126,9 +155,7 @@ const renderWithProviders = () => {
 // Tests
 // -----------------------------------------------------------------------------
 
-// FIXME: Temporarily skipped due to complex TooltipProvider and RTK query mocking behavior.
-// Re-enable after stabilizing wishlist main page grid view and tooltip wiring.
-describe.skip('Wishlist MainPage - Grid View', () => {
+describe('Wishlist MainPage - Grid View', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 

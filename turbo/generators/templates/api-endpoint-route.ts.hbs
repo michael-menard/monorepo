@@ -1,0 +1,71 @@
+/**
+ * {{pascalCase domain}} Routes
+ *
+ * Hono routes for {{domain}} operations.
+ * These are thin HTTP adapters - all business logic is in /services.
+ *
+ * @see docs/architecture/api-layer.md for architectural guidelines
+ */
+
+import { Hono } from 'hono'
+{{#if hasRequestBody}}
+import { zValidator } from '@hono/zod-validator'
+{{/if}}
+{{#if requiresAuth}}
+// import { authMiddleware } from '../middleware/auth'
+{{/if}}
+import {
+  {{camelCase operation}},
+{{#if hasRequestBody}}
+  {{pascalCase operation}}InputSchema,
+{{/if}}
+} from '../services/{{kebabCase domain}}/{{kebabCase operation}}'
+
+const {{camelCase domain}} = new Hono()
+
+// ============================================================================
+// Middleware
+// ============================================================================
+
+{{#if requiresAuth}}
+// TODO: Uncomment when auth middleware is set up
+// {{camelCase domain}}.use('*', authMiddleware)
+{{/if}}
+
+// ============================================================================
+// Routes
+// ============================================================================
+
+/**
+ * {{method}} /{{kebabCase domain}}
+ *
+ * TODO: Add description
+ */
+{{camelCase domain}}.{{lowercase method}}(
+  '/',
+{{#if hasRequestBody}}
+  zValidator('json', {{pascalCase operation}}InputSchema),
+{{/if}}
+  async c => {
+{{#if requiresAuth}}
+    // TODO: Get userId from auth middleware
+    const userId = c.get('userId') || 'temp-user-id'
+{{/if}}
+{{#if hasRequestBody}}
+    const input = c.req.valid('json')
+{{/if}}
+
+    const result = await {{camelCase operation}}(
+{{#if requiresAuth}}
+      userId,
+{{/if}}
+{{#if hasRequestBody}}
+      input,
+{{/if}}
+    )
+
+    return c.json(result{{#if (eq method "POST")}}, 201{{/if}})
+  },
+)
+
+export default {{camelCase domain}}

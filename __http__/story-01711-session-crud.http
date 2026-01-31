@@ -1,0 +1,327 @@
+### STORY-01711: Session & File Management - CRUD Only
+### Multipart Upload Session Management Endpoints
+###
+### Prerequisites:
+### - Set AUTH_BYPASS=true and DEV_USER_SUB in environment
+### - Database accessible with upload_sessions and upload_session_files tables
+### - S3 bucket configured via MOC_BUCKET or LEGO_API_BUCKET_NAME
+
+@baseUrl = http://localhost:3000
+
+### ============================================================================
+### HAPPY PATH TESTS
+### ============================================================================
+
+### CS-HP-001: Create session with single instruction file
+### Expected: 201 Created with sessionId, partSizeBytes, expiresAt
+# @name createSessionSingleFile
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "name": "castle-instructions.pdf",
+      "size": 5242880,
+      "type": "application/pdf",
+      "ext": "pdf"
+    }
+  ]
+}
+
+###
+
+### CS-HP-004: Create session with all file types
+### Expected: 201 Created with sessionId
+# @name createSessionAllTypes
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "name": "castle-instructions.pdf",
+      "size": 5242880,
+      "type": "application/pdf",
+      "ext": "pdf"
+    },
+    {
+      "category": "image",
+      "name": "castle-front.jpg",
+      "size": 1048576,
+      "type": "image/jpeg",
+      "ext": "jpg"
+    },
+    {
+      "category": "thumbnail",
+      "name": "castle-thumb.png",
+      "size": 524288,
+      "type": "image/png",
+      "ext": "png"
+    },
+    {
+      "category": "parts-list",
+      "name": "castle-parts.csv",
+      "size": 102400,
+      "type": "text/csv",
+      "ext": "csv"
+    }
+  ]
+}
+
+###
+
+### RF-HP-001: Register instruction PDF file
+### Requires: Valid sessionId from createSessionSingleFile
+### Expected: 201 Created with fileId, uploadId
+# @name registerFile
+POST {{baseUrl}}/api/mocs/uploads/sessions/{{createSessionSingleFile.response.body.sessionId}}/files
+Content-Type: application/json
+
+{
+  "category": "instruction",
+  "name": "castle-instructions.pdf",
+  "size": 5242880,
+  "type": "application/pdf",
+  "ext": "pdf"
+}
+
+###
+
+### CF-HP-001: Complete single-part upload
+### Requires: Valid sessionId and fileId from registerFile
+### Expected: 200 OK with fileId, fileUrl
+### Note: This will fail without actual uploaded parts - use for contract testing only
+# @name completeFile
+POST {{baseUrl}}/api/mocs/uploads/sessions/{{createSessionSingleFile.response.body.sessionId}}/files/{{registerFile.response.body.fileId}}/complete
+Content-Type: application/json
+
+{
+  "parts": [
+    {
+      "partNumber": 1,
+      "etag": "\"d41d8cd98f00b204e9800998ecf8427e\""
+    }
+  ]
+}
+
+### ============================================================================
+### ERROR CASE TESTS - Create Session
+### ============================================================================
+
+### CS-AUTH-001: Missing auth header
+### Expected: 401 UNAUTHORIZED
+### Note: Only works when AUTH_BYPASS=false
+# @name createSessionNoAuth
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "name": "test.pdf",
+      "size": 1024,
+      "type": "application/pdf",
+      "ext": "pdf"
+    }
+  ]
+}
+
+###
+
+### CS-VAL-003: Empty files array
+### Expected: 422 VALIDATION_ERROR
+# @name createSessionEmptyFiles
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": []
+}
+
+###
+
+### CS-VAL-004: No instruction file (only image)
+### Expected: 400 BAD_REQUEST
+# @name createSessionNoInstruction
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "image",
+      "name": "photo.jpg",
+      "size": 1048576,
+      "type": "image/jpeg",
+      "ext": "jpg"
+    }
+  ]
+}
+
+###
+
+### CS-LIM-001: Instruction file exceeds 50MB limit
+### Expected: 413 FILE_TOO_LARGE
+# @name createSessionFileTooLarge
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "name": "huge-instructions.pdf",
+      "size": 60000000,
+      "type": "application/pdf",
+      "ext": "pdf"
+    }
+  ]
+}
+
+###
+
+### CS-LIM-006: Invalid MIME type for instruction
+### Expected: 415 UNSUPPORTED_MEDIA_TYPE
+# @name createSessionInvalidMime
+POST {{baseUrl}}/api/mocs/uploads/sessions
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "category": "instruction",
+      "name": "instructions.exe",
+      "size": 1024,
+      "type": "application/x-msdownload",
+      "ext": "exe"
+    }
+  ]
+}
+
+### ============================================================================
+### ERROR CASE TESTS - Register File
+### ============================================================================
+
+### RF-PATH-003: Session not found
+### Expected: 404 NOT_FOUND
+# @name registerFileNotFound
+POST {{baseUrl}}/api/mocs/uploads/sessions/00000000-0000-0000-0000-000000000000/files
+Content-Type: application/json
+
+{
+  "category": "instruction",
+  "name": "test.pdf",
+  "size": 1024,
+  "type": "application/pdf",
+  "ext": "pdf"
+}
+
+###
+
+### RF-STATE-004: Session expired (use seeded expired session)
+### Expected: 400 BAD_REQUEST "Session has expired"
+### Requires: Seeded expired session eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee
+# @name registerFileExpiredSession
+POST {{baseUrl}}/api/mocs/uploads/sessions/eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee/files
+Content-Type: application/json
+
+{
+  "category": "instruction",
+  "name": "test.pdf",
+  "size": 1024,
+  "type": "application/pdf",
+  "ext": "pdf"
+}
+
+###
+
+### RF-AUTH-002: Session belongs to other user (use seeded other user's session)
+### Expected: 404 NOT_FOUND (returns 404 to not reveal session existence)
+### Requires: Seeded other user's session dddddddd-dddd-dddd-dddd-dddddddddddd
+# @name registerFileOtherUserSession
+POST {{baseUrl}}/api/mocs/uploads/sessions/dddddddd-dddd-dddd-dddd-dddddddddddd/files
+Content-Type: application/json
+
+{
+  "category": "instruction",
+  "name": "test.pdf",
+  "size": 1024,
+  "type": "application/pdf",
+  "ext": "pdf"
+}
+
+### ============================================================================
+### ERROR CASE TESTS - Complete File
+### ============================================================================
+
+### CF-VAL-007: Part count mismatch
+### Requires: Valid session with registered file but no uploaded parts
+### Expected: 400 BAD_REQUEST "Part count mismatch"
+# @name completeFilePartMismatch
+POST {{baseUrl}}/api/mocs/uploads/sessions/{{createSessionSingleFile.response.body.sessionId}}/files/{{registerFile.response.body.fileId}}/complete
+Content-Type: application/json
+
+{
+  "parts": [
+    { "partNumber": 1, "etag": "\"abc123\"" },
+    { "partNumber": 2, "etag": "\"def456\"" }
+  ]
+}
+
+###
+
+### CF-STATE-004: File already completed
+### Requires: Already completed file
+### Expected: 400 BAD_REQUEST "File already completed"
+# @name completeFileAlreadyCompleted
+POST {{baseUrl}}/api/mocs/uploads/sessions/{{createSessionSingleFile.response.body.sessionId}}/files/{{registerFile.response.body.fileId}}/complete
+Content-Type: application/json
+
+{
+  "parts": [
+    { "partNumber": 1, "etag": "\"abc123\"" }
+  ]
+}
+
+###
+
+### CF-PATH-003: File not found
+### Expected: 404 NOT_FOUND
+# @name completeFileNotFound
+POST {{baseUrl}}/api/mocs/uploads/sessions/{{createSessionSingleFile.response.body.sessionId}}/files/00000000-0000-0000-0000-000000000000/complete
+Content-Type: application/json
+
+{
+  "parts": [
+    { "partNumber": 1, "etag": "\"abc123\"" }
+  ]
+}
+
+### ============================================================================
+### DATABASE VERIFICATION QUERIES
+### Run these in psql to verify records were created
+### ============================================================================
+
+### Verify session created:
+### SELECT * FROM upload_sessions WHERE id = '<sessionId>';
+
+### Verify file registered:
+### SELECT * FROM upload_session_files WHERE session_id = '<sessionId>';
+
+### Verify file completed:
+### SELECT status, file_url FROM upload_session_files WHERE id = '<fileId>';
+
+### ============================================================================
+### S3 VERIFICATION
+### Run these AWS CLI commands to verify S3 operations
+### ============================================================================
+
+### List multipart uploads:
+### aws s3api list-multipart-uploads --bucket <bucket-name>
+
+### Verify completed file exists:
+### aws s3 ls s3://<bucket-name>/dev/moc-instructions/<userId>/<sessionId>/

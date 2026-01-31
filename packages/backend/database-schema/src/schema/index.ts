@@ -1,9 +1,11 @@
 import {
   boolean,
+  check,
   date,
   index,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -11,10 +13,11 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
-import { setImages, sets } from './sets'
-
 // Re-export Sets tables so Drizzle can discover them via schema entrypoint
 export { setImages, sets } from './sets'
+
+// Re-export Feature Flags table (WISH-2009)
+export { featureFlags } from './feature-flags'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
 // Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
@@ -356,6 +359,26 @@ export const mocGalleryAlbums = pgTable(
   }),
 )
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Wishlist Enums (WISH-2000)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Store/retailer enum for wishlist items */
+export const wishlistStoreEnum = pgEnum('wishlist_store', [
+  'LEGO',
+  'Barweer',
+  'Cata',
+  'BrickLink',
+  'Other',
+])
+
+/** Currency enum for wishlist items */
+export const wishlistCurrencyEnum = pgEnum('wishlist_currency', ['USD', 'EUR', 'GBP', 'CAD', 'AUD'])
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wishlist Items Table (WISH-2000)
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const wishlistItems = pgTable(
   'wishlist_items',
   {
@@ -364,7 +387,7 @@ export const wishlistItems = pgTable(
 
     // Core fields (required)
     title: text('title').notNull(),
-    store: text('store').notNull(), // Retailer: LEGO, Barweer, Cata, BrickLink, Other
+    store: wishlistStoreEnum('store').notNull(), // Retailer: LEGO, Barweer, Cata, BrickLink, Other
 
     // Identification
     setNumber: text('set_number'), // LEGO set number (e.g., "75192")
@@ -375,7 +398,7 @@ export const wishlistItems = pgTable(
 
     // Pricing
     price: text('price'), // Using text for decimal precision (e.g., "199.99")
-    currency: text('currency').default('USD'), // USD, EUR, GBP, CAD, AUD
+    currency: wishlistCurrencyEnum('currency').default('USD'), // USD, EUR, GBP, CAD, AUD
 
     // Details
     pieceCount: integer('piece_count'), // Number of pieces
@@ -383,19 +406,32 @@ export const wishlistItems = pgTable(
     tags: jsonb('tags').$type<string[]>().default([]), // Theme/category tags
 
     // User organization
-    priority: integer('priority').default(0), // 0-5 scale
+    priority: integer('priority').default(0), // 0-5 scale, validated by check constraint
     notes: text('notes'), // User notes (e.g., "wait for sale")
     sortOrder: integer('sort_order').notNull().default(0), // Position in gallery for drag reorder
 
     // Timestamps
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
+
+    // Audit fields (WISH-2000 enhancement)
+    createdBy: text('created_by'), // User ID who created this item (nullable for existing records)
+    updatedBy: text('updated_by'), // User ID who last modified this item
   },
   table => ({
+    // Indexes for common queries
     userIdx: index('idx_wishlist_user_id').on(table.userId),
     userSortIdx: index('idx_wishlist_user_sort').on(table.userId, table.sortOrder),
     userStoreIdx: index('idx_wishlist_user_store').on(table.userId, table.store),
     userPriorityIdx: index('idx_wishlist_user_priority').on(table.userId, table.priority),
+    // Composite index for gallery filtering (WISH-2000 enhancement)
+    userStorePriorityIdx: index('idx_wishlist_user_store_priority').on(
+      table.userId,
+      table.store,
+      table.priority,
+    ),
+    // Check constraint for priority range (WISH-2000 enhancement)
+    priorityRangeCheck: check('priority_range_check', sql`priority >= 0 AND priority <= 5`),
   }),
 )
 

@@ -9,6 +9,7 @@ skills_used:
   - /precondition-check
   - /story-move
   - /story-update
+  - /index-update
   - /context-init
   - /token-log
 ---
@@ -38,34 +39,34 @@ Check ALL before proceeding:
 
 If ANY precondition fails → emit `SETUP BLOCKED: <reason>` and STOP.
 
-## Steps
+## Steps (using skills)
 
 1. **Validate preconditions** - Check all 4 gates above
 
-2. **Move story to UAT**
-   ```bash
-   mv {FEATURE_DIR}/in-progress/{STORY_ID} {FEATURE_DIR}/UAT/{STORY_ID}
+2. **Move story to UAT** (use /story-move skill)
+   ```
+   /story-move {FEATURE_DIR} {STORY_ID} UAT
    ```
 
-3. **Update status to in-qa**
-   - Open `{FEATURE_DIR}/UAT/{STORY_ID}/{STORY_ID}.md`
-   - Change `status: ready-for-qa` to `status: in-qa`
-
-4. **Create AGENT-CONTEXT.md**
-   Write to `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
-   ```yaml
-   feature_dir: {FEATURE_DIR}
-   story_id: {STORY_ID}
-   base_path: {FEATURE_DIR}/UAT/{STORY_ID}/
-   artifacts_path: {FEATURE_DIR}/UAT/{STORY_ID}/_implementation/
-   story_file: {FEATURE_DIR}/UAT/{STORY_ID}/{STORY_ID}.md
-   proof_file: {FEATURE_DIR}/UAT/{STORY_ID}/PROOF-{STORY_ID}.md
-   verification_file: {FEATURE_DIR}/UAT/{STORY_ID}/_implementation/VERIFICATION.yaml
-   phase: qa-verify
-   started_at: <timestamp>
+3. **Update status to in-qa** (use /story-update skill)
+   ```
+   /story-update {FEATURE_DIR} {STORY_ID} in-qa
    ```
 
-5. **Emit signal**
+4. **Update Story Index** (use /index-update skill)
+   ```
+   /index-update {FEATURE_DIR} {STORY_ID} --status=in-qa
+   ```
+
+5. **Create AGENT-CONTEXT.md** (use /context-init skill)
+   ```
+   /context-init {STORY_ID} qa-verify-story --path={FEATURE_DIR}
+   ```
+
+   This creates standardized context file with all paths at:
+   `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`
+
+6. **Emit signal**
 
 ## Output Format
 

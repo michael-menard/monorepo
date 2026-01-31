@@ -17,26 +17,26 @@ Story IDs follow the pattern `{PREFIX}-XXYZ` where:
 | Position | Meaning | Range | Description |
 |----------|---------|-------|-------------|
 | XX | Story number | 00-99 | Base story sequence number |
-| Y | Follow-up | 0-9 | 0 = original, 1-9 = follow-up iteration |
-| Z | Split | 0-9 | 0 = original, 1-9 = split part |
+| Y | Split | 0-9 | 0 = original, 1-9 = split part |
+| Z | Follow-up | 0-9 | 0 = original, 1-9 = follow-up iteration |
 
 **Examples:**
 
 | Story ID | Meaning |
 |----------|---------|
 | `WISH-0100` | Story 01, original |
-| `WISH-0110` | Story 01, follow-up 1 |
-| `WISH-0120` | Story 01, follow-up 2 |
-| `WISH-0101` | Story 01, split part 1 |
-| `WISH-0102` | Story 01, split part 2 |
-| `WISH-0111` | Story 01, follow-up 1, split part 1 |
+| `WISH-0110` | Story 01, split 1 |
+| `WISH-0120` | Story 01, split 2 |
+| `WISH-0101` | Story 01, follow-up 1 |
+| `WISH-0102` | Story 01, follow-up 2 |
+| `WISH-0111` | Story 01, split 1, follow-up 1 |
 | `WISH-2000` | Story 20, original |
-| `WISH-2010` | Story 20, follow-up 1 |
+| `WISH-2001` | Story 20, follow-up 1 |
 
 **Numbering rules:**
 - New stories increment XX (e.g., 01→02→03)
-- Follow-ups increment Y on the parent story (e.g., 0100→0110→0120)
-- Splits increment Z on the parent story (e.g., 0100→0101, 0102)
+- Splits increment Y on the parent story (e.g., 0100→0110, 0120)
+- Follow-ups increment Z on the parent story (e.g., 0100→0101→0102)
 - Ad-hoc stories use next available XX with Y=0, Z=0
 
 ## Usage
@@ -50,10 +50,10 @@ Story IDs follow the pattern `{PREFIX}-XXYZ` where:
 /pm-story generate plans/future/wishlist WISH-0100
 /pm-story generate plans/future/wishlist next
 
-# Follow-up: creates WISH-0110 from WISH-0100
+# Follow-up: creates WISH-0101 from WISH-0100 (increments Z)
 /pm-story followup plans/stories/WISH.stories.index.md WISH-0100
 
-# Split: creates WISH-0101, WISH-0102 from WISH-0100
+# Split: creates WISH-0110, WISH-0120 from WISH-0100 (increments Y)
 /pm-story split plans/stories/WISH.stories.index.md WISH-0100
 
 # Ad-hoc story (next available XX00)
@@ -67,8 +67,8 @@ Story IDs follow the pattern `{PREFIX}-XXYZ` where:
 | `generate` | `/pm-story generate {INDEX_PATH} [STORY_ID]` | Create story from index (auto-finds next if no ID) |
 | `generate` | `/pm-story generate {FEATURE_DIR} {STORY_ID \| next}` | Create story from feature dir (legacy) |
 | `generate --ad-hoc` | `/pm-story generate --ad-hoc {INDEX_PATH}` | Create emergent/one-off story (next XX00) |
-| `followup` | `/pm-story followup {INDEX_PATH} {STORY_ID}` | Create follow-up (increments Y digit) |
-| `split` | `/pm-story split {INDEX_PATH} {STORY_ID}` | Split oversized story (increments Z digit)  |
+| `followup` | `/pm-story followup {INDEX_PATH} {STORY_ID}` | Create follow-up (increments Z digit) |
+| `split` | `/pm-story split {INDEX_PATH} {STORY_ID}` | Split oversized story (increments Y digit)  |
 
 ### ID Generation by Action
 
@@ -76,14 +76,29 @@ Story IDs follow the pattern `{PREFIX}-XXYZ` where:
 |--------|----------|--------------|-------|
 | `generate` | next | `XX00` | Next available XX, Y=0, Z=0 |
 | `generate --ad-hoc` | — | `XX00` | Next available XX, Y=0, Z=0 |
-| `followup` | `XXY0` | `XX(Y+1)0` | Increment Y, keep XX, reset Z |
-| `split` | `XXY0` | `XXY1`, `XXY2`, ... | Increment Z for each part |
+| `split` | `XX0Z` | `XX1Z`, `XX2Z`, ... | Increment Y for each part, keep Z |
+| `followup` | `XXY0` | `XXY1`, `XXY2`, ... | Increment Z, keep XX and Y |
 
 **Examples:**
-- `followup WISH-0100` → creates `WISH-0110`
-- `followup WISH-0110` → creates `WISH-0120`
-- `split WISH-0100` → creates `WISH-0101`, `WISH-0102` (based on split count)
-- `split WISH-0110` → creates `WISH-0111`, `WISH-0112`
+- `split WISH-0100` → creates `WISH-0110`, `WISH-0120` (based on split count)
+- `split WISH-0101` → creates `WISH-0111`, `WISH-0121` (keeps Z=1)
+- `followup WISH-0100` → creates `WISH-0101`
+- `followup WISH-0101` → creates `WISH-0102`
+- `followup WISH-0110` → creates `WISH-0111` (keeps Y=1)
+
+## Collision Detection (REQUIRED)
+
+Before generating ANY story ID, the system MUST check:
+
+1. **Directory check**: Does `{OUTPUT_DIR}/{STORY_ID}/` already exist?
+2. **Index check**: Does `stories.index.md` contain an entry for `{STORY_ID}`?
+
+If collision detected:
+- For splits: Increment Y until unique (Y=1, Y=2, ...)
+- For follow-ups: Increment Z until unique (Z=1, Z=2, ...)
+- For new stories: Increment XX until unique
+
+Report if no unique ID found within range (Y/Z max=9, XX max=99).
 
 ## Phases
 

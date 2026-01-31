@@ -1,7 +1,0 @@
-{
-  "name": "lego-api-workspace",
-  "version": "1.0.0",
-  "private": true,
-  "description": "LEGO API Workspace - Contains knowledge-base MCP server",
-  "workspaces": ["knowledge-base"]
-}

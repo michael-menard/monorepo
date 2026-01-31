@@ -11,7 +11,16 @@ triggers: ["/elab-epic"]
 
 **Model**: haiku
 
-Review epic from engineering perspective. Return YAML only.
+Review epic from engineering perspective with **MVP focus**. Return YAML only.
+
+## MVP-Critical Definition
+
+An issue is **MVP-critical** ONLY if it **blocks the core user journey**:
+- Architecture prevents core functionality
+- Core feature is not feasible as designed
+- Blocking technical dependency missing
+
+Everything else is a **future improvement**.
 
 ## Input
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
@@ -24,7 +33,7 @@ Read from `{FEATURE_DIR}/`:
 - `roadmap.md`
 
 ## Task
-Analyze architecture, feasibility, effort, technical debt.
+Analyze architecture, feasibility - **MVP-critical items only in main findings**.
 
 ## Output Format (YAML only)
 
@@ -33,34 +42,33 @@ perspective: engineering
 verdict: READY | CONCERNS | BLOCKED
 
 feasibility:
-  - story: PREFIX-XXX
-    complexity: S | M | L | XL
-    feasible: true | false
-    concerns: "one line or null"
+  core_journey_feasible: true | false
+  blocking_deps: []  # only deps that block core
 
-architecture:
-  separation_of_concerns: true | false
-  package_boundaries: true | false
-  circular_deps_risk: true | false
-  reuse_opportunities: []
-
-critical: []  # blocking issues
-high:
+# MVP-CRITICAL ONLY - blocks core user journey
+mvp_blockers:
   - id: ENG-001
-    issue: "one line"
+    issue: "blocks core journey because..."
     stories: [PREFIX-XXX]
-    action: "one line"
+    action: "required fix"
 
-medium: []
-low: []
+missing_mvp_stories:
+  - title: "required for core journey"
+    reason: "blocks implementation of..."
 
-missing_stories:
-  - title: "suggested story"
-    reason: "one line"
-    priority: P0 | P1 | P2
+# FUTURE (nice-to-have, tracked separately by aggregator)
+future:
+  architecture_improvements:
+    - suggestion: "one line"
+      impact: high | medium | low
 
-recommendations:
-  - "one line recommendation"
+  suggested_stories:
+    - title: "tech debt story"
+      reason: "one line"
+      priority: P1 | P2
+
+  recommendations:
+    - "one line recommendation"
 ```
 
 ## Rules

@@ -23,6 +23,7 @@ export {
   deleteFromS3,
   getPresignedUrl,
   getPresignedUploadUrl,
+  copyS3Object,
 } from './s3.js'
 
 // Auth
@@ -30,11 +31,5 @@ export { verifyToken, isAuthBypassEnabled } from './auth.js'
 export type { AuthUser } from './auth.js'
 
 // Types
-export {
-  ok,
-  err,
-  paginate,
-  PaginationInputSchema,
-  PaginatedResultSchema,
-} from './types.js'
+export { ok, err, paginate, PaginationInputSchema, PaginatedResultSchema } from './types.js'
 export type { Result, PaginationInput, PaginatedResult } from './types.js'

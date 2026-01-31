@@ -524,7 +524,12 @@ code_review:
    completed_at: "<timestamp>"
    ```
 
-2. Update story status to `ready-for-qa`
+2. Move story to ready-for-qa directory:
+   ```bash
+   mv {FEATURE_DIR}/in-progress/{STORY_ID} {FEATURE_DIR}/ready-for-qa/{STORY_ID}
+   ```
+
+3. Update story status to `ready-for-qa` in stories.index.md
 
 ### Forced Continue (--force-continue after max iterations)
 
@@ -537,18 +542,23 @@ code_review:
    completed_at: "<timestamp>"
    ```
 
-2. Update story status to `ready-for-qa-with-warnings`
+2. Move story to ready-for-qa directory:
+   ```bash
+   mv {FEATURE_DIR}/in-progress/{STORY_ID} {FEATURE_DIR}/ready-for-qa/{STORY_ID}
+   ```
+
+3. Update story status to `ready-for-qa-with-warnings` in stories.index.md
 
 ### Common Steps
 
-3. Log tokens:
+4. Log tokens:
    ```
    /token-log {STORY_ID} implementation <in> <out>
    /token-log {STORY_ID} review-{N} <in> <out>  # Per iteration
    /token-log {STORY_ID} fix-{N} <in> <out>     # Per iteration
    ```
 
-4. Report (clean pass):
+5. Report (clean pass):
    ```
    ✓ IMPLEMENTATION COMPLETE: {STORY_ID}
    Iterations: {iteration}

@@ -1,0 +1,114 @@
+---
+schema: 1
+phase: qa_verify_completion
+feature_dir: plans/future/wish
+story_id: WISH-2041
+timestamp: "2026-01-28T16:32:00-07:00"
+
+summary:
+  title: "QA Verification Completion Phase 2: WISH-2041 Delete Flow"
+  verdict: FAIL
+  reason: "Pre-existing frontend test failures (25 unrelated tests) prevent full test suite pass"
+  qualified: true
+  notes: "WISH-2041 implementation is complete and correct. All 20 ACs verified as PASS. Story returned to in-progress awaiting resolution of pre-existing test failures in other components."
+
+actions_taken:
+  - action: "Updated story status"
+    from: "in-qa"
+    to: "needs-work"
+    file: "plans/future/wish/in-progress/WISH-2041/WISH-2041.md"
+    timestamp: "2026-01-28T16:32:00-07:00"
+
+  - action: "Moved story directory"
+    from: "plans/future/wish/UAT/WISH-2041/"
+    to: "plans/future/wish/in-progress/WISH-2041/"
+    timestamp: "2026-01-28T16:32:00-07:00"
+
+  - action: "Added gate section to VERIFICATION.yaml"
+    file: "plans/future/wish/in-progress/WISH-2041/_implementation/VERIFICATION.yaml"
+    decision: "FAIL"
+    blocking_issues: 2
+    timestamp: "2026-01-28T16:32:00-07:00"
+
+  - action: "Updated story index"
+    file: "plans/future/wish/stories.index.md"
+    changes:
+      - "Updated WISH-2041 status entry: in-qa → needs-work"
+      - "Updated WISH-2041 location: UAT → in-progress"
+      - "Updated Progress Summary: in-progress (0→1), needs-work (0→1), in-qa (1→0)"
+      - "Updated Ready to Start: WISH-2005a now blocked by WISH-2041"
+    timestamp: "2026-01-28T16:32:00-07:00"
+
+  - action: "Created Phase 2 completion documentation"
+    file: "plans/future/wish/in-progress/WISH-2041/_implementation/QA-COMPLETION-PHASE-2.md"
+    timestamp: "2026-01-28T16:32:00-07:00"
+
+verification_results:
+  implementation_status: COMPLETE
+  acceptance_criteria: "20/20 PASS"
+  wish_2041_tests: "17/17 PASS (DeleteConfirmModal)"
+  backend_tests: "2/2 PASS (deleteItem suite)"
+  code_review: PASS
+  architecture_compliance: true
+
+test_failure_analysis:
+  total_failures: 25
+  unrelated_to_wish_2041: true
+  pre_existing: true
+  blocking_overall_pass: true
+
+files_modified:
+  - path: "plans/future/wish/in-progress/WISH-2041/WISH-2041.md"
+    change_type: "updated"
+    field: "status"
+    old_value: "in-qa"
+    new_value: "needs-work"
+
+  - path: "plans/future/wish/in-progress/WISH-2041/_implementation/VERIFICATION.yaml"
+    change_type: "added"
+    section: "gate"
+
+  - path: "plans/future/wish/stories.index.md"
+    change_type: "updated"
+    sections:
+      - "Progress Summary"
+      - "Ready to Start"
+      - "WISH-2041 entry"
+
+signal: "QA FAIL - QUALIFIED"
+
+next_steps:
+  - action: "Resolve pre-existing test failures"
+    priority: HIGH
+    details: "Fix 25 failing tests in other components (not WISH-2041)"
+    files_affected:
+      - "src/pages/__tests__/main-page.datatable.test.tsx (8 failures)"
+      - "src/pages/__tests__/main-page.grid.test.tsx (1 failure)"
+      - "src/hooks/__tests__/useS3Upload.test.ts (6 failures)"
+      - "src/components/WishlistForm/__tests__/WishlistForm.test.tsx (1 failure)"
+      - "src/pages/__tests__/AddItemPage.test.tsx (1 failure)"
+      - "src/App.test.tsx (2 failures)"
+      - "Other files (6 failures)"
+
+  - action: "Re-run QA verification"
+    priority: HIGH
+    command: "/qa-verify-story plans/future/wish WISH-2041"
+    expected_verdict: "PASS"
+
+  - action: "Move to UAT and complete"
+    priority: MEDIUM
+    steps:
+      - "Move directory from in-progress to UAT"
+      - "Update status to uat"
+      - "Run index-update with --clear-deps"
+
+completed_checklist:
+  - "Story status updated in frontmatter"
+  - "Story directory moved from UAT to in-progress"
+  - "Gate section written to VERIFICATION.yaml"
+  - "Index entry updated"
+  - "Progress summary updated"
+  - "Ready to Start section updated"
+  - "Phase 2 completion documented"
+
+completion_status: COMPLETE

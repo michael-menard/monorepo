@@ -5,17 +5,53 @@
  * Uses Zod schemas from @repo/api-client/schemas/wishlist for response validation.
  *
  * Story wish-2001: Wishlist Gallery MVP
+ * Story wish-2002: Add Item Flow
+ * Story WISH-2041: Delete Flow
+ * Story WISH-2042: Purchase/Got It Flow
+ * Story WISH-2005a: Drag-and-drop reordering
+ * Story WISH-2005b: Optimistic updates and undo flow
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
+import { z } from 'zod'
 import {
   WishlistListResponseSchema,
   WishlistItemSchema,
+  PresignResponseSchema,
+  SetItemSchema,
+  ReorderResponseSchema,
   type WishlistListResponse,
   type WishlistItem,
   type WishlistQueryParams,
+  type CreateWishlistItem,
+  type PresignRequest,
+  type PresignResponse,
+  type MarkAsPurchasedInput,
+  type SetItem,
+  type BatchReorder,
+  type ReorderResponse,
 } from '../schemas/wishlist'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
+
+/**
+ * Reorder undo context returned from optimistic update
+ * Story WISH-2005b: Optimistic updates and undo flow
+ * Per CLAUDE.md: Use Zod for data structures, TypeScript types for functions
+ */
+const ReorderUndoContextDataSchema = z.object({
+  /** Original sortOrder values before reorder */
+  originalOrder: z.array(
+    z.object({
+      id: z.string(),
+      sortOrder: z.number(),
+    }),
+  ),
+})
+
+export type ReorderUndoContext = z.infer<typeof ReorderUndoContextDataSchema> & {
+  /** Function to restore original order (undo operation) */
+  undo: () => void
+}
 
 /**
  * Wishlist Gallery API
@@ -28,7 +64,7 @@ export const wishlistGalleryApi = createApi({
   baseQuery: createServerlessBaseQuery({
     enablePerformanceMonitoring: true,
   }),
-  tagTypes: ['Wishlist', 'WishlistItem'],
+  tagTypes: ['Wishlist', 'WishlistItem', 'Sets'],
   endpoints: builder => ({
     /**
      * GET /api/wishlist
@@ -71,9 +107,174 @@ export const wishlistGalleryApi = createApi({
       providesTags: (_, __, id) => [{ type: 'WishlistItem', id }],
       ...getServerlessCacheConfig('medium'),
     }),
+
+    /**
+     * POST /api/wishlist
+     *
+     * Creates a new wishlist item.
+     * Story wish-2002: Add Item Flow
+     */
+    addWishlistItem: builder.mutation<WishlistItem, CreateWishlistItem>({
+      query: body => ({
+        url: '/wishlist',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
+    }),
+
+    /**
+     * GET /api/wishlist/images/presign
+     *
+     * Gets a presigned URL for uploading an image to S3.
+     * Story wish-2002: Add Item Flow
+     */
+    getWishlistImagePresignUrl: builder.mutation<PresignResponse, PresignRequest>({
+      query: params => ({
+        url: '/wishlist/images/presign',
+        params: {
+          fileName: params.fileName,
+          mimeType: params.mimeType,
+        },
+      }),
+      transformResponse: (response: unknown) => PresignResponseSchema.parse(response),
+    }),
+
+    /**
+     * POST /api/wishlist/:id/purchased
+     *
+     * Marks a wishlist item as purchased and creates a Set item.
+     * Story WISH-2042: Purchase/Got It Flow
+     */
+    markAsPurchased: builder.mutation<SetItem, { itemId: string; input: MarkAsPurchasedInput }>({
+      query: ({ itemId, input }) => ({
+        url: `/wishlist/${itemId}/purchased`,
+        method: 'POST',
+        body: input,
+      }),
+      transformResponse: (response: unknown) => SetItemSchema.parse(response),
+      invalidatesTags: (result, _error, { itemId }) =>
+        result
+          ? [
+              { type: 'WishlistItem', id: itemId },
+              { type: 'Wishlist', id: 'LIST' },
+              { type: 'Sets', id: 'LIST' },
+            ]
+          : [],
+    }),
+
+    /**
+     * DELETE /api/wishlist/:id
+     *
+     * Deletes a wishlist item permanently.
+     * Story WISH-2041: Delete Flow
+     *
+     * Alias: removeFromWishlist (story naming convention)
+     */
+    deleteWishlistItem: builder.mutation<void, string>({
+      query: itemId => ({
+        url: `/wishlist/${itemId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, itemId) => [
+        { type: 'WishlistItem', id: itemId },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * DELETE /api/wishlist/:id (Alias)
+     *
+     * Alias for deleteWishlistItem per WISH-2041 naming convention.
+     * Story WISH-2041: Delete Flow
+     */
+    removeFromWishlist: builder.mutation<void, string>({
+      query: itemId => ({
+        url: `/wishlist/${itemId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, itemId) => [
+        { type: 'WishlistItem', id: itemId },
+        { type: 'Wishlist', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * PUT /api/wishlist/reorder
+     *
+     * Reorders wishlist items by updating their sortOrder values.
+     * Story WISH-2005a: Drag-and-drop reordering
+     * Story WISH-2005b: Optimistic updates and undo flow
+     *
+     * Implements optimistic cache update via onQueryStarted:
+     * - Cache is updated immediately before API response
+     * - On error, cache is rolled back via patchResult.undo()
+     * - Component shows toast with undo button for 5 seconds
+     */
+    reorderWishlist: builder.mutation<ReorderResponse, BatchReorder>({
+      query: body => ({
+        url: '/wishlist/reorder',
+        method: 'PUT',
+        body,
+      }),
+      transformResponse: (response: unknown) => ReorderResponseSchema.parse(response),
+      /**
+       * Optimistic update implementation (WISH-2005b AC 1-5)
+       *
+       * Flow:
+       * 1. Capture original order from cache
+       * 2. Optimistically update cache with new order
+       * 3. Wait for API response
+       * 4. On success: cache already correct, return undo context
+       * 5. On error: rollback cache via patchResult.undo()
+       */
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        // AC 3: Capture original order before optimistic update
+        // We need to update ALL cached queries that might contain these items
+        // For simplicity, we update the default query (no params)
+        const patchResult = dispatch(
+          wishlistGalleryApi.util.updateQueryData('getWishlist', {}, draft => {
+            // AC 1-2: Update sortOrder values in cache immediately
+            const itemMap = new Map(arg.items.map(item => [item.id, item.sortOrder]))
+
+            for (const item of draft.items) {
+              const newSortOrder = itemMap.get(item.id)
+              if (newSortOrder !== undefined) {
+                item.sortOrder = newSortOrder
+              }
+            }
+
+            // Sort items by new sortOrder
+            draft.items.sort((a, b) => a.sortOrder - b.sortOrder)
+          }),
+        )
+
+        try {
+          // AC 4: Wait for API success - cache already reflects new order
+          await queryFulfilled
+        } catch {
+          // AC 5, AC 16: Rollback cache on API failure
+          patchResult.undo()
+        }
+      },
+      // Do NOT invalidate cache - optimistic update handles it
+      invalidatesTags: [],
+    }),
   }),
 })
 
 // Export hooks for use in components
-export const { useGetWishlistQuery, useGetWishlistItemQuery, useLazyGetWishlistQuery } =
-  wishlistGalleryApi
+export const {
+  useGetWishlistQuery,
+  useGetWishlistItemQuery,
+  useLazyGetWishlistQuery,
+  useAddWishlistItemMutation,
+  useGetWishlistImagePresignUrlMutation,
+  useMarkAsPurchasedMutation,
+  useDeleteWishlistItemMutation,
+  // WISH-2041: Delete Flow - alias hook
+  useRemoveFromWishlistMutation,
+  // WISH-2005a: Drag-and-drop reordering
+  useReorderWishlistMutation,
+} = wishlistGalleryApi

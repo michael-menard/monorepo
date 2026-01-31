@@ -1,0 +1,54 @@
+/**
+ * {{pascalCase domain}} Service: {{pascalCase operation}} Tests
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { {{camelCase operation}} } from '../{{kebabCase operation}}'
+
+describe('{{camelCase operation}}', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+{{#if requiresAuth}}
+  it('should require a userId', async () => {
+    // @ts-expect-error - Testing missing required param
+    await expect({{camelCase operation}}()).rejects.toThrow()
+  })
+
+  it('should process request for authenticated user', async () => {
+    const userId = 'test-user-123'
+{{#if hasRequestBody}}
+    const input = {
+      // TODO: Add test input
+    }
+    const result = await {{camelCase operation}}(userId, input)
+{{else}}
+    const result = await {{camelCase operation}}(userId)
+{{/if}}
+
+    expect(result).toBeDefined()
+    expect(result.success).toBe(true)
+  })
+{{else}}
+  it('should process request', async () => {
+{{#if hasRequestBody}}
+    const input = {
+      // TODO: Add test input
+    }
+    const result = await {{camelCase operation}}(input)
+{{else}}
+    const result = await {{camelCase operation}}()
+{{/if}}
+
+    expect(result).toBeDefined()
+    expect(result.success).toBe(true)
+  })
+{{/if}}
+
+  // TODO: Add more specific tests:
+  // - Validation errors
+  // - Business rule enforcement
+  // - Database interactions (mocked)
+  // - Error cases
+})

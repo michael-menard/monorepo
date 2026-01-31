@@ -1,9 +1,324 @@
 # Operational Runbooks
 # Generated: 2026-01-24
+# Updated: 2026-01-25 - Added Knowledge Base MCP runbooks
 #
 # Procedures for deployment, incidents, and maintenance
 
 ---
+
+# =============================================================================
+# KNOWLEDGE BASE MCP SERVER
+# =============================================================================
+
+- id: runbook-kb-001
+  content: |
+    **Connect Knowledge Base to Claude Code**
+
+    The KB runs as an MCP server that Claude connects to via stdio.
+
+    **Prerequisites:**
+    - Docker Desktop running
+    - OpenAI API key
+    - Package built (`pnpm build --filter=@repo/knowledge-base`)
+
+    **Step 1: Start PostgreSQL**
+    ```bash
+    cd apps/api/knowledge-base
+    docker-compose up -d
+    ```
+
+    **Step 2: Configure environment**
+    ```bash
+    cp .env.example .env
+    # Edit .env:
+    #   KB_DB_PASSWORD=YourSecurePassword123!
+    #   OPENAI_API_KEY=sk-...
+    ```
+
+    **Step 3: Initialize database**
+    ```bash
+    pnpm db:push     # Push schema to DB
+    pnpm validate:env  # Verify config
+    ```
+
+    **Step 4: Register with Claude**
+    Create or edit `~/.claude/mcp.json`:
+    ```json
+    {
+      "mcpServers": {
+        "knowledge-base": {
+          "command": "node",
+          "args": [
+            "/Users/YOUR_USER/Development/Monorepo/apps/api/knowledge-base/dist/mcp-server/index.js"
+          ],
+          "env": {
+            "DATABASE_URL": "postgresql://kbuser:YourPassword@localhost:5433/knowledgebase",
+            "OPENAI_API_KEY": "sk-..."
+          }
+        }
+      }
+    }
+    ```
+
+    **Step 5: Restart Claude Code**
+    Quit and reopen Claude Code. The KB tools will appear in tool list.
+
+    **Available MCP Tools:**
+    - `kb_add` - Add new knowledge entry
+    - `kb_get` - Get entry by ID
+    - `kb_update` - Update existing entry
+    - `kb_delete` - Delete entry
+    - `kb_list` - List entries with filters
+    - `kb_search` - Semantic + keyword search
+    - `kb_get_related` - Find similar entries
+    - `kb_stats` - Database statistics
+    - `kb_health` - Server health check
+  entry_type: runbook
+  roles: [dev]
+  tags: [knowledge-base, mcp, claude, setup, connection]
+  source_file: apps/api/knowledge-base/README.md
+  confidence: 1.0
+
+- id: runbook-kb-002
+  content: |
+    **How Embeddings/Vectorization Work**
+
+    The KB uses OpenAI's text-embedding-3-small model to convert text into 1536-dimensional vectors for semantic search.
+
+    **Flow: Text → Vector**
+    ```
+    1. You call kb_add({ content: "Your text here", ... })
+    2. Content is hashed (SHA-256) for deduplication
+    3. Hash checked against embedding_cache table
+    4. If cache miss: OpenAI API called → 1536-dim vector returned
+    5. Vector stored in embedding_cache (keyed by hash)
+    6. Entry stored in knowledge_entries with vector
+    ```
+
+    **Cost:**
+    - Model: text-embedding-3-small
+    - Price: $0.00002 per 1K tokens (~750 words)
+    - Caching: Same content never re-embedded (hash match)
+
+    **Search Flow:**
+    ```
+    1. You call kb_search({ query: "how to fix X" })
+    2. Query text embedded via same process
+    3. pgvector finds nearest vectors (cosine similarity)
+    4. Keyword search also runs (PostgreSQL FTS)
+    5. Results merged via RRF (Reciprocal Rank Fusion)
+    6. Top results returned with similarity scores
+    ```
+
+    **Key Tables:**
+    - `knowledge_entries` - Content + embedding vector
+    - `embedding_cache` - Hash → vector cache (avoids re-embedding)
+
+    **Index:**
+    - IVFFlat index on embedding column
+    - Approximate nearest neighbor (ANN) for speed
+    - `lists=100` parameter (tune for dataset size)
+  entry_type: runbook
+  roles: [dev]
+  tags: [knowledge-base, embeddings, vectors, openai, search]
+  source_file: apps/api/knowledge-base/src/embedding-client/index.ts
+  confidence: 1.0
+
+- id: runbook-kb-003
+  content: |
+    **Content Preparation (No Auto-Chunking)**
+
+    ⚠️ **IMPORTANT:** The KB does NOT automatically chunk long documents.
+
+    You must prepare content appropriately before adding:
+
+    **Guidelines:**
+    - Each entry should be a discrete, self-contained piece of knowledge
+    - Ideal size: 100-500 words (fits well in context windows)
+    - Maximum: ~8000 tokens (OpenAI embedding limit)
+    - Too short (<20 words): May not embed meaningfully
+    - Too long (>2000 words): Split into logical sections
+
+    **Good Entry Examples:**
+    ```yaml
+    # Single concept
+    - content: "When using Drizzle ORM, always call db.push() in dev
+                and db.migrate() in production. Push is faster but
+                doesn't create migration files..."
+      tags: [drizzle, database, migrations]
+
+    # One procedure
+    - content: "To debug Lambda locally: 1) Set AUTH_BYPASS=true
+                2) Run pnpm sls:offline 3) Test at localhost:4000..."
+      tags: [lambda, debug, local]
+    ```
+
+    **Bad Entry Examples:**
+    ```yaml
+    # Too vague
+    - content: "Databases are important"
+      # Won't match specific queries
+
+    # Too long (entire README)
+    - content: "[5000 words of documentation]"
+      # Split into sections instead
+
+    # Multiple unrelated topics
+    - content: "Use React 19. Also, Lambda needs 256MB. And
+                Tailwind uses utility classes..."
+      # Split into separate entries
+    ```
+
+    **Chunking Strategy for Long Docs:**
+    1. Split by logical section (## headers in markdown)
+    2. Each chunk gets its own entry
+    3. Use consistent tags to group related chunks
+    4. Include context in each chunk ("In the Auth module...")
+  entry_type: runbook
+  roles: [dev, pm]
+  tags: [knowledge-base, content, chunking, preparation]
+  source_file: apps/api/knowledge-base
+  confidence: 1.0
+
+- id: runbook-kb-004
+  content: |
+    **Quick Reference: KB Commands**
+
+    **Docker:**
+    ```bash
+    cd apps/api/knowledge-base
+
+    # Start database
+    docker-compose up -d
+
+    # Stop database
+    docker-compose down
+
+    # Reset database (delete all data)
+    docker-compose down -v && docker-compose up -d && pnpm db:push
+
+    # View logs
+    docker-compose logs -f kb-postgres
+    ```
+
+    **Database:**
+    ```bash
+    pnpm db:push      # Push schema (dev)
+    pnpm db:migrate   # Run migrations (prod)
+    pnpm db:studio    # Open Drizzle Studio UI
+    pnpm db:seed      # Seed sample data
+    pnpm validate:env # Check env vars
+    ```
+
+    **Build & Test:**
+    ```bash
+    pnpm build --filter=@repo/knowledge-base
+    pnpm test --filter=@repo/knowledge-base
+    pnpm mcp:start    # Start MCP server manually
+    ```
+
+    **Direct DB Access:**
+    ```bash
+    # Connect to PostgreSQL
+    docker exec -it knowledge-base-postgres psql -U kbuser -d knowledgebase
+
+    # Useful queries
+    SELECT count(*) FROM knowledge_entries;
+    SELECT id, left(content, 50), tags FROM knowledge_entries LIMIT 10;
+    SELECT count(*) FROM embedding_cache;
+    ```
+  entry_type: runbook
+  roles: [dev]
+  tags: [knowledge-base, commands, docker, database]
+  source_file: apps/api/knowledge-base/package.json
+  confidence: 1.0
+
+- id: runbook-kb-005
+  content: |
+    **Troubleshooting: KB Connection Issues**
+
+    **"Cannot connect to MCP server"**
+    1. Check Docker is running: `docker ps | grep knowledge-base`
+    2. Check package is built: `ls apps/api/knowledge-base/dist/mcp-server/index.js`
+    3. Verify mcp.json path is absolute (not relative)
+    4. Check env vars in mcp.json match your .env
+
+    **"OPENAI_API_KEY is required"**
+    - Add OPENAI_API_KEY to the `env` block in mcp.json
+    - OR set it in your shell profile (~/.zshrc)
+
+    **"Connection refused to PostgreSQL"**
+    1. Start Docker: `docker-compose up -d`
+    2. Wait for healthy: `docker-compose ps` (should show "healthy")
+    3. Check port: default is 5433, not 5432
+
+    **"Extension vector not found"**
+    - Wrong Docker image. Must use `pgvector/pgvector:pg16`
+    - Reset: `docker-compose down -v && docker-compose up -d`
+
+    **Tools not appearing in Claude**
+    1. Restart Claude Code completely (Cmd+Q, reopen)
+    2. Check mcp.json syntax: `cat ~/.claude/mcp.json | jq .`
+    3. Check Claude logs for MCP errors
+
+    **Embeddings failing**
+    - Check OPENAI_API_KEY is valid
+    - Check rate limits: reduce OPENAI_MAX_CONCURRENT_REQUESTS
+    - Check timeout: increase OPENAI_TIMEOUT_MS
+  entry_type: runbook
+  roles: [dev]
+  tags: [knowledge-base, troubleshooting, mcp, connection]
+  source_file: apps/api/knowledge-base/README.md
+  confidence: 1.0
+
+- id: runbook-kb-006
+  content: |
+    **Using the KB Tools in Claude**
+
+    Once connected, Claude has access to these tools:
+
+    **Add Knowledge:**
+    ```
+    "Add this to the knowledge base: When deploying Lambda,
+    always set memory to at least 256MB for Node.js functions.
+    Tag it with 'lambda' and 'deployment'."
+    ```
+    → Claude calls `kb_add({ content: "...", tags: ["lambda", "deployment"], role: "dev" })`
+
+    **Search Knowledge:**
+    ```
+    "Search the knowledge base for how to debug Lambda locally"
+    ```
+    → Claude calls `kb_search({ query: "debug Lambda locally", limit: 5 })`
+
+    **Find Related:**
+    ```
+    "What other knowledge do we have related to entry abc-123?"
+    ```
+    → Claude calls `kb_get_related({ id: "abc-123", limit: 5 })`
+
+    **List with Filters:**
+    ```
+    "Show me all knowledge entries tagged with 'security'"
+    ```
+    → Claude calls `kb_list({ tags: ["security"], limit: 20 })`
+
+    **Check Health:**
+    ```
+    "Is the knowledge base healthy?"
+    ```
+    → Claude calls `kb_health({})` → Returns DB status, OpenAI status, uptime
+
+    **Roles:**
+    - `pm` - Product management knowledge
+    - `dev` - Development/engineering knowledge
+    - `qa` - Testing/QA knowledge
+    - `all` - Applies to everyone
+  entry_type: runbook
+  roles: [dev, pm, qa]
+  tags: [knowledge-base, mcp, tools, usage, claude]
+  source_file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+  confidence: 1.0
 
 # =============================================================================
 # LOCAL DEVELOPMENT

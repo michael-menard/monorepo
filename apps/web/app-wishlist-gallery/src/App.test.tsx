@@ -38,6 +38,12 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
     isFetching: false,
     error: null,
   }),
+  // WISH-2041: Add mock for delete mutation
+  useRemoveFromWishlistMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+  // WISH-2041: Add mock for add mutation (used for undo)
+  useAddWishlistItemMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+  // WISH-2042: Add mock for purchase mutation
+  useMarkAsPurchasedMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
   wishlistGalleryApi: {
     reducerPath: 'wishlistGalleryApi',
     reducer: (state = {}) => state,

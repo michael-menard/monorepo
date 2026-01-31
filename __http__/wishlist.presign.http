@@ -1,0 +1,135 @@
+### Wishlist Image Presign API Tests for WISH-2002
+### Base URL: http://localhost:3000 (vercel dev)
+### Requires: AUTH_BYPASS=true and seeded database
+
+@baseUrl = http://localhost:3000
+
+### =============================================================================
+### GET /api/wishlist/images/presign - Generate Presigned Upload URLs
+### =============================================================================
+
+### Generate Presigned URL - Valid JPG
+# @name presignJpg
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test-image.jpg&mimeType=image/jpeg
+
+### Generate Presigned URL - Valid PNG
+# @name presignPng
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test-image.png&mimeType=image/png
+
+### Generate Presigned URL - Valid GIF
+# @name presignGif
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test-image.gif&mimeType=image/gif
+
+### Generate Presigned URL - Valid WEBP
+# @name presignWebp
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test-image.webp&mimeType=image/webp
+
+### Generate Presigned URL - JPEG extension variant
+# @name presignJpeg
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test-image.jpeg&mimeType=image/jpeg
+
+### Generate Presigned URL - Uppercase extension (should normalize)
+# @name presignUppercase
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test-image.JPG&mimeType=image/jpeg
+
+### Generate Presigned URL - Complex filename
+# @name presignComplexFilename
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=my-lego-set-2024-ultimate-collection.jpg&mimeType=image/jpeg
+
+### =============================================================================
+### Error Cases - Invalid Parameters
+### =============================================================================
+
+### Missing fileName parameter (400)
+# @name presignMissingFileName
+GET {{baseUrl}}/api/wishlist/images/presign?mimeType=image/jpeg
+
+### Missing mimeType parameter (400)
+# @name presignMissingMimeType
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test.jpg
+
+### Both parameters missing (400)
+# @name presignMissingBoth
+GET {{baseUrl}}/api/wishlist/images/presign
+
+### Empty fileName (400)
+# @name presignEmptyFileName
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=&mimeType=image/jpeg
+
+### Empty mimeType (400)
+# @name presignEmptyMimeType
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test.jpg&mimeType=
+
+### Invalid file extension (400)
+# @name presignInvalidExtension
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=document.pdf&mimeType=application/pdf
+
+### File without extension (400)
+# @name presignNoExtension
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=image&mimeType=image/jpeg
+
+### Unsupported MIME type (400)
+# @name presignInvalidMimeType
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=video.jpg&mimeType=video/mp4
+
+### Extension mismatch with MIME type (400)
+# @name presignExtensionMimeTypeMismatch
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test.jpg&mimeType=image/png
+
+### SVG file (not allowed) (400)
+# @name presignSvg
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=icon.svg&mimeType=image/svg+xml
+
+### BMP file (not allowed) (400)
+# @name presignBmp
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=image.bmp&mimeType=image/bmp
+
+### TIFF file (not allowed) (400)
+# @name presignTiff
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=image.tiff&mimeType=image/tiff
+
+### =============================================================================
+### Response Structure Verification
+### =============================================================================
+
+### Verify Response Structure - Valid Request
+# @name verifyResponseStructure
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=verify-structure.jpg&mimeType=image/jpeg
+# Expected response:
+# {
+#   "presignedUrl": "https://bucket.s3.amazonaws.com/...",
+#   "key": "wishlist/user-id/uuid.ext",
+#   "expiresIn": 900
+# }
+
+### =============================================================================
+### Auth Tests (manual - requires AUTH_BYPASS=false)
+### =============================================================================
+
+### Presign Without Auth - 401 (only works when AUTH_BYPASS=false)
+# @name presignWithoutAuth
+# Note: This test requires AUTH_BYPASS=false to return 401
+# With AUTH_BYPASS=true, it will return 200 or validation error
+GET {{baseUrl}}/api/wishlist/images/presign?fileName=test.jpg&mimeType=image/jpeg
+
+### =============================================================================
+### Notes
+### =============================================================================
+#
+# Expected Behavior:
+# - Valid requests return 200 with { presignedUrl, key, expiresIn }
+# - presignedUrl should be a valid S3 presigned URL
+# - key should follow pattern: wishlist/{userId}/{uuid}.{ext}
+# - expiresIn should be 900 (15 minutes)
+#
+# Validation Rules:
+# - Allowed extensions: jpg, jpeg, png, gif, webp
+# - Allowed MIME types: image/jpeg, image/png, image/gif, image/webp
+# - Both fileName and mimeType are required
+# - Extension validation is case-insensitive
+#
+# Integration with Frontend:
+# 1. Frontend calls this endpoint with file metadata
+# 2. Receives presignedUrl
+# 3. Uploads file directly to S3 using presignedUrl (PUT request)
+# 4. Saves the returned `key` in wishlist item as `imageUrl`

@@ -120,35 +120,42 @@ _Added by QA Elaboration on [date]_
 - [Item]: [Justification]
 ```
 
-### Step 3: Update Story Status
+### Step 3: Update Story Status (use /story-update skill)
 
-Based on verdict, update {STORY_ID}.md frontmatter:
+Based on verdict, use the skill to update status:
 
-| Verdict | New Status |
-|---------|------------|
-| PASS | `status: ready-to-work` |
-| CONDITIONAL PASS | `status: ready-to-work` |
-| FAIL | `status: needs-refinement` |
-| SPLIT REQUIRED | `status: needs-split` |
+| Verdict | Command |
+|---------|---------|
+| PASS | `/story-update {FEATURE_DIR} {STORY_ID} ready-to-work` |
+| CONDITIONAL PASS | `/story-update {FEATURE_DIR} {STORY_ID} ready-to-work` |
+| FAIL | `/story-update {FEATURE_DIR} {STORY_ID} needs-refinement` |
+| SPLIT REQUIRED | `/story-update {FEATURE_DIR} {STORY_ID} needs-split` |
 
-### Step 4: Move Story Directory
+### Step 4: Move Story Directory (use /story-move skill)
 
 Based on verdict:
 
 **If PASS or CONDITIONAL PASS:**
-```bash
-mkdir -p {FEATURE_DIR}/ready-to-work
-mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
+```
+/story-move {FEATURE_DIR} {STORY_ID} ready-to-work
 ```
 
 **If FAIL or SPLIT REQUIRED:**
-Story stays in `{FEATURE_DIR}/elaboration/` for PM to address.
+Story stays in `{FEATURE_DIR}/elaboration/` for PM to address. No move needed.
 
-### Step 5: Verify Final State
+### Step 5: Update Story Index (use /index-update skill)
+
+```
+/index-update {FEATURE_DIR} {STORY_ID} --status=<new-status>
+```
+
+Use the appropriate status from Step 3.
+
+### Step 6: Verify Final State
 
 Confirm:
 - ELAB-{STORY_ID}.md exists
-- Story status updated
+- Story status updated (frontmatter + index)
 - Directory in correct location
 
 ---

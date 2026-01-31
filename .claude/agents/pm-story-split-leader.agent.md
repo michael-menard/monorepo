@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
 updated: 2026-01-25
-version: 3.1.0
+version: 4.0.0
 type: leader
 permission_level: docs-only
 triggers: ["/pm-story split"]
@@ -53,19 +53,61 @@ If preconditions fail → `PM BLOCKED: <missing precondition>`
 
 3. **Determine Split IDs using XXYZ format:**
    - Parse parent story ID: `{PREFIX}-XXYZ`
-   - Extract XX (story number), Y (follow-up), Z (current split)
-   - Assign Z=1, Z=2, etc. for each split part
+   - Extract XX (story number), Y (current split), Z (follow-up)
+   - Assign Y=1, Y=2, etc. for each split part (keep Z unchanged)
 
    ```
    Examples:
-   - Parent: WISH-0100 (Z=0) → Splits: WISH-0101, WISH-0102
-   - Parent: WISH-0110 (follow-up, Z=0) → Splits: WISH-0111, WISH-0112
+   - Parent: WISH-0100 (Y=0) → Splits: WISH-0110, WISH-0120
+   - Parent: WISH-0101 (follow-up, Z=1) → Splits: WISH-0111, WISH-0121
    ```
 
 4. Validate:
    - All original ACs accounted for across splits
    - Each split is independently testable
-   - Dependency order is clear (e.g., Z=1 before Z=2)
+   - Dependency order is clear (e.g., Y=1 before Y=2)
+
+If validation fails → `PM BLOCKED: <validation issue>`
+
+### Phase 1.5: Collision Detection (CRITICAL)
+
+**IMPORTANT:** Before creating ANY story, you MUST verify the ID is not already in use.
+
+For each proposed split ID:
+
+1. **Scan stories.index.md for existing IDs:**
+   ```bash
+   grep -E "^## {PREFIX}-[0-9]{4}:" {FEATURE_DIR}/stories.index.md
+   ```
+   Extract all existing story IDs from the index.
+
+2. **Check if proposed ID exists in index:**
+   - Search for `## {NEW_STORY_ID}:` in stories.index.md
+   - If found (regardless of status): ID is taken
+
+3. **Check if directory exists:**
+   - `{FEATURE_DIR}/backlog/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/elaboration/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/ready-to-work/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/in-progress/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/UAT/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
+
+4. **If collision detected:**
+   - Find the highest existing story ID in the index matching `{PREFIX}-*`
+   - Set new ID to `{PREFIX}-{MAX_ID + 10}` (increment by 10 to leave room)
+   - Re-run collision check on new ID
+
+5. **If no available IDs after 10 retries:**
+   `PM FAILED: Could not allocate unique story ID after 10 attempts`
+
+**Example collision resolution:**
+```
+Proposed: WISH-0110 (split 1)
+Collision: WISH-0110 already exists
+Scan index: highest WISH-* ID is WISH-2050
+New IDs: WISH-2060 (split 1), WISH-2070 (split 2)
+```
 
 If validation fails → `PM BLOCKED: <validation issue>`
 
@@ -73,17 +115,14 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 1. Open `{FEATURE_DIR}/stories.index.md`
 2. Locate entry for {STORY_ID}
-3. Update original entry:
-   - Change `**Status:** generated` to `**Status:** superseded`
-   - Add: `**Superseded By:** {PREFIX}-XXY1, {PREFIX}-XXY2, ...`
-
-4. Add NEW entries for each split AFTER original:
+3. **DELETE the original entry entirely** (superseded stories are not kept in index)
+4. Add NEW entries for each split:
 
 ```markdown
-## {PREFIX}-XXY1: [Brief title from scope summary]
+## {PREFIX}-XX1Z: [Brief title from scope summary]
 
 **Status:** pending
-**Depends On:** [none OR previous split if this is Z=2+]
+**Depends On:** [none OR previous split if this is Y=2+]
 **Split From:** {STORY_ID}
 
 ### Scope
@@ -100,7 +139,7 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
    ```
    Example output:
-   Downstream stories referencing superseded {STORY_ID}:
+   Downstream stories referencing deleted {STORY_ID}:
    - WISH-0200: Blocked By includes WISH-0100 → Review needed
    - WISH-0300: Depends On includes WISH-0100 → Review needed
 
@@ -109,17 +148,32 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 6. Update Progress Summary:
    - Increment `pending` by number of splits
-   - Decrement `generated` by 1
-   - Increment `superseded` by 1
+   - Decrement `generated` (or `needs-split`) by 1
+   - Do NOT increment `superseded` (superseded stories are deleted, not tracked)
+
+### Phase 2b: Delete Original Story Directory
+
+1. **Delete the entire original story directory:**
+   ```
+   rm -rf {FEATURE_DIR}/*/{STORY_ID}/
+   ```
+
+2. This removes:
+   - `{STORY_ID}.md` (the original story file)
+   - `ELAB-{STORY_ID}.md` (the elaboration that triggered the split)
+   - `_pm/` subdirectory and all contents
+   - Any `_implementation/` artifacts if they exist
+
+3. **Rationale:** Superseded stories are replaced entirely by their splits. Keeping them creates confusion and stale references. The split context in each child story provides lineage.
 
 ### Phase 3: Create Split Story Directories
 
-For each split (using XXYZ IDs):
+For each split (using XXYZ IDs where Y is the split number):
 ```
-{FEATURE_DIR}/backlog/{PREFIX}-XXY1/
-{FEATURE_DIR}/backlog/{PREFIX}-XXY1/_pm/
-{FEATURE_DIR}/backlog/{PREFIX}-XXY2/
-{FEATURE_DIR}/backlog/{PREFIX}-XXY2/_pm/
+{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/
+{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/_pm/
+{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/
+{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/_pm/
 ```
 
 ### Phase 4: Generate Split Stories
@@ -130,7 +184,7 @@ For each split, generate full story following standard structure with modificati
 ---
 status: backlog
 split_from: {STORY_ID}
-split_part: 1 of N  # Z value
+split_part: 1 of N  # Y value
 ---
 ```
 
@@ -142,8 +196,8 @@ split_part: 1 of N  # Z value
 This story is part of a split from {STORY_ID}.
 - **Original Story:** {STORY_ID}
 - **Split Reason:** [From ELAB verdict]
-- **This Part:** 1 of N (Z=1)
-- **Dependency:** [Depends on {PREFIX}-XXY1 | No dependencies]
+- **This Part:** 1 of N (Y=1)
+- **Dependency:** [Depends on {PREFIX}-XX1Z | No dependencies]
 ```
 
 **Key Constraints:**
@@ -167,16 +221,20 @@ This story is part of a split from {STORY_ID}.
 ### Phase 5: Verification
 
 1. Verify all split stories created:
-   - `{FEATURE_DIR}/backlog/{PREFIX}-XXY1/{PREFIX}-XXY1.md` exists
-   - `{FEATURE_DIR}/backlog/{PREFIX}-XXY2/{PREFIX}-XXY2.md` exists
+   - `{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md` exists
+   - `{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md` exists
    - (etc. for all splits)
 
-2. Verify index updated:
-   - Original {STORY_ID} shows `superseded`
+2. Verify original story deleted:
+   - `{FEATURE_DIR}/*/{STORY_ID}/` directory no longer exists
+   - Original {STORY_ID} entry removed from index
+
+3. Verify index updated:
    - All split stories appear with `pending` status
    - Dependencies between splits correctly recorded
+   - No orphan references to deleted {STORY_ID}
 
-3. Verify AC coverage:
+4. Verify AC coverage:
    - Count total ACs across all splits
    - Compare to original story AC count
    - Must be equal (no ACs lost)
@@ -197,19 +255,21 @@ This story is part of a split from {STORY_ID}.
 feature_dir: {FEATURE_DIR}
 parent_story: {STORY_ID}  # e.g., WISH-0100
 splits_created:
-  - story: {PREFIX}-XXY1  # e.g., WISH-0101
+  - story: {PREFIX}-XX1Z  # e.g., WISH-0110
     acs: [1, 2, 3]
     depends_on: null
-  - story: {PREFIX}-XXY2  # e.g., WISH-0102
+  - story: {PREFIX}-XX2Z  # e.g., WISH-0120
     acs: [4, 5]
-    depends_on: {PREFIX}-XXY1
+    depends_on: {PREFIX}-XX1Z
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/backlog/{PREFIX}-XXY1/{PREFIX}-XXY1.md
-  - {FEATURE_DIR}/backlog/{PREFIX}-XXY2/{PREFIX}-XXY2.md
+  - {FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md
+  - {FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md
 files_updated:
-  - {FEATURE_DIR}/stories.index.md (original superseded, splits added)
+  - {FEATURE_DIR}/stories.index.md (original removed, splits added)
+files_deleted:
+  - {FEATURE_DIR}/*/{STORY_ID}/ (entire directory)
 verification:
   total_acs_parent: N
   total_acs_splits: N
@@ -224,7 +284,7 @@ downstream_review_needed:
 ```
 ⚠️  DEPENDENCY REVIEW REQUIRED
 
-The following stories referenced the now-superseded {STORY_ID}:
+The following stories referenced the now-deleted {STORY_ID}:
 | Story | Current Dependency | Suggested Action |
 |-------|-------------------|------------------|
 | WISH-0200 | Blocked By: WISH-0100 | Update to WISH-0101 or WISH-0102 |
@@ -248,7 +308,7 @@ Before completion signal:
 ## Constraints
 
 - Do NOT implement code
-- Do NOT modify original {STORY_ID}.md (except status if needed)
+- ALWAYS delete original {STORY_ID} directory after creating splits
 - Do NOT skip any split from ELAB recommendations
 - Do NOT combine splits back together
 - Do NOT generate splits not in ELAB recommendations
@@ -258,6 +318,6 @@ Before completion signal:
 ## Next Steps
 
 After completion, report:
-- "Created N split stories: {PREFIX}-XXY1, {PREFIX}-XXY2, ..."
-- "Dependency chain: Z=1 → Z=2 → ..."
-- "Next step: Run /elab-story {INDEX_PATH} {PREFIX}-XXY1 to begin elaboration of first split"
+- "Created N split stories: {PREFIX}-XX1Z, {PREFIX}-XX2Z, ..."
+- "Dependency chain: Y=1 → Y=2 → ..."
+- "Next step: Run /elab-story {INDEX_PATH} {PREFIX}-XX1Z to begin elaboration of first split"

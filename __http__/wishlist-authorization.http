@@ -1,0 +1,311 @@
+# Wishlist Authorization Test Suite (WISH-2008)
+#
+# This file contains 20+ authorization test scenarios for the wishlist API.
+# Tests cover AC3-13, AC16, AC18, and AC23.
+#
+# Prerequisites:
+# - API running at http://localhost:3001
+# - AUTH_BYPASS=true for development testing (or valid Cognito tokens)
+# - Test users: USER_A (dev-user-a), USER_B (dev-user-b)
+# - Seed data: Items belonging to each user
+#
+# Usage with VS Code REST Client or similar HTTP client tools.
+
+@baseUrl = http://localhost:3001
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Test User Configuration
+# In AUTH_BYPASS mode, set DEV_USER_ID to simulate different users
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@userAToken = Bearer dev-token-user-a
+@userBToken = Bearer dev-token-user-b
+@expiredToken = Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImV4cCI6MTY0MDAwMDAwMH0.expired
+@invalidSignatureToken = Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyJ9.invalid-signature
+@malformedToken = Bearer not.a.valid.jwt
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HAPPY PATH TESTS (8 Tests)
+# Authenticated user accessing their own resources
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Test 1: Authenticated user lists own items - 200 (AC10)
+# @name listOwnItems
+GET {{baseUrl}}/wishlist
+Authorization: {{userAToken}}
+
+### Test 2: Authenticated user retrieves own item by ID - 200 (AC10)
+# @name getOwnItem
+GET {{baseUrl}}/wishlist/{{itemId}}
+Authorization: {{userAToken}}
+
+### Test 3: Authenticated user creates item - 201 (AC9)
+# @name createItem
+POST {{baseUrl}}/wishlist
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "title": "LEGO Star Wars UCS AT-AT",
+  "store": "LEGO",
+  "setNumber": "75313",
+  "price": "849.99",
+  "currency": "USD",
+  "pieceCount": 6785,
+  "priority": 5,
+  "tags": ["star-wars", "ultimate-collector"],
+  "notes": "Wait for VIP 2x points event"
+}
+
+### Test 4: Authenticated user updates own item - 200
+# @name updateOwnItem
+PUT {{baseUrl}}/wishlist/{{itemId}}
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "title": "LEGO Star Wars UCS AT-AT (Updated)",
+  "priority": 10
+}
+
+### Test 5: Authenticated user deletes own item - 204
+# @name deleteOwnItem
+DELETE {{baseUrl}}/wishlist/{{itemId}}
+Authorization: {{userAToken}}
+
+### Test 6: Authenticated user reorders own items - 200 (AC11)
+# @name reorderOwnItems
+PUT {{baseUrl}}/wishlist/reorder
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": "{{itemId1}}", "sortOrder": 0 },
+    { "id": "{{itemId2}}", "sortOrder": 1 }
+  ]
+}
+
+### Test 7: Authenticated user marks own item as purchased - 201 (AC12)
+# @name purchaseOwnItem
+POST {{baseUrl}}/wishlist/{{itemId}}/purchased
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "pricePaid": "799.99",
+  "purchaseDate": "2026-01-29",
+  "quantity": 1,
+  "keepOnWishlist": false
+}
+
+### Test 8: Authenticated user requests presigned URL - 200 (AC13)
+# @name getPresignedUrl
+GET {{baseUrl}}/wishlist/images/presign?fileName=at-at.jpg&mimeType=image/jpeg
+Authorization: {{userAToken}}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CROSS-USER ACCESS FAILURE TESTS (6 Tests)
+# User A attempting to access User B's resources
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Test 9: User A attempts GET User B's item - 404 (AC3)
+# @name crossUserGet
+# Note: Returns 404 (not 403) to prevent item ID enumeration attacks
+GET {{baseUrl}}/wishlist/{{userBItemId}}
+Authorization: {{userAToken}}
+
+### Test 10: User A attempts PUT User B's item - 404 (AC4)
+# @name crossUserUpdate
+PUT {{baseUrl}}/wishlist/{{userBItemId}}
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "title": "Malicious Update Attempt"
+}
+
+### Test 11: User A attempts DELETE User B's item - 404 (AC5)
+# @name crossUserDelete
+DELETE {{baseUrl}}/wishlist/{{userBItemId}}
+Authorization: {{userAToken}}
+
+### Test 12: User A attempts reorder with User B's itemIds - 400 (AC11)
+# @name crossUserReorder
+# Returns 400 Bad Request with "VALIDATION_ERROR"
+PUT {{baseUrl}}/wishlist/reorder
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": "{{userBItemId1}}", "sortOrder": 0 },
+    { "id": "{{userBItemId2}}", "sortOrder": 1 }
+  ]
+}
+
+### Test 13: User A attempts purchase User B's item - 404 (AC12)
+# @name crossUserPurchase
+POST {{baseUrl}}/wishlist/{{userBItemId}}/purchased
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "pricePaid": "100.00",
+  "purchaseDate": "2026-01-29"
+}
+
+### Test 14: Verify S3 path isolation - presigned URL includes userId (AC13)
+# @name verifyS3PathIsolation
+# The presigned URL should contain the userId in the path: wishlist/{userId}/images/
+# User A cannot upload to User B's S3 path even with a valid presigned URL
+GET {{baseUrl}}/wishlist/images/presign?fileName=test.jpg&mimeType=image/jpeg
+Authorization: {{userAToken}}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUTHENTICATION FAILURE TESTS (4 Tests)
+# Missing or invalid tokens
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Test 15: GET /wishlist without Authorization header - 401 (AC6)
+# @name missingAuthHeader
+GET {{baseUrl}}/wishlist
+
+### Test 16: POST /wishlist with expired token - 401 (AC7)
+# @name expiredToken
+POST {{baseUrl}}/wishlist
+Authorization: {{expiredToken}}
+Content-Type: application/json
+
+{
+  "title": "Test Item",
+  "store": "LEGO"
+}
+
+### Test 17: PUT /wishlist/:id with invalid signature - 401 (AC8)
+# @name invalidSignature
+PUT {{baseUrl}}/wishlist/{{itemId}}
+Authorization: {{invalidSignatureToken}}
+Content-Type: application/json
+
+{
+  "title": "Test Update"
+}
+
+### Test 18: DELETE /wishlist/:id with malformed token - 401
+# @name malformedToken
+DELETE {{baseUrl}}/wishlist/{{itemId}}
+Authorization: {{malformedToken}}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EDGE CASE TESTS (4 Tests)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Test 19: User with no items returns empty array - 200
+# @name emptyWishlist
+# New user with no wishlist items should get empty array, not error
+GET {{baseUrl}}/wishlist
+Authorization: Bearer dev-token-new-user
+
+### Test 20: Concurrent PATCH requests to same item (last-write-wins)
+# @name concurrentUpdate
+# Note: Run multiple instances of this request simultaneously
+PUT {{baseUrl}}/wishlist/{{itemId}}
+Authorization: {{userAToken}}
+Content-Type: application/json
+
+{
+  "notes": "Concurrent update at {{$timestamp}}"
+}
+
+### Test 21: Presigned URL expiration test (AC23)
+# @name presignedUrlExpiration
+# Step 1: Request presigned URL (valid for 15 minutes)
+# Step 2: Verify URL works immediately
+# Step 3: After 15+ minutes, URL should return 403 from S3
+GET {{baseUrl}}/wishlist/images/presign?fileName=expiration-test.jpg&mimeType=image/jpeg
+Authorization: {{userAToken}}
+
+### Test 22: Malformed Authorization header formats (AC22)
+# @name malformedAuthHeader
+# Missing "Bearer " prefix
+GET {{baseUrl}}/wishlist
+Authorization: just-a-token-no-bearer-prefix
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL MALFORMED HEADER TESTS (AC22)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Test 22b: Authorization header with extra whitespace
+# @name extraWhitespace
+GET {{baseUrl}}/wishlist
+Authorization: Bearer  extra-space-token
+
+### Test 22c: Authorization header with wrong case prefix
+# @name wrongCasePrefix
+GET {{baseUrl}}/wishlist
+Authorization: bearer lowercase-prefix
+
+### Test 22d: Empty Authorization header value
+# @name emptyAuthValue
+GET {{baseUrl}}/wishlist
+Authorization:
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUDIT LOG VERIFICATION (AC14)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Trigger unauthorized access for audit logging
+# @name triggerAuditLog
+# After running this request, verify CloudWatch logs contain:
+# - level: "warn"
+# - message: "Unauthorized wishlist access attempt"
+# - userId, itemId, endpoint, statusCode, timestamp
+GET {{baseUrl}}/wishlist/nonexistent-item-id
+Authorization: {{userAToken}}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RATE LIMITING TESTS (AC24)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+### Test rate limiting - send 10+ requests with invalid auth
+# @name rateLimitTest
+# After 10 failed auth attempts, should receive 429 Too Many Requests
+# Note: Run this request multiple times to trigger rate limit
+GET {{baseUrl}}/wishlist
+Authorization: Bearer invalid-token-for-rate-limit
+
+### Verify rate limit response
+# @name verifyRateLimit
+# After triggering rate limit, verify:
+# - Status: 429 Too Many Requests
+# - Header: Retry-After (seconds until limit resets)
+# - Body: { error: "Too Many Requests", retryAfter: number }
+GET {{baseUrl}}/wishlist
+Authorization: Bearer invalid-token-for-rate-limit
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEST SUMMARY
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Happy Path Tests (8): Tests 1-8
+#   - Verify authenticated users can access their own resources
+#   - Covers AC9, AC10, AC11, AC12, AC13
+#
+# Cross-User Access Tests (6): Tests 9-14
+#   - Verify users cannot access other users' resources
+#   - Covers AC3, AC4, AC5, AC11, AC12, AC13
+#
+# Authentication Failure Tests (4): Tests 15-18
+#   - Verify proper 401 responses for auth failures
+#   - Covers AC6, AC7, AC8
+#
+# Edge Case Tests (4): Tests 19-22
+#   - Empty wishlist, concurrent updates, presigned URL expiration
+#   - Covers AC22, AC23
+#
+# Additional Tests:
+#   - Audit log verification (AC14)
+#   - Rate limiting tests (AC24)
+#
+# Total: 24+ authorization scenarios

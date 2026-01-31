@@ -11,7 +11,16 @@ triggers: ["/elab-epic"]
 
 **Model**: haiku
 
-Review epic from QA perspective. Return YAML only.
+Review epic from QA perspective with **MVP focus**. Return YAML only.
+
+## MVP-Critical Definition
+
+An issue is **MVP-critical** ONLY if it **blocks the core user journey**:
+- Core happy path is untestable
+- No way to verify core functionality works
+- Missing test infrastructure for core flow
+
+Everything else is a **future improvement**.
 
 ## Input
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
@@ -24,7 +33,7 @@ Read from `{FEATURE_DIR}/`:
 - `roadmap.md`
 
 ## Task
-Analyze testability, quality gates, risk coverage.
+Analyze testability for core journey - **MVP-critical items only in main findings**.
 
 ## Output Format (YAML only)
 
@@ -33,39 +42,34 @@ perspective: qa
 verdict: READY | CONCERNS | BLOCKED
 
 testability:
-  - story: PREFIX-XXX
-    unit: true | false | partial
-    integration: true | false | partial
-    e2e: true | false | partial
-    concern: "one line or null"
+  core_journey_testable: true | false
+  core_acs_clear: true | false
 
-quality_gates:
-  clear_acs: true | false
-  test_plan_derivable: true | false
-  edge_cases_identified: true | false
-  error_scenarios_covered: true | false
-
-risk_coverage:
-  - area: "data validation"
-    stories: [PREFIX-XXX]
-    gap: true | false
-
-critical: []
-high:
+# MVP-CRITICAL ONLY - blocks core journey verification
+mvp_blockers:
   - id: QA-001
-    issue: "one line"
+    issue: "cannot verify core journey because..."
     stories: [PREFIX-XXX]
-    action: "one line"
+    action: "required fix"
 
-medium: []
+missing_mvp_stories:
+  - title: "required test setup"
+    gap: "cannot test core flow X"
 
-missing_stories:
-  - title: "suggested test story"
-    gap: "what's not covered"
-    priority: P0 | P1 | P2
+# FUTURE (nice-to-have, tracked separately by aggregator)
+future:
+  test_improvements:
+    - area: "edge case coverage"
+      stories: [PREFIX-XXX]
+      suggestion: "one line"
 
-recommendations:
-  - "one line recommendation"
+  suggested_stories:
+    - title: "additional test story"
+      gap: "what's not covered"
+      priority: P1 | P2
+
+  recommendations:
+    - "one line recommendation"
 ```
 
 ## Rules

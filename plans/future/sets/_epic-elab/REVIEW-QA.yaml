@@ -1,0 +1,675 @@
+---
+perspective: qa
+reviewer: qa-agent
+reviewed_at: "2026-01-25T22:00:00Z"
+verdict: CONCERNS
+
+epic: SETS (Sets Gallery)
+total_stories: 17
+analysis_scope: |-
+  Reviewed elaboration context, epic plan, stories index, roadmap, and execution plan.
+  Focus: Testability, acceptance criteria clarity, edge cases, integration needs, E2E coverage.
+
+findings:
+  critical:
+    - id: QA-001
+      title: "Missing Atomic Transaction Test Coverage for Wishlist Integration"
+      description: |-
+        SETS-008 (Wishlist 'Got it' Integration) requires atomic transactions (create Set before deleting Wishlist).
+        No test scenarios documented for failure modes: what happens if Set creation succeeds but Wishlist deletion fails?
+        What if deletion succeeds but Set creation fails? Undo capability adds complexity.
+      impact: "High—data integrity risk. Could create orphaned records or inconsistent state."
+      affected_stories: [SETS-008]
+      test_approach: |-
+        - Unit tests: Transaction rollback on each failure point
+        - Integration tests: Full flow with simulated failures at each step
+        - E2E tests: Success, partial failure, and undo scenarios
+      priority: "critical"
+
+    - id: QA-002
+      title: "Optimistic Update Rollback Scenarios Not Fully Specified"
+      description: |-
+        SETS-009 (Build Status Toggle), SETS-010 (Quantity Stepper), and SETS-006 (Purchase Details)
+        all use optimistic updates with undo toasts. Acceptance criteria lack detail on:
+        - How long does the undo window stay open? (5 seconds mentioned but not in all stories)
+        - What if user navigates away during undo window?
+        - What if API call is in-flight when user clicks undo?
+        - Race conditions: multiple rapid toggles before first completes?
+      impact: "High—UX consistency and data correctness. Incomplete specs lead to bugs."
+      affected_stories: [SETS-009, SETS-010]
+      test_approach: |-
+        - Unit: Test state transitions with pending API calls
+        - Integration: Verify rollback correctness with delayed responses
+        - E2E: Test navigation away, rapid clicks, network delays
+      priority: "critical"
+
+    - id: QA-003
+      title: "Shared Scraper Reliability & Error Handling Not Defined"
+      description: |-
+        SETS-005 (Add Modal with URL Scrape) and SETS-013 (Manual Entry Form) depend on shared scraper service.
+        No acceptance criteria for scraper failure scenarios:
+        - Timeout handling (how long to wait?)
+        - Partial data retrieval (some fields missing)
+        - Invalid URLs (malformed, blocked, non-product pages)
+        - Network errors vs. scraper service errors
+        - Retry logic and max attempts
+      impact: "High—user experience degradation. Silent failures or unclear error messages."
+      affected_stories: [SETS-005, SETS-013]
+      test_approach: |-
+        - Unit: Mock scraper with various response states
+        - Integration: Test with real scraper service (staging)
+        - E2E: Test with live URLs (LEGO.com, edge cases, 404s)
+      priority: "critical"
+
+  high:
+    - id: QA-004
+      title: "Cross-Epic Dependency Verification Missing"
+      description: |-
+        SETS has two cross-epic dependencies:
+        1. SETS-008 depends on Wishlist epic (for 'Got it' flow, undo capability)
+        2. SETS-011 depends on MOC Instructions epic (for picker, bidirectional updates)
+        No documented test contracts or API contracts with these epics.
+      impact: "High—integration failures with upstream/downstream epics. Late discovery of incompatibilities."
+      affected_stories: [SETS-008, SETS-011]
+      test_approach: |-
+        - Contract tests: Define expected API signatures and behaviors
+        - Integration tests: Verify bi-directional updates (MOC links)
+        - E2E: Test full flow including navigation between epics
+      priority: "high"
+
+    - id: QA-005
+      title: "Duplicate Detection Acceptance Criteria Ambiguous"
+      description: |-
+        SETS-018 (Duplicate Set Detection) lacks clarity on:
+        - What constitutes a duplicate? (matching setNumber only? or title?)
+        - How to handle alt-brick sets that may not have a setNumber?
+        - Should comparison be exact or fuzzy match?
+        - Does 'quantity increment' vs 'new entry' choice persist across sessions?
+      impact: "High—inconsistent behavior, user confusion, data quality issues."
+      affected_stories: [SETS-018]
+      test_approach: |-
+        - Unit: Test duplicate detection logic with edge cases
+        - Integration: Test with partial data (missing setNumber)
+        - E2E: User flows for both options (increment vs. new)
+      priority: "high"
+
+    - id: QA-006
+      title: "Quantity Minimum Edge Case Handling Unclear"
+      description: |-
+        SETS-010 (Quantity Stepper) mentions minimum of 1 and prompting to delete instead of going to 0.
+        Missing acceptance criteria:
+        - What exactly does the 'delete instead' prompt say?
+        - Is the "-" button disabled at quantity 1, or does it show a prompt?
+        - What if user directly edits quantity field to 0 or negative?
+        - Does the prompt appear before or after the invalid input?
+      impact: "Medium—unexpected behavior, user error recovery unclear."
+      affected_stories: [SETS-010]
+      test_approach: |-
+        - Unit: Input validation for quantity field
+        - Integration: Stepper button states at boundaries
+        - E2E: Direct input, button clicking, prompt handling
+      priority: "high"
+
+    - id: QA-007
+      title: "Mobile Responsive Testing Scope Not Detailed"
+      description: |-
+        SETS-020 (Mobile Responsive with Swipe Actions) mentions swipe gestures and bottom sheets
+        but lacks testable acceptance criteria:
+        - Which viewport sizes? (iPhone SE, iPhone 14, iPad, foldables?)
+        - What are swipe thresholds? (velocity, distance?)
+        - Which gestures trigger what actions? (swipe up/down/left/right?)
+        - Does bottom sheet dismiss on swipe? Keyboard? Tap outside?
+        - Touch target minimums (44px for WCAG)?
+      impact: "Medium—mobile UX inconsistency, gesture recognition failures."
+      affected_stories: [SETS-020]
+      test_approach: |-
+        - Device testing: Multiple viewport sizes and browsers
+        - Gesture testing: Swipe velocity and distance variations
+        - E2E: Full flows on mobile (add, toggle, delete)
+      priority: "high"
+
+  medium:
+    - id: QA-008
+      title: "Keyboard Navigation Acceptance Criteria Incomplete"
+      description: |-
+        SETS-019 (Keyboard Navigation and Accessibility) lists shortcuts (B, +/-, M, A, Delete)
+        but missing:
+        - Modal keyboard handling (Tab order, Escape to close)
+        - Form field Tab order and focus visible states
+        - What happens with Shift+shortcut or Alt+shortcut?
+        - Screen reader announcement timing (immediate or after state change?)
+        - Interaction pattern: Do shortcuts work in all contexts or only when item selected?
+      impact: "Medium—accessibility gaps, keyboard users excluded or confused."
+      affected_stories: [SETS-019]
+      test_approach: |-
+        - Unit: Keyboard event handlers and focus management
+        - Integration: Full flows using keyboard only
+        - E2E: Keyboard navigation with screen reader, WCAG compliance checklist
+      priority: "medium"
+
+    - id: QA-009
+      title: "Collection Stats Query Performance Not Tested"
+      description: |-
+        SETS-016 (Collection Stats Display) mentions 'may need performance optimization for large collections'
+        but no acceptance criteria or test thresholds:
+        - At what size does performance degrade? (1K sets? 10K?)
+        - What's the acceptable query response time? (<500ms? <1s?)
+        - Should pagination be tested? Virtualization?
+        - Are database indexes specified?
+      impact: "Medium—potential slow queries, scalability issues discovered late."
+      affected_stories: [SETS-016]
+      test_approach: |-
+        - Load testing: Generate large datasets and measure response time
+        - DB testing: Index effectiveness
+        - E2E: Realistic scenario with 1K+ sets
+      priority: "medium"
+
+    - id: QA-010
+      title: "Empty State Acceptance Criteria Not Granular"
+      description: |-
+        SETS-017 (Empty States for All Scenarios) lists scenarios but lacks specific acceptance criteria:
+        - Which buttons/CTAs in each state? (exact labels?)
+        - Are state transitions animated? How long?
+        - Does empty state show when filtered results = 0? Or only true empty collection?
+        - Is there a 'no results' state distinct from 'no content' state?
+      impact: "Medium—inconsistent UX, QA effort duplicated guessing intent."
+      affected_stories: [SETS-017]
+      test_approach: |-
+        - Unit: Empty state component rendering
+        - Integration: State transitions (empty → populated, filter → no results)
+        - E2E: User navigates from empty to populated, various filters
+      priority: "medium"
+
+    - id: QA-011
+      title: "MOC Bidirectional Update Synchronization Not Specified"
+      description: |-
+        SETS-011 (MOC Linking Picker and Display) mentions bidirectional display but lacks test criteria:
+        - If a MOC is deleted upstream, does the Set link automatically clear?
+        - If a Set is deleted, does the MOC show it as unlinked?
+        - Are updates real-time or eventually consistent?
+        - What's the consistency model? (immediate? eventual?)
+      impact: "Medium—data integrity, orphaned references, stale UI state."
+      affected_stories: [SETS-011]
+      test_approach: |-
+        - Unit: Mock MOC deletion and verify link cleanup
+        - Integration: Cross-epic update propagation
+        - E2E: Delete MOC and verify Set UI updates, refresh and verify state
+      priority: "medium"
+
+    - id: QA-012
+      title: "Tag Management Integration Points Vague"
+      description: |-
+        SETS-015 (Tag Management Integration) relies on shared tag system with no documented contract:
+        - Are tags app-global or set-specific?
+        - Can tags be deleted if sets reference them?
+        - Tag autocomplete scope? (user's tags only? suggestions from all users?)
+        - Max tag count per set?
+      impact: "Medium—integration ambiguity, potential data model mismatch."
+      affected_stories: [SETS-015]
+      test_approach: |-
+        - Unit: Tag CRUD operations
+        - Integration: Tag system contract testing
+        - E2E: Full tag workflow (create, assign, filter by tag)
+      priority: "medium"
+
+  low:
+    - id: QA-013
+      title: "Sort & Filter Behavior Edge Cases"
+      description: |-
+        SETS-014 (Sort and Filter by Build Status) mentions sorting by build status, purchase date, etc.
+        Missing edge cases:
+        - Sort order: ascending/descending for each field?
+        - Sort persistence: Does sort preference persist across sessions?
+        - Combined filters: How do multiple filters interact? (AND/OR logic?)
+        - NaN/null handling: How to sort sets with missing piece count?
+      impact: "Low—minor UX inconsistencies, usually easily fixed."
+      affected_stories: [SETS-014]
+      test_approach: |-
+        - Unit: Sort comparator functions with edge values
+        - Integration: Filter combinations and persistence
+        - E2E: Sort/filter flows, session persistence
+      priority: "low"
+
+    - id: QA-014
+      title: "Image Upload & S3 Storage Error Scenarios"
+      description: |-
+        SETS-005 (Add Modal) mentions S3 for image storage but lacks error handling:
+        - S3 upload timeout
+        - Oversized images (max dimensions/size?)
+        - Invalid image formats
+        - S3 unavailable (fallback strategy?)
+        - CDN invalidation or cache busting strategy?
+      impact: "Low—degraded image handling, edge case failures."
+      affected_stories: [SETS-005]
+      test_approach: |-
+        - Unit: Image validation logic
+        - Integration: S3 upload with failures
+        - E2E: Add set with various images
+      priority: "low"
+
+testability_concerns:
+  - story: SETS-008
+    concern: "Atomic transaction with undo requires precise control of API timing and state. Hard to test real-world failure scenarios without network manipulation."
+    suggestion: |-
+      Create test helper to inject failures at each transaction step.
+      Use MSW to mock partial failures (Set created, Wishlist deletion fails).
+      Document expected state at each failure point.
+
+  - story: SETS-009
+    concern: "Optimistic updates with rollback are state-heavy. Race conditions from rapid user clicks hard to reproduce deterministically."
+    suggestion: |-
+      Mock time to control animation/undo window timing.
+      Create test scenarios: (1) rapid clicks, (2) navigate away during undo window, (3) API response delayed.
+      Use test IDs to track visual state changes.
+
+  - story: SETS-005
+    concern: "URL scraping is non-deterministic. Different URLs produce different data shapes. Manual entry fallback path is important but easy to miss in testing."
+    suggestion: |-
+      Create scraperTestCase fixtures (happy path, partial data, timeout, invalid URL).
+      Mock scraper with controlled responses.
+      Document fallback flow acceptance criteria explicitly.
+
+  - story: SETS-018
+    concern: "Duplicate detection depends on fuzzy match logic that can be ambiguous. User choice ('increment vs. new') is critical UX but hard to test at scale."
+    suggestion: |-
+      Define duplicate detection algorithm precisely (setNumber exact match? fuzzy title match?).
+      Create test fixtures: exact match, similar titles, no setNumber, alt-brick sets.
+      Test user choice persistence and implications.
+
+  - story: SETS-010
+    concern: "Quantity stepper minimum enforcement at 1 is a boundary condition. Direct input to 0/negative is edge case easily overlooked."
+    suggestion: |-
+      Test all input paths: stepper buttons, direct edit, paste, drag selection.
+      Verify state at boundary (1): button disabled/enabled, input accepts/rejects 0.
+      Test invalid inputs: negative, decimal, NaN, empty string.
+
+  - story: SETS-020
+    concern: "Touch gestures and swipe actions are device-specific. Hard to reproduce consistently in automated tests. Relies on test infrastructure (viewport, touch simulation)."
+    suggestion: |-
+      Use Playwright's touch input API for consistent gesture testing.
+      Document swipe thresholds (velocity, distance) in acceptance criteria.
+      Test on multiple device profiles (mobile, tablet, foldable).
+
+  - story: SETS-011
+    concern: "MOC bidirectional updates require coordination with upstream epic. Difficult to test in isolation without MOC epic ready."
+    suggestion: |-
+      Define contract tests (expected API shape, delete propagation).
+      Mock MOC epic endpoints for local testing.
+      Create integration test that verifies propagation behavior.
+
+missing_test_scenarios:
+  - scenario: "SETS-007: Database constraints validation (unique set_number per user, foreign key integrity, cascading deletes)"
+    affects_stories: [SETS-007]
+    priority: critical
+    details: |-
+      Missing: Testing of DB constraints and integrity.
+      Add: Unit tests for constraint violations, integration tests for cascading deletes (when set deleted, MOC links cleaned up).
+
+  - scenario: "SETS-008: Partial rollback handling (Set created, Wishlist deletion times out)"
+    affects_stories: [SETS-008]
+    priority: critical
+    details: |-
+      Missing: Test for state recovery when transaction partially succeeds.
+      Add: Simulate network failures at each step, verify data consistency and user guidance.
+
+  - scenario: "SETS-009/010: Concurrent updates (user toggles status while quantity is updating)"
+    affects_stories: [SETS-009, SETS-010]
+    priority: critical
+    details: |-
+      Missing: Tests for concurrent optimistic updates.
+      Add: Simulate rapid sequential actions, verify state consistency and undo correctness.
+
+  - scenario: "SETS-005: Scraper failure recovery (timeout, invalid HTML, blocked by rate limit)"
+    affects_stories: [SETS-005]
+    priority: high
+    details: |-
+      Missing: Explicit scraper error scenarios.
+      Add: Test timeout handling, malformed HTML, network errors, retry logic, fallback to manual entry.
+
+  - scenario: "SETS-018: Quantity increment vs. new entry choice validation"
+    affects_stories: [SETS-018]
+    priority: high
+    details: |-
+      Missing: Acceptance criteria for 'quantity increment' action (does it merge purchase details?).
+      Add: Test both paths, verify data integrity, document side effects.
+
+  - scenario: "SETS-011: Bidirectional MOC link deletion (MOC deleted upstream)"
+    affects_stories: [SETS-011]
+    priority: high
+    details: |-
+      Missing: Cleanup behavior when MOC is deleted.
+      Add: Integration test verifying orphaned link removal, propagation to user UI.
+
+  - scenario: "SETS-020: Touch target sizing validation (44px minimum per WCAG)"
+    affects_stories: [SETS-020]
+    priority: high
+    details: |-
+      Missing: Accessibility compliance testing for touch targets.
+      Add: E2E tests with touch input, measure button/control dimensions, verify spacing.
+
+  - scenario: "SETS-019: Keyboard shortcut conflicts and modal context handling"
+    affects_stories: [SETS-019]
+    priority: medium
+    details: |-
+      Missing: Handling of keyboard shortcuts in modals vs. gallery context.
+      Add: Test shortcuts disabled in modals, focus trapping, Tab order verification.
+
+  - scenario: "SETS-017: Empty state with dynamic filter transitions"
+    affects_stories: [SETS-017]
+    priority: medium
+    details: |-
+      Missing: State transitions (populated → empty via filter, empty → populated via clearing filters).
+      Add: Test animations, CTA behavior, state changes.
+
+  - scenario: "SETS-016: Stats query performance with large datasets (10K+ sets)"
+    affects_stories: [SETS-016]
+    priority: medium
+    details: |-
+      Missing: Performance acceptance criteria (max query time, result size).
+      Add: Load tests with synthetic data, measure response time, verify indexing.
+
+edge_cases:
+  - case: "SETS-005: URL paste with whitespace, special characters, shortened URLs (bit.ly), social media links"
+    story: SETS-005
+    risk: "URL validation fails, scraper receives malformed input, user frustrated with unclear error."
+    mitigation: "Normalize URL input (trim, lowercase), validate scheme (http/https), handle redirects, provide clear error messages for unsupported domains."
+
+  - case: "SETS-006: User submits form with all optional fields empty (only title required)"
+    story: SETS-006
+    risk: "Stats display and filtering broken due to missing data, query optimization fails."
+    mitigation: "Define minimum required fields for meaningful collection tracking. Default values for optional fields (e.g., pieceCount=null, purchaseDate=today)."
+
+  - case: "SETS-007: User simultaneously adds two sets with identical setNumber from different sessions/devices"
+    story: SETS-007
+    risk: "Race condition creates duplicate entries or data inconsistency."
+    mitigation: "Use database unique constraint or application-level deduplication. Document expected behavior in acceptance criteria."
+
+  - case: "SETS-008: User clicks 'Undo' on 'Got it' toast 30 seconds after the action completed (undo window expired)"
+    story: SETS-008
+    risk: "Button appears but doesn't work, or state is already reverted, confusing user."
+    mitigation: "Undo window should have clear timeout (5s mentioned). Button should be disabled after timeout or navigate user with explanation."
+
+  - case: "SETS-009: User toggles build status offline, app comes back online, API response differs from optimistic state"
+    story: SETS-009
+    risk: "UI shows one state but server has different state. Undo becomes meaningless."
+    mitigation: "Verify API response matches optimistic state before accepting. If mismatch, revert and show error."
+
+  - case: "SETS-010: User directly edits quantity field and inputs '1.5', '0', '-5', 'abc'"
+    story: SETS-010
+    risk: "Input validation bypassed, invalid state persists."
+    mitigation: "Enforce integer input, minimum 1, maximum reasonable bound (e.g., 999). Show validation error inline."
+
+  - case: "SETS-011: User links set to MOC, then MOC is deleted by another user, user refreshes gallery"
+    story: SETS-011
+    risk: "MOC link still shown but MOC detail view returns 404. Orphaned reference."
+    mitigation: "Cascade delete MOC links when MOC deleted. Or soft-delete MOC and show 'archived' state. Document strategy."
+
+  - case: "SETS-012: User attempts to delete set that is linked to multiple MOCs and referenced in wishlist"
+    story: SETS-012
+    risk: "Cascade delete or foreign key constraint error leaves data in inconsistent state."
+    mitigation: "Define cascading delete policy: delete MOC links, what about wishlistItemId reference? Test thoroughly."
+
+  - case: "SETS-014: User filters to 'No results' state, then clears filter, should return to full list"
+    story: SETS-014
+    risk: "Filter state not properly cleared, user sees empty state with no guidance."
+    mitigation: "Test filter clear interaction, ensure state properly resets, show helpful CTA to re-engage."
+
+  - case: "SETS-018: User adds set #75192 with purchase price $100, then tries to add same set with price $80 (different purchase)"
+    story: SETS-018
+    risk: "User expects 'new entry' option but unclear if quantity increment loses purchase detail history."
+    mitigation: "Clarify that 'new entry' creates separate record. Test both paths preserve all purchase data."
+
+  - case: "SETS-019: User on Mac uses Cmd+B (conflicting with browser 'bold' shortcut) expecting to toggle build status"
+    story: SETS-019
+    risk: "Browser shortcut takes precedence, user action doesn't register, confusion."
+    mitigation: "Use Ctrl/Cmd-aware shortcuts or avoid conflicting keys. Document keyboard shortcuts. Allow customization or override."
+
+  - case: "SETS-020: User on iPhone with swipe-to-go-back gesture attempts swipe gesture on set card"
+    story: SETS-020
+    risk: "Browser gesture interpreted as back navigation instead of app action (build toggle)."
+    mitigation: "Design swipe zones carefully, use event.preventDefault() judiciously. Test on iOS and Android. Document precedence."
+
+integration_test_needs:
+  - integration: "SETS-007 API endpoints with database persistence"
+    stories: [SETS-007]
+    complexity: high
+    details: |-
+      Verify CRUD operations create/update/delete records correctly.
+      Test pagination, filtering by userId, setNumber indexing.
+      Test cascading deletes (MOC links cleaned up when set deleted).
+      Test atomic constraints (userId + setNumber unique?).
+
+  - integration: "SETS-005/013 Scraper service integration with add flow"
+    stories: [SETS-005, SETS-013]
+    complexity: high
+    details: |-
+      Test happy path: paste URL → scrape → review → add.
+      Test scraper failure recovery: timeout, invalid URL, partial data.
+      Test manual entry fallback.
+      Test S3 image upload and URL generation.
+
+  - integration: "SETS-008 Wishlist epic 'Got it' transaction"
+    stories: [SETS-008]
+    complexity: high
+    details: |-
+      Verify atomic transaction: Set created before Wishlist deleted.
+      Test rollback on failure at each step.
+      Test undo capability (restore Set and Wishlist).
+      Test cross-epic communication and state consistency.
+
+  - integration: "SETS-009/010 Optimistic updates with API sync"
+    stories: [SETS-009, SETS-010]
+    complexity: high
+    details: |-
+      Verify optimistic UI change followed by API call.
+      Test rollback on API failure.
+      Test undo window (5s timeout).
+      Test concurrent updates (two rapid toggles).
+
+  - integration: "SETS-011 MOC bidirectional linking"
+    stories: [SETS-011]
+    complexity: high
+    details: |-
+      Verify many-to-many relationship creation.
+      Test MOC picker integration (search, multi-select).
+      Test bidirectional display (MOC shows linked sets, Set shows linked MOCs).
+      Test propagation when MOC deleted upstream.
+
+  - integration: "SETS-014 Filter/sort with shared gallery package"
+    stories: [SETS-014]
+    complexity: medium
+    details: |-
+      Test gallery filtering API contract.
+      Test sort persistence.
+      Test combined filters (AND/OR logic).
+      Test null/missing data handling in sort.
+
+  - integration: "SETS-015 Tag management with shared tag system"
+    stories: [SETS-015]
+    complexity: medium
+    details: |-
+      Test tag CRUD through shared service.
+      Test tag assignment to sets.
+      Test tag deletion (cascade or soft-delete?).
+      Test tag filtering in gallery.
+
+  - integration: "SETS-019/020 Accessibility with real devices and AT"
+    stories: [SETS-019, SETS-020]
+    complexity: medium
+    details: |-
+      Test keyboard navigation with screen reader (NVDA, JAWS, VoiceOver).
+      Test touch gestures on mobile devices (iOS, Android).
+      Test focus management and tab order.
+      Test WCAG AA contrast and touch target sizing.
+
+e2e_critical_paths:
+  - path: "New user adds first set via URL scrape"
+    stories: [SETS-005, SETS-006, SETS-007]
+    description: |-
+      User opens app, clicks "Add Set", pastes LEGO.com URL, system scrapes data,
+      user reviews/edits, enters purchase details, selects build status, confirms.
+      Set appears in gallery. Verify: scraped data correct, image loaded, purchase details saved,
+      build status reflected.
+    test_priority: critical
+
+  - path: "User gets set from Wishlist 'Got it' flow"
+    stories: [SETS-008, SETS-021]
+    description: |-
+      User on Wishlist clicks 'Got it', modal pre-fills from wishlist item, user enters purchase details,
+      confirms. Set appears in Sets gallery with success toast/highlight. Verify: item removed from Wishlist,
+      appears in Sets, purchase details captured, undo works, new item highlighted.
+    test_priority: critical
+
+  - path: "User manages collection: toggle status, adjust quantity, filter by status"
+    stories: [SETS-009, SETS-010, SETS-014]
+    description: |-
+      User views gallery, clicks set card to detail, toggles 'In Pieces' → 'Built' (expects animation),
+      adjusts quantity (×2 → ×3), closes detail, filters gallery to 'Built' only, verifies count.
+      Verify: toggle reflects correctly, quantity updates, filter works, optimistic updates synced.
+    test_priority: critical
+
+  - path: "User links sets to MOC instructions they built with"
+    stories: [SETS-011]
+    description: |-
+      User views set detail, clicks "+ Link to MOC", searches for MOC, selects multiple,
+      confirms. MOC links appear in detail view. MOC detail page shows set is linked.
+      Verify: many-to-many relationship, bidirectional display, search works.
+    test_priority: high
+
+  - path: "User adds duplicate set with different purchase details"
+    stories: [SETS-018]
+    description: |-
+      User tries to add Set #75192 (already in collection), prompted with choice:
+      'Add to existing quantity' vs 'Add as new entry'. User selects 'new entry'.
+      Verify: two entries created with different purchase prices/dates, quantities tracked separately.
+    test_priority: high
+
+  - path: "User deletes set with confirmation"
+    stories: [SETS-012]
+    description: |-
+      User views set detail or gallery card, clicks delete, modal asks for confirmation
+      ('This is permanent'), user confirms. Set removed from gallery, MOC links cleaned up.
+      Verify: hard delete (no restore), orphaned references removed.
+    test_priority: high
+
+  - path: "User navigates Sets on mobile with touch gestures"
+    stories: [SETS-020]
+    description: |-
+      User on iPhone/Android views gallery, taps set card (bottom sheet opens),
+      swipes to toggle build status, uses + stepper to increase quantity, swipes down to close.
+      Verify: responsive layout, touch targets adequate, gestures intuitive, no browser conflicts.
+    test_priority: high
+
+  - path: "Power user navigates entirely by keyboard"
+    stories: [SETS-019]
+    description: |-
+      User navigates gallery (arrow keys), selects set (space), toggles (B), adjusts quantity (+/-),
+      links to MOC (M), all without mouse. Screen reader announces state changes.
+      Verify: all actions work via keyboard, shortcuts responsive, focus visible, ARIA correct.
+    test_priority: medium
+
+  - path: "User views empty collection and empty filtered states"
+    stories: [SETS-017]
+    description: |-
+      New user sees empty state with CTA to add first set.
+      User adds sets, then filters to 'Built' with no results, sees empty filtered state.
+      User clears filter, sees full collection again.
+      Verify: correct empty state shown, CTAs functional, state transitions smooth.
+    test_priority: medium
+
+  - path: "User views collection statistics and trends"
+    stories: [SETS-016]
+    description: |-
+      User navigates to stats view, sees total sets, unique sets, total pieces, total value.
+      Stats update after adding/deleting sets. Performance acceptable with 1K+ sets.
+      Verify: calculations correct, display updated, query performance acceptable.
+    test_priority: low
+
+recommendations:
+  acceptance_criteria_clarity:
+    - |-
+      Stories SETS-008, SETS-009, SETS-010 need explicit acceptance criteria for:
+      - Undo window timing (when does it expire?)
+      - State transitions (what UI changes happen and when?)
+      - Failure recovery (what does user see if API fails?)
+    - |-
+      Stories SETS-005, SETS-013 need scraper error handling explicitly defined:
+      - Timeout thresholds
+      - Retry strategy
+      - Fallback to manual entry
+      - Error message content
+    - |-
+      SETS-018 (Duplicate Detection) needs algorithm definition:
+      - Exact match on setNumber?
+      - Fuzzy match on title?
+      - Handle null setNumber?
+      - User choice implications (data model effects)
+    - |-
+      SETS-020 (Mobile Responsive) needs swipe action definitions:
+      - Gesture thresholds (velocity, distance)
+      - Viewport sizes to test
+      - Browser compatibility (iOS/Android)
+
+  test_infrastructure_requirements:
+    - |-
+      MSW mock setup for scraper service failures (timeout, malformed response, network error)
+    - |-
+      Test helpers for time manipulation (undo window expiry, animation timing)
+    - |-
+      Database seeding fixtures for performance testing (10K+ sets)
+    - |-
+      Playwright touch input configuration for gesture testing
+    - |-
+      Mock Wishlist and MOC epic endpoints for integration testing
+    - |-
+      Screen reader testing setup (NVDA, JAWS, VoiceOver, TalkBack)
+
+  test_coverage_priorities:
+    - critical:
+        - Atomic transaction rollback scenarios (SETS-008)
+        - Optimistic update race conditions (SETS-009, SETS-010)
+        - Scraper error handling (SETS-005)
+        - Database constraint validation (SETS-007)
+    - high:
+        - Cross-epic dependency contracts (SETS-008, SETS-011)
+        - Mobile touch gesture accuracy (SETS-020)
+        - Keyboard navigation and a11y (SETS-019)
+    - medium:
+        - Filter/sort behavior and persistence (SETS-014)
+        - Empty state transitions (SETS-017)
+        - Performance with large datasets (SETS-016)
+
+  qa_gate_criteria:
+    - |-
+      Each story MUST document acceptance criteria for all identified critical/high findings.
+    - |-
+      Integration tests MUST exist for all cross-epic dependencies before marking story ready.
+    - |-
+      E2E critical paths MUST pass on desktop and mobile before story marked complete.
+    - |-
+      Performance tests MUST show acceptable response times (<500ms for stats queries, <1s for large galleries).
+    - |-
+      Accessibility tests MUST pass WCAG AA compliance before marking done.
+
+summary: |-
+  The SETS epic is well-structured with clear phases, good dependency management, and comprehensive
+  feature planning. However, QA readiness concerns center on:
+
+  1. **Acceptance Criteria Completeness**: Several stories lack precise, testable acceptance criteria
+     for complex features (atomic transactions, optimistic updates, error recovery).
+
+  2. **Cross-Epic Dependencies**: Wishlist integration (SETS-008) and MOC linking (SETS-011) lack
+     documented contracts and integration test strategies.
+
+  3. **Edge Cases & Error Scenarios**: Stories underspecify handling of real-world failures
+     (network timeouts, partial data, concurrent updates, user navigation during async operations).
+
+  4. **Mobile & Accessibility**: SETS-020 and SETS-019 need more granular acceptance criteria
+     for gesture thresholds, keyboard shortcuts, and WCAG compliance.
+
+  5. **Performance & Scale**: SETS-016 mentions optimization need but lacks acceptance criteria
+     for response times and data volume thresholds.
+
+  Recommendation: Schedule elaboration sessions to convert critical/high findings into detailed
+  acceptance criteria before development begins. Prepare test infrastructure (mocks, fixtures,
+  device test lab) early to avoid late-phase testing delays.

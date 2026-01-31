@@ -1,0 +1,122 @@
+schema: 4
+feature_dir: "plans/future/wish"
+story_id: "WISH-2009"
+updated: "2026-01-29T18:35:00Z"
+iteration: 1
+
+code_review:
+  verdict: FAIL
+  workers_run: [lint, style, syntax, security, typecheck, build]
+  workers_skipped: []
+
+  lint:
+    verdict: FAIL
+    skipped: false
+    errors: 3
+    findings:
+      - "apps/api/lego-api/server.ts:31:14 - prettier/prettier: Replace `(c)` with `c`"
+      - "apps/api/lego-api/server.ts:40:14 - prettier/prettier: Replace `(c)` with `c`"
+      - "packages/backend/database-schema/src/schema/feature-flags.ts:1:9 - prettier/prettier: Multi-line import formatting"
+
+  style:
+    verdict: FAIL
+    skipped: false
+    errors: 2
+    findings:
+      - "adapters/index.ts is a barrel file (re-exports) - violates NO BARREL FILES rule"
+      - "application/index.ts is a barrel file (re-exports) - violates NO BARREL FILES rule"
+    notes:
+      - "All types correctly use Zod schemas with z.infer<>"
+      - "Import patterns follow @repo/api-core convention"
+      - "All React components are functional"
+
+  syntax:
+    verdict: FAIL
+    skipped: false
+    errors: 7
+    findings:
+      - "apps/api/lego-api/domains/config/adapters/repositories.ts:69 - TS2769: eq() overload mismatch (unknown types)"
+      - "apps/api/lego-api/domains/config/adapters/repositories.ts:85 - TS2769: eq() overload mismatch"
+      - "apps/api/lego-api/domains/config/adapters/repositories.ts:147 - TS2769: eq() overload mismatch"
+      - "apps/api/lego-api/domains/config/adapters/repositories.ts:170 - TS2769: eq() overload mismatch"
+    notes:
+      - "Pre-existing errors in database-schema/src/schema/index.ts (sets imports) - NOT from WISH-2009"
+
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings: []
+    notes:
+      - "SQL injection: PASS - Uses Drizzle ORM with parameterized queries"
+      - "XSS: PASS - No direct DOM manipulation or innerHTML usage"
+      - "Hardcoded secrets: PASS - No credentials found"
+      - "Command injection: PASS - No shell execution"
+      - "SHA-256 hashing uses Node crypto module - secure implementation"
+
+  typecheck:
+    verdict: FAIL
+    skipped: false
+    errors: 7
+    findings:
+      - "repositories.ts uses `unknown` type assertions that break Drizzle eq() type inference"
+      - "DrizzleTable interface uses `unknown` for flagKey/environment columns"
+      - "Type coercion with `as unknown as DrizzleDb` loses type safety"
+
+  build:
+    verdict: FAIL
+    skipped: false
+    errors: 1
+    findings:
+      - "Build fails in @repo/knowledge-base (missing uuid types) - PRE-EXISTING issue, NOT from WISH-2009"
+    notes:
+      - "All WISH-2009 packages would build if pre-existing issues were fixed"
+      - "@repo/lego-api builds successfully (no standalone build)"
+      - "@repo/api-client builds successfully"
+      - "@repo/app-wishlist-gallery builds successfully"
+
+  tests:
+    backend:
+      verdict: PASS
+      errors: 0
+      findings:
+        - "18/18 feature flag service tests pass"
+        - "All 217 lego-api tests pass"
+    frontend:
+      verdict: FAIL
+      errors: 5
+      findings:
+        - "FeatureFlagContext.test.tsx: 4 tests fail due to MSW/fetch mock conflict"
+        - "useFeatureFlag.test.tsx: 1 test fails due to fetch mock timing"
+        - "Tests mock globalThis.fetch but MSW intercepts first (onUnhandledRequest: error)"
+
+issues_requiring_fix:
+  - severity: HIGH
+    file: "apps/api/lego-api/domains/config/adapters/repositories.ts"
+    description: "TypeScript errors - Drizzle eq() type inference broken by unknown types"
+    fix: "Use proper Drizzle types instead of unknown/type assertions"
+
+  - severity: MEDIUM
+    file: "apps/api/lego-api/domains/config/adapters/index.ts"
+    description: "Barrel file violates codebase style rules"
+    fix: "Import directly from source files, remove barrel re-exports"
+
+  - severity: MEDIUM
+    file: "apps/api/lego-api/domains/config/application/index.ts"
+    description: "Barrel file violates codebase style rules"
+    fix: "Import directly from source files, remove barrel re-exports"
+
+  - severity: MEDIUM
+    file: "apps/web/app-wishlist-gallery/src/contexts/__tests__/FeatureFlagContext.test.tsx"
+    description: "Test fails due to MSW/fetch mock conflict"
+    fix: "Add MSW handler for /api/config/flags endpoint instead of mocking globalThis.fetch"
+
+  - severity: LOW
+    file: "apps/api/lego-api/server.ts"
+    description: "Prettier formatting - arrow function parameter parentheses"
+    fix: "Run pnpm lint --fix"
+
+  - severity: LOW
+    file: "packages/backend/database-schema/src/schema/feature-flags.ts"
+    description: "Prettier formatting - multi-line import"
+    fix: "Run pnpm lint --fix"

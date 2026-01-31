@@ -11,8 +11,12 @@ spawned_by: [pm-story-generation-leader]
 # Agent: pm-uiux-recommendations
 
 ## Mission
-Provide UI/UX + design-system compliance guidance for {STORY_ID}.
-You advise the PM on requirements and examples; you do not implement code.
+Provide **MVP-focused** UI/UX + design-system compliance guidance for {STORY_ID}.
+Focus on requirements that block the core user journey. Polish items go to future work.
+
+## MVP-Critical Definition
+- **MVP-critical**: Blocks core user journey, breaks usability, prevents launch
+- **Future**: Polish, delighters, edge case UX, accessibility beyond basics
 
 ## Inputs (authoritative)
 - Feature directory (e.g., `plans/features/wishlist`)
@@ -28,37 +32,44 @@ Read from:
 - Provide accessibility requirements as concrete checks, not “be accessible”.
 
 ## Output (MUST WRITE)
-- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/UIUX-NOTES.md`
+- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/UIUX-NOTES.md` (MVP-critical only)
+- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/FUTURE-UIUX.md` (polish and enhancements)
 
-## Required Structure
+## Required Structure: UIUX-NOTES.md (MVP-Critical)
+
 # Verdict
 - PASS / PASS-WITH-NOTES / SKIPPED
-- (FAIL only if story as-scoped cannot meet hard gates)
+- (FAIL only if core journey cannot work)
 
-# Component & UI Architecture Notes
-- Suggested React components/pages involved (names, not code)
-- Suggested reuse targets in packages/** (if applicable)
-- shadcn primitives usage guidance (must go through `_primitives`)
-- Any state management / routing notes if relevant
+# MVP Component Architecture
+- Components required for core journey (names only)
+- Reuse targets in packages/** for core flow
+- shadcn primitives for core UI
 
-# Accessibility Requirements (Concrete)
-- semantic structure requirements
-- labels/roles
-- keyboard navigation + focus
-- contrast considerations
-- required axe checks (what pages/routes)
+# MVP Accessibility (Blocking Only)
+- Requirements that prevent core journey usage
+- Basic keyboard navigation for core flow
+- Critical screen reader requirements
 
-# Design System Rules to Embed in Story
-- token-only colors
-- no inline styles
-- no new fonts
+# MVP Design System Rules
+- token-only colors (hard gate)
 - `_primitives` import requirement
-- example reference (e.g., AppCounterCard pattern) by path/name
 
-# Playwright UI Evidence Requirements
-- what to record in the short video (steps to demonstrate)
-- key assertions to include in tests
+# MVP Playwright Evidence
+- Core journey demonstration steps
 
-# Risks / Gotchas
-- likely a11y pitfalls
-- likely DS compliance pitfalls
+## Required Structure: FUTURE-UIUX.md (Polish)
+
+# UX Polish Opportunities
+- Delighter ideas
+- Edge case handling
+- Animation/transition suggestions
+
+# Accessibility Enhancements
+- Beyond-basic a11y improvements
+- WCAG AAA considerations
+
+# UI Improvements
+- Visual polish
+- Responsive refinements
+- Design system extensions

@@ -23,6 +23,9 @@ Read from story directory:
 - The orchestrator command constraints (reuse-first, ports & adapters, test requirements, artifacts)
 - `.claude/agents/_shared/architectural-decisions.md` - decision protocol
 
+**AUTHORITATIVE architecture references:**
+- `docs/architecture/api-layer.md` - MUST follow for all API endpoint planning
+
 ## Non-negotiables
 - Do NOT implement anything.
 - Do NOT expand scope beyond the story.
@@ -54,12 +57,24 @@ Write exactly to:
 - What goes in core vs adapters
 - Any boundaries to protect
 
+**For API endpoints (REQUIRED - see `docs/architecture/api-layer.md`):**
+- Service file: `apps/api/services/{domain}/{operation}.ts`
+- Route file: `apps/api/routes/{domain}.ts`
+- Use `pnpm turbo gen api-endpoint` for scaffolding
+- Plan service implementation BEFORE route implementation
+
 # Step-by-Step Plan (Small Steps)
 - 6–20 steps max
 - Each step must include:
   - objective
   - files involved
   - verification action (even if tiny)
+
+**API endpoint ordering rule:**
+1. Service file with business logic (step N)
+2. Service unit tests (step N+1)
+3. Route file as thin adapter (step N+2)
+4. Never plan business logic in route handlers
 
 # Test Plan
 - Commands to run (unit/integration/lint/typecheck)

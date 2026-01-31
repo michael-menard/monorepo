@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { logger } from '@repo/logger'
 import type { Result } from './types.js'
 import { ok, err } from './types.js'
 
@@ -40,7 +41,7 @@ function getBucket(): string {
 export async function uploadToS3(
   key: string,
   body: Buffer | Uint8Array | string,
-  contentType: string
+  contentType: string,
 ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>> {
   try {
     const bucket = getBucket()
@@ -51,13 +52,13 @@ export async function uploadToS3(
         Body: body,
         ContentType: contentType,
         ServerSideEncryption: 'AES256',
-      })
+      }),
     )
 
     const url = `https://${bucket}.s3.amazonaws.com/${key}`
     return ok({ url })
   } catch (error) {
-    console.error('S3 upload failed:', error)
+    logger.error('S3 upload failed:', error)
     return err('UPLOAD_FAILED')
   }
 }
@@ -65,19 +66,17 @@ export async function uploadToS3(
 /**
  * Delete a file from S3
  */
-export async function deleteFromS3(
-  key: string
-): Promise<Result<void, 'DELETE_FAILED'>> {
+export async function deleteFromS3(key: string): Promise<Result<void, 'DELETE_FAILED'>> {
   try {
     await getS3Client().send(
       new DeleteObjectCommand({
         Bucket: getBucket(),
         Key: key,
-      })
+      }),
     )
     return ok(undefined)
   } catch (error) {
-    console.error('S3 delete failed:', error)
+    logger.error('S3 delete failed:', error)
     return err('DELETE_FAILED')
   }
 }
@@ -85,10 +84,7 @@ export async function deleteFromS3(
 /**
  * Get a presigned URL for downloading a file
  */
-export async function getPresignedUrl(
-  key: string,
-  expiresInSeconds = 3600
-): Promise<string> {
+export async function getPresignedUrl(key: string, expiresInSeconds = 3600): Promise<string> {
   const command = new GetObjectCommand({
     Bucket: getBucket(),
     Key: key,
@@ -102,7 +98,7 @@ export async function getPresignedUrl(
 export async function getPresignedUploadUrl(
   key: string,
   contentType: string,
-  expiresInSeconds = 3600
+  expiresInSeconds = 3600,
 ): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: getBucket(),
@@ -110,4 +106,56 @@ export async function getPresignedUploadUrl(
     ContentType: contentType,
   })
   return getSignedUrl(getS3Client(), command, { expiresIn: expiresInSeconds })
+}
+
+/**
+ * Copy an S3 object from source key to destination key
+ * Downloads then re-uploads (works across buckets and handles all cases)
+ */
+export async function copyS3Object(
+  sourceKey: string,
+  destKey: string,
+): Promise<Result<{ url: string }, 'COPY_FAILED' | 'SOURCE_NOT_FOUND'>> {
+  try {
+    const bucket = getBucket()
+
+    // Get the source object
+    const getCommand = new GetObjectCommand({
+      Bucket: bucket,
+      Key: sourceKey,
+    })
+
+    const response = await getS3Client().send(getCommand)
+
+    if (!response.Body) {
+      logger.error(`Source object not found: ${sourceKey}`)
+      return err('SOURCE_NOT_FOUND')
+    }
+
+    // Convert stream to buffer
+    const chunks: Uint8Array[] = []
+    const stream = response.Body as AsyncIterable<Uint8Array>
+    for await (const chunk of stream) {
+      chunks.push(chunk)
+    }
+    const buffer = Buffer.concat(chunks)
+
+    // Upload to destination
+    const contentType = response.ContentType || 'application/octet-stream'
+    const uploadResult = await uploadToS3(destKey, buffer, contentType)
+
+    if (!uploadResult.ok) {
+      logger.error(`Failed to upload copied object: ${destKey}`)
+      return err('COPY_FAILED')
+    }
+
+    return ok({ url: uploadResult.data.url })
+  } catch (error) {
+    logger.error('Failed to copy S3 object:', error)
+    // Check if it's a "not found" error
+    if ((error as Error).name === 'NoSuchKey') {
+      return err('SOURCE_NOT_FOUND')
+    }
+    return err('COPY_FAILED')
+  }
 }

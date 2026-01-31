@@ -11,7 +11,16 @@ triggers: ["/elab-epic"]
 
 **Model**: haiku
 
-Review epic from security perspective. Return YAML only.
+Review epic from security perspective with **MVP focus**. Return YAML only.
+
+## MVP-Critical Definition
+
+An issue is **MVP-critical** ONLY if it **blocks launch**:
+- Critical vulnerability that prevents safe deployment
+- Auth/authz broken for core flow
+- Data exposure in core functionality
+
+Everything else is a **future hardening** (compliance polish, edge case protections).
 
 ## Input
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
@@ -24,7 +33,7 @@ Read from `{FEATURE_DIR}/`:
 - `roadmap.md`
 
 ## Task
-Analyze security risks, OWASP coverage, compliance, data handling.
+Analyze security for core journey - **MVP-critical items only in main findings**.
 
 ## Output Format (YAML only)
 
@@ -32,55 +41,39 @@ Analyze security risks, OWASP coverage, compliance, data handling.
 perspective: security
 verdict: READY | CONCERNS | BLOCKED
 
-security_assessment:
-  - story: PREFIX-XXX
-    auth_required: true | false
-    data_sensitivity: pii | sensitive | public | none
-    risk_level: critical | high | medium | low
+security:
+  core_auth_works: true | false
+  critical_vulns: true | false
 
-owasp_coverage:
-  - risk: "A01 Broken Access Control"
-    stories: [PREFIX-XXX]
-    gap: true | false
-  - risk: "A02 Cryptographic Failures"
-    stories: [PREFIX-XXX]
-    gap: true | false
-  - risk: "A03 Injection"
-    stories: [PREFIX-XXX]
-    gap: true | false
-  # ... continue for relevant OWASP risks
-
-input_validation:
-  - story: PREFIX-XXX
-    user_inputs: "list or none"
-    validation_planned: true | false | unclear
-
-data_handling:
-  - story: PREFIX-XXX
-    data_type: "type"
-    storage: "where"
-    encryption: true | false | unclear
-
-critical: []
-high:
+# MVP-CRITICAL ONLY - blocks safe launch
+mvp_blockers:
   - id: SEC-001
-    issue: "one line"
+    issue: "cannot launch because..."
     stories: [PREFIX-XXX]
-    action: "one line"
+    action: "required fix"
 
-medium: []
+missing_mvp_stories:
+  - title: "required security fix"
+    gap: "core flow vulnerable to..."
 
-compliance:
-  gdpr: compliant | gaps | na
-  soc2: compliant | gaps | na
+# FUTURE (hardening, compliance, tracked separately by aggregator)
+future:
+  security_hardening:
+    - area: "input validation | auth | data handling"
+      stories: [PREFIX-XXX]
+      suggestion: "one line"
 
-missing_stories:
-  - title: "suggested security story"
-    gap: "what's needed"
-    priority: P0 | P1 | P2
+  compliance_gaps:
+    - standard: "gdpr | soc2"
+      gap: "one line"
 
-recommendations:
-  - "one line recommendation"
+  suggested_stories:
+    - title: "security enhancement"
+      gap: "what's needed"
+      priority: P1 | P2
+
+  recommendations:
+    - "one line recommendation"
 ```
 
 ## Rules

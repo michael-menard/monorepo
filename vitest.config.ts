@@ -57,6 +57,8 @@ export default defineConfig({
       '@packages/auth': path.resolve(__dirname, './packages/auth/src'),
       // Backend aliases for apps/api
       '@/core': path.resolve(__dirname, './apps/api/core'),
+      '@/services': path.resolve(__dirname, './apps/api/services'),
+      '@/routes': path.resolve(__dirname, './apps/api/routes'),
       '@/endpoints': path.resolve(__dirname, './apps/api/platforms/aws/endpoints'),
     },
   },

@@ -1,0 +1,138 @@
+### Wishlist Gallery MVP API Verification
+### Story: WISH-2001
+### Base URL: http://localhost:3000 (lego-api)
+### Requires: AUTH_BYPASS=true and seeded database
+
+@baseUrl = http://localhost:3000
+
+### =============================================================================
+### GET /api/wishlist - List Wishlist Items
+### =============================================================================
+
+### List Wishlist Items - Basic (no filters)
+# @name listWishlist
+GET {{baseUrl}}/api/wishlist
+
+### List Wishlist Items - With Search
+# @name listWishlistSearch
+GET {{baseUrl}}/api/wishlist?search=millennium
+
+### List Wishlist Items - Filter by Store (LEGO)
+# @name listWishlistStoreLego
+GET {{baseUrl}}/api/wishlist?store=LEGO
+
+### List Wishlist Items - Filter by Store (Barweer)
+# @name listWishlistStoreBarweer
+GET {{baseUrl}}/api/wishlist?store=Barweer
+
+### List Wishlist Items - Filter by Store (BrickLink)
+# @name listWishlistStoreBrickLink
+GET {{baseUrl}}/api/wishlist?store=BrickLink
+
+### List Wishlist Items - Filter by Priority
+# @name listWishlistPriority
+GET {{baseUrl}}/api/wishlist?priority=5
+
+### List Wishlist Items - Filter by Tags
+# @name listWishlistTags
+GET {{baseUrl}}/api/wishlist?tags=Star%20Wars,UCS
+
+### List Wishlist Items - Sort by Price (ascending)
+# @name listWishlistSortPriceAsc
+GET {{baseUrl}}/api/wishlist?sort=price&order=asc
+
+### List Wishlist Items - Sort by Price (descending)
+# @name listWishlistSortPriceDesc
+GET {{baseUrl}}/api/wishlist?sort=price&order=desc
+
+### List Wishlist Items - Sort by Date (newest first)
+# @name listWishlistSortDateDesc
+GET {{baseUrl}}/api/wishlist?sort=createdAt&order=desc
+
+### List Wishlist Items - Sort by Priority (high to low)
+# @name listWishlistSortPriority
+GET {{baseUrl}}/api/wishlist?sort=priority&order=desc
+
+### List Wishlist Items - Sort by Manual Order
+# @name listWishlistSortOrder
+GET {{baseUrl}}/api/wishlist?sort=sortOrder&order=asc
+
+### List Wishlist Items - Pagination (page 1, limit 5)
+# @name listWishlistPage1
+GET {{baseUrl}}/api/wishlist?page=1&limit=5
+
+### List Wishlist Items - Pagination (page 2, limit 5)
+# @name listWishlistPage2
+GET {{baseUrl}}/api/wishlist?page=2&limit=5
+
+### List Wishlist Items - Combined filters
+# @name listWishlistCombined
+GET {{baseUrl}}/api/wishlist?store=LEGO&sort=price&order=desc&page=1&limit=10
+
+### =============================================================================
+### GET /api/wishlist/:id - Get Single Item
+### =============================================================================
+
+### Get Wishlist Item - Valid ID (from seed data)
+# @name getWishlistItem
+GET {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+
+### Get Wishlist Item - Non-existent ID (404)
+# @name getWishlistItemNotFound
+GET {{baseUrl}}/api/wishlist/00000000-0000-0000-0000-000000000000
+
+### Get Wishlist Item - Other user's item (403)
+# @name getWishlistItemForbidden
+GET {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111004
+
+### Get Wishlist Item - Invalid UUID format (400)
+# @name getWishlistItemInvalid
+GET {{baseUrl}}/api/wishlist/not-a-uuid
+
+### =============================================================================
+### Response Format Verification
+### =============================================================================
+
+### Verify List Response Structure
+### Expected response shape:
+### {
+###   "items": [...],
+###   "pagination": { "page": 1, "limit": 20, "total": N, "totalPages": M },
+###   "counts": { "total": N, "byStore": { "LEGO": X, "Barweer": Y, ... } },
+###   "filters": { "availableTags": [...], "availableStores": [...] }
+### }
+# @name verifyListResponse
+GET {{baseUrl}}/api/wishlist?page=1&limit=20
+
+### Verify Single Item Response Structure
+### Expected response shape:
+### {
+###   "id": "uuid",
+###   "userId": "uuid",
+###   "title": "string",
+###   "store": "LEGO|Barweer|Cata|BrickLink|Other",
+###   "setNumber": "string|null",
+###   "sourceUrl": "url|null",
+###   "imageUrl": "url|null",
+###   "price": "string|null",
+###   "currency": "USD|EUR|GBP|CAD|AUD",
+###   "pieceCount": number|null,
+###   "releaseDate": "datetime|null",
+###   "tags": ["string"],
+###   "priority": 0-5,
+###   "notes": "string|null",
+###   "sortOrder": number,
+###   "createdAt": "datetime",
+###   "updatedAt": "datetime"
+### }
+# @name verifySingleItemResponse
+GET {{baseUrl}}/api/wishlist/11111111-1111-1111-1111-111111111001
+
+### =============================================================================
+### Auth Verification (requires AUTH_BYPASS=false)
+### =============================================================================
+
+### Unauthenticated request should return 401
+### Note: Only works when AUTH_BYPASS=false
+# @name listWishlistUnauth
+GET {{baseUrl}}/api/wishlist

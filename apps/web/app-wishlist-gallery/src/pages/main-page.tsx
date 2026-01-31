@@ -5,10 +5,16 @@
  * Uses shared @repo/gallery components with wishlist-specific WishlistCard.
  *
  * Story wish-2001: Wishlist Gallery MVP
+ * Story WISH-2041: Delete Flow
+ * Story WISH-2042: Purchase/Got It Flow
+ * Story WISH-2005a: Drag-and-drop reordering
+ * Story WISH-2015: Sort Mode Persistence (localStorage)
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { z } from 'zod'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import {
   GalleryGrid,
   GalleryFilterBar,
@@ -23,11 +29,19 @@ import {
   useFirstTimeHint,
   type GalleryDataTableColumn,
 } from '@repo/gallery'
-import { Tabs, TabsList, TabsTrigger } from '@repo/app-component-library'
-import { Heart } from 'lucide-react'
-import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
-import { useGetWishlistQuery } from '@repo/api-client/rtk/wishlist-gallery-api'
+import { Tabs, TabsList, TabsTrigger, Button } from '@repo/app-component-library'
+import { Heart, Plus } from 'lucide-react'
+import type { WishlistItem, CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
+import {
+  useGetWishlistQuery,
+  useRemoveFromWishlistMutation,
+  useAddWishlistItemMutation,
+} from '@repo/api-client/rtk/wishlist-gallery-api'
 import { WishlistCard } from '../components/WishlistCard'
+import { GotItModal } from '../components/GotItModal'
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
+import { DraggableWishlistGallery } from '../components/DraggableWishlistGallery'
+import { useWishlistSortPersistence, DEFAULT_SORT_MODE } from '../hooks/useWishlistSortPersistence'
 
 /**
  * Main page props schema
@@ -133,7 +147,29 @@ type WishlistFilters = {
   page: number
 } & Record<string, unknown>
 
-function WishlistMainPageContent({ className }: MainPageProps) {
+/**
+ * Props for WishlistMainPageContent including sort persistence
+ */
+interface WishlistMainPageContentProps extends MainPageProps {
+  /** Callback to persist sort mode changes to localStorage */
+  onSortPersist: (sortMode: string) => void
+  /** Whether the sort mode was restored from localStorage */
+  wasRestored: boolean
+}
+
+/**
+ * Get human-readable label for sort mode
+ */
+const getSortModeLabel = (sortValue: string): string => {
+  const option = wishlistSortOptions.find(opt => opt.value === sortValue)
+  return option?.label ?? sortValue
+}
+
+function WishlistMainPageContent({
+  className,
+  onSortPersist,
+  wasRestored,
+}: WishlistMainPageContentProps) {
   const { filters, updateFilter, clearFilters } = useFilterContext<WishlistFilters>()
 
   const search = filters.search
@@ -145,8 +181,41 @@ function WishlistMainPageContent({ className }: MainPageProps) {
   // View mode state (grid | datatable) with persistence
   const [viewMode, setViewMode] = useViewMode('wishlist')
 
+  // Got It modal state (WISH-2042)
+  const [gotItModalOpen, setGotItModalOpen] = useState(false)
+  const [selectedItemForPurchase, setSelectedItemForPurchase] = useState<WishlistItem | null>(null)
+
+  // Delete modal state (WISH-2041)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [selectedItemForDelete, setSelectedItemForDelete] = useState<WishlistItem | null>(null)
+  const deletedItemRef = useRef<WishlistItem | null>(null)
+
+  // RTK Query mutations for delete flow (WISH-2041)
+  const [removeFromWishlist, { isLoading: isDeleting }] = useRemoveFromWishlistMutation()
+  const [addWishlistItem] = useAddWishlistItemMutation()
+
   // First-time hint state for view toggle tooltip
   const [showHint, dismissHint] = useFirstTimeHint()
+
+  // Screen reader announcement for restored sort mode (WISH-2015 AC14)
+  const hasAnnouncedRef = useRef(false)
+  useEffect(() => {
+    if (wasRestored && !hasAnnouncedRef.current && sortValue !== DEFAULT_SORT_MODE) {
+      hasAnnouncedRef.current = true
+      // Create an aria-live region to announce the restored sort mode
+      const announcement = document.createElement('div')
+      announcement.setAttribute('role', 'status')
+      announcement.setAttribute('aria-live', 'polite')
+      announcement.setAttribute('aria-atomic', 'true')
+      announcement.className = 'sr-only'
+      announcement.textContent = `Sort mode set to ${getSortModeLabel(sortValue)}`
+      document.body.appendChild(announcement)
+      // Remove after announcement is read
+      setTimeout(() => {
+        document.body.removeChild(announcement)
+      }, 1000)
+    }
+  }, [wasRestored, sortValue])
 
   // Parse sort value
   const [sortField, sortOrder] = sortValue.split('-') as [string, 'asc' | 'desc']
@@ -231,13 +300,15 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     [updateFilter],
   )
 
-  // Handle sort
+  // Handle sort (WISH-2015: persist to localStorage)
   const handleSortChange = useCallback(
     (value: string) => {
       updateFilter('sort', value)
       updateFilter('page', 1)
+      // Persist to localStorage
+      onSortPersist(value)
     },
-    [updateFilter],
+    [updateFilter, onSortPersist],
   )
 
   // Handle page change
@@ -263,6 +334,111 @@ function WishlistMainPageContent({ className }: MainPageProps) {
       handleCardClick(item.id)
     },
     [handleCardClick],
+  )
+
+  // Handle Got It button click (WISH-2042)
+  const handleGotIt = useCallback((item: WishlistItem) => {
+    setSelectedItemForPurchase(item)
+    setGotItModalOpen(true)
+  }, [])
+
+  // Close Got It modal
+  const handleCloseGotItModal = useCallback(() => {
+    setGotItModalOpen(false)
+    setSelectedItemForPurchase(null)
+  }, [])
+
+  // Handle Delete button click (WISH-2041)
+  const handleDeleteClick = useCallback((item: WishlistItem) => {
+    setSelectedItemForDelete(item)
+    setDeleteModalOpen(true)
+  }, [])
+
+  // Close Delete modal
+  const handleCloseDeleteModal = useCallback(() => {
+    setDeleteModalOpen(false)
+    setSelectedItemForDelete(null)
+  }, [])
+
+  // Get error message from API error (WISH-2041 AC 17-18)
+  const getDeleteErrorMessage = useCallback((error: unknown): string => {
+    if (!error) return 'Failed to delete item. Please try again.'
+
+    // Check for RTK Query error shape
+    const rtkError = error as { status?: number; data?: { error?: string } }
+
+    if (rtkError.status === 403) {
+      return "You don't have permission to delete this item"
+    }
+    if (rtkError.status === 404) {
+      return 'Item not found or already deleted'
+    }
+    if (rtkError.status === undefined || rtkError.status === 0) {
+      return 'Network error. Please check your connection.'
+    }
+
+    return 'Failed to delete item. Please try again.'
+  }, [])
+
+  // Handle Delete confirmation (WISH-2041)
+  const handleDeleteConfirm = useCallback(
+    async (item: WishlistItem) => {
+      // Store item for undo (AC 12)
+      deletedItemRef.current = item
+
+      try {
+        await removeFromWishlist(item.id).unwrap()
+
+        // Close modal
+        handleCloseDeleteModal()
+
+        // Show success toast with undo action (AC 10-11, 16, 20)
+        toast('Item removed', {
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              const itemToRestore = deletedItemRef.current
+              if (!itemToRestore) return
+
+              try {
+                // Restore item (AC 13)
+                const createInput: CreateWishlistItem = {
+                  title: itemToRestore.title,
+                  store: itemToRestore.store,
+                  currency: itemToRestore.currency,
+                  tags: itemToRestore.tags ?? [],
+                  priority: itemToRestore.priority ?? 0,
+                  setNumber: itemToRestore.setNumber ?? undefined,
+                  sourceUrl: itemToRestore.sourceUrl ?? undefined,
+                  imageUrl: itemToRestore.imageUrl ?? undefined,
+                  price: itemToRestore.price ?? undefined,
+                  pieceCount: itemToRestore.pieceCount ?? undefined,
+                  releaseDate: itemToRestore.releaseDate ?? undefined,
+                  notes: itemToRestore.notes ?? undefined,
+                }
+
+                await addWishlistItem(createInput).unwrap()
+                toast.success('Item restored')
+                deletedItemRef.current = null
+              } catch {
+                // Handle undo failure (AC 14)
+                toast.error('Failed to restore item')
+              }
+            },
+          },
+          duration: 5000, // 5-second undo window (AC 11)
+        })
+
+        // Clear stored item after toast duration
+        setTimeout(() => {
+          deletedItemRef.current = null
+        }, 5500)
+      } catch (error) {
+        // Handle errors (AC 17-18)
+        toast.error(getDeleteErrorMessage(error))
+      }
+    },
+    [removeFromWishlist, addWishlistItem, handleCloseDeleteModal, getDeleteErrorMessage],
   )
 
   // Loading state
@@ -297,20 +473,31 @@ function WishlistMainPageContent({ className }: MainPageProps) {
     )
   }
 
+  // Navigate hook for empty state action
+  const navigateToAdd = useNavigate()
+
   // Empty state
   if (items.length === 0 && !search && !selectedStore && selectedTags.length === 0) {
     return (
       <div className={className}>
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Wishlist</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Wishlist</h1>
+            <Link to="/add">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </Link>
+          </div>
           <GalleryEmptyState
             icon={Heart}
             title="Your wishlist is empty"
-            description="Add LEGO sets to your wishlist to keep track of what you want."
+            description="Start adding items you want to keep track of."
             action={{
-              label: 'Browse Sets',
+              label: 'Add First Item',
               onClick: () => {
-                window.location.href = '/sets'
+                void navigateToAdd({ to: '/add' })
               },
             }}
           />
@@ -324,12 +511,20 @@ function WishlistMainPageContent({ className }: MainPageProps) {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Wishlist</h1>
-          {counts ? (
-            <span className="text-muted-foreground">
-              {counts.total} {counts.total === 1 ? 'item' : 'items'}
-            </span>
-          ) : null}
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">Wishlist</h1>
+            {counts ? (
+              <span className="text-muted-foreground">
+                {counts.total} {counts.total === 1 ? 'item' : 'items'}
+              </span>
+            ) : null}
+          </div>
+          <Link to="/add">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Item
+            </Button>
+          </Link>
         </div>
 
         {/* Filter Bar with Store Tabs and View Toggle */}
@@ -403,15 +598,29 @@ function WishlistMainPageContent({ className }: MainPageProps) {
             <>
               {/* Gallery Content - view mode controlled by GalleryViewToggle */}
               {viewMode === 'grid' ? (
-                <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
-                  {items.map(item => (
-                    <WishlistCard
-                      key={item.id}
-                      item={item}
-                      onClick={() => handleCardClick(item.id)}
-                    />
-                  ))}
-                </GalleryGrid>
+                // WISH-2005a: Use DraggableWishlistGallery when in Manual Order mode
+                sortField === 'sortOrder' ? (
+                  <DraggableWishlistGallery
+                    items={items}
+                    onCardClick={handleCardClick}
+                    onGotIt={handleGotIt}
+                    onDelete={handleDeleteClick}
+                    isDraggingEnabled={true}
+                  />
+                ) : (
+                  // Standard GalleryGrid for other sort modes (no drag-and-drop)
+                  <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
+                    {items.map(item => (
+                      <WishlistCard
+                        key={item.id}
+                        item={item}
+                        onClick={() => handleCardClick(item.id)}
+                        onGotIt={() => handleGotIt(item)}
+                        onDelete={() => handleDeleteClick(item)}
+                      />
+                    ))}
+                  </GalleryGrid>
+                )
               ) : (
                 <GalleryDataTable<WishlistItem>
                   items={allItems}
@@ -444,22 +653,53 @@ function WishlistMainPageContent({ className }: MainPageProps) {
           )}
         </div>
       </div>
+
+      {/* Got It Modal (WISH-2042) */}
+      <GotItModal
+        isOpen={gotItModalOpen}
+        onClose={handleCloseGotItModal}
+        item={selectedItemForPurchase}
+        onSuccess={() => {
+          // Refetch the list after successful purchase
+          void refetch()
+        }}
+      />
+
+      {/* Delete Confirm Modal (WISH-2041) */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        item={selectedItemForDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }
 
 export function MainPage({ className }: MainPageProps) {
+  // WISH-2015: Use persisted sort mode from localStorage
+  const { sortMode, setSortMode, wasRestored } = useWishlistSortPersistence()
+
+  // Memoize initial filters to avoid unnecessary re-renders
+  const initialFilters = useMemo(
+    () => ({
+      search: '',
+      store: null,
+      tags: [],
+      sort: sortMode,
+      page: 1,
+    }),
+    [sortMode],
+  )
+
   return (
-    <FilterProvider<WishlistFilters>
-      initialFilters={{
-        search: '',
-        store: null,
-        tags: [],
-        sort: 'sortOrder-asc',
-        page: 1,
-      }}
-    >
-      <WishlistMainPageContent className={className} />
+    <FilterProvider<WishlistFilters> initialFilters={initialFilters}>
+      <WishlistMainPageContent
+        className={className}
+        onSortPersist={setSortMode}
+        wasRestored={wasRestored}
+      />
     </FilterProvider>
   )
 }

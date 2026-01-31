@@ -24,6 +24,7 @@ From orchestrator context:
 - Feature directory (e.g., `plans/features/wishlist`)
 - Source story ID (e.g., WISH-007)
 - Finding number (optional, for specific finding)
+- **Pre-allocated story ID** (optional, provided when spawned in parallel)
 
 From filesystem:
 - Source story: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
@@ -84,21 +85,76 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 
 ### Phase 3: Determine Story ID
 
-Follow-up IDs use the `XXYZ` format where Y is the follow-up number:
+**If PRE-ALLOCATED ID was provided by orchestrator:**
+- Use the pre-allocated ID directly
+- Skip to Phase 3.5 for verification only (collision should not occur)
+- The orchestrator pre-allocates IDs to avoid race conditions when workers run in parallel
 
-1. Parse parent story ID: `{PREFIX}-XXYZ`
-   - Extract XX (story number), Y (current follow-up), Z (split)
-2. Increment Y by 1 for the new follow-up
-3. New ID: `{PREFIX}-XX(Y+1)0`
+**If NO pre-allocated ID (running standalone):**
+
+1. **Scan stories.index.md for existing IDs:**
+   ```bash
+   grep -E "^## {PREFIX}-[0-9]+:" {FEATURE_DIR}/stories.index.md
+   ```
+
+2. **Find highest existing ID:**
+   - Extract numeric portion from each ID
+   - Find MAX (e.g., if WISH-2050 exists, MAX=2050)
+
+3. **Calculate new ID:**
+   - New ID: `{PREFIX}-{MAX + 10}`
+   - Increment by 10 to leave room for future insertions
 
 ```
 Examples:
-- Parent: WISH-0100 (Y=0) → Follow-up: WISH-0110 (Y=1)
-- Parent: WISH-0110 (Y=1) → Follow-up: WISH-0120 (Y=2)
-- Parent: WISH-0101 (split) → Follow-up: WISH-0111 (Y=1, keeps Z=1)
+- Highest existing: WISH-2050 → New follow-up: WISH-2060
+- Highest existing: WISH-1025 → New follow-up: WISH-1035
+- Highest existing: STORY-0150 → New follow-up: STORY-0160
 ```
 
-For multiple follow-ups from same parent in one session, assign sequential Y values.
+For multiple follow-ups from same parent in one session, each gets +10 from the previous.
+
+### Phase 3.5: Collision Detection (CRITICAL)
+
+**IMPORTANT:** Before creating ANY story, you MUST verify the ID is not already in use.
+
+For the proposed follow-up ID:
+
+1. **Scan stories.index.md for existing IDs:**
+   ```bash
+   grep -E "^## {PREFIX}-[0-9]{4}:" {FEATURE_DIR}/stories.index.md
+   ```
+   Extract all existing story IDs from the index.
+
+2. **Check if proposed ID exists in index:**
+   - Search for `## {NEW_STORY_ID}:` in stories.index.md
+   - If found (regardless of status): ID is taken
+
+3. **Check if directory exists:**
+   - `{FEATURE_DIR}/backlog/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/elaboration/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/ready-to-work/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/in-progress/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/UAT/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
+
+4. **If collision detected:**
+   - Find the highest existing story ID in the index matching `{PREFIX}-*`
+   - Set new ID to `{PREFIX}-{MAX_ID + 10}` (increment by 10 to leave room)
+   - Re-run collision check on new ID
+
+5. **If no available IDs after 10 retries:**
+   `PM FAILED: Could not allocate unique story ID after 10 attempts`
+
+**Example collision resolution:**
+```
+Proposed: WISH-2047
+Collision: WISH-2047 already exists (IP/Geolocation Logging)
+Scan index: highest WISH-* ID is WISH-2050
+New ID: WISH-2060
+Check: WISH-2060 not in index, no directory exists
+Use: WISH-2060
+```
 
 ### Phase 4: Generate Follow-up Story
 

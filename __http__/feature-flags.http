@@ -1,0 +1,105 @@
+### Feature Flags Integration Tests (WISH-2009 - AC14)
+### Requires: lego-api running on http://localhost:3001
+### Auth: Using AUTH_BYPASS=true for dev environment
+
+@baseUrl = http://localhost:3001
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 1: GET /api/config/flags - List all flags
+### Expected: 200 OK with flags object
+### ─────────────────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/config/flags
+Accept: application/json
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 2: GET /api/config/flags/wishlist-gallery - Get single flag
+### Expected: 200 OK with flag details
+### ─────────────────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/config/flags/wishlist-gallery
+Accept: application/json
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 3: GET /api/config/flags/nonexistent - Get nonexistent flag
+### Expected: 404 NOT_FOUND
+### ─────────────────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/config/flags/nonexistent-flag
+Accept: application/json
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 4: POST /api/admin/flags/wishlist-gallery - Update flag (admin)
+### Expected: 200 OK with updated flag (requires admin auth)
+### Note: In dev mode with AUTH_BYPASS=true, dev users are treated as admin
+### ─────────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/wishlist-gallery
+Content-Type: application/json
+Accept: application/json
+
+{
+  "enabled": true,
+  "rolloutPercentage": 50
+}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 5: POST /api/admin/flags/wishlist-gallery - Update to 100% rollout
+### Expected: 200 OK with flag at 100% rollout
+### ─────────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/wishlist-gallery
+Content-Type: application/json
+Accept: application/json
+
+{
+  "enabled": true,
+  "rolloutPercentage": 100
+}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 6: POST /api/admin/flags/wishlist-gallery - Disable flag
+### Expected: 200 OK with flag disabled
+### ─────────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/wishlist-gallery
+Content-Type: application/json
+Accept: application/json
+
+{
+  "enabled": false
+}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 7: POST /api/admin/flags/nonexistent - Update nonexistent flag
+### Expected: 404 NOT_FOUND
+### ─────────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/nonexistent-flag
+Content-Type: application/json
+Accept: application/json
+
+{
+  "enabled": true
+}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 8: POST /api/admin/flags/wishlist-gallery - Invalid rollout percentage
+### Expected: 400 Validation error (percentage must be 0-100)
+### ─────────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/wishlist-gallery
+Content-Type: application/json
+Accept: application/json
+
+{
+  "rolloutPercentage": 150
+}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### Test 9: GET /api/config/flags with environment query param
+### Expected: 200 OK with flags for specified environment
+### ─────────────────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/config/flags?environment=staging
+Accept: application/json

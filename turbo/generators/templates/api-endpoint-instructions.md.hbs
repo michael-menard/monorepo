@@ -1,0 +1,49 @@
+# Setup Instructions for {{pascalCase domain}}/{{pascalCase operation}}
+
+Generated files:
+- `services/{{kebabCase domain}}/{{kebabCase operation}}.ts` - Service (business logic)
+- `services/{{kebabCase domain}}/__tests__/{{kebabCase operation}}.test.ts` - Service tests
+{{#if createNewDomainRoute}}
+- `routes/{{kebabCase domain}}.ts` - Route file
+{{/if}}
+
+## Next Steps
+
+### 1. Implement the Service
+
+Edit `services/{{kebabCase domain}}/{{kebabCase operation}}.ts`:
+- Define proper Zod schemas for input/output
+- Implement business logic
+- Add database/storage calls as needed
+
+### 2. Mount the Route
+
+{{#if createNewDomainRoute}}
+Add to `routes/index.ts`:
+
+```typescript
+import {{camelCase domain}} from './{{kebabCase domain}}'
+
+// In the routes section:
+app.route('/{{kebabCase domain}}', {{camelCase domain}})
+```
+{{else}}
+Add the route handler to the existing `routes/{{kebabCase domain}}.ts` file.
+{{/if}}
+
+### 3. Run Tests
+
+```bash
+pnpm test --filter lego-api-serverless
+```
+
+### 4. Test Locally
+
+```bash
+pnpm dev:bun --filter lego-api-serverless
+curl http://localhost:3001/{{kebabCase domain}}
+```
+
+---
+
+**Delete this file after completing setup.**

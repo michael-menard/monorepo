@@ -36,6 +36,10 @@
       "import": "./src/schemas/sets.ts",
       "types": "./src/schemas/sets.ts"
     },
+    "./schemas/feature-flags": {
+      "import": "./src/schemas/feature-flags.ts",
+      "types": "./src/schemas/feature-flags.ts"
+    },
     "./rtk/dashboard-api": {
       "import": "./src/rtk/dashboard-api.ts",
       "types": "./src/rtk/dashboard-api.ts"

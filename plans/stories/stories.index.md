@@ -4,10 +4,11 @@
 
 | Status | Count |
 |--------|-------|
-| completed | 16 |
+| completed | 17 |
 | generated | 1 |
+| in-elaboration | 2 |
 | in-progress | 0 |
-| pending | 2 |
+| pending | 5 |
 
 ---
 
@@ -15,13 +16,33 @@
 
 Stories with all dependencies satisfied (can be worked in parallel):
 
-| Story | Feature | Blocked By |
-|-------|---------|------------|
-| STORY-017 | Multipart Upload Sessions | — |
-| STORY-019 | WebSocket Support | — |
+(None - all unblocked stories have been generated and are in elaboration or later phases)
 
-**Waiting on STORY-017:**
+**Waiting on STORY-01711:**
+- STORY-01721
 - STORY-018
+
+**Waiting on STORY-01711:**
+- STORY-01721
+- STORY-01725
+
+**Waiting on STORY-01721:**
+- STORY-01722
+- STORY-01723
+- STORY-01724
+
+**Waiting on STORY-01722:**
+- STORY-01723
+
+**Waiting on STORY-01725:**
+- STORY-01726
+- STORY-018
+
+**Waiting on STORY-01726:**
+- STORY-01727
+
+**Waiting on STORY-019 + STORY-01721:**
+- STORY-01724
 
 ---
 
@@ -371,36 +392,159 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
-## STORY-017: Image Uploads - Phase 3 (Multipart Sessions)
-**Status:** generated
+## STORY-01711: Session & File Management - CRUD Only
+**Status:** completed
 **Depends On:** none
-**Feature:** Image Uploads - Multipart Upload Sessions
-**Endpoints:**
-- `moc-uploads/sessions/create/handler.ts`
-- `moc-uploads/sessions/register-file/handler.ts`
-- `moc-uploads/sessions/complete-file/handler.ts`
-- `moc-uploads/sessions/upload-part/handler.ts`
-- `moc-uploads/sessions/finalize/handler.ts`
+**Split From:** STORY-0171
 
-**Vercel Infrastructure:**
-- 5 serverless functions (moc-upload-sessions-*)
-- Cognito auth middleware
-- PostgreSQL connection
-- S3 multipart upload API
-- Session state management
-- Redis/DynamoDB for session persistence (if needed)
-- Cleanup for incomplete uploads
-- Env vars: DB connection, Cognito config, S3 bucket, S3 region, upload limits, session timeout, part size config
+### Scope
+Core session management functionality: create upload sessions, register files within sessions, and complete file uploads. Establishes the foundational session infrastructure with authentication and validation, excluding advanced features and enhancements.
 
-**Goal:** Migrate complex multipart upload sessions for large files with resumable uploads
+### Acceptance Criteria (from parent)
+AC-1: Create Session Endpoint
+AC-2: Register File Endpoint
+AC-4: Complete File Endpoint (with clarifications)
+AC-6: Authentication (All Endpoints)
+AC-7: Vercel Function Configuration
+AC-8: Core Package (for code organization)
+AC-9: Database Schema (for clarity)
 
-**Risk Notes:** Auth required, S3 multipart API, stateful session management, timeout handling, cleanup jobs, part ordering, memory limits, concurrent upload coordination
+### Completion Note
+QA verification PASSED on 2026-01-25. All code review workers passed (lint, style, syntax, security, typecheck, build). All 7 acceptance criteria verified with evidence mapping. Ready for deployment.
+
+---
+
+## STORY-01721: Session & File Management - Gap Remediations
+
+**Status:** in-elaboration
+**Depends On:** STORY-01711
+**Split From:** STORY-01712
+
+### Scope
+Low-risk documentation and edge case handling for session management endpoints. Addresses 8 critical gaps identified during STORY-01712 elaboration: session cleanup timing, part size configuration rationale, concurrent registration handling, complete file idempotency, session expiration edge cases, MIME type validation documentation, file count limits enforcement, and rate limit bypass for testing. No new endpoints or schema changes - extends STORY-01711 handlers with clarifications and test cases.
+
+### Acceptance Criteria (from parent)
+- AC-10: Session cleanup timing specification
+- AC-11: Part size configuration with rationale
+- AC-12: Concurrent file registration race condition handling
+- AC-13: Complete file idempotency clarification
+- AC-14: Session expiration window edge case handling
+- AC-15: MIME type validation documentation
+- AC-16: File count limits enforcement
+- AC-17: Rate limit bypass for testing
+
+---
+
+## STORY-01722: Session & File Management - Upload Enhancements
+
+**Status:** pending
+**Depends On:** STORY-01721
+**Split From:** STORY-01712
+
+### Scope
+High-value upload UX features that improve developer experience with the session management API. Adds presigned URL batch generation (return all part URLs upfront), batch file registration endpoint (register multiple files in one call), and upload resume capability (query completed parts to resume interrupted uploads). Adds 2 new endpoints (batch registration, parts query). Builds on completed gap remediations from STORY-01721.
+
+### Acceptance Criteria (from parent)
+- AC-19: Presigned URL batch generation
+- AC-24: Batch file registration endpoint
+- AC-25: Upload resume capability
+
+---
+
+## STORY-01723: Session & File Management - Analytics & Detection
+
+**Status:** pending
+**Depends On:** STORY-01721
+**Split From:** STORY-01712
+
+### Scope
+Observability and deduplication features for session management. Tracks session lifecycle analytics (success rate, upload time, failure points), implements duplicate file detection by hash, adds automatic session extension for active uploads, and generates TypeScript SDK from HTTP contracts. Requires analytics table migration and duplicate detection index. Independent from core upload flow.
+
+### Acceptance Criteria (from parent)
+- AC-20: TypeScript SDK generation
+- AC-21: Session analytics tracking
+- AC-22: Duplicate file detection
+- AC-23: Automatic session extension
+
+---
+
+## STORY-01724: Session & File Management - WebSocket Progress
+
+**Status:** pending
+**Depends On:** STORY-019, STORY-01721
+**Split From:** STORY-01712
+
+### Scope
+WebSocket progress tracking integration for real-time upload notifications. Emits progress events at key upload lifecycle points (session created, file registered, part uploaded, file completed, session finalized). Requires STORY-019 WebSocket server infrastructure to be complete. Gracefully no-ops if WebSocket server unavailable.
+
+### Acceptance Criteria (from parent)
+- AC-18: WebSocket progress tracking hooks
+
+---
+
+## STORY-01725: Binary Upload & Finalization - Core MVP
+
+**Status:** pending
+**Depends On:** STORY-01711
+**Split From:** STORY-0172
+
+### Scope
+Core binary part upload and session finalization endpoints. Establishes working upload-part handler with Vercel bodyParser: false configuration and finalize endpoint with two-phase locking for MOC creation. Happy path functionality with basic error cases.
+
+### Acceptance Criteria (from parent)
+- AC-3: Upload Part Endpoint (Binary Handling)
+- AC-5: Finalize Session Endpoint
+- AC-8: Part Size Configuration
+
+---
+
+## STORY-01726: Binary Upload & Finalization - Reliability & Resilience
+
+**Status:** pending
+**Depends On:** STORY-01725
+**Split From:** STORY-0172
+
+### Scope
+Production-ready hardening for binary upload and finalization. Adds S3 retry strategies, Vercel timeout handling, enhanced validation (partNumber range 1-10000, ETag format documentation), slug conflict UX, structured logging, stale lock recovery testing, CORS preflight handling, database transaction boundaries, and rate limiting for finalize endpoint.
+
+### Acceptance Criteria (from parent)
+- gap_1_s3_retry: S3 retry strategy and exhaustion handling
+- gap_2_vercel_timeout: Vercel 30s timeout + client timeout coordination
+- gap_3_partnumber_range: Validate partNumber in range [1, 10000]
+- gap_4_etag_format: Document ETag format differences (multipart vs single-part)
+- gap_5_slug_conflict_ux: Slug conflict UX guidance (auto-retry vs prompt)
+- gap_6_upload_logging: Structured logging strategy (partNumber, size, etag)
+- gap_7_lock_recovery_testing: Explicit test for stale lock recovery (>5 min)
+- gap_8_cors_handling: CORS preflight for browser uploads
+- gap_9_db_transactions: Database transaction boundary specification
+- gap_10_rate_limiting: Rate limiting for finalize endpoint
+
+---
+
+## STORY-01727: Binary Upload & Finalization - Performance & Observability
+
+**Status:** pending
+**Depends On:** STORY-01726
+**Split From:** STORY-0172
+
+### Scope
+Advanced features for upload UX and operational visibility. WebSocket progress tracking, parallel file validation, MD5/SHA checksum verification, batch upload-part endpoint, auto-thumbnail generation, webhook notifications, resume from partial finalize, and OpenTelemetry spans for finalize critical path.
+
+### Acceptance Criteria (from parent)
+- enhance_1_websocket_progress: Real-time progress tracking via WebSocket
+- enhance_2_parallel_validation: Parallel file validation during finalize
+- enhance_3_checksum_validation: MD5/SHA checksum verification
+- enhance_4_batch_upload: Batch upload-part endpoint (multiple parts per request)
+- enhance_5_thumbnail_generation: Auto-generate thumbnails from images
+- enhance_6_webhook_notifications: Post-finalize webhook notifications
+- enhance_7_resume_from_failure: Upload resume from partial finalize state
+- enhance_8_opentelemetry: Structured finalize telemetry
 
 ---
 
 ## STORY-018: Background Jobs
 **Status:** pending
-**Depends On:** STORY-017
+**Depends On:** STORY-01725
 **Feature:** Background Cleanup Tasks
 **Endpoints:**
 - `cleanup/edit-orphans/handler.ts`
@@ -419,7 +563,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ---
 
 ## STORY-019: WebSocket Support
-**Status:** BLOCKED
+**Status:** Created
 **Depends On:** none
 **Feature:** Real-Time WebSocket Connections
 **Endpoints:**

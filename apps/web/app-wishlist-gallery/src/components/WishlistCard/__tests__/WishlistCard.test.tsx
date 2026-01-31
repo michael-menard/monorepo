@@ -4,8 +4,8 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { WishlistCard } from '../index'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { WishlistCard } from '../index'
 
 // Mock data
 const mockWishlistItem: WishlistItem = {
@@ -26,6 +26,8 @@ const mockWishlistItem: WishlistItem = {
   sortOrder: 1,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-15T00:00:00.000Z',
+  createdBy: null,
+  updatedBy: null,
 }
 
 describe('WishlistCard', () => {
