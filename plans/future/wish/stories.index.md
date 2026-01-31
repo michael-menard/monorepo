@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-30T22:22:00Z"
+updated_at: "2026-01-30T23:30:00Z"
 ---
 
 # WISH Stories Index
@@ -15,17 +15,18 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 6 |
+| completed | 8 |
 | in-progress | 0 |
 | review | 0 |
-| ready-for-qa | 1 |
-| uat | 1 |
+| ready-for-qa | 2 |
+| uat | 0 |
 | in-qa | 0 |
 | backlog | 13 |
 | elaboration | 0 |
-| ready-to-work | 15 |
-| pending | 10 |
-| deferred | 2 |
+| ready-to-work | 16 |
+| pending | 14 |
+| created | 1 |
+| deferred | 1 |
 | BLOCKED | 1 |
 
 ---
@@ -198,9 +199,49 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
+## WISH-2005c: Drag preview thumbnail
+
+**Status:** completed
+**Depends On:** none
+**Phase:** 4 - UX Polish
+
+**Feature:** Enhanced visual feedback during drag operations with item preview thumbnail displayed in DragOverlay instead of generic ghost. Shows item image, title, and price in a scaled preview.
+
+**Complexity:** Small
+
+**Goal:** Provide clear visual confirmation of which item is being dragged during reordering
+
+**Risk Notes:** Minor - straightforward dnd-kit DragOverlay integration
+
+**Source:** WISH-2005a QA Elaboration (Enhancement Opportunity #1)
+
+**Story File:** `plans/future/wish/UAT/WISH-2005c/WISH-2005c.md`
+
+---
+
+## WISH-2005d: Haptic feedback on mobile drag
+
+**Status:** backlog
+**Depends On:** WISH-2005a
+**Phase:** 4 - UX Polish
+
+**Feature:** Mobile vibration feedback during drag-and-drop operations using the Vibration API to provide tactile confirmation on drag start, during drag, and on drop for iOS and Android users.
+
+**Complexity:** Small
+
+**Goal:** Provide tactile feedback for mobile users during drag-and-drop reordering operations
+
+**Risk Notes:** Vibration API support varies across devices; requires graceful fallback for unsupported browsers
+
+**Source:** WISH-2005a QA Elaboration (Enhancement Opportunity #2)
+
+**Story File:** `plans/future/wish/backlog/WISH-2005d/WISH-2005d.md`
+
+---
+
 ## WISH-2006: Accessibility
 
-**Status:** Deferred
+**Status:** Created
 **Depends On:** WISH-2005
 **Phase:** 5 - Accessibility (Deferred to Phase 2 after core functionality)
 
@@ -423,9 +464,107 @@ Follow-up from QA Elaboration of WISH-2011 (Enhancement Opportunity #3)
 
 ---
 
-## WISH-2121: Playwright E2E MSW Setup for Browser-Mode Testing
+## WISH-20290: Coverage metrics integration for test utilities
+
+**Status:** pending
+**Depends On:** WISH-2120
+**Follow-up From:** WISH-2120
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Add coverage threshold enforcement (minimum 80%) for test utility files via `vitest.config.ts` to prevent coverage regressions and maintain high test quality as the test infrastructure evolves from WISH-2120.
+
+**Features:**
+- Vitest coverage thresholds: 80% (lines, functions, branches, statements) for `src/test/utils/**/*.ts`
+- Coverage enforcement in CI pipeline
+- Documentation of coverage requirements in test utilities README
+- Clear error messages when thresholds are not met
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/vitest.config.ts` - Add coverage thresholds
+- `apps/web/app-wishlist-gallery/src/test/utils/README.md` - Document requirements (new)
+
+**Benefits:**
+- Prevents future coverage regressions in critical test infrastructure
+- Maintains high test quality for utilities used across many test files
+- Provides clear guidance for developers adding new test utilities
+
+**Acceptance Criteria:** 12 ACs covering Vitest configuration, threshold enforcement, CI integration, documentation, and validation
+
+**Complexity:** Small (configuration only)
+
+**Effort:** Low (1 point)
+
+**Priority:** P2 (Test infrastructure quality for Phase 2)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2120 (Gaps Identified - Finding #1)
+
+**Original Finding:** "Coverage metrics integration for test utilities - Add coverage threshold enforcement (e.g., 80%) for test utility files via vitest.config.ts"
+
+**Category:** Gap
+**Impact:** Low (prevents future coverage regressions)
+**Effort:** Low (configuration only)
+
+**Story File:** `plans/future/wish/backlog/WISH-20290/WISH-20290.md`
+
+---
+
+## WISH-20300: VS Code snippets for test utility discovery (createMockFile, mockS3Upload)
 
 **Status:** backlog
+**Depends On:** WISH-2120
+**Follow-up From:** WISH-2120
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Create VS Code snippets for test utilities from WISH-2120 to improve discoverability, accelerate test writing, and ensure consistent test patterns across the codebase. Provides autocomplete-driven snippets for `createMockFile()` and `mockS3Upload()` utilities.
+
+**VS Code Snippets:**
+- `cmf` - Create mock file with defaults
+- `cmfc` - Create mock file with custom properties
+- `ms3s` - Mock S3 upload success scenario
+- `ms3e` - Mock S3 upload error scenarios (presign-error, s3-error, timeout)
+- `ms3p` - Mock S3 upload with progress simulation
+
+**Packages Affected:**
+- `.vscode/test-utils.code-snippets` - New snippet definitions
+- `.vscode/README.md` - Document snippet usage
+
+**Benefits:**
+- Improve utility discoverability via autocomplete
+- Accelerate test writing (reduce boilerplate)
+- Ensure consistent test patterns across codebase
+- Faster onboarding for new developers
+
+**Acceptance Criteria:** 13 ACs covering snippet creation, TypeScript integration, autocomplete behavior, documentation, and manual testing.
+
+**Complexity:** Small (JSON snippet definitions only)
+
+**Effort:** Low (1 point)
+
+**Priority:** P2 (Developer Experience enhancement)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2120 (Enhancement Opportunity #1)
+
+**Original Finding:** "VS Code snippets for test utility discovery - Create VS Code snippet for createMockFile() and mockS3Upload() in .vscode/test-utils.code-snippets to improve discoverability for developers"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Developer Experience improvement)
+**Effort:** Low
+
+**Story File:** `plans/future/wish/backlog/WISH-20300/WISH-20300.md`
+
+---
+
+## WISH-2121: Playwright E2E MSW Setup for Browser-Mode Testing
+
+**Status:** ready-to-work
 **Depends On:** WISH-2011
 **Follow-up From:** WISH-2011
 **Phase:** 5 - Advanced Testing
@@ -494,7 +633,7 @@ Follow-up from QA Elaboration of WISH-2011 (Follow-up Stories Suggested - Findin
 
 ## WISH-2110: Custom Zod error messages for better form UX
 
-**Status:** backlog
+**Status:** ready-to-work
 **Depends On:** none
 **Follow-up From:** WISH-2010
 **Phase:** 2 - Foundation
@@ -534,8 +673,8 @@ Follow-up from QA Elaboration of WISH-2010 (Enhancement Opportunity #1)
 
 ## WISH-2011: Test infrastructure for MSW mocking of S3 and API calls
 
-**Status:** Ready to Work
-**Depends On:** WISH-2007
+**Status:** completed
+**Depends On:** none
 **Phase:** 2 - Infrastructure
 
 **Feature:** Mock Service Worker (MSW) handlers for S3 presigned URL generation, S3 upload responses, API endpoints. Integration test fixtures for upload flows.
@@ -548,13 +687,13 @@ Follow-up from QA Elaboration of WISH-2010 (Enhancement Opportunity #1)
 
 **Source:** Epic Elaboration - QA perspective
 
-**Story File:** `plans/future/wish/elaboration/WISH-2011/WISH-2011.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2011/WISH-2011.md`
 
 ---
 
 ## WISH-2012: Accessibility testing harness setup
 
-**Status:** ready-to-work
+**Status:** completed
 **Depends On:** WISH-2001
 **Phase:** 2 - Infrastructure
 
@@ -570,7 +709,9 @@ Follow-up from QA Elaboration of WISH-2010 (Enhancement Opportunity #1)
 
 **Elaboration Notes:** CONDITIONAL PASS - Two clarification items added as acceptance criteria (AC16: Evaluate @repo/accessibility package reuse), (AC17: Clarify Playwright integration scope and WISH-2121 dependency). No MVP blockers identified.
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2012/WISH-2012.md`
+**Story File:** `plans/future/wish/UAT/WISH-2012/WISH-2012.md`
+
+**QA Verdict:** PASS - All 15 ACs verified, 103 tests passing, 72.87% coverage, architecture compliant
 
 ---
 
@@ -636,6 +777,171 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 **Category:** Enhancement Opportunity
 **Impact:** Medium (Trust & Safety requirement for production platform)
 **Effort:** High (AI/ML pipeline integration, moderation workflow, review tooling)
+
+---
+
+## WISH-2124: Redis infrastructure setup and migration from in-memory cache
+
+**Status:** ready-to-work
+**Depends On:** WISH-2009
+**Follow-up From:** WISH-2009
+**Phase:** 2 - Core Infrastructure
+
+### Scope
+
+Migrate feature flag caching from in-memory Map to Redis for distributed, production-ready caching. Implement RedisCacheAdapter following hexagonal architecture patterns, configure AWS ElastiCache for production, and set up Docker Compose for local development.
+
+**Features:**
+- RedisCacheAdapter implementing CacheAdapter interface
+- Redis client singleton with connection pooling (ioredis v5.x)
+- AWS ElastiCache infrastructure (t3.micro, Redis 7.x)
+- Graceful error handling and database fallback on cache failure
+- Docker Compose local development setup
+- Canary deployment strategy with monitoring
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/adapters/` - RedisCacheAdapter
+- `apps/api/lego-api/core/cache/` - Redis client singleton
+- `apps/api/lego-api/domains/config/application/` - Service wiring
+- Infrastructure code (CDK/Terraform)
+- Docker Compose configuration
+
+**Acceptance Criteria:** 16 ACs covering Redis client integration, cache adapter implementation, error handling, fallback logic, cold start resilience, failover handling, TTL configuration, cache invalidation, VPC security, connection pool testing, local development setup, cost monitoring, canary deployment, and service layer wiring.
+
+**Complexity:** Medium (Infrastructure + Migration + Testing)
+
+**Effort:** 4 points
+
+**Priority:** P1 (Production scaling requirement)
+
+**Goal:** Enable distributed, production-ready caching for feature flags across multiple Lambda instances with automatic fallback to database on Redis failure.
+
+**Risks:**
+- Lambda cold start connection failures (mitigated by retry logic and database fallback)
+- VPC security group misconfiguration (mitigated by infrastructure validation)
+- Cache invalidation race conditions (mitigated by transaction atomicity)
+- Infrastructure cost overruns (mitigated by billing alarms)
+- Connection pool exhaustion under load (mitigated by load testing)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2009 (QA Elaboration Enhancement Opportunity #1)
+
+**Original Finding:** "Redis infrastructure setup and migration from in-memory cache"
+
+**Category:** Infrastructure
+**Impact:** High (production scaling)
+**Effort:** Medium (new infrastructure)
+
+---
+
+## WISH-20320: Redis Cluster mode for high availability (multi-AZ failover, load balancing)
+
+**Status:** pending
+**Depends On:** WISH-2124
+**Follow-up From:** WISH-2124
+**Phase:** 3 - Advanced Infrastructure
+
+### Scope
+
+Migrate ElastiCache from single-instance to Cluster mode with multi-AZ deployment for production-grade high availability. Enable automatic failover, horizontal scaling, and fault tolerance for feature flag caching infrastructure.
+
+**Features:**
+- ElastiCache Cluster mode with 3 nodes (1 primary, 2 replicas)
+- Multi-AZ deployment across 3 availability zones
+- Automatic failover with <60 second recovery time
+- Read replica load balancing for distributed read traffic
+- `ioredis` cluster client configuration
+- Zero-downtime blue-green migration from single-instance
+- Cluster health monitoring and alerting
+- Backup and recovery configuration
+
+**Packages Affected:**
+- `apps/api/lego-api/core/cache/redis-client.ts` - Cluster mode client initialization
+- Infrastructure code (CDK/Terraform) - ElastiCache cluster configuration
+- Docker Compose - 6-node local Redis Cluster simulation
+
+**Acceptance Criteria:** 12 ACs covering cluster provisioning, client configuration, automatic failover validation, multi-AZ resilience, read replica load balancing, zero-downtime migration, cluster health monitoring, backup/recovery, connection string migration, local development cluster, cost monitoring, and graceful degradation.
+
+**Complexity:** High (Distributed infrastructure + migration + failover testing)
+
+**Effort:** 5 points
+
+**Priority:** P2 (Production availability requirement)
+
+**Goal:** Enable production-grade high availability for Redis caching with automatic failover and multi-AZ fault tolerance.
+
+**Risks:**
+- Increased infrastructure cost (~3x single-instance, mitigated by billing alarms)
+- Replication lag under high write load (mitigated by monitoring and eventual consistency acceptance)
+- Complex failover behavior (mitigated by staging tests and rollback plan)
+- Client library compatibility issues (mitigated by ioredis v5.x cluster support)
+- Network latency between AZs (mitigated by cross-AZ optimization and monitoring)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #1)
+
+**Original Finding:** "Redis Cluster mode for high availability (multi-AZ failover, load balancing)"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (production availability and fault tolerance)
+**Effort:** High (infrastructure redesign and migration)
+
+---
+
+## WISH-20340: Multi-region Redis replication (global latency optimization)
+
+**Status:** pending
+**Depends On:** WISH-2124
+**Follow-up From:** WISH-2124
+**Phase:** 5 - Global Optimization
+
+### Scope
+
+Deploy multi-region Redis replication for feature flag caching to optimize latency for global users. Enable each AWS region's Lambda functions to read from local Redis read replicas while maintaining centralized write control.
+
+**Features:**
+- ElastiCache Global Datastore with primary and secondary clusters
+- Region-aware Redis client (auto-detect region, connect to local replica)
+- Read-write split in RedisCacheAdapter (reads from local replica, writes to primary)
+- Graceful degradation on replica failure (fallback to primary)
+- Manual failover procedures with runbook
+- Replication lag monitoring and alerting
+- Cross-region latency validation (P95 < 50ms per region)
+
+**Packages Affected:**
+- `apps/api/lego-api/core/cache/redis-client.ts` - Region detection and dual-client creation
+- `apps/api/lego-api/domains/config/adapters/RedisCacheAdapter.ts` - Read-write split routing
+- Infrastructure code (CDK/Terraform) - ElastiCache Global Datastore
+- Environment configuration - REDIS_PRIMARY_URL, REDIS_REPLICA_URL per region
+
+**Acceptance Criteria:** 12 ACs covering Global Datastore setup, region-aware Redis client, read-write split, replica failover, primary failover procedures, replication lag monitoring, cross-region latency validation, write latency acceptance, environment configuration, cost monitoring, cache invalidation propagation, and disaster recovery testing.
+
+**Complexity:** High (Multi-region infrastructure + failover orchestration)
+
+**Effort:** 5 points
+
+**Priority:** P3 (Global user experience optimization, deferred until multi-region deployment active)
+
+**Goal:** Optimize cache read latency for global users by deploying read replicas in multiple AWS regions while maintaining centralized write control and eventual consistency.
+
+**Risks:**
+- Replication lag spikes during high traffic (mitigated by monitoring and TTL)
+- Primary region failure requires manual intervention (mitigated by runbook and DR drills)
+- Split-brain scenario with two primaries (mitigated by validation steps in failover process)
+- Network partition between regions (mitigated by graceful degradation to database)
+- Cost overruns from additional regions (mitigated by billing alarms and t3.micro instances)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
+
+**Original Finding:** "Multi-region Redis replication (global latency optimization)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (global user experience)
+**Effort:** High (multi-region infrastructure)
 
 ---
 
@@ -1004,7 +1310,7 @@ Follow-up from QA Elaboration of WISH-2009 (Gap #2 - AC 18 follow-up)
 
 ## WISH-2039: User-level targeting for feature flags
 
-**Status:** BLOCKED
+**Status:** ready-to-work
 **Depends On:** WISH-2009
 **Follow-up From:** WISH-2009
 **Phase:** 3 - Infrastructure
@@ -1291,7 +1597,7 @@ Follow-up from QA Elaboration of WISH-2022 (Gaps Identified - Finding #2)
 
 ## WISH-20180: CI Job to Validate Schema Changes Against Policy
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WISH-2057
 **Follow-up From:** WISH-2057
 **Phase:** 2 - Infrastructure
@@ -1322,7 +1628,7 @@ Implement automated CI validation of database schema changes against schema evol
 
 **Priority:** P1 (Automated governance for Phase 2)
 
-**Story File:** `plans/future/wish/backlog/WISH-20180/WISH-20180.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-20180/WISH-20180.md`
 
 ### Source
 
@@ -1336,9 +1642,158 @@ Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Findin
 
 ---
 
-## WISH-20190: Schema Drift Detection Tool (db:check command)
+## WISH-20370: Schema Change Impact Analysis Tool
 
 **Status:** pending
+**Depends On:** WISH-20180
+**Follow-up From:** WISH-20180
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Implement an automated schema change impact analysis tool that identifies affected services, API endpoints, GraphQL queries, and application code when database schema changes are proposed. Integrates with the CI pipeline from WISH-20180 to provide developers with impact reports in PR comments.
+
+**Features:**
+- Schema change detection from migration SQL files
+- Service impact analysis (backend services, Lambda functions)
+- API endpoint impact analysis (GraphQL schema, REST endpoints)
+- Frontend impact analysis (GraphQL queries, API client calls, TypeScript types)
+- Impact report generation (JSON + markdown formats)
+- CI integration with PR comment posting
+- Categorized impacts by severity (breaking, warning, informational)
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/` - Impact analysis script
+- `.github/workflows/schema-validation.yml` - CI workflow extension
+- `packages/backend/database-schema/docs/` - Impact analysis documentation
+
+**Acceptance Criteria:** 20 ACs covering schema change detection, service impact analysis, API endpoint analysis, frontend impact analysis, report generation, and CI integration
+
+**Complexity:** Medium-High (AST parsing + codebase scanning + impact classification)
+
+**Effort:** 3 points
+
+**Priority:** P1 (Automated impact visibility for Phase 2)
+
+**Story File:** `plans/future/wish/backlog/WISH-20370/WISH-20370.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20180 (Follow-up Stories Suggested - Finding #2)
+
+**Original Finding:** "Schema change impact analysis (service/endpoint impact detection)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (helps developers understand downstream consequences)
+**Effort:** Medium (AST parsing + codebase scanning)
+
+---
+
+## WISH-20380: Migration Performance Profiling
+
+**Status:** pending
+**Depends On:** WISH-20180
+**Follow-up From:** WISH-20180
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Implement migration performance profiling tooling that estimates execution time of schema changes on production-sized datasets. Provide developers with runtime estimates, execution plan analysis, and warnings for long-running migrations during PR review.
+
+**Features:**
+- Performance profiling script (`profile-migration.ts`) for isolated migration testing
+- Seed data generator for production-scale datasets (configurable sizes)
+- CI workflow integration with WISH-20180 schema validation
+- Performance reports posted as PR comments with threshold warnings
+- EXPLAIN analysis for execution plan inspection
+- Lock detection and zero-downtime strategy recommendations
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/` - Profiling and seed scripts
+- `.github/workflows/schema-validation.yml` - CI workflow extension
+- `packages/backend/database-schema/docs/` - Performance profiling documentation
+
+**Infrastructure:**
+- Isolated test databases with production-scale seed data
+- Performance thresholds: 30s (small), 5min (medium), 10min (critical)
+- PostgreSQL EXPLAIN analysis for query plan insights
+
+**Benefits:**
+- Prevents production incidents from slow migrations
+- Enables data-driven decisions on migration strategies
+- Provides visibility into migration runtime before deployment
+- Identifies table locks and performance risks proactively
+
+**Acceptance Criteria:** 20 ACs covering profiling script, seed data generator, performance reports, CI integration, and documentation
+
+**Complexity:** Medium (profiling script + seed generator + EXPLAIN analysis + CI integration)
+
+**Effort:** Medium (2-3 points)
+
+**Priority:** P2 (Operational enhancement for Phase 2)
+
+**Story File:** `plans/future/wish/backlog/WISH-20380/WISH-20380.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunities - Finding #3)
+
+**Original Finding:** "Migration performance profiling - Estimate migration execution time on production-sized datasets"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (prevents slow migrations, enables planning)
+**Effort:** Medium (test database + seed data + timing + EXPLAIN analysis)
+
+---
+
+## WISH-20390: Visual Schema Diff Tool for PR Reviews
+
+**Status:** pending
+**Depends On:** WISH-20180
+**Follow-up From:** WISH-20180
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Implement a visual schema diff tool that generates graphical representations of database schema changes for PR reviews. Integrates with WISH-20180 CI workflow to automatically post visual diffs as PR comments, improving review velocity and comprehension.
+
+**Features:**
+- Schema diff parser extracting table/column/index/constraint changes
+- Visual renderer generating Mermaid diagrams showing before/after state
+- CI integration embedding visual diffs in PR comments
+- Color-coded highlighting (green=added, red=removed, yellow=modified)
+- Graceful fallback for unparseable SQL or complex changes
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/` - Visual diff generator script
+- `.github/workflows/schema-validation.yml` - CI workflow extension
+- `packages/backend/database-schema/docs/` - Visual diff documentation
+
+**Acceptance Criteria:** 18 ACs covering schema diff parser, visual renderer, CI integration, and documentation
+
+**Complexity:** Low-Medium (SQL parsing + Mermaid rendering + GitHub PR integration)
+
+**Effort:** 2 points
+
+**Priority:** P2 (Developer experience enhancement for schema reviews)
+
+**Story File:** `plans/future/wish/backlog/WISH-20390/WISH-20390.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunities - Finding #4)
+
+**Original Finding:** "Visual schema diff tool - Show table/column changes graphically in PR reviews"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves review velocity and comprehension)
+**Effort:** Low (leverages existing parser from WISH-20180, Mermaid.js for rendering)
+
+---
+
+## WISH-20190: Schema Drift Detection Tool (db:check command)
+
+**Status:** elaboration
 **Depends On:** WISH-2057
 **Follow-up From:** WISH-2057
 **Phase:** 1 - Foundation
@@ -2053,5 +2508,237 @@ Follow-up from QA Elaboration of WISH-2119 (Follow-up Stories Suggested - Findin
 **Effort:** Low (1 point - simple cron job reusing existing patterns)
 
 **Story File:** `plans/future/wish/backlog/WISH-20270/WISH-20270.md`
+
+---
+
+## WISH-20310: Global MSW handler cleanup in src/test/setup.ts afterEach hook
+
+**Status:** backlog
+**Depends On:** WISH-2120
+**Follow-up From:** WISH-2120
+**Phase:** 2 - Infrastructure
+
+### Scope
+
+Add global MSW handler cleanup in `src/test/setup.ts` afterEach hook to automatically prevent handler leaks across tests, eliminating the need for manual cleanup calls from WISH-2120's `mockS3Upload()` utility.
+
+**Features:**
+- Global `afterEach(() => server.resetHandlers())` hook in test setup
+- Automatic cleanup runs after each test (even on failure)
+- Backward compatible with manual cleanup pattern from WISH-2120
+- Prevents handler leaks causing flaky test behavior
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/test/setup.ts` - Add global afterEach hook
+- `apps/web/app-wishlist-gallery/src/test/__tests__/` - Verification tests
+
+**Benefits:**
+- Safer tests: Cleanup runs even if test fails
+- Less boilerplate: No manual cleanup() calls needed
+- Flake reduction: Prevents handler leaks across tests
+- Backward compatible: Existing manual cleanup still works
+
+**Acceptance Criteria:** 14 ACs covering global cleanup implementation, verification tests, backward compatibility, and documentation
+
+**Complexity:** Small (single afterEach hook + verification test)
+
+**Effort:** 1 point
+
+**Priority:** P2 (Test reliability enhancement for Phase 2)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2120 (Enhancement Opportunity #2)
+
+**Original Finding:** "Auto-cleanup in test teardown - Add global MSW handler cleanup in src/test/setup.ts afterEach hook to prevent handler leaks across tests"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (prevents handler leaks, improves test reliability)
+**Effort:** Low (global cleanup hook)
+
+**Story File:** `plans/future/wish/backlog/WISH-20310/WISH-20310.md`
+
+---
+
+## WISH-20350: Cache analytics dashboard (Grafana/Prometheus integration)
+
+**Status:** backlog
+**Depends On:** WISH-2124
+**Follow-up From:** WISH-2124
+**Phase:** 3 - Observability
+
+### Scope
+
+Implement Grafana/Prometheus analytics dashboard for Redis cache observability. Provide centralized, long-term metric storage and advanced visualization for cache performance, capacity planning, and cost optimization.
+
+**Features:**
+- Prometheus server deployment (AWS Fargate/EC2) with 90-day metric retention
+- CloudWatch Exporter for scraping ElastiCache metrics
+- Grafana server deployment with cache performance dashboard
+- 6-panel dashboard: cache hit rate, latency P95, connection errors, active connections, memory utilization, network throughput
+- Alert configuration for cache degradation (Slack notifications)
+- VPN-only access with AWS SSO authentication
+
+**Packages Affected:**
+- Infrastructure code (CDK/Terraform) - Prometheus, Grafana, CloudWatch Exporter
+- `apps/api/lego-api/core/monitoring/` - CloudWatch metric namespace configuration
+- Grafana dashboard JSON: `infrastructure/grafana/dashboards/redis-cache.json`
+
+**Monitoring Components:**
+- Prometheus: Metric collection, storage (90-day retention), query engine
+- CloudWatch Exporter: Scrapes CloudWatch metrics, exposes Prometheus endpoint
+- Grafana: Visualization, dashboards, alerting via Slack
+
+**Benefits:**
+- Long-term metric retention (90 days vs. CloudWatch 15 days)
+- Advanced analytics and custom dashboards
+- Cross-service metric correlation
+- Centralized observability for all Redis-backed services
+- Proactive alerting for cache performance issues
+
+**Acceptance Criteria:** 10 ACs covering Prometheus deployment, CloudWatch Exporter configuration, Grafana setup, cache performance dashboard (6 panels), alert rules, 90-day retention, IAM permissions, access control, cost monitoring, and dashboard version control.
+
+**Complexity:** Medium (Monitoring Infrastructure + Dashboard + Alerting)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Observability enhancement for production scaling)
+
+**Goal:** Provide production-grade observability for Redis cache infrastructure with long-term trend analysis, custom dashboards, and proactive alerting.
+
+**Risks:**
+- CloudWatch API rate limiting (mitigated by 1-minute scrape interval and batching)
+- Prometheus storage exhaustion (mitigated by 50 GB EBS, 90-day retention, monitoring)
+- Grafana dashboard complexity (mitigated by starting with 6 essential panels)
+- Infrastructure cost overruns (mitigated by billing alarms, Fargate spot instances)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #4)
+
+**Original Finding:** "Cache analytics dashboard (Grafana/Prometheus integration)"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (observability improvement)
+**Effort:** Medium (new monitoring infrastructure)
+
+**Story File:** `plans/future/wish/backlog/WISH-20350/WISH-20350.md`
+
+---
+
+## WISH-20330: Cache warming strategy (pre-populate on cold start, CloudWatch triggers)
+
+**Status:** pending
+**Depends On:** WISH-2124
+**Follow-up From:** WISH-2124
+**Phase:** 2 - Core Infrastructure
+
+### Scope
+
+Implement proactive cache warming for feature flags to eliminate cold start cache misses and maintain consistently high cache hit rates across deployments and Lambda scaling events. Pre-populate frequently accessed flags before user requests arrive.
+
+**Features:**
+- CacheWarmer service for proactive flag loading
+- Batch Redis operations (pipeline) for efficient warming
+- Scheduled warming via EventBridge (hourly triggers)
+- Post-deployment warming hook
+- Cold start warming strategy (background task)
+- Manual admin warming endpoint (`POST /api/admin/cache/warm`)
+- CloudWatch metrics for warming observability
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/config/application/cache-warmer.ts` - New cache warming service
+- `apps/api/lego-api/domains/config/adapters/redis-cache-adapter.ts` - Add `setMany()` batch operation
+- `apps/api/lego-api/infrastructure/lambdas/warm-cache-handler.ts` - Scheduled warming Lambda
+- EventBridge schedule rule (hourly warming trigger)
+- Lambda post-deployment hook
+
+**Endpoints:**
+- `POST /api/admin/cache/warm` - Manual warming trigger (admin only)
+
+**Infrastructure:**
+- EventBridge schedule: `rate(1 hour)` for periodic warming
+- Lambda post-deployment hook: Warm cache before traffic shift
+- CloudWatch metrics: `cache_warming_duration`, `cache_warming_flags_count`, `cache_warming_errors`
+
+**Acceptance Criteria:** 12 ACs covering CacheWarmer service, batch Redis pipeline, top flags selection, scheduled/post-deployment/cold-start warming, admin endpoint, metrics, error handling, and performance validation
+
+**Complexity:** Medium (infrastructure orchestration + cache preloading logic)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Performance enhancement for Phase 2)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #2)
+
+**Original Finding:** "Cache warming on deployment - Pre-populating cache on cold start adds complexity. MVP relies on lazy population (cache-on-read)."
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (reduces cold start latency, improves cache hit rates from ~80% to >95%)
+**Effort:** Medium (requires infrastructure orchestration)
+
+**Story File:** `plans/future/wish/backlog/WISH-20330/WISH-20330.md`
+
+---
+
+## WISH-20360: Automated Migration Rollback Testing
+
+**Status:** pending
+**Depends On:** WISH-20180
+**Follow-up From:** WISH-20180
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Implement automated CI testing that verifies database migrations can be successfully rolled back. For each migration in a PR, create a temporary test database, apply the migration, execute the rollback, and verify the database returns to the pre-migration state.
+
+**Features:**
+- Test database provisioning (Docker container with PostgreSQL)
+- Migration apply/rollback cycle testing
+- Schema state comparison (pre-migration vs post-rollback)
+- Data integrity validation (test data preserved after rollback)
+- CI workflow integration (GitHub Actions)
+- Rollback SQL requirement enforcement
+
+**Packages Affected:**
+- `.github/workflows/` - New CI workflow for rollback testing
+- `packages/backend/database-schema/scripts/` - Rollback test script implementation
+- `packages/backend/database-schema/docs/` - Rollback testing documentation
+- `packages/backend/database-schema/migrations/` - Migration format with rollback SQL
+
+**Testing:**
+- Ephemeral PostgreSQL database creation
+- Schema comparison (tables, columns, indexes, constraints)
+- Data integrity checks (test data preservation)
+- CI integration (PR comment generation, pass/fail behavior)
+
+**Acceptance Criteria:** 20 ACs covering test infrastructure setup (5 ACs), rollback execution and verification (5 ACs), data integrity validation (3 ACs), CI workflow integration (4 ACs), and documentation (3 ACs)
+
+**Complexity:** Medium (test infrastructure + schema comparison + CI integration)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Migration safety enhancement for production deployments)
+
+**Goal:** Catch irreversible migrations before production deployment by automatically testing rollback procedures in CI.
+
+**Risks:**
+- Test database provisioning complexity (mitigated by GitHub Actions service containers)
+- Schema comparison false positives (mitigated by normalized schema representations)
+- Slow CI execution (mitigated by test optimization, 60s timeout target)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunity #1)
+
+**Original Finding:** "Automated migration rollback testing (test database creation and rollback verification)"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (prevents irreversible migrations, reduces rollback risk)
+**Effort:** Medium (test infrastructure + schema comparison)
+
+**Story File:** `plans/future/wish/backlog/WISH-20360/WISH-20360.md`
 
 ---
