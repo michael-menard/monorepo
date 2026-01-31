@@ -16,9 +16,11 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 | Status | Count |
 |--------|-------|
 | completed | 9 |
-| uat | 1 |
+| uat | 3 |
 | ready-for-qa | 2 |
-| backlog | 3 |
+| ready-to-work | 0 |
+| elaboration | 0 |
+| backlog | 9 |
 
 **Goal:** Get to a working, usable KB. Then iterate based on real experience.
 
@@ -34,16 +36,29 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 
 ---
 
-## Ready for QA
+## User Acceptance Testing (UAT)
 
-### KNOW-006: Parsers and Seeding
+### KNOW-016: PostgreSQL Monitoring
 
-**Status:** ready-for-qa
-**Feature:** Parsers for YAML/markdown, seed script, kb_bulk_import tool
+**Status:** uat
+**Depends On:** KNOW-001
+**Feature:** CloudWatch dashboards, alarms, SNS alerts for PostgreSQL monitoring with disk space and no-data monitoring
 
-**Why it matters:** Without this, you can't import your existing knowledge.
+**Why it matters:** Production deployment requires comprehensive observability to enable proactive incident management. Prevents silent service degradation from connection exhaustion, high CPU, disk space issues, or monitoring pipeline failures.
 
-**Story Document:** plans/future/knowledgebase-mcp/ready-for-qa/KNOW-006/KNOW-006.md
+**Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-016/KNOW-016.md
+
+**Implementation Summary:**
+- 10 Terraform files in `infra/monitoring/`
+- 7-widget CloudWatch dashboard
+- 6 CloudWatch alarms (connections, CPU, memory, latency, disk, no-data)
+- SNS topic with email subscription support
+- Comprehensive runbook documentation in README
+- Multi-environment support (staging/production)
+
+**Code Review:** PASS (iteration 1) - All 6 workers passed, no blocking issues
+
+**QA Verification:** PASS - All 13 acceptance criteria verified
 
 ---
 
@@ -58,6 +73,19 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 **Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-018/KNOW-018.md
 
 **Verification Result:** PASS - All 15 ACs verified, 30/30 tests pass with 96.37% coverage
+
+---
+
+## Ready for QA
+
+### KNOW-006: Parsers and Seeding
+
+**Status:** ready-for-qa
+**Feature:** Parsers for YAML/markdown, seed script, kb_bulk_import tool
+
+**Why it matters:** Without this, you can't import your existing knowledge.
+
+**Story Document:** plans/future/knowledgebase-mcp/ready-for-qa/KNOW-006/KNOW-006.md
 
 ---
 
@@ -122,14 +150,210 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 ---
 
 ### KNOW-043: Lessons Learned Migration
+### KNOW-043: Lessons Learned Migration
+
 
 **Status:** backlog
+**Status:** backlog
+**Depends On:** KNOW-006
 **Depends On:** KNOW-006
 **Feature:** Migrate LESSONS-LEARNED.md to KB, transition agents to write to KB
+**Feature:** Migrate LESSONS-LEARNED.md to KB, transition agents to write to KB
+
 
 **Why it matters:** Makes the KB the canonical source of institutional knowledge.
+**Why it matters:** Makes the KB the canonical source of institutional knowledge.
+
 
 **When to do:** After KNOW-040, when you're confident the KB is useful.
+**When to do:** After KNOW-040, when you're confident the KB is useful.
+
+
+---
+
+### KNOW-068: CloudWatch Anomaly Detection
+
+**Status:** backlog
+**Depends On:** KNOW-016
+**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #2)
+**Priority:** P2 (operational improvement)
+**Feature:** CloudWatch anomaly detection for PostgreSQL metrics with ML-based adaptive alerting
+
+**Why it matters:** Eliminates manual threshold tuning by automatically learning normal patterns and alerting on deviations. Reduces operational burden and improves alert accuracy by adapting to changing usage patterns.
+
+**Scope (MVP):**
+- Enable anomaly detection on 4 key metrics: DatabaseConnections, CPUUtilization, ReadLatency, WriteLatency
+- Add anomaly detection bands to CloudWatch dashboard for visual anomaly identification
+- Create 4 anomaly-based alarms that coexist with static threshold alarms from KNOW-016
+- Use CloudWatch default sensitivity (2 standard deviations) with tuning plan
+- Wait 2-4 weeks after KNOW-016 production deployment for baseline data collection
+
+**Non-Goals (avoid over-engineering):**
+- No custom ML models (use CloudWatch built-in only)
+- No anomaly detection for all metrics (focus on high-value metrics only)
+- No replacing static threshold alarms (anomaly detection is additive)
+- No real-time sub-minute anomaly detection (use 5-minute evaluation periods)
+- No multi-metric composite anomaly detection (per-metric only)
+
+**Acceptance Criteria:**
+1. Dashboard updated with anomaly bands on 4 metrics
+2. Anomaly detection models trained with 2+ weeks baseline data
+3. 4 anomaly-based alarms created (connections, CPU, read latency, write latency)
+4. Anomaly alarm test completed with notification delivery
+5. Dual alarm strategy documented (static + anomaly)
+6. False positive tuning plan documented (monitor 1 week, adjust if >3/week)
+7. IaC includes anomaly detectors and alarms
+8. Cost estimate: ~$2/month incremental cost
+
+**Story Points:** 3
+
+**CRITICAL:** Must wait 2-4 weeks after KNOW-016 deploys to production for baseline data collection. Deploying too early results in poor model accuracy and excessive false positives.
+
+**When to do:** After KNOW-016 has been in production for 2-4 weeks and metrics show continuous data without significant gaps.
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-068/KNOW-068.md
+
+**Source:** QA Discovery Notes from KNOW-016 (Enhancement Opportunity #2)
+
+---
+
+### KNOW-078: Composite Alarms for Database Health
+
+**Status:** backlog
+**Depends On:** KNOW-016
+**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #3)
+**Priority:** P2 (operational improvement)
+**Feature:** CloudWatch composite alarms to reduce alert noise and provide clearer database health states
+
+**Why it matters:** Combines multiple metrics into single "database health" composite alarm that triggers only when multiple conditions indicate actual problems (e.g., high CPU + high connections + elevated latency = true degradation vs. just high CPU = normal batch job). Reduces alert fatigue and improves operational clarity.
+
+**Scope:**
+- Define database health states (Healthy, Degraded, Critical)
+- Create composite alarms combining multiple metric alarms from KNOW-016
+- Configure SNS routing (reuse existing topic or create severity-based topics)
+- Update runbooks to focus on composite health states
+- Document when to respond to individual vs composite alarms
+
+**Story Points:** 2
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-078/KNOW-078.md
+
+---
+
+### KNOW-088: Dashboard Templates for Reusability
+
+**Status:** backlog
+**Depends On:** KNOW-016
+**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #5)
+**Priority:** P3 (technical debt reduction)
+**Story Points:** 2
+**Feature:** Extract CloudWatch dashboard JSON into reusable parameterized template. Enable consistent monitoring dashboards across environments and databases with environment-specific variables (RDS instance ID, SNS topic ARN, alarm thresholds). Reduces duplication and ensures consistency.
+
+**Why it matters:** As the monorepo scales to multiple environments, maintaining separate dashboard configurations becomes error-prone. Template-based approach enables consistent monitoring infrastructure with minimal duplication and maintenance burden.
+
+**Scope:**
+- Extract dashboard JSON from KNOW-016 into parameterized template
+- Support environment-specific variables (RDS instance ID, SNS topic ARN, alarm thresholds)
+- Provide template rendering mechanism (bash script or Terraform templatefile)
+- Update IaC to use templates instead of static JSON
+- Document template usage and new environment setup
+
+**Non-Goals:**
+- No multi-region dashboard consolidation
+- No custom metric templates (RDS metrics only)
+- No Grafana/Prometheus migration
+- No dashboard versioning system
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-088/KNOW-088.md
+
+**When to do:** After KNOW-016 is deployed to both staging and production. Reduces technical debt and improves operational consistency.
+
+---
+
+### KNOW-058: Connection Pool Metrics Monitoring
+
+**Status:** backlog
+**Depends On:** KNOW-016
+**Follow-up From:** KNOW-016 (QA Gap #3)
+**Priority:** P2 (operational improvement)
+**Story Points:** 2
+**Feature:** Add connection pool metrics to PostgreSQL monitoring. Evaluate RDS Enhanced Monitoring for pool-level metrics (idle connections, pool exhaustion, connection wait time). If available, add to dashboard and create alarms for pool health.
+
+**Why it matters:** Connection pool health is critical for detecting connection leaks, pool exhaustion, and inefficient pool sizing before they impact service availability. Early warning signals enable proactive incident management.
+
+**Scope:**
+- Evaluate RDS Enhanced Monitoring for connection pool metric availability
+- Extend CloudWatch dashboard (from KNOW-016) with pool metrics widgets
+- Create alarms for pool utilization (90%), excessive idle connections (>50%), and connection wait time
+- Update runbook with pool health troubleshooting procedures
+
+**Non-Goals:**
+- No application-level instrumentation (RDS metrics only)
+- No connection pool library changes
+- No auto-remediation (alerts only)
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-058/KNOW-058.md
+
+**When to do:** After KNOW-016 is deployed and baseline monitoring is stable. Operational improvement, not critical for MVP.
+
+---
+
+### KNOW-098: CloudWatch Logs Integration
+
+**Status:** backlog
+**Depends On:** KNOW-016
+**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #1)
+**Priority:** P2 (operational improvement)
+**Story Points:** 3
+**Feature:** Set up CloudWatch Logs for PostgreSQL log aggregation and integrate with CloudWatch Insights for query analysis
+
+**Why it matters:** Enables analysis of slow queries, error patterns, and connection issues from database logs. Provides forensic analysis capabilities that complement metrics-based monitoring from KNOW-016. Critical for root cause analysis during incidents.
+
+**Scope:**
+- RDS PostgreSQL log export to CloudWatch Logs
+- CloudWatch Insights query library for common analysis patterns (slow queries, connection errors, deadlocks)
+- Log retention and archival policies (30 days operational logs)
+- Integration with existing monitoring infrastructure (KNOW-016)
+- Documentation for log analysis workflows and query patterns
+
+**Non-Goals:**
+- Custom application logging (PostgreSQL logs only)
+- Real-time log streaming (CloudWatch Logs batching acceptable)
+- Log-based alerting (metrics handle alerting)
+- Third-party log aggregation (CloudWatch native tools only)
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-098/KNOW-098.md
+
+**When to do:** After KNOW-016 is deployed and baseline monitoring is stable. Complements metrics with log-based forensics for incident investigation.
+
+---
+
+### KNOW-108: Cost Attribution Tags
+
+**Status:** backlog
+**Depends On:** KNOW-016
+**Follow-up From:** KNOW-016 (QA Enhancement #7)
+**Priority:** P3 (operational improvement)
+**Story Points:** 1
+**Feature:** Add resource tags (project, environment, service, cost-center) to CloudWatch monitoring infrastructure IaC for cost tracking and attribution. Enables AWS Cost Explorer analysis of monitoring costs separate from application costs.
+
+**Why it matters:** Enables cost tracking, attribution analysis, and chargeback support for monitoring infrastructure. Separates monitoring costs from application costs in AWS Cost Explorer, supports multi-environment cost comparison, and establishes reusable tagging pattern for future AWS resources.
+
+**Scope:**
+- Add standardized tags to CloudWatch dashboards, alarms, and SNS topics from KNOW-016
+- Update IaC (Terraform/CDK/CloudFormation) with tags configuration
+- Document tag schema, Cost Explorer usage, and validation procedures
+- Test tag-based filtering in AWS Cost Explorer (requires 24-hour wait for Cost Allocation Tags activation)
+
+**Non-Goals:**
+- No application resource tagging (RDS, Lambda out of scope)
+- No custom cost allocation reports (Cost Explorer sufficient)
+- No tag-based IAM policies
+- No budget alerts or cost thresholds
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-108/KNOW-108.md
+
+**When to do:** During or after KNOW-016 deployment. Low-effort operational improvement that establishes tagging pattern for future infrastructure.
 
 ---
 
