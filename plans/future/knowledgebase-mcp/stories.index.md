@@ -21,6 +21,7 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 | ready-to-work | 0 |
 | elaboration | 0 |
 | backlog | 9 |
+| cancelled | 1 |
 
 **Goal:** Get to a working, usable KB. Then iterate based on real experience.
 
@@ -96,6 +97,24 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 **Feature:** kb_rebuild_embeddings, comprehensive logging, performance testing
 
 **Why it matters:** Lets you rebuild embeddings when models change, plus production polish.
+
+---
+
+## Cancelled Stories
+
+### KNOW-017: Data Encryption (CANCELLED)
+
+**Status:** cancelled
+**Depends On:** KNOW-001
+**Feature:** RDS encryption at rest with AWS KMS key management, operational procedures, and verification
+**Cancelled Date:** 2026-01-31
+**Cancellation Reason:** Infrastructure change - project uses local Docker PostgreSQL, not AWS RDS. Aligns with cancellation rationale of KNOW-016 (PostgreSQL Monitoring).
+
+**Why it was planned:** Protects sensitive institutional knowledge stored in Knowledge Base PostgreSQL from unauthorized access in case of physical media compromise. Required for security and compliance in AWS RDS deployment scenario.
+
+**Story Document:** plans/future/knowledgebase-mcp/elaboration/KNOW-017/KNOW-017.md
+
+**Future Consideration:** If AWS RDS deployment is planned in future, revisit after creating prerequisite infrastructure stories for AWS migration and RDS provisioning.
 
 ---
 

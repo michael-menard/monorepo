@@ -2,18 +2,21 @@
 doc_type: story
 story_id: KNOW-017
 title: "Data Encryption"
-status: needs-refinement
+status: cancelled
 priority: P1
 depends_on: [KNOW-001]
 source: "Epic Elaboration - Security Finding (SEC-003)"
 created_at: "2026-01-25"
-updated_at: "2026-01-25"
+updated_at: "2026-01-31"
+cancelled_date: "2026-01-31"
+cancellation_reason: "Infrastructure change - project uses local Docker PostgreSQL, not AWS RDS. Aligns with cancellation rationale of KNOW-016."
 tags:
   - infrastructure
   - security
   - compliance
   - rds
   - kms
+  - aws-future-only
 ---
 
 # KNOW-017: Data Encryption
