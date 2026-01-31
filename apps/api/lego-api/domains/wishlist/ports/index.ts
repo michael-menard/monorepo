@@ -15,15 +15,27 @@ import type { WishlistItem, UpdateWishlistItemInput } from '../types.js'
 export interface WishlistImageStorage {
   /**
    * Generate a presigned URL for uploading an image to S3
+   *
+   * WISH-2013: Enhanced with file size validation
+   *
+   * @param userId - The user ID for scoping the upload
+   * @param fileName - The original file name
+   * @param mimeType - The MIME type of the file
+   * @param fileSize - Optional file size in bytes for server-side validation
    */
   generateUploadUrl(
     userId: string,
     fileName: string,
     mimeType: string,
+    fileSize?: number,
   ): Promise<
     Result<
       { presignedUrl: string; key: string; expiresIn: number },
-      'INVALID_EXTENSION' | 'INVALID_MIME_TYPE' | 'PRESIGN_FAILED'
+      | 'INVALID_EXTENSION'
+      | 'INVALID_MIME_TYPE'
+      | 'FILE_TOO_LARGE'
+      | 'FILE_TOO_SMALL'
+      | 'PRESIGN_FAILED'
     >
   >
 

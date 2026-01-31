@@ -5,6 +5,16 @@ import type { WishlistItem } from '../types.js'
 import type { SetsService } from '../../sets/application/services.js'
 import type { Set as SetItem } from '../../sets/types.js'
 
+// WISH-2013: Mock logger for warning tests
+vi.mock('@repo/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
 /**
  * Purchase Flow (markAsPurchased) Unit Tests - WISH-2042
  *
@@ -250,8 +260,8 @@ describe('WishlistService.markAsPurchased', () => {
     })
 
     it('logs warning but returns success when wishlist deletion fails after Set creation', async () => {
+      const { logger } = await import('@repo/logger')
       vi.mocked(wishlistRepo.delete).mockResolvedValue({ ok: false, error: 'NOT_FOUND' })
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       const result = await service.markAsPurchased('user-123', mockWishlistItem.id, {
         quantity: 1,
@@ -260,13 +270,12 @@ describe('WishlistService.markAsPurchased', () => {
 
       // Set was created, so result should be success
       expect(result.ok).toBe(true)
-      expect(consoleSpy).toHaveBeenCalled()
-      consoleSpy.mockRestore()
+      expect(logger.warn).toHaveBeenCalled()
     })
 
     it('logs warning but returns success when image copy fails', async () => {
+      const { logger } = await import('@repo/logger')
       vi.mocked(imageStorage.copyImage).mockResolvedValue({ ok: false, error: 'COPY_FAILED' })
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       const result = await service.markAsPurchased('user-123', mockWishlistItem.id, {
         quantity: 1,
@@ -275,8 +284,7 @@ describe('WishlistService.markAsPurchased', () => {
 
       // Set was created, so result should be success
       expect(result.ok).toBe(true)
-      expect(consoleSpy).toHaveBeenCalled()
-      consoleSpy.mockRestore()
+      expect(logger.warn).toHaveBeenCalled()
     })
   })
 

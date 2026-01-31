@@ -39,7 +39,7 @@ import {
 } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { useDispatch } from 'react-redux'
 import { SortableWishlistCard } from '../SortableWishlistCard'
-import { WishlistCard } from '../WishlistCard'
+import { WishlistDragPreview } from '../WishlistDragPreview'
 
 /**
  * DraggableWishlistGallery props schema (data-only)
@@ -566,18 +566,14 @@ export function DraggableWishlistGallery({
           </div>
         </SortableContext>
 
-        {/* AC 5: DragOverlay with ghost preview */}
+        {/* AC 5: DragOverlay with enhanced drag preview (WISH-2005c) */}
         <DragOverlay
           dropAnimation={{
             duration: 300, // AC 24: < 300ms animation
             easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
           }}
         >
-          {activeItem ? (
-            <div className="opacity-90 shadow-xl scale-105">
-              <WishlistCard item={activeItem} />
-            </div>
-          ) : null}
+          <WishlistDragPreview item={activeItem} />
         </DragOverlay>
       </DndContext>
 

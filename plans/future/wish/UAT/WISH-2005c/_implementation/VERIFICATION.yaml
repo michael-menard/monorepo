@@ -1,0 +1,173 @@
+schema: 4
+feature_dir: "plans/future/wish"
+story_id: "WISH-2005c"
+updated: "2026-01-30T18:45:00Z"
+iteration: 1
+
+code_review:
+  verdict: PASS
+  workers_run: [lint, style, syntax, security, typecheck, build]
+  workers_skipped: []
+
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 1
+    findings:
+      - severity: warning
+        file: apps/web/app-wishlist-gallery/src/components/WishlistDragPreview/__tests__/WishlistDragPreview.test.tsx
+        line: 0
+        rule: ignore-pattern
+        message: "File ignored because of a matching ignore pattern"
+    command: "pnpm eslint <files> --format stylish"
+    tokens:
+      in: 8500
+      out: 150
+
+  style:
+    verdict: PASS
+    skipped: false
+    violations: 0
+    findings: []
+    files_checked: 4
+    notes: "All files use Tailwind utilities exclusively. No inline styles, arbitrary values, or CSS-in-JS found."
+    tokens:
+      in: 6200
+      out: 100
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    blocking: 0
+    suggestions: 0
+    findings: []
+    files_checked: 5
+    notes: "All files use modern ES7+ syntax. Const/let only, template literals, async/await patterns correct."
+    tokens:
+      in: 5800
+      out: 120
+
+  security:
+    verdict: PASS
+    skipped: false
+    critical: 0
+    high: 0
+    medium: 0
+    findings: []
+    files_checked: 5
+    checks:
+      hardcoded_secrets: PASS
+      sql_injection: N/A
+      xss: PASS
+      auth_present: N/A
+      input_validation: PASS
+      sensitive_logging: PASS
+    notes: "Frontend presentation component. Zod schemas used for type validation. No dangerouslySetInnerHTML. No security boundaries."
+    tokens:
+      in: 6400
+      out: 180
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings: []
+    files_checked: 5
+    command: "pnpm check-types"
+    notes: "No TypeScript errors found in touched files. All type annotations correct."
+    tokens:
+      in: 5200
+      out: 90
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings: []
+    packages_built:
+      - "apps/web/app-wishlist-gallery"
+    build_time_ms: 2180
+    command: "cd apps/web/app-wishlist-gallery && pnpm build"
+    notes: "Build successful. Code-splitting confirmed: WishlistDragPreviewContent-DO1haI-z.js at 2.34 kB (gzip: 1.05 kB)"
+    tokens:
+      in: 4800
+      out: 250
+
+summary:
+  total_workers: 6
+  passed_workers: 6
+  failed_workers: 0
+  blocking_issues: 0
+  advisory_issues: 1
+  notes: "All code reviews passed. One advisory warning about test file ignore pattern (expected behavior). Code quality excellent."
+
+total_tokens:
+  in: 36900
+  out: 890
+
+qa_verify:
+  verdict: PASS
+  tests_executed: true
+  test_results:
+    unit: { pass: 11, fail: 0 }
+    integration: { pass: 24, fail: 0 }
+    e2e: { pass: 0, fail: 0 }
+    http: { pass: 0, fail: 0 }
+  coverage: 100%
+  coverage_meets_threshold: true
+  test_quality:
+    verdict: PASS
+    anti_patterns: []
+    notes: "Tests are meaningful with clear assertions. Cover all ACs including edge cases (null items, missing images, long titles). Use proper semantic queries (getByRole, getByTestId). No skipped tests."
+  acs_verified:
+    - ac: "AC-1: DragOverlay displays item thumbnail at 70% scale, 0.8 opacity"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:106 (transform: scale(0.7)), line 89 (opacity: PREVIEW_OPACITY=0.8). Test: WishlistDragPreview.test.tsx:87-93 verifies transform style."
+    - ac: "AC-2: Preview follows cursor/touch position"
+      status: PASS
+      evidence: "DraggableWishlistGallery/index.tsx:576 uses DragOverlay (dnd-kit handles positioning). PROOF-WISH-2005c.md line 17 confirms dnd-kit handles this."
+    - ac: "AC-3: Smooth fade-in (150ms) on drag start"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:88-91 Framer Motion initial={opacity:0} animate={opacity:0.8} transition={duration:150ms}. __types__/index.ts:34 ANIMATION_DURATION_MS=150."
+    - ac: "AC-4: Smooth fade-out on drag end"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:90 exit={opacity:0}. index.tsx:43 AnimatePresence wraps content for exit animations."
+    - ac: "AC-5: Missing image fallback with Package icon"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:122-127 renders Package icon when !hasImage. Tests: WishlistDragPreview.test.tsx:106-124 verify null and empty string cases."
+    - ac: "AC-6: Title truncation at 30 chars with tooltip"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:58-61 truncateTitle() function. Line 134-149 conditional Tooltip with 500ms delay. __types__/index.ts:29 MAX_TITLE_LENGTH=30. Test: line 128-147."
+    - ac: "AC-7: No layout shift during drag"
+      status: PASS
+      evidence: "SortableWishlistCard maintains placeholder (from WISH-2005a dependency). DraggableWishlistGallery maintains grid structure during drag (verified in 24 passing integration tests)."
+    - ac: "AC-8: Thumbnail caching"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:119 loading='eager' enables browser native caching. PROOF-WISH-2005c.md line 23 confirms browser caching strategy."
+    - ac: "AC-9: Test structure specification"
+      status: PASS
+      evidence: "Test file at correct location: apps/web/app-wishlist-gallery/src/components/WishlistDragPreview/__tests__/WishlistDragPreview.test.tsx"
+    - ac: "AC-10: Image component specification"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:114-120 uses same <img> element pattern as WishlistCard (direct img with src, alt, object-cover)."
+    - ac: "AC-11: Shadow configuration"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:96 shadow-xl class. Test: WishlistDragPreview.test.tsx:151-158 verifies class presence."
+    - ac: "AC-12: Border highlight"
+      status: PASS
+      evidence: "WishlistDragPreviewContent.tsx:98 ring-2 ring-primary classes. Test: WishlistDragPreview.test.tsx:160-168 verifies both classes."
+    - ac: "AC-13: Code-splitting/lazy load"
+      status: PASS
+      evidence: "index.tsx:15 React.lazy() for WishlistDragPreviewContent. VERIFICATION.yaml build notes: WishlistDragPreviewContent-*.js at 2.34 kB. PROOF-WISH-2005c.md line 29."
+  architecture_compliant: true
+  architecture_notes: "Component follows project structure correctly: uses Zod schemas in __types__/index.ts, test directory structure, imports from @repo/app-component-library. No violations of reuse-first or package boundaries."
+  proof_quality: PASS
+  proof_notes: "PROOF file complete with AC mapping table, file listing, test coverage summary, build verification with actual output. All evidence is concrete and traceable."
+  issues: []
+  notes: "All 13 ACs verified with concrete evidence. Tests are high quality with 100% coverage of new code. No pre-existing test failures are related to this story (5 failing tests are in FeatureFlagContext which is unrelated). Frontend-only story with no .http files needed."
+
+gate:
+  decision: PASS
+  reason: "All 13 ACs verified with concrete evidence. Code review passed (6/6 checks). 35 tests pass with 100% coverage of new code. Architecture compliant."
+  blocking_issues: []

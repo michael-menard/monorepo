@@ -1,7 +1,11 @@
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach, beforeAll, afterAll } from 'vitest'
+import { afterEach, beforeAll, afterAll, expect } from 'vitest'
+import * as matchers from 'vitest-axe/matchers'
 import { server } from './mocks/server'
+
+// WISH-2012: Extend Vitest matchers with axe-core accessibility assertions
+expect.extend(matchers)
 
 // Cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
@@ -119,3 +123,17 @@ declare global {
 }
 
 globalThis.vi = vi
+
+// WISH-2012: Accessibility testing helpers
+// These are available globally in all tests for convenience
+
+/**
+ * Global a11y test configuration flag
+ * Set to false in specific tests to skip axe-core checks
+ */
+declare global {
+  // eslint-disable-next-line no-var
+  var skipA11yChecks: boolean
+}
+
+globalThis.skipA11yChecks = false

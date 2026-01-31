@@ -281,10 +281,12 @@ describe('WishlistService', () => {
         expect(result.data.key).toBe('wishlist/user-123/12345.jpg')
         expect(result.data.expiresIn).toBe(900)
       }
+      // WISH-2013: Now includes optional fileSize parameter
       expect(mockImageStorage.generateUploadUrl).toHaveBeenCalledWith(
         'user-123',
         'test.jpg',
-        'image/jpeg'
+        'image/jpeg',
+        undefined
       )
     })
 

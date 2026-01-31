@@ -15,14 +15,14 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 8 |
+| completed | 9 |
 | in-progress | 0 |
 | review | 0 |
 | ready-for-qa | 2 |
 | uat | 0 |
 | in-qa | 0 |
-| backlog | 13 |
-| elaboration | 0 |
+| backlog | 16 |
+| elaboration | 1 |
 | ready-to-work | 16 |
 | pending | 14 |
 | created | 1 |
@@ -947,8 +947,8 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 ## WISH-2013: File upload security hardening
 
-**Status:** ready-to-work
-**Depends On:** WISH-2011, WISH-2002
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2011
 **Phase:** 3 - Security
 
@@ -962,7 +962,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 **Source:** Follow-up from QA Elaboration of WISH-2011 (Finding #1)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2013/WISH-2013.md`
+**Story File:** `plans/future/wish/UAT/WISH-2013/WISH-2013.md`
 
 **Elaboration Notes:** CONDITIONAL PASS - Three MVP-critical gaps addressed via additional acceptance criteria (AC18: server-side file size validation), clarified existing criteria (AC5: async virus scanning via S3 event trigger Lambda), and enhanced existing criteria (AC16: structured CloudWatch logging with specific fields).
 
@@ -1791,21 +1791,67 @@ Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunities - Finding
 
 ---
 
-## WISH-20190: Schema Drift Detection Tool (db:check command)
+## WISH-20400: Real-time CI Integration for Schema Change Impact Analysis
 
-**Status:** elaboration
+**Status:** pending
+**Depends On:** WISH-20210
+**Follow-up From:** WISH-20210
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Integrate the schema change impact analysis tool (from WISH-20210) into GitHub Actions CI/CD pipelines to automatically analyze schema changes, post impact reports as PR comments, and optionally block high-impact changes pending manual review.
+
+**Features:**
+- GitHub Actions workflow triggering on schema file changes
+- Automated detection of schema modifications (column/enum/constraint changes)
+- Impact report formatting as GitHub-flavored Markdown PR comments
+- Threshold enforcement with blocking rules for high-impact/breaking changes
+- Multi-change aggregation for PRs modifying multiple tables
+
+**Packages Affected:**
+- `.github/workflows/` - New `schema-impact-analysis.yml` workflow
+- `scripts/` - Detection, formatting, and threshold enforcement scripts
+- `packages/backend/database-schema/` - Reuses existing `pnpm db:impact-analysis` from WISH-20210
+
+**Acceptance Criteria:** 26 ACs covering CI workflow basics, schema change detection, impact report formatting, threshold enforcement, multi-change scenarios, error handling, and documentation
+
+**Complexity:** Medium (GitHub Actions workflow + detection script + formatting + threshold logic)
+
+**Effort:** 3 points
+
+**Priority:** High (automation for schema change workflow)
+
+**Story File:** `plans/future/wish/backlog/WISH-20400/WISH-20400.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Finding #1)
+
+**Original Finding:** "Real-time CI integration for schema change impact analysis (automated PR comments, blocking checks)"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (automated guardrails for schema evolution)
+**Effort:** Medium (CI workflow + detection logic + integration with existing tool)
+
+---
+
+## WISH-20191: Schema Drift Detection Tool - MVP (db:check command)
+
+**Status:** backlog
 **Depends On:** WISH-2057
-**Follow-up From:** WISH-2057
+**Split From:** WISH-20190
+**Split Part:** 1 of 3
 **Phase:** 1 - Foundation
 
 ### Scope
 
-Implement a `db:check` command that compares the current database schema against the expected schema from Drizzle migrations, detecting drift and reporting mismatches for manual review and remediation. Provides proactive detection of schema inconsistencies across development, staging, and production environments.
+Implement core `db:check` command that compares the current database schema against the expected schema from Drizzle migrations, detecting drift and reporting mismatches. This MVP provides the foundational drift detection capabilities without advanced features like auto-remediation or CI/CD integration.
 
 **Features:**
-- CLI command `pnpm db:check` with environment flag support
+- CLI command `pnpm db:check` with environment flag support (local, staging, production)
 - Schema introspection using Drizzle introspection API
-- Drift detection categories: missing/extra tables, column mismatches, type differences, constraint differences, enum value differences, index differences
+- All drift detection categories: missing/extra tables, column mismatches, type differences, constraint differences, enum value differences, index differences
 - Human-readable and JSON output modes for CI integration
 - Exit code 0 for no drift, exit code 1 for drift detected
 - Remediation suggestions in output
@@ -1816,7 +1862,7 @@ Implement a `db:check` command that compares the current database schema against
 - `packages/backend/database-schema/docs/SCHEMA-DRIFT-DETECTION.md` - Usage documentation (new)
 - `packages/backend/database-schema/package.json` - Add `db:check` script
 
-**Acceptance Criteria:** 20 ACs covering core functionality, output formatting, enum/constraint detection, error handling, edge cases, documentation, and testing
+**Acceptance Criteria:** 20 ACs covering core functionality (AC 1-6), output formatting (AC 7-9), enum/constraint detection (AC 10-12), error handling/edge cases (AC 13-16), documentation and testing (AC 17-20)
 
 **Complexity:** Medium (CLI script + Drizzle introspection + schema comparison)
 
@@ -1824,13 +1870,14 @@ Implement a `db:check` command that compares the current database schema against
 
 **Priority:** P1 (Critical operational tool for Phase 1)
 
-**Story File:** `plans/future/wish/backlog/WISH-20190/WISH-20190.md`
+**Story File:** `plans/future/wish/backlog/WISH-20191/WISH-20191.md`
 
 ### Source
 
-Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Finding #2)
+Split from WISH-20190 during QA Elaboration (scope reduction to MVP).
 
-**Original Finding:** "Schema drift detection tool (`db:check` command from WISH-2007 Enhancement #3)"
+**Original Parent:** WISH-20190 (Schema Drift Detection Tool)
+**Split Reason:** Scope expansion during elaboration (8 new features added). Separated MVP core functionality from advanced features and CI/CD integration.
 
 **Category:** Enhancement Opportunity
 **Impact:** High (proactive detection of schema inconsistencies)
@@ -1838,53 +1885,96 @@ Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Findin
 
 ---
 
-## WISH-20200: Automated Rollback Script Generation
+## WISH-20192: Schema Drift Detection - Advanced Features
 
-**Status:** pending
-**Depends On:** WISH-2057
-**Follow-up From:** WISH-2057
+**Status:** backlog
+**Depends On:** WISH-20191
+**Split From:** WISH-20190
+**Split Part:** 2 of 3
+**Phase:** 1 - Foundation
+
+### Scope
+
+Extend the drift detection tool with advanced features: `.driftignore` file support for excluding intentional drift, automated drift remediation to generate migration scripts, verbose mode for debugging, and historical drift tracking for trend analysis.
+
+**Features:**
+- `.driftignore` file support to exclude intentional drift (e.g., test tables in staging)
+- Automated drift remediation: generate migration scripts to fix detected drift
+- Verbose mode: detailed logging of comparison steps for debugging
+- Historical drift tracking: store drift detection results over time for trend analysis
+
+**Packages Affected:**
+- `packages/backend/database-schema/src/drift-detector/ignore-parser.ts` - .driftignore parser (new)
+- `packages/backend/database-schema/src/drift-detector/remediation-generator.ts` - Migration script generator (new)
+- `packages/backend/database-schema/src/drift-detector/history-tracker.ts` - Drift history storage (new)
+- `packages/backend/database-schema/docs/SCHEMA-DRIFT-DETECTION.md` - Update with advanced features
+
+**Acceptance Criteria:** 4 ACs covering .driftignore support (AC 21), automated remediation (AC 22), verbose mode (AC 23), historical tracking (AC 24)
+
+**Complexity:** Medium (requires migration script generation and persistence layer)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Enhancement of core tool)
+
+**Story File:** `plans/future/wish/backlog/WISH-20192/WISH-20192.md`
+
+### Source
+
+Split from WISH-20190 during QA Elaboration. User decisions from gaps #1, #4 and enhancements #1, #5.
+
+**Original Parent:** WISH-20190 (Schema Drift Detection Tool)
+**Split Reason:** Advanced features added during elaboration requiring separate implementation after MVP.
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves drift tool usability and automation)
+**Effort:** Medium (migration generation + persistence)
+
+---
+
+## WISH-20193: Schema Drift Detection - CI/CD Integration
+
+**Status:** backlog
+**Depends On:** WISH-20191, WISH-20192
+**Split From:** WISH-20190
+**Split Part:** 3 of 3
 **Phase:** 2 - Infrastructure
 
 ### Scope
 
-Automate the generation of rollback scripts from migration metadata to reduce manual error risks, improve incident response time, and ensure consistent rollback procedures across all environments. Extends the `schema_versions` metadata table from WISH-2057 with rollback script storage and provides CLI commands for preview and execution.
+Integrate drift detection into CI/CD pipelines with deployment blocking capabilities and configurable drift severity levels. Enables enforcement of schema consistency policies in deployment workflows.
 
 **Features:**
-- PostgreSQL AST parser to analyze migration SQL and generate inverse operations
-- Rollback script generation for supported operations (ADD COLUMN → DROP COLUMN, CREATE INDEX → DROP INDEX, etc.)
-- Storage of generated scripts in `schema_versions.rollback_script` column
-- CLI commands: `pnpm db:rollback --version=X.Y.Z` (preview), `pnpm db:rollback --version=X.Y.Z --execute` (execute)
-- Safety validations: rollback_safe boolean, confirmation prompts, error handling
-- Warnings for unsafe migrations (DROP COLUMN, enum modifications, etc.)
+- CI/CD integration: block deployments if drift detected in target environment
+- Drift severity levels: classify drift as error/warning/info with configurable thresholds
+- GitHub Actions workflow integration examples
+- Deployment gate configuration for different environments
 
 **Packages Affected:**
-- `packages/backend/database-schema/src/rollback/` - Rollback generator (new)
-- `packages/backend/database-schema/src/cli/` - Rollback CLI command (new)
-- `packages/backend/database-schema/src/migrations/` - Schema updates for rollback metadata
+- `packages/backend/database-schema/src/drift-detector/severity-classifier.ts` - Drift severity logic (new)
+- `.github/workflows/drift-check.yml` - CI drift detection workflow (new)
+- `packages/backend/database-schema/docs/SCHEMA-DRIFT-DETECTION.md` - Update with CI/CD integration
 
-**Infrastructure:**
-- Database schema: Add `rollback_script` (TEXT) and `rollback_applied_at` (TIMESTAMP) columns to `schema_versions` table
-- npm dependency: `pgsql-parser` for PostgreSQL SQL parsing
+**Acceptance Criteria:** 2 ACs covering CI/CD integration (AC 25) and drift severity levels (AC 26)
 
-**Acceptance Criteria:** 20 ACs covering rollback script generation, CLI commands, database schema updates, integration with migration flow, safety validations, and comprehensive test coverage
+**Complexity:** Low (leverages existing drift detection, adds CI integration)
 
-**Complexity:** Medium (AST parsing + CLI tooling + database schema updates)
+**Effort:** 2 points
 
-**Effort:** 3 points
+**Priority:** P2 (Operational hardening)
 
-**Priority:** P2 (Infrastructure enhancement for Phase 2)
-
-**Story File:** `plans/future/wish/backlog/WISH-20200/WISH-20200.md`
+**Story File:** `plans/future/wish/backlog/WISH-20193/WISH-20193.md`
 
 ### Source
 
-Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Finding #3)
+Split from WISH-20190 during QA Elaboration. User decisions from enhancements #2, #6.
 
-**Original Finding:** "Automated rollback script generation based on migration metadata"
+**Original Parent:** WISH-20190 (Schema Drift Detection Tool)
+**Split Reason:** CI/CD integration requires deployment infrastructure coordination and separate implementation phase.
 
 **Category:** Enhancement Opportunity
-**Impact:** High (reduces manual error risks, improves incident response time)
-**Effort:** Medium (AST parser integration + CLI + database schema)
+**Impact:** Medium (improves deployment safety and consistency)
+**Effort:** Low (integration work + configuration)
 
 ---
 
@@ -2129,7 +2219,7 @@ Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunity #1)
 
 ## WISH-20210: Schema Change Impact Analysis Tool
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WISH-2057
 **Follow-up From:** WISH-2057
 **Phase:** 3 - Infrastructure
@@ -2186,8 +2276,91 @@ Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Findin
 **Impact:** High (prevents missed dependencies and runtime failures)
 **Effort:** Medium (CLI tool development + AST parsing)
 
-**Story File:** `plans/future/wish/backlog/WISH-20210/WISH-20210.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-20210/WISH-20210.md`
 
+**Elaboration Report:** `plans/future/wish/ready-to-work/WISH-20210/ELAB-WISH-20210.md`
+
+**Verdict:** CONDITIONAL PASS - Ready for implementation with 3 critical issues to address during kickoff
+
+---
+
+## WISH-20420: Schema Migration Code Generation Tool
+
+**Status:** pending
+**Depends On:** WISH-20210
+**Follow-up From:** WISH-20210
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Build an automated CLI tool (`pnpm db:generate-migration`) that consumes schema change impact analysis reports (from WISH-20210) and generates skeleton code modifications for affected files, including Drizzle schema updates, Zod schema changes, service layer boilerplate, and frontend component scaffolding.
+
+**Features:**
+- CLI tool accepting `--report` flag pointing to impact analysis Markdown file
+- Template-based code generation for common schema change patterns
+- Drizzle schema updates (column additions, enum extensions, migrations)
+- Zod schema updates (field additions, enum extensions, validation)
+- Service layer boilerplate (method signatures, repository mappings)
+- Frontend scaffolding (form fields, type imports, display components)
+- Test fixture updates (mock data, test assertions)
+
+**Code Generation Capabilities:**
+- Adding optional/required columns with defaults
+- Adding/renaming enum values
+- Generating Drizzle SQL migrations + TypeScript schema updates
+- Generating Zod schema field additions with validation
+- Generating service layer code with field mappings
+- Generating frontend form fields and display components
+- Generating test fixture updates
+
+**Generated Output Structure:**
+- `generated-migrations/{timestamp}-{table}-{operation}/`
+  - `drizzle/` - SQL migrations and schema updates
+  - `backend/` - `.patch` files for services, repositories, schemas
+  - `frontend/` - `.patch` files for components, hooks
+  - `tests/` - `.patch` files for fixtures, mocks
+  - `README.md` - Step-by-step application instructions
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/` - New `generate-migration.ts` CLI tool
+- `packages/backend/database-schema/templates/` - Code generation templates
+- Reuses `impact-analysis.ts` output from WISH-20210
+
+**Safety Mechanisms:**
+- No automatic application (developer must review patches)
+- Dry-run mode by default (`--apply` flag required)
+- Generated code includes "REVIEW REQUIRED" comments
+- TypeScript compilation validation before writing files
+- Unified diff `.patch` format for manual application
+
+**Benefits:**
+- Reduces manual boilerplate from hours to minutes
+- Eliminates repetitive schema migration work
+- Provides consistent code patterns across migrations
+- Reduces human error in schema change implementation
+- Complements WISH-20210 analysis with automated scaffolding
+
+**Acceptance Criteria:** 24 ACs covering CLI basics, Drizzle/Zod generation, service layer boilerplate, frontend scaffolding, test fixture updates, code quality, and documentation.
+
+**Complexity:** Medium (Template system + AST code insertion + patch generation)
+
+**Effort:** 5 points
+
+**Priority:** P2 (Developer productivity enhancement, builds on WISH-20210)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Finding #3)
+
+**Original Finding:** "Build schema migration code generation based on impact analysis output"
+
+**Category:** Enhancement Opportunity
+**Impact:** High (reduces manual migration work from hours to minutes)
+**Effort:** Medium (code generation templates + AST utilities)
+
+**Story File:** `plans/future/wish/backlog/WISH-20420/WISH-20420.md`
+
+---
 
 ## WISH-20220: Schedule UI/UX (admin dashboard for schedule management)
 

@@ -133,6 +133,25 @@ export type UpdateWishlistItem = z.infer<typeof UpdateWishlistItemSchema>
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Sort field enum for wishlist queries.
+ * Includes standard column sorts and smart sorting algorithms (WISH-2014).
+ */
+export const WishlistSortFieldSchema = z.enum([
+  'createdAt',
+  'title',
+  'price',
+  'pieceCount',
+  'sortOrder',
+  'priority',
+  // Smart sorting algorithms (WISH-2014)
+  'bestValue', // price / pieceCount ratio (lowest first)
+  'expiringSoon', // oldest release date first
+  'hiddenGems', // (5 - priority) * pieceCount (highest first)
+])
+
+export type WishlistSortField = z.infer<typeof WishlistSortFieldSchema>
+
+/**
  * Query parameters schema for listing wishlist items (GET /api/wishlist).
  * Supports search, filtering, sorting, and pagination.
  *
@@ -141,6 +160,7 @@ export type UpdateWishlistItem = z.infer<typeof UpdateWishlistItemSchema>
  * - `tags` is comma-separated for multi-tag filtering
  * - `page` defaults to 1, `limit` defaults to 20 (max 100)
  * - All number params use coerce for query string conversion
+ * - Smart sort modes (WISH-2014): bestValue, expiringSoon, hiddenGems
  */
 export const WishlistQueryParamsSchema = z.object({
   // Search
@@ -152,7 +172,7 @@ export const WishlistQueryParamsSchema = z.object({
   priority: z.coerce.number().int().min(0).max(5).optional(),
 
   // Sorting
-  sort: z.enum(['createdAt', 'title', 'price', 'pieceCount', 'sortOrder', 'priority']).optional(),
+  sort: WishlistSortFieldSchema.optional(),
   order: z.enum(['asc', 'desc']).optional(),
 
   // Pagination

@@ -38,7 +38,16 @@ export function createWishlistRepository(
         store?: string
         tags?: string[]
         priority?: number
-        sort?: 'createdAt' | 'title' | 'price' | 'pieceCount' | 'sortOrder' | 'priority'
+        sort?:
+          | 'createdAt'
+          | 'title'
+          | 'price'
+          | 'pieceCount'
+          | 'sortOrder'
+          | 'priority'
+          | 'bestValue'
+          | 'expiringSoon'
+          | 'hiddenGems'
         order?: 'asc' | 'desc'
       },
     ): Promise<PaginatedResult<WishlistItem>> {
@@ -79,22 +88,90 @@ export function createWishlistRepository(
         )
       }
 
-      // Build sort order
-      const sortColumn = {
-        createdAt: wishlistItems.createdAt,
-        title: wishlistItems.title,
-        price: wishlistItems.price,
-        pieceCount: wishlistItems.pieceCount,
-        sortOrder: wishlistItems.sortOrder,
-        priority: wishlistItems.priority,
-      }[filters?.sort ?? 'sortOrder']
+      // Build sort order - supports smart sorting algorithms (WISH-2014)
+      const sortMode = filters?.sort ?? 'sortOrder'
+      const orderDirection = filters?.order ?? 'asc'
+      let orderByClause
 
-      const orderFn = filters?.order === 'desc' ? desc : asc
+      if (sortMode === 'bestValue') {
+        // Best Value: price / pieceCount ratio (lowest first by default)
+        // Items with null price, null pieceCount, or pieceCount=0 placed at end
+        // Uses NULLIF to prevent division by zero
+        if (orderDirection === 'desc') {
+          orderByClause = sql`
+            CASE
+              WHEN ${wishlistItems.price} IS NULL OR ${wishlistItems.pieceCount} IS NULL OR ${wishlistItems.pieceCount} = 0
+              THEN 1
+              ELSE 0
+            END ASC,
+            CASE
+              WHEN ${wishlistItems.price} IS NOT NULL AND ${wishlistItems.pieceCount} > 0
+              THEN ${wishlistItems.price}::numeric / ${wishlistItems.pieceCount}
+              ELSE NULL
+            END DESC NULLS LAST
+          `
+        } else {
+          orderByClause = sql`
+            CASE
+              WHEN ${wishlistItems.price} IS NULL OR ${wishlistItems.pieceCount} IS NULL OR ${wishlistItems.pieceCount} = 0
+              THEN 1
+              ELSE 0
+            END ASC,
+            CASE
+              WHEN ${wishlistItems.price} IS NOT NULL AND ${wishlistItems.pieceCount} > 0
+              THEN ${wishlistItems.price}::numeric / ${wishlistItems.pieceCount}
+              ELSE NULL
+            END ASC NULLS LAST
+          `
+        }
+      } else if (sortMode === 'expiringSoon') {
+        // Expiring Soon: oldest release date first (asc default)
+        // Items with null releaseDate placed at end
+        if (orderDirection === 'desc') {
+          orderByClause = sql`
+            CASE WHEN ${wishlistItems.releaseDate} IS NULL THEN 1 ELSE 0 END ASC,
+            ${wishlistItems.releaseDate} DESC NULLS LAST
+          `
+        } else {
+          orderByClause = sql`
+            CASE WHEN ${wishlistItems.releaseDate} IS NULL THEN 1 ELSE 0 END ASC,
+            ${wishlistItems.releaseDate} ASC NULLS LAST
+          `
+        }
+      } else if (sortMode === 'hiddenGems') {
+        // Hidden Gems: (5 - priority) * pieceCount (highest first by default - desc)
+        // Items with null pieceCount placed at end
+        // Lower priority (0-2) + higher piece count = higher score
+        if (orderDirection === 'asc') {
+          orderByClause = sql`
+            CASE WHEN ${wishlistItems.pieceCount} IS NULL THEN 1 ELSE 0 END ASC,
+            (5 - COALESCE(${wishlistItems.priority}, 0)) * COALESCE(${wishlistItems.pieceCount}, 0) ASC
+          `
+        } else {
+          orderByClause = sql`
+            CASE WHEN ${wishlistItems.pieceCount} IS NULL THEN 1 ELSE 0 END ASC,
+            (5 - COALESCE(${wishlistItems.priority}, 0)) * COALESCE(${wishlistItems.pieceCount}, 0) DESC
+          `
+        }
+      } else {
+        // Standard column sort
+        const sortColumn = {
+          createdAt: wishlistItems.createdAt,
+          title: wishlistItems.title,
+          price: wishlistItems.price,
+          pieceCount: wishlistItems.pieceCount,
+          sortOrder: wishlistItems.sortOrder,
+          priority: wishlistItems.priority,
+        }[sortMode]
 
-      // Get items
+        const orderFn = orderDirection === 'desc' ? desc : asc
+        orderByClause = orderFn(sortColumn)
+      }
+
+      // Get items using raw query for smart sorting (orderBy doesn't support SQL fragments directly)
       const rows = await db.query.wishlistItems.findMany({
         where: and(...conditions),
-        orderBy: orderFn(sortColumn),
+        orderBy: orderByClause,
         limit,
         offset,
       })

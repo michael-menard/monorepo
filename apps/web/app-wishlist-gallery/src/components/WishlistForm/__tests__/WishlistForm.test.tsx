@@ -334,4 +334,66 @@ describe('WishlistForm', () => {
       expect(screen.getByLabelText(/price/i)).toHaveValue('99.99')
     })
   })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2011: MSW Integration Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('Image Upload Integration (WISH-2011 AC10)', () => {
+    it('handles file validation for upload', () => {
+      mockValidateFile.mockReturnValue('File too large')
+
+      render(<WishlistForm {...defaultProps} />)
+
+      // Verify upload area is rendered
+      expect(screen.getByText(/click to upload or drag and drop/i)).toBeInTheDocument()
+    })
+
+    it('shows upload progress state', () => {
+      mockUploadState.state = 'uploading'
+      mockUploadState.progress = 50
+
+      // Need to re-render with new mock state
+      render(<WishlistForm {...defaultProps} />)
+
+      // Form should be disabled during upload
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      expect(submitButton).toBeDisabled()
+    })
+
+    it('includes uploaded image URL in form submission', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      mockUploadState.imageUrl = 'https://s3.amazonaws.com/bucket/uploads/test.jpg'
+      mockUploadState.imageKey = 'uploads/test.jpg'
+      mockUploadState.state = 'complete'
+
+      render(<WishlistForm {...defaultProps} onSubmit={onSubmit} />)
+
+      const titleInput = screen.getByLabelText(/title/i)
+      await userEvent.type(titleInput, 'Test Item with Image')
+
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      fireEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Test Item with Image',
+            imageUrl: 'https://s3.amazonaws.com/bucket/uploads/test.jpg',
+          }),
+        )
+      })
+    })
+
+    it('disables form during image upload', () => {
+      mockUploadState.state = 'preparing'
+      mockUploadState.progress = 0
+
+      render(<WishlistForm {...defaultProps} />)
+
+      // Form inputs should be disabled
+      expect(screen.getByLabelText(/title/i)).toBeDisabled()
+      expect(screen.getByRole('button', { name: /add to wishlist/i })).toBeDisabled()
+    })
+  })
 })

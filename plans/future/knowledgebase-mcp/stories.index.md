@@ -16,6 +16,7 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 | Status | Count |
 |--------|-------|
 | completed | 9 |
+| uat | 1 |
 | ready-for-qa | 2 |
 | backlog | 3 |
 
@@ -43,6 +44,20 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 **Why it matters:** Without this, you can't import your existing knowledge.
 
 **Story Document:** plans/future/knowledgebase-mcp/ready-for-qa/KNOW-006/KNOW-006.md
+
+---
+
+### KNOW-018: Audit Logging
+
+**Status:** uat
+**Depends On:** KNOW-003
+**Feature:** Comprehensive audit logging for kb_add, kb_update, kb_delete operations with retention policy
+
+**Why it matters:** Compliance, debugging, and operational transparency require audit trails. Tracks who changed what and when.
+
+**Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-018/KNOW-018.md
+
+**Verification Result:** PASS - All 15 ACs verified, 30/30 tests pass with 96.37% coverage
 
 ---
 

@@ -85,12 +85,14 @@ describe('WishlistImageStorage', () => {
         expect(result.ok).toBe(true)
       })
 
-      it('accepts gif extension', async () => {
-        vi.mocked(apiCore.getPresignedUploadUrl).mockResolvedValue('https://presigned-url')
-
+      // WISH-2013: GIF removed from whitelist for security hardening
+      it('rejects gif extension (security hardening)', async () => {
         const result = await storage.generateUploadUrl(mockUserId, 'image.gif', 'image/gif')
 
-        expect(result.ok).toBe(true)
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+          expect(result.error).toBe('INVALID_EXTENSION')
+        }
       })
 
       it('accepts webp extension', async () => {
@@ -149,12 +151,15 @@ describe('WishlistImageStorage', () => {
         expect(result.ok).toBe(true)
       })
 
-      it('accepts image/gif MIME type', async () => {
-        vi.mocked(apiCore.getPresignedUploadUrl).mockResolvedValue('https://presigned-url')
-
+      // WISH-2013: GIF removed from whitelist for security hardening
+      it('rejects image/gif MIME type (security hardening)', async () => {
         const result = await storage.generateUploadUrl(mockUserId, 'image.gif', 'image/gif')
 
-        expect(result.ok).toBe(true)
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+          // Will fail on extension first
+          expect(['INVALID_EXTENSION', 'INVALID_MIME_TYPE']).toContain(result.error)
+        }
       })
 
       it('accepts image/webp MIME type', async () => {
@@ -262,12 +267,13 @@ describe('WishlistImageStorage', () => {
   })
 
   describe('constants', () => {
-    it('exports allowed image extensions', () => {
-      expect(ALLOWED_IMAGE_EXTENSIONS).toEqual(['jpg', 'jpeg', 'png', 'gif', 'webp'])
+    // WISH-2013: Security hardening - GIF removed from whitelist
+    it('exports allowed image extensions (without gif)', () => {
+      expect(ALLOWED_IMAGE_EXTENSIONS).toEqual(['jpg', 'jpeg', 'png', 'webp'])
     })
 
-    it('exports allowed MIME types', () => {
-      expect(ALLOWED_MIME_TYPES).toEqual(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+    it('exports allowed MIME types (without gif)', () => {
+      expect(ALLOWED_MIME_TYPES).toEqual(['image/jpeg', 'image/png', 'image/webp'])
     })
   })
 })

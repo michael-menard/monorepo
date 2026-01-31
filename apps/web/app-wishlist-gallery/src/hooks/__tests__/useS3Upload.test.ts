@@ -64,6 +64,7 @@ describe('useS3Upload', () => {
   })
 
   describe('File Validation', () => {
+    // WISH-2013: Updated error messages for security hardening
     it('validates file size', () => {
       const { result } = renderHook(() => useS3Upload())
 
@@ -72,7 +73,7 @@ describe('useS3Upload', () => {
       })
 
       const error = result.current.validateFile(largeFile)
-      expect(error).toContain('File size must be less than')
+      expect(error).toContain('File size exceeds maximum limit of')
     })
 
     it('validates MIME type', () => {
@@ -81,7 +82,7 @@ describe('useS3Upload', () => {
       const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' })
 
       const error = result.current.validateFile(invalidFile)
-      expect(error).toContain('Invalid file type')
+      expect(error).toContain('Only JPEG, PNG, and WebP images are allowed')
     })
 
     it('accepts valid files', () => {
@@ -226,6 +227,7 @@ describe('useS3Upload', () => {
   })
 
   describe('Error Handling', () => {
+    // WISH-2013: Updated error message for security hardening
     it('handles validation errors', async () => {
       const { result } = renderHook(() => useS3Upload())
 
@@ -237,7 +239,7 @@ describe('useS3Upload', () => {
 
       expect(uploadResult).toBe(null)
       expect(result.current.state).toBe('error')
-      expect(result.current.error).toContain('Invalid file type')
+      expect(result.current.error).toContain('Only JPEG, PNG, and WebP images are allowed')
     })
 
     it('handles presign request failure', async () => {
@@ -518,6 +520,137 @@ describe('useS3Upload', () => {
       expect(result.current.error).toBe(null)
       expect(result.current.imageUrl).toBe(null)
       expect(result.current.imageKey).toBe(null)
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2011: Additional Test Coverage
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('Concurrent Uploads (WISH-2011 AC8)', () => {
+    it('handles two concurrent uploads with unique keys', async () => {
+      // Track call order
+      let presignCallCount = 0
+
+      mockUnwrap.mockImplementation(async () => {
+        presignCallCount++
+        const callNumber = presignCallCount
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return {
+          presignedUrl: `https://s3.amazonaws.com/presigned-url-${callNumber}`,
+          key: `uploads/file-${callNumber}.jpg`,
+        }
+      })
+
+      mockUploadToPresignedUrl.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return { success: true as const, httpStatus: 200 }
+      })
+
+      // Create two independent hook instances
+      const { result: result1 } = renderHook(() => useS3Upload())
+      const { result: result2 } = renderHook(() => useS3Upload())
+
+      const file1 = new File(['content1'], 'test1.jpg', { type: 'image/jpeg' })
+      const file2 = new File(['content2'], 'test2.jpg', { type: 'image/jpeg' })
+
+      // Start both uploads concurrently
+      await act(async () => {
+        await Promise.all([result1.current.upload(file1), result2.current.upload(file2)])
+      })
+
+      // Both should complete successfully
+      expect(result1.current.state).toBe('complete')
+      expect(result2.current.state).toBe('complete')
+
+      // Each should have a unique key
+      expect(result1.current.imageKey).not.toBe(result2.current.imageKey)
+      expect(result1.current.imageUrl).toBeTruthy()
+      expect(result2.current.imageUrl).toBeTruthy()
+
+      // Verify both presign calls were made
+      expect(mockGetPresignUrl).toHaveBeenCalledTimes(2)
+    })
+
+    it('maintains separate state for concurrent uploads', async () => {
+      let presignCallCount = 0
+
+      // First upload succeeds, second fails
+      mockUnwrap.mockImplementation(async () => {
+        presignCallCount++
+        if (presignCallCount === 1) {
+          await new Promise(resolve => setTimeout(resolve, 10))
+          return {
+            presignedUrl: 'https://s3.amazonaws.com/presigned-url-1',
+            key: 'uploads/file-1.jpg',
+          }
+        } else {
+          throw new Error('Presign failed for second upload')
+        }
+      })
+
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result: result1 } = renderHook(() => useS3Upload())
+      const { result: result2 } = renderHook(() => useS3Upload())
+
+      const file1 = new File(['content1'], 'test1.jpg', { type: 'image/jpeg' })
+      const file2 = new File(['content2'], 'test2.jpg', { type: 'image/jpeg' })
+
+      await act(async () => {
+        await Promise.all([
+          result1.current.upload(file1),
+          result2.current.upload(file2).catch(() => {}), // Ignore error
+        ])
+      })
+
+      // First should succeed, second should fail
+      expect(result1.current.state).toBe('complete')
+      expect(result2.current.state).toBe('error')
+
+      // First should have valid URL, second should not
+      expect(result1.current.imageUrl).toBeTruthy()
+      expect(result2.current.imageUrl).toBe(null)
+    })
+  })
+
+  describe('Zero-Byte File Handling (WISH-2011 AC9)', () => {
+    it('rejects zero-byte files with validation error', async () => {
+      const { result } = renderHook(() => useS3Upload())
+
+      // Create a zero-byte file
+      const emptyFile = new File([], 'empty.jpg', { type: 'image/jpeg' })
+      expect(emptyFile.size).toBe(0)
+
+      let uploadResult
+      await act(async () => {
+        uploadResult = await result.current.upload(emptyFile)
+      })
+
+      // Should fail validation or upload
+      expect(uploadResult).toBe(null)
+
+      // Should be in error state (either validation or upload error)
+      // The hook may handle this as a validation error or let the upload fail
+      // Either way, there should be no partial state
+      expect(result.current.imageUrl).toBe(null)
+      expect(result.current.imageKey).toBe(null)
+    })
+
+    it('does not leave partial state on zero-byte file upload', async () => {
+      const { result } = renderHook(() => useS3Upload())
+
+      const emptyFile = new File([], 'empty.jpg', { type: 'image/jpeg' })
+
+      await act(async () => {
+        await result.current.upload(emptyFile)
+      })
+
+      // Verify no partial upload state exists
+      // Either idle (if validation rejected it) or error (if upload failed)
+      expect(['idle', 'error']).toContain(result.current.state)
+      expect(result.current.progress).toBe(0)
+      expect(result.current.imageUrl).toBe(null)
     })
   })
 })

@@ -501,7 +501,7 @@ export function WishlistForm({
                   {isDragOver ? 'Drop image here' : 'Click to upload or drag and drop'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JPEG, PNG, GIF, WebP up to {MAX_FILE_SIZE / 1024 / 1024}MB
+                  JPEG, PNG, WebP up to {MAX_FILE_SIZE / 1024 / 1024}MB
                 </p>
                 <p className="text-xs text-muted-foreground">You can also paste from clipboard</p>
               </div>

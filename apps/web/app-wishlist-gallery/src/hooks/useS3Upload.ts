@@ -5,6 +5,7 @@
  * Uses @repo/upload-client for the actual upload with progress tracking.
  *
  * Story wish-2002: Add Item Flow
+ * WISH-2013: Security hardening - file type and size validation
  */
 
 import { useState, useCallback, useRef } from 'react'
@@ -17,9 +18,17 @@ import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wish
 export const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 /**
- * Allowed MIME types for upload
+ * Minimum file size in bytes (1 byte - rejects empty files)
  */
-export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
+export const MIN_FILE_SIZE = 1
+
+/**
+ * Allowed MIME types for upload
+ *
+ * WISH-2013: Security hardening - removed GIF, restricted to JPEG, PNG, WebP
+ * GIF removed due to potential for embedded scripts and complexity in scanning
+ */
+export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 
 export type UploadState = 'idle' | 'preparing' | 'uploading' | 'complete' | 'error'
 
@@ -82,14 +91,18 @@ export function useS3Upload(): UseS3UploadResult {
   const [getPresignUrl] = useGetWishlistImagePresignUrlMutation()
 
   const validateFile = useCallback((file: File): string | null => {
-    // Check file size
-    if (file.size > MAX_FILE_SIZE) {
-      return `File size must be less than ${MAX_FILE_SIZE / 1024 / 1024}MB`
+    // WISH-2013 AC4: Check file size (client-side validation)
+    if (file.size < MIN_FILE_SIZE) {
+      return 'File cannot be empty (0 bytes)'
     }
 
-    // Check MIME type
+    if (file.size > MAX_FILE_SIZE) {
+      return `File size exceeds maximum limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`
+    }
+
+    // WISH-2013 AC2: Check MIME type against whitelist (client-side validation)
     if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
-      return 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP'
+      return 'Only JPEG, PNG, and WebP images are allowed'
     }
 
     return null

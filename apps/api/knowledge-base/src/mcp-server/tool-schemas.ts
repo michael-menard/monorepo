@@ -576,6 +576,214 @@ Response:
   inputSchema: zodToMcpSchema(KbHealthInputSchema),
 }
 
+// ============================================================================
+// Audit Tool Definitions (KNOW-018)
+// ============================================================================
+
+/**
+ * Input schema for kb_audit_by_entry tool.
+ *
+ * @see KNOW-018 AC6 for query by entry requirements
+ */
+export const KbAuditByEntryInputSchema = z.object({
+  /** UUID of the entry to query audit logs for */
+  entry_id: z.string().uuid(),
+
+  /** Maximum number of results (default 100, max 1000) */
+  limit: z.number().int().min(1).max(1000).optional().default(100),
+
+  /** Number of results to skip (default 0) */
+  offset: z.number().int().min(0).optional().default(0),
+})
+export type KbAuditByEntryInput = z.infer<typeof KbAuditByEntryInputSchema>
+
+/**
+ * Input schema for kb_audit_query tool.
+ *
+ * @see KNOW-018 AC7-AC8 for time range and filter requirements
+ */
+export const KbAuditQueryInputSchema = z
+  .object({
+    /** Start of time range (ISO 8601) */
+    start_date: z.coerce.date(),
+
+    /** End of time range (ISO 8601) */
+    end_date: z.coerce.date(),
+
+    /** Filter by operation type (optional) */
+    operation: z.enum(['add', 'update', 'delete']).optional(),
+
+    /** Maximum number of results (default 100, max 1000) */
+    limit: z.number().int().min(1).max(1000).optional().default(100),
+
+    /** Number of results to skip (default 0) */
+    offset: z.number().int().min(0).optional().default(0),
+  })
+  .refine(data => data.end_date >= data.start_date, {
+    message: 'end_date must be after start_date',
+    path: ['end_date'],
+  })
+export type KbAuditQueryInput = z.infer<typeof KbAuditQueryInputSchema>
+
+/**
+ * Input schema for kb_audit_retention_cleanup tool.
+ *
+ * @see KNOW-018 AC9-AC10 for retention requirements
+ */
+export const KbAuditRetentionInputSchema = z.object({
+  /** Delete logs older than this many days (default 90, min 1) */
+  retention_days: z.number().int().min(1).optional().default(90),
+
+  /** If true, report count without deleting (default false) */
+  dry_run: z.boolean().optional().default(false),
+})
+export type KbAuditRetentionInput = z.infer<typeof KbAuditRetentionInputSchema>
+
+/**
+ * kb_audit_by_entry tool definition.
+ *
+ * Query audit logs for a specific knowledge entry.
+ *
+ * @see KNOW-018 AC6 for query by entry requirements
+ */
+export const kbAuditByEntryToolDefinition: McpToolDefinition = {
+  name: 'kb_audit_by_entry',
+  description: `Get full audit history for a specific knowledge base entry.
+
+Returns all audit events for the specified entry, sorted by timestamp (oldest first).
+Use this to trace the complete history of changes to an entry.
+
+Parameters:
+- entry_id (required): UUID of the entry to query audit logs for
+- limit (optional): Maximum results to return (default 100, max 1000)
+- offset (optional): Number of results to skip for pagination (default 0)
+
+Returns: Object with results array and metadata
+{
+  "results": [
+    {
+      "id": "audit-uuid",
+      "entry_id": "entry-uuid",
+      "operation": "add|update|delete",
+      "previous_value": {...} | null,
+      "new_value": {...} | null,
+      "timestamp": "2026-01-25T10:30:00Z",
+      "user_context": {...} | null
+    }
+  ],
+  "metadata": {
+    "total": 5,
+    "limit": 100,
+    "offset": 0,
+    "correlation_id": "..."
+  }
+}
+
+Example:
+{
+  "entry_id": "123e4567-e89b-12d3-a456-426614174000"
+}
+
+Example with pagination:
+{
+  "entry_id": "123e4567-e89b-12d3-a456-426614174000",
+  "limit": 10,
+  "offset": 20
+}`,
+  inputSchema: zodToMcpSchema(KbAuditByEntryInputSchema),
+}
+
+/**
+ * kb_audit_query tool definition.
+ *
+ * Query audit logs by time range with optional filters.
+ *
+ * @see KNOW-018 AC7-AC8 for time range and filter requirements
+ */
+export const kbAuditQueryToolDefinition: McpToolDefinition = {
+  name: 'kb_audit_query',
+  description: `Query audit logs by time range and optional filters.
+
+Returns audit events within the specified date range, sorted by timestamp (newest first).
+Use this for compliance reporting, security investigations, or usage analysis.
+
+Parameters:
+- start_date (required): Start of time range (ISO 8601 format)
+- end_date (required): End of time range (ISO 8601 format, must be after start_date)
+- operation (optional): Filter by operation type ('add', 'update', or 'delete')
+- limit (optional): Maximum results to return (default 100, max 1000)
+- offset (optional): Number of results to skip for pagination (default 0)
+
+Returns: Object with results array and metadata
+{
+  "results": [...],
+  "metadata": {
+    "total": 150,
+    "limit": 100,
+    "offset": 0,
+    "correlation_id": "..."
+  }
+}
+
+Example (query January 2026):
+{
+  "start_date": "2026-01-01T00:00:00Z",
+  "end_date": "2026-01-31T23:59:59Z"
+}
+
+Example (filter by operation type):
+{
+  "start_date": "2026-01-01T00:00:00Z",
+  "end_date": "2026-01-31T23:59:59Z",
+  "operation": "delete"
+}`,
+  inputSchema: zodToMcpSchema(KbAuditQueryInputSchema),
+}
+
+/**
+ * kb_audit_retention_cleanup tool definition.
+ *
+ * Manually trigger retention policy cleanup.
+ *
+ * @see KNOW-018 AC9-AC10 for retention requirements
+ */
+export const kbAuditRetentionToolDefinition: McpToolDefinition = {
+  name: 'kb_audit_retention_cleanup',
+  description: `Manually trigger audit log retention policy cleanup (admin tool).
+
+Deletes audit log entries older than the specified retention period.
+Uses batch deletion (10k rows at a time) to avoid long table locks.
+
+Parameters:
+- retention_days (optional): Delete logs older than this many days (default 90, min 1)
+- dry_run (optional): If true, report count without deleting (default false)
+
+Returns: Cleanup result with statistics
+{
+  "deleted_count": 5000,
+  "retention_days": 90,
+  "cutoff_date": "2025-10-24T00:00:00Z",
+  "dry_run": false,
+  "duration_ms": 2500,
+  "batches_processed": 1,
+  "correlation_id": "..."
+}
+
+Example (dry run to see count):
+{
+  "dry_run": true
+}
+
+Example (cleanup with custom retention):
+{
+  "retention_days": 30
+}
+
+Example (default cleanup):
+{}`,
+  inputSchema: zodToMcpSchema(KbAuditRetentionInputSchema),
+}
+
 /**
  * All MCP tool definitions.
  */
@@ -592,6 +800,10 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbRebuildEmbeddingsToolDefinition,
   kbStatsToolDefinition,
   kbHealthToolDefinition,
+  // Audit tools (KNOW-018)
+  kbAuditByEntryToolDefinition,
+  kbAuditQueryToolDefinition,
+  kbAuditRetentionToolDefinition,
 ]
 
 /**

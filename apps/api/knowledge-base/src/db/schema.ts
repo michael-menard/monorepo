@@ -12,7 +12,7 @@
  * @see KNOW-002 for embedding client implementation
  */
 
-import { pgTable, text, timestamp, uuid, index, customType } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, index, customType, jsonb } from 'drizzle-orm/pg-core'
 
 /**
  * Custom Drizzle column type for pgvector VECTOR columns.
@@ -193,8 +193,95 @@ export const embeddingCache = pgTable(
   }),
 )
 
+/**
+ * Audit Log Table
+ *
+ * Stores audit trail of all knowledge entry modifications (add, update, delete).
+ * Used for compliance, debugging, and operational transparency.
+ *
+ * Design decisions:
+ * - entry_id uses ON DELETE SET NULL to preserve audit history after entry deletion
+ * - previous_value and new_value store JSONB snapshots (embedding excluded)
+ * - user_context stores MCP session metadata when available
+ *
+ * @see KNOW-018 for audit logging requirements
+ */
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    /** Unique identifier for the audit log entry */
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /**
+     * ID of the knowledge entry being audited.
+     *
+     * Nullable because:
+     * - ON DELETE SET NULL preserves audit history after entry deletion
+     * - Allows audit log to outlive the entry for compliance requirements
+     */
+    entryId: uuid('entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
+
+    /**
+     * Type of operation performed.
+     *
+     * Values: 'add' | 'update' | 'delete'
+     */
+    operation: text('operation').notNull(),
+
+    /**
+     * Entry state before the operation.
+     *
+     * - null for 'add' operations (no previous state)
+     * - JSONB snapshot for 'update' and 'delete' operations
+     * - Embedding vectors are excluded (too large)
+     */
+    previousValue: jsonb('previous_value'),
+
+    /**
+     * Entry state after the operation.
+     *
+     * - JSONB snapshot for 'add' and 'update' operations
+     * - null for 'delete' operations (no new state)
+     * - Embedding vectors are excluded (too large)
+     */
+    newValue: jsonb('new_value'),
+
+    /**
+     * When the operation occurred.
+     *
+     * UTC timestamp for consistent ordering and retention policy.
+     */
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+
+    /**
+     * MCP session context.
+     *
+     * Stores available metadata:
+     * - correlation_id (for request tracing)
+     * - client info (if available from MCP)
+     * - session metadata
+     */
+    userContext: jsonb('user_context'),
+
+    /** When the audit log entry was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    /** Index for querying audit history by entry */
+    entryIdIdx: index('audit_log_entry_id_idx').on(table.entryId),
+
+    /** Index for time range queries and retention cleanup */
+    timestampIdx: index('audit_log_timestamp_idx').on(table.timestamp),
+
+    /** Composite index for sorted history retrieval by entry */
+    entryTimestampIdx: index('audit_log_entry_timestamp_idx').on(table.entryId, table.timestamp),
+  }),
+)
+
 // Export table types for use in queries
 export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert
 export type EmbeddingCacheEntry = typeof embeddingCache.$inferSelect
 export type NewEmbeddingCacheEntry = typeof embeddingCache.$inferInsert
+export type AuditLogEntry = typeof auditLog.$inferSelect
+export type NewAuditLogEntry = typeof auditLog.$inferInsert

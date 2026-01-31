@@ -38,10 +38,19 @@ import {
   type KbSearchDeps,
   type KbGetRelatedDeps,
 } from '../search/index.js'
+import {
+  AuditLogger,
+  queryAuditByEntry,
+  queryAuditByTimeRange,
+  runRetentionCleanup,
+  parseAuditConfig,
+  type AuditUserContext,
+} from '../audit/index.js'
 import { knowledgeEntries } from '../db/schema.js'
 import { computeContentHash } from '../embedding-client/cache-manager.js'
-import { createMcpLogger } from './logger.js'
+import { checkAccess, cacheGet, cacheSet, type AgentRole } from './access-control.js'
 import { errorToToolResult, type McpToolResult } from './error-handling.js'
+import { createMcpLogger } from './logger.js'
 import {
   type ToolCallContext,
   MAX_TOOL_CALL_DEPTH,
@@ -54,8 +63,10 @@ import {
   KbRebuildEmbeddingsInputSchema,
   KbStatsInputSchema,
   KbHealthInputSchema,
+  KbAuditByEntryInputSchema,
+  KbAuditQueryInputSchema,
+  KbAuditRetentionInputSchema,
 } from './tool-schemas.js'
-import { checkAccess, cacheGet, cacheSet, type AgentRole } from './access-control.js'
 
 const logger = createMcpLogger('tool-handlers')
 
@@ -208,6 +219,7 @@ function checkCircularDependency(context: ToolCallContext | undefined, toolName:
  * Handle kb_add tool invocation.
  *
  * Creates a new knowledge entry with automatic embedding generation.
+ * Also creates audit log entry for the add operation (KNOW-018).
  *
  * @param input - Raw input from MCP request
  * @param deps - Database and embedding client dependencies
@@ -241,6 +253,18 @@ export async function handleKbAdd(
     const domainLogicStart = Date.now()
     const entryId = await kb_add(validated, deps)
     const domainLogicTimeMs = Date.now() - domainLogicStart
+
+    // Audit logging (KNOW-018): Log the add operation
+    const auditConfig = parseAuditConfig()
+    if (auditConfig.enabled) {
+      // Fetch the created entry for audit snapshot
+      const createdEntry = await kb_get({ id: entryId }, deps)
+      if (createdEntry) {
+        const auditLogger = new AuditLogger({ db: deps.db })
+        const userContext: AuditUserContext = { correlation_id: correlationId }
+        await auditLogger.logAdd(entryId, createdEntry, userContext)
+      }
+    }
 
     const totalTimeMs = Date.now() - startTime
 
@@ -365,6 +389,7 @@ export async function handleKbGet(
  *
  * Updates an existing knowledge entry.
  * Includes embedding_regenerated flag in response (KNOW-0053 AC8).
+ * Also creates audit log entry for the update operation (KNOW-018).
  *
  * @param input - Raw input from MCP request
  * @param deps - Database and embedding client dependencies
@@ -394,19 +419,27 @@ export async function handleKbUpdate(
     // Validate input with Zod schema
     const validated = KbUpdateInputSchema.parse(input)
 
-    // Fetch existing entry to detect embedding regeneration (KNOW-0053 AC8)
+    // Fetch existing entry BEFORE update for audit logging (KNOW-018) and embedding regeneration check
+    const existingEntry = await kb_get({ id: validated.id }, deps)
+
+    // Detect embedding regeneration (KNOW-0053 AC8)
     let embeddingRegenerated = false
-    if (validated.content !== undefined) {
-      const existingEntry = await kb_get({ id: validated.id }, deps)
-      if (existingEntry) {
-        const existingHash = computeContentHash(existingEntry.content)
-        const newHash = computeContentHash(validated.content)
-        embeddingRegenerated = existingHash !== newHash
-      }
+    if (validated.content !== undefined && existingEntry) {
+      const existingHash = computeContentHash(existingEntry.content)
+      const newHash = computeContentHash(validated.content)
+      embeddingRegenerated = existingHash !== newHash
     }
 
     // Call CRUD operation
     const entry = await kb_update(validated, deps)
+
+    // Audit logging (KNOW-018): Log the update operation with before/after snapshots
+    const auditConfig = parseAuditConfig()
+    if (auditConfig.enabled && existingEntry) {
+      const auditLogger = new AuditLogger({ db: deps.db })
+      const userContext: AuditUserContext = { correlation_id: correlationId }
+      await auditLogger.logUpdate(validated.id, existingEntry, entry, userContext)
+    }
 
     const queryTimeMs = Date.now() - startTime
 
@@ -455,6 +488,7 @@ export async function handleKbUpdate(
  * Handle kb_delete tool invocation.
  *
  * Deletes a knowledge entry by ID. Idempotent operation.
+ * Also creates audit log entry for the delete operation (KNOW-018).
  *
  * @param input - Raw input from MCP request
  * @param deps - Database dependency
@@ -480,8 +514,19 @@ export async function handleKbDelete(
     // Validate input with Zod schema
     const validated = KbDeleteInputSchema.parse(input)
 
+    // Fetch existing entry BEFORE delete for audit logging (KNOW-018)
+    const existingEntry = await kb_get({ id: validated.id }, deps)
+
     // Call CRUD operation
     await kb_delete(validated, deps)
+
+    // Audit logging (KNOW-018): Log the delete operation with deleted entry snapshot
+    const auditConfig = parseAuditConfig()
+    if (auditConfig.enabled && existingEntry) {
+      const auditLogger = new AuditLogger({ db: deps.db })
+      const userContext: AuditUserContext = { correlation_id: correlationId }
+      await auditLogger.logDelete(validated.id, existingEntry, userContext)
+    }
 
     const queryTimeMs = Date.now() - startTime
 
@@ -1415,6 +1460,227 @@ export async function handleKbHealth(
   }
 }
 
+// ============================================================================
+// Audit Tool Handlers (KNOW-018)
+// ============================================================================
+
+/**
+ * Handle kb_audit_by_entry tool invocation.
+ *
+ * Query audit logs for a specific knowledge entry.
+ *
+ * @see KNOW-018 AC6 for query by entry requirements
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with audit log entries
+ */
+export async function handleKbAuditByEntry(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  // Log invocation
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_audit_by_entry tool invoked', {
+    correlation_id: correlationId,
+    entry_id: inputObj?.entry_id,
+    limit: inputObj?.limit,
+    offset: inputObj?.offset,
+  })
+
+  // Call access control stub (future-proofs for KNOW-039)
+  const agentRole: AgentRole = 'all'
+  checkAccess('kb_audit_by_entry', agentRole)
+
+  try {
+    // Validate input with Zod schema
+    const validated = KbAuditByEntryInputSchema.parse(input)
+
+    // Execute query
+    const result = await queryAuditByEntry(validated, { db: deps.db }, correlationId)
+
+    const queryTimeMs = Date.now() - startTime
+
+    logger.info('kb_audit_by_entry succeeded', {
+      correlation_id: correlationId,
+      entry_id: validated.entry_id,
+      result_count: result.results.length,
+      total: result.metadata.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_audit_by_entry failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_audit_query tool invocation.
+ *
+ * Query audit logs by time range with optional filters.
+ *
+ * @see KNOW-018 AC7-AC8 for time range and filter requirements
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with audit log entries
+ */
+export async function handleKbAuditQuery(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  // Log invocation
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_audit_query tool invoked', {
+    correlation_id: correlationId,
+    start_date: inputObj?.start_date,
+    end_date: inputObj?.end_date,
+    operation: inputObj?.operation,
+    limit: inputObj?.limit,
+    offset: inputObj?.offset,
+  })
+
+  // Call access control stub (future-proofs for KNOW-039)
+  const agentRole: AgentRole = 'all'
+  checkAccess('kb_audit_query', agentRole)
+
+  try {
+    // Validate input with Zod schema
+    const validated = KbAuditQueryInputSchema.parse(input)
+
+    // Execute query
+    const result = await queryAuditByTimeRange(validated, { db: deps.db }, correlationId)
+
+    const queryTimeMs = Date.now() - startTime
+
+    logger.info('kb_audit_query succeeded', {
+      correlation_id: correlationId,
+      start_date: validated.start_date.toISOString(),
+      end_date: validated.end_date.toISOString(),
+      operation: validated.operation,
+      result_count: result.results.length,
+      total: result.metadata.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_audit_query failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_audit_retention_cleanup tool invocation.
+ *
+ * Manually trigger retention policy cleanup.
+ *
+ * @see KNOW-018 AC9-AC10 for retention requirements
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with cleanup statistics
+ */
+export async function handleKbAuditRetentionCleanup(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  // Log invocation
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_audit_retention_cleanup tool invoked', {
+    correlation_id: correlationId,
+    retention_days: inputObj?.retention_days,
+    dry_run: inputObj?.dry_run,
+  })
+
+  // Call access control stub (future-proofs for KNOW-039)
+  const agentRole: AgentRole = 'all'
+  checkAccess('kb_audit_retention_cleanup', agentRole)
+
+  try {
+    // Validate input with Zod schema
+    const validated = KbAuditRetentionInputSchema.parse(input)
+
+    // Execute cleanup
+    const result = await runRetentionCleanup(validated, { db: deps.db }, correlationId)
+
+    const queryTimeMs = Date.now() - startTime
+
+    logger.info('kb_audit_retention_cleanup succeeded', {
+      correlation_id: correlationId,
+      deleted_count: result.deleted_count,
+      retention_days: result.retention_days,
+      dry_run: result.dry_run,
+      batches_processed: result.batches_processed,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_audit_retention_cleanup failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -1440,6 +1706,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_rebuild_embeddings: handleKbRebuildEmbeddings,
   kb_stats: handleKbStats,
   kb_health: handleKbHealth,
+  // Audit tools (KNOW-018)
+  kb_audit_by_entry: handleKbAuditByEntry,
+  kb_audit_query: handleKbAuditQuery,
+  kb_audit_retention_cleanup: handleKbAuditRetentionCleanup,
 }
 
 /**

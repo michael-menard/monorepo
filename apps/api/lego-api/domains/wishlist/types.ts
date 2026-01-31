@@ -105,6 +105,25 @@ export type UpdateWishlistItemInput = z.infer<typeof UpdateWishlistItemInputSche
  * Supports search, filtering, sorting, and pagination.
  * Aligned with @repo/api-client WishlistQueryParamsSchema.
  */
+/**
+ * Sort field enum for wishlist queries.
+ * Includes standard column sorts and smart sorting algorithms (WISH-2014).
+ */
+export const WishlistSortFieldSchema = z.enum([
+  'createdAt',
+  'title',
+  'price',
+  'pieceCount',
+  'sortOrder',
+  'priority',
+  // Smart sorting algorithms (WISH-2014)
+  'bestValue', // price / pieceCount ratio (lowest first)
+  'expiringSoon', // oldest release date first
+  'hiddenGems', // (5 - priority) * pieceCount (highest first)
+])
+
+export type WishlistSortField = z.infer<typeof WishlistSortFieldSchema>
+
 export const ListWishlistQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -112,9 +131,7 @@ export const ListWishlistQuerySchema = z.object({
   store: z.string().max(100).optional(),
   tags: z.string().optional(), // comma-separated
   priority: z.coerce.number().int().min(0).max(5).optional(),
-  sort: z
-    .enum(['createdAt', 'title', 'price', 'pieceCount', 'sortOrder', 'priority'])
-    .default('sortOrder'),
+  sort: WishlistSortFieldSchema.default('sortOrder'),
   order: z.enum(['asc', 'desc']).default('asc'),
 })
 
@@ -148,13 +165,22 @@ export type ReorderWishlistInput = z.infer<typeof ReorderWishlistInputSchema>
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
- * Request schema for presigned URL generation (POST /api/wishlist/presign).
+ * Maximum file size in bytes (10MB)
+ * WISH-2013: Consistent with storage adapter limit
+ */
+export const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+/**
+ * Request schema for presigned URL generation (GET /api/wishlist/images/presign).
  * Used for S3 image uploads.
  * Aligned with @repo/api-client PresignRequestSchema.
+ *
+ * WISH-2013: Added optional fileSize for server-side validation
  */
 export const PresignRequestSchema = z.object({
   fileName: z.string().min(1, 'File name is required'),
   mimeType: z.string().min(1, 'MIME type is required'),
+  fileSize: z.coerce.number().int().positive().optional(),
 })
 
 export type PresignRequest = z.infer<typeof PresignRequestSchema>

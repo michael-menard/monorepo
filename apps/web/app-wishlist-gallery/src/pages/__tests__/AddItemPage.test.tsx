@@ -286,4 +286,82 @@ describe('AddItemPage', () => {
       expect(backLink).toHaveAttribute('href', '/')
     })
   })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2011: MSW Integration Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('Full Add Item Flow with Image (WISH-2011 AC11)', () => {
+    it('handles form submission with image upload data', async () => {
+      const mockItem: WishlistItem = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: 'user-123',
+        title: 'Test Item with Image',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: 'https://s3.amazonaws.com/lego-moc-bucket/uploads/test.jpg',
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      }
+
+      mockUnwrap.mockResolvedValue(mockItem)
+
+      render(<AddItemPage />)
+
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockAddWishlistItem).toHaveBeenCalled()
+      })
+    })
+
+    it('displays success and navigates after submission', async () => {
+      const { showSuccessToast } = await import('@repo/app-component-library')
+      const mockItem: WishlistItem = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: 'user-123',
+        title: 'Test Item',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: 'https://s3.amazonaws.com/lego-moc-bucket/uploads/test.jpg',
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      }
+
+      mockUnwrap.mockResolvedValue(mockItem)
+
+      render(<AddItemPage />)
+
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        expect(showSuccessToast).toHaveBeenCalled()
+        expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
+      })
+    })
+  })
 })

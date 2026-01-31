@@ -147,6 +147,8 @@ wishlist.put('/reorder', async c => {
 
 /**
  * GET /images/presign - Get presigned URL for image upload
+ *
+ * WISH-2013: Enhanced with file size validation (AC3, AC18)
  */
 wishlist.get('/images/presign', async c => {
   const userId = c.get('userId')
@@ -156,20 +158,45 @@ wishlist.get('/images/presign', async c => {
     return c.json({ error: 'Validation failed', details: query.error.flatten() }, 400)
   }
 
-  const { fileName, mimeType } = query.data
+  const { fileName, mimeType, fileSize } = query.data
 
-  const result = await wishlistService.generateImageUploadUrl(userId, fileName, mimeType)
+  const result = await wishlistService.generateImageUploadUrl(userId, fileName, mimeType, fileSize)
 
   if (!result.ok) {
+    // WISH-2013 AC16: Security audit logging handled in storage adapter
     const status =
-      result.error === 'INVALID_EXTENSION' || result.error === 'INVALID_MIME_TYPE' ? 400 : 500
+      result.error === 'INVALID_EXTENSION' ||
+      result.error === 'INVALID_MIME_TYPE' ||
+      result.error === 'FILE_TOO_LARGE' ||
+      result.error === 'FILE_TOO_SMALL'
+        ? 400
+        : 500
+
     const message =
       result.error === 'INVALID_EXTENSION'
-        ? 'Invalid file extension. Allowed: jpg, jpeg, png, gif, webp'
+        ? 'Invalid file extension. Allowed: jpg, jpeg, png, webp'
         : result.error === 'INVALID_MIME_TYPE'
-          ? 'Invalid MIME type. Allowed: image/jpeg, image/png, image/gif, image/webp'
-          : 'Failed to generate presigned URL'
-    return c.json({ error: result.error, message }, status)
+          ? 'Unsupported file type. Allowed: image/jpeg, image/png, image/webp'
+          : result.error === 'FILE_TOO_LARGE'
+            ? 'File size exceeds maximum limit of 10MB'
+            : result.error === 'FILE_TOO_SMALL'
+              ? 'File cannot be empty (0 bytes)'
+              : 'Failed to generate presigned URL'
+
+    // Return structured error response for client handling
+    return c.json(
+      {
+        error: result.error,
+        message,
+        ...(result.error === 'INVALID_MIME_TYPE' && {
+          allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        }),
+        ...(result.error === 'FILE_TOO_LARGE' && {
+          maxSizeBytes: 10 * 1024 * 1024,
+        }),
+      },
+      status,
+    )
   }
 
   return c.json(result.data)
@@ -192,7 +219,14 @@ wishlist.get('/:id', async c => {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
     // Log authorization failures for audit trail (AC14)
     if (status === 403 || status === 404) {
-      logAuthorizationFailure(userId, itemId, '/wishlist/:id', 'GET', status as 403 | 404, result.error)
+      logAuthorizationFailure(
+        userId,
+        itemId,
+        '/wishlist/:id',
+        'GET',
+        status as 403 | 404,
+        result.error,
+      )
     }
     return c.json({ error: result.error }, status)
   }
@@ -241,7 +275,14 @@ wishlist.put('/:id', async c => {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
     // Log authorization failures for audit trail (AC14)
     if (status === 403 || status === 404) {
-      logAuthorizationFailure(userId, itemId, '/wishlist/:id', 'PUT', status as 403 | 404, result.error)
+      logAuthorizationFailure(
+        userId,
+        itemId,
+        '/wishlist/:id',
+        'PUT',
+        status as 403 | 404,
+        result.error,
+      )
     }
     return c.json({ error: result.error }, status)
   }
@@ -262,7 +303,14 @@ wishlist.delete('/:id', async c => {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
     // Log authorization failures for audit trail (AC14)
     if (status === 403 || status === 404) {
-      logAuthorizationFailure(userId, itemId, '/wishlist/:id', 'DELETE', status as 403 | 404, result.error)
+      logAuthorizationFailure(
+        userId,
+        itemId,
+        '/wishlist/:id',
+        'DELETE',
+        status as 403 | 404,
+        result.error,
+      )
     }
     return c.json({ error: result.error }, status)
   }
@@ -309,7 +357,14 @@ wishlist.post('/:id/purchased', async c => {
             : 500
     // Log authorization failures for audit trail (AC14)
     if (status === 403 || status === 404) {
-      logAuthorizationFailure(userId, itemId, '/wishlist/:id/purchased', 'POST', status as 403 | 404, result.error)
+      logAuthorizationFailure(
+        userId,
+        itemId,
+        '/wishlist/:id/purchased',
+        'POST',
+        status as 403 | 404,
+        result.error,
+      )
     }
     return c.json({ error: result.error }, status)
   }

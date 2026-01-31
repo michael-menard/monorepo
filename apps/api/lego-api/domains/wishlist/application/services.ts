@@ -1,5 +1,6 @@
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err } from '@repo/api-core'
+import { logger } from '@repo/logger'
 import type { WishlistRepository, WishlistImageStorage } from '../ports/index.js'
 import type {
   WishlistItem,
@@ -41,17 +42,25 @@ export function createWishlistService(deps: WishlistServiceDeps) {
 
     /**
      * Generate a presigned URL for uploading an image
+     *
+     * WISH-2013: Added fileSize parameter for server-side validation
      */
     async generateImageUploadUrl(
       userId: string,
       fileName: string,
       mimeType: string,
-    ): Promise<Result<{ presignedUrl: string; key: string; expiresIn: number }, PresignError>> {
+      fileSize?: number,
+    ): Promise<
+      Result<
+        { presignedUrl: string; key: string; expiresIn: number },
+        PresignError | 'FILE_TOO_LARGE' | 'FILE_TOO_SMALL'
+      >
+    > {
       if (!imageStorage) {
         return err('PRESIGN_FAILED')
       }
 
-      return imageStorage.generateUploadUrl(userId, fileName, mimeType)
+      return imageStorage.generateUploadUrl(userId, fileName, mimeType, fileSize)
     },
 
     /**
@@ -99,7 +108,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
 
         return ok(item)
       } catch (error) {
-        console.error('Failed to create wishlist item:', error)
+        logger.error('Failed to create wishlist item:', error)
         return err('DB_ERROR')
       }
     },
@@ -128,6 +137,11 @@ export function createWishlistService(deps: WishlistServiceDeps) {
 
     /**
      * List wishlist items for a user
+     *
+     * WISH-2014: Added smart sorting algorithms
+     * - bestValue: Sort by price/pieceCount ratio (lowest first)
+     * - expiringSoon: Sort by oldest release date first
+     * - hiddenGems: Sort by (5 - priority) * pieceCount (highest first)
      */
     async listItems(
       userId: string,
@@ -137,7 +151,16 @@ export function createWishlistService(deps: WishlistServiceDeps) {
         store?: string
         tags?: string[]
         priority?: number
-        sort?: 'createdAt' | 'title' | 'price' | 'pieceCount' | 'sortOrder' | 'priority'
+        sort?:
+          | 'createdAt'
+          | 'title'
+          | 'price'
+          | 'pieceCount'
+          | 'sortOrder'
+          | 'priority'
+          | 'bestValue'
+          | 'expiringSoon'
+          | 'hiddenGems'
         order?: 'asc' | 'desc'
       },
     ): Promise<PaginatedResult<WishlistItem>> {
@@ -238,7 +261,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
     ): Promise<Result<SetItem, WishlistError>> {
       // Check if SetsService is available
       if (!setsService) {
-        console.error('SetsService not available for purchase operation')
+        logger.error('SetsService not available for purchase operation')
         return err('SET_CREATION_FAILED')
       }
 
@@ -276,7 +299,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
       // Step 3: Create Set item (point of no return)
       const setResult = await setsService.createSet(userId, setInput)
       if (!setResult.ok) {
-        console.error('Failed to create Set item:', setResult.error)
+        logger.error('Failed to create Set item:', setResult.error)
         return err('SET_CREATION_FAILED')
       }
 
@@ -290,7 +313,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
             const destKey = `sets/${userId}/${newSet.id}/main.jpg`
             const copyResult = await imageStorage.copyImage(sourceKey, destKey)
             if (!copyResult.ok) {
-              console.warn(
+              logger.warn(
                 `Failed to copy image for purchase (set ${newSet.id}): ${copyResult.error}`,
               )
               // Continue - Set was created, image copy is best effort
@@ -299,7 +322,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
             // we'll let the user upload images separately via the Sets UI
           }
         } catch (error) {
-          console.warn('Error during image copy for purchase:', error)
+          logger.warn('Error during image copy for purchase:', error)
           // Continue - Set was created, image copy is best effort
         }
       }
@@ -309,7 +332,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
         try {
           const deleteResult = await wishlistRepo.delete(itemId)
           if (!deleteResult.ok) {
-            console.warn(
+            logger.warn(
               `Failed to delete wishlist item after purchase (item ${itemId}): ${deleteResult.error}`,
             )
             // Continue - Set was created, deletion is best effort
@@ -323,7 +346,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
             }
           }
         } catch (error) {
-          console.warn('Error during wishlist item cleanup after purchase:', error)
+          logger.warn('Error during wishlist item cleanup after purchase:', error)
           // Continue - Set was created, cleanup is best effort
         }
       }
