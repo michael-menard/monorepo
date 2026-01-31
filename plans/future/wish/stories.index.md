@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-30T23:30:00Z"
+updated_at: "2026-01-31T00:00:00Z"
 ---
 
 # WISH Stories Index
@@ -15,16 +15,16 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 9 |
+| completed | 13 |
 | in-progress | 0 |
 | review | 0 |
-| ready-for-qa | 2 |
+| ready-for-qa | 1 |
 | uat | 0 |
 | in-qa | 0 |
-| backlog | 16 |
-| elaboration | 1 |
-| ready-to-work | 16 |
-| pending | 14 |
+| backlog | 19 |
+| elaboration | 0 |
+| ready-to-work | 15 |
+| pending | 17 |
 | created | 1 |
 | deferred | 1 |
 | BLOCKED | 1 |
@@ -968,6 +968,44 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 ---
 
+## WISH-2014: Smart Sorting Algorithms
+
+**Status:** completed
+**Depends On:** none
+**Follow-up From:** WISH-2001
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Add three smart sorting modes to help users discover wishlist items in meaningful ways beyond basic date/price sorting. These sorting modes leverage existing database fields (price, pieceCount, releaseDate, priority) to provide value-based, time-based, and discovery-based sorting.
+
+**Features:**
+- Best Value: Sort by price-per-piece ratio (lowest first)
+- Expiring Soon: Sort by release date (oldest first)
+- Hidden Gems: Sort by (5 - priority) * pieceCount (highest score first)
+
+**Endpoints Affected:**
+- `GET /api/wishlist` - Extended with new sort parameter values: bestValue, expiringSoon, hiddenGems
+
+**Packages Affected:**
+- `apps/api/lego-api/domains/wishlist/` - Sort algorithms in service/repository
+- `packages/core/api-client/src/schemas/wishlist.ts` - Extended sort enum
+- `apps/web/app-wishlist-gallery/src/pages/main-page.tsx` - Sort dropdown with new options
+
+**Acceptance Criteria:** 18 ACs covering backend algorithms, frontend dropdown, schema synchronization, error handling, performance, and accessibility.
+
+**Complexity:** Medium
+
+**Effort:** 3 points
+
+**Priority:** P2 (UX enhancement)
+
+**Code Review Verdict:** PASS (iteration 3) - All 6 review workers passed (lint, style, syntax, security, typecheck, build).
+
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2014/WISH-2014.md`
+
+---
+
 ## WISH-2015: Sort Mode Persistence (localStorage)
 
 **Status:** completed
@@ -1007,8 +1045,8 @@ Automatically persist wishlist sort mode preference to localStorage and restore 
 
 ## WISH-2016: Image Optimization - Automatic Resizing, Compression, and Watermarking
 
-**Status:** ready-to-work
-**Depends On:** WISH-2013
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2013
 **Phase:** 4 - Performance & UX Polish
 
@@ -1119,7 +1157,7 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 ## WISH-20171: Backend Combined Filter + Sort Queries
 
 **Status:** ready-to-work
-**Depends On:** WISH-2014
+**Depends On:** none
 **Split From:** WISH-2017
 **Phase:** 6 - Advanced Features
 
@@ -1215,8 +1253,8 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 
 ## WISH-2019: Redis infrastructure setup and migration from in-memory cache
 
-**Status:** ready-to-work
-**Depends On:** WISH-2009
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 2 - Infrastructure
 
@@ -1251,7 +1289,7 @@ Migrate feature flag caching from in-memory Map to Redis for production-ready di
 - AC 16: REDIS_URL environment variable paths (apps/api/lego-api/.env.local)
 - Path inconsistencies corrected in Scope and Reuse Plan sections
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2019/WISH-2019.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2019/WISH-2019.md`
 
 ### Source
 
@@ -1407,7 +1445,7 @@ Follow-up from QA Elaboration of WISH-2008 (Enhancement Opportunity #9)
 
 ## WISH-2022: Client-side Image Compression
 
-**Status:** ready-to-work
+**Status:** completed
 **Depends On:** WISH-2002
 **Follow-up From:** WISH-2002
 **Phase:** 4 - UX Polish
@@ -1438,7 +1476,7 @@ Automatically compress images on the client side before uploading to S3, reducin
 
 **Priority:** P2 (UX enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/elaboration/WISH-2022/WISH-2022.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2022/WISH-2022.md`
 
 ### Source
 
@@ -1833,6 +1871,71 @@ Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Findi
 **Category:** Enhancement Opportunity
 **Impact:** High (automated guardrails for schema evolution)
 **Effort:** Medium (CI workflow + detection logic + integration with existing tool)
+
+---
+
+## WISH-20410: Visual Dependency Graph UI for Schema Impact Analysis
+
+**Status:** pending
+**Depends On:** WISH-20210
+**Follow-up From:** WISH-20210
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Add an interactive visual dependency graph to the Schema Change Impact Analysis Tool (WISH-20210) that displays table → service → endpoint → component relationships as a hierarchical graph, enabling developers to quickly understand multi-layer impacts from schema changes.
+
+**Features:**
+- `--graph` flag for `pnpm db:impact-analysis` command
+- Interactive HTML graph with hierarchical layout (table as root node)
+- Color-coded node types (Database=cyan, Repository=blue, Service=green, Route=orange, Schema=purple, Component=pink, Test=gray)
+- Edge types showing dependency relationships (solid=direct, dashed=type import)
+- Interactive features: hover tooltips, click to highlight downstream dependencies, toggle test files, zoom/pan
+- Static SVG export option for embedding in documentation
+
+**Output Files:**
+- Interactive HTML graph: `impact-reports/{timestamp}-{table}-{operation}-graph.html`
+- Static SVG graph (optional): `impact-reports/{timestamp}-{table}-{operation}-graph.svg`
+
+**Packages Affected:**
+- `packages/backend/database-schema/scripts/impact-analysis.ts` - Extend CLI with `--graph` flag
+- `packages/backend/database-schema/src/analysis/graph-builder.ts` - New dependency graph construction module
+- `packages/backend/database-schema/src/renderers/graph-renderer.ts` - New HTML/SVG rendering module
+- `packages/backend/database-schema/package.json` - Add vis-network or D3.js dependency
+
+**Technical Implementation:**
+- AST analysis enhancement: Track dependency relationships (not just affected files)
+- Graph data structure: Nodes (files) + Edges (dependencies)
+- Rendering: vis-network for interactive HTML, headless SVG generation
+- Self-contained output: Embedded JavaScript/CSS (no external CDN dependencies)
+
+**Acceptance Criteria:** 22 ACs covering CLI integration, graph structure, interactive features, dependency analysis, output quality, test coverage, and documentation
+
+**Complexity:** Medium (graph builder + HTML renderer + AST enhancement)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Developer experience enhancement for schema impact visualization)
+
+**Goal:** Make complex dependency chains immediately clear through visual graph representation, improving developer understanding of schema change impacts.
+
+**Benefits:**
+- Quick identification of full impact scope at a glance
+- Clear visualization of direct vs indirect dependencies
+- Improved communication of impact to stakeholders
+- Better understanding of update order (database → backend → frontend)
+
+**Story File:** `plans/future/wish/backlog/WISH-20410/WISH-20410.md`
+
+### Source
+
+Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Finding #2)
+
+**Original Finding:** "Add visual dependency graph UI showing table → service → endpoint relationships"
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves developer understanding of complex dependency chains)
+**Effort:** Medium (graph construction + interactive rendering + CLI integration)
 
 ---
 
@@ -2362,57 +2465,143 @@ Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Findi
 
 ---
 
-## WISH-20220: Schedule UI/UX (admin dashboard for schedule management)
+## WISH-20500: Schedule Management Dashboard (Core UI)
 
 **Status:** backlog
 **Depends On:** WISH-2119
-**Follow-up From:** WISH-2119
+**Split From:** WISH-20220
 **Phase:** 3 - Infrastructure
 
 ### Scope
 
-Provide admins with a visual, user-friendly dashboard for creating, viewing, and canceling scheduled flag updates. Implements calendar view, timeline visualization, schedule creation forms, and real-time status updates with polling.
+Provide the foundational dashboard page and RTK Query API integration for schedule management. Implements page scaffolding, view toggle (calendar/timeline), auto-refresh polling, authorization enforcement, and error handling.
 
 **Features:**
 - Schedule management dashboard page at `/admin/feature-flags/:flagKey/schedules`
-- Calendar view showing all schedules with color-coded markers (pending, applied, failed, cancelled)
-- Timeline view with chronological schedule list and countdown timers
-- CreateScheduleForm modal with date/time picker and validation
-- Schedule cards with cancel functionality for pending schedules
-- Auto-refresh polling (60-second interval) for real-time status updates
-
-**Pages Affected:**
-- `/admin/feature-flags/:flagKey/schedules` - Schedule management dashboard (new)
-- `/admin/feature-flags/:flagKey` - Add "Schedules" tab to flag detail page
-- `/admin/feature-flags` - Add "Manage Schedules" button to flag list
+- View toggle between calendar and timeline views (preference saved to localStorage)
+- RTK Query endpoints: getSchedules, createSchedule, cancelSchedule
+- Auto-refresh polling (60-second interval)
+- Authorization enforcement (admin-only access)
+- Error handling (404, 403, network errors)
 
 **Packages Affected:**
 - `apps/web/admin-dashboard/src/pages/ScheduleManagementPage.tsx` - Main dashboard page (new)
-- `apps/web/admin-dashboard/src/components/ScheduleCalendar/` - Calendar view component (new)
+- `packages/core/api-client/src/rtk/feature-flags-api.ts` - RTK Query endpoints (new)
+
+**Acceptance Criteria:** 9 ACs covering dashboard navigation, view toggle, auto-refresh, authorization, error handling, and testing.
+
+**Complexity:** Medium (Core foundation + RTK Query + admin dashboard scaffolding)
+
+**Effort:** 2 points
+
+**Priority:** P1 (Foundation for WISH-20510 and WISH-20520)
+
+### Split Context
+
+This is part 1 of 3 from the split of WISH-20220. Original story had 20 ACs (2.5x over threshold).
+
+**Split Allocation:**
+- WISH-20500 (this story): Core Dashboard - 2 points
+- WISH-20510: Timeline & Cards - 1 point (depends on this)
+- WISH-20520: Calendar View - 2 points (depends on this)
+
+**Story File:** `plans/future/wish/backlog/WISH-20500/WISH-20500.md`
+
+---
+
+## WISH-20510: Schedule Timeline & Cards
+
+**Status:** backlog
+**Depends On:** WISH-20500
+**Split From:** WISH-20220
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Build the timeline view and schedule card components for the schedule management dashboard. Implements chronological schedule list, expandable schedule cards with status badges, cancel functionality for pending schedules, and countdown timers.
+
+**Features:**
+- ScheduleTimeline component (chronological list with past/future separation)
+- ScheduleCard component (details, status badges, countdown timers)
+- Cancel pending schedule flow (confirmation modal + RTK Query mutation)
+- Test fixtures for mock schedule data (mockPendingSchedule, mockAppliedSchedule, mockFailedSchedule)
+- Performance optimization (single interval for all countdown timers)
+
+**Packages Affected:**
 - `apps/web/admin-dashboard/src/components/ScheduleTimeline/` - Timeline visualization (new)
-- `apps/web/admin-dashboard/src/components/CreateScheduleForm/` - Schedule form (new)
 - `apps/web/admin-dashboard/src/components/ScheduleCard/` - Schedule card (new)
-- `packages/core/api-client/src/rtk/feature-flags-api.ts` - RTK Query endpoints (extend)
+- `apps/web/admin-dashboard/src/hooks/useCountdown.ts` - Countdown timer hook (new)
 
-**Acceptance Criteria:** 20 ACs covering dashboard navigation, calendar/timeline views, schedule creation, cancel functionality, auto-refresh, authorization, and accessibility.
+**Acceptance Criteria:** 6 ACs covering timeline rendering, card rendering, cancel functionality, and testing.
 
-**Complexity:** Medium (UI components + calendar/timeline + forms + RTK Query integration)
+**Complexity:** Low-Medium (Timeline + cards + cancel flow)
 
-**Effort:** 3 points
+**Effort:** 1 point
 
-**Priority:** P2 (Admin UX enhancement for Phase 3)
+**Priority:** P2 (Depends on WISH-20500)
 
-### Source
+### Split Context
 
-Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #6)
+This is part 2 of 3 from the split of WISH-20220. Depends on WISH-20500 (core dashboard + RTK Query API).
 
-**Original Finding:** "Admin dashboard for schedule management - Deferred to Phase 3+ follow-up story"
+**Split Allocation:**
+- WISH-20500: Core Dashboard - 2 points (prerequisite)
+- WISH-20510 (this story): Timeline & Cards - 1 point
+- WISH-20520: Calendar View - 2 points (can run in parallel after WISH-20500)
 
-**Category:** Enhancement Opportunity
-**Impact:** Medium (improves admin experience for managing scheduled flag updates)
-**Effort:** Medium (admin UI components + calendar/timeline views + integration with backend endpoints)
+**Story File:** `plans/future/wish/backlog/WISH-20510/WISH-20510.md`
 
-**Story File:** `plans/future/wish/backlog/WISH-20220/WISH-20220.md`
+---
+
+## WISH-20520: Schedule Calendar View
+
+**Status:** backlog
+**Depends On:** WISH-20500
+**Split From:** WISH-20220
+**Phase:** 3 - Infrastructure
+
+### Scope
+
+Build the calendar view and schedule creation form for the schedule management dashboard. Implements full month calendar with color-coded schedule markers, schedule creation form with validation, keyboard navigation, and screen reader support.
+
+**Features:**
+- ScheduleCalendar component (full month view, color-coded markers)
+- CreateScheduleForm modal (date/time picker, validation, submission)
+- Click date to pre-fill creation form
+- Navigate between months (prev/next buttons)
+- Keyboard navigation (arrow keys, Enter, Tab)
+- Screen reader support (aria-labels, aria-live regions)
+- Focus management (modal trap, restoration)
+
+**Packages Affected:**
+- `apps/web/admin-dashboard/src/components/ScheduleCalendar/` - Calendar view (new)
+- `apps/web/admin-dashboard/src/components/CreateScheduleForm/` - Schedule form (new)
+- `packages/core/app-component-library/_primitives/Slider/` - Radix UI slider (new)
+
+**New Dependencies:**
+- `react-calendar` (~15 KB, better a11y)
+- `react-datepicker` (~20 KB)
+- `date-fns` (tree-shakable date formatting)
+- `@radix-ui/react-slider` (rollout percentage slider)
+
+**Acceptance Criteria:** 8 ACs covering calendar rendering, form validation, form submission, keyboard navigation, screen reader support, focus management, and testing.
+
+**Complexity:** Medium (Calendar + form + a11y + new libraries)
+
+**Effort:** 2 points
+
+**Priority:** P2 (Depends on WISH-20500)
+
+### Split Context
+
+This is part 3 of 3 from the split of WISH-20220. Depends on WISH-20500 (core dashboard + RTK Query API).
+
+**Split Allocation:**
+- WISH-20500: Core Dashboard - 2 points (prerequisite)
+- WISH-20510: Timeline & Cards - 1 point (can run in parallel after WISH-20500)
+- WISH-20520 (this story): Calendar View - 2 points
+
+**Story File:** `plans/future/wish/backlog/WISH-20520/WISH-20520.md`
 
 ---
 
@@ -2587,7 +2776,7 @@ Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #3)
 ## WISH-20280: Audit Logging for Flag Schedule Operations
 
 **Status:** backlog
-**Depends On:** WISH-2119, WISH-2019
+**Depends On:** WISH-2119
 **Follow-up From:** WISH-2119
 **Phase:** 3 - Infrastructure
 
