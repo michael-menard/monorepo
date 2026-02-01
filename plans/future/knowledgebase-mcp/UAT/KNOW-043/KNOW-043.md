@@ -1,7 +1,7 @@
 ---
 story_id: KNOW-043
 title: Lessons Learned Migration
-status: in-qa
+status: uat
 epic: knowledgebase-mcp
 created: 2026-01-31
 updated: 2026-01-31
