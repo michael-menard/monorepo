@@ -1,9 +1,9 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.2.0
+updated: 2026-01-31
+version: 3.3.0
 type: orchestrator
-agents: ["pm-story-generation-leader.agent.md", "pm-story-adhoc-leader.agent.md", "pm-story-followup-leader.agent.md", "pm-story-split-leader.agent.md"]
+agents: ["pm-story-seed-agent.agent.md", "pm-story-generation-leader.agent.md", "pm-story-adhoc-leader.agent.md", "pm-story-followup-leader.agent.md", "pm-story-split-leader.agent.md"]
 ---
 
 /pm-story <action> [args]
@@ -102,6 +102,27 @@ Report if no unique ID found within range (Y/Z max=9, XX max=99).
 
 ## Phases
 
+### Phase 0: Story Seed (Pre-Generation)
+
+Before spawning the leader agent, the orchestrator runs the Story Seed phase to:
+1. Load the most recent active baseline reality
+2. Retrieve relevant codebase context for the story scope
+3. Generate initial story structure (seed) grounded in reality
+4. Pass seed to subsequent leader phases
+
+| Phase | Agent | Model | Signal |
+|-------|-------|-------|--------|
+| Seed | `pm-story-seed-agent.agent.md` | sonnet | STORY-SEED COMPLETE |
+
+**Seed Phase Flow:**
+1. Find most recent baseline: `plans/baselines/BASELINE-REALITY-*.md` (sorted by date, take latest with `status: active`)
+2. If no active baseline exists, continue with warning (seed will flag missing context)
+3. Spawn seed agent with baseline path and story context
+4. Wait for `STORY-SEED COMPLETE` or handle `STORY-SEED BLOCKED`
+5. Pass seed output to leader agent
+
+### Phase 1+: Leader Phases
+
 | Action | Agent | Model | Signal |
 |--------|-------|-------|--------|
 | generate | `pm-story-generation-leader.agent.md` | sonnet | PM COMPLETE |
@@ -192,7 +213,81 @@ Example from WISH.stories.index.md:
 - WISH-0400: Draft, no blockers → THIS IS NEXT
 ```
 
-### Step 2: Spawn Leader
+### Step 2: Story Seed Phase (Phase 0)
+
+Before spawning the main leader, run the Story Seed phase to ground the story in current reality.
+
+**2a. Find Most Recent Baseline**
+
+```
+# Scan for baseline files
+baseline_files = glob("plans/baselines/BASELINE-REALITY-*.md")
+
+# Sort by date in filename (descending)
+baseline_files.sort(by=date, desc=true)
+
+# Find first active baseline
+for file in baseline_files:
+    if frontmatter(file).status == "active":
+        baseline_path = file
+        break
+
+# If no active baseline, use most recent draft or null
+if not baseline_path:
+    if baseline_files.length > 0:
+        baseline_path = baseline_files[0]  # Most recent (may be draft)
+        log_warning("Using non-active baseline: {baseline_path}")
+    else:
+        baseline_path = null
+        log_warning("No baseline reality file found")
+```
+
+**2b. Derive Output Directory**
+
+```
+# From index path, derive where story artifacts will be written
+# Example: plans/stories/WISH.stories.index.md → plans/stories/WISH/{STORY_ID}/
+output_dir = {INDEX_DIR}/{PREFIX}/{STORY_ID}/
+```
+
+**2c. Spawn Seed Agent**
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: sonnet
+  description: "Story Seed {STORY_ID}"
+  prompt: |
+    Read instructions: .claude/agents/pm-story-seed-agent.agent.md
+
+    CONTEXT:
+    Baseline path: {BASELINE_PATH}  # May be null if no baseline exists
+    Index path: {INDEX_PATH}
+    Story ID: {STORY_ID}
+    Output directory: {OUTPUT_DIR}
+
+    Story entry from index:
+    <paste relevant story entry from index>
+```
+
+**2d. Handle Seed Response**
+
+```
+if response contains "STORY-SEED BLOCKED":
+    report "PM BLOCKED: Story seed failed - {reason}"
+    STOP
+
+if response contains "STORY-SEED COMPLETE WITH WARNINGS":
+    log_warnings(response.warnings)
+    seed_path = "{OUTPUT_DIR}/_pm/STORY-SEED.md"
+    continue to Step 3
+
+if response contains "STORY-SEED COMPLETE":
+    seed_path = "{OUTPUT_DIR}/_pm/STORY-SEED.md"
+    continue to Step 3
+```
+
+### Step 3: Spawn Leader
 
 ```
 Task tool:
@@ -207,9 +302,20 @@ Task tool:
     Index path: {INDEX_PATH}
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}  # Already resolved from "next" if applicable
+    Seed path: {SEED_PATH}  # Path to story seed generated in Phase 0
+
+    IMPORTANT: Read the story seed at {SEED_PATH} before spawning workers.
+    The seed contains:
+    - Reality context (what exists, in-progress work, constraints)
+    - Retrieved codebase context (reuse candidates, related code)
+    - Conflict analysis (overlapping work, pattern violations)
+    - Initial story structure (title, description, initial ACs)
+    - Recommendations for each worker (Test Plan, UI/UX, Feasibility)
+
+    Use the seed to inform worker context and ensure grounded output.
 ```
 
-### Step 3: Handle Response
+### Step 4: Handle Response
 
 - Wait for completion signal
 - `PM COMPLETE` → report success, suggest next step

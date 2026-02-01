@@ -199,8 +199,15 @@ export const rateLimitPost = createMiddleware(async (c, next) => {
  *
  * Use this single middleware for both pre and post checks.
  * Applies rate limiting check before handler and records failures after.
+ *
+ * Set DISABLE_RATE_LIMIT=true to bypass rate limiting (for testing).
  */
 export const rateLimit = createMiddleware(async (c, next) => {
+  // Bypass rate limiting if disabled (for testing)
+  if (process.env.DISABLE_RATE_LIMIT === 'true') {
+    return next()
+  }
+
   const ip = getClientIp(c.req.raw)
 
   // Pre-handler: Check if rate limited

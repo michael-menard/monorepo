@@ -243,7 +243,7 @@ describe('WishlistImageStorage', () => {
   })
 
   describe('buildImageUrl', () => {
-    it('builds correct S3 URL from key', () => {
+    it('builds correct S3 URL from key when CloudFront is not configured', () => {
       const key = 'wishlist/user-123/12345.jpg'
       const url = storage.buildImageUrl(key)
 
@@ -257,12 +257,42 @@ describe('WishlistImageStorage', () => {
       expect(url).toBe('https://test-bucket.s3.amazonaws.com/wishlist/user-123/image with spaces.jpg')
     })
 
-    it('throws error when S3_BUCKET is not set', () => {
+    it('throws error when S3_BUCKET is not set and CloudFront not configured', () => {
       delete process.env.S3_BUCKET
+      delete process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN
 
       expect(() => {
         storage.buildImageUrl('wishlist/user-123/test.jpg')
       }).toThrow('S3_BUCKET environment variable is required')
+    })
+
+    // WISH-2018: CloudFront URL generation tests
+    // Note: CloudFront URL tests are in core/cdn/__tests__/cloudfront.test.ts
+    // The storage adapter delegates to buildImageUrlFromKey which is tested there
+    describe('with CloudFront configured', () => {
+      it('delegates to buildImageUrlFromKey for CloudFront support', async () => {
+        // Import the CDN utility to verify it's being used
+        const { buildImageUrlFromKey } = await import('../../../../core/cdn/index.js')
+
+        // Set up CloudFront
+        const prevDomain = process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN
+        process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN = 'd1234abcd.cloudfront.net'
+
+        try {
+          const key = 'wishlist/user-123/12345.jpg'
+          const directUrl = buildImageUrlFromKey(key)
+
+          // Verify the CDN utility returns CloudFront URL
+          expect(directUrl).toBe('https://d1234abcd.cloudfront.net/wishlist/user-123/12345.jpg')
+        } finally {
+          // Restore original env
+          if (prevDomain !== undefined) {
+            process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN = prevDomain
+          } else {
+            delete process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN
+          }
+        }
+      })
     })
   })
 

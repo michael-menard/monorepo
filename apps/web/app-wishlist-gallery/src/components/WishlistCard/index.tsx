@@ -9,12 +9,14 @@
  * Story WISH-2016: Image Optimization (responsive images)
  */
 
+import React, { forwardRef } from 'react'
 import { z } from 'zod'
 import { GalleryCard } from '@repo/gallery'
 import { Badge, Button } from '@repo/app-component-library'
 import { Star, Puzzle, Check, Trash2 } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { getBestImageUrl } from '../ResponsiveImage/index.js'
+import { generateItemAriaLabel, focusRingClasses } from '../../utils/a11y'
 
 /**
  * WishlistCard props schema
@@ -30,9 +32,21 @@ export const WishlistCardPropsSchema = z.object({
   onDelete: z.function().optional(),
   /** Additional CSS classes */
   className: z.string().optional(),
+  /** WISH-2006: Tab index for keyboard navigation */
+  tabIndex: z.number().optional(),
+  /** WISH-2006: Keyboard event handler */
+  onKeyDown: z.function().optional(),
+  /** WISH-2006: Whether this item is currently selected */
+  isSelected: z.boolean().optional(),
+  /** WISH-2006: Index in the gallery for screen reader label */
+  index: z.number().optional(),
+  /** WISH-2006: Total items in gallery for screen reader label */
+  totalItems: z.number().optional(),
 })
 
-export type WishlistCardProps = z.infer<typeof WishlistCardPropsSchema>
+export type WishlistCardProps = z.infer<typeof WishlistCardPropsSchema> & {
+  onKeyDown?: (e: React.KeyboardEvent) => void
+}
 
 /**
  * Store badge colors
@@ -85,8 +99,23 @@ const formatPrice = (price: string | null, currency: string): string => {
  * - Piece count with icon
  * - Priority stars indicator
  * - Got It button (WISH-2042)
+ * - WISH-2006: Keyboard navigation support and ARIA labels
  */
-export function WishlistCard({ item, onClick, onGotIt, onDelete, className }: WishlistCardProps) {
+export const WishlistCard = forwardRef<HTMLDivElement, WishlistCardProps>(function WishlistCard(
+  {
+    item,
+    onClick,
+    onGotIt,
+    onDelete,
+    className,
+    tabIndex,
+    onKeyDown,
+    isSelected,
+    index,
+    totalItems,
+  },
+  ref,
+) {
   const {
     id,
     title,
@@ -187,19 +216,59 @@ export function WishlistCard({ item, onClick, onGotIt, onDelete, className }: Wi
   // WISH-2016: Use optimized thumbnail for gallery display
   const imageSrc = getBestImageUrl(imageVariants, 'thumbnail', imageUrl)
 
+  // WISH-2006: Generate accessible label for screen readers
+  const ariaLabel =
+    index !== undefined && totalItems !== undefined
+      ? generateItemAriaLabel(item, index, totalItems)
+      : title
+
+  // WISH-2006: Combine base classes with focus ring for keyboard navigation
+  const cardClassName = className ? `${className} ${focusRingClasses}` : focusRingClasses
+
+  // WISH-2006: Handle click on wrapper for accessibility
+  const handleWrapperClick = onClick
+    ? (e: React.MouseEvent) => {
+        // Don't trigger if clicking on a button inside
+        if ((e.target as HTMLElement).closest('button')) {
+          return
+        }
+        onClick()
+      }
+    : undefined
+
+  // WISH-2006: Handle keyboard activation
+  const handleWrapperKeyDown = (e: React.KeyboardEvent) => {
+    // Handle Enter/Space for activation
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault()
+      onClick()
+    }
+    // Pass through other keyboard events
+    onKeyDown?.(e)
+  }
+
   return (
-    <GalleryCard
-      image={{
-        src: imageSrc,
-        alt: title,
-        aspectRatio: '4/3',
-      }}
-      title={title}
-      subtitle={subtitle}
-      metadata={metadata}
-      onClick={onClick}
-      className={className}
+    <div
+      ref={ref}
+      role="button"
+      tabIndex={tabIndex ?? (onClick ? 0 : undefined)}
+      aria-label={ariaLabel}
+      aria-selected={isSelected}
+      onClick={handleWrapperClick}
+      onKeyDown={handleWrapperKeyDown}
       data-testid={`wishlist-card-${id}`}
-    />
+      className={cardClassName}
+    >
+      <GalleryCard
+        image={{
+          src: imageSrc,
+          alt: title,
+          aspectRatio: '4/3',
+        }}
+        title={title}
+        subtitle={subtitle}
+        metadata={metadata}
+      />
+    </div>
   )
-}
+})

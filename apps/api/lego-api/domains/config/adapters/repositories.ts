@@ -20,43 +20,21 @@ import type {
  * Uses type assertions for Drizzle db/schema since exact types are complex.
  */
 
-// Define minimal types for Drizzle operations
-interface DrizzleDb {
-  select(): { from(table: unknown): { where(condition: unknown): Promise<unknown[]> } }
-  insert(table: unknown): { values(data: unknown): { returning(): Promise<unknown[]> } }
-  update(table: unknown): {
-    set(data: unknown): { where(condition: unknown): { returning(): Promise<unknown[]> } }
-  }
-  delete(table: unknown): { where(condition: unknown): { returning(): Promise<unknown[]> } }
-}
-
-interface DrizzleTable {
-  flagKey: unknown
-  environment: unknown
-}
-
-interface DrizzleUserOverrideTable {
-  id: unknown
-  flagId: unknown
-  userId: unknown
-  overrideType: unknown
-  reason: unknown
-  createdBy: unknown
-  createdAt: unknown
-}
-
-interface DrizzleSchema {
-  featureFlags: DrizzleTable
-  featureFlagUserOverrides?: DrizzleUserOverrideTable
-}
+/**
+ * Type alias for Drizzle operations
+ *
+ * Uses 'any' to avoid complex Drizzle type inference issues with eq().
+ * TypeScript's noImplicitAny: false allows this pattern per codebase config.
+ */
+type DrizzleAny = any
 
 /**
  * Create a feature flag repository adapter
  */
 export function createFeatureFlagRepository(db: unknown, schema: unknown): FeatureFlagRepository {
-  const typedDb = db as DrizzleDb
-  const typedSchema = schema as DrizzleSchema
-  const { featureFlags } = typedSchema
+  const typedDb = db as DrizzleAny
+  const typedSchema = schema as DrizzleAny
+  const featureFlags = typedSchema.featureFlags
   const DEFAULT_ENVIRONMENT = 'production'
 
   /**
@@ -206,10 +184,6 @@ export function createFeatureFlagRepository(db: unknown, schema: unknown): Featu
  * Database adapter for user override CRUD operations.
  * Uses type assertions for Drizzle db/schema since exact types are complex.
  */
-
-// Extended Drizzle DB interface with all needed operations
-
-type DrizzleAny = any
 
 /**
  * Create a user override repository adapter

@@ -15,18 +15,18 @@ test.describe('Purchase Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to wishlist gallery
     await page.goto('/wishlist')
-    // Wait for gallery to load
-    await page.waitForSelector('[data-testid="wishlist-gallery"]', { timeout: 10000 })
+    // Wait for gallery to load - filter bar indicates the page has rendered
+    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 10000 })
   })
 
   test.describe('AC10-15: Modal Opening and Defaults', () => {
     test('AC10: GotItModal opens when user triggers "Got It" action', async ({ page }) => {
       // Find a wishlist card and click its "Got It" button
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
 
       // Click "Got It" button
-      const gotItButton = card.locator('[data-testid="got-it-button"]')
+      const gotItButton = card.locator('[data-testid="wishlist-card-got-it"]')
       await gotItButton.click()
 
       // Modal should be visible
@@ -36,11 +36,11 @@ test.describe('Purchase Flow', () => {
 
     test('AC11: Modal displays item title in description', async ({ page }) => {
       // Get card title before opening modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
-      const cardTitle = await card.locator('[data-testid="wishlist-card-title"]').textContent()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+      const cardTitle = await card.locator('[data-testid="gallery-card-title"]').textContent()
 
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Modal description should contain item title
       await expect(page.getByText(new RegExp(cardTitle!, 'i'))).toBeVisible()
@@ -48,9 +48,9 @@ test.describe('Purchase Flow', () => {
 
     test('AC12: Price field pre-filled from wishlist item price', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Price input should have a value (pre-filled)
       const priceInput = page.locator('[data-testid="price-paid-input"]')
@@ -62,9 +62,9 @@ test.describe('Purchase Flow', () => {
 
     test('AC13: Quantity defaults to 1', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Quantity input should default to 1
       const quantityInput = page.locator('[data-testid="quantity-input"]')
@@ -73,9 +73,9 @@ test.describe('Purchase Flow', () => {
 
     test('AC14: Purchase date defaults to today', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Date input should have today's date
       const dateInput = page.locator('[data-testid="purchase-date-input"]')
@@ -85,9 +85,9 @@ test.describe('Purchase Flow', () => {
 
     test('AC15: "Keep on wishlist" checkbox defaults to unchecked', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Checkbox should be unchecked
       const checkbox = page.locator('[data-testid="keep-on-wishlist-checkbox"]')
@@ -98,9 +98,9 @@ test.describe('Purchase Flow', () => {
   test.describe('AC16-17: Form Validation', () => {
     test('AC16: Form validates price/tax/shipping format (decimal only)', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Enter invalid price format
       const priceInput = page.locator('[data-testid="price-paid-input"]')
@@ -115,9 +115,9 @@ test.describe('Purchase Flow', () => {
 
     test('AC17: Form validates quantity >= 1', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Enter invalid quantity
       const quantityInput = page.locator('[data-testid="quantity-input"]')
@@ -156,9 +156,9 @@ test.describe('Purchase Flow', () => {
       })
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Fill form
       await page.locator('[data-testid="price-paid-input"]').fill('99.99')
@@ -189,9 +189,9 @@ test.describe('Purchase Flow', () => {
       })
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Submit
       await page.locator('[data-testid="submit-button"]').click()
@@ -209,9 +209,9 @@ test.describe('Purchase Flow', () => {
       })
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Submit
       await page.locator('[data-testid="submit-button"]').click()
@@ -231,12 +231,12 @@ test.describe('Purchase Flow', () => {
       })
 
       // Get initial card count
-      const initialCount = await page.locator('[data-testid="wishlist-card"]').count()
+      const initialCount = await page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').count()
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Ensure keepOnWishlist is unchecked (default)
       const checkbox = page.locator('[data-testid="keep-on-wishlist-checkbox"]')
@@ -249,7 +249,7 @@ test.describe('Purchase Flow', () => {
       await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 5000 })
 
       // Card count should decrease
-      await expect(page.locator('[data-testid="wishlist-card"]')).toHaveCount(initialCount - 1, {
+      await expect(page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')).toHaveCount(initialCount - 1, {
         timeout: 5000,
       })
     })
@@ -263,12 +263,12 @@ test.describe('Purchase Flow', () => {
       })
 
       // Get initial card count
-      const initialCount = await page.locator('[data-testid="wishlist-card"]').count()
+      const initialCount = await page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').count()
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Check keepOnWishlist
       const checkbox = page.locator('[data-testid="keep-on-wishlist-checkbox"]')
@@ -282,7 +282,7 @@ test.describe('Purchase Flow', () => {
       await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 5000 })
 
       // Card count should remain the same
-      await expect(page.locator('[data-testid="wishlist-card"]')).toHaveCount(initialCount, {
+      await expect(page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')).toHaveCount(initialCount, {
         timeout: 5000,
       })
     })
@@ -300,9 +300,9 @@ test.describe('Purchase Flow', () => {
       })
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Submit
       await page.locator('[data-testid="submit-button"]').click()

@@ -1,6 +1,5 @@
+import { z } from 'zod'
 import { createMiddleware } from 'hono/factory'
-import type { FeatureFlagsResponse } from '../domains/config/types.js'
-import type { FeatureFlagService } from '../domains/config/application/services.js'
 
 /**
  * Feature Flag Middleware (WISH-2009 - AC8, AC21)
@@ -8,6 +7,21 @@ import type { FeatureFlagService } from '../domains/config/application/services.
  * Injects evaluated feature flags into request context.
  * Flags are evaluated once per request using the authenticated user's ID.
  */
+
+/**
+ * Feature flags response schema - inline definition to avoid relative parent imports.
+ * Maps flag keys to their evaluated boolean state.
+ */
+const FeatureFlagsResponseSchema = z.record(z.string(), z.boolean())
+type FeatureFlagsResponse = z.infer<typeof FeatureFlagsResponseSchema>
+
+/**
+ * Feature flag service interface - minimal interface for middleware dependency injection.
+ * Avoids importing from parent directory to comply with ESLint import rules.
+ */
+interface FeatureFlagService {
+  getAllFlags(userId?: string, environment?: string): Promise<FeatureFlagsResponse>
+}
 
 // Extend Hono context with feature flags
 declare module 'hono' {

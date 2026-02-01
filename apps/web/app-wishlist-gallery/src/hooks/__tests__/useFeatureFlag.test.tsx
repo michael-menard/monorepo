@@ -2,17 +2,15 @@
  * useFeatureFlag Hook Tests (WISH-2009 - AC12)
  *
  * Tests for useFeatureFlag and useFeatureFlags hooks.
+ * Uses MSW handlers for API mocking (handlers.ts).
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useFeatureFlag, useFeatureFlags } from '../useFeatureFlag'
 import { FeatureFlagProvider } from '../../contexts/FeatureFlagContext'
 import type { ReactNode } from 'react'
-
-// Mock fetch globally
-const mockFetch = vi.fn()
-globalThis.fetch = mockFetch
+import { setMockFeatureFlags, resetFeatureFlagMocks } from '../../test/mocks/handlers'
 
 // Wrapper component with provider
 function createWrapper(initialFlags = {}) {
@@ -23,16 +21,16 @@ function createWrapper(initialFlags = {}) {
 
 describe('useFeatureFlag', () => {
   beforeEach(() => {
-    mockFetch.mockReset()
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          'wishlist-gallery': true,
-          'wishlist-add-item': false,
-          'wishlist-edit-item': true,
-        }),
+    resetFeatureFlagMocks()
+    setMockFeatureFlags({
+      'wishlist-gallery': true,
+      'wishlist-add-item': false,
+      'wishlist-edit-item': true,
     })
+  })
+
+  afterEach(() => {
+    resetFeatureFlagMocks()
   })
 
   // ─────────────────────────────────────────────────────────────────────
@@ -95,15 +93,15 @@ describe('useFeatureFlag', () => {
 
 describe('useFeatureFlags', () => {
   beforeEach(() => {
-    mockFetch.mockReset()
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          'wishlist-gallery': true,
-          'wishlist-add-item': false,
-        }),
+    resetFeatureFlagMocks()
+    setMockFeatureFlags({
+      'wishlist-gallery': true,
+      'wishlist-add-item': false,
     })
+  })
+
+  afterEach(() => {
+    resetFeatureFlagMocks()
   })
 
   // ─────────────────────────────────────────────────────────────────────
@@ -133,13 +131,9 @@ describe('useFeatureFlags', () => {
   })
 
   it('updates flags after fetch', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          'wishlist-gallery': true,
-          'new-flag': true,
-        }),
+    setMockFeatureFlags({
+      'wishlist-gallery': true,
+      'new-flag': true,
     })
 
     const { result } = renderHook(() => useFeatureFlags(), {

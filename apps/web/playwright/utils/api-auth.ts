@@ -2,10 +2,15 @@
  * API Authentication Utilities
  *
  * Manages authentication tokens for API tests.
- * Supports mocked tokens for unit tests and real tokens for integration tests.
+ * Uses real Cognito authentication for integration tests.
  *
  * @module utils/api-auth
  */
+
+import {
+  CognitoIdentityProviderClient,
+  AdminInitiateAuthCommand,
+} from '@aws-sdk/client-cognito-identity-provider'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -15,6 +20,7 @@ export type TestUser = {
   id: string
   email: string
   name: string
+  password: string
 }
 
 export type AuthTokens = {
@@ -24,42 +30,182 @@ export type AuthTokens = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test User Data
+// Configuration
 // ─────────────────────────────────────────────────────────────────────────────
+
+const COGNITO_CONFIG = {
+  userPoolId: process.env.COGNITO_USER_POOL_ID || 'us-east-1_vtW1Slo3o',
+  clientId: process.env.COGNITO_CLIENT_ID || '4527ui02h63b7c0ra7vs00gua5',
+  region: process.env.AWS_REGION || 'us-east-1',
+}
+
+const cognitoClient = new CognitoIdentityProviderClient({
+  region: COGNITO_CONFIG.region,
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test User Data (South Park Characters)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TEST_PASSWORD = '0Xcoffee?'
 
 /**
  * Pre-defined test users for API testing
+ * These users must be seeded in Cognito using: pnpm --filter playwright seed:users
  */
 export const TEST_USERS = {
-  /** Primary test user for most tests */
+  /** Stan Marsh - Primary test user for most tests */
   primary: {
-    id: 'test-user-001-0000-0000-000000000001',
-    email: 'test-user-1@test.example.com',
-    name: 'Test User One',
+    id: '', // Will be populated from Cognito
+    email: 'stan.marsh@southpark.test',
+    name: 'Stan Marsh',
+    password: TEST_PASSWORD,
   },
-  /** Secondary test user for cross-user access tests */
+  /** Kyle Broflovski - Secondary test user for cross-user access tests */
   secondary: {
-    id: 'test-user-002-0000-0000-000000000002',
-    email: 'test-user-2@test.example.com',
-    name: 'Test User Two',
+    id: '', // Will be populated from Cognito
+    email: 'kyle.broflovski@southpark.test',
+    name: 'Kyle Broflovski',
+    password: TEST_PASSWORD,
   },
-  /** Admin user (if applicable) */
+  /** Eric Cartman - For edge case and conflict tests */
+  cartman: {
+    id: '',
+    email: 'eric.cartman@southpark.test',
+    name: 'Eric Cartman',
+    password: TEST_PASSWORD,
+  },
+  /** Kenny McCormick - For additional user tests */
+  kenny: {
+    id: '',
+    email: 'kenny.mccormick@southpark.test',
+    name: 'Kenny McCormick',
+    password: TEST_PASSWORD,
+  },
+  /** Butters Stotch - For additional user tests */
+  butters: {
+    id: '',
+    email: 'butters.stotch@southpark.test',
+    name: 'Butters Stotch',
+    password: TEST_PASSWORD,
+  },
+  /** Randy Marsh - Admin user (if applicable) */
   admin: {
-    id: 'admin-user-000-0000-0000-000000000000',
-    email: 'admin@test.example.com',
-    name: 'Admin User',
+    id: '',
+    email: 'randy.marsh@southpark.test',
+    name: 'Randy Marsh',
+    password: TEST_PASSWORD,
   },
 } as const satisfies Record<string, TestUser>
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock Token Generation
+// Cognito Authentication
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Generate a mock JWT token for testing
- *
- * Creates a base64-encoded JWT-like string with user claims.
- * Not cryptographically valid - only for testing with mocked auth middleware.
+ * Authenticate a user with Cognito and return tokens
+ */
+export async function authenticateWithCognito(
+  email: string,
+  password: string,
+): Promise<{ tokens: AuthTokens; userId: string }> {
+  const response = await cognitoClient.send(
+    new AdminInitiateAuthCommand({
+      UserPoolId: COGNITO_CONFIG.userPoolId,
+      ClientId: COGNITO_CONFIG.clientId,
+      AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
+      AuthParameters: {
+        USERNAME: email,
+        PASSWORD: password,
+      },
+    }),
+  )
+
+  if (!response.AuthenticationResult) {
+    throw new Error(`Authentication failed for ${email}`)
+  }
+
+  const { AccessToken, IdToken, RefreshToken } = response.AuthenticationResult
+
+  if (!AccessToken || !IdToken) {
+    throw new Error(`Missing tokens for ${email}`)
+  }
+
+  // Extract userId (sub) from the access token
+  const payload = JSON.parse(
+    Buffer.from(AccessToken.split('.')[1], 'base64').toString(),
+  )
+
+  return {
+    tokens: {
+      accessToken: AccessToken,
+      idToken: IdToken,
+      refreshToken: RefreshToken,
+    },
+    userId: payload.sub,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Token State Management
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Shared auth state for step definitions
+ */
+export const authState = {
+  currentUser: null as (TestUser & { id: string }) | null,
+  currentToken: null as string | null,
+  tokens: null as AuthTokens | null,
+
+  /**
+   * Authenticate as a test user with real Cognito
+   */
+  async authenticateAs(user: TestUser): Promise<void> {
+    const result = await authenticateWithCognito(user.email, user.password)
+    this.currentUser = { ...user, id: result.userId }
+    this.currentToken = result.tokens.accessToken
+    this.tokens = result.tokens
+  },
+
+  /**
+   * Set authenticated user (authenticates with Cognito)
+   */
+  async setUser(user: TestUser): Promise<void> {
+    await this.authenticateAs(user)
+  },
+
+  /**
+   * Set explicit token (for invalid token tests)
+   */
+  setToken(token: string | null): void {
+    this.currentToken = token
+  },
+
+  /**
+   * Clear authentication
+   */
+  clear(): void {
+    this.currentUser = null
+    this.currentToken = null
+    this.tokens = null
+  },
+
+  /**
+   * Check if authenticated
+   */
+  isAuthenticated(): boolean {
+    return this.currentToken !== null
+  },
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mock Token Generation (for specific test scenarios)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Generate a mock JWT token for testing invalid token scenarios
+ * Not cryptographically valid - only for testing error handling
  */
 export function generateMockToken(user: TestUser, expiresInSeconds = 3600): string {
   const header = {
@@ -69,13 +215,13 @@ export function generateMockToken(user: TestUser, expiresInSeconds = 3600): stri
 
   const now = Math.floor(Date.now() / 1000)
   const payload = {
-    sub: user.id,
+    sub: user.id || 'mock-user-id',
     email: user.email,
     name: user.name,
     iat: now,
     exp: now + expiresInSeconds,
-    iss: 'test-issuer',
-    aud: 'test-audience',
+    iss: 'mock-issuer',
+    aud: 'mock-audience',
   }
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header))
@@ -93,21 +239,6 @@ export function generateExpiredToken(user: TestUser): string {
 }
 
 /**
- * Generate mock auth tokens for a user
- */
-export function generateMockAuthTokens(user: TestUser): AuthTokens {
-  return {
-    idToken: generateMockToken(user),
-    accessToken: generateMockToken(user),
-    refreshToken: generateMockToken(user, 86400 * 7), // 7 days
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Token Manipulation
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
  * Create an invalid token (malformed)
  */
 export function createInvalidToken(): string {
@@ -123,59 +254,6 @@ export function createTamperedToken(user: TestUser): string {
   return `${parts[0]}.${parts[1]}.tampered-signature`
 }
 
-/**
- * Create a token for a non-existent user
- */
-export function createTokenForNonExistentUser(): string {
-  return generateMockToken({
-    id: '00000000-0000-0000-0000-000000000000',
-    email: 'nonexistent@test.example.com',
-    name: 'Non-existent User',
-  })
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Token State Management
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Shared auth state for step definitions
- */
-export const authState = {
-  currentUser: null as TestUser | null,
-  currentToken: null as string | null,
-
-  /**
-   * Set authenticated user
-   */
-  setUser(user: TestUser): void {
-    this.currentUser = user
-    this.currentToken = generateMockToken(user)
-  },
-
-  /**
-   * Set explicit token (for invalid token tests)
-   */
-  setToken(token: string | null): void {
-    this.currentToken = token
-  },
-
-  /**
-   * Clear authentication
-   */
-  clear(): void {
-    this.currentUser = null
-    this.currentToken = null
-  },
-
-  /**
-   * Check if authenticated
-   */
-  isAuthenticated(): boolean {
-    return this.currentToken !== null
-  },
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility Functions
 // ─────────────────────────────────────────────────────────────────────────────
@@ -189,7 +267,7 @@ function base64UrlEncode(str: string): string {
 }
 
 /**
- * Parse claims from a mock token (for debugging)
+ * Parse claims from a token (for debugging)
  */
 export function parseTokenClaims(token: string): Record<string, unknown> | null {
   try {

@@ -128,7 +128,14 @@ export function SortableWishlistCard({
 
       {/* The actual card - offset to make room for drag handle */}
       <div className={cn(isDraggingEnabled && 'ml-10')}>
-        <WishlistCard item={item} onClick={onClick} onGotIt={onGotIt} onDelete={onDelete} />
+        <WishlistCard
+          item={item}
+          onClick={onClick}
+          onGotIt={onGotIt}
+          onDelete={onDelete}
+          index={index}
+          totalItems={totalItems}
+        />
       </div>
     </div>
   )

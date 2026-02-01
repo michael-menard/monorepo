@@ -51,7 +51,7 @@ const MAX_LIMIT = 100
  * - Both filters: entries matching role AND having at least one matching tag
  *
  * Tag Filtering Semantics:
- * - Uses PostgreSQL array overlap operator: tags && ARRAY['tag1', 'tag2']
+ * - Uses PostgreSQL JSONB ?| operator: tags ?| ARRAY['tag1', 'tag2']
  * - Entry with tags=['a', 'b'] matches filter tags=['b', 'c'] (because 'b' matches)
  *
  * @param input - Optional filter and pagination parameters
@@ -100,10 +100,10 @@ export async function kb_list(input?: KbListInput, deps?: KbListDeps): Promise<K
   }
 
   if (tags !== undefined && tags.length > 0) {
-    // PostgreSQL array overlap operator: tags && ARRAY['tag1', 'tag2']
-    // Returns true if there's any overlap between arrays
+    // JSONB ?| operator: checks if JSONB array contains any of the specified values
+    // Returns true if there's any overlap between the JSONB array and text array
     conditions.push(
-      sql`${knowledgeEntries.tags} && ARRAY[${sql.join(
+      sql`${knowledgeEntries.tags} ?| ARRAY[${sql.join(
         tags.map(tag => sql`${tag}`),
         sql`, `,
       )}]::text[]`,

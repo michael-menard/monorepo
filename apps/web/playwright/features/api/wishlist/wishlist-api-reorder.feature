@@ -96,7 +96,7 @@ Feature: Wishlist API Reorder Operations
   @wish-2005a @validation
   Scenario: Reorder with non-integer sortOrder returns 400
     Given I have created a wishlist item
-    When I send a reorder request with sortOrder 1.5
+    When I send a reorder request with decimal sortOrder "1.5"
     Then the response status should be 400
 
   @wish-2005a @validation

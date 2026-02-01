@@ -15,16 +15,16 @@ test.describe('Modal Accessibility', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to wishlist gallery
     await page.goto('/wishlist')
-    // Wait for gallery to load
-    await page.waitForSelector('[data-testid="wishlist-gallery"]', { timeout: 10000 })
+    // Wait for gallery to load - filter bar indicates the page has rendered
+    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 10000 })
   })
 
   test.describe('AC26: ESC Key Closes Modals', () => {
     test('ESC key closes DeleteConfirmModal (when not loading)', async ({ page }) => {
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Modal should be visible
       await expect(page.locator('[role="alertdialog"]')).toBeVisible()
@@ -38,9 +38,9 @@ test.describe('Modal Accessibility', () => {
 
     test('ESC key closes GotItModal (when not loading)', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Modal should be visible
       await expect(page.locator('[role="dialog"]')).toBeVisible()
@@ -64,9 +64,9 @@ test.describe('Modal Accessibility', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete to start loading
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -85,9 +85,9 @@ test.describe('Modal Accessibility', () => {
   test.describe('AC27: Focus Trap', () => {
     test('Focus trap active in DeleteConfirmModal', async ({ page }) => {
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       await expect(page.locator('[role="alertdialog"]')).toBeVisible()
 
@@ -118,9 +118,9 @@ test.describe('Modal Accessibility', () => {
 
     test('Focus trap active in GotItModal', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       await expect(page.locator('[role="dialog"]')).toBeVisible()
 
@@ -143,8 +143,8 @@ test.describe('Modal Accessibility', () => {
   test.describe('AC28: Focus Returns to Trigger', () => {
     test('Focus returns to delete button after DeleteConfirmModal closes', async ({ page }) => {
       // Open delete modal via keyboard
-      const card = page.locator('[data-testid="wishlist-card"]').first()
-      const deleteButton = card.locator('[data-testid="delete-button"]')
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+      const deleteButton = card.locator('[data-testid="wishlist-card-delete"]')
 
       await card.hover()
       await deleteButton.focus()
@@ -164,8 +164,8 @@ test.describe('Modal Accessibility', () => {
 
     test('Focus returns to trigger after GotItModal closes', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
-      const gotItButton = card.locator('[data-testid="got-it-button"]')
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+      const gotItButton = card.locator('[data-testid="wishlist-card-got-it"]')
 
       await card.hover()
       await gotItButton.focus()
@@ -186,9 +186,9 @@ test.describe('Modal Accessibility', () => {
   test.describe('AC29: Form Field Labels', () => {
     test('All GotItModal form fields have associated labels', async ({ page }) => {
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       await expect(page.locator('[role="dialog"]')).toBeVisible()
 
@@ -215,9 +215,9 @@ test.describe('Modal Accessibility', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -237,9 +237,9 @@ test.describe('Modal Accessibility', () => {
       })
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       // Submit form
       await page.locator('[data-testid="submit-button"]').click()
@@ -252,9 +252,9 @@ test.describe('Modal Accessibility', () => {
   test.describe('Keyboard Navigation', () => {
     test('Can navigate DeleteConfirmModal with Tab key', async ({ page }) => {
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       await expect(page.locator('[role="alertdialog"]')).toBeVisible()
 
@@ -280,9 +280,9 @@ test.describe('Modal Accessibility', () => {
       })
 
       // Open Got It modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="got-it-button"]').click()
+      await card.locator('[data-testid="wishlist-card-got-it"]').click()
 
       await expect(page.locator('[role="dialog"]')).toBeVisible()
 

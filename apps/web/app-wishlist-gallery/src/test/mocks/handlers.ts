@@ -22,7 +22,63 @@ const API_BASE_URL = 'http://localhost:3001'
 // Re-export for test setup
 export { resetPresignCounter }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature Flag Handler State (WISH-2009)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Default flags returned by the feature flag endpoint
+let mockFeatureFlags: Record<string, boolean> = {
+  'wishlist-gallery': true,
+  'wishlist-add-item': false,
+}
+
+// Configurable response state for feature flag endpoint
+let featureFlagError: { status: number; message: string } | null = null
+
+/**
+ * Set mock feature flags for tests
+ */
+export function setMockFeatureFlags(flags: Record<string, boolean>) {
+  mockFeatureFlags = flags
+}
+
+/**
+ * Set feature flag endpoint to return an error
+ */
+export function setFeatureFlagError(error: { status: number; message: string } | null) {
+  featureFlagError = error
+}
+
+/**
+ * Reset feature flag mock state
+ */
+export function resetFeatureFlagMocks() {
+  mockFeatureFlags = {
+    'wishlist-gallery': true,
+    'wishlist-add-item': false,
+  }
+  featureFlagError = null
+}
+
 export const handlers = [
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Feature Flag Handler (WISH-2009)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * GET /api/config/flags - Get all feature flags
+   * Used by FeatureFlagContext and useFeatureFlag hook
+   */
+  http.get('/api/config/flags', () => {
+    if (featureFlagError) {
+      return HttpResponse.json(
+        { error: featureFlagError.message },
+        { status: featureFlagError.status },
+      )
+    }
+    return HttpResponse.json(mockFeatureFlags)
+  }),
+
   // Health check endpoint
   http.get(`${API_BASE_URL}/health`, () => {
     return HttpResponse.json({

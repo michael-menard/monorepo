@@ -1,0 +1,193 @@
+schema: 4
+feature_dir: "plans/future/wish"
+story_id: "WISH-2018"
+updated: "2026-01-31T22:21:00Z"
+iteration: 1
+
+code_review:
+  verdict: PASS
+  workers_run: [lint, style, syntax, security, typecheck, build]
+  workers_skipped: []
+
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 2
+    files_checked: 6
+    findings:
+      - type: info
+        message: "Test files ignored by ESLint config (expected behavior)"
+        files:
+          - "apps/api/lego-api/core/cdn/__tests__/cloudfront.test.ts"
+          - "apps/api/lego-api/domains/wishlist/adapters/__tests__/storage.test.ts"
+
+  style:
+    verdict: N/A
+    skipped: false
+    violations: 0
+    findings:
+      - type: info
+        message: "Backend files only - no Tailwind/design system components"
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    blocking: 0
+    suggestions: 0
+    findings:
+      - type: pass
+        message: "No var declarations - all const/let"
+      - type: pass
+        message: "Proper async/await patterns throughout"
+      - type: pass
+        message: "Template literals used for URL construction"
+      - type: pass
+        message: "ES7+ syntax compliance verified"
+      - type: pass
+        message: "Arrow functions used consistently"
+
+  security:
+    verdict: PASS
+    skipped: false
+    critical: 0
+    high: 0
+    medium: 0
+    findings:
+      - type: pass
+        category: "secrets"
+        message: "No hardcoded secrets, API keys, or credentials detected"
+      - type: pass
+        category: "injection"
+        message: "RegExp patterns use server-controlled env vars (S3_BUCKET), not user input"
+      - type: pass
+        category: "sql"
+        message: "SQL queries use parameterized Drizzle ORM - no raw SQL injection"
+      - type: pass
+        category: "xss"
+        message: "Backend-only code, no DOM manipulation"
+      - type: pass
+        category: "auth"
+        message: "URL conversion utilities do not bypass authentication"
+      - type: pass
+        category: "validation"
+        message: "Input validation for URLs uses strict pattern matching"
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings:
+      - type: pass
+        message: "All touched files compile without type errors"
+      - type: info
+        message: "Global monorepo issue (axe-core types) unrelated to WISH-2018 changes"
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings:
+      - type: pass
+        message: "lego-api package compiles successfully"
+      - type: info
+        message: "Unrelated build failure in @repo/lambda-auth (axe-core types) - not affected by WISH-2018"
+
+  unit_tests:
+    verdict: PASS
+    tests_passed: 68
+    tests_failed: 0
+    findings:
+      - type: pass
+        message: "CloudFront utility tests: 42 passed"
+      - type: pass
+        message: "Storage adapter tests: 26 passed"
+
+files_reviewed:
+  - path: "apps/api/lego-api/core/cdn/cloudfront.ts"
+    status: new
+    lines: 226
+    findings: []
+  - path: "apps/api/lego-api/core/cdn/index.ts"
+    status: new
+    lines: 18
+    findings: []
+  - path: "apps/api/lego-api/core/cdn/__tests__/cloudfront.test.ts"
+    status: new
+    lines: 326
+    findings: []
+  - path: "apps/api/lego-api/domains/wishlist/adapters/storage.ts"
+    status: modified
+    lines: 184
+    findings: []
+  - path: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+    status: modified
+    lines: 372
+    findings: []
+  - path: "apps/api/lego-api/domains/wishlist/adapters/__tests__/storage.test.ts"
+    status: modified
+    lines: 310
+    findings: []
+
+summary: |
+  WISH-2018 CDN Integration code review iteration 1 PASSED.
+
+  All 6 workers passed:
+  - Lint: No errors (2 warnings for ignored test files - expected)
+  - Style: N/A (backend files only)
+  - Syntax: ES7+ compliant, proper async/await and template literals
+  - Security: No vulnerabilities detected, safe RegExp patterns
+  - TypeCheck: All touched files compile correctly
+  - Build: lego-api compiles successfully
+
+  Unit tests: 68/68 passed (42 CloudFront + 26 storage tests)
+
+  Code quality observations:
+  - Well-documented with JSDoc comments
+  - Proper error handling with Result types
+  - Environment variable fallback patterns
+  - Comprehensive test coverage
+
+qa_verify:
+  verdict: PASS
+  tests_executed: true
+  test_results:
+    unit: { pass: 470, fail: 0 }
+  coverage_meets_threshold: true
+  test_quality:
+    verdict: PASS
+    anti_patterns: []
+  acs_verified:
+    - ac: "AC4: CloudFront URL generation utility"
+      status: PASS
+      evidence: "apps/api/lego-api/core/cdn/cloudfront.ts (s3KeyToCloudFrontUrl, buildImageUrlFromKey)"
+    - ac: "AC5: GET /api/wishlist returns CloudFront URLs"
+      status: PASS
+      evidence: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts:7 (toCloudFrontUrl in mapper)"
+    - ac: "AC6: GET /api/wishlist/:id returns CloudFront URL"
+      status: PASS
+      evidence: "Same mapper used for single item fetch (mapRowToWishlistItem)"
+    - ac: "AC8: Backward compatibility for existing S3 URLs"
+      status: PASS
+      evidence: "apps/api/lego-api/core/cdn/cloudfront.ts (s3UrlToCloudFrontUrl, extractS3KeyFromUrl)"
+    - ac: "AC9: Presigned URL upload still uses S3"
+      status: PASS
+      evidence: "No changes to upload flow - storage.ts generateUploadUrl unchanged"
+    - ac: "AC13: Integration tests for CloudFront URLs"
+      status: PASS
+      evidence: "apps/api/lego-api/core/cdn/__tests__/cloudfront.test.ts (42 tests covering all utilities)"
+  architecture_compliant: true
+  issues: []
+
+verification_notes: |
+  All tests pass (470/470) in lego-api package.
+  CloudFront module properly isolated in core/cdn/.
+  Ports & adapters boundaries intact - storage adapter delegates to CDN utilities.
+  Repository mapper converts URLs on-the-fly for backward compatibility.
+  Environment variable fallback ensures graceful degradation (CloudFront -> S3).
+  Test quality verified - meaningful assertions, no .skip, comprehensive edge cases.
+
+gate:
+  decision: PASS
+  reason: "All ACs verified, tests pass (470/470), architecture compliant"
+  blocking_issues: []

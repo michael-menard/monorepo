@@ -2,15 +2,19 @@
  * Feature Flag Context Tests (WISH-2009 - AC12)
  *
  * Tests for FeatureFlagProvider and useFeatureFlagContext.
+ * Uses MSW handlers for API mocking (handlers.ts).
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { FeatureFlagProvider, useFeatureFlagContext, WishlistFlagKeys } from '../FeatureFlagContext'
-
-// Mock fetch globally
-const mockFetch = vi.fn()
-globalThis.fetch = mockFetch
+import { server } from '../../test/mocks/server'
+import { http, HttpResponse, delay } from 'msw'
+import {
+  setMockFeatureFlags,
+  setFeatureFlagError,
+  resetFeatureFlagMocks,
+} from '../../test/mocks/handlers'
 
 // Test component that uses the context
 function TestConsumer() {
@@ -31,21 +35,19 @@ function TestConsumer() {
 
 describe('FeatureFlagContext', () => {
   beforeEach(() => {
-    mockFetch.mockReset()
+    resetFeatureFlagMocks()
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    resetFeatureFlagMocks()
   })
 
   // ─────────────────────────────────────────────────────────────────────
   // Test 1: FeatureFlagProvider renders children
   // ─────────────────────────────────────────────────────────────────────
   it('renders children', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ 'wishlist-gallery': true }),
-    })
+    setMockFeatureFlags({ 'wishlist-gallery': true })
 
     render(
       <FeatureFlagProvider>
@@ -60,13 +62,9 @@ describe('FeatureFlagContext', () => {
   // Test 2: Context provides correct flag values
   // ─────────────────────────────────────────────────────────────────────
   it('provides correct flag values', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          'wishlist-gallery': true,
-          'wishlist-add-item': false,
-        }),
+    setMockFeatureFlags({
+      'wishlist-gallery': true,
+      'wishlist-add-item': false,
     })
 
     render(
@@ -87,16 +85,18 @@ describe('FeatureFlagContext', () => {
   // Test 3: Loading state returns false (safe default)
   // ─────────────────────────────────────────────────────────────────────
   it('returns false while loading', async () => {
-    // Create a promise that we can control
-    let resolvePromise: (value: unknown) => void
-    const pendingPromise = new Promise(resolve => {
-      resolvePromise = resolve
+    // Create a delayed response using MSW
+    let resolveResponse: () => void
+    const responsePromise = new Promise<void>(resolve => {
+      resolveResponse = resolve
     })
 
-    mockFetch.mockReturnValueOnce({
-      ok: true,
-      json: () => pendingPromise,
-    })
+    server.use(
+      http.get('/api/config/flags', async () => {
+        await responsePromise
+        return HttpResponse.json({ 'wishlist-gallery': true })
+      }),
+    )
 
     render(
       <FeatureFlagProvider>
@@ -108,9 +108,9 @@ describe('FeatureFlagContext', () => {
     expect(screen.getByTestId('loading')).toHaveTextContent('loading')
     expect(screen.getByTestId('gallery-enabled')).toHaveTextContent('no')
 
-    // Resolve the promise
+    // Resolve the response
     await act(async () => {
-      resolvePromise!({ 'wishlist-gallery': true })
+      resolveResponse!()
     })
 
     await waitFor(() => {
@@ -124,10 +124,7 @@ describe('FeatureFlagContext', () => {
   // Test 4: Handles fetch errors gracefully
   // ─────────────────────────────────────────────────────────────────────
   it('handles fetch errors gracefully', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    })
+    setFeatureFlagError({ status: 500, message: 'Internal Server Error' })
 
     render(
       <FeatureFlagProvider>
@@ -146,13 +143,8 @@ describe('FeatureFlagContext', () => {
   // Test 5: Uses initial flags when provided
   // ─────────────────────────────────────────────────────────────────────
   it('uses initial flags when provided', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          'wishlist-gallery': false, // API returns different value
-        }),
-    })
+    // API returns different value than initial flags
+    setMockFeatureFlags({ 'wishlist-gallery': false })
 
     render(
       <FeatureFlagProvider initialFlags={{ 'wishlist-gallery': true }}>

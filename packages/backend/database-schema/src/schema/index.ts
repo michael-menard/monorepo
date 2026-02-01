@@ -13,8 +13,9 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
-// Re-export Sets tables so Drizzle can discover them via schema entrypoint
-export { setImages, sets } from './sets'
+// Import and re-export Sets tables so Drizzle can discover them via schema entrypoint
+import { setImages, sets } from './sets'
+export { setImages, sets }
 
 // Re-export Feature Flags table (WISH-2009)
 export { featureFlags } from './feature-flags'

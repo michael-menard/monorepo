@@ -4,6 +4,7 @@
  * Story wish-2002: Add Item Flow
  * WISH-2022: Client-side image compression
  * WISH-2046: Client-side image compression quality presets
+ * WISH-2045: HEIC/HEIF Image Format Support
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -34,7 +35,7 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
   useGetWishlistImagePresignUrlMutation: vi.fn(),
 }))
 
-// WISH-2022/2046: Mock image compression utility
+// WISH-2022/2046/2045: Mock image compression utility
 vi.mock('../../utils/imageCompression', () => ({
   compressImage: vi.fn(),
   getPresetByName: vi.fn((name: string) => {
@@ -57,17 +58,28 @@ vi.mock('../../utils/imageCompression', () => ({
     }
     return presets[name] ?? presets['balanced']
   }),
+  // WISH-2045: HEIC support mocks
+  isHEIC: vi.fn((file: File) => {
+    const heicMimeTypes = ['image/heic', 'image/heif']
+    const heicExtensions = ['.heic', '.heif']
+    return heicMimeTypes.includes(file.type) ||
+           heicExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
+  }),
+  convertHEICToJPEG: vi.fn(),
 }))
 
 // Import mocked functions after mocks are set up
 import { uploadToPresignedUrl } from '@repo/upload-client'
 import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
-import { compressImage, getPresetByName } from '../../utils/imageCompression'
+import { compressImage, getPresetByName, isHEIC, convertHEICToJPEG } from '../../utils/imageCompression'
 
 const mockUploadToPresignedUrl = vi.mocked(uploadToPresignedUrl)
 const mockUseGetWishlistImagePresignUrlMutation = vi.mocked(useGetWishlistImagePresignUrlMutation)
 const mockCompressImage = vi.mocked(compressImage)
 const mockGetPresetByName = vi.mocked(getPresetByName)
+// Note: isHEIC uses the actual mock implementation defined in vi.mock
+void isHEIC // suppress unused import warning - used via mock
+const mockConvertHEICToJPEG = vi.mocked(convertHEICToJPEG)
 const mockGetPresignUrl = vi.fn()
 const mockUnwrap = vi.fn()
 
@@ -121,7 +133,8 @@ describe('useS3Upload', () => {
       const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' })
 
       const error = result.current.validateFile(invalidFile)
-      expect(error).toContain('Only JPEG, PNG, and WebP images are allowed')
+      // WISH-2045: Updated to include HEIC in allowed types
+      expect(error).toContain('Only JPEG, PNG, WebP, and HEIC images are allowed')
     })
 
     it('accepts valid files', () => {
@@ -278,7 +291,8 @@ describe('useS3Upload', () => {
 
       expect(uploadResult).toBe(null)
       expect(result.current.state).toBe('error')
-      expect(result.current.error).toContain('Only JPEG, PNG, and WebP images are allowed')
+      // WISH-2045: Updated to include HEIC in allowed types
+      expect(result.current.error).toContain('Only JPEG, PNG, WebP, and HEIC images are allowed')
     })
 
     it('handles presign request failure', async () => {
@@ -1172,6 +1186,344 @@ describe('useS3Upload', () => {
           }),
         }),
       )
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2045: HEIC/HEIF Image Format Support Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('HEIC Conversion (WISH-2045)', () => {
+    beforeEach(() => {
+      // Reset HEIC-specific mocks
+      mockConvertHEICToJPEG.mockReset()
+    })
+
+    it('includes HEIC MIME types in ALLOWED_MIME_TYPES', () => {
+      expect(ALLOWED_MIME_TYPES).toContain('image/heic')
+      expect(ALLOWED_MIME_TYPES).toContain('image/heif')
+    })
+
+    it('converts HEIC file to JPEG before compression', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+
+      mockConvertHEICToJPEG.mockResolvedValue({
+        converted: true,
+        file: convertedFile,
+        originalSize: heicFile.size,
+        convertedSize: convertedFile.size,
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/IMG_1234.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(heicFile)
+      })
+
+      // HEIC conversion should have been called
+      expect(mockConvertHEICToJPEG).toHaveBeenCalledWith(
+        heicFile,
+        expect.objectContaining({
+          quality: 0.9,
+          onProgress: expect.any(Function),
+        }),
+      )
+
+      // Compression should have been called with converted file
+      expect(mockCompressImage).toHaveBeenCalledWith(
+        convertedFile,
+        expect.objectContaining({
+          onProgress: expect.any(Function),
+        }),
+      )
+
+      // Conversion result should be stored
+      expect(result.current.conversionResult).toEqual({
+        converted: true,
+        file: convertedFile,
+        originalSize: heicFile.size,
+        convertedSize: convertedFile.size,
+      })
+    })
+
+    it('transitions through converting state for HEIC files', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+
+      // Slow conversion to observe state
+      mockConvertHEICToJPEG.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50))
+        return {
+          converted: true,
+          file: convertedFile,
+          originalSize: heicFile.size,
+          convertedSize: convertedFile.size,
+        }
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/IMG_1234.jpg',
+      }
+      mockUnwrap.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return mockPresignResponse
+      })
+      mockUploadToPresignedUrl.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return { success: true as const, httpStatus: 200 }
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      let uploadPromise: Promise<string | null>
+      act(() => {
+        uploadPromise = result.current.upload(heicFile)
+      })
+
+      // Should be in converting state first
+      await waitFor(
+        () => {
+          expect(result.current.state).toBe('converting')
+        },
+        { timeout: 3000 },
+      )
+
+      await act(async () => {
+        await uploadPromise
+      })
+
+      expect(result.current.state).toBe('complete')
+    })
+
+    it('handles HEIC conversion failure gracefully', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+
+      // Conversion fails but returns original file
+      mockConvertHEICToJPEG.mockResolvedValue({
+        converted: false,
+        file: heicFile,
+        originalSize: heicFile.size,
+        convertedSize: heicFile.size,
+        error: 'HEIC decode failed',
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/IMG_1234.heic',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(heicFile)
+      })
+
+      // Upload should still complete (with original file as fallback)
+      expect(result.current.state).toBe('complete')
+
+      // Conversion result should show error
+      expect(result.current.conversionResult?.error).toBe('HEIC decode failed')
+      expect(result.current.conversionResult?.converted).toBe(false)
+    })
+
+    it('tracks conversion progress', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+
+      mockConvertHEICToJPEG.mockImplementation(async (_file, options) => {
+        // Simulate progress callbacks
+        options?.onProgress?.(0)
+        options?.onProgress?.(100)
+        return {
+          converted: true,
+          file: convertedFile,
+          originalSize: heicFile.size,
+          convertedSize: convertedFile.size,
+        }
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/IMG_1234.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(heicFile)
+      })
+
+      // Final conversion progress should be 100
+      expect(result.current.conversionProgress).toBe(100)
+    })
+
+    it('still converts HEIC even when skipCompression is true', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+
+      mockConvertHEICToJPEG.mockResolvedValue({
+        converted: true,
+        file: convertedFile,
+        originalSize: heicFile.size,
+        convertedSize: convertedFile.size,
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/IMG_1234.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(heicFile, { skipCompression: true })
+      })
+
+      // HEIC conversion should still have been called
+      expect(mockConvertHEICToJPEG).toHaveBeenCalled()
+
+      // Compression should NOT have been called
+      expect(mockCompressImage).not.toHaveBeenCalled()
+
+      // Upload should use converted file
+      expect(mockUploadToPresignedUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: convertedFile,
+        }),
+      )
+    })
+
+    it('resets conversion state on cancel', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+
+      // Very slow conversion
+      mockConvertHEICToJPEG.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        return {
+          converted: true,
+          file: heicFile,
+          originalSize: heicFile.size,
+          convertedSize: heicFile.size,
+        }
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      let uploadPromise: Promise<string | null> | undefined
+      act(() => {
+        uploadPromise = result.current.upload(heicFile)
+      })
+
+      // Wait for converting state
+      await waitFor(() => {
+        expect(result.current.state).toBe('converting')
+      })
+
+      // Cancel the upload
+      act(() => {
+        result.current.cancel()
+      })
+
+      // State should be reset
+      expect(result.current.state).toBe('idle')
+      expect(result.current.conversionProgress).toBe(0)
+
+      if (uploadPromise) {
+        await uploadPromise.catch(() => {})
+      }
+    })
+
+    it('resets conversion result on reset', async () => {
+      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+
+      mockConvertHEICToJPEG.mockResolvedValue({
+        converted: true,
+        file: convertedFile,
+        originalSize: heicFile.size,
+        convertedSize: convertedFile.size,
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/IMG_1234.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(heicFile)
+      })
+
+      expect(result.current.conversionResult).not.toBe(null)
+
+      act(() => {
+        result.current.reset()
+      })
+
+      expect(result.current.conversionResult).toBe(null)
+    })
+
+    it('has initial conversion state values', () => {
+      const { result } = renderHook(() => useS3Upload())
+
+      expect(result.current.conversionProgress).toBe(0)
+      expect(result.current.conversionResult).toBe(null)
+    })
+
+    it('validates HEIC files by extension when MIME type is octet-stream', () => {
+      const { result } = renderHook(() => useS3Upload())
+
+      // Some apps report HEIC as application/octet-stream
+      const heicFileWithOctetStream = new File(
+        ['content'],
+        'IMG_1234.heic',
+        { type: 'application/octet-stream' },
+      )
+
+      // Should pass validation because of .heic extension
+      const error = result.current.validateFile(heicFileWithOctetStream)
+      expect(error).toBe(null)
+    })
+
+    it('does not convert non-HEIC files', async () => {
+      const jpegFile = new File(['jpeg-content'], 'photo.jpg', { type: 'image/jpeg' })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/photo.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(jpegFile)
+      })
+
+      // HEIC conversion should NOT have been called for JPEG
+      expect(mockConvertHEICToJPEG).not.toHaveBeenCalled()
+
+      // Conversion result should remain null
+      expect(result.current.conversionResult).toBe(null)
     })
   })
 })

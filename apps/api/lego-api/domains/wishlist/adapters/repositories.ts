@@ -5,6 +5,7 @@ import { ok, err, paginate } from '@repo/api-core'
 import type * as schema from '@repo/database-schema'
 import type { WishlistRepository } from '../ports/index.js'
 import type { WishlistItem, UpdateWishlistItemInput } from '../types.js'
+import { toCloudFrontUrl } from '../../../core/cdn/index.js'
 
 type Schema = typeof schema
 
@@ -80,8 +81,9 @@ export function createWishlistRepository(
 
       if (filters?.tags && filters.tags.length > 0) {
         // Filter by tags (items must have at least one matching tag)
+        // Use JSONB ?| operator: checks if JSONB array contains any of the specified values
         conditions.push(
-          sql`${wishlistItems.tags} && ARRAY[${sql.join(
+          sql`${wishlistItems.tags} ?| ARRAY[${sql.join(
             filters.tags.map(t => sql`${t}`),
             sql`,`,
           )}]::text[]`,
@@ -320,6 +322,7 @@ export function createWishlistRepository(
  * pre-migration data (no imageVariants column) and post-migration data.
  *
  * WISH-2016: Added imageVariants field
+ * WISH-2018: Converts S3 URLs to CloudFront URLs for backward compatibility
  */
 function mapRowToWishlistItem(row: {
   id: string
@@ -341,6 +344,10 @@ function mapRowToWishlistItem(row: {
   createdAt: Date
   updatedAt: Date
 }): WishlistItem {
+  // WISH-2018: Convert S3 URLs to CloudFront URLs on-the-fly
+  // This provides backward compatibility for existing S3 URLs stored in the database
+  const imageUrl = toCloudFrontUrl(row.imageUrl)
+
   return {
     id: row.id,
     userId: row.userId,
@@ -348,7 +355,7 @@ function mapRowToWishlistItem(row: {
     store: row.store,
     setNumber: row.setNumber,
     sourceUrl: row.sourceUrl,
-    imageUrl: row.imageUrl,
+    imageUrl,
     imageVariants: (row.imageVariants as WishlistItem['imageVariants']) ?? null,
     price: row.price,
     currency: row.currency,

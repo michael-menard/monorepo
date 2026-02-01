@@ -12,7 +12,7 @@ const testDir = defineBddConfig({
 })
 
 // API base URL for API tests (defaults to local API server)
-const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:4000'
+const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
 
 /**
  * @see https://playwright.dev/docs/test-configuration

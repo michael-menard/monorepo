@@ -3,6 +3,7 @@
  *
  * Story WISH-2022: Client-side Image Compression
  * Story WISH-2046: Client-side Image Compression Quality Presets
+ * Story WISH-2045: HEIC/HEIF Image Format Support
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -18,6 +19,12 @@ import {
   getPresetByName,
   isValidPresetName,
   type CompressionPresetName,
+  // WISH-2045: HEIC exports
+  isHEIC,
+  transformHEICFilename,
+  convertHEICToJPEG,
+  HEIC_MIME_TYPES,
+  HEIC_EXTENSIONS,
 } from '../imageCompression'
 
 // Mock browser-image-compression
@@ -25,8 +32,15 @@ vi.mock('browser-image-compression', () => ({
   default: vi.fn(),
 }))
 
+// Mock heic2any
+vi.mock('heic2any', () => ({
+  default: vi.fn(),
+}))
+
 import imageCompression from 'browser-image-compression'
+import heic2any from 'heic2any'
 const mockImageCompression = vi.mocked(imageCompression)
+const mockHeic2any = vi.mocked(heic2any)
 
 // Mock Image for getImageDimensions
 const mockImage = {
@@ -504,5 +518,213 @@ describe('compressImage with presets (WISH-2046)', () => {
         initialQuality: 0.9,
       }),
     )
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WISH-2045: HEIC/HEIF Image Format Support Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('HEIC Constants (WISH-2045)', () => {
+  it('has correct HEIC MIME types', () => {
+    expect(HEIC_MIME_TYPES).toContain('image/heic')
+    expect(HEIC_MIME_TYPES).toContain('image/heif')
+    expect(HEIC_MIME_TYPES).toHaveLength(2)
+  })
+
+  it('has correct HEIC extensions', () => {
+    expect(HEIC_EXTENSIONS).toContain('.heic')
+    expect(HEIC_EXTENSIONS).toContain('.heif')
+    expect(HEIC_EXTENSIONS).toHaveLength(2)
+  })
+})
+
+describe('isHEIC (WISH-2045)', () => {
+  it('returns true for image/heic MIME type', () => {
+    const file = createMockFile(1000, 'test.heic', 'image/heic')
+    expect(isHEIC(file)).toBe(true)
+  })
+
+  it('returns true for image/heif MIME type', () => {
+    const file = createMockFile(1000, 'test.heif', 'image/heif')
+    expect(isHEIC(file)).toBe(true)
+  })
+
+  it('returns true for .heic extension with unknown MIME type', () => {
+    // Some apps report HEIC files as application/octet-stream
+    const file = createMockFile(1000, 'IMG_1234.heic', 'application/octet-stream')
+    expect(isHEIC(file)).toBe(true)
+  })
+
+  it('returns true for .heif extension with unknown MIME type', () => {
+    const file = createMockFile(1000, 'IMG_1234.heif', 'application/octet-stream')
+    expect(isHEIC(file)).toBe(true)
+  })
+
+  it('is case-insensitive for extension', () => {
+    const upperHeic = createMockFile(1000, 'IMG_1234.HEIC', 'application/octet-stream')
+    const upperHeif = createMockFile(1000, 'IMG_1234.HEIF', 'application/octet-stream')
+    const mixedCase = createMockFile(1000, 'IMG_1234.HeIc', 'application/octet-stream')
+
+    expect(isHEIC(upperHeic)).toBe(true)
+    expect(isHEIC(upperHeif)).toBe(true)
+    expect(isHEIC(mixedCase)).toBe(true)
+  })
+
+  it('returns false for JPEG files', () => {
+    const file = createMockFile(1000, 'test.jpg', 'image/jpeg')
+    expect(isHEIC(file)).toBe(false)
+  })
+
+  it('returns false for PNG files', () => {
+    const file = createMockFile(1000, 'test.png', 'image/png')
+    expect(isHEIC(file)).toBe(false)
+  })
+
+  it('returns false for WebP files', () => {
+    const file = createMockFile(1000, 'test.webp', 'image/webp')
+    expect(isHEIC(file)).toBe(false)
+  })
+})
+
+describe('transformHEICFilename (WISH-2045)', () => {
+  it('transforms .heic to .jpg', () => {
+    expect(transformHEICFilename('IMG_1234.heic')).toBe('IMG_1234.jpg')
+  })
+
+  it('transforms .heif to .jpg', () => {
+    expect(transformHEICFilename('photo.heif')).toBe('photo.jpg')
+  })
+
+  it('handles uppercase extension', () => {
+    expect(transformHEICFilename('IMG_1234.HEIC')).toBe('IMG_1234.jpg')
+    expect(transformHEICFilename('IMG_1234.HEIF')).toBe('IMG_1234.jpg')
+  })
+
+  it('handles mixed case extension', () => {
+    expect(transformHEICFilename('IMG_1234.HeIc')).toBe('IMG_1234.jpg')
+  })
+
+  it('preserves filename with dots', () => {
+    expect(transformHEICFilename('my.photo.2024.heic')).toBe('my.photo.2024.jpg')
+  })
+
+  it('does not modify non-HEIC filenames', () => {
+    expect(transformHEICFilename('test.jpg')).toBe('test.jpg')
+    expect(transformHEICFilename('test.png')).toBe('test.png')
+  })
+})
+
+describe('convertHEICToJPEG (WISH-2045)', () => {
+  beforeEach(() => {
+    mockHeic2any.mockReset()
+  })
+
+  it('converts HEIC to JPEG successfully', async () => {
+    const heicFile = createMockFile(3 * 1024 * 1024, 'IMG_1234.heic', 'image/heic')
+    const convertedBlob = new Blob([new Uint8Array(5 * 1024 * 1024)], { type: 'image/jpeg' })
+
+    mockHeic2any.mockResolvedValue(convertedBlob)
+
+    const result = await convertHEICToJPEG(heicFile)
+
+    expect(result.converted).toBe(true)
+    expect(result.file.name).toBe('IMG_1234.jpg')
+    expect(result.file.type).toBe('image/jpeg')
+    expect(result.originalSize).toBe(heicFile.size)
+    expect(result.error).toBeUndefined()
+  })
+
+  it('handles heic2any returning Blob array (multi-image HEIC)', async () => {
+    const heicFile = createMockFile(3 * 1024 * 1024, 'burst_photo.heic', 'image/heic')
+    const blob1 = new Blob([new Uint8Array(2 * 1024 * 1024)], { type: 'image/jpeg' })
+    const blob2 = new Blob([new Uint8Array(2 * 1024 * 1024)], { type: 'image/jpeg' })
+
+    // Multi-image HEIC returns array of blobs
+    mockHeic2any.mockResolvedValue([blob1, blob2])
+
+    const result = await convertHEICToJPEG(heicFile)
+
+    // Should take first image
+    expect(result.converted).toBe(true)
+    expect(result.file.name).toBe('burst_photo.jpg')
+    expect(result.convertedSize).toBe(blob1.size)
+  })
+
+  it('calls heic2any with correct options', async () => {
+    const heicFile = createMockFile(1000, 'test.heic', 'image/heic')
+    const convertedBlob = new Blob([new Uint8Array(2000)], { type: 'image/jpeg' })
+
+    mockHeic2any.mockResolvedValue(convertedBlob)
+
+    await convertHEICToJPEG(heicFile, { quality: 0.85 })
+
+    expect(mockHeic2any).toHaveBeenCalledWith({
+      blob: heicFile,
+      toType: 'image/jpeg',
+      quality: 0.85,
+    })
+  })
+
+  it('uses default quality of 0.9', async () => {
+    const heicFile = createMockFile(1000, 'test.heic', 'image/heic')
+    const convertedBlob = new Blob([new Uint8Array(2000)], { type: 'image/jpeg' })
+
+    mockHeic2any.mockResolvedValue(convertedBlob)
+
+    await convertHEICToJPEG(heicFile)
+
+    expect(mockHeic2any).toHaveBeenCalledWith({
+      blob: heicFile,
+      toType: 'image/jpeg',
+      quality: 0.9,
+    })
+  })
+
+  it('calls progress callback on start and completion', async () => {
+    const heicFile = createMockFile(1000, 'test.heic', 'image/heic')
+    const convertedBlob = new Blob([new Uint8Array(2000)], { type: 'image/jpeg' })
+    const onProgress = vi.fn()
+
+    mockHeic2any.mockResolvedValue(convertedBlob)
+
+    await convertHEICToJPEG(heicFile, { onProgress })
+
+    expect(onProgress).toHaveBeenCalledWith(0)
+    expect(onProgress).toHaveBeenCalledWith(100)
+  })
+
+  it('returns original file on conversion error', async () => {
+    const heicFile = createMockFile(1000, 'test.heic', 'image/heic')
+
+    mockHeic2any.mockRejectedValue(new Error('HEIC decode failed'))
+
+    const result = await convertHEICToJPEG(heicFile)
+
+    expect(result.converted).toBe(false)
+    expect(result.file).toBe(heicFile)
+    expect(result.error).toBe('HEIC decode failed')
+  })
+
+  it('handles non-Error rejection gracefully', async () => {
+    const heicFile = createMockFile(1000, 'test.heic', 'image/heic')
+
+    mockHeic2any.mockRejectedValue('Unknown error string')
+
+    const result = await convertHEICToJPEG(heicFile)
+
+    expect(result.converted).toBe(false)
+    expect(result.error).toBe('Unknown HEIC conversion error')
+  })
+
+  it('preserves original size in result on failure', async () => {
+    const heicFile = createMockFile(3 * 1024 * 1024, 'test.heic', 'image/heic')
+
+    mockHeic2any.mockRejectedValue(new Error('Failed'))
+
+    const result = await convertHEICToJPEG(heicFile)
+
+    expect(result.originalSize).toBe(heicFile.size)
+    expect(result.convertedSize).toBe(heicFile.size)
   })
 })

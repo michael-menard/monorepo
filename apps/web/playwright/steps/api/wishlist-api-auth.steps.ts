@@ -18,6 +18,7 @@ import { createMinimalWishlistItem, uniqueItemName } from '../../utils/api-fixtu
 import {
   TEST_USERS,
   authState,
+  authenticateWithCognito,
   generateMockToken,
   generateExpiredToken,
   createInvalidToken,
@@ -82,12 +83,17 @@ Given('I am authenticated with a tampered token', async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 Given('the secondary user has created a wishlist item', async ({ request }) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000'
+  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+
+  // Authenticate as secondary user with Cognito
+  const { tokens } = await authenticateWithCognito(
+    TEST_USERS.secondary.email,
+    TEST_USERS.secondary.password,
+  )
 
   // Create secondary user client
   authTestState.secondaryClient = createWishlistApiClient(request, baseUrl)
-  const secondaryToken = generateMockToken(TEST_USERS.secondary)
-  authTestState.secondaryClient.setAuthToken(secondaryToken)
+  authTestState.secondaryClient.setAuthToken(tokens.accessToken)
 
   // Create item as secondary user
   const data = createMinimalWishlistItem({ title: `Secondary User ${uniqueItemName()}` })
@@ -98,11 +104,16 @@ Given('the secondary user has created a wishlist item', async ({ request }) => {
 })
 
 Given('the secondary user has created a wishlist item with title {string}', async ({ request }, title: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000'
+  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+
+  // Authenticate as secondary user with Cognito
+  const { tokens } = await authenticateWithCognito(
+    TEST_USERS.secondary.email,
+    TEST_USERS.secondary.password,
+  )
 
   authTestState.secondaryClient = createWishlistApiClient(request, baseUrl)
-  const secondaryToken = generateMockToken(TEST_USERS.secondary)
-  authTestState.secondaryClient.setAuthToken(secondaryToken)
+  authTestState.secondaryClient.setAuthToken(tokens.accessToken)
 
   const data = createMinimalWishlistItem({ title })
   const response = await authTestState.secondaryClient.create(data)

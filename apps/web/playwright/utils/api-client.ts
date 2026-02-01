@@ -216,7 +216,7 @@ export class WishlistApiClient {
   private baseUrl: string
   private authToken: string | null = null
 
-  constructor(request: APIRequestContext, baseUrl: string = 'http://localhost:4000') {
+  constructor(request: APIRequestContext, baseUrl: string = 'http://localhost:3001') {
     this.request = request
     this.baseUrl = baseUrl
   }
@@ -261,10 +261,10 @@ export class WishlistApiClient {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * GET /api/wishlist - List wishlist items
+   * GET /wishlist - List wishlist items
    */
   async list(params?: WishlistQueryParams): Promise<APIResponse> {
-    return this.request.get(this.buildUrl('/api/wishlist', params), {
+    return this.request.get(this.buildUrl('/wishlist', params), {
       headers: this.getHeaders(),
     })
   }
@@ -283,10 +283,10 @@ export class WishlistApiClient {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * GET /api/wishlist/:id - Get single item
+   * GET /wishlist/:id - Get single item
    */
   async get(id: string): Promise<APIResponse> {
-    return this.request.get(`${this.baseUrl}/api/wishlist/${id}`, {
+    return this.request.get(`${this.baseUrl}/wishlist/${id}`, {
       headers: this.getHeaders(),
     })
   }
@@ -301,10 +301,10 @@ export class WishlistApiClient {
   }
 
   /**
-   * POST /api/wishlist - Create item
+   * POST /wishlist - Create item
    */
   async create(data: CreateWishlistItemInput): Promise<APIResponse> {
-    return this.request.post(`${this.baseUrl}/api/wishlist`, {
+    return this.request.post(`${this.baseUrl}/wishlist`, {
       headers: this.getHeaders(),
       data,
     })
@@ -320,10 +320,10 @@ export class WishlistApiClient {
   }
 
   /**
-   * PUT /api/wishlist/:id - Update item
+   * PUT /wishlist/:id - Update item
    */
   async update(id: string, data: UpdateWishlistItemInput): Promise<APIResponse> {
-    return this.request.put(`${this.baseUrl}/api/wishlist/${id}`, {
+    return this.request.put(`${this.baseUrl}/wishlist/${id}`, {
       headers: this.getHeaders(),
       data,
     })
@@ -339,10 +339,10 @@ export class WishlistApiClient {
   }
 
   /**
-   * DELETE /api/wishlist/:id - Delete item
+   * DELETE /wishlist/:id - Delete item
    */
   async delete(id: string): Promise<APIResponse> {
-    return this.request.delete(`${this.baseUrl}/api/wishlist/${id}`, {
+    return this.request.delete(`${this.baseUrl}/wishlist/${id}`, {
       headers: this.getHeaders(),
     })
   }
@@ -352,10 +352,10 @@ export class WishlistApiClient {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * PUT /api/wishlist/reorder - Batch reorder items
+   * PUT /wishlist/reorder - Batch reorder items
    */
   async reorder(data: ReorderInput): Promise<APIResponse> {
-    return this.request.put(`${this.baseUrl}/api/wishlist/reorder`, {
+    return this.request.put(`${this.baseUrl}/wishlist/reorder`, {
       headers: this.getHeaders(),
       data,
     })
@@ -375,10 +375,10 @@ export class WishlistApiClient {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * GET /api/wishlist/images/presign - Get presigned URL
+   * GET /wishlist/images/presign - Get presigned URL
    */
   async presign(params: PresignQueryParams): Promise<APIResponse> {
-    return this.request.get(this.buildUrl('/api/wishlist/images/presign', params), {
+    return this.request.get(this.buildUrl('/wishlist/images/presign', params), {
       headers: this.getHeaders(),
     })
   }
@@ -397,10 +397,10 @@ export class WishlistApiClient {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * POST /api/wishlist/:id/purchased - Mark item as purchased
+   * POST /wishlist/:id/purchased - Mark item as purchased
    */
   async markAsPurchased(id: string, data: MarkAsPurchasedInput): Promise<APIResponse> {
-    return this.request.post(`${this.baseUrl}/api/wishlist/${id}/purchased`, {
+    return this.request.post(`${this.baseUrl}/wishlist/${id}/purchased`, {
       headers: this.getHeaders(),
       data,
     })

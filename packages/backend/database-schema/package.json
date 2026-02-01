@@ -25,9 +25,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/seeds/index.ts",
-    "db:status": "drizzle-kit status",
-    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "validate:schema": "tsx scripts/validate-schema-changes.ts",
+    "test": "vitest run",
     "clean": "rm -rf dist node_modules .turbo"
   },
   "dependencies": {
@@ -41,7 +41,8 @@
     "@types/pg": "^8.15.4",
     "drizzle-kit": "^0.31.4",
     "tsx": "^4.20.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.5"
   },
   "engines": {
     "node": ">=20"

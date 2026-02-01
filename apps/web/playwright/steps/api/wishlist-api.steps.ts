@@ -43,7 +43,8 @@ interface ApiTestState {
   storedValues: Record<string, unknown>
 }
 
-const apiState: ApiTestState = {
+// Export apiState so it can be shared with other step files
+export const apiState: ApiTestState = {
   client: null,
   lastResponse: null,
   lastResponseBody: null,
@@ -71,17 +72,17 @@ function resetState(): void {
 
 Given('the API is available', async ({ request }) => {
   resetState()
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000'
+  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
   apiState.client = createWishlistApiClient(request, baseUrl)
 })
 
 Given('I am authenticated as the primary test user', async () => {
-  authState.setUser(TEST_USERS.primary)
+  await authState.setUser(TEST_USERS.primary)
   apiState.client?.setAuthToken(authState.currentToken)
 })
 
 Given('I am authenticated as the secondary test user', async () => {
-  authState.setUser(TEST_USERS.secondary)
+  await authState.setUser(TEST_USERS.secondary)
   apiState.client?.setAuthToken(authState.currentToken)
 })
 

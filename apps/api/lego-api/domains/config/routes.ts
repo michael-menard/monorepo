@@ -3,13 +3,13 @@ import { logger } from '@repo/logger'
 import { auth, optionalAuth, adminAuth } from '../../middleware/auth.js'
 import { db, schema } from '../../composition/index.js'
 import { getRedisClient } from '../../core/cache/index.js'
-import { createFeatureFlagService } from './application/index.js'
+import { createFeatureFlagService } from './application/services.js'
 import {
   createFeatureFlagRepository,
   createUserOverrideRepository,
-  createInMemoryCache,
-  createRedisCacheAdapter,
-} from './adapters/index.js'
+} from './adapters/repositories.js'
+import { createInMemoryCache } from './adapters/cache.js'
+import { createRedisCacheAdapter } from './adapters/redis-cache.js'
 import { UpdateFeatureFlagInputSchema, AddUserOverrideRequestSchema } from './types.js'
 
 /**

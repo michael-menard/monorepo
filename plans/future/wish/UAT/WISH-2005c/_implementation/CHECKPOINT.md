@@ -6,10 +6,12 @@ feature_dir: "plans/future/wish"
 story_id: "WISH-2005c"
 timestamp: "2026-01-30T23:15:00Z"
 
-stage: done
+stage: uat
 implementation_complete: true
 code_review_complete: true
 code_review_verdict: PASS
+qa_verify_complete: true
+qa_verify_verdict: PASS
 iteration: 1
 max_iterations: 3
 model_used: sonnet
@@ -43,6 +45,7 @@ WishlistDragPreview component successfully implemented with all 13 acceptance cr
 | Unit Tests | PASS (35/35) |
 | Build | PASS |
 | Code Review | PASS |
+| QA Verify | PASS (13/13 ACs) |
 
 ## Artifacts
 
@@ -58,4 +61,4 @@ WishlistDragPreview component successfully implemented with all 13 acceptance cr
 
 ## Next Step
 
-Story ready for QA verification. Run `/qa-verify-story plans/future/wish WISH-2005c`
+QA verification complete. Story is in UAT awaiting user acceptance testing.

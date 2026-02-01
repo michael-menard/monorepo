@@ -3,6 +3,10 @@ import type { Result } from '@repo/api-core'
 import { getPresignedUploadUrl, deleteFromS3, copyS3Object, ok, err } from '@repo/api-core'
 import { logger } from '@repo/logger'
 import type { WishlistImageStorage } from '../ports/index.js'
+import {
+  buildImageUrlFromKey,
+  extractS3KeyFromUrl as extractKeyFromS3Url,
+} from '../../../core/cdn/index.js'
 
 /**
  * Allowed image extensions for wishlist uploads
@@ -135,14 +139,12 @@ export function createWishlistImageStorage(): WishlistImageStorage {
     },
 
     /**
-     * Build the S3 URL from a key
+     * Build the public URL from a key
+     *
+     * WISH-2018: Returns CloudFront URL if configured, otherwise S3 URL
      */
     buildImageUrl(key: string): string {
-      const bucket = process.env.S3_BUCKET
-      if (!bucket) {
-        throw new Error('S3_BUCKET environment variable is required')
-      }
-      return `https://${bucket}.s3.amazonaws.com/${key}`
+      return buildImageUrlFromKey(key)
     },
 
     /**
@@ -171,26 +173,11 @@ export function createWishlistImageStorage(): WishlistImageStorage {
 
     /**
      * Extract S3 key from a full URL
+     *
+     * WISH-2018: Delegates to CDN utility for consistent extraction
      */
     extractKeyFromUrl(url: string): string | null {
-      const bucket = process.env.S3_BUCKET
-      if (!bucket) return null
-
-      // URL format: https://{bucket}.s3.amazonaws.com/{key}
-      // or: https://{bucket}.s3.{region}.amazonaws.com/{key}
-      const patterns = [
-        new RegExp(`https://${bucket}\\.s3\\.amazonaws\\.com/(.+)`),
-        new RegExp(`https://${bucket}\\.s3\\.[^/]+\\.amazonaws\\.com/(.+)`),
-      ]
-
-      for (const pattern of patterns) {
-        const match = url.match(pattern)
-        if (match?.[1]) {
-          return match[1]
-        }
-      }
-
-      return null
+      return extractKeyFromS3Url(url)
     },
   }
 }

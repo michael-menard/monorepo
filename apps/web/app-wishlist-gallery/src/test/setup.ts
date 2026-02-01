@@ -117,6 +117,11 @@ vi.mock('@repo/logger', () => ({
   })),
 }))
 
+// WISH-2045: Mock heic2any since it uses Web Workers which aren't available in Node
+vi.mock('heic2any', () => ({
+  default: vi.fn().mockResolvedValue(new Blob(['mock-jpeg'], { type: 'image/jpeg' })),
+}))
+
 // Global test utilities
 declare global {
   var vi: typeof import('vitest').vi

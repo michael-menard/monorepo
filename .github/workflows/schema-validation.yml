@@ -1,0 +1,109 @@
+name: Schema Validation
+
+on:
+  pull_request:
+    paths:
+      - 'packages/backend/database-schema/src/**'
+      - 'packages/backend/database-schema/migrations/**'
+
+concurrency:
+  group: schema-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-schema:
+    name: Validate Schema Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for git diff comparison
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Validate schema changes
+        id: validate
+        run: |
+          pnpm --filter @repo/database-schema validate:schema
+        continue-on-error: true
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+
+      - name: Read validation results
+        id: read-results
+        if: always()
+        run: |
+          if [ -f schema-validation-results.md ]; then
+            echo "results<<EOF" >> $GITHUB_OUTPUT
+            cat schema-validation-results.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "results=No validation results file found" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = `${{ steps.read-results.outputs.results }}`;
+            const outcome = '${{ steps.validate.outcome }}';
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('## Schema Validation Results')
+            );
+
+            const statusEmoji = outcome === 'success' ? '✅' : '❌';
+            const body = `${statusEmoji} **Schema Validation ${outcome === 'success' ? 'Passed' : 'Failed'}**
+
+            ${results}
+
+            ---
+            *This comment is automatically updated on each push.*`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+
+      - name: Fail if critical violations
+        if: steps.validate.outcome == 'failure'
+        run: |
+          echo "Schema validation failed with critical violations"
+          exit 1

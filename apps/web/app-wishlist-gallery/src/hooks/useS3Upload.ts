@@ -8,6 +8,7 @@
  * WISH-2013: Security hardening - file type and size validation
  * WISH-2022: Client-side image compression before upload
  * WISH-2046: Client-side image compression quality presets
+ * WISH-2045: HEIC/HEIF Image Format Support
  */
 
 import { useState, useCallback, useRef } from 'react'
@@ -16,8 +17,11 @@ import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wish
 import {
   compressImage,
   getPresetByName,
+  isHEIC,
+  convertHEICToJPEG,
   type CompressionResult,
   type CompressionPresetName,
+  type HEICConversionResult,
 } from '../utils/imageCompression'
 
 /**
@@ -35,14 +39,29 @@ export const MIN_FILE_SIZE = 1
  *
  * WISH-2013: Security hardening - removed GIF, restricted to JPEG, PNG, WebP
  * GIF removed due to potential for embedded scripts and complexity in scanning
+ * WISH-2045: Added HEIC/HEIF types (will be converted to JPEG before upload)
  */
-export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+export const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+] as const
 
 /**
- * Upload state including compression phase
+ * Upload state including compression and conversion phases
  * WISH-2022: Added 'compressing' state
+ * WISH-2045: Added 'converting' state for HEIC to JPEG conversion
  */
-export type UploadState = 'idle' | 'compressing' | 'preparing' | 'uploading' | 'complete' | 'error'
+export type UploadState =
+  | 'idle'
+  | 'converting'
+  | 'compressing'
+  | 'preparing'
+  | 'uploading'
+  | 'complete'
+  | 'error'
 
 /**
  * Options for the upload function
@@ -85,6 +104,18 @@ export interface UseS3UploadResult {
    * WISH-2022: Provides compression details for toast notification
    */
   compressionResult: CompressionResult | null
+
+  /**
+   * Conversion progress (0-100)
+   * WISH-2045: Separate HEIC conversion progress tracking
+   */
+  conversionProgress: number
+
+  /**
+   * Result of the HEIC conversion operation
+   * WISH-2045: Provides conversion details for toast notification
+   */
+  conversionResult: HEICConversionResult | null
 
   /**
    * Error message if upload failed
@@ -135,6 +166,8 @@ export function useS3Upload(): UseS3UploadResult {
   const [progress, setProgress] = useState(0)
   const [compressionProgress, setCompressionProgress] = useState(0)
   const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null)
+  const [conversionProgress, setConversionProgress] = useState(0)
+  const [conversionResult, setConversionResult] = useState<HEICConversionResult | null>(null)
   const [presetUsed, setPresetUsed] = useState<CompressionPresetName | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -155,8 +188,14 @@ export function useS3Upload(): UseS3UploadResult {
     }
 
     // WISH-2013 AC2: Check MIME type against whitelist (client-side validation)
-    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
-      return 'Only JPEG, PNG, and WebP images are allowed'
+    // WISH-2045: Also check for HEIC files by extension (some apps report as octet-stream)
+    const isAllowedMimeType = ALLOWED_MIME_TYPES.includes(
+      file.type as (typeof ALLOWED_MIME_TYPES)[number],
+    )
+    const isHEICFile = isHEIC(file)
+
+    if (!isAllowedMimeType && !isHEICFile) {
+      return 'Only JPEG, PNG, WebP, and HEIC images are allowed'
     }
 
     return null
@@ -179,6 +218,8 @@ export function useS3Upload(): UseS3UploadResult {
       setProgress(0)
       setCompressionProgress(0)
       setCompressionResult(null)
+      setConversionProgress(0)
+      setConversionResult(null)
       setPresetUsed(null)
       setImageUrl(null)
       setImageKey(null)
@@ -187,14 +228,43 @@ export function useS3Upload(): UseS3UploadResult {
       abortControllerRef.current = new AbortController()
 
       try {
-        let fileToUpload = file
+        let fileToProcess = file
+
+        // WISH-2045: Convert HEIC to JPEG if needed
+        // Conversion happens before compression, even if compression is skipped
+        if (isHEIC(file)) {
+          setState('converting')
+          const convResult = await convertHEICToJPEG(file, {
+            quality: 0.9, // High quality for conversion (compression happens next)
+            onProgress: setConversionProgress,
+          })
+          setConversionResult(convResult)
+
+          if (convResult.converted) {
+            fileToProcess = convResult.file
+          } else {
+            // Conversion failed - we could either:
+            // 1. Continue with original HEIC (may fail on upload if server doesn't accept HEIC)
+            // 2. Return an error immediately
+            // Per story AC: "fall back to uploading original HEIC file (with warning toast)"
+            // The consumer should check conversionResult.error to show appropriate toast
+          }
+
+          // Check if cancelled during conversion
+          if (abortControllerRef.current?.signal.aborted) {
+            setState('idle')
+            return null
+          }
+        }
+
+        let fileToUpload = fileToProcess
 
         // WISH-2022/2046: Compress image before upload (unless skipped)
         // Uses the selected preset settings for compression
         if (!skipCompression) {
           setState('compressing')
           const presetConfig = getPresetByName(preset)
-          const result = await compressImage(file, {
+          const result = await compressImage(fileToProcess, {
             config: presetConfig.settings,
             onProgress: setCompressionProgress,
           })
@@ -274,6 +344,7 @@ export function useS3Upload(): UseS3UploadResult {
     setState('idle')
     setProgress(0)
     setCompressionProgress(0)
+    setConversionProgress(0)
     setError(null)
   }, [])
 
@@ -282,6 +353,7 @@ export function useS3Upload(): UseS3UploadResult {
     setImageUrl(null)
     setImageKey(null)
     setCompressionResult(null)
+    setConversionResult(null)
     setPresetUsed(null)
   }, [cancel])
 
@@ -290,6 +362,8 @@ export function useS3Upload(): UseS3UploadResult {
     progress,
     compressionProgress,
     compressionResult,
+    conversionProgress,
+    conversionResult,
     presetUsed,
     error,
     imageUrl,

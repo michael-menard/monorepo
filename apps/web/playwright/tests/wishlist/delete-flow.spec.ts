@@ -15,18 +15,18 @@ test.describe('Delete Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to wishlist gallery
     await page.goto('/wishlist')
-    // Wait for gallery to load
-    await page.waitForSelector('[data-testid="wishlist-gallery"]', { timeout: 10000 })
+    // Wait for gallery to load - filter bar indicates the page has rendered
+    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 10000 })
   })
 
   test.describe('AC1-3: Modal Opening and Preview', () => {
     test('AC1: DeleteConfirmModal opens when user triggers delete action', async ({ page }) => {
       // Find a wishlist card and click its delete button
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
 
       // Click delete button (usually in card actions menu)
-      const deleteButton = card.locator('[data-testid="delete-button"]')
+      const deleteButton = card.locator('[data-testid="wishlist-card-delete"]')
       await deleteButton.click()
 
       // Modal should be visible
@@ -38,9 +38,9 @@ test.describe('Delete Flow', () => {
       page,
     }) => {
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Check item preview elements
       const preview = page.locator('[data-testid="delete-confirm-item-preview"]')
@@ -52,10 +52,10 @@ test.describe('Delete Flow', () => {
 
     test('AC3: Cancel button closes modal without deleting', async ({ page }) => {
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
-      const cardTitle = await card.locator('[data-testid="wishlist-card-title"]').textContent()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+      const cardTitle = await card.locator('[data-testid="gallery-card-title"]').textContent()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click cancel
       await page.locator('[data-testid="delete-confirm-cancel"]').click()
@@ -82,9 +82,9 @@ test.describe('Delete Flow', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -107,12 +107,12 @@ test.describe('Delete Flow', () => {
       })
 
       // Get initial card count
-      const initialCount = await page.locator('[data-testid="wishlist-card"]').count()
+      const initialCount = await page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').count()
 
       // Open delete modal for first card
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Confirm delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -121,7 +121,7 @@ test.describe('Delete Flow', () => {
       await expect(page.locator('[role="alertdialog"]')).not.toBeVisible()
 
       // Card count should decrease by 1
-      await expect(page.locator('[data-testid="wishlist-card"]')).toHaveCount(initialCount - 1)
+      await expect(page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')).toHaveCount(initialCount - 1)
     })
 
     test('AC6: Loading state disables buttons during deletion', async ({ page }) => {
@@ -136,9 +136,9 @@ test.describe('Delete Flow', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -167,9 +167,9 @@ test.describe('Delete Flow', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -194,9 +194,9 @@ test.describe('Delete Flow', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()
@@ -218,9 +218,9 @@ test.describe('Delete Flow', () => {
       })
 
       // Open delete modal
-      const card = page.locator('[data-testid="wishlist-card"]').first()
+      const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
-      await card.locator('[data-testid="delete-button"]').click()
+      await card.locator('[data-testid="wishlist-card-delete"]').click()
 
       // Click delete
       await page.locator('[data-testid="delete-confirm-delete"]').click()

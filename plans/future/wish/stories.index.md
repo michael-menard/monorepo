@@ -15,12 +15,12 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 20 |
+| completed | 21 |
 | in-progress | 0 |
 | review | 0 |
 | ready-for-code-review | 1 |
 | ready-for-qa | 0 |
-| uat | 1 |
+| uat | 0 |
 | in-qa | 0 |
 | backlog | 13 |
 | elaboration | 3 |
@@ -2264,8 +2264,8 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 
 ## WISH-2045: HEIC/HEIF Image Format Support
 
-**Status:** ready-to-work
-**Depends On:** WISH-2022
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2022
 **Phase:** 4 - UX Polish
 
@@ -2306,14 +2306,14 @@ Follow-up from QA Elaboration of WISH-2022 (Gap #1)
 **Impact:** High (Modern iPhone users cannot use compression workflow)
 **Effort:** Medium (requires additional library integration)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2045/WISH-2045.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2045/WISH-2045.md`
 
 ---
 
 ## WISH-20530: Server-side HEIC Conversion Fallback
 
 **Status:** deferred
-**Depends On:** WISH-2045
+**Depends On:** none
 **Follow-up From:** WISH-2045
 **Phase:** 4 - UX Polish
 
@@ -2839,7 +2839,7 @@ This is part 3 of 3 from the split of WISH-20220. Depends on WISH-20500 (core da
 ## WISH-20540: HEIC Telemetry Tracking for Conversion Success/Failure Rates
 
 **Status:** deferred
-**Depends On:** WISH-2045
+**Depends On:** none
 **Follow-up From:** WISH-2045
 **Phase:** 4 - UX Polish
 
