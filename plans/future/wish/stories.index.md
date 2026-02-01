@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-31T17:35:00Z"
+updated_at: "2026-01-31T23:55:00Z"
 ---
 
 # WISH Stories Index
@@ -15,18 +15,19 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 18 |
+| completed | 20 |
 | in-progress | 0 |
 | review | 0 |
+| ready-for-code-review | 1 |
 | ready-for-qa | 0 |
-| uat | 0 |
+| uat | 1 |
 | in-qa | 0 |
-| backlog | 11 |
+| backlog | 13 |
 | elaboration | 3 |
 | needs-refinement | 1 |
-| deferred | 18 |
-| ready-to-work | 16 |
-| pending | 9 |
+| deferred | 17 |
+| ready-to-work | 17 |
+| pending | 10 |
 | created | 1 |
 | cancelled | 1 |
 | BLOCKED | 1 |
@@ -40,6 +41,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | Story | Feature | Blocked By |
 |-------|---------|------------|
 | WISH-2000 | Database Schema & Types | — |
+| WISH-2119 | Flag scheduling (auto-enable/disable at scheduled times) | — |
+| WISH-2124 | Redis infrastructure setup and migration from in-memory cache | — |
 
 ---
 
@@ -203,8 +206,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005c: Drag preview thumbnail
 
-**Status:** completed
-**Depends On:** none
+**Status:** uat
+**Depends On:** WISH-2005a
 **Phase:** 4 - UX Polish
 
 **Feature:** Enhanced visual feedback during drag operations with item preview thumbnail displayed in DragOverlay instead of generic ghost. Shows item image, title, and price in a scaled preview.
@@ -241,7 +244,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2006: Accessibility
 
-**Status:** Ready to Work
+**Status:** completed
 **Depends On:** WISH-2005
 **Phase:** 5 - Accessibility (Deferred to Phase 2 after core functionality)
 
@@ -329,7 +332,7 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #5)
 
 ## WISH-2009: Feature flag infrastructure setup for gradual wishlist rollout
 
-**Status:** backlog
+**Status:** completed
 **Depends On:** WISH-2007
 **Phase:** 2+ - Infrastructure
 
@@ -348,7 +351,7 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #5)
 ## WISH-2119: Flag scheduling (auto-enable/disable at scheduled times)
 
 **Status:** ready-to-work
-**Depends On:** WISH-2009
+**Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 3 - Infrastructure
 
@@ -652,7 +655,7 @@ Follow-up from QA Elaboration of WISH-2011 (Follow-up Stories Suggested - Findin
 
 ## WISH-2010: Shared Zod schemas and types setup
 
-**Status:** completed
+**Status:** uat
 **Depends On:** none
 **Phase:** 2 - Foundation
 
@@ -822,7 +825,7 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 ## WISH-2124: Redis infrastructure setup and migration from in-memory cache
 
 **Status:** ready-to-work
-**Depends On:** WISH-2009
+**Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 2 - Core Infrastructure
 
@@ -1140,7 +1143,7 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 
 ## WISH-2122: Usage Quotas - Per-User Storage Quotas and Upload Rate Limits
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2013
 **Follow-up From:** WISH-2013
 **Phase:** 4 - Resource Management
@@ -1191,6 +1194,8 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 **Impact:** Medium (Cost control and abuse prevention)
 **Effort:** Medium (Database tracking + enforcement logic + rate limiting)
 
+**Story File:** _(deleted - deferred)_
+
 ---
 
 ## WISH-20171: Backend Combined Filter + Sort Queries
@@ -1229,7 +1234,7 @@ AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC17, AC19, AC20 (11 ACs)
 
 ## WISH-2018: CDN Integration for Image Performance Optimization
 
-**Status:** ready-to-work
+**Status:** uat
 **Depends On:** WISH-2013
 **Follow-up From:** WISH-2013
 **Phase:** 5 - Performance
@@ -1344,7 +1349,7 @@ Follow-up from QA Elaboration of WISH-2009 (Enhancement Opportunity #1)
 ## WISH-2029: Update architecture documentation for lego-api/domains/ pattern
 
 **Status:** completed
-**Depends On:** WISH-2009
+**Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 2 - Infrastructure
 
@@ -1388,7 +1393,7 @@ Follow-up from QA Elaboration of WISH-2009 (Gap #2 - AC 18 follow-up)
 ## WISH-2039: User-level targeting for feature flags
 
 **Status:** uat
-**Depends On:** WISH-2009
+**Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 3 - Infrastructure
 
@@ -1766,8 +1771,8 @@ Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunities - Finding 
 
 ## WISH-20180: CI Job to Validate Schema Changes Against Policy
 
-**Status:** ready-to-work
-**Depends On:** WISH-2057
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2057
 **Phase:** 2 - Infrastructure
 
@@ -1797,7 +1802,7 @@ Implement automated CI validation of database schema changes against schema evol
 
 **Priority:** P1 (Automated governance for Phase 2)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-20180/WISH-20180.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-20180/WISH-20180.md`
 
 ### Source
 
@@ -1814,7 +1819,7 @@ Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Findin
 ## WISH-20370: Schema Change Impact Analysis Tool
 
 **Status:** deferred
-**Depends On:** WISH-20180
+**Depends On:** none
 **Follow-up From:** WISH-20180
 **Phase:** 2 - Infrastructure
 
@@ -1918,7 +1923,7 @@ Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunities - Finding
 ## WISH-20390: Visual Schema Diff Tool for PR Reviews
 
 **Status:** deferred
-**Depends On:** WISH-20180
+**Depends On:** none
 **Follow-up From:** WISH-20180
 **Phase:** 2 - Infrastructure
 
@@ -2458,7 +2463,7 @@ Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunities - Finding 
 
 ## WISH-2058: Core WebP Conversion
 
-**Status:** ready-to-work
+**Status:** deferred
 **Depends On:** WISH-2022
 **Split From:** WISH-2048
 **Phase:** 4 - UX Polish
@@ -2506,7 +2511,7 @@ Split from WISH-2048 (WebP Format Conversion) during QA Elaboration. Original st
 
 ## WISH-2068: Browser Compatibility & Fallback for WebP
 
-**Status:** ready-to-work
+**Status:** deferred
 **Depends On:** WISH-2058
 **Split From:** WISH-2048
 **Phase:** 4 - UX Polish
@@ -3314,7 +3319,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #2)
 ## WISH-20360: Automated Migration Rollback Testing
 
 **Status:** deferred
-**Depends On:** WISH-20180
+**Depends On:** none
 **Follow-up From:** WISH-20180
 **Phase:** 3 - Infrastructure
 
@@ -3471,7 +3476,7 @@ Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunity #4)
 
 ## WISH-20590: Migrate Accessibility Hooks to @repo/accessibility
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-2006
 **Follow-up From:** WISH-2006
 **Phase:** 5 - Future Enhancements
@@ -3510,7 +3515,7 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #1)
 **Impact:** Medium (Enables reuse of accessibility patterns across multiple apps)
 **Effort:** Low (Straightforward migration of proven utilities to shared package)
 
-**Story File:** `plans/future/wish/backlog/WISH-20590/WISH-20590.md`
+**Story File:** _(deleted - deferred)_
 
 ---
 
@@ -3600,5 +3605,323 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #4)
 **Effort:** Medium (Requires @guidepup integration and CI runner configuration)
 
 **Story File:** _(deleted - deferred)_
+
+---
+
+## SETS-MVP-001: Unified Schema Extension
+
+**Status:** ready-to-work
+**Depends On:** WISH-2000
+**Phase:** 1 - Foundation
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Extend the existing wishlist schema to support owned items, enabling a single unified data model for both wishlist and collection. Adds status field and owned-specific columns to the existing `wishlist_items` table.
+
+**Feature:** Add status field with enum constraint ('wishlist' | 'owned'), purchase tracking fields (purchaseDate, purchasePrice, purchaseTax, purchaseShipping), build status enum, and composite index for collection queries.
+
+**Goal:** Enable tracking of owned LEGO sets alongside wishlists using the unified data model approach.
+
+**Dependencies:** WISH-2000 (Database Schema & Types must be completed first)
+
+**Acceptance Criteria:** 23 ACs covering:
+- Schema changes (AC1-8): status, purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus, statusChangedAt, composite index
+- Zod schema updates (AC9-13): ItemStatusSchema, BuildStatusSchema, UserSetSchema, MarkAsPurchasedSchema, UpdateBuildStatusSchema
+- Service layer changes (AC21-23): service methods for status filtering, default filter behavior, integration tests
+- Migration (AC14-16): reversible migration, default values, backward compatibility
+- Tests (AC17-20): schema validation, default values, null field handling, query compatibility
+
+**Risk Notes:** Migration must be backward compatible with no downtime. Service layer must implement default filter behavior for backward compatibility.
+
+**Story File:** `plans/future/wish/elaboration/SETS-MVP-001/SETS-MVP-001.md`
+
+---
+
+## SETS-MVP-002: Collection View
+
+**Status:** ready-to-work
+**Depends On:** SETS-MVP-001, WISH-2001
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Create a collection view that shows owned items using the same gallery infrastructure as the wishlist, filtered by `status = 'owned'`. Reuses existing WishlistGallery components with a simple status filter, avoiding the need to build a separate Sets feature from scratch.
+
+**Feature:** Collection page at `/collection` showing owned items in the same gallery layout as wishlist, with collection-specific display (build status badge, purchase date, no priority/drag-drop).
+
+**Goal:** Enable users to view their collection of owned LEGO sets with build status and purchase information.
+
+**Dependencies:** SETS-MVP-001 (Unified Schema Extension must be completed first), WISH-2001 (Gallery MVP must be completed first)
+
+**Acceptance Criteria:** 21 ACs covering:
+- Route & Navigation (AC1-3): /collection route, navigation link, page title
+- Gallery Display (AC4-8): WishlistGallery reuse with status filter, build status badge, purchase date, no priority, no drag-drop
+- API Integration (AC9-11, AC16-17): status filtering, default sort, existing filter support, service layer, route changes
+- Empty State (AC12-13): empty collection message, CTA to wishlist
+- Component Wiring (AC18): CollectionPage wiring specification
+- Testing (AC19-20): HTTP test file, Playwright E2E tests
+- Stories & Index (AC21): stories.index.md entry
+
+**Risk Notes:** Low risk; primarily configuration of existing components. Build status badge is new UI element.
+
+**Story File:** `plans/future/wish/elaboration/SETS-MVP-002/SETS-MVP-002.md`
+
+---
+
+## SETS-MVP-004: Build Status Toggle
+
+**Status:** ready-to-work
+**Depends On:** SETS-MVP-002
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Allow users to toggle the build status of owned items between "In Pieces" and "Built" with optimistic updates and visual feedback. Simple toggle component on collection cards and detail view with satisfying UX.
+
+**Feature:** Toggle component on collection cards and detail view that switches build status with optimistic UI updates, optional celebration animation, and undo support.
+
+**Goal:** Enable users to track and update the build status of their owned LEGO sets with visual feedback.
+
+**Dependencies:** SETS-MVP-002 (Collection View must be completed first)
+
+**Acceptance Criteria:** 32 ACs covering:
+- Toggle Component (AC1-5): BuildStatusToggle component, current state display, distinct visual states
+- Interaction (AC6-8): click toggle, keyboard accessible, ARIA attributes
+- API Integration (AC9-11): PATCH endpoint, validation, error handling
+- Optimistic Updates (AC12-14): immediate UI update, error revert, error toast
+- Celebration (AC15-17): optional celebration animation, subtle design, prefers-reduced-motion
+- Undo Support (AC18-20): toast with undo action, revert on undo
+- Backend Service Layer (AC21-22): updateBuildStatus service method with validation
+- Routes & Adapters (AC23-24): PATCH route handler with thin adapter pattern
+- Error Handling (AC25): explicit error code and message format
+- Zod Schema (AC26): UpdateWishlistItemInputSchema update
+- Backend Testing (AC27): .http test file with core scenarios
+- Optimistic Update Pattern (AC28): React Query useMutation implementation
+- Motion Preferences (AC29): prefers-reduced-motion support
+- Toast Timing (AC30): 5000ms success, 7000ms error
+- Network Retry (AC31): no auto-retry, immediate revert
+- Concurrent Prevention (AC32): button disable during request
+
+**Risk Notes:** Low complexity; simple toggle with standard patterns. Celebration animation is nice-to-have, can be deferred. All architecture gaps addressed.
+
+**Elaboration Report:** `plans/future/wish/ready-to-work/SETS-MVP-004/ELAB-SETS-MVP-004.md`
+
+**Story File:** `plans/future/wish/ready-to-work/SETS-MVP-004/SETS-MVP-004.md`
+
+---
+
+## SETS-MVP-0360: Build History and Date Tracking
+
+**Status:** pending
+**Depends On:** SETS-MVP-004
+**Follow-up From:** SETS-MVP-004
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Track and display build completion dates and maintain a history of build status changes over time. Extends SETS-MVP-004 (Build Status Toggle) to add temporal context for when items were marked as built.
+
+**Feature:** Database schema additions for `build_completed_at` timestamp and `wishlist_item_build_history` table, backend service updates to track status changes, and frontend components to display "Built on [date]" badges and optional build history timeline.
+
+**Goal:** Enable users to see when they marked items as built and maintain a history of build status changes over time, providing timeline context for their collection.
+
+**Dependencies:** SETS-MVP-004 (Build Status Toggle must be completed first)
+
+**Acceptance Criteria:** 37 ACs covering:
+- Database Schema (AC1-7): build_completed_at column, build_history table, indexes, Drizzle/Zod schemas
+- Backend Service Layer (AC8-12): updateBuildStatus enhancements, getBuildHistory method, authorization
+- API Response Updates (AC13-15): include build_completed_at in responses
+- Frontend Display - Build Date Badge (AC16-19): date badge on cards, formatting, positioning
+- Frontend Display - Item Detail (AC20-22): date display in detail view, relative time
+- Build History Timeline (AC23-27): collapsible history section, chronological list, empty state
+- Backend Testing (AC28-29): .http tests, unit tests for history retrieval
+- Migration & Rollback (AC30-32): safe migration, rollback script, null initial values
+- Type Safety (AC33-35): TypeScript types, Zod schemas
+- Accessibility (AC36-37): ARIA labels, keyboard navigation
+
+**Risk Notes:** Medium complexity; requires database migration and careful timestamp handling. Build history timeline is optional for MVP. All schema changes are additive (no data loss risk).
+
+**Source:** Follow-up from QA Elaboration of SETS-MVP-004 (Finding #2: "Build history and date tracking")
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0360/SETS-MVP-0360.md`
+
+---
+
+## SETS-MVP-0310: Status Update Flow
+
+**Status:** backlog
+**Depends On:** SETS-MVP-001
+**Split From:** SETS-MVP-003
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Core purchase flow using the unified model - update item status to 'owned' with purchase details. Extends the "Got it" modal with a purchase details step and provides a PATCH endpoint to update the item's status and capture purchase information.
+
+**Feature:** Extended "Got it" modal with purchase details form and backend endpoint to update item status to 'owned' with purchase metadata.
+
+**Goal:** Enable users to mark wishlist items as owned while capturing purchase details (price, tax, shipping, purchase date, build status).
+
+**Dependencies:** SETS-MVP-001 (requires unified schema with status, purchaseDate, buildStatus, purchasePrice, purchaseTax, purchaseShipping fields)
+
+**Acceptance Criteria (from parent):**
+- AC1-6: Modal flow (confirmation step, purchase details form, optional fields, skip/save buttons, calculated total)
+- AC7-10: API changes (PATCH /api/wishlist/:id/purchase endpoint, status update, ownership validation, return updated item)
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0310/SETS-MVP-0310.md`
+
+---
+
+## SETS-MVP-0320: Purchase UX Polish
+
+**Status:** backlog
+**Depends On:** SETS-MVP-0310
+**Split From:** SETS-MVP-003
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+UX polish for the purchase flow - add success feedback, navigation link, and item removal animation after marking an item as owned.
+
+**Feature:** Success toast with "View in Collection" link and smooth item removal animation from wishlist view.
+
+**Goal:** Provide clear user feedback after purchase and smooth visual transition when items leave the wishlist.
+
+**Dependencies:** SETS-MVP-0310 (requires core purchase flow to be implemented)
+
+**Acceptance Criteria (from parent):**
+- AC11-14: Success toast with "Added to your collection!" message, "View in Collection" link in toast, item disappears from wishlist view, animated removal if on wishlist page
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0320/SETS-MVP-0320.md`
+
+---
+
+## SETS-MVP-0330: Undo Support
+
+**Status:** backlog
+**Depends On:** SETS-MVP-0310
+**Split From:** SETS-MVP-003
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Undo functionality for purchase operations - provide a 5-second window to revert a purchase action and restore the item to wishlist status.
+
+**Feature:** Undo button in success toast with client-side timer and unpurchase endpoint to revert status changes.
+
+**Goal:** Allow users to quickly undo accidental purchase actions within a 5-second window.
+
+**Dependencies:** SETS-MVP-0310 (requires core purchase flow to be implemented)
+
+**Acceptance Criteria (from parent):**
+- AC15-17: Toast includes "Undo" action (5 second window), undo reverts status to 'wishlist' and clears purchase fields, PATCH /api/wishlist/:id/unpurchase endpoint for undo
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0330/SETS-MVP-0330.md`
+
+---
+
+## SETS-MVP-0340: Form Validation
+
+**Status:** backlog
+**Depends On:** SETS-MVP-0310
+**Split From:** SETS-MVP-003
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Form validation and accessibility polish for the purchase details form - ensure data integrity and keyboard accessibility.
+
+**Feature:** Client-side validation for price fields and purchase dates, plus full keyboard navigation support.
+
+**Goal:** Ensure purchase data is valid and the form is fully accessible via keyboard.
+
+**Dependencies:** SETS-MVP-0310 (requires core purchase flow to be implemented)
+
+**Acceptance Criteria (from parent):**
+- AC18-20: Price fields accept valid decimals only (0.00 - 999999.99), purchase date cannot be in the future, form is keyboard accessible (tab order, enter to submit)
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0340/SETS-MVP-0340.md`
+
+---
+
+## SETS-MVP-0350: Batch Build Status Updates
+
+**Status:** pending
+**Depends On:** SETS-MVP-004
+**Follow-up From:** SETS-MVP-004
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Enable batch build status updates allowing users to mark multiple collection items as built or in pieces simultaneously, with progress feedback, error handling, and undo support.
+
+**Feature:** Multi-select UI for collection items, batch API endpoint for updating multiple items at once, progress indicator for batch operations, partial failure handling with detailed error reporting, and undo support for batch operations.
+
+**Goal:** Improve UX efficiency for users managing large collections by enabling batch operations instead of updating items one at a time.
+
+**Dependencies:** SETS-MVP-004 (Build Status Toggle - requires buildStatus field and single-item toggle functionality)
+
+**Source:** Follow-up from QA Elaboration of SETS-MVP-004 - Finding #1: "Batch build status updates (mark multiple items as built in one action)"
+
+**Acceptance Criteria:** 49 ACs covering:
+- Multi-select UI (AC1-5): checkboxes, visual feedback, selection count
+- Batch Action Toolbar (AC6-10): sticky toolbar, action buttons, keyboard accessibility
+- Selection Modes (AC11-14): select mode toggle, keyboard shortcuts
+- Batch API Endpoint (AC15-19): PATCH /api/wishlist/batch/build-status, validation, transaction processing
+- Progress Feedback (AC20-23): progress indicator, summary toast, partial failure warnings
+- Error Handling (AC24-27): complete/partial failure handling, error details, retry support
+- Undo Support (AC28-31): undo button, revert functionality, extended toast duration
+- Optimistic Updates (AC32-34): immediate UI updates, selective revert on errors
+- Backend Service Layer (AC35-37): batchUpdateBuildStatus service method
+- Input Validation & Schema (AC38-40): BatchBuildStatusInputSchema with Zod
+- Backend Testing (AC41-42): .http test file, unit tests
+- Accessibility (AC43-46): ARIA labels, screen reader announcements, focus management
+- Performance (AC47-49): 50 item limit, warning for oversized batches, parallel processing
+
+**Risk Notes:** Medium complexity - requires handling partial failures and maintaining consistent state between client and server. Performance considerations for large batches.
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0350/SETS-MVP-0350.md`
+
+---
+
+## SETS-MVP-0370: Build Status Analytics
+
+**Status:** pending
+**Depends On:** SETS-MVP-004
+**Follow-up From:** SETS-MVP-004
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Collection-level build status analytics showing completion percentage, built vs in_pieces breakdown, and filtering capabilities.
+
+**Feature:** Stats card displaying collection completion metrics (total owned, total built, percentage complete), visual progress indicator (bar or pie chart), and build status filter to show only built or only unbuilt items.
+
+**Goal:** Help users understand their collection progress at a glance and motivate them to build more sets by showing meaningful statistics.
+
+**Dependencies:** SETS-MVP-004 (Build Status Toggle - requires buildStatus field and toggle functionality)
+
+**Source:** Follow-up from QA Elaboration of SETS-MVP-004 - Enhancement opportunity identified during elaboration
+
+**Acceptance Criteria:**
+- Backend stats calculation service method with database aggregation
+- GET /api/wishlist/collection/stats endpoint returning completion metrics
+- CollectionStatsCard component with total/built/in_pieces counts and percentage
+- Visual progress bar or pie chart showing built vs in_pieces ratio
+- Build status filter dropdown with URL persistence
+- Empty states for no owned items, all built, no built items
+- Accessibility compliance (ARIA labels, keyboard navigation)
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0370/SETS-MVP-0370.md`
 
 ---
