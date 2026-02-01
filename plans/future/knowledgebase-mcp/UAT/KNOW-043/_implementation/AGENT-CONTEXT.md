@@ -1,46 +1,45 @@
-# Agent Context - KNOW-043
+---
+schema: 1
+story_id: KNOW-043
+command: qa-verify-story
+created: 2026-01-31T18:20:00Z
 
-## Story Reference
-- **Story ID**: KNOW-043
-- **Title**: Lessons Learned Migration
-- **Status**: in-qa
-- **Epic**: knowledgebase-mcp
+paths:
+  base: plans/future/knowledgebase-mcp/UAT/KNOW-043/
+  story_file: plans/future/knowledgebase-mcp/UAT/KNOW-043/KNOW-043.md
+  artifacts: plans/future/knowledgebase-mcp/UAT/KNOW-043/_implementation/
+  proof_file: plans/future/knowledgebase-mcp/UAT/KNOW-043/_implementation/PROOF-KNOW-043.md
+  verification_file: plans/future/knowledgebase-mcp/UAT/KNOW-043/_implementation/VERIFICATION.yaml
 
-## Paths
-- **Feature Directory**: plans/future/knowledgebase-mcp
-- **Story Directory**: plans/future/knowledgebase-mcp/UAT/KNOW-043
-- **Artifacts Directory**: plans/future/knowledgebase-mcp/UAT/KNOW-043/_implementation
+status:
+  current_phase: setup
+  started_at: 2026-01-31T18:20:00Z
+  signal: SETUP COMPLETE
+---
 
-## Mode
-- **Mode**: qa-verify
-- **Phase**: QA Verification (Setup)
+# QA Verification Setup Context - KNOW-043
 
-## Scope Flags
-- **backend_impacted**: true
-- **frontend_impacted**: false
-- **infra_impacted**: true
+## Preconditions Verified
 
-## Key Dependencies
-- KNOW-006 (Parsers and Seeding) - provides kb_bulk_import functionality
-- Knowledge Base MCP server operational at apps/api/knowledge-base
+All 4 preconditions passed:
 
-## Implementation Context
+1. **Story exists** at `plans/future/knowledgebase-mcp/UAT/KNOW-043/` ✓
+2. **Status is ready-for-qa** in frontmatter ✓
+3. **PROOF file exists** at `_implementation/PROOF-KNOW-043.md` ✓
+4. **Code review passed** - VERIFICATION.yaml has `code_review.verdict: PASS` ✓
 
-### Migration Script Location
-Target: `scripts/migrate-lessons-learned.ts`
+## Setup Actions Completed
 
-### KB Tools to Use
-- `kb_bulk_import` - for batch importing parsed lessons
-- `kb_add` - for adding individual lessons (agent workflow)
-- `kb_search` - for querying lessons (agent workflow)
+1. ✓ Story moved from `in-progress/KNOW-043` to `UAT/KNOW-043`
+2. ✓ Status updated from `ready-for-qa` to `in-qa` in story frontmatter
+3. ✓ Story index updated (status changed, counts updated)
+4. ✓ AGENT-CONTEXT.md created for QA verification phase
 
-### Agent Files to Modify
-Primary targets in `.claude/agents/`:
-- dev-implement-learnings.agent.md
-- dev-implement-planner.agent.md
-- dev-setup-leader.agent.md
-- dev-implement-implementation-leader.agent.md
+## Next Phase
 
-### LESSONS-LEARNED.md Files
-- plans/stories/LESSONS-LEARNED.md
-- plans/future/knowledgebase-mcp/LESSONS-LEARNED.md
+Ready for QA verification phase. Proceed with:
+- /qa-verify-story plans/future/knowledgebase-mcp KNOW-043
+
+## Token Usage
+
+- Setup phase tokens: ~2500 (estimate)

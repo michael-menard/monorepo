@@ -17,6 +17,7 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 |--------|-------|
 | completed | 9 |
 | uat | 7 |
+| in-progress | 0 |
 | ready-for-code-review | 0 |
 | ready-for-qa | 2 |
 | ready-to-work | 0 |
@@ -154,7 +155,7 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 
 ### KNOW-043: Lessons Learned Migration
 
-**Status:** in-qa
+**Status:** uat
 **Depends On:** KNOW-006
 **Feature:** Migrate LESSONS-LEARNED.md to KB, transition agents to write to KB
 
@@ -169,6 +170,10 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 - 23 unit tests covering all parsing scenarios
 
 **Code Review:** PASS (iteration 2) - crypto import fixed, all 6 workers passed
+
+**QA Verification:** FAIL (Missing npm dependencies: glob, uuid)
+
+**Fix Cycle:** PASS - Added glob and uuid dependencies to apps/api/knowledge-base/package.json. All fixes verified: dependencies installed, migration script builds successfully, all 23 tests passing.
 
 **Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-043/KNOW-043.md
 
@@ -194,10 +199,6 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 **Code Review:** PASS (iteration 1) - All 6 workers passed, no blocking issues
 
 ---
-
-## In Progress
-
-_No stories currently in progress._
 
 ---
 
