@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-01-31
+version: 3.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story"]
@@ -43,7 +43,9 @@ From orchestrator context:
 From filesystem:
 - `{STORY_ID}/{STORY_ID}.md` - story definition
 - `_implementation/SCOPE.md` - scope from Setup Leader
-- `{FEATURE_DIR}/LESSONS-LEARNED.md` - for planner context (if exists)
+
+From Knowledge Base (via MCP tools):
+- `kb_search({ query: "lessons learned {domain}", tags: ["lesson-learned"], limit: 5 })` - for planner context
 
 ---
 
@@ -67,9 +69,9 @@ Task tool:
     Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
     Artifact directory: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
 
-    LESSONS LEARNED (read if exists):
-    {FEATURE_DIR}/LESSONS-LEARNED.md
-    Review recent entries for patterns to apply or avoid.
+    LESSONS LEARNED (query from KB):
+    kb_search({ query: "lessons learned {domain}", tags: ["lesson-learned"], limit: 5 })
+    Review KB results for patterns to apply or avoid.
 ```
 
 Wait for completion.

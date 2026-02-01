@@ -14,6 +14,53 @@ import { z } from 'zod'
  */
 
 // ─────────────────────────────────────────────────────────────────────────
+// Image Variants Types (WISH-2016)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Image format enum for optimized images
+ */
+export const ImageFormatSchema = z.enum(['jpeg', 'webp', 'png'])
+export type ImageFormat = z.infer<typeof ImageFormatSchema>
+
+/**
+ * Metadata for a single image variant
+ */
+export const ImageVariantMetadataSchema = z.object({
+  url: z.string().url(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  sizeBytes: z.number().int().positive(),
+  format: ImageFormatSchema,
+  watermarked: z.boolean().optional(),
+})
+
+export type ImageVariantMetadata = z.infer<typeof ImageVariantMetadataSchema>
+
+/**
+ * Processing status for image optimization
+ */
+export const ImageProcessingStatusSchema = z.enum(['pending', 'processing', 'completed', 'failed'])
+export type ImageProcessingStatus = z.infer<typeof ImageProcessingStatusSchema>
+
+/**
+ * Complete image variants structure (stored in database JSONB)
+ *
+ * WISH-2016: Image Optimization
+ */
+export const ImageVariantsSchema = z.object({
+  original: ImageVariantMetadataSchema.optional(),
+  thumbnail: ImageVariantMetadataSchema.optional(),
+  medium: ImageVariantMetadataSchema.optional(),
+  large: ImageVariantMetadataSchema.optional(),
+  processingStatus: ImageProcessingStatusSchema.optional(),
+  processedAt: z.string().datetime().optional(),
+  error: z.string().optional(),
+})
+
+export type ImageVariants = z.infer<typeof ImageVariantsSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
 // Wishlist Item Types
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -31,6 +78,7 @@ export const WishlistItemSchema = z.object({
   setNumber: z.string().nullable(),
   sourceUrl: z.string().nullable(),
   imageUrl: z.string().nullable(),
+  imageVariants: ImageVariantsSchema.nullable().optional().default(null),
   price: z.string().nullable(),
   currency: z.string().nullable(),
   pieceCount: z.number().int().nullable(),

@@ -1,0 +1,130 @@
+### ─────────────────────────────────────────────────────────────────────────
+### WISH-2047: IP/Geolocation Logging for Authorization Events
+### ─────────────────────────────────────────────────────────────────────────
+###
+### Integration tests for IP address and geolocation enrichment in
+### authorization failure audit logs.
+###
+### Purpose:
+### - Verify IP extraction from X-Forwarded-For/X-Real-IP headers
+### - Verify geolocation data included in 403/404 logs
+### - Verify privacy: IP NOT logged for successful 200/201 responses
+###
+### Pre-requisites:
+### - Server running at localhost:3000
+### - Valid JWT token for authenticated requests
+### - CloudWatch Logs access for log verification
+###
+### ─────────────────────────────────────────────────────────────────────────
+
+@baseUrl = http://localhost:3000
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEyMyIsImVtYWlsIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTcxNjkwMDAwMH0.fake-signature
+@otherUserItemId = item-other-user-456
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 1: Cross-user GET access logs IP/geolocation (404)
+### ─────────────────────────────────────────────────────────────────────────
+### Expected:
+### - Response: 404 NOT_FOUND
+### - CloudWatch Log should contain:
+###   - ip: "8.8.8.8"
+###   - country: "US" (or null if geo unavailable)
+###   - city: "Mountain View" (or null if geo unavailable)
+### ─────────────────────────────────────────────────────────────────────────
+
+# @name crossUserGetAccess
+GET {{baseUrl}}/api/wishlist/{{otherUserItemId}}
+Authorization: Bearer {{userToken}}
+X-Forwarded-For: 8.8.8.8, 10.0.0.1
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 2: Cross-user PATCH access logs IP/geolocation (404)
+### ─────────────────────────────────────────────────────────────────────────
+### Expected:
+### - Response: 404 NOT_FOUND
+### - CloudWatch Log should contain IP and geolocation from X-Real-IP
+### ─────────────────────────────────────────────────────────────────────────
+
+# @name crossUserPatchAccess
+PUT {{baseUrl}}/api/wishlist/{{otherUserItemId}}
+Authorization: Bearer {{userToken}}
+X-Real-IP: 1.1.1.1
+Content-Type: application/json
+
+{
+  "title": "Attempted Update",
+  "notes": "This should fail with 404"
+}
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 3: Unauthenticated request logs IP/geolocation (401)
+### ─────────────────────────────────────────────────────────────────────────
+### Expected:
+### - Response: 401 Unauthorized
+### - CloudWatch Log should contain IP from X-Forwarded-For
+### ─────────────────────────────────────────────────────────────────────────
+
+# @name unauthenticatedRequest
+GET {{baseUrl}}/api/wishlist
+X-Forwarded-For: 203.0.113.195
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 4: Successful request does NOT log IP (200)
+### ─────────────────────────────────────────────────────────────────────────
+### Expected:
+### - Response: 200 OK
+### - CloudWatch Log should NOT contain IP/geolocation fields
+### - Privacy: IP only logged for 403/404 authorization failures
+### ─────────────────────────────────────────────────────────────────────────
+
+# @name successfulRequest
+GET {{baseUrl}}/api/wishlist
+Authorization: Bearer {{userToken}}
+X-Forwarded-For: 8.8.8.8
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 5: IPv6 address extraction
+### ─────────────────────────────────────────────────────────────────────────
+### Expected:
+### - Response: 404 NOT_FOUND
+### - CloudWatch Log should contain IPv6 address
+### ─────────────────────────────────────────────────────────────────────────
+
+# @name ipv6Extraction
+GET {{baseUrl}}/api/wishlist/{{otherUserItemId}}
+Authorization: Bearer {{userToken}}
+X-Forwarded-For: 2001:4860:4860::8888
+
+### ─────────────────────────────────────────────────────────────────────────
+### CloudWatch Logs Insights Queries (WISH-2047 AC5)
+### ─────────────────────────────────────────────────────────────────────────
+###
+### After running these tests, use these CloudWatch Logs Insights queries
+### to verify log enrichment:
+###
+### Query 1: Top attacking IPs
+### ```
+### fields @timestamp, ip, country, city, endpoint, statusCode
+### | filter statusCode = 403 or statusCode = 404
+### | stats count(*) as attempts by ip, country
+### | sort attempts desc
+### | limit 10
+### ```
+###
+### Query 2: Failed access attempts with geolocation
+### ```
+### fields @timestamp, userId, ip, country, city, endpoint, method
+### | filter @message like /Unauthorized wishlist access attempt/
+### | sort @timestamp desc
+### | limit 20
+### ```
+###
+### Query 3: Geographic anomalies (same user, multiple countries)
+### ```
+### fields @timestamp, userId, ip, country, city
+### | filter @message like /Unauthorized wishlist access attempt/
+### | stats count_distinct(country) as countries by userId
+### | filter countries > 1
+### ```
+###
+### ─────────────────────────────────────────────────────────────────────────

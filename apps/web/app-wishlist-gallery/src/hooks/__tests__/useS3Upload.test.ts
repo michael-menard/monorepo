@@ -2,6 +2,8 @@
  * useS3Upload Hook Tests
  *
  * Story wish-2002: Add Item Flow
+ * WISH-2022: Client-side image compression
+ * WISH-2046: Client-side image compression quality presets
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -32,12 +34,40 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
   useGetWishlistImagePresignUrlMutation: vi.fn(),
 }))
 
+// WISH-2022/2046: Mock image compression utility
+vi.mock('../../utils/imageCompression', () => ({
+  compressImage: vi.fn(),
+  getPresetByName: vi.fn((name: string) => {
+    const presets: Record<string, { name: string; label: string; settings: object }> = {
+      'low-bandwidth': {
+        name: 'low-bandwidth',
+        label: 'Low bandwidth',
+        settings: { maxSizeMB: 0.5, maxWidthOrHeight: 1200, initialQuality: 0.6, useWebWorker: true, fileType: 'image/jpeg' },
+      },
+      'balanced': {
+        name: 'balanced',
+        label: 'Balanced',
+        settings: { maxSizeMB: 1, maxWidthOrHeight: 1920, initialQuality: 0.8, useWebWorker: true, fileType: 'image/jpeg' },
+      },
+      'high-quality': {
+        name: 'high-quality',
+        label: 'High quality',
+        settings: { maxSizeMB: 2, maxWidthOrHeight: 2400, initialQuality: 0.9, useWebWorker: true, fileType: 'image/jpeg' },
+      },
+    }
+    return presets[name] ?? presets['balanced']
+  }),
+}))
+
 // Import mocked functions after mocks are set up
 import { uploadToPresignedUrl } from '@repo/upload-client'
 import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
+import { compressImage, getPresetByName } from '../../utils/imageCompression'
 
 const mockUploadToPresignedUrl = vi.mocked(uploadToPresignedUrl)
 const mockUseGetWishlistImagePresignUrlMutation = vi.mocked(useGetWishlistImagePresignUrlMutation)
+const mockCompressImage = vi.mocked(compressImage)
+const mockGetPresetByName = vi.mocked(getPresetByName)
 const mockGetPresignUrl = vi.fn()
 const mockUnwrap = vi.fn()
 
@@ -49,6 +79,15 @@ describe('useS3Upload', () => {
     vi.clearAllMocks()
     mockGetPresignUrl.mockReturnValue({ unwrap: mockUnwrap })
     mockUseGetWishlistImagePresignUrlMutation.mockReturnValue([mockGetPresignUrl] as any)
+
+    // WISH-2022: Default compression mock - returns original file (compression skipped)
+    mockCompressImage.mockImplementation(async file => ({
+      compressed: false,
+      file,
+      originalSize: file.size,
+      finalSize: file.size,
+      ratio: 1,
+    }))
   })
 
   describe('Initial State', () => {
@@ -651,6 +690,488 @@ describe('useS3Upload', () => {
       expect(['idle', 'error']).toContain(result.current.state)
       expect(result.current.progress).toBe(0)
       expect(result.current.imageUrl).toBe(null)
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2022: Image Compression Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('Image Compression (WISH-2022)', () => {
+    it('compresses image before upload by default', async () => {
+      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const compressedFile = new File(['compressed'], 'test.jpg', { type: 'image/jpeg' })
+
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: compressedFile,
+        originalSize: 1000000,
+        finalSize: 500000,
+        ratio: 0.5,
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(originalFile)
+      })
+
+      // Compression should have been called
+      expect(mockCompressImage).toHaveBeenCalledWith(
+        originalFile,
+        expect.objectContaining({
+          onProgress: expect.any(Function),
+        }),
+      )
+
+      // The compressed file should be uploaded
+      expect(mockUploadToPresignedUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: compressedFile,
+        }),
+      )
+
+      // Compression result should be stored
+      expect(result.current.compressionResult).toEqual({
+        compressed: true,
+        file: compressedFile,
+        originalSize: 1000000,
+        finalSize: 500000,
+        ratio: 0.5,
+      })
+    })
+
+    it('skips compression when skipCompression option is true', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { skipCompression: true })
+      })
+
+      // Compression should NOT have been called
+      expect(mockCompressImage).not.toHaveBeenCalled()
+
+      // Original file should be uploaded
+      expect(mockUploadToPresignedUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file,
+        }),
+      )
+
+      // No compression result
+      expect(result.current.compressionResult).toBe(null)
+    })
+
+    it('transitions through compressing state', async () => {
+      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+
+      // Slow compression to observe state
+      mockCompressImage.mockImplementation(async file => {
+        await new Promise(resolve => setTimeout(resolve, 50))
+        return {
+          compressed: true,
+          file,
+          originalSize: file.size,
+          finalSize: file.size,
+          ratio: 1,
+        }
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return mockPresignResponse
+      })
+      mockUploadToPresignedUrl.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return { success: true as const, httpStatus: 200 }
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      let uploadPromise: Promise<string | null>
+      act(() => {
+        uploadPromise = result.current.upload(originalFile)
+      })
+
+      // Should be in compressing state first
+      await waitFor(
+        () => {
+          expect(result.current.state).toBe('compressing')
+        },
+        { timeout: 3000 },
+      )
+
+      await act(async () => {
+        await uploadPromise
+      })
+
+      expect(result.current.state).toBe('complete')
+    })
+
+    it('handles compression errors gracefully', async () => {
+      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+
+      // Compression fails but returns original file
+      mockCompressImage.mockResolvedValue({
+        compressed: false,
+        file: originalFile,
+        originalSize: originalFile.size,
+        finalSize: originalFile.size,
+        ratio: 1,
+        error: 'Compression failed',
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(originalFile)
+      })
+
+      // Upload should still complete successfully
+      expect(result.current.state).toBe('complete')
+
+      // Compression result should show error
+      expect(result.current.compressionResult?.error).toBe('Compression failed')
+      expect(result.current.compressionResult?.compressed).toBe(false)
+    })
+
+    it('tracks compression progress', async () => {
+      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+
+      mockCompressImage.mockImplementation(async (_file, options) => {
+        // Simulate progress callbacks
+        options?.onProgress?.(25)
+        options?.onProgress?.(50)
+        options?.onProgress?.(100)
+        return {
+          compressed: true,
+          file: originalFile,
+          originalSize: originalFile.size,
+          finalSize: originalFile.size,
+          ratio: 1,
+        }
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(originalFile)
+      })
+
+      // Final compression progress should be 100
+      expect(result.current.compressionProgress).toBe(100)
+    })
+
+    it('resets compression state on cancel', async () => {
+      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+
+      // Very slow compression
+      mockCompressImage.mockImplementation(async file => {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        return {
+          compressed: true,
+          file,
+          originalSize: file.size,
+          finalSize: file.size,
+          ratio: 1,
+        }
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      let uploadPromise: Promise<string | null> | undefined
+      act(() => {
+        uploadPromise = result.current.upload(originalFile)
+      })
+
+      // Wait for compressing state
+      await waitFor(() => {
+        expect(result.current.state).toBe('compressing')
+      })
+
+      // Cancel the upload
+      act(() => {
+        result.current.cancel()
+      })
+
+      // State should be reset
+      expect(result.current.state).toBe('idle')
+      expect(result.current.compressionProgress).toBe(0)
+
+      if (uploadPromise) {
+        await uploadPromise.catch(() => {})
+      }
+    })
+
+    it('resets compression result on reset', async () => {
+      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: originalFile,
+        originalSize: 1000,
+        finalSize: 500,
+        ratio: 0.5,
+      })
+
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      await act(async () => {
+        await result.current.upload(originalFile)
+      })
+
+      expect(result.current.compressionResult).not.toBe(null)
+
+      act(() => {
+        result.current.reset()
+      })
+
+      expect(result.current.compressionResult).toBe(null)
+    })
+
+    it('has initial compression state values', () => {
+      const { result } = renderHook(() => useS3Upload())
+
+      expect(result.current.compressionProgress).toBe(0)
+      expect(result.current.compressionResult).toBe(null)
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2046: Compression Quality Presets Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('Compression Quality Presets (WISH-2046)', () => {
+    it('uses balanced preset by default', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        originalSize: 1000000,
+        finalSize: 500000,
+        ratio: 0.5,
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file)
+      })
+
+      // getPresetByName should be called with 'balanced' (default)
+      expect(mockGetPresetByName).toHaveBeenCalledWith('balanced')
+    })
+
+    it('uses specified preset for compression', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        originalSize: 1000000,
+        finalSize: 200000,
+        ratio: 0.2,
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { preset: 'low-bandwidth' })
+      })
+
+      // getPresetByName should be called with 'low-bandwidth'
+      expect(mockGetPresetByName).toHaveBeenCalledWith('low-bandwidth')
+    })
+
+    it('uses high-quality preset when specified', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        originalSize: 2000000,
+        finalSize: 1500000,
+        ratio: 0.75,
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { preset: 'high-quality' })
+      })
+
+      expect(mockGetPresetByName).toHaveBeenCalledWith('high-quality')
+    })
+
+    it('stores preset used in state', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        originalSize: 1000000,
+        finalSize: 500000,
+        ratio: 0.5,
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { preset: 'low-bandwidth' })
+      })
+
+      expect(result.current.presetUsed).toBe('low-bandwidth')
+    })
+
+    it('has null presetUsed when compression is skipped', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { skipCompression: true })
+      })
+
+      expect(result.current.presetUsed).toBe(null)
+    })
+
+    it('resets presetUsed on reset', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        originalSize: 1000000,
+        finalSize: 500000,
+        ratio: 0.5,
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { preset: 'high-quality' })
+      })
+
+      expect(result.current.presetUsed).toBe('high-quality')
+
+      act(() => {
+        result.current.reset()
+      })
+
+      expect(result.current.presetUsed).toBe(null)
+    })
+
+    it('has initial presetUsed as null', () => {
+      const { result } = renderHook(() => useS3Upload())
+
+      expect(result.current.presetUsed).toBe(null)
+    })
+
+    it('passes preset config settings to compressImage', async () => {
+      const mockPresignResponse = {
+        presignedUrl: 'https://s3.amazonaws.com/presigned-url',
+        key: 'uploads/test.jpg',
+      }
+      mockUnwrap.mockResolvedValue(mockPresignResponse)
+      mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
+      mockCompressImage.mockResolvedValue({
+        compressed: true,
+        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        originalSize: 1000000,
+        finalSize: 500000,
+        ratio: 0.5,
+      })
+
+      const { result } = renderHook(() => useS3Upload())
+
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await act(async () => {
+        await result.current.upload(file, { preset: 'low-bandwidth' })
+      })
+
+      // Verify compressImage was called with the preset's settings
+      expect(mockCompressImage).toHaveBeenCalledWith(
+        file,
+        expect.objectContaining({
+          config: expect.objectContaining({
+            maxSizeMB: 0.5,
+            maxWidthOrHeight: 1200,
+            initialQuality: 0.6,
+          }),
+        }),
+      )
     })
   })
 })

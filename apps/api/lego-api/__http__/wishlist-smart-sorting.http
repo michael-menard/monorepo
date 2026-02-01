@@ -1,0 +1,126 @@
+### WISH-2014: Smart Sorting Algorithms Integration Tests
+###
+### Prerequisites:
+### - API server running on localhost:3000
+### - Valid JWT token in @token variable
+### - Wishlist items seeded with varying price, pieceCount, releaseDate, priority
+###
+
+@baseUrl = http://localhost:3000/api
+@token = {{$dotenv JWT_TOKEN}}
+
+### ─────────────────────────────────────────────────────────────────────────
+### Happy Path Tests
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 1: Best Value Sort (ascending - lowest price per piece first)
+# Expected: Items sorted by price/pieceCount ratio, nulls at end
+GET {{baseUrl}}/wishlist?sort=bestValue&order=asc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 2: Best Value Sort (descending - highest price per piece first)
+GET {{baseUrl}}/wishlist?sort=bestValue&order=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 3: Expiring Soon Sort (ascending - oldest release date first)
+# Expected: Items sorted by releaseDate, nulls at end
+GET {{baseUrl}}/wishlist?sort=expiringSoon&order=asc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 4: Expiring Soon Sort (descending - newest release date first)
+GET {{baseUrl}}/wishlist?sort=expiringSoon&order=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 5: Hidden Gems Sort (descending - highest score first)
+# Expected: Items sorted by (5-priority)*pieceCount descending, nulls at end
+# Score = (5 - priority) * pieceCount
+# Low priority (0-2) + high piece count = high score
+GET {{baseUrl}}/wishlist?sort=hiddenGems&order=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 6: Hidden Gems Sort (ascending - lowest score first)
+GET {{baseUrl}}/wishlist?sort=hiddenGems&order=asc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─────────────────────────────────────────────────────────────────────────
+### Pagination with Smart Sorting
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 7: Best Value with Pagination (page 1)
+GET {{baseUrl}}/wishlist?sort=bestValue&order=asc&page=1&limit=10
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 8: Best Value with Pagination (page 2)
+GET {{baseUrl}}/wishlist?sort=bestValue&order=asc&page=2&limit=10
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 9: Expiring Soon with Pagination
+GET {{baseUrl}}/wishlist?sort=expiringSoon&order=asc&page=1&limit=5
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 10: Hidden Gems with Pagination
+GET {{baseUrl}}/wishlist?sort=hiddenGems&order=desc&page=1&limit=20
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─────────────────────────────────────────────────────────────────────────
+### Combined Filters with Smart Sorting
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 11: Best Value with Store Filter
+GET {{baseUrl}}/wishlist?sort=bestValue&order=asc&store=LEGO
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 12: Expiring Soon with Search
+GET {{baseUrl}}/wishlist?sort=expiringSoon&order=asc&search=Star%20Wars
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 13: Hidden Gems with Priority Filter
+GET {{baseUrl}}/wishlist?sort=hiddenGems&order=desc&priority=0
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─────────────────────────────────────────────────────────────────────────
+### Error Cases
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 14: Invalid Sort Parameter (should return 400)
+GET {{baseUrl}}/wishlist?sort=invalidSort
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 15: Unauthenticated Request (should return 401)
+GET {{baseUrl}}/wishlist?sort=bestValue
+Content-Type: application/json
+
+### ─────────────────────────────────────────────────────────────────────────
+### Edge Cases
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 16: Large Limit (performance check)
+# Expected: Response time < 2s
+GET {{baseUrl}}/wishlist?sort=bestValue&order=asc&limit=100
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 17: Standard Sort (baseline comparison)
+# Verify smart sorts don't break existing sorts
+GET {{baseUrl}}/wishlist?sort=createdAt&order=desc
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 18: Default Sort (no sort parameter)
+GET {{baseUrl}}/wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json

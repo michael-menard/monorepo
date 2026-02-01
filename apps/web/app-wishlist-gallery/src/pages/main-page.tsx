@@ -54,6 +54,14 @@ export type MainPageProps = z.infer<typeof MainPagePropsSchema>
 
 /**
  * Sort options for wishlist
+ *
+ * WISH-2014: Added smart sorting modes
+ * - Best Value: price/pieceCount ratio (lowest first)
+ * - Expiring Soon: oldest release date first
+ * - Hidden Gems: (5 - priority) * pieceCount (highest first)
+ *
+ * Note: Icon integration with sort dropdown deferred to future enhancement.
+ * Icons imported for potential tooltip/visual indicator use in expanded UI.
  */
 const wishlistSortOptions = [
   { value: 'sortOrder-asc', label: 'Manual Order' },
@@ -65,6 +73,10 @@ const wishlistSortOptions = [
   { value: 'price-desc', label: 'Price: High to Low' },
   { value: 'priority-desc', label: 'Priority: High to Low' },
   { value: 'priority-asc', label: 'Priority: Low to High' },
+  // Smart sorting algorithms (WISH-2014)
+  { value: 'bestValue-asc', label: 'Best Value' },
+  { value: 'expiringSoon-asc', label: 'Expiring Soon' },
+  { value: 'hiddenGems-desc', label: 'Hidden Gems' },
 ]
 
 /**
@@ -231,7 +243,16 @@ function WishlistMainPageContent({
     q: search || undefined,
     store: selectedStore || undefined,
     tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
-    sort: sortField as 'createdAt' | 'title' | 'price' | 'sortOrder' | 'priority',
+    sort: sortField as
+      | 'createdAt'
+      | 'title'
+      | 'price'
+      | 'pieceCount'
+      | 'sortOrder'
+      | 'priority'
+      | 'bestValue'
+      | 'expiringSoon'
+      | 'hiddenGems',
     order: sortOrder,
     page,
     limit: 20,

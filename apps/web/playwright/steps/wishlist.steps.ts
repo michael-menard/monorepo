@@ -36,7 +36,7 @@ Given('the wishlist API returns search results for {string}', async () => {
   // No special scenario needed; search behavior is driven by q parameter.
 })
 
-Given('the wishlist API has a {int} second delay', async (_context, seconds: number) => {
+Given('the wishlist API has a {int} second delay', async ({}, seconds: number) => {
   wishlistState.delayMs = seconds * 1000
 })
 
@@ -44,9 +44,7 @@ Given('the wishlist has more than {int} items', async () => {
   wishlistState.scenario = 'many'
 })
 
-Given('I am using a mobile viewport', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 667 })
-})
+// Note: 'I am using a mobile viewport' is defined in gallery-datatable-view.steps.ts
 
 // ============================================================================
 // Navigation Steps
@@ -77,10 +75,7 @@ When('I navigate to the wishlist page', async ({ page }) => {
 // Page Element Verification Steps
 // ============================================================================
 
-Then('I should see the page title {string}', async ({ page }, title: string) => {
-  const heading = page.getByRole('heading', { name: title, level: 1 })
-  await expect(heading).toBeVisible({ timeout: 10000 })
-})
+// Note: 'I should see the page title {string}' is defined in common.steps.ts
 
 Then('I should see the total item count', async ({ page }) => {
   // Look for item count text (e.g., "4 items")
@@ -241,10 +236,7 @@ Then('I should see the message {string}', async ({ page }, message: string) => {
   await expect(text).toBeVisible()
 })
 
-Then('I should see a {string} button', async ({ page }, buttonText: string) => {
-  const button = page.getByRole('button', { name: new RegExp(buttonText, 'i') })
-  await expect(button).toBeVisible()
-})
+// Note: 'I should see a {string} button' is defined in common.steps.ts
 
 // ============================================================================
 // Error State Steps

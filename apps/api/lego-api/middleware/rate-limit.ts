@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory'
 import { logger } from '@repo/logger'
+import { extractClientIp } from '../core/utils/ip.js'
 
 /**
  * Rate Limiting Configuration
@@ -32,30 +33,14 @@ interface RateLimitEntry {
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
 /**
- * Extract client IP from request
+ * Get client IP from request using shared utility (WISH-2047 AC9)
  *
- * Checks headers in order of precedence:
- * 1. X-Forwarded-For (load balancer/proxy)
- * 2. X-Real-IP (nginx)
- * 3. Socket remote address (direct connection)
- *
+ * Wraps the shared extractClientIp utility for rate limiting.
  * Returns 'unknown' if IP cannot be determined.
  */
 function getClientIp(request: Request, rawIp?: string): string {
-  // Check X-Forwarded-For header (may contain multiple IPs)
-  const forwardedFor = request.headers.get('X-Forwarded-For')
-  if (forwardedFor) {
-    // Take the first IP in the chain (client IP)
-    const firstIp = forwardedFor.split(',')[0]?.trim()
-    if (firstIp) return firstIp
-  }
-
-  // Check X-Real-IP header
-  const realIp = request.headers.get('X-Real-IP')
-  if (realIp) return realIp
-
-  // Fall back to provided rawIp or unknown
-  return rawIp || 'unknown'
+  const ip = extractClientIp(request, rawIp)
+  return ip || 'unknown'
 }
 
 /**
@@ -131,9 +116,7 @@ function getRetryAfterSeconds(ip: string): number {
   const cutoff = now - RATE_LIMIT_WINDOW_MS
 
   // Find the oldest failure within the window
-  const oldestTimestamp = entry.timestamps
-    .filter(ts => ts > cutoff)
-    .sort((a, b) => a - b)[0]
+  const oldestTimestamp = entry.timestamps.filter(ts => ts > cutoff).sort((a, b) => a - b)[0]
 
   if (!oldestTimestamp) return 0
 

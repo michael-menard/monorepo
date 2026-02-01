@@ -4,7 +4,7 @@ title: "KNOW Stories Index"
 status: active
 story_prefix: "KNOW"
 created_at: "2026-01-24T23:55:00Z"
-updated_at: "2026-01-25T14:00:00Z"
+updated_at: "2026-01-31T00:00:00Z"
 ---
 
 # KNOW Stories Index
@@ -16,11 +16,13 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 | Status | Count |
 |--------|-------|
 | completed | 9 |
-| uat | 3 |
+| uat | 7 |
+| ready-for-code-review | 0 |
 | ready-for-qa | 2 |
 | ready-to-work | 0 |
 | elaboration | 0 |
-| backlog | 9 |
+| backlog | 6 |
+| deferred | 6 |
 | cancelled | 1 |
 
 **Goal:** Get to a working, usable KB. Then iterate based on real experience.
@@ -77,6 +79,56 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 
 ---
 
+### KNOW-009: MCP Tool Authorization
+
+**Status:** uat
+**Depends On:** KNOW-005
+**Priority:** P0
+**Feature:** Role-based access control for MCP tools (pm/dev/qa agents with tool-level authorization)
+
+**Why it matters:** Security-critical before production deployment. Prevents unauthorized agents from accessing destructive operations like kb_delete and kb_rebuild_embeddings. Implements SEC-001 finding from epic elaboration.
+
+**Implementation Summary:**
+- Replaced `checkAccess()` stub with matrix-based authorization in `access-control.ts`
+- Added authorization enforcement to all 11 tool handlers (first operation)
+- Added `AGENT_ROLE` environment variable support (defaults to 'all' fail-safe)
+- Implemented `AuthorizationError` class with sanitized error responses
+- 124 unit tests for access control (44 matrix combinations + edge cases)
+- 8 integration tests for authorization enforcement
+- Performance: p95 < 0.01ms (target was <1ms)
+
+**Access Control Matrix:**
+- PM role: Full access to all 11 tools
+- Dev/QA roles: Access to 8 tools (denied: kb_delete, kb_bulk_import, kb_rebuild_embeddings)
+- 'all' role: Access to 8 tools (fail-safe default)
+
+**Code Review:** PASS (iteration 1) - All 6 workers passed, 307 tests passing
+
+**Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-009/KNOW-009.md
+
+---
+
+### KNOW-040: Agent Instruction Integration
+
+**Status:** uat
+**Feature:** Add KB search instructions to 5 agent files + create integration guide
+
+**Why it matters:** Makes agents automatically query the KB before tasks, establishing KB-first workflow pattern.
+
+**Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-040/KNOW-040.md
+
+**Implementation Summary:**
+- 5 agent files modified with "Knowledge Base Integration" sections
+- Integration guide created at `.claude/KB-AGENT-INTEGRATION.md`
+- Consistent trigger patterns, examples, and fallback behavior across all agents
+- Character limits enforced (max 1109 chars per section, under 1500 limit)
+
+**Code Review:** PASS (iteration 1) - All 6 workers passed, documentation-only changes
+
+**QA Verification:** PASS - All 10 ACs verified (9 PASS, 1 N/A for runtime testing)
+
+---
+
 ## Ready for QA
 
 ### KNOW-006: Parsers and Seeding
@@ -100,6 +152,119 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 
 ---
 
+### KNOW-043: Lessons Learned Migration
+
+**Status:** in-qa
+**Depends On:** KNOW-006
+**Feature:** Migrate LESSONS-LEARNED.md to KB, transition agents to write to KB
+
+**Why it matters:** Makes the KB the canonical source of institutional knowledge, replacing fragmented markdown files with structured, searchable entries.
+
+**Implementation Summary:**
+- Migration script (`apps/api/knowledge-base/src/scripts/migrate-lessons.ts`) with auto-discovery, format variation handling, content hash deduplication
+- Parser module (`apps/api/knowledge-base/src/migration/lessons-parser.ts`) with smart format detection
+- Updated agent instructions for KB-first workflow (dev-implement-learnings.agent.md, dev-implement-planning-leader.agent.md)
+- Deprecation notices added to existing LESSONS-LEARNED.md files
+- Comprehensive documentation at `docs/knowledge-base/lessons-learned-migration.md`
+- 23 unit tests covering all parsing scenarios
+
+**Code Review:** PASS (iteration 2) - crypto import fixed, all 6 workers passed
+
+**Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-043/KNOW-043.md
+
+---
+
+### KNOW-048: Document Chunking (Learning Story)
+
+**Status:** uat
+**Priority:** P2 (learning opportunity)
+**Depends On:** KNOW-006
+**Feature:** Split long documents into chunks before importing to KB
+
+**Implementation Summary:**
+- Core chunking module (`apps/api/knowledge-base/src/chunking/`)
+- Token counting with tiktoken (500 token default)
+- CLI tool (`pnpm kb:chunk`) for processing markdown files
+- Splits on `##` headers, falls back to paragraph boundaries
+- Preserves code blocks, extracts YAML front matter as metadata
+- 36 tests (28 unit + 8 integration) passing
+
+**Story Document:** plans/future/knowledgebase-mcp/UAT/KNOW-048/KNOW-048.md
+
+**Code Review:** PASS (iteration 1) - All 6 workers passed, no blocking issues
+
+---
+
+## In Progress
+
+_No stories currently in progress._
+
+---
+
+## Deferred Stories
+
+These stories depend on AWS RDS infrastructure that is not currently in use (project uses local Docker PostgreSQL). Revisit if AWS RDS deployment is planned.
+
+### KNOW-058: Connection Pool Metrics Monitoring (DEFERRED)
+
+**Status:** deferred
+**Depends On:** KNOW-016
+**Story Points:** 2
+**Feature:** Add connection pool metrics to PostgreSQL monitoring via RDS Enhanced Monitoring
+**Deferral Reason:** Requires AWS RDS; project uses local Docker PostgreSQL
+
+---
+
+### KNOW-068: CloudWatch Anomaly Detection (DEFERRED)
+
+**Status:** deferred
+**Depends On:** KNOW-016
+**Story Points:** 3
+**Feature:** CloudWatch anomaly detection for PostgreSQL metrics with ML-based adaptive alerting
+**Deferral Reason:** Requires AWS RDS and CloudWatch; project uses local Docker PostgreSQL
+
+---
+
+### KNOW-078: Composite Alarms for Database Health (DEFERRED)
+
+**Status:** deferred
+**Depends On:** KNOW-016
+**Story Points:** 2
+**Feature:** CloudWatch composite alarms to reduce alert noise and provide clearer database health states
+**Deferral Reason:** Requires AWS CloudWatch alarms; project uses local Docker PostgreSQL
+
+---
+
+### KNOW-088: Dashboard Templates for Reusability (DEFERRED)
+
+**Status:** deferred
+**Depends On:** KNOW-016
+**Story Points:** 2
+**Feature:** Extract CloudWatch dashboard JSON into reusable parameterized templates
+**Deferral Reason:** Requires AWS CloudWatch dashboards; project uses local Docker PostgreSQL
+
+---
+
+### KNOW-098: CloudWatch Logs Integration (DEFERRED)
+
+**Status:** deferred
+**Depends On:** KNOW-016
+**Story Points:** 3
+**Feature:** CloudWatch Logs for PostgreSQL log aggregation with CloudWatch Insights
+**Deferral Reason:** Requires AWS RDS log export; project uses local Docker PostgreSQL
+
+---
+
+### KNOW-108: Cost Attribution Tags (DEFERRED)
+
+**Status:** deferred
+**Depends On:** KNOW-016
+**Story Points:** 1
+**Feature:** AWS resource tags for cost tracking and attribution in Cost Explorer
+**Deferral Reason:** Requires AWS resources; project uses local Docker PostgreSQL
+
+---
+
 ## Cancelled Stories
 
 ### KNOW-017: Data Encryption (CANCELLED)
@@ -120,262 +285,255 @@ A focused knowledge base MCP server for capturing and retrieving institutional k
 
 ## Backlog (Do After Using the KB)
 
-### KNOW-048: Document Chunking (Learning Story)
+### KNOW-118: Worker Agent KB Integration Pattern
 
 **Status:** backlog
-**Priority:** P2 (learning opportunity)
-**Depends On:** KNOW-006
-**Feature:** Split long documents into chunks before importing to KB
+**Depends On:** KNOW-040
+**Follow-up From:** KNOW-040 (QA Gap #6)
+**Priority:** P2 (pattern definition)
+**Story Points:** 2
+**Feature:** Define and document KB integration pattern for worker agents (backend-coder, frontend-coder, playwright-engineer). Establish whether workers query KB independently or rely on leader-provided context.
 
-**Why it matters:** Enables ingestion of long-form content (READMEs, guides, design docs). Also a learning opportunity for RAG chunking patterns.
+**Why it matters:** KNOW-040 establishes KB integration for leader agents but doesn't cover worker agents spawned by leaders. Unclear whether workers should query KB independently, creating inconsistent knowledge access patterns and potential duplicate queries.
 
-**Scope (MVP):**
-- Markdown-aware splitting on `##` headers
-- Token-limited fallback (max 500 tokens per chunk)
-- Metadata: source file, chunk index, total chunks
-- CLI: `pnpm kb:chunk path/to/doc.md` → outputs JSON array
-- Integration with `kb_bulk_import`
+**Scope:**
+- Evaluate 3 pattern options: Leader-Only, Worker-Independent, Hybrid
+- Document chosen pattern with decision rationale
+- Define context passing mechanism (if leader provides context to workers)
+- Document worker query triggers (if workers query independently)
+- Add anti-patterns and examples to integration guide
+- Update `.claude/KB-AGENT-INTEGRATION.md` with worker pattern section
 
-**Non-Goals (avoid over-engineering):**
-- No overlap/sliding window (add later if retrieval quality suffers)
-- No hierarchical parent-child retrieval
-- No DOCX/HTML/PDF support (markdown only)
-- No semantic boundary detection (just headers + token limit)
+**Non-Goals:**
+- No implementation of worker KB integration (documentation only)
+- No bulk update of existing worker agents
+- No automated context passing mechanism
+- No worker-specific query templates
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-118/KNOW-118.md
+
+**When to do:** After KNOW-040 is implemented and leader agent KB integration is validated. Completes KB-first workflow pattern for leader-worker agent hierarchies.
+
+**Source:** QA Discovery Notes from KNOW-040 (Gap #6 from FUTURE-OPPORTUNITIES.md)
+
+---
+
+### KNOW-128: Migration Rollback Capability
+
+**Status:** backlog
+**Depends On:** KNOW-043
+**Follow-up From:** KNOW-043 (QA Follow-up Story #1)
+**Priority:** P3 (operational safety)
+**Story Points:** 2
+**Feature:** Implement checkpoint/resume and rollback for failed migrations. If migration fails midway, provide ability to undo partial imports and resume from last checkpoint.
+
+**Why it matters:** Improves operational safety and resilience during migrations. Enables operators to recover from partial failures gracefully without manual KB inspection or accepting inconsistent migration states.
+
+**Scope:**
+- Checkpoint mechanism tracks migration progress with resume capability
+- Rollback command undoes all imports from a failed migration run
+- Batch transaction support with per-batch rollback on failure
+- Detailed failure reporting with per-file counts and error logging
+- Migration run metadata stored in KB for traceability
+
+**Non-Goals:**
+- No general-purpose rollback system (migration-specific only)
+- No automated retry logic (operator-triggered only)
+- No cross-migration rollback (current run only)
+- No point-in-time recovery (use KNOW-015 for comprehensive PITR)
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-128/KNOW-128.md
+
+**When to do:** Optional enhancement to KNOW-043. Prioritize if migrations become frequent or large-scale (e.g., migrating other markdown sources beyond lessons learned).
+
+**Source:** QA Discovery Notes from KNOW-043 (Follow-up Story #1)
+
+---
+
+### KNOW-138: Agent KB Integration Testing
+
+**Status:** backlog
+**Depends On:** KNOW-043
+**Follow-up From:** KNOW-043 (QA Discovery Notes - Follow-up Story #2)
+**Priority:** P2
+**Story Points:** 2
+**Feature:** Create test scenarios for agents querying and writing to the Knowledge Base. Verify that agents correctly use kb_search before tasks and kb_add to capture lessons.
+
+**Why it matters:** KNOW-043 updates agent instructions to use KB tools, but without integration testing we have no confidence that agents actually follow the new workflow correctly. This story validates that agents query KB for lessons before tasks, write new lessons to KB (not markdown files), and use appropriate metadata.
+
+**Scope:**
+- Agent read test scenarios (PM/Dev/QA agents query KB before tasks)
+- Agent write test scenarios (agents write lessons to KB with proper tags/categories)
+- Workflow integration tests (end-to-end agent workflows use KB)
+- Tag and category validation (verify metadata on KB writes)
+- Negative test cases (empty results, KB unavailable)
+- Test documentation with setup, action, expected results, validation criteria
+
+**Non-Goals:**
+- No testing of KB MCP server functionality (already covered in KNOW-003, KNOW-004)
+- No testing of agent architecture changes (only behavior from instruction updates)
+- No automated test harness (manual scenarios sufficient for MVP)
+- No testing all agent types (focus on PM/Dev/QA leader agents)
 
 **Acceptance Criteria:**
-1. `chunkMarkdown(content, maxTokens)` returns `ChunkedDocument[]`
-2. Splits on `##` headers, keeps header as context
-3. Falls back to token limit if section too long
-4. Preserves code blocks (don't split mid-block)
-5. CLI outputs JSON to stdout
-6. Integration test: chunk → bulk_import → search returns chunk
-7. 80% test coverage
+1. Test scenarios for agent reads (PM/Dev/QA query KB before tasks)
+2. Test scenarios for agent writes (lessons written to KB with required fields)
+3. Tag/category validation (lessons include `lesson-learned`, agent tag, category)
+4. Workflow integration tests (query → task → write new lesson)
+5. Test documentation with pass/fail criteria
+6. Negative test cases (empty results, KB unavailable)
 
-**Story Points:** 3
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-138/KNOW-138.md
 
-**When to do:** After KNOW-006 passes QA and you've done a basic import. Then try importing a long doc and see if chunking helps retrieval.
+**When to do:** After KNOW-043 completes and agent instruction updates are deployed. Validates that the KB-first workflow pattern is actually adopted by agents.
 
----
-
-### KNOW-040: Agent Instruction Integration
-
-**Status:** backlog
-**Feature:** Add KB search instructions to agent files
-
-**Why it matters:** Makes agents automatically query the KB before tasks.
-
-**When to do:** After you've manually used the KB for a few stories and understand the query patterns that work.
+**Source:** QA Discovery Notes from KNOW-043 (Follow-up Story Suggestion #2)
 
 ---
 
-### KNOW-043: Lessons Learned Migration
-### KNOW-043: Lessons Learned Migration
-
+### KNOW-148: Post-Migration Quality Review
 
 **Status:** backlog
-**Status:** backlog
-**Depends On:** KNOW-006
-**Depends On:** KNOW-006
-**Feature:** Migrate LESSONS-LEARNED.md to KB, transition agents to write to KB
-**Feature:** Migrate LESSONS-LEARNED.md to KB, transition agents to write to KB
+**Depends On:** KNOW-043
+**Follow-up From:** KNOW-043 (QA Discovery Notes - Follow-up Story #3)
+**Priority:** P3
+**Story Points:** 2
+**Feature:** Add quality review process after LESSONS-LEARNED.md migration. Identify low-value entries (short content, duplicated information), outdated lessons, and consolidation opportunities.
 
-
-**Why it matters:** Makes the KB the canonical source of institutional knowledge.
-**Why it matters:** Makes the KB the canonical source of institutional knowledge.
-
-
-**When to do:** After KNOW-040, when you're confident the KB is useful.
-**When to do:** After KNOW-040, when you're confident the KB is useful.
-
-
----
-
-### KNOW-068: CloudWatch Anomaly Detection
-
-**Status:** backlog
-**Depends On:** KNOW-016
-**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #2)
-**Priority:** P2 (operational improvement)
-**Feature:** CloudWatch anomaly detection for PostgreSQL metrics with ML-based adaptive alerting
-
-**Why it matters:** Eliminates manual threshold tuning by automatically learning normal patterns and alerting on deviations. Reduces operational burden and improves alert accuracy by adapting to changing usage patterns.
-
-**Scope (MVP):**
-- Enable anomaly detection on 4 key metrics: DatabaseConnections, CPUUtilization, ReadLatency, WriteLatency
-- Add anomaly detection bands to CloudWatch dashboard for visual anomaly identification
-- Create 4 anomaly-based alarms that coexist with static threshold alarms from KNOW-016
-- Use CloudWatch default sensitivity (2 standard deviations) with tuning plan
-- Wait 2-4 weeks after KNOW-016 production deployment for baseline data collection
-
-**Non-Goals (avoid over-engineering):**
-- No custom ML models (use CloudWatch built-in only)
-- No anomaly detection for all metrics (focus on high-value metrics only)
-- No replacing static threshold alarms (anomaly detection is additive)
-- No real-time sub-minute anomaly detection (use 5-minute evaluation periods)
-- No multi-metric composite anomaly detection (per-metric only)
-
-**Acceptance Criteria:**
-1. Dashboard updated with anomaly bands on 4 metrics
-2. Anomaly detection models trained with 2+ weeks baseline data
-3. 4 anomaly-based alarms created (connections, CPU, read latency, write latency)
-4. Anomaly alarm test completed with notification delivery
-5. Dual alarm strategy documented (static + anomaly)
-6. False positive tuning plan documented (monitor 1 week, adjust if >3/week)
-7. IaC includes anomaly detectors and alarms
-8. Cost estimate: ~$2/month incremental cost
-
-**Story Points:** 3
-
-**CRITICAL:** Must wait 2-4 weeks after KNOW-016 deploys to production for baseline data collection. Deploying too early results in poor model accuracy and excessive false positives.
-
-**When to do:** After KNOW-016 has been in production for 2-4 weeks and metrics show continuous data without significant gaps.
-
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-068/KNOW-068.md
-
-**Source:** QA Discovery Notes from KNOW-016 (Enhancement Opportunity #2)
-
----
-
-### KNOW-078: Composite Alarms for Database Health
-
-**Status:** backlog
-**Depends On:** KNOW-016
-**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #3)
-**Priority:** P2 (operational improvement)
-**Feature:** CloudWatch composite alarms to reduce alert noise and provide clearer database health states
-
-**Why it matters:** Combines multiple metrics into single "database health" composite alarm that triggers only when multiple conditions indicate actual problems (e.g., high CPU + high connections + elevated latency = true degradation vs. just high CPU = normal batch job). Reduces alert fatigue and improves operational clarity.
+**Why it matters:** Ensures migrated KB content is high-quality, relevant, and searchable. Removes noise and improves search effectiveness by identifying low-value entries, duplicates, and outdated lessons.
 
 **Scope:**
-- Define database health states (Healthy, Degraded, Critical)
-- Create composite alarms combining multiple metric alarms from KNOW-016
-- Configure SNS routing (reuse existing topic or create severity-based topics)
-- Update runbooks to focus on composite health states
-- Document when to respond to individual vs composite alarms
-
-**Story Points:** 2
-
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-078/KNOW-078.md
-
----
-
-### KNOW-088: Dashboard Templates for Reusability
-
-**Status:** backlog
-**Depends On:** KNOW-016
-**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #5)
-**Priority:** P3 (technical debt reduction)
-**Story Points:** 2
-**Feature:** Extract CloudWatch dashboard JSON into reusable parameterized template. Enable consistent monitoring dashboards across environments and databases with environment-specific variables (RDS instance ID, SNS topic ARN, alarm thresholds). Reduces duplication and ensures consistency.
-
-**Why it matters:** As the monorepo scales to multiple environments, maintaining separate dashboard configurations becomes error-prone. Template-based approach enables consistent monitoring infrastructure with minimal duplication and maintenance burden.
-
-**Scope:**
-- Extract dashboard JSON from KNOW-016 into parameterized template
-- Support environment-specific variables (RDS instance ID, SNS topic ARN, alarm thresholds)
-- Provide template rendering mechanism (bash script or Terraform templatefile)
-- Update IaC to use templates instead of static JSON
-- Document template usage and new environment setup
+- Script to identify low-value entries (< 100 characters, generic content)
+- Duplicate detection via semantic similarity or text comparison (> 80% overlap)
+- Outdated lesson identification (> 1 year old) for manual review
+- Consolidation opportunities clustering (group related lessons by topic)
+- Search effectiveness validation (test common queries, measure hit rate)
+- Quality report with actionable recommendations (remove, enhance, consolidate)
+- Cleanup actions with `--apply` flag and dry-run preview
 
 **Non-Goals:**
-- No multi-region dashboard consolidation
-- No custom metric templates (RDS metrics only)
-- No Grafana/Prometheus migration
-- No dashboard versioning system
+- No automated quality scoring
+- No continuous monitoring (one-time review)
+- No lesson versioning
+- No AI-based auto-tagging
 
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-088/KNOW-088.md
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-148/KNOW-148.md
 
-**When to do:** After KNOW-016 is deployed to both staging and production. Reduces technical debt and improves operational consistency.
+**When to do:** After KNOW-043 completes and migration has been validated. Post-migration cleanup to ensure KB content quality.
+
+**Source:** QA Discovery Notes from KNOW-043 (Enhancement Opportunity - Follow-up Story #3)
 
 ---
 
-### KNOW-058: Connection Pool Metrics Monitoring
+### KNOW-158: Lesson Lifecycle Management
 
 **Status:** backlog
-**Depends On:** KNOW-016
-**Follow-up From:** KNOW-016 (QA Gap #3)
-**Priority:** P2 (operational improvement)
+**Depends On:** KNOW-043
+**Follow-up From:** KNOW-043 (QA Open Question #3 deferred)
+**Priority:** P3
 **Story Points:** 2
-**Feature:** Add connection pool metrics to PostgreSQL monitoring. Evaluate RDS Enhanced Monitoring for pool-level metrics (idle connections, pool exhaustion, connection wait time). If available, add to dashboard and create alarms for pool health.
+**Feature:** Define and implement lesson expiration/review strategy with review date metadata and cleanup process
 
-**Why it matters:** Connection pool health is critical for detecting connection leaks, pool exhaustion, and inefficient pool sizing before they impact service availability. Early warning signals enable proactive incident management.
+**Why it matters:** Prevents knowledge decay and ensures lessons remain relevant. Without lifecycle management, the KB could accumulate outdated or irrelevant lessons that mislead agents or clutter search results.
 
 **Scope:**
-- Evaluate RDS Enhanced Monitoring for connection pool metric availability
-- Extend CloudWatch dashboard (from KNOW-016) with pool metrics widgets
-- Create alarms for pool utilization (90%), excessive idle connections (>50%), and connection wait time
-- Update runbook with pool health troubleshooting procedures
+- Add review metadata to KB schema (review_date, last_reviewed, is_stale)
+- Define review interval policy (6-12 months depending on lesson type)
+- Implement stale lesson identification script with reporting
+- Create review workflow tools (kb_mark_for_review, archival process)
+- Update kb_search to exclude stale lessons by default
+- Document lifecycle policy and review procedures
 
 **Non-Goals:**
-- No application-level instrumentation (RDS metrics only)
-- No connection pool library changes
-- No auto-remediation (alerts only)
+- No automatic content updates (manual review only)
+- No version control for lessons (KB timestamps sufficient)
+- No lesson approval workflows (post-hoc review)
+- No hard deletion on expiration (tag-based archival)
 
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-058/KNOW-058.md
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-158/KNOW-158.md
 
-**When to do:** After KNOW-016 is deployed and baseline monitoring is stable. Operational improvement, not critical for MVP.
+**When to do:** After KNOW-043 migrates lessons to KB. Establishes maintenance practices to prevent knowledge decay and ensure long-term KB quality.
+
+**Source:** QA Discovery Notes from KNOW-043 (Open Question #3: "Should lessons have an expiration or review date?")
 
 ---
 
-### KNOW-098: CloudWatch Logs Integration
+
+### KNOW-168: KB Usage Monitoring
 
 **Status:** backlog
-**Depends On:** KNOW-016
-**Follow-up From:** KNOW-016 (QA Enhancement Opportunity #1)
-**Priority:** P2 (operational improvement)
-**Story Points:** 3
-**Feature:** Set up CloudWatch Logs for PostgreSQL log aggregation and integrate with CloudWatch Insights for query analysis
-
-**Why it matters:** Enables analysis of slow queries, error patterns, and connection issues from database logs. Provides forensic analysis capabilities that complement metrics-based monitoring from KNOW-016. Critical for root cause analysis during incidents.
-
-**Scope:**
-- RDS PostgreSQL log export to CloudWatch Logs
-- CloudWatch Insights query library for common analysis patterns (slow queries, connection errors, deadlocks)
-- Log retention and archival policies (30 days operational logs)
-- Integration with existing monitoring infrastructure (KNOW-016)
-- Documentation for log analysis workflows and query patterns
-
-**Non-Goals:**
-- Custom application logging (PostgreSQL logs only)
-- Real-time log streaming (CloudWatch Logs batching acceptable)
-- Log-based alerting (metrics handle alerting)
-- Third-party log aggregation (CloudWatch native tools only)
-
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-098/KNOW-098.md
-
-**When to do:** After KNOW-016 is deployed and baseline monitoring is stable. Complements metrics with log-based forensics for incident investigation.
-
----
-
-### KNOW-108: Cost Attribution Tags
-
-**Status:** backlog
-**Depends On:** KNOW-016
-**Follow-up From:** KNOW-016 (QA Enhancement #7)
+**Depends On:** KNOW-043
+**Follow-up From:** KNOW-043 (QA Discovery Notes - Follow-up Story #5)
 **Priority:** P3 (operational improvement)
-**Story Points:** 1
-**Feature:** Add resource tags (project, environment, service, cost-center) to CloudWatch monitoring infrastructure IaC for cost tracking and attribution. Enables AWS Cost Explorer analysis of monitoring costs separate from application costs.
+**Story Points:** 2
+**Feature:** Track which agents use KB tools via logging. Identify agents not querying KB as expected. Monitor adoption of KB-first workflow and popular search patterns.
 
-**Why it matters:** Enables cost tracking, attribution analysis, and chargeback support for monitoring infrastructure. Separates monitoring costs from application costs in AWS Cost Explorer, supports multi-environment cost comparison, and establishes reusable tagging pattern for future AWS resources.
+**Why it matters:** Provides visibility into KB adoption and usage patterns after KNOW-043 migrates lessons learned to KB. Enables proactive agent instruction improvements by identifying which agents aren't following KB-first workflow and what knowledge gaps exist (queries returning no results).
 
 **Scope:**
-- Add standardized tags to CloudWatch dashboards, alarms, and SNS topics from KNOW-016
-- Update IaC (Terraform/CDK/CloudFormation) with tags configuration
-- Document tag schema, Cost Explorer usage, and validation procedures
-- Test tag-based filtering in AWS Cost Explorer (requires 24-hour wait for Cost Allocation Tags activation)
+- Add usage logging to all 11 KB tool handlers (tool name, agent role, timestamp, success/failure)
+- Log search queries with result counts and relevance scores
+- Create `kb-usage-report.ts` script to generate usage reports
+- Report shows: agent adoption by role, top queries, knowledge gaps (0 results), usage trends (7-day)
+- Documentation for usage logging and report generation
 
 **Non-Goals:**
-- No application resource tagging (RDS, Lambda out of scope)
-- No custom cost allocation reports (Cost Explorer sufficient)
-- No tag-based IAM policies
-- No budget alerts or cost thresholds
+- No real-time alerting on usage patterns
+- No user-level tracking (agent roles only)
+- No query performance profiling (KNOW-004 handles that)
+- No custom analytics dashboard (simple logs + script sufficient)
+- No retention beyond 30 days
 
-**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-108/KNOW-108.md
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-168/KNOW-168.md
 
-**When to do:** During or after KNOW-016 deployment. Low-effort operational improvement that establishes tagging pattern for future infrastructure.
+**When to do:** After KNOW-043 is implemented and agents are using KB for lessons learned. Measures adoption success and identifies knowledge gaps.
+
+**Source:** QA Discovery Notes from KNOW-043 (Follow-up Story #5)
 
 ---
 
+### KNOW-178: Lesson Quality Metrics
+
+**Status:** backlog
+**Depends On:** KNOW-043
+**Follow-up From:** KNOW-043 (QA Discovery Notes - Follow-up Story #6)
+**Priority:** P3
+**Story Points:** 2
+**Feature:** Capture metrics to measure lesson value: search hits per lesson, agent citations, last accessed date. Enable data-driven decisions about which lessons are valuable.
+
+**Why it matters:** After migrating lessons learned to the Knowledge Base (KNOW-043), need visibility into which lessons are actually valuable to agents. Enables data-driven decisions about lesson quality, identifies stale/unused content, and measures ROI of the lessons learned migration.
+
+**Scope:**
+- Track lesson usage metrics in KB schema (search hit count, last accessed timestamp, first accessed timestamp)
+- Capture search hit counts when lessons are retrieved via `kb_search`
+- Record last accessed timestamps for each lesson
+- Provide metrics query capability via new tool `kb_lesson_metrics`
+- Enable filtering and ranking by usage to identify valuable vs. stale lessons
+
+**Non-Goals:**
+- No agent citation extraction (tracking which agent used which lesson requires deep integration; deferred)
+- No lesson quality scoring (automated quality assessment combining multiple signals is future work)
+- No real-time analytics dashboard (metrics stored in DB; visualization tools deferred)
+- No user-facing analytics UI (KB is agent-facing only; no web UI needed)
+
+**Acceptance Criteria:**
+1. Schema migration adds search_hit_count, last_accessed_at, first_accessed_at to entries
+2. `kb_search` increments search hit count asynchronously for returned lessons
+3. `kb_get` updates last accessed timestamp
+4. New tool `kb_lesson_metrics` returns usage statistics (top N, least accessed, stale)
+5. Performance: Metrics updates add < 5ms latency (p95)
+6. Test coverage > 80% for new code
+7. Documentation for metrics tracking and usage
+
+**Story Document:** plans/future/knowledgebase-mcp/backlog/KNOW-178/KNOW-178.md
+
+**When to do:** After KNOW-043 is completed and lessons are migrated. Provides metrics to assess migration ROI and lesson quality.
+
+**Source:** QA Discovery Notes from KNOW-043 (Follow-up Story #6)
+
+---
+
+---
 ## Completed
 
 ### KNOW-001: Package Infrastructure Setup ✓

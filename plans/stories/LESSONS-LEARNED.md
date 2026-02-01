@@ -1,5 +1,26 @@
 # Lessons Learned
 
+> **DEPRECATED**: This file is deprecated as of KNOW-043 (2026-01-31).
+> Lessons are now stored in the Knowledge Base and accessed via `kb_search`.
+>
+> **To query lessons:**
+> ```javascript
+> kb_search({ query: "lesson topic category", tags: ["lesson-learned"], limit: 5 })
+> ```
+>
+> **To add new lessons:**
+> ```javascript
+> kb_add({
+>   content: "**[STORY-XXX] Category**\n\n- Lesson content here",
+>   role: "dev",
+>   tags: ["lesson-learned", "story:story-xxx", "category:category-name"]
+> })
+> ```
+>
+> This file is preserved for historical reference. Do NOT add new entries here.
+
+---
+
 This file captures implementation learnings from completed stories to improve future planning and execution.
 
 ---

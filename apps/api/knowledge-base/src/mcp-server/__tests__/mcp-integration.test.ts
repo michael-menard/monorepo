@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 11 tool definitions (CRUD + search + admin)', () => {
+    it('should return all 14 tool definitions (CRUD + search + admin + audit)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(11)
+      expect(tools).toHaveLength(14)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -82,6 +82,9 @@ describe('MCP Server Integration', () => {
         'kb_rebuild_embeddings',
         'kb_stats',
         'kb_health',
+        'kb_audit_by_entry',
+        'kb_audit_query',
+        'kb_audit_retention_cleanup',
       ])
     })
 
@@ -322,6 +325,190 @@ describe('MCP Server Integration', () => {
       expect(result.isError).toBe(true)
       const error = JSON.parse(result.content[0].text)
       expect(error.message).not.toContain('password')
+    })
+  })
+
+  describe('Authorization Integration (KNOW-009)', () => {
+    it('should allow PM role to access all tools', async () => {
+      const expectedId = generateTestUuid()
+      mockKbAdd.mockResolvedValue(expectedId)
+      mockKbGet.mockResolvedValue(null)
+
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      // Create context with PM role
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'pm' as const,
+      }
+
+      // PM should be able to access kb_add (non-admin)
+      const addResult = await handleToolCall(
+        'kb_add',
+        { content: 'Test content', role: 'dev', tags: ['test'] },
+        mockDeps,
+        context,
+      )
+      expect(addResult.isError).toBeUndefined()
+    })
+
+    it('should deny dev role access to kb_delete (admin tool)', async () => {
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      // Create context with dev role
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'dev' as const,
+      }
+
+      // Dev should be denied access to kb_delete
+      const result = await handleToolCall(
+        'kb_delete',
+        { id: generateTestUuid() },
+        mockDeps,
+        context,
+      )
+
+      expect(result.isError).toBe(true)
+      const error = JSON.parse(result.content[0].text)
+      expect(error.code).toBe('FORBIDDEN')
+      expect(error.message).toBe('kb_delete requires pm role')
+    })
+
+    it('should deny qa role access to kb_bulk_import (admin tool)', async () => {
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      // Create context with qa role
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'qa' as const,
+      }
+
+      // QA should be denied access to kb_bulk_import
+      const result = await handleToolCall(
+        'kb_bulk_import',
+        { entries: [] },
+        mockDeps,
+        context,
+      )
+
+      expect(result.isError).toBe(true)
+      const error = JSON.parse(result.content[0].text)
+      expect(error.code).toBe('FORBIDDEN')
+      expect(error.message).toBe('kb_bulk_import requires pm role')
+    })
+
+    it('should deny all role access to kb_rebuild_embeddings (admin tool)', async () => {
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      // Create context with all role
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'all' as const,
+      }
+
+      // All role should be denied access to kb_rebuild_embeddings
+      const result = await handleToolCall('kb_rebuild_embeddings', {}, mockDeps, context)
+
+      expect(result.isError).toBe(true)
+      const error = JSON.parse(result.content[0].text)
+      expect(error.code).toBe('FORBIDDEN')
+      expect(error.message).toBe('kb_rebuild_embeddings requires pm role')
+    })
+
+    it('should allow dev role access to non-admin tools', async () => {
+      const mockEntry = createMockKnowledgeEntry()
+      mockKbGet.mockResolvedValue(mockEntry)
+
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      // Create context with dev role
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'dev' as const,
+      }
+
+      // Dev should be able to access kb_get (non-admin)
+      const result = await handleToolCall('kb_get', { id: mockEntry.id }, mockDeps, context)
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(parsed.id).toBe(mockEntry.id)
+    })
+
+    it('should default to all role when context is undefined', async () => {
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      // Call without context - should default to 'all' role
+      const result = await handleToolCall('kb_delete', { id: generateTestUuid() }, mockDeps)
+
+      expect(result.isError).toBe(true)
+      const error = JSON.parse(result.content[0].text)
+      expect(error.code).toBe('FORBIDDEN')
+      expect(error.message).toBe('kb_delete requires pm role')
+    })
+
+    it('authorization error should not include stack traces', async () => {
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'dev' as const,
+      }
+
+      const result = await handleToolCall(
+        'kb_delete',
+        { id: generateTestUuid() },
+        mockDeps,
+        context,
+      )
+
+      expect(result.isError).toBe(true)
+      const errorText = result.content[0].text
+
+      // Should not include any internal details
+      expect(errorText).not.toContain('stack')
+      expect(errorText).not.toContain('.ts')
+      expect(errorText).not.toContain('Error:')
+      expect(errorText).not.toContain('at ')
+
+      // Should only include sanitized error
+      const error = JSON.parse(errorText)
+      expect(error.code).toBe('FORBIDDEN')
+      expect(error.message).toBe('kb_delete requires pm role')
+    })
+
+    it('authorization failure should not execute business logic', async () => {
+      // Reset mock call counts
+      mockKbGet.mockClear()
+
+      const { handleToolCall } = await import('../tool-handlers.js')
+
+      const context = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'dev' as const,
+      }
+
+      // Try to delete with dev role
+      await handleToolCall('kb_delete', { id: generateTestUuid() }, mockDeps, context)
+
+      // The kb_get (used for audit logging before delete) should NOT be called
+      // because authorization check happens FIRST
+      expect(mockKbGet).not.toHaveBeenCalled()
     })
   })
 })

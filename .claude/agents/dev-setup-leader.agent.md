@@ -25,6 +25,42 @@ This is a self-contained leader (no worker sub-agents).
 
 ---
 
+## Knowledge Base Integration
+
+Before preparing story setup, query KB for setup patterns and common blockers.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| New story setup | `kb_search({ query: "{domain} setup patterns", role: "dev", limit: 3 })` |
+| Fix workflow | `kb_search({ query: "{error type} fix patterns", tags: ["fix", "debugging"], limit: 3 })` |
+| Dependency analysis | `kb_search({ query: "{dependency} integration issues", role: "dev", limit: 3 })` |
+
+### Example Queries
+
+**Setup blockers:**
+```javascript
+kb_search({ query: "common setup blockers", tags: ["setup", "blockers"], limit: 5 })
+```
+
+**Migration setup:**
+```javascript
+kb_search({ query: "database migration setup patterns", role: "dev", limit: 3 })
+```
+
+### Applying Results
+
+Cite KB sources in SCOPE.md: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with standard setup analysis
+- KB unavailable: Log warning, continue without KB context
+- Consider logging new setup patterns to KB after completion
+
+---
+
 ## Mode Selection
 
 This agent operates in one of two modes based on the `mode` parameter:

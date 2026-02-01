@@ -11,6 +11,9 @@ const testDir = defineBddConfig({
   steps: './steps/**/*.ts',
 })
 
+// API base URL for API tests (defaults to local API server)
+const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:4000'
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
@@ -40,9 +43,13 @@ export default defineConfig({
     testIdAttribute: 'data-testid',
   },
   projects: [
+    // ─────────────────────────────────────────────────────────────────────────
+    // UI E2E Projects
+    // ─────────────────────────────────────────────────────────────────────────
     {
       name: 'chromium-mocked',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: /(?<!api\/).*\.feature/,
       webServer: {
         command: 'VITE_ENABLE_MSW=true pnpm dev --port 3002',
         url: 'http://localhost:3002',
@@ -54,12 +61,34 @@ export default defineConfig({
     {
       name: 'chromium-live',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: /(?<!api\/).*\.feature/,
       webServer: {
         command: 'pnpm dev --port 3002',
         url: 'http://localhost:3002',
         reuseExistingServer: true,
         timeout: 120 * 1000,
         cwd: '../main-app',
+      },
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // API Test Projects
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      name: 'api-mocked',
+      testMatch: /features\/api\/.*\.feature/,
+      use: {
+        // API tests don't need a browser, but Playwright BDD requires one
+        ...devices['Desktop Chrome'],
+        baseURL: apiBaseUrl,
+      },
+      // No webServer for API tests - they hit the API directly
+    },
+    {
+      name: 'api-live',
+      testMatch: /features\/api\/.*\.feature/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.API_LIVE_URL || apiBaseUrl,
       },
     },
   ],

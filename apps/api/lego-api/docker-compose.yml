@@ -1,0 +1,35 @@
+# Docker Compose for LEGO API Local Development (WISH-2019)
+#
+# Services:
+# - redis: Redis 7.2 for feature flag caching
+#
+# Usage:
+#   docker-compose up -d redis   # Start Redis only
+#   docker-compose up             # Start all services
+#   docker-compose down           # Stop all services
+#
+# Environment:
+#   Set REDIS_URL=redis://localhost:6379 in .env.local
+
+version: '3.8'
+
+services:
+  # Redis Service (AC 11)
+  redis:
+    image: redis:7.2-alpine
+    container_name: lego-api-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+    driver: local

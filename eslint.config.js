@@ -124,16 +124,11 @@ export default [
         btoa: 'readonly',
         atob: 'readonly',
 
-        // Browser globals - Events
-        Event: 'readonly',
+        // Browser globals - Events (CustomEvent)
         CustomEvent: 'readonly',
         EventTarget: 'readonly',
 
-        // Browser globals - Elements
-        HTMLElement: 'readonly',
-        HTMLTextAreaElement: 'readonly',
-        HTMLInputElement: 'readonly',
-        HTMLFormElement: 'readonly',
+        // Browser globals - Elements (additional)
         HTMLCanvasElement: 'readonly',
         Image: 'readonly',
 
@@ -273,6 +268,23 @@ export default [
       // Node.js specific rules
       'no-console': 'off', // Console is fine in Node.js
       '@typescript-eslint/no-var-requires': 'off', // CommonJS requires are OK
+    },
+  },
+
+  // Hexagonal architecture domains - allow relative parent imports
+  {
+    files: [
+      'apps/api/lego-api/domains/**/adapters/**/*.{js,ts}',
+      'apps/api/lego-api/domains/**/application/**/*.{js,ts}',
+      'apps/api/lego-api/domains/**/ports/**/*.{js,ts}',
+      'apps/api/lego-api/domains/**/routes.{js,ts}',
+    ],
+    rules: {
+      // Hexagonal architecture uses relative imports between domain layers by design
+      // adapters/ and application/ need to import from ../ports, ../types
+      // routes/ need to import from ../middleware and ../composition
+      // This is a deliberate architectural choice for domain isolation
+      'import/no-relative-parent-imports': 'off',
     },
   },
 

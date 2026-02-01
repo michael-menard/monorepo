@@ -1,0 +1,215 @@
+# Feature Flags User Targeting HTTP Tests (WISH-2039)
+#
+# These tests verify the three new admin endpoints for user-level targeting:
+# - POST /api/admin/flags/:flagKey/users - Add user override
+# - DELETE /api/admin/flags/:flagKey/users/:userId - Remove user override
+# - GET /api/admin/flags/:flagKey/users - List user overrides
+#
+# Prerequisites:
+# 1. Start the dev server: pnpm dev
+# 2. Ensure you have a valid admin JWT token
+# 3. Create a test feature flag (if not exists)
+
+@baseUrl = http://localhost:3000/api
+@adminToken = Bearer <your-admin-jwt-token>
+@environment = production
+@testFlagKey = wishlist-gallery
+@testUserId = test-user-123
+@betaTesterId = beta-tester-456
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 1: Add user to include list
+### POST /api/admin/flags/:flagKey/users
+### ─────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/{{testFlagKey}}/users?environment={{environment}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{testUserId}}",
+  "overrideType": "include",
+  "reason": "Beta tester for WISH-2039"
+}
+
+### Expected response: 201 Created
+### {
+###   "userId": "test-user-123",
+###   "overrideType": "include",
+###   "reason": "Beta tester for WISH-2039",
+###   "createdBy": "admin-user-id",
+###   "createdAt": "2026-01-31T..."
+### }
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 2: Add user to exclude list
+### POST /api/admin/flags/:flagKey/users
+### ─────────────────────────────────────────────────────────────────────────
+
+POST {{baseUrl}}/admin/flags/{{testFlagKey}}/users?environment={{environment}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{betaTesterId}}",
+  "overrideType": "exclude",
+  "reason": "VIP exemption from rollout"
+}
+
+### Expected response: 201 Created
+### {
+###   "userId": "beta-tester-456",
+###   "overrideType": "exclude",
+###   "reason": "VIP exemption from rollout",
+###   "createdBy": "admin-user-id",
+###   "createdAt": "2026-01-31T..."
+### }
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 3: List all user overrides for flag
+### GET /api/admin/flags/:flagKey/users
+### ─────────────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/admin/flags/{{testFlagKey}}/users?environment={{environment}}&page=1&pageSize=50
+Authorization: {{adminToken}}
+
+### Expected response: 200 OK
+### {
+###   "includes": [
+###     {
+###       "userId": "test-user-123",
+###       "overrideType": "include",
+###       "reason": "Beta tester for WISH-2039",
+###       "createdBy": "admin-user-id",
+###       "createdAt": "2026-01-31T..."
+###     }
+###   ],
+###   "excludes": [
+###     {
+###       "userId": "beta-tester-456",
+###       "overrideType": "exclude",
+###       "reason": "VIP exemption from rollout",
+###       "createdBy": "admin-user-id",
+###       "createdAt": "2026-01-31T..."
+###     }
+###   ],
+###   "pagination": {
+###     "page": 1,
+###     "pageSize": 50,
+###     "total": 2
+###   }
+### }
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 4: Verify evaluation for included user
+### GET /api/config/flags (with user context)
+###
+### This test verifies that the included user sees the flag as enabled
+### even if the flag has 0% rollout.
+### ─────────────────────────────────────────────────────────────────────────
+
+# Note: This requires the user to be authenticated as "test-user-123"
+# The flag should return true for this user due to inclusion override
+GET {{baseUrl}}/config/flags?environment={{environment}}
+Authorization: Bearer <test-user-123-jwt-token>
+
+### Expected response: 200 OK
+### {
+###   "wishlist-gallery": true,
+###   ...
+### }
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 5: Remove user override
+### DELETE /api/admin/flags/:flagKey/users/:userId
+### ─────────────────────────────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/admin/flags/{{testFlagKey}}/users/{{testUserId}}?environment={{environment}}
+Authorization: {{adminToken}}
+
+### Expected response: 204 No Content
+### (empty body)
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test 6: Verify override was removed
+### GET /api/admin/flags/:flagKey/users
+###
+### After deleting the include override, the user should no longer be listed.
+### ─────────────────────────────────────────────────────────────────────────
+
+GET {{baseUrl}}/admin/flags/{{testFlagKey}}/users?environment={{environment}}
+Authorization: {{adminToken}}
+
+### Expected response: 200 OK
+### {
+###   "includes": [],
+###   "excludes": [
+###     {
+###       "userId": "beta-tester-456",
+###       "overrideType": "exclude",
+###       "reason": "VIP exemption from rollout",
+###       ...
+###     }
+###   ],
+###   "pagination": {
+###     "page": 1,
+###     "pageSize": 50,
+###     "total": 1
+###   }
+### }
+
+### ─────────────────────────────────────────────────────────────────────────
+### Error Cases
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 7: Add override to non-existent flag
+### Should return 404 NOT_FOUND
+
+POST {{baseUrl}}/admin/flags/nonexistent-flag/users?environment={{environment}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "test-user",
+  "overrideType": "include"
+}
+
+### Expected response: 404 Not Found
+### { "error": "NOT_FOUND", "message": "Flag 'nonexistent-flag' not found" }
+
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 8: Remove non-existent override
+### Should return 404 NOT_FOUND
+
+DELETE {{baseUrl}}/admin/flags/{{testFlagKey}}/users/nonexistent-user?environment={{environment}}
+Authorization: {{adminToken}}
+
+### Expected response: 404 Not Found
+### { "error": "NOT_FOUND", "message": "User override not found for flag 'wishlist-gallery'" }
+
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 9: Invalid override type
+### Should return 400 Validation Error
+
+POST {{baseUrl}}/admin/flags/{{testFlagKey}}/users?environment={{environment}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "test-user",
+  "overrideType": "invalid-type"
+}
+
+### Expected response: 400 Bad Request
+### { "error": "Validation failed", "details": {...} }
+
+### ─────────────────────────────────────────────────────────────────────────
+### Cleanup: Remove remaining test override
+### ─────────────────────────────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/admin/flags/{{testFlagKey}}/users/{{betaTesterId}}?environment={{environment}}
+Authorization: {{adminToken}}
+
+### Expected response: 204 No Content

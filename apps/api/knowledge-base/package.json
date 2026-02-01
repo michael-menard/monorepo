@@ -38,7 +38,8 @@
     "validate:env": "tsx src/scripts/validate-env.ts",
     "mcp:start": "node dist/mcp-server/index.js",
     "kb:generate-config": "tsx scripts/generate-config.ts",
-    "kb:validate-connection": "tsx scripts/validate-connection.ts"
+    "kb:validate-connection": "tsx scripts/validate-connection.ts",
+    "kb:chunk": "tsx src/scripts/chunk-document.ts"
   },
   "keywords": [
     "knowledge-base",

@@ -313,6 +313,14 @@ export function createWishlistRepository(
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
 
+/**
+ * Map a database row to a WishlistItem.
+ *
+ * Uses a flexible type with optional imageVariants to support both
+ * pre-migration data (no imageVariants column) and post-migration data.
+ *
+ * WISH-2016: Added imageVariants field
+ */
 function mapRowToWishlistItem(row: {
   id: string
   userId: string
@@ -321,6 +329,7 @@ function mapRowToWishlistItem(row: {
   setNumber: string | null
   sourceUrl: string | null
   imageUrl: string | null
+  imageVariants?: unknown // Optional - may not exist until migration runs
   price: string | null
   currency: string | null
   pieceCount: number | null
@@ -340,6 +349,7 @@ function mapRowToWishlistItem(row: {
     setNumber: row.setNumber,
     sourceUrl: row.sourceUrl,
     imageUrl: row.imageUrl,
+    imageVariants: (row.imageVariants as WishlistItem['imageVariants']) ?? null,
     price: row.price,
     currency: row.currency,
     pieceCount: row.pieceCount,

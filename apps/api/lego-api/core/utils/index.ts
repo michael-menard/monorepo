@@ -23,3 +23,6 @@ export {
   logSecurityEvent,
   createSecurityEvent,
 } from './file-validation.js'
+
+// IP Address Utilities (WISH-2047)
+export { extractClientIp, isValidIp, normalizeIp } from './ip.js'

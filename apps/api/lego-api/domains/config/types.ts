@@ -77,6 +77,71 @@ export const FeatureFlagDetailResponseSchema = z.object({
 export type FeatureFlagDetailResponse = z.infer<typeof FeatureFlagDetailResponseSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
+// User Override Schemas (WISH-2039)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Override type: 'include' forces flag true, 'exclude' forces flag false
+ */
+export const OverrideTypeSchema = z.enum(['include', 'exclude'])
+
+export type OverrideType = z.infer<typeof OverrideTypeSchema>
+
+/**
+ * User override from database
+ */
+export const UserOverrideSchema = z.object({
+  id: z.string().uuid(),
+  flagId: z.string().uuid(),
+  userId: z.string().min(1).max(255),
+  overrideType: OverrideTypeSchema,
+  reason: z.string().nullable(),
+  createdBy: z.string().nullable(),
+  createdAt: z.date(),
+})
+
+export type UserOverride = z.infer<typeof UserOverrideSchema>
+
+/**
+ * POST /api/admin/flags/:flagKey/users request body
+ */
+export const AddUserOverrideRequestSchema = z.object({
+  userId: z.string().min(1, 'User ID is required').max(255, 'User ID too long'),
+  overrideType: OverrideTypeSchema,
+  reason: z.string().max(500).optional(),
+})
+
+export type AddUserOverrideRequest = z.infer<typeof AddUserOverrideRequestSchema>
+
+/**
+ * User override response (single item)
+ */
+export const UserOverrideResponseSchema = z.object({
+  userId: z.string(),
+  overrideType: OverrideTypeSchema,
+  reason: z.string().nullable(),
+  createdBy: z.string().nullable(),
+  createdAt: z.date(),
+})
+
+export type UserOverrideResponse = z.infer<typeof UserOverrideResponseSchema>
+
+/**
+ * GET /api/admin/flags/:flagKey/users response
+ */
+export const UserOverridesListResponseSchema = z.object({
+  includes: z.array(UserOverrideResponseSchema),
+  excludes: z.array(UserOverrideResponseSchema),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    pageSize: z.number().int().min(1).max(500),
+    total: z.number().int().min(0),
+  }),
+})
+
+export type UserOverridesListResponse = z.infer<typeof UserOverridesListResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
 // Error Types
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -86,3 +151,4 @@ export type FeatureFlagError =
   | 'VALIDATION_ERROR'
   | 'DB_ERROR'
   | 'FORBIDDEN'
+  | 'RATE_LIMITED'

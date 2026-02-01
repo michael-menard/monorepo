@@ -1,0 +1,288 @@
+schema: 4
+feature_dir: plans/future/wish
+story_id: WISH-2029
+updated: 2026-01-31T19:30:00Z
+iteration: 1
+
+code_review:
+  verdict: PASS
+  workers_run: [lint, style, syntax, security, typecheck, build]
+  workers_skipped: []
+
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings: []
+    notes: |
+      Ran prettier check on docs/architecture/api-layer.md
+      Result: All matched files use Prettier code style!
+
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings:
+      - type: info
+        message: "All code blocks have proper language tags (typescript, bash)"
+        location: "Throughout document"
+      - type: info
+        message: "Last Verified date present: 2026-01-28"
+        location: "Line 3"
+      - type: info
+        message: "Zod-first approach used consistently in examples"
+        location: "Throughout document"
+    notes: |
+      Documentation style review completed:
+      - All code examples use proper language tags
+      - Consistent formatting throughout
+      - Follows CLAUDE.md guidelines (Zod-first, named exports)
+      - Clear section structure with table of contents
+
+  syntax:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    findings: []
+    notes: "N/A for documentation-only story - no TypeScript code modified"
+
+  security:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    findings: []
+    notes: "N/A for documentation-only story - no security-sensitive code modified"
+
+  typecheck:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    findings: []
+    notes: "N/A for documentation-only story - no TypeScript code modified"
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    findings:
+      - type: info
+        message: "Pre-existing build failure in @repo/lambda-auth (unrelated to this story)"
+        location: "packages/backend/lambda-auth"
+        severity: low
+        notes: "Build failure: Cannot find type definition file for 'axe-core'. This is a pre-existing dependency issue not caused by documentation changes."
+    notes: |
+      Build verification completed:
+      - Documentation file is not imported by any build artifacts
+      - All referenced paths verified to exist:
+        * apps/api/lego-api/domains/ (all 7 domains present)
+        * packages/core/api-client/
+        * Domain structures match documentation (health, wishlist verified)
+      - Pre-existing lambda-auth build issue is unrelated to this story
+
+documentation_quality:
+  verdict: PASS
+  path_verification:
+    status: PASS
+    findings:
+      - path: "apps/api/lego-api/domains/"
+        exists: true
+        note: "All 7 domains present: gallery, wishlist, health, instructions, sets, parts-lists, config"
+      - path: "apps/api/lego-api/domains/health/"
+        exists: true
+        structure: "Matches simplified pattern in docs (no adapters/ports)"
+      - path: "apps/api/lego-api/domains/wishlist/"
+        exists: true
+        structure: "Matches full hexagonal pattern in docs (adapters, ports, application)"
+      - path: "packages/core/api-client/"
+        exists: true
+        note: "Schema package exists as documented"
+
+  code_examples:
+    status: PASS
+    findings:
+      - "All TypeScript code blocks have 'typescript' language tag"
+      - "All bash code blocks have 'bash' language tag"
+      - "Examples extracted from real domain code (health, wishlist)"
+      - "Cross-domain dependency example matches actual wishlist -> sets pattern"
+
+  internal_consistency:
+    status: PASS
+    findings:
+      - "Directory structure diagram matches actual filesystem"
+      - "Hexagonal architecture pattern consistently explained"
+      - "No contradictions with CLAUDE.md guidelines"
+      - "Migration section clearly distinguishes deprecated vs canonical patterns"
+
+summary: |
+  WISH-2029 documentation review PASSED all applicable checks.
+
+  This is a documentation-only story with no TypeScript code changes.
+  The single modified file (docs/architecture/api-layer.md) passed:
+  - Lint check (prettier)
+  - Style compliance
+  - Path verification (all referenced paths exist)
+  - Code example quality (proper language tags, real examples)
+  - Internal consistency
+
+  Pre-existing build failure in @repo/lambda-auth is unrelated to this story.
+  All paths mentioned in documentation verified to exist in codebase.
+  Documentation aligns with CLAUDE.md guidelines and actual code patterns.
+
+qa_verify:
+  verdict: PASS
+  tests_executed: false
+  test_execution_note: "N/A - Documentation-only story with no code changes or tests"
+
+  test_results:
+    unit: { pass: 0, fail: 0 }
+    integration: { pass: 0, fail: 0 }
+    e2e: { pass: 0, fail: 0 }
+    http: { pass: 0, fail: 0 }
+    note: "No tests required for documentation-only story"
+
+  coverage: "N/A"
+  coverage_meets_threshold: true
+  coverage_note: "No code changes - coverage thresholds not applicable"
+
+  test_quality:
+    verdict: PASS
+    anti_patterns: []
+    note: "No test code added or modified"
+
+  acs_verified:
+    - ac: "AC1: Directory structure tree showing apps/api/lego-api/domains/{domain}/ with all subdirectories"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:44-87 - Complete tree with application/, adapters/, ports/, routes.ts, types.ts, __tests__/"
+
+    - ac: "AC2: Subdirectory responsibilities documented"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:89-285 - Detailed explanation of application/, adapters/, ports/, routes.ts, types.ts layers"
+
+    - ac: "AC3: Hexagonal architecture explained with rationale"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:287-358 - Pattern explanation, dependency rule, benefits (testability, flexibility, maintainability)"
+
+    - ac: "AC4: Complete domain example with real code snippets"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:343-509 - Health domain (simple) and Wishlist domain (complex with cross-domain deps)"
+
+    - ac: "AC5: Creating a New Domain step-by-step guide"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:484-687 - 8 detailed steps with code examples and checklist"
+
+    - ac: "AC6: Hono framework usage patterns documented"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:649-777 - Route definition, Zod validation, response formatting, error handling patterns"
+
+    - ac: "AC7: Shared schema pattern documented"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:726-818 - Backend owns Zod schemas, frontend imports via @repo/api-client, versioning considerations"
+
+    - ac: "AC8: Migration notes with old vs new pattern"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:907-1012 - Old pattern marked DEPRECATED (line 968), new pattern canonical, migration steps provided"
+
+    - ac: "AC9: Cross-domain dependency pattern documented"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:767-891 - Service injection pattern with wishlist -> sets example"
+
+    - ac: "AC10: All 7 domains verified to follow documented pattern"
+      status: PASS
+      evidence: "Verified via filesystem: gallery, wishlist, health, instructions, sets, parts-lists, config all exist with expected structure"
+
+    - ac: "AC11: Documentation cross-references actual code"
+      status: PASS
+      evidence: "Code examples match real files - health/types.ts (lines 21-25 match doc line 284-288), wishlist/ports/index.ts matches doc examples"
+
+    - ac: "AC12: No contradictions with CLAUDE.md"
+      status: PASS
+      evidence: "All examples use Zod-first (z.infer<>), no barrel file patterns, named exports, @repo/logger mentioned appropriately"
+
+    - ac: "AC13: Last Verified date present"
+      status: PASS
+      evidence: "docs/architecture/api-layer.md:3 - 'Last Verified: 2026-01-28'"
+
+    - ac: "AC14: Old pattern only in migration/historical context"
+      status: PASS
+      evidence: "grep results show only 1 reference at line 968 in migration section, clearly marked DEPRECATED"
+
+  architecture_compliant: true
+  architecture_notes: |
+    Documentation fully aligns with CLAUDE.md guidelines:
+    - Zod-first type approach (no TypeScript interfaces)
+    - Named exports pattern
+    - No barrel files
+    - @repo/logger usage
+    - Hexagonal architecture promotes testability and separation of concerns
+    - All code examples follow monorepo conventions
+
+  documentation_verification:
+    paths_verified: true
+    paths_checked:
+      - path: "apps/api/lego-api/domains/"
+        exists: true
+        domains_count: 7
+      - path: "apps/api/lego-api/domains/gallery/"
+        exists: true
+        structure: "Full hexagonal (application/, adapters/, ports/, routes.ts, types.ts, __tests__/)"
+      - path: "apps/api/lego-api/domains/wishlist/"
+        exists: true
+        structure: "Full hexagonal with cross-domain dependencies"
+      - path: "apps/api/lego-api/domains/health/"
+        exists: true
+        structure: "Simplified (application/, routes.ts, types.ts, __tests__/) - no adapters/ports needed"
+      - path: "apps/api/lego-api/domains/instructions/"
+        exists: true
+        structure: "Full hexagonal"
+      - path: "apps/api/lego-api/domains/sets/"
+        exists: true
+        structure: "Full hexagonal"
+      - path: "apps/api/lego-api/domains/parts-lists/"
+        exists: true
+        structure: "Full hexagonal"
+      - path: "apps/api/lego-api/domains/config/"
+        exists: true
+        structure: "Full hexagonal"
+
+    code_examples_accurate: true
+    code_examples_verified:
+      - example: "LivenessResponseSchema (line 284-288)"
+        actual_file: "apps/api/lego-api/domains/health/types.ts:21-25"
+        match: true
+      - example: "WishlistRepository interface (line 182-206)"
+        actual_file: "apps/api/lego-api/domains/wishlist/ports/index.ts:1-50"
+        match: true
+        note: "Actual implementation has additional fields (fileSize param) but core structure matches"
+
+    deprecated_pattern_handling: true
+    deprecated_pattern_note: "Old services/{domain}/ pattern only mentioned once at line 968 in migration section, clearly marked DEPRECATED"
+
+  issues: []
+
+  notes: |
+    This is a DOCUMENTATION-ONLY story with no code implementation.
+
+    Test execution: N/A (no code tests exist or are needed)
+    Test coverage: N/A (no code changes to cover)
+    Test quality: N/A (no test code added)
+
+    All 14 acceptance criteria verified through:
+    - Direct documentation review
+    - Filesystem verification of referenced paths
+    - Code example cross-referencing with actual domain files
+    - CLAUDE.md alignment check
+    - Deprecated pattern usage verification
+
+    Documentation quality is high:
+    - Comprehensive coverage of hexagonal architecture pattern
+    - Real code examples from existing domains
+    - Step-by-step guides for common tasks
+    - Clear migration path from old to new pattern
+    - Proper verification date for drift detection
+
+    VERDICT: PASS - All acceptance criteria met, documentation accurate and complete.
+
+gate:
+  decision: PASS
+  reason: "All 14 ACs verified, documentation accurate and complete, architecture compliant with CLAUDE.md guidelines"
+  blocking_issues: []

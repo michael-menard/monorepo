@@ -5,11 +5,14 @@
  * Supports image upload, tag input, and keyboard shortcuts.
  *
  * Story wish-2002: Add Item Flow
+ * WISH-2022: Client-side image compression with preference toggle
+ * WISH-2046: Client-side image compression quality presets
  */
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import {
   Button,
   Input,
@@ -21,11 +24,32 @@ import {
   SelectTrigger,
   SelectValue,
   Progress,
+  Checkbox,
   cn,
 } from '@repo/app-component-library'
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
 import { TagInput } from '../TagInput'
 import { useS3Upload, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '../../hooks/useS3Upload'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
+import {
+  formatFileSize,
+  COMPRESSION_PRESETS,
+  getPresetByName,
+  isValidPresetName,
+  type CompressionPresetName,
+} from '../../utils/imageCompression'
+
+/**
+ * localStorage key for compression preset preference
+ * WISH-2046: Stores user's selected compression quality preset
+ */
+const COMPRESSION_PRESET_KEY = 'wishlist:preferences:compressionPreset'
+
+/**
+ * localStorage key for skip compression preference
+ * WISH-2022/2046: Stores user preference for skipping compression entirely
+ */
+const SKIP_COMPRESSION_KEY = 'wishlist:preferences:skipCompression'
 
 /**
  * Form validation schema
@@ -120,15 +144,59 @@ export function WishlistForm({
   const [isDragOver, setIsDragOver] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.imageUrl || null)
 
+  // WISH-2046: Compression preset preference
+  // Default 'balanced' for recommended quality/size trade-off
+  const [selectedPreset, setSelectedPreset] = useLocalStorage<string>(
+    COMPRESSION_PRESET_KEY,
+    'balanced',
+  )
+
+  // WISH-2022/2046: Skip compression preference
+  // Default false = compression enabled
+  const [skipCompression, setSkipCompression] = useLocalStorage<boolean>(
+    SKIP_COMPRESSION_KEY,
+    false,
+  )
+
+  // Validate stored preset and get the valid preset name
+  const validPreset: CompressionPresetName = isValidPresetName(selectedPreset)
+    ? selectedPreset
+    : 'balanced'
+
   const {
     state: uploadState,
     progress: uploadProgress,
+    compressionProgress,
+    compressionResult,
+    presetUsed,
     error: uploadError,
     imageUrl: uploadedImageUrl,
     upload,
     reset: resetUpload,
     validateFile,
   } = useS3Upload()
+
+  // WISH-2022/2046: Show toast notification after compression with preset name
+  useEffect(() => {
+    if (compressionResult) {
+      if (compressionResult.compressed && presetUsed) {
+        const preset = getPresetByName(presetUsed)
+        toast.success(
+          `Image compressed with ${preset.label}: ${formatFileSize(compressionResult.originalSize)} -> ${formatFileSize(compressionResult.finalSize)}`,
+        )
+      } else if (compressionResult.compressed) {
+        // Fallback for edge case where preset is not available
+        toast.success(
+          `Image compressed: ${formatFileSize(compressionResult.originalSize)} -> ${formatFileSize(compressionResult.finalSize)}`,
+        )
+      } else if (compressionResult.error) {
+        toast.warning('Compression failed, using original image')
+      } else if (!compressionResult.compressed && !compressionResult.error) {
+        // WISH-2046: Notify when compression is skipped (image already small)
+        toast.info('Image already optimized, no compression needed')
+      }
+    }
+  }, [compressionResult, presetUsed])
 
   // Handle keyboard shortcut (Cmd/Ctrl+Enter)
   useEffect(() => {
@@ -197,6 +265,7 @@ export function WishlistForm({
   )
 
   // File handling
+  // WISH-2022/2046: Pass skipCompression and preset options based on user preferences
   const handleFileSelect = useCallback(
     async (file: File) => {
       const error = validateFile(file)
@@ -212,10 +281,13 @@ export function WishlistForm({
       }
       reader.readAsDataURL(file)
 
-      // Upload to S3
-      await upload(file)
+      // Upload to S3 with compression preset option
+      await upload(file, {
+        skipCompression,
+        preset: validPreset,
+      })
     },
-    [upload, validateFile],
+    [upload, validateFile, skipCompression, validPreset],
   )
 
   const handleFileInputChange = useCallback(
@@ -285,8 +357,35 @@ export function WishlistForm({
     fileInputRef.current?.click()
   }, [])
 
-  const isUploading = uploadState === 'preparing' || uploadState === 'uploading'
+  // WISH-2022: Include compressing state in upload check
+  const isUploading =
+    uploadState === 'compressing' || uploadState === 'preparing' || uploadState === 'uploading'
   const isDisabled = isSubmitting || isUploading
+
+  // WISH-2022: Helper to get progress display text
+  const getProgressText = () => {
+    if (uploadState === 'compressing') {
+      return `Compressing image... ${compressionProgress}%`
+    }
+    if (uploadState === 'preparing') {
+      return 'Preparing upload...'
+    }
+    if (uploadState === 'uploading') {
+      return `Uploading... ${uploadProgress}%`
+    }
+    return ''
+  }
+
+  // WISH-2022: Get progress value for the progress bar
+  const getProgressValue = () => {
+    if (uploadState === 'compressing') {
+      return compressionProgress
+    }
+    if (uploadState === 'uploading') {
+      return uploadProgress
+    }
+    return 0
+  }
 
   return (
     <form ref={formRef} onSubmit={handleFormSubmit} className={cn('space-y-6', className)}>
@@ -430,17 +529,13 @@ export function WishlistForm({
                 className="w-full max-h-64 object-contain bg-muted"
               />
 
-              {/* Upload progress overlay */}
+              {/* Upload progress overlay - WISH-2022: Updated for compression */}
               {Boolean(isUploading) && (
                 <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-2">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground">
-                    {uploadState === 'preparing'
-                      ? 'Preparing upload...'
-                      : `Uploading... ${uploadProgress}%`}
-                  </span>
-                  {uploadState === 'uploading' && (
-                    <Progress value={uploadProgress} className="w-48" />
+                  <span className="text-sm text-muted-foreground">{getProgressText()}</span>
+                  {(uploadState === 'compressing' || uploadState === 'uploading') && (
+                    <Progress value={getProgressValue()} className="w-48" />
                   )}
                 </div>
               )}
@@ -508,6 +603,54 @@ export function WishlistForm({
             </div>
           )}
         </div>
+
+        {/* WISH-2046: Compression quality preset selector */}
+        <div className="space-y-3 mt-3">
+          <div className="space-y-2">
+            <Label htmlFor="compressionPreset" className="text-sm">
+              Compression Quality
+            </Label>
+            <Select
+              value={validPreset}
+              onValueChange={value => setSelectedPreset(value)}
+              disabled={isDisabled || skipCompression}
+            >
+              <SelectTrigger id="compressionPreset" className="w-full">
+                <SelectValue placeholder="Select compression quality" />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPRESSION_PRESETS.map(preset => (
+                  <SelectItem key={preset.name} value={preset.name}>
+                    <div className="flex items-center gap-2">
+                      <span>{preset.label}</span>
+                      {preset.name === 'balanced' && (
+                        <span className="text-xs text-primary">(recommended)</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">{preset.estimatedSize}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {getPresetByName(validPreset).description}
+            </p>
+          </div>
+
+          {/* WISH-2022/2046: Skip compression checkbox */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="skipCompression"
+              checked={skipCompression}
+              onCheckedChange={checked => setSkipCompression(checked === true)}
+              disabled={isDisabled}
+            />
+            <Label htmlFor="skipCompression" className="text-sm font-normal cursor-pointer">
+              Skip compression (upload original)
+            </Label>
+          </div>
+        </div>
+
         {Boolean(uploadError || errors.imageUrl) && (
           <p className="text-sm text-destructive">{uploadError || errors.imageUrl}</p>
         )}

@@ -76,6 +76,11 @@ export interface WishlistRepository {
 
   /**
    * Find wishlist items by user ID with pagination and optional filters
+   *
+   * WISH-2014: Added smart sorting algorithms
+   * - bestValue: Sort by price/pieceCount ratio (lowest first)
+   * - expiringSoon: Sort by oldest release date first
+   * - hiddenGems: Sort by (5 - priority) * pieceCount (highest first)
    */
   findByUserId(
     userId: string,
@@ -85,7 +90,16 @@ export interface WishlistRepository {
       store?: string
       tags?: string[]
       priority?: number
-      sort?: 'createdAt' | 'title' | 'price' | 'pieceCount' | 'sortOrder' | 'priority'
+      sort?:
+        | 'createdAt'
+        | 'title'
+        | 'price'
+        | 'pieceCount'
+        | 'sortOrder'
+        | 'priority'
+        | 'bestValue'
+        | 'expiringSoon'
+        | 'hiddenGems'
       order?: 'asc' | 'desc'
     },
   ): Promise<PaginatedResult<WishlistItem>>

@@ -166,11 +166,7 @@ Then('the {string} button should be enabled', async ({ page }, buttonName: strin
   await expect(button).toBeEnabled()
 })
 
-// Navigation/Actions
-When('I click the {string} button', async ({ page }, buttonName: string) => {
-  const button = page.getByRole('button', { name: new RegExp(buttonName, 'i') })
-  await button.click()
-})
+// Note: 'I click the {string} button' is defined in gallery-datatable-view.steps.ts
 
 When('I reload the page', async ({ page }) => {
   await page.reload()

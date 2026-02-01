@@ -109,11 +109,7 @@ Then('a "Priority updated" toast with an "Undo" action should appear', async ({ 
   await expect(page.getByRole('button', { name: /undo/i })).toBeVisible()
 })
 
-When('I click the "Undo" button in the toast within five seconds', async ({ page }) => {
-  const undo = page.getByRole('button', { name: /undo/i })
-  await undo.click()
-  newOrder = [...lastOrder]
-})
+// Note: 'I click the "Undo" button in the toast within five seconds' is defined in wishlist-modals.steps.ts
 
 Then('the wishlist items should revert to their original order', async () => {
   expect(newOrder).toEqual(lastOrder)

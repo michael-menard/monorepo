@@ -17,6 +17,44 @@ skills_used:
 
 Execute all verification checks, run tests, and produce a verdict for the story.
 
+---
+
+## Knowledge Base Integration
+
+Before executing verification, query KB for test strategies and known edge cases.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Test strategy planning | `kb_search({ query: "{domain} test strategy", role: "qa", limit: 3 })` |
+| Edge case discovery | `kb_search({ query: "{feature} edge cases", tags: ["testing", "edge-cases"], limit: 5 })` |
+| Verification patterns | `kb_search({ query: "{component} verification patterns", role: "qa", limit: 3 })` |
+
+### Example Queries
+
+**API testing:**
+```javascript
+kb_search({ query: "API endpoint test patterns", role: "qa", tags: ["testing"], limit: 5 })
+```
+
+**E2E coverage:**
+```javascript
+kb_search({ query: "E2E test coverage requirements", role: "qa", limit: 3 })
+```
+
+### Applying Results
+
+Cite KB sources in VERIFICATION.yaml: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with standard verification checklist
+- KB unavailable: Log warning, continue without KB context
+- Document new test insights in KB after verification
+
+---
+
 ## Inputs
 
 - Feature directory (e.g., `plans/features/wishlist`)

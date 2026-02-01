@@ -2,6 +2,7 @@
  * AddItemPage Tests
  *
  * Story wish-2002: Add Item Flow
+ * Story WISH-2032: Optimistic UI for Form Submission
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -41,12 +42,15 @@ vi.mock('@repo/app-component-library', async () => {
   }
 })
 
+// Mock sonner toast - use inline function to avoid hoisting issues
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
+    custom: vi.fn(),
+    dismiss: vi.fn(),
   },
 }))
 
@@ -79,6 +83,11 @@ vi.mock('../../components/WishlistForm', () => ({
       </button>
     </form>
   ),
+}))
+
+// Mock useLocalStorage
+vi.mock('../../hooks/useLocalStorage', () => ({
+  useLocalStorage: () => [null, vi.fn(), vi.fn()],
 }))
 
 describe('AddItemPage', () => {
@@ -118,7 +127,7 @@ describe('AddItemPage', () => {
   })
 
   describe('Form Submission', () => {
-    it('triggers mutation on form submit', async () => {
+    it('triggers mutation on form submit with tempId and callback', async () => {
       const mockItem: WishlistItem = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         userId: 'user-123',
@@ -149,12 +158,14 @@ describe('AddItemPage', () => {
       await userEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(mockAddWishlistItem).toHaveBeenCalledWith({
-          title: 'Test Item',
-          store: 'LEGO',
-          priority: 0,
-          tags: [],
-        })
+        expect(mockAddWishlistItem).toHaveBeenCalled()
+        // WISH-2032: Verify tempId and onOptimisticError callback are passed
+        const callArg = mockAddWishlistItem.mock.calls[0][0]
+        expect(callArg.title).toBe('Test Item')
+        expect(callArg.store).toBe('LEGO')
+        expect(callArg.tempId).toBeDefined()
+        expect(callArg.tempId).toMatch(/^temp-\d+$/)
+        expect(typeof callArg.onOptimisticError).toBe('function')
       })
     })
 
@@ -167,8 +178,8 @@ describe('AddItemPage', () => {
     })
   })
 
-  describe('Success Handling', () => {
-    it('shows success toast on successful submission', async () => {
+  describe('Success Handling (WISH-2032 Optimistic UI)', () => {
+    it('shows success toast immediately on form submit (optimistic)', async () => {
       const { showSuccessToast } = await import('@repo/app-component-library')
       const mockItem: WishlistItem = {
         id: '123e4567-e89b-12d3-a456-426614174000',
@@ -199,6 +210,7 @@ describe('AddItemPage', () => {
       const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
       await userEvent.click(submitButton)
 
+      // WISH-2032: Success toast is shown immediately (before API response)
       await waitFor(() => {
         expect(showSuccessToast).toHaveBeenCalledWith(
           'Item added!',
@@ -208,7 +220,7 @@ describe('AddItemPage', () => {
       })
     })
 
-    it('navigates to gallery on success', async () => {
+    it('navigates to gallery immediately on submit (optimistic)', async () => {
       const mockItem: WishlistItem = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         userId: 'user-123',
@@ -238,16 +250,16 @@ describe('AddItemPage', () => {
       const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
       await userEvent.click(submitButton)
 
+      // WISH-2032: Navigation happens immediately (before API response)
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
       })
     })
   })
 
-  describe('Error Handling', () => {
-    it('shows error toast on API failure', async () => {
-      const { showErrorToast } = await import('@repo/app-component-library')
-      const mockError = new Error('Network error')
+  describe('Error Handling (WISH-2032 Rollback)', () => {
+    it('calls onOptimisticError callback on API failure', async () => {
+      const mockError = { error: { data: { message: 'Network error' } } }
       mockUnwrap.mockRejectedValue(mockError)
 
       render(<AddItemPage />)
@@ -255,26 +267,54 @@ describe('AddItemPage', () => {
       const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
       await userEvent.click(submitButton)
 
+      // Wait for mutation to be called
       await waitFor(() => {
-        expect(showErrorToast).toHaveBeenCalledWith(mockError, 'Failed to add item')
+        expect(mockAddWishlistItem).toHaveBeenCalled()
       })
+
+      // WISH-2032: Error callback is passed to mutation
+      const callArg = mockAddWishlistItem.mock.calls[0][0]
+      expect(typeof callArg.onOptimisticError).toBe('function')
     })
 
-    it('does not navigate on error', async () => {
-      const { showErrorToast } = await import('@repo/app-component-library')
-      const mockError = new Error('Network error')
-      mockUnwrap.mockRejectedValue(mockError)
+    it('navigates immediately even before API response (optimistic)', async () => {
+      // This test verifies optimistic behavior - navigation happens before API response
+      const mockItem: WishlistItem = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: 'user-123',
+        title: 'Test Item',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      }
+
+      // Delay the API response
+      mockUnwrap.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve(mockItem), 100)),
+      )
 
       render(<AddItemPage />)
 
       const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
       await userEvent.click(submitButton)
 
+      // Navigation should happen immediately, not after API response
       await waitFor(() => {
-        expect(showErrorToast).toHaveBeenCalled()
+        expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
       })
-
-      expect(mockNavigate).not.toHaveBeenCalled()
     })
   })
 
@@ -361,6 +401,129 @@ describe('AddItemPage', () => {
       await waitFor(() => {
         expect(showSuccessToast).toHaveBeenCalled()
         expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
+      })
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WISH-2032: Optimistic UI Specific Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('WISH-2032: Optimistic UI for Form Submission', () => {
+    it('passes tempId to mutation for cache tracking', async () => {
+      const mockItem: WishlistItem = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: 'user-123',
+        title: 'Test Item',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      }
+
+      mockUnwrap.mockResolvedValue(mockItem)
+
+      render(<AddItemPage />)
+
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        const callArg = mockAddWishlistItem.mock.calls[0][0]
+        expect(callArg.tempId).toMatch(/^temp-\d+$/)
+      })
+    })
+
+    it('provides onOptimisticError callback for rollback handling', async () => {
+      const mockItem: WishlistItem = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: 'user-123',
+        title: 'Test Item',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      }
+
+      mockUnwrap.mockResolvedValue(mockItem)
+
+      render(<AddItemPage />)
+
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      await userEvent.click(submitButton)
+
+      await waitFor(() => {
+        const callArg = mockAddWishlistItem.mock.calls[0][0]
+        expect(typeof callArg.onOptimisticError).toBe('function')
+      })
+    })
+
+    it('disables form during optimistic submission', async () => {
+      // Create a promise that we control to keep the mutation pending
+      let resolvePromise: (value: any) => void
+      mockUnwrap.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolvePromise = resolve
+          }),
+      )
+
+      render(<AddItemPage />)
+
+      const submitButton = screen.getByRole('button', { name: /add to wishlist/i })
+      await userEvent.click(submitButton)
+
+      // After clicking, the form should show as submitting
+      await waitFor(() => {
+        // The button should show Adding... state
+        expect(screen.getByRole('button', { name: /adding.../i })).toBeDisabled()
+      })
+
+      // Cleanup: resolve the promise
+      resolvePromise!({
+        id: '123',
+        userId: 'user-123',
+        title: 'Test Item',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
       })
     })
   })

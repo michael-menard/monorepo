@@ -24,25 +24,7 @@ Given('the mark-as-purchased API is mocked', async () => {})
 // Detail helpers
 // ---------------------------------------------------------------------------
 
-When('I open the wishlist detail page for item "wish-002"', async ({ page }) => {
-  await page.goto('/wishlist/wish-002')
-  await page.waitForSelector('h1', { timeout: 10000 })
-})
-
-When('I open the wishlist detail page for item "wish-001"', async ({ page }) => {
-  await page.goto('/wishlist/wish-001')
-  await page.waitForSelector('h1', { timeout: 10000 })
-})
-
-When('I open the wishlist detail page for item "wish-003"', async ({ page }) => {
-  await page.goto('/wishlist/wish-003')
-  await page.waitForSelector('h1', { timeout: 10000 })
-})
-
-When('I open the wishlist detail page for item "wish-004"', async ({ page }) => {
-  await page.goto('/wishlist/wish-004')
-  await page.waitForSelector('h1', { timeout: 10000 })
-})
+// Note: 'I open the wishlist detail page for item {string}' is defined in wishlist-detail-edit.steps.ts
 
 // ---------------------------------------------------------------------------
 // Delete modal

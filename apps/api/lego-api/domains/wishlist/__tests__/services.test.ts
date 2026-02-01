@@ -36,6 +36,7 @@ const mockItem: WishlistItem = {
   setNumber: '75192',
   sourceUrl: 'https://lego.com/75192',
   imageUrl: 'https://bucket.s3.amazonaws.com/wishlist/user-123/75192.webp',
+  imageVariants: null, // WISH-2016
   price: '849.99',
   currency: 'USD',
   pieceCount: 7541,

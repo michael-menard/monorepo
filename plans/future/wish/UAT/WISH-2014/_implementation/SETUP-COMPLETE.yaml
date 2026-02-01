@@ -1,0 +1,53 @@
+phase: setup
+status: complete
+timestamp: "2026-01-31T16:45:00-07:00"
+
+story:
+  id: WISH-2014
+  title: "Smart Sorting Algorithms"
+  status: in-qa
+
+steps_completed:
+  - name: "Precondition Validation"
+    status: pass
+    details:
+      - "Story exists at ready-for-qa/WISH-2014/"
+      - "Status was ready-for-qa in frontmatter"
+      - "PROOF file exists: PROOF-WISH-2014.md"
+      - "Code review passed with VERIFICATION.yaml verdict: PASS"
+  
+  - name: "Story Directory Move"
+    status: pass
+    from: "plans/future/wish/ready-for-qa/WISH-2014/"
+    to: "plans/future/wish/UAT/WISH-2014/"
+  
+  - name: "Frontmatter Status Update"
+    status: pass
+    old_status: ready-for-qa
+    new_status: in-qa
+    updated_at: "2026-01-31T16:45:00-07:00"
+  
+  - name: "Story Index Update"
+    status: pass
+    file: "plans/future/wish/stories.index.md"
+    change: "Updated WISH-2014 status from ready-for-qa to in-qa"
+  
+  - name: "AGENT-CONTEXT Initialization"
+    status: pass
+    file: "plans/future/wish/UAT/WISH-2014/_implementation/AGENT-CONTEXT.md"
+    mode: qa-verify
+    command: qa-verify-story
+
+paths:
+  story_file: "plans/future/wish/UAT/WISH-2014/WISH-2014.md"
+  artifacts: "plans/future/wish/UAT/WISH-2014/_implementation/"
+  proof_file: "plans/future/wish/UAT/WISH-2014/_implementation/PROOF-WISH-2014.md"
+  verification_file: "plans/future/wish/UAT/WISH-2014/_implementation/VERIFICATION.yaml"
+  context_file: "plans/future/wish/UAT/WISH-2014/_implementation/AGENT-CONTEXT.md"
+
+next_phase: verification
+ready_for_qa_agents:
+  - qa-verify-discovery
+  - qa-verify-acceptance
+  - qa-verify-performance
+  - qa-verify-accessibility

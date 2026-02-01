@@ -1,5 +1,5 @@
 import type { FeatureFlagCache, CachedFeatureFlags } from '../ports/index.js'
-import type { FeatureFlag } from '../types.js'
+import type { FeatureFlag, UserOverride } from '../types.js'
 
 /**
  * In-Memory Feature Flag Cache (WISH-2009 - AC17)
@@ -9,11 +9,22 @@ import type { FeatureFlag } from '../types.js'
  */
 
 /**
+ * Cached user override with expiration
+ */
+interface CachedUserOverride {
+  override: UserOverride | null
+  expiresAt: number
+}
+
+/**
  * Create an in-memory feature flag cache
  */
 export function createInMemoryCache(): FeatureFlagCache {
   // Cache structure: environment -> { flags: Map<flagKey, FeatureFlag>, expiresAt: number }
   const cache = new Map<string, CachedFeatureFlags>()
+
+  // User override cache: flagId:userId -> { override, expiresAt } (WISH-2039)
+  const userOverrideCache = new Map<string, CachedUserOverride>()
 
   return {
     /**
@@ -59,9 +70,16 @@ export function createInMemoryCache(): FeatureFlagCache {
      * Returns null if cache miss or expired
      */
     getFlag(environment: string, flagKey: string): FeatureFlag | null {
-      const cached = this.get(environment)
+      // Directly access local cache to avoid typing issues with interface's Promise union
+      const cached = cache.get(environment)
 
       if (!cached) {
+        return null
+      }
+
+      // Check expiration
+      if (Date.now() > cached.expiresAt) {
+        cache.delete(environment)
         return null
       }
 
@@ -80,6 +98,62 @@ export function createInMemoryCache(): FeatureFlagCache {
      */
     invalidateAll(): void {
       cache.clear()
+      userOverrideCache.clear()
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // User Override Cache Methods (WISH-2039)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Get user override from cache
+     * Returns null if cache miss or expired, or if override doesn't exist
+     */
+    getUserOverride(flagId: string, userId: string): UserOverride | null {
+      const key = `${flagId}:${userId}`
+      const cached = userOverrideCache.get(key)
+
+      if (!cached) {
+        return null
+      }
+
+      if (Date.now() > cached.expiresAt) {
+        userOverrideCache.delete(key)
+        return null
+      }
+
+      return cached.override
+    },
+
+    /**
+     * Set user override in cache
+     */
+    setUserOverride(flagId: string, userId: string, override: UserOverride, ttlMs: number): void {
+      const key = `${flagId}:${userId}`
+      userOverrideCache.set(key, {
+        override,
+        expiresAt: Date.now() + ttlMs,
+      })
+    },
+
+    /**
+     * Invalidate user override cache entry
+     */
+    invalidateUserOverride(flagId: string, userId: string): void {
+      const key = `${flagId}:${userId}`
+      userOverrideCache.delete(key)
+    },
+
+    /**
+     * Invalidate all user overrides for a flag
+     */
+    invalidateUserOverridesForFlag(flagId: string): void {
+      // Iterate and delete all keys starting with flagId:
+      for (const key of userOverrideCache.keys()) {
+        if (key.startsWith(`${flagId}:`)) {
+          userOverrideCache.delete(key)
+        }
+      }
     },
   }
 }

@@ -6,11 +6,19 @@
  *
  * Story wish-2002: Add Item Flow
  * WISH-2013: Security hardening - file type and size validation
+ * WISH-2022: Client-side image compression before upload
+ * WISH-2046: Client-side image compression quality presets
  */
 
 import { useState, useCallback, useRef } from 'react'
 import { uploadToPresignedUrl, UploadError, type UploadProgress } from '@repo/upload-client'
 import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
+import {
+  compressImage,
+  getPresetByName,
+  type CompressionResult,
+  type CompressionPresetName,
+} from '../utils/imageCompression'
 
 /**
  * Maximum file size in bytes (10MB)
@@ -30,7 +38,30 @@ export const MIN_FILE_SIZE = 1
  */
 export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 
-export type UploadState = 'idle' | 'preparing' | 'uploading' | 'complete' | 'error'
+/**
+ * Upload state including compression phase
+ * WISH-2022: Added 'compressing' state
+ */
+export type UploadState = 'idle' | 'compressing' | 'preparing' | 'uploading' | 'complete' | 'error'
+
+/**
+ * Options for the upload function
+ * WISH-2022: Added skipCompression option
+ * WISH-2046: Added preset option for quality presets
+ */
+export interface UploadOptions {
+  /**
+   * Compression preset to use. Defaults to 'balanced'.
+   * WISH-2046: Allows selecting from predefined quality presets.
+   */
+  preset?: CompressionPresetName
+
+  /**
+   * Skip compression entirely.
+   * When true, the preset option is ignored.
+   */
+  skipCompression?: boolean
+}
 
 export interface UseS3UploadResult {
   /**
@@ -42,6 +73,18 @@ export interface UseS3UploadResult {
    * Upload progress (0-100)
    */
   progress: number
+
+  /**
+   * Compression progress (0-100)
+   * WISH-2022: Separate compression progress tracking
+   */
+  compressionProgress: number
+
+  /**
+   * Result of the compression operation
+   * WISH-2022: Provides compression details for toast notification
+   */
+  compressionResult: CompressionResult | null
 
   /**
    * Error message if upload failed
@@ -60,8 +103,16 @@ export interface UseS3UploadResult {
 
   /**
    * Start the upload process
+   * WISH-2022: Added options parameter for compression control
+   * WISH-2046: Added preset option for quality presets
    */
-  upload: (file: File) => Promise<string | null>
+  upload: (file: File, options?: UploadOptions) => Promise<string | null>
+
+  /**
+   * WISH-2046: The preset name that was used for the last compression
+   * Null if compression was skipped
+   */
+  presetUsed: CompressionPresetName | null
 
   /**
    * Cancel an in-progress upload
@@ -82,6 +133,9 @@ export interface UseS3UploadResult {
 export function useS3Upload(): UseS3UploadResult {
   const [state, setState] = useState<UploadState>('idle')
   const [progress, setProgress] = useState(0)
+  const [compressionProgress, setCompressionProgress] = useState(0)
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null)
+  const [presetUsed, setPresetUsed] = useState<CompressionPresetName | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageKey, setImageKey] = useState<string | null>(null)
@@ -109,7 +163,9 @@ export function useS3Upload(): UseS3UploadResult {
   }, [])
 
   const upload = useCallback(
-    async (file: File): Promise<string | null> => {
+    async (file: File, options: UploadOptions = {}): Promise<string | null> => {
+      const { skipCompression = false, preset = 'balanced' } = options
+
       // Validate file first
       const validationError = validateFile(file)
       if (validationError) {
@@ -121,6 +177,9 @@ export function useS3Upload(): UseS3UploadResult {
       // Reset state
       setError(null)
       setProgress(0)
+      setCompressionProgress(0)
+      setCompressionResult(null)
+      setPresetUsed(null)
       setImageUrl(null)
       setImageKey(null)
 
@@ -128,11 +187,33 @@ export function useS3Upload(): UseS3UploadResult {
       abortControllerRef.current = new AbortController()
 
       try {
+        let fileToUpload = file
+
+        // WISH-2022/2046: Compress image before upload (unless skipped)
+        // Uses the selected preset settings for compression
+        if (!skipCompression) {
+          setState('compressing')
+          const presetConfig = getPresetByName(preset)
+          const result = await compressImage(file, {
+            config: presetConfig.settings,
+            onProgress: setCompressionProgress,
+          })
+          setCompressionResult(result)
+          setPresetUsed(preset)
+          fileToUpload = result.file
+
+          // Check if cancelled during compression
+          if (abortControllerRef.current?.signal.aborted) {
+            setState('idle')
+            return null
+          }
+        }
+
         // Step 1: Get presigned URL
         setState('preparing')
         const presignResult = await getPresignUrl({
-          fileName: file.name,
-          mimeType: file.type,
+          fileName: fileToUpload.name,
+          mimeType: fileToUpload.type,
         }).unwrap()
 
         // Check if cancelled
@@ -145,7 +226,7 @@ export function useS3Upload(): UseS3UploadResult {
         setState('uploading')
         await uploadToPresignedUrl({
           url: presignResult.presignedUrl,
-          file,
+          file: fileToUpload,
           onProgress: (progressData: UploadProgress) => {
             setProgress(progressData.percent)
           },
@@ -192,6 +273,7 @@ export function useS3Upload(): UseS3UploadResult {
     }
     setState('idle')
     setProgress(0)
+    setCompressionProgress(0)
     setError(null)
   }, [])
 
@@ -199,11 +281,16 @@ export function useS3Upload(): UseS3UploadResult {
     cancel()
     setImageUrl(null)
     setImageKey(null)
+    setCompressionResult(null)
+    setPresetUsed(null)
   }, [cancel])
 
   return {
     state,
     progress,
+    compressionProgress,
+    compressionResult,
+    presetUsed,
     error,
     imageUrl,
     imageKey,

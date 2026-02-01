@@ -1,7 +1,17 @@
-import { eq, and } from 'drizzle-orm'
+import { eq, and, count, desc } from 'drizzle-orm'
 import { ok, err, type Result } from '@repo/api-core'
-import type { FeatureFlagRepository } from '../ports/index.js'
-import type { FeatureFlag, CreateFeatureFlagInput, UpdateFeatureFlagInput } from '../types.js'
+import type {
+  FeatureFlagRepository,
+  UserOverrideRepository,
+  UserOverridePagination,
+} from '../ports/index.js'
+import type {
+  FeatureFlag,
+  CreateFeatureFlagInput,
+  UpdateFeatureFlagInput,
+  UserOverride,
+  OverrideType,
+} from '../types.js'
 
 /**
  * Feature Flag Repository Adapter (WISH-2009)
@@ -25,8 +35,19 @@ interface DrizzleTable {
   environment: unknown
 }
 
+interface DrizzleUserOverrideTable {
+  id: unknown
+  flagId: unknown
+  userId: unknown
+  overrideType: unknown
+  reason: unknown
+  createdBy: unknown
+  createdAt: unknown
+}
+
 interface DrizzleSchema {
   featureFlags: DrizzleTable
+  featureFlagUserOverrides?: DrizzleUserOverrideTable
 }
 
 /**
@@ -175,6 +196,163 @@ export function createFeatureFlagRepository(db: unknown, schema: unknown): Featu
       }
 
       return ok(undefined)
+    },
+  }
+}
+
+/**
+ * User Override Repository Adapter (WISH-2039)
+ *
+ * Database adapter for user override CRUD operations.
+ * Uses type assertions for Drizzle db/schema since exact types are complex.
+ */
+
+// Extended Drizzle DB interface with all needed operations
+
+type DrizzleAny = any
+
+/**
+ * Create a user override repository adapter
+ */
+export function createUserOverrideRepository(db: unknown, schema: unknown): UserOverrideRepository {
+  const typedDb = db as DrizzleAny
+  const typedSchema = schema as DrizzleAny
+
+  const userOverridesTable = typedSchema.featureFlagUserOverrides
+
+  if (!userOverridesTable) {
+    throw new Error('featureFlagUserOverrides table not found in schema')
+  }
+
+  /**
+   * Map database row to UserOverride type
+   */
+  function mapToUserOverride(row: unknown): UserOverride {
+    const r = row as Record<string, unknown>
+    return {
+      id: r.id as string,
+      flagId: r.flagId as string,
+      userId: r.userId as string,
+      overrideType: r.overrideType as OverrideType,
+      reason: r.reason as string | null,
+      createdBy: r.createdBy as string | null,
+      createdAt: r.createdAt as Date,
+    }
+  }
+
+  return {
+    /**
+     * Find a specific user override
+     */
+    async findByFlagAndUser(flagId: string, userId: string): Promise<UserOverride | null> {
+      const rows = await typedDb
+        .select()
+        .from(userOverridesTable)
+        .where(and(eq(userOverridesTable.flagId, flagId), eq(userOverridesTable.userId, userId)))
+
+      if (rows.length === 0) {
+        return null
+      }
+
+      return mapToUserOverride(rows[0])
+    },
+
+    /**
+     * Find all overrides for a flag with pagination
+     */
+    async findAllByFlag(
+      flagId: string,
+      pagination: UserOverridePagination,
+    ): Promise<{ overrides: UserOverride[]; total: number }> {
+      const { page, pageSize } = pagination
+      const offsetVal = (page - 1) * pageSize
+
+      // Get paginated results
+      const rows = await typedDb
+        .select()
+        .from(userOverridesTable)
+        .where(eq(userOverridesTable.flagId, flagId))
+        .orderBy(desc(userOverridesTable.createdAt))
+        .limit(pageSize)
+        .offset(offsetVal)
+
+      // Get total count
+      const countResult = await typedDb
+        .select({ count: count() })
+        .from(userOverridesTable)
+        .where(eq(userOverridesTable.flagId, flagId))
+
+      const totalCount = countResult[0]?.count ?? 0
+
+      return {
+        overrides: rows.map(mapToUserOverride),
+        total: totalCount,
+      }
+    },
+
+    /**
+     * Create or update a user override (upsert)
+     */
+    async upsert(
+      flagId: string,
+      input: {
+        userId: string
+        overrideType: OverrideType
+        reason?: string
+        createdBy?: string
+      },
+    ): Promise<Result<UserOverride, 'DB_ERROR'>> {
+      try {
+        const rows = await typedDb
+          .insert(userOverridesTable)
+          .values({
+            flagId,
+            userId: input.userId,
+            overrideType: input.overrideType,
+            reason: input.reason ?? null,
+            createdBy: input.createdBy ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [userOverridesTable.flagId, userOverridesTable.userId],
+            set: {
+              overrideType: input.overrideType,
+              reason: input.reason ?? null,
+              createdBy: input.createdBy ?? null,
+            },
+          })
+          .returning()
+
+        return ok(mapToUserOverride(rows[0]))
+      } catch (error) {
+        console.error('Failed to upsert user override:', error)
+        return err('DB_ERROR')
+      }
+    },
+
+    /**
+     * Delete a user override
+     */
+    async delete(flagId: string, userId: string): Promise<Result<void, 'NOT_FOUND'>> {
+      const rows = await typedDb
+        .delete(userOverridesTable)
+        .where(and(eq(userOverridesTable.flagId, flagId), eq(userOverridesTable.userId, userId)))
+        .returning()
+
+      if (rows.length === 0) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(undefined)
+    },
+
+    /**
+     * Delete all overrides for a flag
+     */
+    async deleteAllByFlag(flagId: string): Promise<void> {
+      await typedDb
+        .delete(userOverridesTable)
+        .where(eq(userOverridesTable.flagId, flagId))
+        .returning()
     },
   }
 }

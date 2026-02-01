@@ -14,6 +14,17 @@
     "test:bdd:uploader": "bddgen && playwright test .features-gen/features/uploader/",
     "test:bdd:uploader:a11y": "bddgen && playwright test .features-gen/features/uploader/ --grep @a11y",
     "test:bdd:uploader:perf": "bddgen && playwright test .features-gen/features/uploader/ --grep @perf",
+    "test:api": "bddgen && playwright test .features-gen/features/api/ --project=api-mocked",
+    "test:api:smoke": "bddgen && playwright test .features-gen/features/api/ --project=api-mocked --grep @smoke",
+    "test:api:crud": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-crud --project=api-mocked",
+    "test:api:auth": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-auth --project=api-mocked",
+    "test:api:sorting": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-sorting --project=api-mocked",
+    "test:api:reorder": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-reorder --project=api-mocked",
+    "test:api:purchase": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-purchase --project=api-mocked",
+    "test:api:upload": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-upload --project=api-mocked",
+    "test:api:validation": "bddgen && playwright test .features-gen/features/api/wishlist/wishlist-api-validation --project=api-mocked",
+    "test:api:live": "bddgen && playwright test .features-gen/features/api/ --project=api-live",
+    "test:api:story": "bddgen && playwright test .features-gen/features/api/ --project=api-mocked --grep",
     "test:legacy": "playwright test tests/",
     "test:legacy:auth": "playwright test tests/auth/",
     "test:legacy:auth:headed": "playwright test tests/auth/ --headed",
@@ -42,6 +53,7 @@
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "zod": "4.3.6"
   }
 }

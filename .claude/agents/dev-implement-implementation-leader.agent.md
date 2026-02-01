@@ -22,6 +22,42 @@ Implement retry logic for recoverable type errors.
 
 ---
 
+## Knowledge Base Integration
+
+Before spawning implementation workers, query KB for relevant patterns and decisions.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| New feature implementation | `kb_search({ query: "{domain} implementation patterns", role: "dev", limit: 3 })` |
+| Architecture decision needed | `kb_search({ query: "{topic} architecture decision", tags: ["architecture"], limit: 3 })` |
+| Complex refactoring | `kb_search({ query: "{area} refactoring lessons", role: "dev", limit: 3 })` |
+
+### Example Queries
+
+**Database patterns:**
+```javascript
+kb_search({ query: "drizzle migration patterns", role: "dev", limit: 5 })
+```
+
+**Auth implementation:**
+```javascript
+kb_search({ query: "authentication flow implementation", tags: ["auth", "security"], limit: 3 })
+```
+
+### Applying Results
+
+Cite KB sources in IMPLEMENTATION-PLAN.md: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with implementation plan as-is
+- KB unavailable: Log warning, continue without KB context
+- Consider adding new learnings to KB after implementation
+
+---
+
 ## Workers
 
 | Worker | Agent File | Output | Condition |

@@ -39,6 +39,7 @@ That's it! See below for detailed documentation.
 - [Troubleshooting](#troubleshooting)
 - [Disaster Recovery](#disaster-recovery)
 - [Rollback Procedures](#rollback-procedures)
+- [Monitoring and Alerts](#monitoring-and-alerts)
 
 ---
 
@@ -798,6 +799,401 @@ docker system prune -a
 
 # Restart container
 docker-compose restart kb-postgres
+```
+
+---
+
+## Monitoring and Alerts
+
+Production monitoring for the Knowledge Base PostgreSQL/RDS instance is implemented using AWS CloudWatch. This section documents the monitoring infrastructure, alert runbooks, and operational procedures.
+
+> **Note:** Monitoring is production-only. Local Docker Compose databases do not emit CloudWatch metrics. For local development, use pgAdmin, Drizzle Studio, or direct PostgreSQL queries for inspection.
+
+### Dashboard Access
+
+The CloudWatch dashboard provides real-time visibility into database health:
+
+| Environment | Dashboard Name | URL |
+|-------------|----------------|-----|
+| Staging | `kb-postgres-dashboard-staging` | CloudWatch Console > Dashboards |
+| Production | `kb-postgres-dashboard-production` | CloudWatch Console > Dashboards |
+
+#### Dashboard Widgets
+
+| Widget | Metric | Description |
+|--------|--------|-------------|
+| Database Connections | `DatabaseConnections` | Current and max active connections |
+| CPU Utilization | `CPUUtilization` | CPU usage percentage |
+| Freeable Memory | `FreeableMemory` | Available memory in GB |
+| Free Storage Space | `FreeStorageSpace` | Available disk space in GB |
+| Read Latency | `ReadLatency` | Average and max read latency |
+| Write Latency | `WriteLatency` | Average and max write latency |
+| Alarm Status | All alarms | Visual status of all configured alarms |
+
+The dashboard auto-refreshes every 5 minutes and shows annotations for alarm thresholds.
+
+### CloudWatch Alarms
+
+| Alarm Name | Metric | Threshold | Severity | Description |
+|------------|--------|-----------|----------|-------------|
+| `kb-postgres-high-connections` | DatabaseConnections | > 80 | P1 | Connection count approaching max_connections |
+| `kb-postgres-high-cpu` | CPUUtilization | > 80% | P1 | Sustained high CPU utilization |
+| `kb-postgres-low-memory` | FreeableMemory | < 10% | P1 | Available memory critically low |
+| `kb-postgres-high-read-latency` | ReadLatency | > 100ms | P1 | Read operations experiencing delays |
+| `kb-postgres-low-disk-space` | FreeStorageSpace | < 10% | P0 | Disk space critically low |
+| `kb-postgres-no-data` | DatabaseConnections | No data for 15+ min | P0 | Metrics not being collected |
+
+All alarms evaluate over 5-minute periods with 2-of-3 consecutive breaches required to trigger (except no-data alarm).
+
+### SNS Alert Topics
+
+| Environment | Topic Name | Purpose |
+|-------------|------------|---------|
+| Staging | `kb-postgres-alerts-staging` | Development team notifications |
+| Production | `kb-postgres-alerts-production` | On-call team notifications |
+
+#### Configuring Subscriptions
+
+Email subscriptions require manual confirmation after creation:
+
+```bash
+# Check subscription status
+aws sns list-subscriptions-by-topic \
+  --topic-arn arn:aws:sns:us-west-2:ACCOUNT:kb-postgres-alerts-production
+
+# Add new subscription
+aws sns subscribe \
+  --topic-arn arn:aws:sns:us-west-2:ACCOUNT:kb-postgres-alerts-production \
+  --protocol email \
+  --notification-endpoint your-team@example.com
+```
+
+After subscription, check email and click "Confirm subscription" link.
+
+### Threshold Rationale (AC7)
+
+| Metric | Threshold | Rationale |
+|--------|-----------|-----------|
+| Connections | 80 (80% of max_connections=100) | Provides headroom before connection exhaustion. Typical workloads should use <50%. |
+| CPU | 80% for 5 min | Brief spikes are normal; sustained usage indicates query optimization needed. |
+| Memory | <10% free | Below this, OOM killer may terminate processes. Buffer pool needs tuning. |
+| Latency | >100ms | User-perceptible delays. Indicates disk I/O saturation or lock contention. |
+| Disk Space | <10% free | Provides ~2GB buffer on 20GB disk for emergency cleanup or scaling. |
+| No Data | 15+ minutes | Indicates RDS instance stopped, CloudWatch agent failure, or network issues. |
+
+**Threshold Review:** After 2-4 weeks of production data, review alert frequency and adjust thresholds. Target: <5 alerts/week that require action.
+
+### Alert Runbooks (AC8)
+
+#### High Connections (`kb-postgres-high-connections`)
+
+**Severity:** P1 (Response SLA: 1 hour)
+
+**Investigation Steps:**
+1. Check current connection count in CloudWatch dashboard
+2. Identify connection sources:
+   ```sql
+   SELECT client_addr, datname, usename, state, count(*)
+   FROM pg_stat_activity
+   GROUP BY client_addr, datname, usename, state
+   ORDER BY count(*) DESC;
+   ```
+3. Look for connection leaks (many `idle` connections from same source)
+4. Check application logs for connection pool exhaustion errors
+
+**Resolution:**
+- If connection leak: Identify and restart the leaking application
+- If legitimate load: Increase `max_connections` and restart RDS
+- If pool exhaustion: Tune connection pool settings in application
+- Long-term: Consider RDS Proxy for connection pooling
+
+#### High CPU (`kb-postgres-high-cpu`)
+
+**Severity:** P1 (Response SLA: 1 hour)
+
+**Investigation Steps:**
+1. Check if correlated with high connections or latency
+2. Identify slow queries:
+   ```sql
+   SELECT pid, now() - pg_stat_activity.query_start AS duration, query, state
+   FROM pg_stat_activity
+   WHERE state != 'idle'
+   ORDER BY duration DESC
+   LIMIT 10;
+   ```
+3. Check for missing indexes using pg_stat_user_tables
+4. Review recent deployments for query changes
+
+**Resolution:**
+- Kill long-running queries: `SELECT pg_terminate_backend(pid);`
+- Add missing indexes based on query patterns
+- Optimize expensive queries (EXPLAIN ANALYZE)
+- If instance undersized: Scale up RDS instance class
+
+#### Low Memory (`kb-postgres-low-memory`)
+
+**Severity:** P1 (Response SLA: 1 hour)
+
+**Investigation Steps:**
+1. Check memory breakdown in CloudWatch (FreeableMemory, SwapUsage)
+2. Review `shared_buffers` and `work_mem` settings
+3. Check for memory-intensive queries (large sorts, hash joins)
+4. Look for connection count spikes (each connection uses memory)
+
+**Resolution:**
+- Reduce `work_mem` for high-concurrency workloads
+- Tune `shared_buffers` (typically 25% of RAM)
+- If insufficient: Upgrade to larger RDS instance class
+- Terminate memory-heavy queries if immediate relief needed
+
+#### High Read Latency (`kb-postgres-high-read-latency`)
+
+**Severity:** P1 (Response SLA: 1 hour)
+
+**Investigation Steps:**
+1. Check if correlated with high CPU or disk I/O
+2. Verify IOPS usage isn't hitting provisioned limit
+3. Check for table bloat requiring VACUUM:
+   ```sql
+   SELECT schemaname, relname, n_dead_tup, n_live_tup
+   FROM pg_stat_user_tables
+   WHERE n_dead_tup > 1000
+   ORDER BY n_dead_tup DESC;
+   ```
+4. Review indexes - missing indexes cause sequential scans
+
+**Resolution:**
+- Run VACUUM ANALYZE on bloated tables
+- Add missing indexes for frequent query patterns
+- Upgrade to Provisioned IOPS if hitting GP2 limits
+- Consider read replicas for read-heavy workloads
+
+#### Low Disk Space (`kb-postgres-low-disk-space`)
+
+**Severity:** P0 (Response SLA: 15 minutes)
+
+**Investigation Steps:**
+1. Identify largest tables:
+   ```sql
+   SELECT schemaname, relname,
+          pg_size_pretty(pg_total_relation_size(relid)) as total_size
+   FROM pg_stat_user_tables
+   ORDER BY pg_total_relation_size(relid) DESC
+   LIMIT 10;
+   ```
+2. Check for WAL log bloat
+3. Look for orphaned temporary tables
+4. Check if backups are consuming space
+
+**Resolution:**
+- Immediate: Delete unnecessary data or old logs
+- Run VACUUM FULL on bloated tables (causes downtime)
+- Increase RDS storage (no downtime required)
+- Enable storage autoscaling in RDS settings
+- Archive old data to S3
+
+#### No Data (`kb-postgres-no-data`)
+
+**Severity:** P0 (Response SLA: 15 minutes)
+
+**Investigation Steps:**
+1. Check RDS instance status in AWS Console
+2. Verify CloudWatch agent is running (if custom metrics)
+3. Check network connectivity to CloudWatch endpoints
+4. Look for IAM permission changes affecting metric publishing
+
+**Resolution:**
+- If RDS stopped: Start the instance
+- If instance exists but no metrics: Restart instance
+- If IAM issue: Restore CloudWatch permissions
+- If network issue: Check VPC endpoints and security groups
+
+### Escalation Policy (AC8)
+
+| Severity | Description | Response SLA | Notification Channel |
+|----------|-------------|--------------|---------------------|
+| P0 (Critical) | Database unavailable or critical resources exhausted | 15 minutes | PagerDuty + Phone |
+| P1 (High) | Performance degradation, approaching resource limits | 1 hour | Email + Slack |
+| P2 (Medium) | Informational, trending towards issues | Next business day | Email only |
+
+**Escalation Path:**
+1. On-call engineer receives alert
+2. If not acknowledged within SLA: Escalate to backup on-call
+3. If still unacknowledged: Escalate to engineering manager
+4. P0 incidents require incident report within 24 hours
+
+**Alert Tuning SLA:** If >5 false positives per week, investigate and adjust thresholds within 48 hours. Document tuning rationale in this section.
+
+### IAM Permissions (AC9)
+
+To deploy or manage monitoring infrastructure, the following IAM permissions are required:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudWatchDashboards",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutDashboard",
+        "cloudwatch:GetDashboard",
+        "cloudwatch:DeleteDashboards",
+        "cloudwatch:ListDashboards"
+      ],
+      "Resource": "arn:aws:cloudwatch::*:dashboard/kb-postgres-*"
+    },
+    {
+      "Sid": "CloudWatchAlarms",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:DeleteAlarms",
+        "cloudwatch:DescribeAlarmHistory",
+        "cloudwatch:SetAlarmState"
+      ],
+      "Resource": "arn:aws:cloudwatch:*:*:alarm:kb-postgres-*"
+    },
+    {
+      "Sid": "CloudWatchMetrics",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SNSTopics",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:DeleteTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:Subscribe",
+        "sns:Unsubscribe",
+        "sns:Publish",
+        "sns:ListSubscriptionsByTopic"
+      ],
+      "Resource": "arn:aws:sns:*:*:kb-postgres-*"
+    },
+    {
+      "Sid": "RDSDescribe",
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeDBInstances"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+The IAM policy is also available in the Terraform outputs and at `infra/monitoring/iam.tf`.
+
+### Cost Estimation (AC11)
+
+| Resource | Cost | Notes |
+|----------|------|-------|
+| CloudWatch Dashboard | ~$3/month | Per dashboard |
+| CloudWatch Alarms | $0.10/month each | 6 alarms = $0.60/month |
+| RDS Metrics | Included | Standard AWS/RDS metrics |
+| SNS Notifications | ~$0.50/million | Email notifications |
+| **Total Estimated** | **<$5/month** | Per environment |
+
+Cost scales with:
+- Number of dashboards created
+- Additional alarms configured
+- High-resolution metrics (if enabled)
+- SNS notification volume
+
+### Error Handling (AC12)
+
+| Error | Cause | Resolution |
+|-------|-------|------------|
+| `AccessDeniedException` | Missing IAM permissions | Add required permissions from AC9 |
+| `ResourceNotFoundException` | SNS topic doesn't exist | Create topic before alarms |
+| `InvalidParameterValue` | Invalid dashboard JSON | Validate JSON with `jq` before deploy |
+| `No data` in widgets | RDS not running or wrong namespace | Verify RDS instance ID and region |
+| Subscription `PendingConfirmation` | Email not confirmed | Check email inbox and confirm |
+
+### Deployment Instructions
+
+The monitoring infrastructure is managed via Terraform in `infra/monitoring/`.
+
+#### Initial Setup
+
+```bash
+cd infra/monitoring
+
+# Copy example variables file
+cp terraform.tfvars.example terraform.tfvars
+
+# Edit with your values
+vim terraform.tfvars
+
+# Initialize Terraform
+terraform init
+
+# Preview changes
+terraform plan
+
+# Apply changes
+terraform apply
+```
+
+#### After Deployment
+
+1. Confirm SNS email subscriptions (check inbox)
+2. Wait 5-15 minutes for metrics to appear
+3. Verify dashboard shows data (not "No data")
+4. Test alarm manually:
+   ```bash
+   aws cloudwatch set-alarm-state \
+     --alarm-name kb-postgres-high-connections-staging \
+     --state-value ALARM \
+     --state-reason "Manual test"
+   ```
+5. Verify notification received
+6. Reset alarm state (it will auto-reset when condition clears)
+
+#### Dashboard Drift Prevention
+
+**Important:** All dashboard and alarm changes MUST go through Terraform. Manual console edits will be overwritten on next `terraform apply`.
+
+To update configuration:
+1. Edit the relevant `.tf` file
+2. Run `terraform plan` to preview
+3. Run `terraform apply` to deploy
+4. Commit changes to version control
+
+### Metrics Verification Commands
+
+```bash
+# List available RDS metrics
+aws cloudwatch list-metrics --namespace AWS/RDS
+
+# Get current connection count
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/RDS \
+  --metric-name DatabaseConnections \
+  --dimensions Name=DBInstanceIdentifier,Value=kb-postgres-production \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average Maximum
+
+# List all alarms
+aws cloudwatch describe-alarms \
+  --alarm-name-prefix kb-postgres
+
+# Get alarm history
+aws cloudwatch describe-alarm-history \
+  --alarm-name kb-postgres-high-connections-production \
+  --max-records 10
 ```
 
 ---

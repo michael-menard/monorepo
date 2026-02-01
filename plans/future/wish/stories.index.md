@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-31T00:00:00Z"
+updated_at: "2026-01-31T17:35:00Z"
 ---
 
 # WISH Stories Index
@@ -15,18 +15,20 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 13 |
+| completed | 18 |
 | in-progress | 0 |
 | review | 0 |
-| ready-for-qa | 1 |
+| ready-for-qa | 0 |
 | uat | 0 |
 | in-qa | 0 |
-| backlog | 19 |
-| elaboration | 0 |
-| ready-to-work | 15 |
-| pending | 17 |
+| backlog | 11 |
+| elaboration | 3 |
+| needs-refinement | 1 |
+| deferred | 18 |
+| ready-to-work | 16 |
+| pending | 9 |
 | created | 1 |
-| deferred | 1 |
+| cancelled | 1 |
 | BLOCKED | 1 |
 
 ---
@@ -221,7 +223,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005d: Haptic feedback on mobile drag
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2005a
 **Phase:** 4 - UX Polish
 
@@ -235,13 +237,11 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** WISH-2005a QA Elaboration (Enhancement Opportunity #2)
 
-**Story File:** `plans/future/wish/backlog/WISH-2005d/WISH-2005d.md`
-
 ---
 
 ## WISH-2006: Accessibility
 
-**Status:** Created
+**Status:** Ready to Work
 **Depends On:** WISH-2005
 **Phase:** 5 - Accessibility (Deferred to Phase 2 after core functionality)
 
@@ -254,6 +254,47 @@ Stories with all dependencies satisfied (can be worked in parallel):
 **Deferral Rationale:** Focus on core functionality first (Phase 1), then tackle accessibility in dedicated phase with dedicated testing resources
 
 **Sizing Warning:** Yes
+
+---
+
+## WISH-20620: Advanced ARIA Features (Landmarks, Skip Links, Heading Hierarchy)
+
+**Status:** deferred
+**Depends On:** WISH-2006
+**Follow-up From:** WISH-2006
+**Phase:** 5 - Accessibility (Future Enhancement)
+
+### Scope
+
+Add advanced ARIA landmarks, skip links, and semantic heading hierarchy to enable efficient screen reader navigation beyond basic WCAG AA compliance from WISH-2006. Enhances navigation efficiency for assistive technology users.
+
+**Features:**
+- ARIA landmarks for major page regions (main, header, navigation, search, complementary)
+- Skip link component (visually hidden, visible on focus, jumps to main content)
+- Semantic heading hierarchy (h1-h6, no skipped levels)
+- All landmarks have unique aria-label or aria-labelledby for disambiguation
+- Screen reader landmark and heading navigation support
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery` - Add semantic landmarks, skip links, and heading hierarchy to existing components
+
+**Acceptance Criteria:** 18 ACs covering ARIA landmarks, skip links, heading hierarchy, testing, and axe-core validation
+
+**Complexity:** Medium (semantic HTML restructuring and skip link implementation)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Enhancement to baseline accessibility from WISH-2006)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #5)
+
+**Original Finding:** Add advanced ARIA features (landmarks, skip links, heading hierarchy)
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Significantly improves navigation for screen reader users)
+**Effort:** Medium (Requires semantic HTML restructuring and skip link implementation)
 
 ---
 
@@ -514,7 +555,7 @@ Follow-up from QA Elaboration of WISH-2120 (Gaps Identified - Finding #1)
 
 ## WISH-20300: VS Code snippets for test utility discovery (createMockFile, mockS3Upload)
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2120
 **Follow-up From:** WISH-2120
 **Phase:** 2 - Infrastructure
@@ -557,8 +598,6 @@ Follow-up from QA Elaboration of WISH-2120 (Enhancement Opportunity #1)
 **Category:** Enhancement Opportunity
 **Impact:** Medium (Developer Experience improvement)
 **Effort:** Low
-
-**Story File:** `plans/future/wish/backlog/WISH-20300/WISH-20300.md`
 
 ---
 
@@ -718,7 +757,7 @@ Follow-up from QA Elaboration of WISH-2010 (Enhancement Opportunity #1)
 
 ## WISH-2123: Content Moderation - AI/ML Image Scanning
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2013
 **Follow-up From:** WISH-2013
 **Phase:** 4 - Security Enhancements
@@ -837,7 +876,7 @@ Follow-up from QA Elaboration of WISH-2009 (QA Elaboration Enhancement Opportuni
 
 ## WISH-20320: Redis Cluster mode for high availability (multi-AZ failover, load balancing)
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-2124
 **Follow-up From:** WISH-2124
 **Phase:** 3 - Advanced Infrastructure
@@ -892,7 +931,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #1)
 
 ## WISH-20340: Multi-region Redis replication (global latency optimization)
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-2124
 **Follow-up From:** WISH-2124
 **Phase:** 5 - Global Optimization
@@ -1304,7 +1343,7 @@ Follow-up from QA Elaboration of WISH-2009 (Enhancement Opportunity #1)
 
 ## WISH-2029: Update architecture documentation for lego-api/domains/ pattern
 
-**Status:** ready-to-work
+**Status:** completed
 **Depends On:** WISH-2009
 **Follow-up From:** WISH-2009
 **Phase:** 2 - Infrastructure
@@ -1348,7 +1387,7 @@ Follow-up from QA Elaboration of WISH-2009 (Gap #2 - AC 18 follow-up)
 
 ## WISH-2039: User-level targeting for feature flags
 
-**Status:** ready-to-work
+**Status:** uat
 **Depends On:** WISH-2009
 **Follow-up From:** WISH-2009
 **Phase:** 3 - Infrastructure
@@ -1394,9 +1433,9 @@ Follow-up from QA Elaboration of WISH-2009 (Enhancement Opportunity - Non-goals 
 
 ## WISH-2047: IP/Geolocation Logging for Authorization Events
 
-**Status:** deferred
-**Deferral Reason:** Not MVP - observability enhancement, defer to post-launch
-**Depends On:** WISH-2008
+**Status:** completed
+**Completed:** 2026-01-31
+**Depends On:** none
 **Follow-up From:** WISH-2008
 **Phase:** 5 - Observability
 
@@ -1493,10 +1532,11 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 
 ## WISH-2023: Add Compression Failure Telemetry
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2022
 **Follow-up From:** WISH-2022
 **Phase:** 4 - UX Polish
+**Deferred Reason:** Not MVP - telemetry is a post-launch enhancement
 
 ### Scope
 
@@ -1536,12 +1576,12 @@ Follow-up from QA Elaboration of WISH-2022 (Gaps Identified - Finding #3)
 **Impact:** Medium (Observability improvement for compression failures)
 **Effort:** Low (CloudWatch metrics + error logging)
 
-**Story File:** `plans/future/wish/backlog/WISH-2023/WISH-2023.md`
+**Story File:** `plans/future/wish/deferred/WISH-2023/WISH-2023.md`
 
 ---
 ## WISH-2046: Client-side Image Compression Quality Presets
 
-**Status:** pending
+**Status:** completed
 **Depends On:** WISH-2022
 **Follow-up From:** WISH-2022
 **Phase:** 4 - UX Polish
@@ -1583,10 +1623,101 @@ Follow-up from QA Elaboration of WISH-2022 (Gaps Identified - Finding #2)
 
 ---
 
+## WISH-20550: Per-image Preset Selection for Multi-Upload Workflows
+
+**Status:** deferred
+**Depends On:** none
+**Follow-up From:** WISH-2046
+**Phase:** 5 - Future Enhancements
+
+### Scope
+
+Enable users to select compression quality presets on a per-image basis during multi-upload workflows. Extends WISH-2046's global preset selection to allow fine-grained control over individual images based on their content type and quality needs.
+
+**Features:**
+- Per-image preset selector UI in multi-upload queue
+- Independent preset selection for each image in upload batch
+- Default preset from global setting (WISH-2046)
+- Per-image "skip compression" checkbox
+- Toast notifications showing preset used for each image
+- Preserved per-image selections when adding/removing images from queue
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/` - Per-image preset selector UI
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Track per-image preset selection
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Accept per-image preset parameter
+
+**Acceptance Criteria:** 13 ACs covering per-image preset UI, independent selection, default preset inheritance, state management, toast notifications, skip compression per-image, and test coverage
+
+**Complexity:** Medium (UI redesign for multi-upload workflows + per-image state management)
+
+**Effort:** 3 points
+
+**Priority:** P3 (Phase 5+ enhancement)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2046 (Gaps Identified - Finding #1)
+
+**Original Finding:** Per-image preset selection - Story non-goal states preset applies globally. Could be future enhancement.
+
+**Category:** Gap
+**Impact:** Medium (enables fine-grained compression control for mixed image types)
+**Effort:** Medium (requires UI redesign and per-image state management)
+
+**Story File:** _(deleted - deferred)_
+
+---
+
+## WISH-20570: Dynamic Preset Recommendations Based on Upload History
+
+**Status:** deferred
+**Depends On:** none
+**Follow-up From:** WISH-2046
+**Phase:** 5+ - Future Enhancements
+
+### Scope
+
+Implement intelligent preset recommendations based on user upload history and compression preferences to reduce decision fatigue. Analyzes last 20 upload events (file size, preset used, compression ratio) to suggest optimal preset using rule-based logic.
+
+**Features:**
+- Upload history tracking in localStorage (last 20 events)
+- Rule-based recommendation logic: frequent usage (80%+ same preset), large files (avg > 3MB), quality preference (low compression ratio)
+- "Recommended for you" badge in preset selector UI
+- Recommendation updates after each upload
+- Client-side only (no server-side tracking)
+- FIFO eviction for upload history (capped at 20 events)
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Recommendation logic
+- `apps/web/app-wishlist-gallery/src/utils/uploadAnalytics.ts` - NEW: Upload history tracking
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/` - Recommendation badge UI
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Log upload events
+
+**Acceptance Criteria:** 15 ACs covering upload history tracking, recommendation rules, UI badge, localStorage persistence, and test coverage
+
+**Complexity:** Medium (requires analytics logic and user preference tracking)
+
+**Effort:** 3 points
+
+**Priority:** P3 (Future enhancement - Phase 5+)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunities - Finding #1)
+
+**Original Finding:** Dynamic preset recommendations based on usage patterns - Future enhancement (Phase 5+). Out-of-scope for MVP.
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (improves UX by reducing decision fatigue with smart defaults)
+**Effort:** Medium (analytics logic + UI)
+
+---
+
 ## WISH-2027: Enum Modification Procedure for Wishlist Stores and Currencies
 
-**Status:** ready-to-work
-**Depends On:** WISH-2007
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2007
 **Phase:** 1 - Foundation
 
@@ -1601,7 +1732,7 @@ Follow-up from QA Elaboration of WISH-2022 (Gaps Identified - Finding #2)
 
 **Source:** Follow-up from QA Elaboration of WISH-2007 (Finding #2)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2027/WISH-2027.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2027/WISH-2027.md`
 
 **Elaboration Notes:** PASS - Story is well-structured documentation task with 15 acceptance criteria. All audit checks pass, no MVP blockers identified, scope boundaries clear.
 
@@ -1682,7 +1813,7 @@ Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Findin
 
 ## WISH-20370: Schema Change Impact Analysis Tool
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20180
 **Follow-up From:** WISH-20180
 **Phase:** 2 - Infrastructure
@@ -1713,7 +1844,7 @@ Implement an automated schema change impact analysis tool that identifies affect
 
 **Priority:** P1 (Automated impact visibility for Phase 2)
 
-**Story File:** `plans/future/wish/backlog/WISH-20370/WISH-20370.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -1729,7 +1860,7 @@ Follow-up from QA Elaboration of WISH-20180 (Follow-up Stories Suggested - Findi
 
 ## WISH-20380: Migration Performance Profiling
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20180
 **Follow-up From:** WISH-20180
 **Phase:** 2 - Infrastructure
@@ -1770,7 +1901,7 @@ Implement migration performance profiling tooling that estimates execution time 
 
 **Priority:** P2 (Operational enhancement for Phase 2)
 
-**Story File:** `plans/future/wish/backlog/WISH-20380/WISH-20380.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -1786,7 +1917,7 @@ Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunities - Finding
 
 ## WISH-20390: Visual Schema Diff Tool for PR Reviews
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20180
 **Follow-up From:** WISH-20180
 **Phase:** 2 - Infrastructure
@@ -1815,7 +1946,7 @@ Implement a visual schema diff tool that generates graphical representations of 
 
 **Priority:** P2 (Developer experience enhancement for schema reviews)
 
-**Story File:** `plans/future/wish/backlog/WISH-20390/WISH-20390.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -1831,7 +1962,7 @@ Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunities - Finding
 
 ## WISH-20400: Real-time CI Integration for Schema Change Impact Analysis
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20210
 **Follow-up From:** WISH-20210
 **Phase:** 3 - Infrastructure
@@ -1860,7 +1991,7 @@ Integrate the schema change impact analysis tool (from WISH-20210) into GitHub A
 
 **Priority:** High (automation for schema change workflow)
 
-**Story File:** `plans/future/wish/backlog/WISH-20400/WISH-20400.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -1876,7 +2007,7 @@ Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Findi
 
 ## WISH-20410: Visual Dependency Graph UI for Schema Impact Analysis
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20210
 **Follow-up From:** WISH-20210
 **Phase:** 3 - Infrastructure
@@ -1925,7 +2056,7 @@ Add an interactive visual dependency graph to the Schema Change Impact Analysis 
 - Improved communication of impact to stakeholders
 - Better understanding of update order (database → backend → frontend)
 
-**Story File:** `plans/future/wish/backlog/WISH-20410/WISH-20410.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -1941,7 +2072,7 @@ Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Findi
 
 ## WISH-20191: Schema Drift Detection Tool - MVP (db:check command)
 
-**Status:** backlog
+**Status:** deleted
 **Depends On:** WISH-2057
 **Split From:** WISH-20190
 **Split Part:** 1 of 3
@@ -1973,8 +2104,6 @@ Implement core `db:check` command that compares the current database schema agai
 
 **Priority:** P1 (Critical operational tool for Phase 1)
 
-**Story File:** `plans/future/wish/backlog/WISH-20191/WISH-20191.md`
-
 ### Source
 
 Split from WISH-20190 during QA Elaboration (scope reduction to MVP).
@@ -1990,7 +2119,7 @@ Split from WISH-20190 during QA Elaboration (scope reduction to MVP).
 
 ## WISH-20192: Schema Drift Detection - Advanced Features
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-20191
 **Split From:** WISH-20190
 **Split Part:** 2 of 3
@@ -2020,7 +2149,7 @@ Extend the drift detection tool with advanced features: `.driftignore` file supp
 
 **Priority:** P2 (Enhancement of core tool)
 
-**Story File:** `plans/future/wish/backlog/WISH-20192/WISH-20192.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -2037,7 +2166,7 @@ Split from WISH-20190 during QA Elaboration. User decisions from gaps #1, #4 and
 
 ## WISH-20193: Schema Drift Detection - CI/CD Integration
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-20191, WISH-20192
 **Split From:** WISH-20190
 **Split Part:** 3 of 3
@@ -2066,7 +2195,7 @@ Integrate drift detection into CI/CD pipelines with deployment blocking capabili
 
 **Priority:** P2 (Operational hardening)
 
-**Story File:** `plans/future/wish/backlog/WISH-20193/WISH-20193.md`
+**Story File:** _(deleted - deferred)_
 
 ### Source
 
@@ -2083,8 +2212,8 @@ Split from WISH-20190 during QA Elaboration. User decisions from enhancements #2
 
 ## WISH-2032: Optimistic UI for Form Submission
 
-**Status:** ready-to-work
-**Depends On:** WISH-2002
+**Status:** completed
+**Depends On:** none
 **Follow-up From:** WISH-2002
 **Phase:** 4 - UX Polish
 
@@ -2114,7 +2243,7 @@ Implement optimistic UI for wishlist item creation to provide immediate feedback
 
 **Priority:** P2 (UX enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/backlog/WISH-2032/WISH-2032.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-2032/WISH-2032.md`
 
 ### Source
 
@@ -2130,7 +2259,7 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 
 ## WISH-2045: HEIC/HEIF Image Format Support
 
-**Status:** backlog
+**Status:** ready-to-work
 **Depends On:** WISH-2022
 **Follow-up From:** WISH-2022
 **Phase:** 4 - UX Polish
@@ -2172,13 +2301,71 @@ Follow-up from QA Elaboration of WISH-2022 (Gap #1)
 **Impact:** High (Modern iPhone users cannot use compression workflow)
 **Effort:** Medium (requires additional library integration)
 
-**Story File:** `plans/future/wish/backlog/WISH-2045/WISH-2045.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-2045/WISH-2045.md`
+
+---
+
+## WISH-20530: Server-side HEIC Conversion Fallback
+
+**Status:** deferred
+**Depends On:** WISH-2045
+**Follow-up From:** WISH-2045
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Implement server-side HEIC to JPEG conversion as a fallback when client-side conversion fails, ensuring all users can upload iPhone photos with compression benefits regardless of browser capabilities.
+
+**Features:**
+- Detect client-side HEIC conversion failures from WISH-2045
+- Upload original HEIC to S3 with fallback metadata
+- S3 event triggers Lambda function for server-side conversion
+- HEIC to JPEG conversion using `sharp` library (quality 90%)
+- Automatic compression to target <1MB file size
+- CloudWatch metrics for conversion success/failure rates
+- Frontend polling for converted image (30-second timeout)
+- Asynchronous processing with user notifications
+
+**Backend Components:**
+- New Lambda: `apps/api/lego-api/functions/image-processing/heicConverter.ts`
+- S3 event notification configuration
+- Dead letter queue for failed conversions
+- CloudWatch alarms for conversion failures
+
+**Frontend Components:**
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Fallback detection and polling
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Signal fallback needed
+
+**Infrastructure:**
+- Lambda layer for `libheif` native library
+- S3 lifecycle policy bucket for original HEIC files
+- CloudWatch metrics and alarms
+
+**Acceptance Criteria:** 21 ACs covering client-side failure detection, S3 upload with metadata, Lambda conversion workflow, error handling, frontend polling, toast notifications, CloudWatch metrics, and comprehensive test coverage.
+
+**Complexity:** Medium (Lambda function + S3 events + image processing + frontend polling)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Reliability enhancement for browsers with failed client-side conversion)
+
+**Story File:** _(deleted - deferred)_
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2045
+
+**Original Finding:** Server-side HEIC conversion fallback (if client-side conversion fails in production)
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Improves reliability for users whose browsers fail client-side HEIC conversion)
+**Effort:** Medium (Requires Lambda function integration with image processing library)
 
 ---
 
 ## WISH-2049: Background Compression for Perceived Performance
 
-**Status:** backlog
+**Status:** ready-to-work
 **Depends On:** WISH-2022
 **Follow-up From:** WISH-2022
 **Phase:** 4 - UX Polish
@@ -2201,7 +2388,7 @@ Start compressing images immediately when selected (before form is filled), so c
 - `apps/web/app-wishlist-gallery/src/components/WishlistForm/`
 - `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts`
 
-**Acceptance Criteria:** 13 ACs covering background compression trigger, web worker integration, compression state management, image change handling, preview updates, toast notifications, and E2E test coverage.
+**Acceptance Criteria:** 15 ACs covering background compression trigger, web worker integration, compression state management, image change handling, preview updates, toast notifications, E2E test coverage, rapid image change race condition testing, and stale result detection.
 
 **Complexity:** Small-Medium (Refactor compression timing + state management)
 
@@ -2209,7 +2396,7 @@ Start compressing images immediately when selected (before form is filled), so c
 
 **Priority:** P2 (UX enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/backlog/WISH-2049/WISH-2049.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-2049/WISH-2049.md`
 
 ### Source
 
@@ -2225,7 +2412,7 @@ Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunity #2)
 
 ## WISH-2050: Compression Preview Comparison
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2022
 **Follow-up From:** WISH-2022
 **Phase:** 5 - UX Polish
@@ -2255,8 +2442,6 @@ Provide a visual comparison of original vs. compressed images to help users unde
 
 **Priority:** P2 (Trust-building UX enhancement for Phase 5)
 
-**Story File:** `plans/future/wish/backlog/WISH-2050/WISH-2050.md`
-
 ### Source
 
 Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunities - Finding #3)
@@ -2271,22 +2456,21 @@ Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunities - Finding 
 
 ---
 
-## WISH-2048: WebP Format Conversion
+## WISH-2058: Core WebP Conversion
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WISH-2022
-**Follow-up From:** WISH-2022
+**Split From:** WISH-2048
 **Phase:** 4 - UX Polish
 
 ### Scope
 
-Convert compressed images to WebP format instead of JPEG to achieve 25-35% additional size savings while maintaining acceptable visual quality. Simple configuration change to browser-image-compression library from WISH-2022.
+Convert compressed images to WebP format instead of JPEG to achieve 25-35% additional size savings while maintaining acceptable visual quality in modern browsers. Simple configuration change to browser-image-compression library from WISH-2022. This is part 1 of 2 from the WISH-2048 split, focusing on core WebP conversion functionality.
 
 **Features:**
 - Change output format from JPEG to WebP in compression settings
 - Maintain existing compression quality (0.8) and dimensions (1920px)
 - 25-35% smaller file sizes compared to JPEG at equivalent visual quality
-- Browser compatibility check with fallback to JPEG for Safari < 14
 - WebP support: Chrome 32+, Firefox 65+, Safari 14+, Edge 18+ (97%+ coverage)
 
 **Packages Affected:**
@@ -2298,7 +2482,7 @@ Convert compressed images to WebP format instead of JPEG to achieve 25-35% addit
 - Better compression efficiency than JPEG
 - Already supported by browser-image-compression library
 
-**Acceptance Criteria:** 14 ACs covering WebP conversion, quality settings, file size comparison, toast notifications, filename handling, browser compatibility, fallback logic, and test coverage.
+**Acceptance Criteria:** 12 ACs covering WebP conversion, quality settings, file size comparison, toast notifications, filename handling, S3 upload, API storage, and test coverage.
 
 **Complexity:** Small (configuration change only)
 
@@ -2306,17 +2490,64 @@ Convert compressed images to WebP format instead of JPEG to achieve 25-35% addit
 
 **Priority:** P2 (Performance enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/backlog/WISH-2048/WISH-2048.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-2058/WISH-2058.md`
 
 ### Source
 
-Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunity #1)
+Split from WISH-2048 (WebP Format Conversion) during QA Elaboration. Original story had 14 ACs and overlapping concerns between core conversion and browser fallback logic.
 
-**Original Finding:** WebP format conversion - Convert to WebP instead of JPEG for 25-35% additional size savings; supported by browser-image-compression library
+**Original Finding:** WebP format conversion - Convert to WebP instead of JPEG for 25-35% additional size savings; supported by browser-image-compression library (from WISH-2022 QA Elaboration)
 
 **Category:** Enhancement Opportunity
 **Impact:** Medium (additional storage and bandwidth savings)
 **Effort:** Low (simple configuration change)
+
+---
+
+## WISH-2068: Browser Compatibility & Fallback for WebP
+
+**Status:** ready-to-work
+**Depends On:** WISH-2058
+**Split From:** WISH-2048
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Detect browsers without WebP support (Safari < 14, IE11) and provide graceful fallback to JPEG compression with clear user messaging. This is part 2 of 2 from the WISH-2048 split, focusing on edge case handling for older browsers (< 3% of users).
+
+**Features:**
+- Browser compatibility detection using canvas API
+- Preventive check: Warn users on unsupported browsers before compression
+- Reactive fallback: If WebP compression fails, retry with JPEG
+- Distinct toast notifications for WebP success vs JPEG fallback
+- Filename extension matches actual output format (.webp or .jpeg)
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Add browser detection
+- `apps/web/app-wishlist-gallery/src/utils/browserSupport.ts` - New utility for WebP detection
+
+**Benefits:**
+- Graceful degradation for older browsers
+- Clear user communication about format selection
+- Ensures all users can upload images successfully
+
+**Acceptance Criteria:** 2 ACs covering browser compatibility detection and fallback logic.
+
+**Complexity:** Small (browser detection and error handling)
+
+**Effort:** Low (1 point)
+
+**Priority:** P3 (Edge case handling for < 3% of users)
+
+**Story File:** `plans/future/wish/backlog/WISH-2068/WISH-2068.md`
+
+### Source
+
+Split from WISH-2048 (WebP Format Conversion) during QA Elaboration. Browser compatibility and fallback logic separated from core conversion functionality.
+
+**Category:** Enhancement Opportunity - Edge Case Handling
+**Impact:** Low (covers edge case for Safari < 14 and IE11)
+**Effort:** Low (browser detection and fallback logic)
 
 ---
 
@@ -2389,7 +2620,7 @@ Follow-up from QA Elaboration of WISH-2057 (Follow-up Stories Suggested - Findin
 
 ## WISH-20420: Schema Migration Code Generation Tool
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20210
 **Follow-up From:** WISH-20210
 **Phase:** 3 - Infrastructure
@@ -2461,14 +2692,15 @@ Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Findi
 **Impact:** High (reduces manual migration work from hours to minutes)
 **Effort:** Medium (code generation templates + AST utilities)
 
-**Story File:** `plans/future/wish/backlog/WISH-20420/WISH-20420.md`
+**Story File:** _(deleted - deferred)_
 
 ---
 
 ## WISH-20500: Schedule Management Dashboard (Core UI)
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2119
+**Blocker:** WISH-2119 not implemented (status: ready-to-work)
 **Split From:** WISH-20220
 **Phase:** 3 - Infrastructure
 
@@ -2505,13 +2737,11 @@ This is part 1 of 3 from the split of WISH-20220. Original story had 20 ACs (2.5
 - WISH-20510: Timeline & Cards - 1 point (depends on this)
 - WISH-20520: Calendar View - 2 points (depends on this)
 
-**Story File:** `plans/future/wish/backlog/WISH-20500/WISH-20500.md`
-
 ---
 
 ## WISH-20510: Schedule Timeline & Cards
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-20500
 **Split From:** WISH-20220
 **Phase:** 3 - Infrastructure
@@ -2549,13 +2779,11 @@ This is part 2 of 3 from the split of WISH-20220. Depends on WISH-20500 (core da
 - WISH-20510 (this story): Timeline & Cards - 1 point
 - WISH-20520: Calendar View - 2 points (can run in parallel after WISH-20500)
 
-**Story File:** `plans/future/wish/backlog/WISH-20510/WISH-20510.md`
-
 ---
 
 ## WISH-20520: Schedule Calendar View
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-20500
 **Split From:** WISH-20220
 **Phase:** 3 - Infrastructure
@@ -2601,13 +2829,56 @@ This is part 3 of 3 from the split of WISH-20220. Depends on WISH-20500 (core da
 - WISH-20510: Timeline & Cards - 1 point (can run in parallel after WISH-20500)
 - WISH-20520 (this story): Calendar View - 2 points
 
-**Story File:** `plans/future/wish/backlog/WISH-20520/WISH-20520.md`
+---
+
+## WISH-20540: HEIC Telemetry Tracking for Conversion Success/Failure Rates
+
+**Status:** deferred
+**Depends On:** WISH-2045
+**Follow-up From:** WISH-2045
+**Phase:** 4 - UX Polish
+
+### Scope
+
+Instrument HEIC conversion workflow with telemetry to track success/failure rates, error types, conversion performance, and file characteristics for data-driven optimization. Provides visibility into real-world HEIC conversion reliability from WISH-2045 implementation.
+
+**Features:**
+- Telemetry events: HEIC_CONVERSION_STARTED, HEIC_CONVERSION_SUCCESS, HEIC_CONVERSION_FAILED, HEIC_FALLBACK_UPLOAD
+- Metrics tracked: success/failure rates, conversion duration, file sizes, error type distribution
+- Error categorization: BROWSER_INCOMPATIBLE, TIMEOUT, MEMORY_ERROR, CORRUPTED_FILE, UNKNOWN_ERROR
+- PII sanitization for error messages and filenames
+- Structured logging via @repo/logger
+- Fire-and-forget telemetry (non-blocking)
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - HEIC conversion telemetry
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Upload workflow telemetry
+
+**Acceptance Criteria:** 17 ACs covering telemetry events, metrics tracking, error categorization, PII sanitization, test coverage, and documentation.
+
+**Complexity:** Small (Straightforward telemetry instrumentation)
+
+**Effort:** 2 points
+
+**Priority:** P2 (Data collection for future HEIC optimization)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2045 (Follow-up Story Suggested #2)
+
+**Original Finding:** Consider adding telemetry to track HEIC conversion success/failure rates for future optimization
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Provides data-driven insights for improving HEIC conversion reliability)
+**Effort:** Low (Straightforward telemetry instrumentation)
+
+**Story File:** _(deleted - deferred)_
 
 ---
 
 ## WISH-20230: Recurring schedules (cron-like syntax for automated recurring flag updates)
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-2119
 **Follow-up From:** WISH-2119
 **Phase:** 4 - Infrastructure
@@ -2664,14 +2935,14 @@ Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #1)
 **Impact:** Medium (enables automated recurring flag operations without manual intervention)
 **Effort:** Medium (cron expression parsing + recurring schedule generation + next execution calculation)
 
-**Story File:** `plans/future/wish/backlog/WISH-20230/WISH-20230.md`
+**Story File:** `plans/future/wish/deferred/WISH-20230/WISH-20230.md`
 
 ---
 ---
 
 ## WISH-20240: Schedule preview endpoint (simulate flag state before schedule applies)
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-2119
 **Follow-up From:** WISH-2119
 **Phase:** 4 - Infrastructure Enhancements
@@ -2715,8 +2986,6 @@ Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #2)
 **Category:** Enhancement Opportunity
 **Impact:** Medium (improves admin confidence and reduces configuration errors)
 **Effort:** Low (2 points - read-only simulation logic)
-
-**Story File:** `plans/future/wish/backlog/WISH-20240/WISH-20240.md`
 
 ---
 
@@ -2875,10 +3144,11 @@ Follow-up from QA Elaboration of WISH-2119 (Follow-up Stories Suggested - Findin
 
 ## WISH-20310: Global MSW handler cleanup in src/test/setup.ts afterEach hook
 
-**Status:** backlog
+**Status:** deleted
 **Depends On:** WISH-2120
 **Follow-up From:** WISH-2120
 **Phase:** 2 - Infrastructure
+**Cancellation Reason:** Implementation already exists in production code (lines 22-24 of apps/web/app-wishlist-gallery/src/test/setup.ts). Story cancelled during elaboration as obsolete.
 
 ### Scope
 
@@ -2918,13 +3188,11 @@ Follow-up from QA Elaboration of WISH-2120 (Enhancement Opportunity #2)
 **Impact:** Medium (prevents handler leaks, improves test reliability)
 **Effort:** Low (global cleanup hook)
 
-**Story File:** `plans/future/wish/backlog/WISH-20310/WISH-20310.md`
-
 ---
 
 ## WISH-20350: Cache analytics dashboard (Grafana/Prometheus integration)
 
-**Status:** backlog
+**Status:** deferred
 **Depends On:** WISH-2124
 **Follow-up From:** WISH-2124
 **Phase:** 3 - Observability
@@ -2984,13 +3252,13 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #4)
 **Impact:** Medium (observability improvement)
 **Effort:** Medium (new monitoring infrastructure)
 
-**Story File:** `plans/future/wish/backlog/WISH-20350/WISH-20350.md`
+**Story File:** _(deleted - deferred)_
 
 ---
 
 ## WISH-20330: Cache warming strategy (pre-populate on cold start, CloudWatch triggers)
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-2124
 **Follow-up From:** WISH-2124
 **Phase:** 2 - Core Infrastructure
@@ -3041,13 +3309,11 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #2)
 **Impact:** Medium (reduces cold start latency, improves cache hit rates from ~80% to >95%)
 **Effort:** Medium (requires infrastructure orchestration)
 
-**Story File:** `plans/future/wish/backlog/WISH-20330/WISH-20330.md`
-
 ---
 
 ## WISH-20360: Automated Migration Rollback Testing
 
-**Status:** pending
+**Status:** deferred
 **Depends On:** WISH-20180
 **Follow-up From:** WISH-20180
 **Phase:** 3 - Infrastructure
@@ -3101,6 +3367,238 @@ Follow-up from QA Elaboration of WISH-20180 (Enhancement Opportunity #1)
 **Impact:** High (prevents irreversible migrations, reduces rollback risk)
 **Effort:** Medium (test infrastructure + schema comparison)
 
-**Story File:** `plans/future/wish/backlog/WISH-20360/WISH-20360.md`
+**Story File:** _(deleted - deferred)_
+
+---
+
+## WISH-20560: Real-time Compression Preview Before Upload
+
+**Status:** deferred
+**Depends On:** none
+**Follow-up From:** WISH-2046
+**Phase:** 5 - UX Polish
+
+### Scope
+
+Add real-time compression preview that shows users the exact compressed image and file size before upload, enabling informed preset selection decisions. Addresses the limitation of approximate estimates in WISH-2046 by showing actual compression results.
+
+**Features:**
+- Real-time preview component with before/after image comparison
+- Side-by-side comparison layout (desktop) or stacked layout (mobile)
+- Shows original vs compressed image with actual file size labels
+- Preview automatically re-compresses when user changes preset
+- Web Worker compression to avoid blocking UI thread
+- "Use this compression" confirmation button to proceed with upload
+- Caches compressed blob for reuse during actual upload
+
+**UI/UX:**
+- Preview appears after image selection, before form submission
+- Each preview pane shows image label and file size with percentage reduction
+- Loading spinner during re-compression (target < 1 second)
+- Handles edge cases: compression failure, small images, skip compression checkbox
+- Keyboard accessible with proper ARIA labels
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/components/CompressionPreview/` - Preview component (new)
+- `apps/web/app-wishlist-gallery/src/hooks/useCompressionPreview.ts` - Preview hook (new)
+- `apps/web/app-wishlist-gallery/src/components/WishlistForm/` - Integration
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Reuse compression logic
+
+**Acceptance Criteria:** 24 ACs covering core preview functionality (6 ACs), preset integration (5 ACs), UI/UX requirements (7 ACs), performance optimization (5 ACs), edge cases (4 ACs), and testing/documentation (5 ACs)
+
+**Complexity:** High (dual image preview, Web Worker integration, real-time re-compression)
+
+**Effort:** 5 points
+
+**Priority:** P3 (Phase 5+ enhancement, validates need after WISH-2046 adoption)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunities - Finding #3)
+
+**Original Finding:** "Real-time compression preview before upload - Future enhancement. Would improve decision-making but is high-effort."
+
+**Category:** Enhancement Opportunity
+**Impact:** High (significantly improves user understanding and confidence in compression decisions)
+**Effort:** High (dual image preview, on-the-fly compression, comparison UI)
+
+---
+
+## WISH-20580: Compression Telemetry per Preset
+
+**Status:** deferred
+**Depends On:** WISH-2023
+**Follow-up From:** WISH-2046
+**Phase:** 5 - Future Enhancements
+
+### Scope
+
+Track compression telemetry metrics per preset to enable data-driven analysis of preset usage and effectiveness from WISH-2046. Integrates with WISH-2023 telemetry infrastructure to track which presets are most frequently used, compression ratios per preset, and user satisfaction.
+
+**Features:**
+- Compression telemetry events include `preset` field with preset name
+- Track original size, compressed size, compression ratio per preset
+- Track compression duration and success/failure per preset
+- Track preset selection changes and compression skip events
+- Track auto-skip and fallback events per preset
+- Integration with existing WISH-2023 telemetry infrastructure
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/src/utils/imageCompression.ts` - Emit telemetry with preset metadata
+- `apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts` - Track preset selection in upload flow
+
+**Acceptance Criteria:** 12 ACs covering telemetry event schema, preset metadata tracking, success/failure/skip/fallback tracking, integration with WISH-2023, test coverage, and documentation
+
+**Complexity:** Small (extends existing telemetry infrastructure)
+
+**Effort:** 2 points
+
+**Priority:** P3 (Data collection for future preset optimization)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunity #4)
+
+**Original Finding:** Compression telemetry per preset - Could integrate with WISH-2023 telemetry tracking
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Provides data-driven insights into preset usage and compression effectiveness)
+**Effort:** Low (Extends existing WISH-2023 telemetry infrastructure with preset-specific metrics)
+
+**Story File:** _(deleted - deferred)_
+
+---
+
+## WISH-20590: Migrate Accessibility Hooks to @repo/accessibility
+
+**Status:** pending
+**Depends On:** WISH-2006
+**Follow-up From:** WISH-2006
+**Phase:** 5 - Future Enhancements
+
+### Scope
+
+Migrate proven accessibility hooks (useRovingTabIndex, useKeyboardShortcuts, useAnnouncer) from app-wishlist-gallery to shared @repo/accessibility package for reuse across all React apps. Enables consistent accessibility patterns across the platform and reduces code duplication.
+
+**Features:**
+- Move useRovingTabIndex, useKeyboardShortcuts, useAnnouncer from app-local to shared package
+- Export all three hooks from @repo/accessibility barrel export
+- Update app-wishlist-gallery imports to use shared package
+- Migrate unit tests to shared package location
+- Add TSDoc documentation and usage examples for each hook
+- Update @repo/accessibility README with new exports
+
+**Packages Affected:**
+- `packages/core/accessibility` - Add three new hook exports with documentation
+- `apps/web/app-wishlist-gallery` - Update imports to use @repo/accessibility
+
+**Acceptance Criteria:** 7 ACs covering file migration, barrel exports, import updates, test migration, documentation, no breaking changes, and regression testing
+
+**Complexity:** Small (straightforward refactor with zero user-facing impact)
+
+**Effort:** 3 points
+
+**Priority:** P3 (Improves developer experience and code reuse)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #1)
+
+**Original Finding:** Migrate accessibility hooks to @repo/accessibility package once proven in production
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Enables reuse of accessibility patterns across multiple apps)
+**Effort:** Low (Straightforward migration of proven utilities to shared package)
+
+**Story File:** `plans/future/wish/backlog/WISH-20590/WISH-20590.md`
+
+---
+
+## WISH-20600: WCAG AAA Compliance for Wishlist Gallery
+
+**Status:** deferred
+**Depends On:** WISH-2006
+**Follow-up From:** WISH-2006
+**Phase:** 5 - Accessibility
+
+### Scope
+
+Enhance the wishlist gallery with configurable WCAG AAA compliance mode, providing 7:1 contrast ratios for all text and UI elements. Currently, WISH-2006 implements WCAG AA standards (4.5:1 contrast). This story adds optional AAA mode for enterprise customers or government organizations requiring stricter compliance without compromising existing AA implementation.
+
+**Features:**
+- AAA color variants with 7:1 contrast for normal text, 4.5:1 for large text
+- Configuration via `WCAG_MODE` environment variable (AA or AAA)
+- Runtime configuration hooks (`useWcagMode`, `useContrastColors`)
+- axe-core AAA compliance validation
+- No breaking changes to existing WCAG AA mode
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery` - Add AAA color variants and configuration
+- `packages/core/design-system` - Add AAA-compliant color tokens (if needed)
+
+**Acceptance Criteria:** 14 ACs covering AAA contrast ratios, configuration, design system compliance, and testing
+
+**Complexity:** Medium (color palette extension with configuration layer)
+
+**Effort:** 3 points
+
+**Priority:** P3 (Enhancement for enterprise/government compliance requirements)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #3)
+
+**Original Finding:** Add WCAG AAA compliance (7:1 contrast) if required by enterprise customers
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Enables enterprise/government compliance, benefits users with low vision)
+**Effort:** Medium (Requires color palette audit and AAA variant creation)
+
+**Story File:** _(deleted - deferred)_
+
+---
+
+
+## WISH-20610: Automated Screen Reader Testing with @guidepup
+
+**Status:** deferred
+**Depends On:** WISH-2006
+**Follow-up From:** WISH-2006
+**Phase:** 5 - Accessibility
+
+### Scope
+
+Add automated screen reader testing using @guidepup to verify accessibility announcements, ARIA labels, and keyboard navigation work correctly with real screen readers (VoiceOver on macOS, NVDA on Windows). Builds on WISH-2006 manual testing by adding automated regression coverage for screen reader UX.
+
+**Features:**
+- Automated VoiceOver tests on macOS (via @guidepup)
+- Automated NVDA tests on Windows (via @guidepup)
+- CI/CD integration with macOS and Windows runners
+- Test coverage for all announcements from WISH-2006 (gallery navigation, priority changes, item deletion, modal interactions)
+- Reusable test helpers for screen reader assertions
+
+**Packages Affected:**
+- `apps/web/app-wishlist-gallery/e2e/screen-reader.spec.ts` - New test suite
+- `.github/workflows/ci.yml` - Add macOS/Windows runners
+
+**Acceptance Criteria:** 16 ACs covering VoiceOver/NVDA test coverage, CI integration, test maintainability, and regression detection
+
+**Complexity:** Medium (requires screen reader automation and CI runner setup)
+
+**Effort:** 3 points
+
+**Priority:** P2 (Improves accessibility test coverage and regression detection)
+
+### Source
+
+Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #4)
+
+**Original Finding:** "Automated screen reader testing (@guidepup) - Manual testing sufficient for MVP. Consider once @guidepup library matures."
+
+**Category:** Enhancement Opportunity
+**Impact:** Medium (Catches screen reader regressions in CI, improves accessibility test coverage)
+**Effort:** Medium (Requires @guidepup integration and CI runner configuration)
+
+**Story File:** _(deleted - deferred)_
 
 ---

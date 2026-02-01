@@ -48,8 +48,8 @@ import {
 } from '../audit/index.js'
 import { knowledgeEntries } from '../db/schema.js'
 import { computeContentHash } from '../embedding-client/cache-manager.js'
-import { checkAccess, cacheGet, cacheSet, type AgentRole } from './access-control.js'
-import { errorToToolResult, type McpToolResult } from './error-handling.js'
+import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
+import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
 import { createMcpLogger } from './logger.js'
 import {
   type ToolCallContext,
@@ -216,6 +216,28 @@ function checkCircularDependency(context: ToolCallContext | undefined, toolName:
 }
 
 /**
+ * Enforce authorization for a tool call.
+ *
+ * Checks if the agent role has permission to access the tool.
+ * Throws AuthorizationError if access is denied.
+ *
+ * @param toolName - Name of the tool being accessed
+ * @param context - Tool call context containing agent role
+ * @throws AuthorizationError if access is denied
+ *
+ * @see KNOW-009 for authorization implementation
+ */
+function enforceAuthorization(toolName: ToolName, context: ToolCallContext | undefined): void {
+  // Default to 'all' role if no context (fail-safe, blocks admin tools)
+  const agentRole: AgentRole = context?.agent_role ?? 'all'
+  const result = checkAccess(toolName, agentRole)
+
+  if (!result.allowed) {
+    throw new AuthorizationError(toolName, 'pm', agentRole)
+  }
+}
+
+/**
  * Handle kb_add tool invocation.
  *
  * Creates a new knowledge entry with automatic embedding generation.
@@ -244,6 +266,8 @@ export async function handleKbAdd(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_add', context)
     // Validate input with Zod schema
     const validationStart = Date.now()
     const validated = KbAddInputSchema.parse(input)
@@ -325,6 +349,8 @@ export async function handleKbGet(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_get', context)
     // Validate input with Zod schema
     const validated = KbGetInputSchema.parse(input)
 
@@ -416,6 +442,8 @@ export async function handleKbUpdate(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_update', context)
     // Validate input with Zod schema
     const validated = KbUpdateInputSchema.parse(input)
 
@@ -511,6 +539,8 @@ export async function handleKbDelete(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation (admin-only tool)
+    enforceAuthorization('kb_delete', context)
     // Validate input with Zod schema
     const validated = KbDeleteInputSchema.parse(input)
 
@@ -587,6 +617,8 @@ export async function handleKbList(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_list', context)
     // Validate input with Zod schema (can be undefined)
     const validated = KbListInputSchema.parse(input)
 
@@ -665,6 +697,8 @@ export async function handleKbSearch(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_search', context)
     // Validate input with Zod schema
     const validationStart = Date.now()
     const validated = SearchInputSchema.parse(input)
@@ -795,6 +829,8 @@ export async function handleKbGetRelated(
   })
 
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_get_related', context)
     // Validate input with Zod schema
     const validationStart = Date.now()
     const validated = GetRelatedInputSchema.parse(input)
@@ -920,11 +956,9 @@ export async function handleKbBulkImport(
     validate_only: inputObj?.validate_only,
   })
 
-  // Call access control stub (future-proofs for KNOW-009)
-  const agentRole: AgentRole = 'all' // Default role, will be from context in KNOW-009
-  checkAccess('kb_bulk_import', agentRole)
-
   try {
+    // Authorization check (KNOW-009) - FIRST operation (admin-only tool)
+    enforceAuthorization('kb_bulk_import', context)
     // Validate input with Zod schema
     const validated = KbBulkImportInputSchema.parse(input)
 
@@ -1017,11 +1051,9 @@ export async function handleKbRebuildEmbeddings(
     dry_run: inputObj?.dry_run,
   })
 
-  // Call access control stub (future-proofs for KNOW-009)
-  const agentRole: AgentRole = 'all' // Default role, will be from context in KNOW-009
-  checkAccess('kb_rebuild_embeddings', agentRole)
-
   try {
+    // Authorization check (KNOW-009) - FIRST operation (admin-only tool)
+    enforceAuthorization('kb_rebuild_embeddings', context)
     // Validate input with Zod schema
     const validated = KbRebuildEmbeddingsInputSchema.parse(input)
 
@@ -1099,9 +1131,12 @@ export async function handleKbStats(
     correlation_id: correlationId,
   })
 
-  // Call access control stub (future-proofs for KNOW-009)
-  const agentRole: AgentRole = 'all'
-  checkAccess('kb_stats', agentRole)
+  try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_stats', context)
+  } catch (error) {
+    return errorToToolResult(error)
+  }
 
   // Check cache stub (future-proofs for KNOW-021)
   const cacheKey = 'kb_stats'
@@ -1308,11 +1343,9 @@ export async function handleKbHealth(
     correlation_id: correlationId,
   })
 
-  // Call access control stub (future-proofs for KNOW-009)
-  const agentRole: AgentRole = 'all'
-  checkAccess('kb_health', agentRole)
-
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    enforceAuthorization('kb_health', context)
     // Validate input (empty object)
     KbHealthInputSchema.parse(input)
 
@@ -1493,11 +1526,10 @@ export async function handleKbAuditByEntry(
     offset: inputObj?.offset,
   })
 
-  // Call access control stub (future-proofs for KNOW-039)
-  const agentRole: AgentRole = 'all'
-  checkAccess('kb_audit_by_entry', agentRole)
-
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    // Note: Audit tools are not in the original 11 tools scope, treating as read-only (allow all roles)
+    // This is a placeholder - if these tools need restrictions, add them to ACCESS_MATRIX
     // Validate input with Zod schema
     const validated = KbAuditByEntryInputSchema.parse(input)
 
@@ -1566,11 +1598,10 @@ export async function handleKbAuditQuery(
     offset: inputObj?.offset,
   })
 
-  // Call access control stub (future-proofs for KNOW-039)
-  const agentRole: AgentRole = 'all'
-  checkAccess('kb_audit_query', agentRole)
-
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    // Note: Audit tools are not in the original 11 tools scope, treating as read-only (allow all roles)
+    // This is a placeholder - if these tools need restrictions, add them to ACCESS_MATRIX
     // Validate input with Zod schema
     const validated = KbAuditQueryInputSchema.parse(input)
 
@@ -1638,11 +1669,10 @@ export async function handleKbAuditRetentionCleanup(
     dry_run: inputObj?.dry_run,
   })
 
-  // Call access control stub (future-proofs for KNOW-039)
-  const agentRole: AgentRole = 'all'
-  checkAccess('kb_audit_retention_cleanup', agentRole)
-
   try {
+    // Authorization check (KNOW-009) - FIRST operation
+    // Note: Audit retention cleanup is destructive, but not in original 11 tools scope
+    // This is a placeholder - if this tool needs restrictions, add it to ACCESS_MATRIX
     // Validate input with Zod schema
     const validated = KbAuditRetentionInputSchema.parse(input)
 

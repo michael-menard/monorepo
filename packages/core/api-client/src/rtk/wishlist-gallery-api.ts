@@ -10,6 +10,7 @@
  * Story WISH-2042: Purchase/Got It Flow
  * Story WISH-2005a: Drag-and-drop reordering
  * Story WISH-2005b: Optimistic updates and undo flow
+ * Story WISH-2032: Optimistic UI for Form Submission
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react'
@@ -113,14 +114,109 @@ export const wishlistGalleryApi = createApi({
      *
      * Creates a new wishlist item.
      * Story wish-2002: Add Item Flow
+     * Story WISH-2032: Optimistic UI for Form Submission
+     *
+     * Implements optimistic cache update via onQueryStarted:
+     * - Generates temporary ID for immediate feedback
+     * - Optimistically adds item to cache
+     * - On success: replaces temp item with real item from API
+     * - On error: rolls back cache, calls onError callback if provided
      */
-    addWishlistItem: builder.mutation<WishlistItem, CreateWishlistItem>({
-      query: body => ({
-        url: '/wishlist',
-        method: 'POST',
-        body,
-      }),
+    addWishlistItem: builder.mutation<
+      WishlistItem,
+      CreateWishlistItem & {
+        /** WISH-2032: Callback when API fails (for rollback UI) */
+        onOptimisticError?: (error: unknown) => void
+        /** WISH-2032: Temporary ID for optimistic update tracking */
+        tempId?: string
+      }
+    >({
+      query: arg => {
+        // Extract optimistic-only properties, send only API-relevant fields
+        const { onOptimisticError, tempId, ...body } = arg
+        void onOptimisticError // Used in onQueryStarted
+        void tempId // Used in onQueryStarted
+        return {
+          url: '/wishlist',
+          method: 'POST',
+          body,
+        }
+      },
       transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      /**
+       * WISH-2032: Optimistic update for immediate UI feedback
+       *
+       * Flow:
+       * 1. Generate temporary ID (or use provided tempId)
+       * 2. Create optimistic item and add to cache
+       * 3. Wait for API response
+       * 4. On success: replace temp item with real item
+       * 5. On error: rollback cache, call onOptimisticError callback
+       */
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        const tempId = arg.tempId || `temp-${Date.now()}`
+        const now = new Date().toISOString()
+
+        // Create optimistic item with temp ID
+        const optimisticItem: WishlistItem = {
+          id: tempId,
+          userId: 'temp-user', // Will be replaced by API
+          title: arg.title,
+          store: arg.store as WishlistItem['store'],
+          setNumber: arg.setNumber || null,
+          sourceUrl: arg.sourceUrl || null,
+          imageUrl: arg.imageUrl || null,
+          imageVariants: null,
+          price: arg.price || null,
+          currency: (arg.currency as WishlistItem['currency']) || 'USD',
+          pieceCount: arg.pieceCount ?? null,
+          releaseDate: arg.releaseDate || null,
+          tags: arg.tags || [],
+          priority: arg.priority ?? 0,
+          notes: arg.notes || null,
+          sortOrder: 0, // Will be at top
+          createdAt: now,
+          updatedAt: now,
+          createdBy: null,
+          updatedBy: null,
+        }
+
+        // Optimistically add to cache
+        const patchResult = dispatch(
+          wishlistGalleryApi.util.updateQueryData('getWishlist', {}, draft => {
+            // Add new item at the beginning
+            draft.items.unshift(optimisticItem)
+            // Update pagination total
+            if (draft.pagination) {
+              draft.pagination.total += 1
+            }
+          }),
+        )
+
+        try {
+          // Wait for API response
+          const { data: realItem } = await queryFulfilled
+
+          // Replace temp item with real item from API
+          dispatch(
+            wishlistGalleryApi.util.updateQueryData('getWishlist', {}, draft => {
+              const index = draft.items.findIndex(item => item.id === tempId)
+              if (index !== -1) {
+                draft.items[index] = realItem
+              }
+            }),
+          )
+        } catch (error) {
+          // Rollback on error
+          patchResult.undo()
+
+          // Call error callback if provided (for UI rollback handling)
+          if (arg.onOptimisticError) {
+            arg.onOptimisticError(error)
+          }
+        }
+      },
+      // Still invalidate tags to ensure fresh data after mutation
       invalidatesTags: [{ type: 'Wishlist', id: 'LIST' }],
     }),
 

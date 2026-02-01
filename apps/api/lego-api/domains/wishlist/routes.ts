@@ -1,4 +1,4 @@
-import { Hono } from 'hono'
+import { Hono, Context } from 'hono'
 import { logger } from '@repo/logger'
 import { auth } from '../../middleware/auth.js'
 import { db, schema } from '../../composition/index.js'
@@ -8,6 +8,8 @@ import {
   createSetImageRepository,
   createImageStorage,
 } from '../sets/adapters/index.js'
+import { extractClientIp } from '../../core/utils/ip.js'
+import { getGeolocation, type GeolocationData } from '../../core/geolocation/index.js'
 import { createWishlistService } from './application/index.js'
 import { createWishlistRepository, createWishlistImageStorage } from './adapters/index.js'
 import {
@@ -18,10 +20,11 @@ import {
   PresignRequestSchema,
   MarkAsPurchasedInputSchema,
 } from './types.js'
+// IP extraction and geolocation (WISH-2047)
 // Cross-domain dependencies for purchase flow (WISH-2042)
 
 // ─────────────────────────────────────────────────────────────────────────
-// Audit Logging (WISH-2008 AC14)
+// Audit Logging (WISH-2008 AC14, WISH-2047 IP/Geolocation)
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
@@ -29,6 +32,14 @@ import {
  *
  * Called when returning 403 or 404 for authorization failures.
  * Provides structured logging for security monitoring and incident response.
+ *
+ * WISH-2047: Enriched with IP address and geolocation data for:
+ * - Detecting suspicious access patterns
+ * - Geographic anomaly detection
+ * - Brute-force attack identification
+ *
+ * Privacy: IP/geolocation is ONLY logged for 403/404 responses,
+ * not for successful 200/201 requests.
  */
 function logAuthorizationFailure(
   userId: string,
@@ -37,6 +48,8 @@ function logAuthorizationFailure(
   method: string,
   statusCode: 403 | 404,
   errorCode: string,
+  clientIp: string | null,
+  geolocation: GeolocationData | null,
 ): void {
   logger.warn('Unauthorized wishlist access attempt', {
     userId,
@@ -46,7 +59,35 @@ function logAuthorizationFailure(
     statusCode,
     errorCode,
     timestamp: new Date().toISOString(),
+    // WISH-2047: IP and geolocation enrichment
+    ip: clientIp,
+    country: geolocation?.country ?? null,
+    countryName: geolocation?.countryName ?? null,
+    region: geolocation?.region ?? null,
+    city: geolocation?.city ?? null,
+    latitude: geolocation?.latitude ?? null,
+    longitude: geolocation?.longitude ?? null,
   })
+}
+
+/**
+ * Helper to extract IP and geolocation for authorization failure logging
+ *
+ * WISH-2047: Extracts client IP from request headers and performs
+ * geolocation lookup. Returns null for geolocation if lookup fails.
+ */
+async function getAuthFailureContext(
+  c: Context,
+): Promise<{ clientIp: string | null; geolocation: GeolocationData | null }> {
+  const clientIp = extractClientIp(c.req.raw)
+
+  // Only perform geolocation lookup if we have an IP
+  let geolocation: GeolocationData | null = null
+  if (clientIp) {
+    geolocation = await getGeolocation(clientIp)
+  }
+
+  return { clientIp, geolocation }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -217,8 +258,9 @@ wishlist.get('/:id', async c => {
 
   if (!result.ok) {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
-    // Log authorization failures for audit trail (AC14)
+    // Log authorization failures for audit trail (AC14, WISH-2047)
     if (status === 403 || status === 404) {
+      const { clientIp, geolocation } = await getAuthFailureContext(c)
       logAuthorizationFailure(
         userId,
         itemId,
@@ -226,6 +268,8 @@ wishlist.get('/:id', async c => {
         'GET',
         status as 403 | 404,
         result.error,
+        clientIp,
+        geolocation,
       )
     }
     return c.json({ error: result.error }, status)
@@ -273,8 +317,9 @@ wishlist.put('/:id', async c => {
 
   if (!result.ok) {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
-    // Log authorization failures for audit trail (AC14)
+    // Log authorization failures for audit trail (AC14, WISH-2047)
     if (status === 403 || status === 404) {
+      const { clientIp, geolocation } = await getAuthFailureContext(c)
       logAuthorizationFailure(
         userId,
         itemId,
@@ -282,6 +327,8 @@ wishlist.put('/:id', async c => {
         'PUT',
         status as 403 | 404,
         result.error,
+        clientIp,
+        geolocation,
       )
     }
     return c.json({ error: result.error }, status)
@@ -301,8 +348,9 @@ wishlist.delete('/:id', async c => {
 
   if (!result.ok) {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
-    // Log authorization failures for audit trail (AC14)
+    // Log authorization failures for audit trail (AC14, WISH-2047)
     if (status === 403 || status === 404) {
+      const { clientIp, geolocation } = await getAuthFailureContext(c)
       logAuthorizationFailure(
         userId,
         itemId,
@@ -310,6 +358,8 @@ wishlist.delete('/:id', async c => {
         'DELETE',
         status as 403 | 404,
         result.error,
+        clientIp,
+        geolocation,
       )
     }
     return c.json({ error: result.error }, status)
@@ -355,8 +405,9 @@ wishlist.post('/:id/purchased', async c => {
           : result.error === 'VALIDATION_ERROR'
             ? 400
             : 500
-    // Log authorization failures for audit trail (AC14)
+    // Log authorization failures for audit trail (AC14, WISH-2047)
     if (status === 403 || status === 404) {
+      const { clientIp, geolocation } = await getAuthFailureContext(c)
       logAuthorizationFailure(
         userId,
         itemId,
@@ -364,6 +415,8 @@ wishlist.post('/:id/purchased', async c => {
         'POST',
         status as 403 | 404,
         result.error,
+        clientIp,
+        geolocation,
       )
     }
     return c.json({ error: result.error }, status)

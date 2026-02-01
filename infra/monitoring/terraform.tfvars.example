@@ -1,0 +1,83 @@
+# Example Terraform Variables for Knowledge Base PostgreSQL Monitoring
+# KNOW-016: PostgreSQL Monitoring Infrastructure
+#
+# Copy this file to terraform.tfvars and update with your values:
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# IMPORTANT: Do NOT commit terraform.tfvars to version control
+#            as it may contain sensitive information.
+
+# ------------------------------------------------------------------------------
+# Required Variables
+# ------------------------------------------------------------------------------
+
+# Deployment environment (staging or production)
+environment = "staging"
+
+# RDS instance identifier (from AWS RDS console)
+rds_instance_id = "kb-postgres-staging"
+
+# ------------------------------------------------------------------------------
+# Optional Variables
+# ------------------------------------------------------------------------------
+
+# AWS region for CloudWatch resources
+# Default: us-west-2
+# aws_region = "us-west-2"
+
+# Email address for alert notifications
+# Note: Must be confirmed manually after terraform apply
+# alert_email = "team@example.com"
+
+# ------------------------------------------------------------------------------
+# Alarm Thresholds (Environment-specific)
+# Staging can use looser thresholds to avoid false alerts
+# ------------------------------------------------------------------------------
+
+# Connection threshold (percentage of max_connections)
+# Default: 80
+# alarm_connection_threshold = 80
+
+# CPU utilization threshold (percentage)
+# Default: 80
+# alarm_cpu_threshold = 80
+
+# Memory threshold (percentage of total remaining)
+# Default: 10
+# alarm_memory_threshold_percent = 10
+
+# Latency threshold (milliseconds)
+# Default: 100
+# alarm_latency_threshold_ms = 100
+
+# Disk space threshold (percentage of total remaining)
+# Default: 10
+# alarm_disk_threshold_percent = 10
+
+# ------------------------------------------------------------------------------
+# Staging-Specific Example
+# Use looser thresholds for staging to reduce noise
+# ------------------------------------------------------------------------------
+#
+# environment = "staging"
+# rds_instance_id = "kb-postgres-staging"
+# alert_email = "dev-team@example.com"
+# alarm_connection_threshold = 90
+# alarm_cpu_threshold = 90
+# alarm_memory_threshold_percent = 5
+# alarm_latency_threshold_ms = 200
+# alarm_disk_threshold_percent = 5
+
+# ------------------------------------------------------------------------------
+# Production-Specific Example
+# Use stricter thresholds for production
+# ------------------------------------------------------------------------------
+#
+# environment = "production"
+# rds_instance_id = "kb-postgres-production"
+# alert_email = "ops-team@example.com"
+# alarm_connection_threshold = 80
+# alarm_cpu_threshold = 80
+# alarm_memory_threshold_percent = 10
+# alarm_latency_threshold_ms = 100
+# alarm_disk_threshold_percent = 10

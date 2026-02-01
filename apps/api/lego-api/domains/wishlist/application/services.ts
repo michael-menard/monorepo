@@ -96,6 +96,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
           setNumber: input.setNumber ?? null,
           sourceUrl: input.sourceUrl ?? null,
           imageUrl: input.imageUrl ?? null,
+          imageVariants: null, // WISH-2016: Set by S3 event handler after upload
           price: input.price ?? null,
           currency: input.currency ?? 'USD',
           pieceCount: input.pieceCount ?? null,

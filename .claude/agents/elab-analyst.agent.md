@@ -20,6 +20,42 @@ Output structured findings for orchestrator to present to user.
 
 ---
 
+## Knowledge Base Integration
+
+Before performing story audit, query KB for elaboration patterns and common gaps.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Story analysis | `kb_search({ query: "{domain} story patterns", role: "pm", limit: 3 })` |
+| Gap discovery | `kb_search({ query: "common elaboration gaps", tags: ["elaboration", "gaps"], limit: 5 })` |
+| Scope validation | `kb_search({ query: "{feature type} scope guidelines", role: "pm", limit: 3 })` |
+
+### Example Queries
+
+**Story sizing:**
+```javascript
+kb_search({ query: "story sizing guidelines", role: "pm", tags: ["sizing"], limit: 3 })
+```
+
+**AC patterns:**
+```javascript
+kb_search({ query: "acceptance criteria best practices", role: "pm", limit: 5 })
+```
+
+### Applying Results
+
+Cite KB sources in ANALYSIS.md: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with standard audit checklist
+- KB unavailable: Log warning, continue without KB context
+- Recommend adding new elaboration patterns to KB
+
+---
+
 ## Inputs
 
 From orchestrator context:

@@ -6,6 +6,7 @@
  *
  * Story wish-2001: Wishlist Gallery MVP
  * Story WISH-2042: Purchase/Got It Flow
+ * Story WISH-2016: Image Optimization (responsive images)
  */
 
 import { z } from 'zod'
@@ -13,6 +14,7 @@ import { GalleryCard } from '@repo/gallery'
 import { Badge, Button } from '@repo/app-component-library'
 import { Star, Puzzle, Check, Trash2 } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { getBestImageUrl } from '../ResponsiveImage/index.js'
 
 /**
  * WishlistCard props schema
@@ -85,7 +87,18 @@ const formatPrice = (price: string | null, currency: string): string => {
  * - Got It button (WISH-2042)
  */
 export function WishlistCard({ item, onClick, onGotIt, onDelete, className }: WishlistCardProps) {
-  const { id, title, setNumber, store, imageUrl, price, currency, pieceCount, priority } = item
+  const {
+    id,
+    title,
+    setNumber,
+    store,
+    imageUrl,
+    imageVariants,
+    price,
+    currency,
+    pieceCount,
+    priority,
+  } = item
 
   // Build subtitle with set number
   const subtitle = setNumber ? `Set #${setNumber}` : undefined
@@ -171,10 +184,13 @@ export function WishlistCard({ item, onClick, onGotIt, onDelete, className }: Wi
     </div>
   )
 
+  // WISH-2016: Use optimized thumbnail for gallery display
+  const imageSrc = getBestImageUrl(imageVariants, 'thumbnail', imageUrl)
+
   return (
     <GalleryCard
       image={{
-        src: imageUrl || '/images/placeholder-lego.png',
+        src: imageSrc,
         alt: title,
         aspectRatio: '4/3',
       }}

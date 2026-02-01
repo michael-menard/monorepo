@@ -34,10 +34,7 @@ Given('the add-to-wishlist API is mocked to return an error', async () => {
 // Navigation
 // ---------------------------------------------------------------------------
 
-When('I click the "Add Item" button', async ({ page }) => {
-  const button = page.getByRole('button', { name: /add item/i })
-  await button.click()
-})
+// Note: 'I click the "Add Item" button' is covered by 'I click the {string} button' in gallery-datatable-view.steps.ts
 
 Then('I should be on the "Add to Wishlist" page', async ({ page }) => {
   await page.waitForURL(/\/wishlist\/add/, { timeout: 10000 })

@@ -205,10 +205,18 @@ describe('Tool Handlers', () => {
   })
 
   describe('handleKbDelete', () => {
+    // kb_delete is an admin-only tool (KNOW-009), requires PM context
+    const pmContext = {
+      correlation_id: 'test-correlation',
+      tool_call_chain: [],
+      start_time: Date.now(),
+      agent_role: 'pm' as const,
+    }
+
     it('should delete entry and return success', async () => {
       mockKbDelete.mockResolvedValue(undefined)
 
-      const result = await handleKbDelete({ id: generateTestUuid() }, mockDeps)
+      const result = await handleKbDelete({ id: generateTestUuid() }, mockDeps, pmContext)
 
       expect(result.isError).toBeUndefined()
       expect(result.content[0].text).toBe('Deleted successfully')
@@ -217,17 +225,33 @@ describe('Tool Handlers', () => {
     it('should succeed for non-existent entry (idempotent)', async () => {
       mockKbDelete.mockResolvedValue(undefined)
 
-      const result = await handleKbDelete({ id: generateTestUuid() }, mockDeps)
+      const result = await handleKbDelete({ id: generateTestUuid() }, mockDeps, pmContext)
 
       expect(result.isError).toBeUndefined()
     })
 
     it('should return error for invalid UUID', async () => {
-      const result = await handleKbDelete({ id: 'invalid' }, mockDeps)
+      const result = await handleKbDelete({ id: 'invalid' }, mockDeps, pmContext)
 
       expect(result.isError).toBe(true)
       const error = JSON.parse(result.content[0].text)
       expect(error.code).toBe('VALIDATION_ERROR')
+    })
+
+    it('should deny access for dev role (KNOW-009)', async () => {
+      const devContext = {
+        correlation_id: 'test-correlation',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'dev' as const,
+      }
+
+      const result = await handleKbDelete({ id: generateTestUuid() }, mockDeps, devContext)
+
+      expect(result.isError).toBe(true)
+      const error = JSON.parse(result.content[0].text)
+      expect(error.code).toBe('FORBIDDEN')
+      expect(error.message).toBe('kb_delete requires pm role')
     })
   })
 

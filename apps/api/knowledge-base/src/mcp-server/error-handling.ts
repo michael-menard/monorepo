@@ -21,6 +21,7 @@ const logger = createMcpLogger('error-handling')
  * - NOT_FOUND - Resource not found (kb_update, kb_get non-existent)
  * - DATABASE_ERROR - Database connection or query failure
  * - API_ERROR - OpenAI API failure
+ * - FORBIDDEN - Authorization failure (KNOW-009)
  * - INTERNAL_ERROR - Unhandled exception
  */
 export const ErrorCode = {
@@ -28,6 +29,7 @@ export const ErrorCode = {
   NOT_FOUND: 'NOT_FOUND',
   DATABASE_ERROR: 'DATABASE_ERROR',
   API_ERROR: 'API_ERROR',
+  FORBIDDEN: 'FORBIDDEN',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const
 
@@ -37,7 +39,14 @@ export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode]
  * Zod schema for sanitized MCP error response.
  */
 export const McpErrorSchema = z.object({
-  code: z.enum(['VALIDATION_ERROR', 'NOT_FOUND', 'DATABASE_ERROR', 'API_ERROR', 'INTERNAL_ERROR']),
+  code: z.enum([
+    'VALIDATION_ERROR',
+    'NOT_FOUND',
+    'DATABASE_ERROR',
+    'API_ERROR',
+    'FORBIDDEN',
+    'INTERNAL_ERROR',
+  ]),
   message: z.string(),
   field: z.string().optional(),
 })
@@ -53,6 +62,50 @@ export interface McpToolResult {
     type: 'text'
     text: string
   }>
+}
+
+/**
+ * Authorization error for access control failures.
+ *
+ * Thrown when an agent role does not have permission to access a tool.
+ *
+ * @see KNOW-009 for authorization implementation
+ */
+export class AuthorizationError extends Error {
+  constructor(
+    public readonly toolName: string,
+    public readonly requiredRole: string,
+    public readonly actualRole: string,
+  ) {
+    super(`${toolName} requires ${requiredRole} role`)
+    this.name = 'AuthorizationError'
+  }
+}
+
+/**
+ * Check if an error is an AuthorizationError.
+ */
+export function isAuthorizationError(error: unknown): error is AuthorizationError {
+  return error instanceof AuthorizationError
+}
+
+/**
+ * Sanitize AuthorizationError for client response.
+ *
+ * Returns only the tool name and required role, no internal details.
+ */
+export function sanitizeAuthorizationError(error: AuthorizationError): McpError {
+  // Log full error server-side
+  logger.info('Authorization denied', {
+    tool_name: error.toolName,
+    required_role: error.requiredRole,
+    actual_role: error.actualRole,
+  })
+
+  return {
+    code: ErrorCode.FORBIDDEN,
+    message: `${error.toolName} requires ${error.requiredRole} role`,
+  }
 }
 
 /**
@@ -206,6 +259,11 @@ export function sanitizeUnknownError(error: unknown): McpError {
  * @returns Sanitized error for client response
  */
 export function sanitizeError(error: unknown): McpError {
+  // Authorization errors - include tool name and required role only
+  if (isAuthorizationError(error)) {
+    return sanitizeAuthorizationError(error)
+  }
+
   // Zod validation errors - include field info
   if (isZodError(error)) {
     return parseZodError(error)

@@ -20,6 +20,7 @@ import { z } from 'zod'
 import { createMcpLogger } from './logger.js'
 import { getToolDefinitions, TOOL_SCHEMA_VERSION } from './tool-schemas.js'
 import { handleToolCall, type ToolHandlerDeps } from './tool-handlers.js'
+import { normalizeRole, type AgentRole } from './access-control.js'
 
 const logger = createMcpLogger('server')
 
@@ -70,6 +71,8 @@ export const EnvSchema = z.object({
     .default(DEFAULT_TIMEOUTS.KB_GET_RELATED),
   // Slow query threshold (KNOW-0052 AC17)
   LOG_SLOW_QUERIES_MS: z.coerce.number().int().positive().default(1000),
+  // Agent role for access control (KNOW-009)
+  AGENT_ROLE: z.string().optional(),
 })
 
 /**
@@ -86,6 +89,7 @@ export function generateCorrelationId(): string {
  * Tool invocation context for tracking nested calls.
  *
  * @see KNOW-0052 AC8 for tool composition support
+ * @see KNOW-009 for agent role authorization
  */
 export interface ToolCallContext {
   /** Correlation ID for tracing */
@@ -96,9 +100,46 @@ export interface ToolCallContext {
   start_time: number
   /** Parent elapsed time for nested timeout calculation */
   parent_elapsed_ms?: number
+  /** Agent role for access control (KNOW-009) */
+  agent_role: AgentRole
 }
 
 export type EnvConfig = z.infer<typeof EnvSchema>
+
+/**
+ * Get agent role from environment variable.
+ *
+ * Reads AGENT_ROLE environment variable, validates it, and returns normalized role.
+ * If not set or invalid, defaults to 'all' (fail-safe, blocks admin tools).
+ *
+ * @see KNOW-009 AC3, AC8, AC9 for role handling requirements
+ *
+ * @returns Validated agent role
+ */
+export function getAgentRole(): AgentRole {
+  const envRole = process.env.AGENT_ROLE
+
+  // Missing role - default to 'all' with warning
+  if (!envRole) {
+    logger.warn("AGENT_ROLE not set, defaulting to 'all' role")
+    return 'all'
+  }
+
+  // Normalize and validate role
+  const normalized = normalizeRole(envRole)
+
+  // Invalid role - default to 'all' with error log
+  if (!normalized) {
+    logger.error('Invalid AGENT_ROLE, defaulting to all', {
+      provided: envRole,
+      valid_values: ['pm', 'dev', 'qa', 'all'],
+    })
+    return 'all'
+  }
+
+  logger.info('Agent role configured', { role: normalized })
+  return normalized
+}
 
 /**
  * Validate environment variables at startup.
@@ -148,13 +189,18 @@ export interface McpServerInstance {
  * Create and configure the MCP server.
  *
  * @param deps - Database and embedding client dependencies
+ * @param agentRole - Optional agent role override (defaults to getAgentRole())
  * @returns Configured MCP server instance
  */
-export function createMcpServer(deps: ToolHandlerDeps): McpServerInstance {
+export function createMcpServer(deps: ToolHandlerDeps, agentRole?: AgentRole): McpServerInstance {
+  // Get agent role from environment or use provided override
+  const role = agentRole ?? getAgentRole()
+
   logger.info('Creating MCP server', {
     name: MCP_SERVER_NAME,
     version: MCP_SERVER_VERSION,
     tool_schema_version: TOOL_SCHEMA_VERSION,
+    agent_role: role,
   })
 
   // Create server instance
@@ -201,6 +247,7 @@ export function createMcpServer(deps: ToolHandlerDeps): McpServerInstance {
       correlation_id: correlationId,
       tool_call_chain: [toolName],
       start_time: startTime,
+      agent_role: role,
     }
 
     const result = await handleToolCall(toolName, toolArgs, deps, context)

@@ -1,0 +1,205 @@
+{
+  "$schema": "https://raw.githubusercontent.com/awslabs/aws-cloudwatch-dashboard-json-schema/main/schema.json",
+  "_comment": "KNOW-016: PostgreSQL Monitoring Dashboard Template. This is a reference template - Terraform generates the actual dashboard.",
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Database Connections",
+        "region": "${AWS_REGION}",
+        "metrics": [
+          ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Average",
+            "period": 300,
+            "label": "Average Connections"
+          }],
+          ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Maximum",
+            "period": 300,
+            "label": "Max Connections"
+          }]
+        ],
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "Alarm Threshold (80)",
+              "value": 80,
+              "color": "#ff0000"
+            }
+          ]
+        },
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "CPU Utilization (%)",
+        "region": "${AWS_REGION}",
+        "metrics": [
+          ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Average",
+            "period": 300,
+            "label": "CPU %"
+          }]
+        ],
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "Alarm Threshold (80%)",
+              "value": 80,
+              "color": "#ff0000"
+            }
+          ]
+        },
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Freeable Memory (GB)",
+        "region": "${AWS_REGION}",
+        "metrics": [
+          ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Average",
+            "period": 300,
+            "label": "Freeable Memory"
+          }]
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Free Storage Space (GB)",
+        "region": "${AWS_REGION}",
+        "metrics": [
+          ["AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Average",
+            "period": 300,
+            "label": "Free Storage"
+          }]
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Read Latency (ms)",
+        "region": "${AWS_REGION}",
+        "metrics": [
+          ["AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Average",
+            "period": 300,
+            "label": "Avg Read Latency"
+          }],
+          ["AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Maximum",
+            "period": 300,
+            "label": "Max Read Latency"
+          }]
+        ],
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "Alarm Threshold (100ms)",
+              "value": 0.1,
+              "color": "#ff0000"
+            }
+          ]
+        },
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Write Latency (ms)",
+        "region": "${AWS_REGION}",
+        "metrics": [
+          ["AWS/RDS", "WriteLatency", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Average",
+            "period": 300,
+            "label": "Avg Write Latency"
+          }],
+          ["AWS/RDS", "WriteLatency", "DBInstanceIdentifier", "${RDS_INSTANCE_ID}", {
+            "stat": "Maximum",
+            "period": 300,
+            "label": "Max Write Latency"
+          }]
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "alarm",
+      "x": 0,
+      "y": 18,
+      "width": 24,
+      "height": 3,
+      "properties": {
+        "title": "Alarm Status",
+        "alarms": [
+          "arn:aws:cloudwatch:${AWS_REGION}:${AWS_ACCOUNT_ID}:alarm:kb-postgres-high-connections-${ENVIRONMENT}",
+          "arn:aws:cloudwatch:${AWS_REGION}:${AWS_ACCOUNT_ID}:alarm:kb-postgres-high-cpu-${ENVIRONMENT}",
+          "arn:aws:cloudwatch:${AWS_REGION}:${AWS_ACCOUNT_ID}:alarm:kb-postgres-low-memory-${ENVIRONMENT}",
+          "arn:aws:cloudwatch:${AWS_REGION}:${AWS_ACCOUNT_ID}:alarm:kb-postgres-high-read-latency-${ENVIRONMENT}",
+          "arn:aws:cloudwatch:${AWS_REGION}:${AWS_ACCOUNT_ID}:alarm:kb-postgres-low-disk-space-${ENVIRONMENT}",
+          "arn:aws:cloudwatch:${AWS_REGION}:${AWS_ACCOUNT_ID}:alarm:kb-postgres-no-data-${ENVIRONMENT}"
+        ]
+      }
+    }
+  ]
+}

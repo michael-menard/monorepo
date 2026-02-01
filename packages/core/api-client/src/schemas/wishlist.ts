@@ -27,6 +27,62 @@ export const CurrencySchema = z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD'])
 export type Currency = z.infer<typeof CurrencySchema>
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Image Variants Schema (WISH-2016)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Image format enum for optimized images
+ */
+export const ImageFormatSchema = z.enum(['jpeg', 'webp', 'png'])
+export type ImageFormat = z.infer<typeof ImageFormatSchema>
+
+/**
+ * Metadata for a single image variant (thumbnail, medium, large)
+ *
+ * WISH-2016: Image Optimization
+ */
+export const ImageVariantMetadataSchema = z.object({
+  url: z.string().url(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  sizeBytes: z.number().int().positive(),
+  format: ImageFormatSchema,
+  watermarked: z.boolean().optional(),
+})
+
+export type ImageVariantMetadata = z.infer<typeof ImageVariantMetadataSchema>
+
+/**
+ * Processing status for image optimization
+ */
+export const ImageProcessingStatusSchema = z.enum(['pending', 'processing', 'completed', 'failed'])
+export type ImageProcessingStatus = z.infer<typeof ImageProcessingStatusSchema>
+
+/**
+ * Complete image variants structure stored in database JSONB column.
+ *
+ * WISH-2016: Image Optimization
+ *
+ * @remarks
+ * Contains metadata for original and all optimized variants:
+ * - original: Full resolution uploaded image
+ * - thumbnail: 200x200 for gallery grid
+ * - medium: 800x800 for hover preview
+ * - large: 1600x1600 for detail page (with watermark)
+ */
+export const ImageVariantsSchema = z.object({
+  original: ImageVariantMetadataSchema.optional(),
+  thumbnail: ImageVariantMetadataSchema.optional(),
+  medium: ImageVariantMetadataSchema.optional(),
+  large: ImageVariantMetadataSchema.optional(),
+  processingStatus: ImageProcessingStatusSchema.optional(),
+  processedAt: z.string().datetime().optional(),
+  error: z.string().optional(),
+})
+
+export type ImageVariants = z.infer<typeof ImageVariantsSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Base Wishlist Item Schema (from database)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -39,6 +95,7 @@ export type Currency = z.infer<typeof CurrencySchema>
  * - `price` is stored as string for decimal precision
  * - `tags` is a JSONB array in PostgreSQL
  * - Audit fields (`createdBy`, `updatedBy`) track who modified the record
+ * - `imageVariants` added in WISH-2016 for optimized images
  */
 export const WishlistItemSchema = z.object({
   id: z.string().uuid(),
@@ -54,6 +111,9 @@ export const WishlistItemSchema = z.object({
 
   // Image
   imageUrl: z.string().url().nullable(),
+
+  // Image Variants (WISH-2016: Optimized images)
+  imageVariants: ImageVariantsSchema.nullable().optional(),
 
   // Pricing
   price: z.string().nullable(), // Decimal as string for precision

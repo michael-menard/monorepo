@@ -19,9 +19,10 @@ import {
 } from './test-helpers.js'
 
 // Create hoisted mock functions (needed for vi.mock)
-const { mockKbGet, mockRebuildEmbeddings } = vi.hoisted(() => ({
+const { mockKbGet, mockRebuildEmbeddings, mockKbBulkImport } = vi.hoisted(() => ({
   mockKbGet: vi.fn(),
   mockRebuildEmbeddings: vi.fn(),
+  mockKbBulkImport: vi.fn(),
 }))
 
 // Mock the logger
@@ -46,6 +47,11 @@ vi.mock('../../crud-operations/index.js', async importOriginal => {
 // Mock the rebuild-embeddings module
 vi.mock('../rebuild-embeddings.js', () => ({
   rebuildEmbeddings: mockRebuildEmbeddings,
+}))
+
+// Mock the bulk-import module
+vi.mock('../../seed/kb-bulk-import.js', () => ({
+  kbBulkImport: mockKbBulkImport,
 }))
 
 // Mock the access control module
@@ -121,10 +127,20 @@ describe('Admin Tool Handlers (KNOW-007)', () => {
     })
 
     it('should include correlation_id in response', async () => {
+      // Mock successful bulk import result
+      mockKbBulkImport.mockResolvedValue({
+        total: 1,
+        succeeded: 1,
+        failed: 0,
+        dry_run: false,
+        errors: [],
+      })
+
       const context = {
         correlation_id: 'test-correlation-123',
         tool_call_chain: ['kb_bulk_import'],
         start_time: Date.now(),
+        agent_role: 'pm' as const, // Required for KNOW-009 authorization
       }
 
       const entries = [{ content: 'Test content', role: 'dev' }]

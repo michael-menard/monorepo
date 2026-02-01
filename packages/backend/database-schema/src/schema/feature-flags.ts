@@ -1,4 +1,14 @@
-import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 /**
@@ -49,5 +59,56 @@ export const featureFlags = pgTable(
       'rollout_percentage_check',
       sql`rollout_percentage >= 0 AND rollout_percentage <= 100`,
     ),
+  }),
+)
+
+/**
+ * Feature Flag User Overrides Table (WISH-2039)
+ *
+ * Stores user-level targeting for feature flags.
+ * Allows explicit inclusion/exclusion of specific users from feature flags.
+ *
+ * Evaluation Priority:
+ * 1. Exclusion override -> return false (highest priority)
+ * 2. Inclusion override -> return true
+ * 3. Percentage-based rollout (existing WISH-2009 logic)
+ */
+export const featureFlagUserOverrides = pgTable(
+  'feature_flag_user_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Foreign key to feature_flags table */
+    flagId: uuid('flag_id')
+      .notNull()
+      .references(() => featureFlags.id, { onDelete: 'cascade' }),
+
+    /** User ID (Cognito sub) to override */
+    userId: text('user_id').notNull(),
+
+    /** Type of override: 'include' (force true) or 'exclude' (force false) */
+    overrideType: text('override_type').notNull(),
+
+    /** Optional reason for the override (e.g., "Beta tester", "Support case #123") */
+    reason: text('reason'),
+
+    /** Admin user who created the override */
+    createdBy: text('created_by'),
+
+    /** Timestamp when override was created */
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => ({
+    // Index for fast lookups by flag_id (for listing all overrides for a flag)
+    flagIdIdx: index('idx_ffu_flag_id').on(table.flagId),
+
+    // Index for fast lookups by user_id (for checking if user has any overrides)
+    userIdIdx: index('idx_ffu_user_id').on(table.userId),
+
+    // Unique constraint: one override per user per flag
+    uniqueFlagUser: uniqueIndex('ffu_flag_user_unique').on(table.flagId, table.userId),
+
+    // Check constraint: override_type must be 'include' or 'exclude'
+    overrideTypeCheck: check('override_type_check', sql`override_type IN ('include', 'exclude')`),
   }),
 )

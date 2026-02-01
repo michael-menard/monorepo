@@ -49,7 +49,7 @@ export const AccessCheckResultSchema = z.object({
 export type AccessCheckResult = z.infer<typeof AccessCheckResultSchema>
 
 /**
- * Planned access control matrix for KNOW-009.
+ * Access control matrix for MCP tools.
  *
  * | Tool                  | pm | dev | qa | all |
  * |-----------------------|----|-----|----|----|
@@ -66,40 +66,99 @@ export type AccessCheckResult = z.infer<typeof AccessCheckResultSchema>
  * | kb_health             | Y  | Y   | Y  | Y  |
  *
  * Legend: Y = allowed, N = denied
+ *
+ * @see KNOW-009 for implementation details
  */
+const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
+  kb_add: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_update: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_delete: new Set(['pm']), // Admin only - destructive operation
+  kb_list: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_search: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_related: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_bulk_import: new Set(['pm']), // Admin only - bulk data modification
+  kb_rebuild_embeddings: new Set(['pm']), // Admin only - expensive operation
+  kb_stats: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_health: new Set(['pm', 'dev', 'qa', 'all']),
+}
+
+/**
+ * Admin-only tools that require PM role.
+ */
+export const ADMIN_TOOLS: readonly ToolName[] = [
+  'kb_delete',
+  'kb_bulk_import',
+  'kb_rebuild_embeddings',
+] as const
+
+/**
+ * Normalize agent role to lowercase for case-insensitive comparison.
+ *
+ * @param role - Role string (may be any case)
+ * @returns Normalized lowercase role or null if invalid
+ */
+export function normalizeRole(role: string): AgentRole | null {
+  const normalized = role.toLowerCase() as AgentRole
+  const result = AgentRoleSchema.safeParse(normalized)
+  return result.success ? result.data : null
+}
 
 /**
  * Check if an agent role has access to a specific tool.
  *
- * STUB IMPLEMENTATION: Always returns true (allowed).
- * Full implementation deferred to KNOW-009.
+ * Uses the ACCESS_MATRIX to determine if a role can access a tool.
+ * PM role has access to all tools. Dev/QA/All roles are denied admin tools.
  *
  * @param toolName - Name of the tool being accessed
  * @param agentRole - Role of the agent making the request
- * @returns Access check result (always allowed in stub)
+ * @returns Access check result with allowed flag and optional reason
  *
- * TODO(KNOW-009): Implement actual access control logic using the matrix above
+ * @see KNOW-009 for access control implementation
  *
  * @example
  * ```typescript
  * const result = checkAccess('kb_delete', 'dev')
- * // In stub: { allowed: true }
- * // In KNOW-009: { allowed: false, reason: 'kb_delete requires pm role' }
+ * // Returns: { allowed: false, reason: 'kb_delete requires pm role' }
+ *
+ * const result = checkAccess('kb_search', 'dev')
+ * // Returns: { allowed: true }
  * ```
  */
 export function checkAccess(toolName: string, agentRole: AgentRole): AccessCheckResult {
+  // Validate tool name exists in matrix
+  const toolNameResult = ToolNameSchema.safeParse(toolName)
+  if (!toolNameResult.success) {
+    // Unknown tool - log warning and deny access
+    logger.warn('Access check for unknown tool', {
+      tool_name: toolName,
+      agent_role: agentRole,
+      decision: 'denied',
+    })
+    return {
+      allowed: false,
+      reason: `Unknown tool: ${toolName}`,
+    }
+  }
+
+  const validToolName = toolNameResult.data
+  const allowedRoles = ACCESS_MATRIX[validToolName]
+  const isAllowed = allowedRoles.has(agentRole)
+
   // Log access check at debug level for tracing
-  logger.debug('Access check (STUB)', {
+  logger.debug('Access check', {
     tool_name: toolName,
     agent_role: agentRole,
-    decision: 'allowed',
-    stub: true,
+    decision: isAllowed ? 'allowed' : 'denied',
   })
 
-  // STUB: Always allow access
-  // TODO(KNOW-009): Replace with actual access control logic
+  if (isAllowed) {
+    return { allowed: true }
+  }
+
   return {
-    allowed: true,
+    allowed: false,
+    reason: `${toolName} requires pm role`,
   }
 }
 

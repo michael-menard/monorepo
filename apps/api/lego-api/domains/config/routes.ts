@@ -1,26 +1,52 @@
 import { Hono } from 'hono'
+import { logger } from '@repo/logger'
 import { auth, optionalAuth, adminAuth } from '../../middleware/auth.js'
 import { db, schema } from '../../composition/index.js'
+import { getRedisClient } from '../../core/cache/index.js'
 import { createFeatureFlagService } from './application/index.js'
-import { createFeatureFlagRepository, createInMemoryCache } from './adapters/index.js'
-import { UpdateFeatureFlagInputSchema } from './types.js'
+import {
+  createFeatureFlagRepository,
+  createUserOverrideRepository,
+  createInMemoryCache,
+  createRedisCacheAdapter,
+} from './adapters/index.js'
+import { UpdateFeatureFlagInputSchema, AddUserOverrideRequestSchema } from './types.js'
 
 /**
- * Config Domain Routes (WISH-2009)
+ * Config Domain Routes (WISH-2009, updated WISH-2019, WISH-2039)
  *
  * Endpoints for feature flag management.
  * - GET /flags - Public: Get all flags (evaluated for current user)
  * - GET /flags/:flagKey - Public: Get single flag with metadata
  * - POST /admin/flags/:flagKey - Admin only: Update flag
+ *
+ * WISH-2019: Added Redis cache support with fallback to in-memory.
+ *
+ * WISH-2039: Added user-level targeting endpoints:
+ * - POST /admin/flags/:flagKey/users - Add user to include/exclude list
+ * - DELETE /admin/flags/:flagKey/users/:userId - Remove user from targeting
+ * - GET /admin/flags/:flagKey/users - List all user overrides for flag
  */
 
 // ─────────────────────────────────────────────────────────────────────────
-// Setup: Wire dependencies
+// Setup: Wire dependencies (AC 14 - Service Layer Wiring)
 // ─────────────────────────────────────────────────────────────────────────
 
 const flagRepo = createFeatureFlagRepository(db, schema)
-const cache = createInMemoryCache()
-const featureFlagService = createFeatureFlagService({ flagRepo, cache })
+const userOverrideRepo = createUserOverrideRepository(db, schema)
+
+// WISH-2019: Use Redis if available, fallback to in-memory cache
+const redisClient = getRedisClient()
+const cache = redisClient ? createRedisCacheAdapter(redisClient) : createInMemoryCache()
+
+// Log which cache adapter is active
+if (redisClient) {
+  logger.info('Feature flag cache: Redis')
+} else {
+  logger.info('Feature flag cache: InMemory (REDIS_URL not configured)')
+}
+
+const featureFlagService = createFeatureFlagService({ flagRepo, cache, userOverrideRepo })
 
 // ─────────────────────────────────────────────────────────────────────────
 // Public Routes (no auth required, but uses userId if available)
@@ -89,6 +115,112 @@ adminConfig.post('/flags/:flagKey', async c => {
   }
 
   const result = await featureFlagService.updateFlag(flagKey, input.data, environment)
+
+  if (!result.ok) {
+    if (result.error === 'NOT_FOUND') {
+      return c.json({ error: 'NOT_FOUND', message: `Flag '${flagKey}' not found` }, 404)
+    }
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json(result.data)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// User Override Routes (WISH-2039)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /flags/:flagKey/users - Add user to include/exclude list (WISH-2039 AC3)
+ *
+ * Request body: { userId: string, overrideType: 'include' | 'exclude', reason?: string }
+ * Returns created/updated override.
+ */
+adminConfig.post('/flags/:flagKey/users', async c => {
+  const flagKey = c.req.param('flagKey')
+  const environment = (c.req.query('environment') as string) || 'production'
+  const adminId = c.get('userId') as string | undefined
+  const body = await c.req.json()
+
+  // Validate input
+  const input = AddUserOverrideRequestSchema.safeParse(body)
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await featureFlagService.addUserOverride(
+    flagKey,
+    {
+      ...input.data,
+      createdBy: adminId,
+    },
+    environment,
+  )
+
+  if (!result.ok) {
+    if (result.error === 'NOT_FOUND') {
+      return c.json({ error: 'NOT_FOUND', message: `Flag '${flagKey}' not found` }, 404)
+    }
+    if (result.error === 'RATE_LIMITED') {
+      return c.json(
+        { error: 'RATE_LIMITED', message: 'Too many user override changes. Try again later.' },
+        429,
+      )
+    }
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json(result.data, 201)
+})
+
+/**
+ * DELETE /flags/:flagKey/users/:userId - Remove user from targeting (WISH-2039 AC4)
+ *
+ * Returns 204 No Content on success.
+ */
+adminConfig.delete('/flags/:flagKey/users/:userId', async c => {
+  const flagKey = c.req.param('flagKey')
+  const userId = c.req.param('userId')
+  const environment = (c.req.query('environment') as string) || 'production'
+
+  const result = await featureFlagService.removeUserOverride(flagKey, userId, environment)
+
+  if (!result.ok) {
+    if (result.error === 'NOT_FOUND') {
+      return c.json(
+        { error: 'NOT_FOUND', message: `User override not found for flag '${flagKey}'` },
+        404,
+      )
+    }
+    if (result.error === 'RATE_LIMITED') {
+      return c.json(
+        { error: 'RATE_LIMITED', message: 'Too many user override changes. Try again later.' },
+        429,
+      )
+    }
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.body(null, 204)
+})
+
+/**
+ * GET /flags/:flagKey/users - List all user overrides for flag (WISH-2039 AC5)
+ *
+ * Query params: page (default 1), pageSize (default 50, max 500)
+ * Returns: { includes: [...], excludes: [...], pagination: { page, pageSize, total } }
+ */
+adminConfig.get('/flags/:flagKey/users', async c => {
+  const flagKey = c.req.param('flagKey')
+  const environment = (c.req.query('environment') as string) || 'production'
+  const page = parseInt(c.req.query('page') || '1', 10)
+  const pageSize = parseInt(c.req.query('pageSize') || '50', 10)
+
+  const result = await featureFlagService.listUserOverrides(
+    flagKey,
+    { page, pageSize },
+    environment,
+  )
 
   if (!result.ok) {
     if (result.error === 'NOT_FOUND') {

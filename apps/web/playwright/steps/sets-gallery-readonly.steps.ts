@@ -21,12 +21,7 @@ const { Given, When, Then } = createBdd()
 // Background / Setup
 // ---------------------------------------------------------------------------
 
-Given('I am logged in as a test user', async ({ page }) => {
-  // For now, assume the dev server starts with an authenticated test session
-  // (e.g., via a test-only login bypass or seeded cookie).
-  // If a dedicated test login route exists later, call it here.
-  await page.goto('/')
-})
+// Note: 'I am logged in as a test user' is defined in common.steps.ts
 
 const setsState = {
   scenario: null as 'sample' | 'empty' | 'error' | null,
