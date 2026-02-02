@@ -1,0 +1,73 @@
+schema: 1
+story_id: KNOW-028
+date: 2026-01-25
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: Story scope matches stories.index.md exactly. Configuration-only story, no endpoints or infrastructure.
+  internal_consistency:
+    status: pass
+    note: Goals, Non-goals, Scope, and ACs are internally consistent. No contradictions found.
+  reuse-first:
+    status: pass
+    note: Story reuses existing patterns (Zod validation, @repo/logger). No new packages needed.
+  ports_&_adapters:
+    status: pass
+    note: Configuration-only story. Validation logic is appropriately transport-agnostic (Zod schemas).
+  local_testability:
+    status: conditional
+    note: AC5 specifies test configuration with MSW mocks, but actual test files not specified. Need concrete test scenarios.
+  decision_completeness:
+    status: pass
+    note: No blocking TBDs or unresolved design decisions. Clear implementation guidance provided.
+  risk_disclosure:
+    status: pass
+    note: "All risks disclosed: developer forgets to copy .env.example, .env.example sync drift, accidental secret commits."
+  story_sizing:
+    status: pass
+    note: Story is appropriately sized at 2 points. Only 5 ACs, configuration-only, no frontend work.
+gaps:
+  - id: GAP-1
+    category: requirements
+    severity: important
+    finding: No validation for DATABASE_URL format beyond .startsWith('postgresql://')
+    recommendation: ""
+  - id: GAP-2
+    category: requirements
+    severity: important
+    finding: Missing OPENAI_API_KEY format validation for test vs production keys
+    recommendation: ""
+  - id: GAP-3
+    category: requirements
+    severity: important
+    finding: No runtime environment variable refresh mechanism
+    recommendation: ""
+  - id: GAP-4
+    category: requirements
+    severity: important
+    finding: Circular dependency risk between db/client.ts and config/env.ts
+    recommendation: ""
+  - id: GAP-5
+    category: requirements
+    severity: important
+    finding: No validation for connection pool settings upper bounds
+    recommendation: ""
+  - id: GAP-6
+    category: requirements
+    severity: important
+    finding: Test environment DATABASE_URL pattern not specified
+    recommendation: ""
+split_required: false
+follow_ups:
+  - finding: "KNOW-028a: Implement auto-generated environment documentation"
+    story_id: null
+  - finding: "KNOW-028b: Add pre-commit hook for .env.example validation"
+    story_id: null
+  - finding: "KNOW-028c: Build developer onboarding setup script"
+    story_id: null
+  - finding: "KNOW-011: AWS Secrets Manager integration (deferred post-launch)"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

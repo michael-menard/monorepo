@@ -134,8 +134,9 @@ export const WishlistItemSchema = z.object({
   updatedAt: z.string().datetime(),
 
   // Audit fields (WISH-2000 enhancement)
-  createdBy: z.string().nullable(),
-  updatedBy: z.string().nullable(),
+  // These are optional because legacy data may not have them, and nullable for explicit null values
+  createdBy: z.string().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
 })
 
 export type WishlistItem = z.infer<typeof WishlistItemSchema>

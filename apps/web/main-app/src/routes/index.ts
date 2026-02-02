@@ -84,14 +84,13 @@ const newPasswordRoute = createRoute({
   beforeLoad: RouteGuards.guestOnly,
 })
 
+// Import the WishlistModule directly - it handles its own lazy loading via React.lazy
+import { WishlistModule } from './modules/WishlistModule'
+
 const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/wishlist',
-  component: () => {
-    // Lazy load wishlist module
-    return import('./modules/WishlistModule').then(module => module.WishlistModule)
-  },
-  pendingComponent: LoadingPage,
+  component: WishlistModule,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     // Check authentication
     if (!context.auth?.isAuthenticated) {

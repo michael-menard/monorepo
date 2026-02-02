@@ -1,0 +1,50 @@
+schema: 1
+story_id: KNOW-043
+updated: 2026-01-31T16:47:00Z
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 23
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: Script fully implemented with dependencies added to package.json
+  - id: AC2
+    verdict: pass
+    evidence: Parser handles multiple formats with tests at lessons-parser.test.ts:63-206
+  - id: AC3
+    verdict: pass
+    evidence: dev-implement-learnings.agent.md updated with KB-first workflow
+  - id: AC4
+    verdict: pass
+    evidence: dev-implement-learnings.agent.md and planning-leader.agent.md updated
+  - id: AC5
+    verdict: pass
+    evidence: Both LESSONS-LEARNED.md files updated with notices
+  - id: AC6
+    verdict: pass
+    evidence: Dry-run flag implemented in parseArgs function
+  - id: AC7
+    verdict: pass
+    evidence: MigrationReport schema and printSummary function implemented
+  - id: AC8
+    verdict: pass
+    evidence: docs/knowledge-base/lessons-learned-migration.md created
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.133Z
+  blocking_issues: []

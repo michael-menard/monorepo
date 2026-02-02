@@ -1,0 +1,386 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "api-gateway-performance",
+    "title": "API Gateway Performance",
+    "tags": ["api-gateway", "performance", "application"],
+    "style": "dark",
+    "timezone": "UTC",
+    "refresh": "1m",
+    "folderId": null,
+    "folderUid": "application-folder",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "stage",
+          "type": "custom",
+          "options": [
+            { "text": "dev", "value": "dev", "selected": true },
+            { "text": "staging", "value": "staging", "selected": false },
+            { "text": "prod", "value": "prod", "selected": false }
+          ],
+          "current": { "text": "dev", "value": "dev" }
+        },
+        {
+          "name": "api",
+          "type": "query",
+          "datasource": "CloudWatch-UserMetrics",
+          "query": "dimension_values(us-east-1,AWS/ApiGateway,Count,ApiName)",
+          "regex": "/lego-api-serverless-$stage/",
+          "multi": false,
+          "includeAll": false,
+          "current": { "text": "lego-api-serverless-dev", "value": "lego-api-serverless-dev" }
+        },
+        {
+          "name": "method",
+          "type": "query",
+          "datasource": "CloudWatch-UserMetrics",
+          "query": "dimension_values(us-east-1,AWS/ApiGateway,Count,Method)",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Count (Sum by API and Method)",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {
+              "ApiName": "$api",
+              "Method": "$method"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1000 },
+                { "color": "red", "value": 10000 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "4xx Error Rate (%)",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "expression": "(m2/m1)*100",
+            "hide": false,
+            "refId": "A"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {
+              "ApiName": "$api",
+              "Method": "$method"
+            },
+            "statistics": ["Sum"],
+            "period": "300",
+            "refId": "m1"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "4XXError",
+            "dimensions": {
+              "ApiName": "$api",
+              "Method": "$method"
+            },
+            "statistics": ["Sum"],
+            "period": "300",
+            "refId": "m2"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 5 },
+                { "color": "red", "value": 10 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 4, "x": 15, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "5xx Error Rate (%)",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "expression": "(m2/m1)*100",
+            "hide": false,
+            "refId": "A"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {
+              "ApiName": "$api",
+              "Method": "$method"
+            },
+            "statistics": ["Sum"],
+            "period": "300",
+            "refId": "m1"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "5XXError",
+            "dimensions": {
+              "ApiName": "$api",
+              "Method": "$method"
+            },
+            "statistics": ["Sum"],
+            "period": "300",
+            "refId": "m2"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 5 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 5, "x": 19, "y": 0 }
+      },
+      {
+        "id": 4,
+        "title": "Request Latency (p50, p95, p99)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Latency",
+            "dimensions": {
+              "ApiName": "$api",
+              "Method": "$method"
+            },
+            "statistics": ["p50", "p95", "p99"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1000 },
+                { "color": "red", "value": 5000 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 9, "x": 6, "y": 0 }
+      },
+      {
+        "id": 5,
+        "title": "API Requests Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {
+              "ApiName": "$api"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 6,
+        "title": "API Latency Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Latency",
+            "dimensions": {
+              "ApiName": "$api"
+            },
+            "statistics": ["Average", "p95", "p99"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "ms"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 7,
+        "title": "Error Rate Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "4XXError",
+            "dimensions": {
+              "ApiName": "$api"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "5XXError",
+            "dimensions": {
+              "ApiName": "$api"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 }
+      },
+      {
+        "id": 8,
+        "title": "Request Count by Route (Top 10)",
+        "type": "table",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "Count",
+            "dimensions": {
+              "ApiName": "$api",
+              "Resource": "*"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        },
+        "transformations": [
+          {
+            "id": "sortBy",
+            "options": {
+              "sort": [{ "field": "Value", "desc": true }]
+            }
+          },
+          {
+            "id": "limit",
+            "options": { "limitField": 10 }
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 }
+      },
+      {
+        "id": 9,
+        "title": "Error Count by Route (Top Error-Prone Routes)",
+        "type": "table",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "4XXError",
+            "dimensions": {
+              "ApiName": "$api",
+              "Resource": "*"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/ApiGateway",
+            "metricName": "5XXError",
+            "dimensions": {
+              "ApiName": "$api",
+              "Resource": "*"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        },
+        "transformations": [
+          {
+            "id": "sortBy",
+            "options": {
+              "sort": [{ "field": "Value", "desc": true }]
+            }
+          },
+          {
+            "id": "limit",
+            "options": { "limitField": 10 }
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 }
+      }
+    ]
+  },
+  "overwrite": true
+}

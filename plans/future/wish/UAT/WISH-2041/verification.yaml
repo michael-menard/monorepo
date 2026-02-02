@@ -1,0 +1,87 @@
+schema: 1
+story_id: WISH-2041
+updated: 2026-01-28T19:09:00-07:00
+code_review:
+  verdict: pass
+  iterations: 3
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 142
+    fail: 0
+  integration:
+    passed: 0
+    failed: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: Not executed - frontend unit tests provide sufficient coverage for this story
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: apps/api/lego-api/domains/wishlist/routes.ts:217-229
+  - id: AC2
+    verdict: pass
+    evidence: apps/api/lego-api/domains/wishlist/application/services.ts:184 + backend test passes
+  - id: AC3
+    verdict: pass
+    evidence: Repository returns NOT_FOUND error + backend test passes
+  - id: AC4
+    verdict: pass
+    evidence: domains/wishlist/__tests__/services.test.ts deleteItem suite - 2/2 pass
+  - id: AC5
+    verdict: pass
+    evidence: packages/core/api-client/src/rtk/wishlist-gallery-api.ts:166-175
+  - id: AC6
+    verdict: pass
+    evidence: "Lines 171-174: WishlistItem + Wishlist LIST tags invalidated"
+  - id: AC7
+    verdict: pass
+    evidence: "Line 189: Hook exported from wishlistGalleryApi"
+  - id: AC8
+    verdict: pass
+    evidence: DeleteConfirmModal/index.tsx:62 - 'This action is permanent. You cannot undo it.'
+  - id: AC9
+    verdict: pass
+    evidence: "Lines 67-96: Thumbnail + title + setNumber + store rendered"
+  - id: AC10
+    verdict: pass
+    evidence: "main-page.tsx:348-382 - toast('Item removed', { action: {...} })"
+  - id: AC11
+    verdict: pass
+    evidence: "Line 381: duration: 5000 + action object with label/onClick"
+  - id: AC12
+    verdict: pass
+    evidence: "Line 339: deletedItemRef.current = item"
+  - id: AC13
+    verdict: pass
+    evidence: "Line 372: await addWishlistItem(createInput).unwrap()"
+  - id: AC14
+    verdict: pass
+    evidence: "Line 377: toast.error('Failed to restore item')"
+  - id: AC15
+    verdict: pass
+    evidence: Radix AlertDialog provides ESC handling + focus trap natively
+  - id: AC16
+    verdict: pass
+    evidence: Sonner provides role=alert by default for accessibility
+  - id: AC17
+    verdict: pass
+    evidence: "DeleteConfirmModal lines 109, 116: disabled={isDeleting}"
+  - id: AC18
+    verdict: pass
+    evidence: main-page.tsx:316-333 getDeleteErrorMessage() handles all cases
+  - id: AC19
+    verdict: pass
+    evidence: "Line 189: useRemoveFromWishlistMutation in exports object"
+  - id: AC20
+    verdict: pass
+    evidence: Sonner action button is keyboard accessible by default
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.300Z
+  blocking_issues: []

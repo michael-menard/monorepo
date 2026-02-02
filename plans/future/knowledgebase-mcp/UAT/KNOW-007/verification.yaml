@@ -1,0 +1,65 @@
+schema: 1
+story_id: KNOW-007
+updated: 2026-01-26T02:50:00.000Z
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 52
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: rebuild-embeddings.ts:156-163, admin-tools.test.ts:173-198
+  - id: AC2
+    verdict: pass
+    evidence: rebuild-embeddings.ts:165-189, admin-tools.test.ts:155-171
+  - id: AC3
+    verdict: pass
+    evidence: rebuild-embeddings.ts:294-320, admin-tools.test.ts:303-333
+  - id: AC4
+    verdict: pass
+    evidence: rebuild-embeddings.ts:24-42, admin-tools.test.ts:266-301
+  - id: AC5
+    verdict: pass
+    evidence: tool-handlers.ts:227-1169 (logger.info calls for all tools)
+  - id: AC6
+    verdict: pass
+    evidence: tool-handlers.ts:268,353,444,507,581,713,834,934,1023 (logger.error calls)
+  - id: AC7
+    verdict: pass
+    evidence: performance.test.ts:382-454 (KNOW-007 AC7 tests)
+  - id: AC8
+    verdict: pass
+    evidence: performance.test.ts:456-586 (KNOW-007 AC8 tests)
+  - id: AC9
+    verdict: pass
+    evidence: performance.test.ts:624-663 (KNOW-007 AC9 tests)
+  - id: AC10
+    verdict: pass
+    evidence: apps/api/knowledge-base/README.md exists
+  - id: AC11
+    verdict: pass
+    evidence: apps/api/knowledge-base/docs/PERFORMANCE.md created
+  - id: AC12
+    verdict: pass
+    evidence: apps/api/knowledge-base/docs/CACHE-INVALIDATION.md created
+  - id: AC13
+    verdict: pass
+    evidence: apps/api/knowledge-base/docs/DEPLOYMENT.md exists
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.109Z
+  blocking_issues: []

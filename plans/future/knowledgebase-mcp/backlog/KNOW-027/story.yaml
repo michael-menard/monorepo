@@ -1,0 +1,32 @@
+schema: 1
+id: KNOW-027
+feature: knowledgebase-mcp
+type: feature
+state: backlog
+title: Adaptive Batch Sizing Based on Rate Limit Headers
+points: null
+priority: null
+blocked_by: null
+depends_on: []
+follow_up_from: KNOW-002
+scope:
+  packages:
+    - apps/api/knowledge
+    - apps/api/knowledge
+    - apps/api/knowledge
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Improve embedding generation throughput by 15-30% under rate limit pressure through adaptive batch sizing based on
+  OpenAI rate limit headers.
+non_goals:
+  - "**Token-based rate limiting** - Focus on request-level limits only (defer token limits to future story)"
+  - "**Predictive rate limit modeling** - Simple reactive adjustment (not ML-based prediction)"
+  - "**Multi-account rate limit pooling** - Single API key only"
+  - "**Rate limit dashboard** - Defer observability to KNOW-019 (Query Analytics)"
+  - "**Automatic API key rotation** - Defer to KNOW-011 (Secrets Management)"
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:36.998Z
+updated_at: 2026-02-01T20:52:36.998Z

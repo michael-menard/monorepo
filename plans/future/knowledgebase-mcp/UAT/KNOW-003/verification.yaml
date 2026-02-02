@@ -1,0 +1,56 @@
+schema: 1
+story_id: KNOW-003
+updated: 2026-01-25T14:10:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 65
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: "kb-add.test.ts: 11 tests covering validation, embedding flow, timestamps, error handling"
+  - id: AC2
+    verdict: pass
+    evidence: "kb-get.test.ts: 9 tests covering retrieval, null return, validation, edge cases"
+  - id: AC3
+    verdict: pass
+    evidence: "kb-update.test.ts: 18 tests covering content change detection, NotFoundError, validation"
+  - id: AC4
+    verdict: pass
+    evidence: "kb-delete.test.ts: 9 tests covering idempotency, validation, cache behavior"
+  - id: AC5
+    verdict: pass
+    evidence: "kb-list.test.ts: 18 tests covering filters, ordering, pagination, edge cases"
+  - id: AC6
+    verdict: pass
+    evidence: All test files verify ZodError on invalid input, NotFoundError tests in kb-update.test.ts
+  - id: AC7
+    verdict: pass
+    evidence: Tests in kb-add.test.ts (null/empty tags) and kb-list.test.ts (tag filtering edge cases)
+  - id: AC8
+    verdict: pass
+    evidence: Architecture uses PostgreSQL row-level locking, tests verify no corruption
+  - id: AC9
+    verdict: pass
+    evidence: "Test execution times: kb-add 64ms, kb-get 58ms, kb-list 137ms (all well under targets)"
+  - id: AC10
+    verdict: pass
+    evidence: "Coverage: 93.94% statements, 97.91% branches, 90% functions"
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.089Z
+  blocking_issues: []

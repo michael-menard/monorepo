@@ -36,7 +36,9 @@ import {
 } from '../migration/__types__/index.js'
 import { kbBulkImport } from '../seed/kb-bulk-import.js'
 import { createEmbeddingClient } from '../embedding-client/index.js'
-import { knowledgeEntries } from '../db/schema.js'
+import * as schema from '../db/schema.js'
+import type { KnowledgeBaseDb } from '../db/client.js'
+const { knowledgeEntries } = schema
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -209,7 +211,7 @@ async function runMigration(options: MigrationOptions): Promise<MigrationReport>
   }
 
   // Connect to database if not dry-run
-  let db: ReturnType<typeof drizzle> | null = null
+  let db: KnowledgeBaseDb | null = null
   let pool: Pool | null = null
   let embeddingClient: ReturnType<typeof createEmbeddingClient> | null = null
 
@@ -234,8 +236,8 @@ async function runMigration(options: MigrationOptions): Promise<MigrationReport>
       password,
     })
 
-    db = drizzle(pool)
-    embeddingClient = createEmbeddingClient({ apiKey: openaiKey })
+    db = drizzle(pool, { schema }) as KnowledgeBaseDb
+    embeddingClient = createEmbeddingClient()
 
     // Get counts before migration
     report.kb_count_before = await getKbEntryCount(db)
@@ -309,7 +311,10 @@ async function runMigration(options: MigrationOptions): Promise<MigrationReport>
       // Import if not dry-run
       if (!options.dry_run && !options.validate_only && db && embeddingClient) {
         if (newEntries.length > 0) {
-          const importResult = await kbBulkImport({ entries: newEntries }, { db, embeddingClient })
+          const importResult = await kbBulkImport(
+            { entries: newEntries, dry_run: false, validate_only: false },
+            { db, embeddingClient },
+          )
 
           fileResult.lessons_imported = importResult.succeeded
           fileResult.lessons_failed = importResult.failed

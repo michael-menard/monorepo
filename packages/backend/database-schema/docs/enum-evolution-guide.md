@@ -1,5 +1,19 @@
 # PostgreSQL Enum Evolution Guide
 
+> **SUPERSEDED**: This document has been superseded by a comprehensive enum modification runbook.
+> Please refer to the following document instead:
+>
+> - [ENUM-MODIFICATION-RUNBOOK.md](./ENUM-MODIFICATION-RUNBOOK.md) - Complete procedures for enum modifications
+>
+> Related documentation:
+> - [SCHEMA-EVOLUTION-POLICY.md](./SCHEMA-EVOLUTION-POLICY.md) - Approval process and governance
+> - [SCHEMA-CHANGE-SCENARIOS.md](./SCHEMA-CHANGE-SCENARIOS.md) - Common scenario guides
+>
+> **Superseded by:** WISH-2057 (2026-02-01)
+> **Status:** Archived for historical reference
+
+---
+
 ## Overview
 
 This runbook provides procedures for safely evolving PostgreSQL ENUMs used in the wishlist schema. PostgreSQL ENUMs (`wishlist_store`, `wishlist_currency`) are immutable by design, requiring careful planning for schema evolution.

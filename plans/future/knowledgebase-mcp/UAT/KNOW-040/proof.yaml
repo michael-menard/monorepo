@@ -1,0 +1,11 @@
+schema: 1
+story_id: KNOW-040
+completed_at: 2026-02-01T20:52:37.131Z
+summary:
+  - This documentation-only story modified 5 agent instruction files to include standardized "Knowledge Base
+    Integration" sections and created a comprehensive integration guide.
+deliverables: []
+verification:
+  tests_passed: 0
+  all_acs_verified: true
+limitations: []

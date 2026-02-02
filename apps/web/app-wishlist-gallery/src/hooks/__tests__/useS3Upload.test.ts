@@ -5,6 +5,7 @@
  * WISH-2022: Client-side image compression
  * WISH-2046: Client-side image compression quality presets
  * WISH-2045: HEIC/HEIF Image Format Support
+ * WISH-2058: Core WebP Conversion
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -35,7 +36,8 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
   useGetWishlistImagePresignUrlMutation: vi.fn(),
 }))
 
-// WISH-2022/2046/2045: Mock image compression utility
+// WISH-2022/2046/2045/2058: Mock image compression utility
+// WISH-2058: Updated presets to use WebP format
 vi.mock('../../utils/imageCompression', () => ({
   compressImage: vi.fn(),
   getPresetByName: vi.fn((name: string) => {
@@ -43,17 +45,17 @@ vi.mock('../../utils/imageCompression', () => ({
       'low-bandwidth': {
         name: 'low-bandwidth',
         label: 'Low bandwidth',
-        settings: { maxSizeMB: 0.5, maxWidthOrHeight: 1200, initialQuality: 0.6, useWebWorker: true, fileType: 'image/jpeg' },
+        settings: { maxSizeMB: 0.5, maxWidthOrHeight: 1200, initialQuality: 0.6, useWebWorker: true, fileType: 'image/webp' },
       },
       'balanced': {
         name: 'balanced',
         label: 'Balanced',
-        settings: { maxSizeMB: 1, maxWidthOrHeight: 1920, initialQuality: 0.8, useWebWorker: true, fileType: 'image/jpeg' },
+        settings: { maxSizeMB: 1, maxWidthOrHeight: 1920, initialQuality: 0.8, useWebWorker: true, fileType: 'image/webp' },
       },
       'high-quality': {
         name: 'high-quality',
         label: 'High quality',
-        settings: { maxSizeMB: 2, maxWidthOrHeight: 2400, initialQuality: 0.9, useWebWorker: true, fileType: 'image/jpeg' },
+        settings: { maxSizeMB: 2, maxWidthOrHeight: 2400, initialQuality: 0.9, useWebWorker: true, fileType: 'image/webp' },
       },
     }
     return presets[name] ?? presets['balanced']
@@ -1153,16 +1155,17 @@ describe('useS3Upload', () => {
       expect(result.current.presetUsed).toBe(null)
     })
 
-    it('passes preset config settings to compressImage', async () => {
+    // WISH-2058: Updated to verify WebP fileType in preset config
+    it('passes preset config settings with WebP to compressImage', async () => {
       const mockPresignResponse = {
         presignedUrl: 'https://s3.amazonaws.com/presigned-url',
-        key: 'uploads/test.jpg',
+        key: 'uploads/test.webp',
       }
       mockUnwrap.mockResolvedValue(mockPresignResponse)
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        file: new File(['content'], 'test.webp', { type: 'image/webp' }),
         originalSize: 1000000,
         finalSize: 500000,
         ratio: 0.5,
@@ -1175,7 +1178,7 @@ describe('useS3Upload', () => {
         await result.current.upload(file, { preset: 'low-bandwidth' })
       })
 
-      // Verify compressImage was called with the preset's settings
+      // Verify compressImage was called with the preset's settings including WebP
       expect(mockCompressImage).toHaveBeenCalledWith(
         file,
         expect.objectContaining({
@@ -1183,6 +1186,7 @@ describe('useS3Upload', () => {
             maxSizeMB: 0.5,
             maxWidthOrHeight: 1200,
             initialQuality: 0.6,
+            fileType: 'image/webp',
           }),
         }),
       )

@@ -1,5 +1,5 @@
 import pino from 'pino'
-import { ILogTransport, LogEntry, LogLevel } from './types'
+import { ILogTransport, LogEntry, LogLevel } from './types.js'
 
 /**
  * Console transport for logging to browser console

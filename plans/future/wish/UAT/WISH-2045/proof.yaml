@@ -1,0 +1,12 @@
+schema: 1
+story_id: WISH-2045
+completed_at: 2026-02-01T20:52:37.306Z
+summary:
+  - WISH-2045 implements client-side HEIC/HEIF image format support for the wishlist gallery, enabling iPhone users (iOS
+    11+) to upload photos in their native format. The implementation automatically converts HEIC images to JPEG before
+    compression, maintaining compatibility with all browsers and storage systems.
+deliverables: []
+verification:
+  tests_passed: 0
+  all_acs_verified: true
+limitations: []

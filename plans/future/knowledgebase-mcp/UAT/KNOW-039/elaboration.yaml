@@ -1,0 +1,94 @@
+schema: 1
+story_id: KNOW-039
+date: 2026-01-25
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: Story scope matches stories.index.md entry. CLI tooling for MCP registration only.
+  internal_consistency:
+    status: pass
+    note: Goals align with Non-goals. AC properly scoped. Local testing plan matches AC.
+  reuse-first:
+    status: pass
+    note: Correctly reuses @repo/logger, existing DB/OpenAI clients, and MCP infrastructure. No unnecessary new packages.
+  ports_&_adapters:
+    status: pass
+    note: Scripts are adapters (filesystem, system checks). Domain logic delegated to existing modules. Clean separation.
+  local_testability:
+    status: pass
+    note: Scripts are testable with mocked filesystem/process operations. kb_health tool already has tests.
+  decision_completeness:
+    status: conditional pass
+    note: Minor ambiguities resolved in DEV-FEASIBILITY. No blocking TBDs remaining.
+  risk_disclosure:
+    status: pass
+    note: All 10 risks documented in DEV-FEASIBILITY. Security considerations (secret sanitization) explicit.
+  story_sizing:
+    status: pass
+    note: 11 ACs, but most are straightforward. No frontend work. 2 packages touched. Reasonable 3-point story.
+gaps:
+  - id: GAP-1
+    category: requirements
+    severity: important
+    finding: Missing MCP protocol version check
+    recommendation: ""
+  - id: GAP-2
+    category: requirements
+    severity: important
+    finding: No stale build detection
+    recommendation: ""
+  - id: GAP-3
+    category: requirements
+    severity: important
+    finding: Backup overwrite risk
+    recommendation: ""
+  - id: GAP-4
+    category: requirements
+    severity: important
+    finding: Port conflict detection missing
+    recommendation: ""
+  - id: GAP-5
+    category: requirements
+    severity: important
+    finding: No rollback mechanism
+    recommendation: ""
+  - id: GAP-6
+    category: requirements
+    severity: important
+    finding: Shell-specific behavior undocumented
+    recommendation: ""
+  - id: GAP-7
+    category: requirements
+    severity: important
+    finding: Docker platform detection
+    recommendation: ""
+  - id: GAP-8
+    category: requirements
+    severity: important
+    finding: No integration test for full setup flow
+    recommendation: ""
+  - id: GAP-9
+    category: requirements
+    severity: important
+    finding: Error recovery documentation missing
+    recommendation: ""
+  - id: GAP-10
+    category: requirements
+    severity: important
+    finding: Logging verbosity not configurable
+    recommendation: ""
+split_required: false
+follow_ups:
+  - finding: "KNOW-040: Enhanced kb_health Tool and OpenAI Validation (for issue #2 - OpenAI validation approach)"
+    story_id: null
+  - finding: "KNOW-041: Advanced MCP Setup Features (for enhancements #1, #5, #9 - interactive merge, auto-restart, visual
+      guide)"
+    story_id: null
+  - finding: "KNOW-007: MCP Server Health Monitoring Dashboard (for enhancement #3, #6 - health dashboard, metrics)"
+    story_id: null
+  - finding: "KNOW-042: Setup Automation and Orchestration (for enhancement #7 - setup script orchestrator)"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

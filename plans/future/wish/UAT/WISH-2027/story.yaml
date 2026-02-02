@@ -1,0 +1,51 @@
+schema: 1
+id: WISH-2027
+feature: wish
+type: feature
+state: uat
+title: Enum Modification Procedure for Wishlist Stores and Currencies
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2007
+follow_up_from: WISH-2007
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Document, validate, and test a safe procedure for evolving PostgreSQL ENUMs in the wishlist schema. Provide
+  runbooks for common enum modification scenarios (add store, add currency, deprecate store) with rollback plans and
+  migration patterns.
+non_goals:
+  - Implementing automated enum migration tooling (future enhancement)
+  - Deciding which stores/currencies to add (product decision)
+  - Changing the current enum values in WISH-2007 (schema is correct as-is)
+  - Migrating to alternative enum storage strategies (e.g., lookup tables) - that's a separate architecture decision
+acs:
+  - id: AC1
+    text: Enum Evolution Runbook exists at `packages/backend/database-schema/docs/enum-evolution-guide.md`
+    type: functional
+  - id: AC2
+    text: Runbook documents PostgreSQL enum immutability constraints and limitations
+    type: functional
+  - id: AC3
+    text: Runbook includes step-by-step procedure for adding enum values with `ALTER TYPE ... ADD VALUE`
+    type: functional
+  - id: AC4
+    text: "Runbook documents rollback strategy for failed enum additions (spoiler: you can't, must plan alternative)"
+    type: functional
+  - id: AC5
+    text: Runbook includes multi-environment coordination checklist (local → staging → production)
+    type: functional
+risks:
+  - risk: Production Migration Cannot Be Rolled Back
+    mitigation: Require staging environment validation before production. Document in runbook.
+  - risk: Multi-Environment Drift
+    mitigation: Add enum value checks to migration pre-flight validation (future enhancement)
+  - risk: Transaction Semantics Confusion
+    mitigation: Clear documentation in runbook with examples
+created_at: 2026-01-28T15:00:00-07:00
+updated_at: 2026-01-31T13:15:00-07:00

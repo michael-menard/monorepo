@@ -1,8 +1,8 @@
 ---
 title: "Unified Development Flow"
-version: "2.19.0"
+version: "2.21.0"
 created_at: "2026-01-22T10:00:00-07:00"
-updated_at: "2026-01-25T12:00:00-07:00"
+updated_at: "2026-02-01T14:00:00-07:00"
 status: active
 tags:
   - workflow
@@ -30,6 +30,8 @@ This document describes the end-to-end workflow combining:
   - [Step 1a: Bootstrap Workflow](#step-1a-bootstrap-workflow)
   - [Step 1b: Harness Story](#step-1b-harness-story-story-000)
 - [Phase 2: PM Story Generation](#phase-2-pm-story-generation)
+  - [Knowledge Context Integration](#knowledge-context-integration)
+  - [Knowledge Base Architecture](#knowledge-base-architecture)
 - [Phase 3: QA Elaboration](#phase-3-qa-elaboration)
 - [Phase 4: Dev Implementation](#phase-4-dev-implementation)
 - [Phase 5: Code Review](#phase-5-code-review)
@@ -549,6 +551,8 @@ Interactive PM-led brainstorming session to:
 /pm-story <action>
     │
     ├─→ action: generate ──→ pm-story-generation-leader.agent.md
+    │                            ├─→ pm-story-seed-agent.agent.md (seeds story with reality & knowledge context)
+    │                            │       └─→ knowledge-context-loader.agent.md (loads lessons + ADRs)
     │                            ├─→ pm-draft-test-plan.agent.md (parallel)
     │                            ├─→ pm-dev-feasibility-review.agent.md (parallel)
     │                            └─→ pm-uiux-recommendations.agent.md (parallel, if UI)
@@ -565,6 +569,8 @@ Interactive PM-led brainstorming session to:
 | Agent | Purpose |
 |-------|---------|
 | `pm-story-generation-leader.agent.md` | Orchestrates standard story generation |
+| `pm-story-seed-agent.agent.md` | Seeds story with baseline reality and knowledge context |
+| `knowledge-context-loader.agent.md` | Loads lessons learned and ADR constraints |
 | `pm-story-adhoc-leader.agent.md` | Generates emergent/one-off stories |
 | `pm-story-bug-leader.agent.md` | Generates bug/defect stories |
 | `pm-story-followup-leader.agent.md` | Generates follow-up stories from QA findings |
@@ -582,6 +588,119 @@ Interactive PM-led brainstorming session to:
 | `DEV-FEASIBILITY.md` | `plans/stories/{PREFIX}-XXX/_pm/` | Technical approach notes |
 | `BLOCKERS.md` | `plans/stories/{PREFIX}-XXX/_pm/` | Known blockers (empty if none) |
 
+### Knowledge Context Integration
+
+Story generation now automatically loads and applies knowledge from past stories and architecture decisions:
+
+#### Sources
+
+1. **Lessons Learned** (via Knowledge Base `kb_search`):
+   - Past blockers from similar stories
+   - Patterns that caused rework
+   - Time sinks to avoid
+   - Successful patterns to reuse
+
+2. **Architecture Decision Records** (`plans/stories/ADR-LOG.md`):
+   - ADR-001: API Path Schema (frontend/backend path conventions)
+   - ADR-002: Infrastructure Patterns
+   - ADR-003: Storage/CDN Architecture
+   - ADR-004: Authentication Patterns
+   - ADR-005: Testing Requirements (UAT must use real services)
+
+#### How It's Used
+
+- **Story Seed**: Knowledge context informs initial story structure
+- **Conflict Detection**: Checks if story violates ADRs or repeats past mistakes
+- **Attack Analysis**: Past failures become attack vectors for assumption challenges
+- **Recommendations**: Story includes patterns to follow and avoid
+
+#### Files Created
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `STORY-SEED.md` | `_pm/` | Initial story seed with knowledge context |
+
+### Knowledge Base Architecture
+
+The workflow integrates with a PostgreSQL Knowledge Base (KB) for persistent institutional knowledge.
+
+#### KB Tools
+
+| Tool | Purpose | Used By |
+|------|---------|---------|
+| `kb_search` | Hybrid semantic + keyword search | `load-knowledge-context.ts`, agents querying past lessons |
+| `kb_add` | Add new entry with auto-embedding | `kb-writer.agent.md` |
+| `kb_bulk_import` | Import multiple entries | Migration scripts |
+| `kb_stats` | Get entry counts and metadata | Verification scripts |
+
+#### Knowledge Flow
+
+```
+READ PATH (Story Generation)
+┌─────────────────────────────────────────────────────────────┐
+│  /pm-story generate                                         │
+│       │                                                     │
+│       └─► load-knowledge-context.ts                         │
+│               │                                             │
+│               ├─► kb_search (domain lessons)                │
+│               ├─► kb_search (blockers to avoid)             │
+│               └─► Parse ADR-LOG.md                          │
+│                       │                                     │
+│                       └─► Return LessonsLearned + ADRs      │
+│                               │                             │
+│                               └─► Story seeding & attack    │
+└─────────────────────────────────────────────────────────────┘
+
+WRITE PATH (Knowledge Capture)
+┌─────────────────────────────────────────────────────────────┐
+│  Story completion (/dev-implement-story)                    │
+│       │                                                     │
+│       └─► dev-implement-learnings.agent.md                  │
+│               │                                             │
+│               └─► Spawns kb-writer.agent.md (per category)  │
+│                       │                                     │
+│                       ├─► Check for duplicates (kb_search)  │
+│                       ├─► Generate standardized tags        │
+│                       └─► kb_add (if not duplicate)         │
+│                                                             │
+│  QA verification (/qa-verify-story)                         │
+│       │                                                     │
+│       └─► qa-verify-completion-leader.agent.md              │
+│               │                                             │
+│               └─► Spawns kb-writer.agent.md (if notable)    │
+│                       └─► Capture test strategies/edge cases│
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Fallback Behavior
+
+- **KB unavailable**: Silent fallback to hardcoded defaults
+- **Workflow NOT blocked**: Story generation proceeds with default lessons
+- **Warning logged**: For monitoring and debugging
+
+#### kb-writer Agent
+
+`kb-writer.agent.md` is the standard agent for writing to KB:
+
+| Feature | Description |
+|---------|-------------|
+| Deduplication | Skips if >0.85 similarity exists |
+| Standardized tags | `lesson-learned`, `story:xxx`, `category:xxx`, `date:YYYY-MM` |
+| Consistent format | `**[STORY-ID] Category**` header |
+| Silent fallback | Returns `skipped` if KB unavailable |
+
+#### Stages That Write to KB
+
+| Stage | Agent | What Gets Written |
+|-------|-------|-------------------|
+| Story Completion | `dev-implement-learnings` | Blockers, patterns, time sinks |
+| QA Verification | `qa-verify-completion-leader` | Test strategies, edge cases |
+| Elaboration | `elab-completion-leader` | Sizing insights, gap patterns (future) |
+| Architecture | `dev-implement-planning-leader` | Confirmed decisions (future) |
+| Bug Fixes | `dev-setup-leader` (fix mode) | Debug patterns, root causes (future) |
+
+All use `kb-writer.agent.md` for consistent tagging and deduplication.
+
 ### Required Story Sections
 
 - YAML frontmatter (id, title, status, created_at)
@@ -591,6 +710,7 @@ Interactive PM-led brainstorming session to:
 - Reuse Plan
 - Local Testing Expectations
 - Token Budget
+- **Knowledge Context** (lessons applied, ADRs respected)
 
 ### Status Change
 
@@ -1408,6 +1528,52 @@ When extending the workflow:
 ## Changelog
 
 All notable changes to this workflow are documented here.
+
+### [2.21.0] - 2026-02-01 MST
+
+#### Added
+- **Knowledge Base Architecture** - New section documenting KB tools, knowledge flow, and fallback behavior
+- `kb-writer.agent.md` - Reusable agent for writing to KB with deduplication and standardized tagging
+- KB write integration in `qa-verify-completion-leader.agent.md` for capturing test strategies and edge cases
+- Knowledge flow diagrams showing read path (story generation) and write path (knowledge capture)
+
+#### Changed
+- **Knowledge Context Integration** - `load-knowledge-context.ts` now queries KB via `kb_search` with fallback to defaults
+- `dev-implement-learnings.agent.md` - Now spawns `kb-writer` for each learning category instead of direct `kb_add` calls
+- `qa-verify-completion-leader.agent.md` - Added optional step 5 for capturing significant QA findings to KB
+- Updated agent spawning relationships (`spawns:` field) for knowledge capture chain
+
+#### Technical Details
+- `getLessonsFromKB()` function added to orchestrator for domain-specific lesson queries
+- KB integration uses optional dependency injection pattern for testability
+- Silent fallback ensures workflow never blocks on KB unavailability
+- Duplicate detection prevents redundant KB entries (>0.85 similarity threshold)
+
+---
+
+### [2.20.0] - 2026-02-01 MST
+
+#### Added
+- **Knowledge Context Integration** - Story generation now automatically consults lessons learned and ADRs
+- `knowledge-context-loader.agent.md` - New worker agent that loads lessons via `kb_search` and ADRs from `ADR-LOG.md`
+- `pm-story-seed-agent.agent.md` - Updated with Phase 3: Load Knowledge Context
+- Knowledge Context section in PM Story Generation documenting sources and usage
+- `STORY-SEED.md` artifact created during story seeding with knowledge context
+
+#### Changed
+- **Story Attack Analysis** (`story-attack-agent.agent.md`) - Now uses lessons learned as attack vectors
+- Attack agent checks story approach against ADR constraints
+- New assumption type `lesson_learned` for patterns that failed in past stories
+- New edge case category `adr_violation` for potential architecture decision violations
+- Attack analysis output includes `lessons_applied` and `adrs_checked` sections
+- Required story sections now include "Knowledge Context" section
+
+#### Technical Details
+- LangGraph `load-knowledge-context.ts` node parses ADR-LOG.md and provides default lessons
+- Knowledge context flows through: seed → fanout agents → attack → synthesis
+- ADR compliance is checked during attack phase with specific edge cases generated
+
+---
 
 ### [2.19.0] - 2026-01-25 MST
 

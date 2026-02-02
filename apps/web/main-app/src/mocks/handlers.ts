@@ -17,6 +17,133 @@ export const handlers = [
     })
   }),
 
+  // V2 Health check
+  http.get('/api/v2/health', () => {
+    return HttpResponse.json({
+      status: 'ok',
+      service: 'main-app-mock-backend',
+      timestamp: new Date().toISOString(),
+    })
+  }),
+
+  // ---------------------------------------------------------------------------
+  // V2 Wishlist API Endpoints (used by RTK Query)
+  // ---------------------------------------------------------------------------
+
+  // GET /api/v2/wishlist/items - v2 list endpoint (RTK Query uses this)
+  http.get('/api/v2/wishlist/items', async ({ request }) => {
+    const url = new URL(request.url)
+    const q = url.searchParams.get('query') || url.searchParams.get('q') || undefined
+    const scenario = url.searchParams.get('__wishlistScenario') || undefined
+
+    // Scenario-specific behavior for E2E tests
+    if (scenario === 'error') {
+      return HttpResponse.json(
+        { error: 'INTERNAL_ERROR', message: 'Failed to load wishlist' },
+        { status: 500 },
+      )
+    }
+
+    if (scenario === 'empty') {
+      const emptyResponse: MockWishlistListResponse = wishlistListResponse([])
+      return HttpResponse.json(emptyResponse, { status: 200 })
+    }
+
+    let items: MockWishlistItem[] = [...mockWishlistItems]
+
+    // Apply filters
+    if (q) {
+      const lower = q.toLowerCase()
+      items = items.filter(item => {
+        return (
+          item.title.toLowerCase().includes(lower) ||
+          item.setNumber?.toLowerCase().includes(lower) ||
+          item.tags.some(tag => tag.toLowerCase().includes(lower))
+        )
+      })
+    }
+
+    const response: MockWishlistListResponse = wishlistListResponse(items)
+    return HttpResponse.json(response, { status: 200 })
+  }),
+
+  // GET /api/v2/wishlist/items/:id - v2 single item endpoint
+  http.get('/api/v2/wishlist/items/:id', ({ params }) => {
+    const id = String(params.id)
+    const item = mockWishlistItems.find(i => i.id === id)
+
+    if (!item) {
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
+    }
+
+    return HttpResponse.json({ data: item }, { status: 200 })
+  }),
+
+  // POST /api/v2/wishlist/items - v2 create item
+  http.post('/api/v2/wishlist/items', async ({ request }) => {
+    const body = (await request.json()) as Partial<MockWishlistItem>
+
+    const created: MockWishlistItem = {
+      id: `wish-${(mockWishlistItems.length + 1).toString().padStart(3, '0')}`,
+      userId: 'test-user-123',
+      title: body.title ?? 'New Wishlist Item',
+      store: (body.store as any) ?? 'LEGO',
+      setNumber: body.setNumber ?? null,
+      sourceUrl: body.sourceUrl ?? null,
+      imageUrl: body.imageUrl ?? null,
+      price: body.price ?? null,
+      currency: body.currency ?? 'USD',
+      pieceCount: body.pieceCount ?? null,
+      releaseDate: body.releaseDate ?? null,
+      tags: body.tags ?? [],
+      priority: body.priority ?? 0,
+      notes: body.notes ?? null,
+      sortOrder: mockWishlistItems.length + 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    mockWishlistItems.push(created)
+
+    return HttpResponse.json({ data: created }, { status: 201 })
+  }),
+
+  // PUT /api/v2/wishlist/items/:id - v2 update item
+  http.put('/api/v2/wishlist/items/:id', async ({ params, request }) => {
+    const id = String(params.id)
+    const index = mockWishlistItems.findIndex(i => i.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
+    }
+
+    const body = (await request.json()) as Partial<MockWishlistItem>
+    const updated: MockWishlistItem = {
+      ...mockWishlistItems[index],
+      ...body,
+      updatedAt: new Date().toISOString(),
+    }
+    mockWishlistItems[index] = updated
+
+    return HttpResponse.json({ data: updated }, { status: 200 })
+  }),
+
+  // DELETE /api/v2/wishlist/items/:id - v2 delete item
+  http.delete('/api/v2/wishlist/items/:id', ({ params }) => {
+    const id = String(params.id)
+    const index = mockWishlistItems.findIndex(i => i.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Item not found' }, { status: 404 })
+    }
+
+    mockWishlistItems.splice(index, 1)
+
+    return HttpResponse.json({ data: { message: 'Item deleted' } }, { status: 200 })
+  }),
+
+  // ---------------------------------------------------------------------------
+  // Legacy Wishlist API Endpoints (v1 - kept for backward compatibility)
+  // ---------------------------------------------------------------------------
+
   // GET /api/wishlist - list endpoint
   http.get('/api/wishlist', async ({ request }) => {
     const url = new URL(request.url)

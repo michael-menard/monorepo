@@ -24,6 +24,14 @@ export {
   GateDecisionSchema,
   type GateDecision,
   GATE_DECISIONS,
+  StoryStateSchema,
+  type StoryState,
+  STORY_STATES,
+  isTerminalState,
+  isActiveState,
+  isWorkableState,
+  getNextState,
+  isValidTransition,
 } from './enums/index.js'
 
 // Reference schemas and types

@@ -1,0 +1,52 @@
+schema: 1
+id: WISH-2057
+feature: wish
+type: feature
+state: uat
+title: Schema Evolution Policy and Versioning Strategy
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2007
+follow_up_from: WISH-2007
+scope:
+  packages:
+    - packages/backend/database
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Document comprehensive schema evolution policies, versioning strategy, and procedures for safe database schema
+  modifications across all environments. Establish governance for schema changes and provide runbooks for common
+  scenarios.
+non_goals:
+  - Implementing automated schema versioning tools (future enhancement)
+  - Migrating existing tables to new schema patterns (no tables exist yet)
+  - Setting up schema change approval workflows in CI/CD (future enhancement)
+  - Database backup/restore automation (separate infrastructure concern)
+acs:
+  - id: AC1
+    text: "`SCHEMA-EVOLUTION-POLICY.md` documents approval process for schema changes (who reviews, what gates)"
+    type: functional
+  - id: AC2
+    text: Policy defines breaking vs non-breaking changes with examples
+    type: functional
+  - id: AC3
+    text: Policy requires migration testing on fresh database before production
+    type: functional
+  - id: AC4
+    text: Policy specifies backward compatibility window (e.g., N-1 version support)
+    type: functional
+  - id: AC5
+    text: Policy documents migration file naming convention (matches Drizzle pattern `XXXX_description.sql`)
+    type: functional
+risks:
+  - risk: Incomplete Policy Leads to Breaking Changes
+    mitigation: Code review gate requiring policy reference for schema PRs
+  - risk: Enum Immutability Not Understood
+    mitigation: Runbook must include warnings and examples of incorrect approaches
+  - risk: Production Downtime from Schema Locks
+    mitigation: Scenarios doc must document CONCURRENTLY options and lock behavior
+created_at: 2026-01-28T15:00:00-07:00
+updated_at: 2026-02-01T14:15:00-07:00

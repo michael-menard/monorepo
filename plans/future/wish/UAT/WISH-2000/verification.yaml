@@ -1,0 +1,76 @@
+schema: 1
+story_id: WISH-2000
+updated: 2026-01-27T18:45:00-07:00
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 3
+    note: ""
+tests:
+  unit:
+    pass: 104
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC?
+    verdict: pass
+    evidence: packages/backend/database-schema/src/schema/index.ts:381-435 - All 19 fields present with correct types
+  - id: AC?
+    verdict: pass
+    evidence: packages/core/api-client/src/schemas/wishlist.ts - All 5 schemas implemented with additional
+      ReorderWishlistItemSchema and BatchReorderSchema
+  - id: AC?
+    verdict: pass
+    evidence: "104 tests total: wishlist.test.ts (56), wishlist-schema-alignment.test.ts (22), wishlist-schema.test.ts (26)"
+  - id: AC?
+    verdict: pass
+    evidence: packages/core/api-client/src/schemas/wishlist.ts:14,17,61,86,94,107,120,130,144 - All types use z.infer<>
+  - id: AC?
+    verdict: pass
+    evidence: wishlist-schema.test.ts:14-152 - Tests verify table export, column definitions, enums, and column count
+  - id: AC?
+    verdict: pass
+    evidence: wishlist-schema-alignment.test.ts:1-142 - 22 tests verify all 19 fields present in both schemas
+  - id: AC?
+    verdict: pass
+    evidence: wishlist.test.ts:431-437 - Tests large price (999999.99), small price (0.01), zero, and precision validation
+  - id: AC?
+    verdict: pass
+    evidence: wishlist.test.ts:469-497 - Tests empty arrays, large arrays (15+ items), special characters
+  - id: AC?
+    verdict: pass
+    evidence: wishlist.test.ts:529-554 - Tests sortOrder edge cases including duplicate values
+  - id: AC?
+    verdict: pass
+    evidence: wishlist-schema.test.ts:111-138 - Tests for wishlistStoreEnum and wishlistCurrencyEnum with correct values
+  - id: AC?
+    verdict: pass
+    evidence: packages/backend/database-schema/src/schema/index.ts:378-379,389 - wishlistStoreEnum defined and used
+  - id: AC?
+    verdict: pass
+    evidence: "packages/backend/database-schema/src/schema/index.ts:433 - CHECK constraint: priority >= 0 AND priority <= 5"
+  - id: AC?
+    verdict: pass
+    evidence: packages/backend/database-schema/src/schema/index.ts:427-431 - idx_wishlist_user_store_priority on (userId,
+      store, priority)
+  - id: AC?
+    verdict: pass
+    evidence: packages/backend/database-schema/docs/WISHLIST-SCHEMA-EVOLUTION.md - Complete migration and rollback procedures
+  - id: AC?
+    verdict: pass
+    evidence: packages/backend/database-schema/src/seeds/wishlist.ts - Existing seed data (referenced in PROOF)
+  - id: AC?
+    verdict: pass
+    evidence: packages/backend/database-schema/src/schema/index.ts:417-418 - createdBy and updatedBy columns (nullable)
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.235Z
+  blocking_issues: []

@@ -7,6 +7,7 @@
  * Story WISH-2022: Client-side Image Compression
  * Story WISH-2046: Client-side Image Compression Quality Presets
  * Story WISH-2045: HEIC/HEIF Image Format Support
+ * Story WISH-2058: Core WebP Conversion
  */
 
 import imageCompression, { type Options } from 'browser-image-compression'
@@ -14,11 +15,12 @@ import heic2any from 'heic2any'
 import { z } from 'zod'
 
 // Compression configuration schema
+// WISH-2058: Changed default fileType from 'image/jpeg' to 'image/webp'
 export const CompressionConfigSchema = z.object({
   maxSizeMB: z.number().default(1),
   maxWidthOrHeight: z.number().default(1920),
   useWebWorker: z.boolean().default(true),
-  fileType: z.string().default('image/jpeg'),
+  fileType: z.string().default('image/webp'),
   initialQuality: z.number().min(0).max(1).default(0.8),
 })
 
@@ -41,9 +43,10 @@ export type CompressionPreset = z.infer<typeof CompressionPresetSchema>
 
 /**
  * WISH-2046: Compression quality presets
- * - Low bandwidth: Smallest file size, fastest upload (0.6 quality, 1200px max, ~300KB)
- * - Balanced: Good quality, reasonable file size - recommended (0.8 quality, 1920px max, ~800KB)
- * - High quality: Best quality, larger file size (0.9 quality, 2400px max, ~1.5MB)
+ * WISH-2058: Updated to WebP format for 25-35% additional size savings
+ * - Low bandwidth: Smallest file size, fastest upload (0.6 quality, 1200px max, ~200KB)
+ * - Balanced: Good quality, reasonable file size - recommended (0.8 quality, 1920px max, ~550KB)
+ * - High quality: Best quality, larger file size (0.9 quality, 2400px max, ~1.0MB)
  */
 export const COMPRESSION_PRESETS: CompressionPreset[] = [
   {
@@ -55,9 +58,9 @@ export const COMPRESSION_PRESETS: CompressionPreset[] = [
       maxWidthOrHeight: 1200,
       initialQuality: 0.6,
       useWebWorker: true,
-      fileType: 'image/jpeg',
+      fileType: 'image/webp',
     },
-    estimatedSize: '~300KB',
+    estimatedSize: '~200KB',
   },
   {
     name: 'balanced',
@@ -68,9 +71,9 @@ export const COMPRESSION_PRESETS: CompressionPreset[] = [
       maxWidthOrHeight: 1920,
       initialQuality: 0.8,
       useWebWorker: true,
-      fileType: 'image/jpeg',
+      fileType: 'image/webp',
     },
-    estimatedSize: '~800KB',
+    estimatedSize: '~550KB',
   },
   {
     name: 'high-quality',
@@ -81,9 +84,9 @@ export const COMPRESSION_PRESETS: CompressionPreset[] = [
       maxWidthOrHeight: 2400,
       initialQuality: 0.9,
       useWebWorker: true,
-      fileType: 'image/jpeg',
+      fileType: 'image/webp',
     },
-    estimatedSize: '~1.5MB',
+    estimatedSize: '~1.0MB',
   },
 ]
 
@@ -111,6 +114,15 @@ export const SKIP_COMPRESSION_SIZE_THRESHOLD = 500 * 1024
 
 // Progress callback type
 export type CompressionProgressCallback = (progress: number) => void
+
+/**
+ * WISH-2058: Transform filename to WebP extension
+ * Replaces common image extensions with .webp
+ * Example: photo.jpg -> photo.webp, image.png -> image.webp
+ */
+export function transformFilenameToWebP(filename: string): string {
+  return filename.replace(/\.(jpe?g|png|gif|bmp|tiff?)$/i, '.webp')
+}
 
 /**
  * Result of compression operation
@@ -230,8 +242,10 @@ export async function compressImage(
       }
     }
 
-    // Create new File with original name to preserve filename
-    const resultFile = new File([compressedFile], file.name, {
+    // WISH-2058: Create new File with WebP extension when compressing to WebP
+    const outputFilename =
+      config.fileType === 'image/webp' ? transformFilenameToWebP(file.name) : file.name
+    const resultFile = new File([compressedFile], outputFilename, {
       type: config.fileType,
       lastModified: Date.now(),
     })

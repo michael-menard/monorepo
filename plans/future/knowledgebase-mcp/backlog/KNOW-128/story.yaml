@@ -1,0 +1,24 @@
+schema: 1
+id: KNOW-128
+feature: knowledgebase-mcp
+type: feature
+state: backlog
+title: Migration Rollback Capability
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - KNOW-043
+follow_up_from: KNOW-043
+scope:
+  packages:
+    - apps/api/knowledge
+  surfaces:
+    - backend
+    - infra
+goal: "Enhance the migration script from KNOW-043 with:"
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.000Z
+updated_at: 2026-02-01T20:52:37.000Z

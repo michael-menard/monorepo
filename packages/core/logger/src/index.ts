@@ -1,12 +1,12 @@
 // Main exports
-export { Logger, PerformanceLogger, ApiLogger } from './logger'
+export { Logger, PerformanceLogger, ApiLogger } from './logger.js'
 export {
   ConsoleTransport,
   StorageTransport,
   RemoteTransport,
   NullTransport,
   BrowserConsoleTransport,
-} from './transports'
+} from './transports.js'
 export {
   LoggerFactory,
   createEnvironmentConfig,
@@ -14,7 +14,7 @@ export {
   getPerformanceLogger,
   getApiLogger,
   getTestLogger,
-} from './factory'
+} from './factory.js'
 
 // Types
 export type {
@@ -26,7 +26,7 @@ export type {
   PerformanceLog,
   ApiLog,
   UserInteractionLog,
-} from './types'
+} from './types.js'
 
 export {
   LogLevel,
@@ -37,10 +37,10 @@ export {
   PerformanceLogSchema,
   ApiLogSchema,
   UserInteractionLogSchema,
-} from './types'
+} from './types.js'
 
 // Simple logger for immediate use (no dependencies)
-export { logger, createLogger, SimpleLogger, LogLevel as SimpleLogLevel } from './simple-logger'
+export { logger, createLogger, SimpleLogger, LogLevel as SimpleLogLevel } from './simple-logger.js'
 
 // Lambda-optimized structured logger (Story 3.2)
 export {
@@ -49,8 +49,8 @@ export {
   generateCorrelationId,
   getXRayTraceId,
   extractCorrelationId,
-} from './lambda-logger'
-export type { LambdaLogContext, LambdaLoggerConfig } from './lambda-logger'
+} from './lambda-logger.js'
+export type { LambdaLogContext, LambdaLoggerConfig } from './lambda-logger.js'
 
 // Convenience re-exports for common usage (requires full setup)
 // export const logger = getAppLogger()

@@ -1,5 +1,18 @@
 # Wishlist Schema Evolution Strategy
 
+> **SUPERSEDED**: This document has been superseded by comprehensive schema evolution documentation.
+> Please refer to the following documents instead:
+>
+> - [SCHEMA-EVOLUTION-POLICY.md](./SCHEMA-EVOLUTION-POLICY.md) - Approval process, governance, testing requirements
+> - [SCHEMA-CHANGE-SCENARIOS.md](./SCHEMA-CHANGE-SCENARIOS.md) - Common scenario guides with examples
+> - [SCHEMA-VERSIONING.md](./SCHEMA-VERSIONING.md) - Version numbering and tracking
+> - [ENUM-MODIFICATION-RUNBOOK.md](./ENUM-MODIFICATION-RUNBOOK.md) - Enum-specific procedures
+>
+> **Superseded by:** WISH-2057 (2026-02-01)
+> **Status:** Archived for historical reference
+
+---
+
 ## Overview
 
 This document describes the schema evolution strategy for the `wishlist_items` table, including migration procedures, backward compatibility guidelines, and rollback procedures.

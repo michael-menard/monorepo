@@ -1,0 +1,348 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/flow-sync"
+prefix: "FLOW"
+project_name: "flow-sync"
+analyzed: "2026-02-01T14:30:00Z"
+
+overall_goal: |
+  Align LangGraph orchestrator with Claude workflow by implementing simplified state model, Knowledge Base integration, YAML artifact schemas, and PostgreSQL persistence.
+
+phases:
+  - id: 1
+    name: "Foundation"
+    description: "State model simplification and artifact schema alignment"
+  - id: 2
+    name: "Database Integration"
+    description: "PostgreSQL repositories and persistence nodes"
+  - id: 3
+    name: "Knowledge Base Integration"
+    description: "KB read verification and write capability"
+  - id: 4
+    name: "Graph Integration"
+    description: "Wire persistence and KB nodes into workflow graphs"
+  - id: 5
+    name: "Testing & Validation"
+    description: "Unit and integration tests for all new components"
+
+stories:
+  - id: "FLOW-001"
+    title: "Create Story State Enum"
+    feature: "Create Zod enum for story lifecycle states (draft, backlog, ready-to-work, in-progress, ready-for-qa, uat, done)"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Define type-safe story state enum matching Claude workflow"
+    risk_notes: "None - straightforward enum definition"
+    sizing_warning: false
+
+  - id: "FLOW-002"
+    title: "Update GraphState Schema"
+    feature: "Add storyState and blockedBy fields to GraphState, remove redundant phase/stage fields"
+    phase: 1
+    depends_on: ["FLOW-001"]
+    endpoints: []
+    infrastructure: []
+    goal: "Align GraphState with simplified state model"
+    risk_notes: "Breaking change - existing graphs may need migration"
+    sizing_warning: false
+
+  - id: "FLOW-003"
+    title: "Update Story Artifact Schema"
+    feature: "Update story.ts to use single state field, remove stage/phase/status fields, align with Claude's story.yaml"
+    phase: 1
+    depends_on: ["FLOW-001"]
+    endpoints: []
+    infrastructure: []
+    goal: "Standardize story artifact structure with Claude workflow"
+    risk_notes: "Breaking change - existing story artifacts may need migration"
+    sizing_warning: false
+
+  - id: "FLOW-004"
+    title: "Align Checkpoint Artifact Schema"
+    feature: "Rename checkpoint.ts to context.ts and align fields with Claude's context.yaml schema"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Standardize context artifact structure"
+    risk_notes: "Rename may break imports across codebase"
+    sizing_warning: false
+
+  - id: "FLOW-005"
+    title: "Align Evidence Artifact Schema"
+    feature: "Update evidence.ts to match proof.yaml deliverables structure from Claude workflow"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Standardize proof artifact structure"
+    risk_notes: "None - schema alignment only"
+    sizing_warning: false
+
+  - id: "FLOW-006"
+    title: "Align Plan Artifact Schema"
+    feature: "Update plan.ts chunks structure to match Claude's plan.yaml schema"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Standardize plan artifact structure"
+    risk_notes: "None - schema alignment only"
+    sizing_warning: false
+
+  - id: "FLOW-007"
+    title: "Align Verification Artifact Schema"
+    feature: "Merge review.ts and qa-verify.ts into single verification.ts matching Claude's verification.yaml"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Consolidate verification schemas into unified structure"
+    risk_notes: "Breaking change - merging two schemas may require data migration"
+    sizing_warning: false
+
+  - id: "FLOW-008"
+    title: "Create Story Repository"
+    feature: "Implement StoryRepository for PostgreSQL with methods: getStory, updateStoryState, getWorkableStories, getNextAction"
+    phase: 2
+    depends_on: ["FLOW-001", "FLOW-003"]
+    endpoints: []
+    infrastructure: ["PostgreSQL connection pool", "workflow_stories table"]
+    goal: "Enable story CRUD operations in PostgreSQL"
+    risk_notes: "Requires database schema from 002_workflow_tables.sql to be deployed"
+    sizing_warning: false
+
+  - id: "FLOW-009"
+    title: "Create Workflow Repository"
+    feature: "Implement WorkflowRepository with methods: saveElaboration, savePlan, saveVerification, saveProof, logTokenUsage"
+    phase: 2
+    depends_on: ["FLOW-004", "FLOW-005", "FLOW-006", "FLOW-007"]
+    endpoints: []
+    infrastructure: ["PostgreSQL connection pool", "workflow_elaborations, workflow_plans, workflow_verification, workflow_proof tables"]
+    goal: "Enable workflow artifact persistence to PostgreSQL"
+    risk_notes: "Requires all workflow tables from 002_workflow_tables.sql"
+    sizing_warning: false
+
+  - id: "FLOW-010"
+    title: "Create DB Load Node"
+    feature: "Implement load-from-db.ts node that loads story and artifacts from PostgreSQL into GraphState"
+    phase: 2
+    depends_on: ["FLOW-008", "FLOW-009"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable loading workflow state from database"
+    risk_notes: "Must handle missing/incomplete data gracefully"
+    sizing_warning: false
+
+  - id: "FLOW-011"
+    title: "Create DB Save Node"
+    feature: "Implement save-to-db.ts node that persists GraphState to PostgreSQL at phase boundaries"
+    phase: 2
+    depends_on: ["FLOW-008", "FLOW-009"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable workflow state persistence to database"
+    risk_notes: "Must be transactional - rollback on failure"
+    sizing_warning: false
+
+  - id: "FLOW-012"
+    title: "Verify KB Read Integration"
+    feature: "Review load-knowledge-context.ts to ensure KB query patterns match Claude's approach (domain-specific lessons, blocker queries)"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: ["Knowledge Base service"]
+    goal: "Confirm KB read integration aligns with Claude workflow"
+    risk_notes: "Verification only - low risk"
+    sizing_warning: false
+
+  - id: "FLOW-013"
+    title: "Create KB Write Node"
+    feature: "Implement persist-learnings.ts node that writes learnings to KB after story completion with deduplication (>0.85 similarity)"
+    phase: 3
+    depends_on: ["FLOW-012"]
+    endpoints: []
+    infrastructure: ["Knowledge Base service with kb_add and kb_search"]
+    goal: "Enable automatic learning capture to Knowledge Base"
+    risk_notes: "Deduplication logic critical - may create duplicates if threshold too low"
+    sizing_warning: false
+
+  - id: "FLOW-014"
+    title: "Update Story Creation Graph"
+    feature: "Add load_from_db, save_to_db, and persist_learnings nodes to story-creation.ts graph with proper transitions"
+    phase: 4
+    depends_on: ["FLOW-010", "FLOW-011", "FLOW-013"]
+    endpoints: []
+    infrastructure: []
+    goal: "Wire database and KB persistence into story creation workflow"
+    risk_notes: "Graph structure changes - existing workflows may break"
+    sizing_warning: false
+
+  - id: "FLOW-015"
+    title: "Update Elaboration Graph"
+    feature: "Add load_from_db and save_to_db nodes to elaboration.ts, update state transitions for PASS (ready-to-work) and FAIL (backlog)"
+    phase: 4
+    depends_on: ["FLOW-010", "FLOW-011"]
+    endpoints: []
+    infrastructure: []
+    goal: "Wire database persistence into elaboration workflow"
+    risk_notes: "State transition logic must be carefully tested"
+    sizing_warning: false
+
+  - id: "FLOW-016"
+    title: "Update Module Exports"
+    feature: "Update src/index.ts to export new repositories, nodes, and updated artifact schemas"
+    phase: 4
+    depends_on: ["FLOW-008", "FLOW-009", "FLOW-010", "FLOW-011", "FLOW-013"]
+    endpoints: []
+    infrastructure: []
+    goal: "Make new modules available for external consumption"
+    risk_notes: "None - export updates only"
+    sizing_warning: false
+
+  - id: "FLOW-017"
+    title: "Unit Tests - Story Repository"
+    feature: "Create comprehensive unit tests for StoryRepository covering all CRUD operations and edge cases"
+    phase: 5
+    depends_on: ["FLOW-008"]
+    endpoints: []
+    infrastructure: ["Test database"]
+    goal: "Validate story repository functionality"
+    risk_notes: "None - testing only"
+    sizing_warning: false
+
+  - id: "FLOW-018"
+    title: "Unit Tests - Workflow Repository"
+    feature: "Create comprehensive unit tests for WorkflowRepository covering all artifact persistence operations"
+    phase: 5
+    depends_on: ["FLOW-009"]
+    endpoints: []
+    infrastructure: ["Test database"]
+    goal: "Validate workflow repository functionality"
+    risk_notes: "None - testing only"
+    sizing_warning: false
+
+  - id: "FLOW-019"
+    title: "Unit Tests - KB Write Node"
+    feature: "Create unit tests for persist-learnings.ts covering deduplication logic and KB write operations"
+    phase: 5
+    depends_on: ["FLOW-013"]
+    endpoints: []
+    infrastructure: ["Mocked KB service"]
+    goal: "Validate KB write node functionality"
+    risk_notes: "None - testing only"
+    sizing_warning: false
+
+  - id: "FLOW-020"
+    title: "Integration Tests - Story Creation"
+    feature: "Create end-to-end integration test for complete story creation workflow with database persistence"
+    phase: 5
+    depends_on: ["FLOW-014", "FLOW-017", "FLOW-018"]
+    endpoints: []
+    infrastructure: ["Test database", "Mocked KB service"]
+    goal: "Validate complete story creation workflow with persistence"
+    risk_notes: "Complex integration test - may be flaky if not properly isolated"
+    sizing_warning: false
+
+  - id: "FLOW-021"
+    title: "Integration Tests - Elaboration"
+    feature: "Create end-to-end integration test for elaboration workflow with database persistence and state transitions"
+    phase: 5
+    depends_on: ["FLOW-015", "FLOW-017", "FLOW-018"]
+    endpoints: []
+    infrastructure: ["Test database"]
+    goal: "Validate elaboration workflow with persistence and state transitions"
+    risk_notes: "Must test both PASS and FAIL paths"
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "FLOW-001": []
+    "FLOW-002": ["FLOW-001"]
+    "FLOW-003": ["FLOW-001"]
+    "FLOW-004": []
+    "FLOW-005": []
+    "FLOW-006": []
+    "FLOW-007": []
+    "FLOW-008": ["FLOW-001", "FLOW-003"]
+    "FLOW-009": ["FLOW-004", "FLOW-005", "FLOW-006", "FLOW-007"]
+    "FLOW-010": ["FLOW-008", "FLOW-009"]
+    "FLOW-011": ["FLOW-008", "FLOW-009"]
+    "FLOW-012": []
+    "FLOW-013": ["FLOW-012"]
+    "FLOW-014": ["FLOW-010", "FLOW-011", "FLOW-013"]
+    "FLOW-015": ["FLOW-010", "FLOW-011"]
+    "FLOW-016": ["FLOW-008", "FLOW-009", "FLOW-010", "FLOW-011", "FLOW-013"]
+    "FLOW-017": ["FLOW-008"]
+    "FLOW-018": ["FLOW-009"]
+    "FLOW-019": ["FLOW-013"]
+    "FLOW-020": ["FLOW-014", "FLOW-017", "FLOW-018"]
+    "FLOW-021": ["FLOW-015", "FLOW-017", "FLOW-018"]
+
+  critical_path:
+    - "FLOW-001"
+    - "FLOW-003"
+    - "FLOW-008"
+    - "FLOW-009"
+    - "FLOW-010"
+    - "FLOW-014"
+    - "FLOW-020"
+
+  critical_path_length: 7
+
+parallelization:
+  max_parallel: 4
+  groups:
+    - stories: ["FLOW-001", "FLOW-004", "FLOW-005", "FLOW-006", "FLOW-007", "FLOW-012"]
+      after: null
+    - stories: ["FLOW-002", "FLOW-003"]
+      after: "group_1"
+    - stories: ["FLOW-008", "FLOW-009"]
+      after: "group_2"
+    - stories: ["FLOW-010", "FLOW-011", "FLOW-013"]
+      after: "group_3"
+    - stories: ["FLOW-014", "FLOW-015", "FLOW-016"]
+      after: "group_4"
+    - stories: ["FLOW-017", "FLOW-018", "FLOW-019"]
+      after: "group_5"
+    - stories: ["FLOW-020", "FLOW-021"]
+      after: "group_6"
+
+risks:
+  - id: "RISK-001"
+    description: "Breaking changes to GraphState and artifact schemas may require migration of existing workflow data"
+    affected_stories: ["FLOW-002", "FLOW-003", "FLOW-007"]
+    severity: high
+
+  - id: "RISK-002"
+    description: "Database schema (002_workflow_tables.sql) must be deployed before repository implementation can be tested"
+    affected_stories: ["FLOW-008", "FLOW-009"]
+    severity: high
+
+  - id: "RISK-003"
+    description: "KB deduplication threshold (0.85) may be too aggressive or too lenient - requires tuning"
+    affected_stories: ["FLOW-013"]
+    severity: medium
+
+  - id: "RISK-004"
+    description: "Graph structure changes may break existing workflow integrations"
+    affected_stories: ["FLOW-014", "FLOW-015"]
+    severity: medium
+
+  - id: "RISK-005"
+    description: "State transition logic in elaboration graph (PASS/FAIL) must be carefully validated"
+    affected_stories: ["FLOW-015", "FLOW-021"]
+    severity: medium
+
+  - id: "RISK-006"
+    description: "Integration tests may be flaky without proper test isolation and database cleanup"
+    affected_stories: ["FLOW-020", "FLOW-021"]
+    severity: low
+
+metrics:
+  total_stories: 21
+  phases: 5
+  max_parallel: 4
+  critical_path_length: 7
+  stories_with_sizing_warnings: 0

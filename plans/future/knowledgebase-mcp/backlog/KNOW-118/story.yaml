@@ -1,0 +1,25 @@
+schema: 1
+id: KNOW-118
+feature: knowledgebase-mcp
+type: feature
+state: backlog
+title: Worker Agent KB Integration Pattern
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - KNOW-040
+follow_up_from: KNOW-040
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Define and document the KB integration pattern for worker agents, ensuring consistent knowledge access across
+  leader-worker agent hierarchies while avoiding duplicate queries and maintaining efficient workflow execution.
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:36.999Z
+updated_at: 2026-02-01T20:52:36.999Z

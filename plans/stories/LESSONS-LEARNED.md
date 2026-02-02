@@ -667,3 +667,194 @@ Date: 2026-01-24
 5. **RollingWindow class pattern is reusable**: The internal `RollingWindow` class with `add(value)`, `getPercentile(p)`, and `clear()` methods can be extracted to a utility package if needed for other statistical calculations (e.g., rate limiting windows, performance monitoring).
 
 ---
+
+## WISH-2018: CDN Integration & Infrastructure Recovery
+Date: 2026-02-01
+
+### Context
+WISH-2018 (CloudFront CDN for image performance) was marked complete but infrastructure ACs were unfulfilled. During investigation, discovered that all IaC (Cognito, S3, CloudFront) was lost during CDK → SST → Serverless Framework migrations.
+
+### Critical Discoveries
+
+#### 1. Infrastructure Lost During Framework Migrations
+- **Migration path**: CDK → SST v3 → Serverless Framework
+- **Key commits**:
+  - `cc1af687` - Removed CDK infrastructure (Cognito, VPC, RDS, Redis, OpenSearch)
+  - `b5ec061b` - Migrated Cognito to SST
+  - `f5554de9` - Removed SST entirely, migrated to Serverless Framework
+- **What was lost**: 54 infrastructure files including Cognito User Pool, S3 buckets, CloudFront distributions
+- **Lesson**: During framework migrations, infrastructure definitions can be deleted without replacement. Always verify IaC exists after migrations.
+
+#### 2. Git History as Recovery Tool
+```bash
+# Find deleted infrastructure files
+git log --all --oneline --diff-filter=D -- '*.tf' 'infra/**' 'cloudformation/**'
+
+# Restore deleted directory from before a specific commit
+git checkout <commit>^ -- apps/api/infrastructure/
+
+# List files that existed before deletion
+git ls-tree -r <commit>^ -- apps/api/infrastructure/
+```
+
+#### 3. CloudFormation Custom Error Response Gotcha
+**Error**: `Your request must specify both ResponsePagePath and ResponseCode together or none of them`
+
+**Wrong** (for image CDN):
+```yaml
+CustomErrorResponses:
+  - ErrorCode: 403
+    ErrorCachingMinTTL: 10
+    ResponseCode: 404
+    ResponsePagePath: ''  # Empty string is invalid
+```
+
+**Correct** (for image CDN - just set caching):
+```yaml
+CustomErrorResponses:
+  - ErrorCode: 403
+    ErrorCachingMinTTL: 10
+  - ErrorCode: 404
+    ErrorCachingMinTTL: 60
+```
+
+#### 4. Story Marked Complete Without Infrastructure
+The story passed code review but infrastructure ACs (AC1-3, AC11-12, AC15) were never implemented. The PROOF document noted `Infrastructure | Documentation only | CloudFront config documented, no IaC changes`.
+
+**Lesson**: QA verification must check that infrastructure ACs have corresponding IaC, not just documentation.
+
+### Infrastructure Created
+
+Created standalone CloudFormation stacks in `/infra/`:
+
+| Stack | Purpose | Key Resources |
+|-------|---------|---------------|
+| `cognito/` | Authentication | User Pool, App Client, Identity Pool, IAM roles |
+| `image-cdn/` | Image CDN (WISH-2018) | S3 bucket, CloudFront with OAC, cache policies |
+| `frontend-hosting/` | React SPA hosting | S3 bucket, CloudFront, SPA routing function |
+
+**Deployment**:
+```bash
+cd infra && ./deploy.sh dev image-cdn
+```
+
+**Deployed successfully**:
+- S3 Bucket: `lego-moc-images-dev-213351177820`
+- CloudFront Domain: `d2melavzuh2vvb.cloudfront.net`
+
+### Tests Created
+
+| Type | File | Tests | Coverage |
+|------|------|-------|----------|
+| Vitest | `cloudfront-integration.test.ts` | 10 | AC4-6, AC8-9 |
+| Playwright | `cloudfront-cdn.spec.ts` | 7 | AC7 (frontend) |
+
+### Recommendations
+
+1. **Post-migration IaC audit**: After any framework migration (CDK→SST→Serverless), run an audit to verify infrastructure definitions still exist for all AWS resources referenced in code.
+
+2. **Environment variable to IaC mapping**: Maintain a document mapping env vars (COGNITO_USER_POOL_ID, S3_BUCKET, CLOUDFRONT_DISTRIBUTION_DOMAIN) to their IaC definitions.
+
+3. **Infrastructure ACs require IaC**: When a story has infrastructure ACs, the Definition of Done must include "IaC files committed to repo" - not just "documented".
+
+4. **Standalone CloudFormation over framework coupling**: The new `/infra/` CloudFormation templates are framework-agnostic and won't be deleted when switching from SST to Serverless Framework.
+
+5. **Git archaeology for recovery**: When infrastructure is missing, search git history for deleted files rather than recreating from scratch. The SST infrastructure had comprehensive resource definitions.
+
+### Files Created/Modified
+- `infra/cognito/template.yaml` - Cognito User Pool stack
+- `infra/image-cdn/template.yaml` - S3 + CloudFront for images
+- `infra/frontend-hosting/template.yaml` - S3 + CloudFront for React SPA
+- `infra/deploy.sh` - Deployment script
+- `infra/*/README.md` - Documentation for each stack
+- Restored: `apps/api/infrastructure/` (66 files from git history)
+- Restored: `apps/api/sst.config.ts` (for reference)
+
+---
+
+## WISH-2004: Playwright E2E Test Debugging Session
+Date: 2026-02-01
+
+> **Note**: This entry documents a debugging session. Should be migrated to Knowledge Base.
+
+### Context
+Attempting to run WISH-2004 E2E tests (delete-flow.spec.ts, purchase-flow.spec.ts, modal-accessibility.spec.ts) against the wishlist gallery.
+
+### Critical Discoveries
+
+#### 1. Frontend/Backend API Path Mismatch
+- **Frontend RTK Query expects**: `/api/v2/wishlist/items`, `/api/v2/wishlist/items/:id`
+- **Backend Hono routes provide**: `/wishlist`, `/wishlist/:id`
+- **Root cause**: The `@repo/api-client` endpoints config (`packages/core/api-client/src/config/endpoints.ts`) uses `/api/v2/...` paths designed for production API Gateway
+- **Backend routes** (`apps/api/lego-api/server.ts`) mount at `/wishlist` without the `/api/v2` prefix
+
+#### 2. Cognito Pool Configuration
+- **App's .env.development**: `us-east-1_jJPnVUCxF` / `7enc2rd3jv8juooui89b1mot56`
+- **Test user pool**: `us-east-1_vtW1Slo3o` / `4527ui02h63b7c0ra7vs00gua5`
+- **Test user**: `stan.marsh@southpark.test` / `0Xcoffee?`
+- **Lesson**: E2E tests must override `VITE_AWS_USER_POOL_ID` and `VITE_AWS_USER_POOL_WEB_CLIENT_ID` to use the test Cognito pool
+
+#### 3. MSW vs Live API Decision Tree
+For E2E testing, choose one approach:
+
+**Option A: MSW Mocking**
+- Set `VITE_ENABLE_MSW=true`
+- Set `VITE_SERVERLESS_API_BASE_URL` to same origin as dev server
+- MSW handlers must match the paths RTK Query calls (e.g., `/api/v2/wishlist/items`)
+- Handlers in `apps/web/main-app/src/mocks/handlers.ts`
+
+**Option B: Live API**
+- API server must be running (port 3001 for lego-api)
+- Either:
+  - Add Vite proxy to rewrite `/api/v2/...` → `/...` (production paths to local paths)
+  - Or modify `VITE_SERVERLESS_API_BASE_URL` and ensure backend has matching routes
+
+#### 4. Vite Proxy Configuration for Live API
+Added to `apps/web/main-app/vite.config.ts`:
+```typescript
+proxy: {
+  '/api/v2/wishlist': {
+    target: 'http://localhost:3001',
+    changeOrigin: true,
+    rewrite: path => path.replace(/^\/api\/v2\/wishlist\/items/, '/wishlist')
+                         .replace(/^\/api\/v2\/wishlist/, '/wishlist'),
+  },
+  // Similar for /api/v2/health, /api/v2/gallery, /api/v2/sets
+}
+```
+
+#### 5. Playwright Legacy Config Requirements
+For `playwright.legacy.config.ts` (E2E tests in `tests/wishlist/*.spec.ts`):
+```typescript
+webServer: {
+  command: [
+    'VITE_SERVERLESS_API_BASE_URL=http://localhost:3002',  // Same origin for proxy
+    'VITE_AWS_USER_POOL_ID=us-east-1_vtW1Slo3o',          // Test Cognito pool
+    'VITE_AWS_USER_POOL_WEB_CLIENT_ID=4527ui02h63b7c0ra7vs00gua5',
+    'pnpm dev --port 3002',
+  ].join(' '),
+  reuseExistingServer: false,  // Force fresh server with correct env vars
+}
+```
+
+### Files Modified
+- `apps/web/main-app/vite.config.ts` - Added proxy configuration
+- `apps/web/playwright/playwright.legacy.config.ts` - Updated webServer command
+- `apps/web/main-app/src/mocks/handlers.ts` - Added v2 API handlers (for MSW approach)
+- `apps/web/playwright/fixtures/browser-auth.fixture.ts` - Browser-based auth for E2E
+
+### Recommendations
+
+1. **Align API paths**: Either update backend to use `/api/v2/...` routes, or create a local development endpoints config that matches backend routes
+
+2. **Document Cognito pools**: Create a `.env.test` or document which Cognito pool/credentials are for E2E testing
+
+3. **Prefer MSW for E2E isolation**: MSW mocking provides deterministic test data without requiring live backend. Only use live API when testing actual backend behavior.
+
+4. **Kill Vite before tests**: Always `pkill -9 -f "vite"` before running tests with `reuseExistingServer: false` to ensure fresh env vars
+
+### Unresolved
+- Vite proxy not fully working - requests to `/api/v2/wishlist/items` still returning 404
+- May need to configure proxy differently or debug proxy target resolution
+
+---

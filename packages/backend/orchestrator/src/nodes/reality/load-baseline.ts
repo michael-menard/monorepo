@@ -28,13 +28,22 @@ const DEFAULT_BASELINES_DIR = 'plans/baselines'
 /**
  * Schema for parsed baseline reality content sections.
  */
-export const BaselineRealitySectionSchema = z.object({
+// Base section schema without recursion
+const BaselineRealitySectionBaseSchema = z.object({
   /** Section heading */
   heading: z.string().min(1),
   /** Section content (markdown) */
   content: z.string(),
+})
+
+// Full schema with recursive subsections
+export const BaselineRealitySectionSchema: z.ZodType<{
+  heading: string
+  content: string
+  subsections?: Array<{ heading: string; content: string; subsections?: unknown[] }>
+}> = BaselineRealitySectionBaseSchema.extend({
   /** Nested subsections */
-  subsections: z.array(z.lazy(() => BaselineRealitySectionSchema)).optional(),
+  subsections: z.lazy(() => z.array(BaselineRealitySectionSchema)).optional(),
 })
 
 export type BaselineRealitySection = z.infer<typeof BaselineRealitySectionSchema>

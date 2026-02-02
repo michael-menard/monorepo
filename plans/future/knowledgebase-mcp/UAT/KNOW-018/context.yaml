@@ -1,0 +1,13 @@
+schema: 1
+story_id: KNOW-018
+feature: knowledgebase-mcp
+state: UAT
+paths:
+  story: plans/future/knowledgebase-mcp/UAT/KNOW-018/
+  artifacts: plans/future/knowledgebase-mcp/UAT/KNOW-018/_implementation/
+files:
+  story: story.yaml
+  plan: plan.yaml
+  verification: verification.yaml
+implementation: []
+notes: []

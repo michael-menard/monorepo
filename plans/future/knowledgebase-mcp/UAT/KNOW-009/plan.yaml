@@ -1,0 +1,45 @@
+schema: 1
+story_id: KNOW-009
+version: 1
+approved: true
+estimates:
+  files: 6
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Add AuthorizationError to error-handling.ts
+    acs: []
+    files:
+      - path: apps/api/knowledge-base/src/mcp-server/error-handling.ts
+        action: create
+  - id: 2
+    name: Replace checkAccess() stub in access-control.ts
+    acs: []
+    files:
+      - path: apps/api/knowledge-base/src/mcp-server/access-control.ts
+        action: create
+  - id: 3
+    name: Add agent role to ToolCallContext in server.ts
+    acs: []
+    files:
+      - path: apps/api/knowledge-base/src/mcp-server/server.ts
+        action: create
+  - id: 4
+    name: Add authorization to tool handlers
+    acs: []
+    files:
+      - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        action: create
+  - id: 5
+    name: Comprehensive unit tests
+    acs: []
+    files:
+      - path: apps/api/knowledge-base/src/mcp-server/__tests__/access-control.test.ts
+        action: create
+  - id: 6
+    name: Integration tests for authorization
+    acs: []
+    files:
+      - path: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+        action: create
+reuse: []

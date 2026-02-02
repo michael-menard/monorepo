@@ -1,0 +1,380 @@
+# Workflow E2E Integration Schema
+# Version: 1.0.0
+# Date: 2026-02-01
+# Purpose: Define the structure for E2E test integration in dev workflow
+
+schema_version: 1
+
+# -------------------------------------------------------------------
+# KNOWLEDGE ENTRIES FOR KB MIGRATION
+# These entries will be migrated to the knowledge base via kb_add
+# -------------------------------------------------------------------
+
+knowledge_entries:
+  # Entry 1: Dev Phase E2E Testing Requirement
+  - id: WRKF-E2E-001
+    content: |
+      **[WRKF-E2E-001] Dev Phase Must Include E2E Tests**
+
+      The development implementation phase MUST include at least one happy-path
+      Playwright E2E test before marking work as complete. This catches config
+      mismatches (URLs, environment variables, API paths) while context is fresh.
+
+      **Rationale:**
+      - Unit tests mock away integration points where config issues hide
+      - Waiting until UAT to discover config drift wastes significant time
+      - Developer has full context to fix issues immediately
+
+      **Implementation:**
+      - After unit tests pass in Execute phase, run Playwright E2E
+      - Use `playwright.legacy.config.ts` (live API mode, no MSW)
+      - Record results in EVIDENCE.yaml under `e2e_results` section
+      - At minimum: one happy-path test per acceptance criterion
+
+      **Dev Phase Flow:**
+      ```
+      Setup → Plan → Execute (unit) → E2E (live) → Proof → Review
+      ```
+    role: dev
+    tags:
+      - workflow
+      - e2e-testing
+      - dev-phase
+      - pattern
+      - category:patterns-established
+
+  # Entry 2: No Mocking in E2E/UAT
+  - id: WRKF-E2E-002
+    content: |
+      **[WRKF-E2E-002] E2E Tests Must Use Live Resources - No Mocking**
+
+      E2E tests run during dev phase and UAT MUST use real services, never MSW mocks.
+
+      **Required Environment:**
+      ```bash
+      VITE_ENABLE_MSW=false  # Critical - disables Mock Service Worker
+      VITE_SERVERLESS_API_BASE_URL=http://localhost:3001  # Real backend
+      ```
+
+      **Playwright Config:**
+      - Use `playwright.legacy.config.ts` for all E2E runs
+      - This config is pre-configured for live API mode
+      - Authenticates against real Cognito test pool
+
+      **What Must Be Real:**
+      - Backend API (Hono server on port 3001)
+      - Database (local or dev PostgreSQL)
+      - Authentication (Cognito test pool)
+      - File storage (S3 or local mock-s3)
+
+      **Anti-Pattern:**
+      Using `VITE_ENABLE_MSW=true` for E2E tests only validates that your mocks
+      match your expectations, not that the real system works.
+    role: dev
+    tags:
+      - workflow
+      - e2e-testing
+      - anti-pattern
+      - mocking
+      - category:blockers-hit
+
+  # Entry 3: UAT Issue Logging
+  - id: WRKF-E2E-003
+    content: |
+      **[WRKF-E2E-003] UAT Issue Logging for Config Mismatches**
+
+      When E2E/UAT tests fail due to configuration issues, log them in a structured
+      format in EVIDENCE.yaml. This creates a feedback loop for improving workflows.
+
+      **EVIDENCE.yaml Structure:**
+      ```yaml
+      e2e_results:
+        status: pass | fail | partial
+        tests_run: 5
+        tests_passed: 3
+        config_issues:
+          - type: url_mismatch
+            expected: "/api/v2/wishlist/items"
+            actual: "/wishlist"
+            files:
+              - apps/web/main-app/src/mocks/handlers.ts
+              - apps/api/lego-api/server.ts
+            resolution: "Updated Vite proxy rewrite rules"
+          - type: env_var_missing
+            variable: "VITE_SERVERLESS_API_BASE_URL"
+            context: "E2E test environment"
+            resolution: "Added to playwright.legacy.config.ts"
+          - type: response_shape_mismatch
+            expected: "{ data: WishlistItem[] }"
+            actual: "{ items: WishlistItem[] }"
+            files:
+              - packages/core/api-client/src/schemas/wishlist.ts
+            resolution: "Updated schema to match backend response"
+      ```
+
+      **Issue Types:**
+      - `url_mismatch` - API paths don't match between mock/real
+      - `env_var_missing` - Required environment variable not set
+      - `env_var_wrong` - Environment variable has incorrect value
+      - `response_shape_mismatch` - API response structure differs
+      - `auth_config_mismatch` - Cognito/auth configuration wrong
+      - `cors_issue` - CORS headers missing or misconfigured
+    role: dev
+    tags:
+      - workflow
+      - e2e-testing
+      - debugging
+      - config-management
+      - category:verification-notes
+
+  # Entry 4: Playwright Agent Configuration
+  - id: WRKF-E2E-004
+    content: |
+      **[WRKF-E2E-004] Playwright Agent Must Enforce Live Mode**
+
+      The `dev-implement-playwright.agent.md` must be configured to ALWAYS run
+      tests with live resources, never with mocking enabled.
+
+      **Agent Pre-Flight Checklist:**
+      1. Verify `VITE_ENABLE_MSW` is NOT set or is `false`
+      2. Verify backend server is running on expected port
+      3. Verify database is accessible
+      4. Verify Cognito test credentials are valid
+
+      **Agent Configuration:**
+      ```yaml
+      # In dev-implement-playwright.agent.md
+      environment:
+        VITE_ENABLE_MSW: "false"
+        PLAYWRIGHT_CONFIG: "playwright.legacy.config.ts"
+
+      pre_run_checks:
+        - command: "curl -s http://localhost:3001/health"
+          expect: "200 OK"
+          message: "Backend must be running"
+        - command: "echo $VITE_ENABLE_MSW"
+          expect_not: "true"
+          message: "MSW must be disabled for E2E"
+      ```
+
+      **Test Execution:**
+      ```bash
+      pnpm --filter playwright test:e2e \
+        --config=playwright.legacy.config.ts \
+        --project=chromium-live
+      ```
+    role: dev
+    tags:
+      - workflow
+      - agents
+      - playwright
+      - configuration
+      - category:patterns-established
+
+  # Entry 5: Dev-Execute Phase E2E Integration
+  - id: WRKF-E2E-005
+    content: |
+      **[WRKF-E2E-005] dev-execute-leader E2E Phase Integration**
+
+      The `dev-execute-leader.agent.md` must be updated to include an E2E testing
+      step after unit tests pass but before the Proof phase.
+
+      **Updated Phase Flow:**
+      ```
+      Execute Phase:
+      1. Spawn slice coders (backend/frontend)
+      2. Run unit/integration tests (Vitest)
+      3. Build artifacts
+      4. [NEW] Run E2E tests (Playwright, live mode)
+      5. Capture all results in EVIDENCE.yaml
+      ```
+
+      **EVIDENCE.yaml Schema Update:**
+      ```yaml
+      evidence:
+        schema: 2  # Bumped from 1
+
+        # Existing sections
+        unit_tests:
+          status: pass
+          coverage: 87%
+
+        build:
+          status: pass
+
+        # NEW section
+        e2e_tests:
+          status: pass | fail | skipped
+          config: playwright.legacy.config.ts
+          project: chromium-live
+          tests:
+            total: 5
+            passed: 5
+            failed: 0
+            skipped: 0
+          config_issues: []  # List of config issues found
+          videos: []  # Paths to failure videos
+          screenshots: []  # Paths to failure screenshots
+      ```
+
+      **Skip Conditions:**
+      E2E tests may be skipped if:
+      - `frontend_impacted: false` in SCOPE.yaml
+      - Story explicitly marks `e2e: not_applicable`
+      - No UI-facing acceptance criteria
+    role: dev
+    tags:
+      - workflow
+      - agents
+      - dev-execute
+      - evidence
+      - category:patterns-established
+
+# -------------------------------------------------------------------
+# ADR ADDITION
+# New ADR to be added to ADR-LOG.md
+# -------------------------------------------------------------------
+
+adr:
+  id: ADR-006
+  title: "E2E Tests Required in Dev Phase"
+  date: "2026-02-01"
+  status: "Active"
+  context: |
+    Unit tests consistently pass but E2E/UAT tests fail due to configuration
+    mismatches (URLs, environment variables, response shapes). This creates
+    significant rework during QA verification.
+
+  problem: |
+    Config drift between unit test mocks and real services goes undetected
+    until UAT, when the developer context is stale and fixes take longer.
+
+  decision: |
+    Require at least one happy-path E2E test per story during the dev
+    implementation phase. Tests must use live resources (no MSW mocking).
+
+  consequences:
+    positive:
+      - Config issues caught while developer has full context
+      - Faster UAT cycles with fewer surprises
+      - E2E tests become part of "definition of done"
+      - Builds institutional knowledge about common config issues
+    negative:
+      - Dev phase takes slightly longer
+      - Requires backend running during frontend development
+      - May surface infrastructure issues earlier (actually a positive)
+
+  related_files:
+    - ".claude/agents/dev-execute-leader.agent.md"
+    - ".claude/agents/dev-implement-playwright.agent.md"
+    - "apps/web/playwright/playwright.legacy.config.ts"
+
+# -------------------------------------------------------------------
+# AGENT UPDATES REQUIRED
+# Files that need modification to implement this workflow
+# -------------------------------------------------------------------
+
+agent_updates:
+  - file: ".claude/agents/dev-execute-leader.agent.md"
+    changes:
+      - description: "Add E2E phase after unit tests"
+        section: "Phase 2: Execute"
+        action: |
+          After unit test success, spawn playwright agent with:
+          - Config: playwright.legacy.config.ts
+          - Mode: live (VITE_ENABLE_MSW=false)
+          - Scope: tests matching touched acceptance criteria
+      - description: "Update EVIDENCE.yaml schema"
+        section: "Output Artifacts"
+        action: "Add e2e_tests section to evidence structure"
+
+  - file: ".claude/agents/dev-implement-playwright.agent.md"
+    changes:
+      - description: "Enforce live mode"
+        section: "Configuration"
+        action: |
+          Add pre-flight checks:
+          1. Verify MSW is disabled
+          2. Verify backend is running
+          3. Verify auth credentials
+      - description: "Use legacy config by default"
+        section: "Execution"
+        action: "Change default config to playwright.legacy.config.ts"
+
+  - file: ".claude/commands/dev-implement-story.md"
+    changes:
+      - description: "Document E2E phase"
+        section: "Workflow Phases"
+        action: "Add E2E as sub-phase of Execute"
+
+# -------------------------------------------------------------------
+# EVIDENCE.YAML SCHEMA (v2)
+# Updated schema with E2E results section
+# -------------------------------------------------------------------
+
+evidence_schema_v2:
+  schema: 2
+  story_id: string
+  timestamp: string  # ISO datetime
+
+  phases:
+    setup:
+      status: pass | fail
+      scope_file: string  # Path to SCOPE.yaml
+
+    plan:
+      status: pass | fail
+      plan_file: string  # Path to PLAN.yaml
+
+    execute:
+      status: pass | fail
+
+      unit_tests:
+        status: pass | fail | skipped
+        framework: vitest
+        coverage_percent: number
+        test_count: number
+        failed_tests: string[]  # Test names that failed
+
+      build:
+        status: pass | fail
+        artifacts: string[]  # Built files
+
+      # NEW: E2E Results
+      e2e_tests:
+        status: pass | fail | skipped
+        skip_reason: string | null  # Why skipped if applicable
+        config: string  # Playwright config used
+        project: string  # Playwright project name
+        mode: "live"  # Must always be "live", never "mocked"
+
+        results:
+          total: number
+          passed: number
+          failed: number
+          skipped: number
+
+        failed_tests:
+          - name: string
+            file: string
+            error: string
+            video: string | null  # Path to failure video
+            screenshot: string | null
+
+        # Config issues discovered during E2E
+        config_issues:
+          - type: url_mismatch | env_var_missing | env_var_wrong | response_shape_mismatch | auth_config_mismatch | cors_issue
+            description: string
+            expected: string | null
+            actual: string | null
+            files: string[]
+            resolution: string | null
+
+    proof:
+      status: pass | fail
+      proof_file: string  # Path to PROOF-{STORY_ID}.md
+
+    review:
+      status: pass | fail
+      iterations: number
+      final_issues: string[]

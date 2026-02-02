@@ -1,0 +1,19 @@
+schema: 1
+story_id: WISH-2006
+total:
+  input: 148000
+  output: 29000
+phases:
+  - phase: pm-generate
+    input: 67000
+    output: 1000
+  - phase: elab-setup
+    input: 4000
+    output: 2000
+  - phase: elab-completion
+    input: 32000
+    output: 18000
+  - phase: qa-verify
+    input: 45000
+    output: 8000
+high_cost: []

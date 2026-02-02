@@ -1,0 +1,98 @@
+schema: 1
+story_id: WISH-2001
+date: 2026-01-27
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: ""
+  internal_consistency:
+    status: pass
+    note: ""
+  reuse-first:
+    status: pass
+    note: ""
+  ports_&_adapters:
+    status: pass
+    note: ""
+  local_testability:
+    status: conditional pass
+    note: ""
+  decision_completeness:
+    status: pass
+    note: ""
+  risk_disclosure:
+    status: pass
+    note: ""
+  story_sizing:
+    status: pass
+    note: ""
+gaps:
+  - id: GAP-gap-1
+    category: requirements
+    severity: important
+    finding: Filter state persistence across page refreshes
+    recommendation: ""
+  - id: GAP-gap-2
+    category: requirements
+    severity: important
+    finding: Search debounce timing not specified
+    recommendation: ""
+  - id: GAP-gap-3
+    category: requirements
+    severity: important
+    finding: Empty search results vs empty wishlist distinction
+    recommendation: ""
+  - id: GAP-gap-4
+    category: requirements
+    severity: important
+    finding: Loading states during filter/sort changes
+    recommendation: ""
+  - id: GAP-gap-5
+    category: requirements
+    severity: important
+    finding: Image placeholder design
+    recommendation: ""
+  - id: GAP-gap-6
+    category: requirements
+    severity: important
+    finding: Priority indicator exact design
+    recommendation: ""
+  - id: GAP-gap-7
+    category: requirements
+    severity: important
+    finding: Store badge color mapping
+    recommendation: ""
+  - id: GAP-gap-8
+    category: requirements
+    severity: important
+    finding: Mobile hover menu UI pattern
+    recommendation: ""
+  - id: GAP-gap-9
+    category: requirements
+    severity: important
+    finding: Card truncation strategy
+    recommendation: ""
+  - id: GAP-gap-10
+    category: requirements
+    severity: important
+    finding: Error recovery actions
+    recommendation: ""
+  - id: GAP-gap-11
+    category: requirements
+    severity: important
+    finding: Accessibility announcements timing
+    recommendation: ""
+  - id: GAP-gap-12
+    category: requirements
+    severity: important
+    finding: Keyboard focus management in view toggle
+    recommendation: ""
+split_required: true
+follow_ups:
+  - finding: '**WISH-2001-B: Smart Sorting Algorithms** - Implement "Best Value" (price per piece), "Expiring Soon" (oldest
+      release dates), "Hidden Gems" (low priority, high piece count) sorting modes for discovery and engagement'
+    story_id: null
+tokens:
+  input: 0
+  output: 0

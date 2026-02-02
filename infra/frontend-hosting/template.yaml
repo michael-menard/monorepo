@@ -1,0 +1,542 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  S3 + CloudFront for React SPA Hosting
+  Static site hosting with SPA routing support (404 -> index.html)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - production
+    Description: Deployment environment
+
+  ProjectName:
+    Type: String
+    Default: lego-moc
+    Description: Project name for resource naming
+
+  CustomDomainName:
+    Type: String
+    Default: ''
+    Description: Custom domain name (e.g., lego-moc-instructions.com). Leave empty for CloudFront default domain.
+
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: ACM certificate ARN for custom domain (must be in us-east-1). Required if CustomDomainName is set.
+
+  DefaultCacheTTL:
+    Type: Number
+    Default: 86400
+    Description: Default cache TTL in seconds for static assets (24 hours)
+
+  IndexDocumentTTL:
+    Type: Number
+    Default: 300
+    Description: Cache TTL for index.html in seconds (5 minutes for faster deployments)
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+  HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
+  HasCertificate: !Not [!Equals [!Ref AcmCertificateArn, '']]
+  UseCustomDomain: !And [!Condition HasCustomDomain, !Condition HasCertificate]
+
+Resources:
+  # ============================================
+  # S3 Bucket for Static Site
+  # ============================================
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-frontend-${Environment}-${AWS::AccountId}'
+
+      # Block all public access (CloudFront only)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      # No versioning needed for frontend assets
+      VersioningConfiguration:
+        Status: Suspended
+
+      # Server-side encryption
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+
+      # Lifecycle rules
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
+
+      # Object ownership
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Purpose
+          Value: FrontendHosting
+
+  # ============================================
+  # CloudFront Origin Access Control
+  # ============================================
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${ProjectName}-frontend-oac-${Environment}'
+        Description: OAC for frontend bucket access
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # ============================================
+  # S3 Bucket Policy
+  # ============================================
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${WebsiteBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  # ============================================
+  # Cache Policy for Static Assets
+  # ============================================
+  StaticAssetsCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${ProjectName}-static-assets-${Environment}'
+        Comment: Long cache for hashed static assets (JS, CSS, images)
+        DefaultTTL: !Ref DefaultCacheTTL
+        MaxTTL: 31536000  # 1 year
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  # ============================================
+  # Cache Policy for HTML (short TTL)
+  # ============================================
+  HtmlCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${ProjectName}-html-${Environment}'
+        Comment: Short cache for HTML files
+        DefaultTTL: !Ref IndexDocumentTTL
+        MaxTTL: 3600  # 1 hour max
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  # ============================================
+  # Response Headers Policy
+  # ============================================
+  SecurityHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${ProjectName}-security-headers-${Environment}'
+        Comment: Security headers for frontend
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: !Sub |
+              default-src 'self';
+              script-src 'self' 'unsafe-inline' 'unsafe-eval';
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+              font-src 'self' https://fonts.gstatic.com;
+              img-src 'self' data: blob: https://*.cloudfront.net https://*.amazonaws.com;
+              connect-src 'self' https://*.amazonaws.com https://*.amazoncognito.com wss://*.amazonaws.com;
+              frame-ancestors 'none';
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            Override: true
+            ReferrerPolicy: strict-origin-when-cross-origin
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+            Preload: true
+          XSSProtection:
+            ModeBlock: true
+            Override: true
+            Protection: true
+
+  # ============================================
+  # CloudFront Function for SPA Routing
+  # ============================================
+  SpaRoutingFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${ProjectName}-spa-routing-${Environment}'
+      AutoPublish: true
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+
+          // Check if the URI has a file extension
+          if (uri.includes('.')) {
+            // Has extension, serve as-is
+            return request;
+          }
+
+          // Check if it's an API or asset path that shouldn't be rewritten
+          if (uri.startsWith('/api/') || uri.startsWith('/assets/') || uri.startsWith('/static/')) {
+            return request;
+          }
+
+          // For all other paths (SPA routes), serve index.html
+          request.uri = '/index.html';
+          return request;
+        }
+      FunctionConfig:
+        Comment: Rewrite SPA routes to index.html
+        Runtime: cloudfront-js-2.0
+
+  # ============================================
+  # CloudFront Distribution
+  # ============================================
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub '${ProjectName} Frontend (${Environment})'
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        DefaultRootObject: index.html
+
+        # Price class
+        PriceClass: !If
+          - IsProduction
+          - PriceClass_All
+          - PriceClass_100
+
+        # Custom domain aliases
+        Aliases: !If
+          - UseCustomDomain
+          - - !Ref CustomDomainName
+            - !If
+              - IsProduction
+              - !Sub 'www.${CustomDomainName}'
+              - !Ref AWS::NoValue
+          - !Ref AWS::NoValue
+
+        # Origin
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOAC
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+
+        # Default behavior (HTML/SPA routes)
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: !Ref HtmlCachePolicy
+          ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+          Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt SpaRoutingFunction.FunctionARN
+
+        # Cache behaviors for static assets (longer TTL)
+        CacheBehaviors:
+          # JavaScript files (hashed, long cache)
+          - PathPattern: '*.js'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            Compress: true
+
+          # CSS files (hashed, long cache)
+          - PathPattern: '*.css'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            Compress: true
+
+          # Static assets directory
+          - PathPattern: '/assets/*'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            Compress: true
+
+          # Images
+          - PathPattern: '*.png'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            Compress: false
+
+          - PathPattern: '*.jpg'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            Compress: false
+
+          - PathPattern: '*.svg'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            Compress: true
+
+          # Fonts
+          - PathPattern: '*.woff2'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref StaticAssetsCachePolicy
+            Compress: false
+
+        # Custom error responses for SPA
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+
+        # Logging
+        Logging:
+          Bucket: !GetAtt LogBucket.DomainName
+          Prefix: !Sub 'cloudfront/${Environment}/'
+          IncludeCookies: false
+
+        # Restrictions
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: none
+
+        # SSL certificate
+        ViewerCertificate: !If
+          - UseCustomDomain
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            MinimumProtocolVersion: TLSv1.2_2021
+            SslSupportMethod: sni-only
+          - CloudFrontDefaultCertificate: true
+            MinimumProtocolVersion: TLSv1.2_2021
+
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Purpose
+          Value: FrontendHosting
+
+  # ============================================
+  # CloudFront Logs Bucket
+  # ============================================
+  LogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-frontend-logs-${Environment}-${AWS::AccountId}'
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldLogs
+            Status: Enabled
+            ExpirationInDays: 30
+
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ============================================
+  # IAM Policy for CI/CD Deployments
+  # ============================================
+  DeploymentPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${ProjectName}-frontend-deploy-${Environment}'
+      Description: Policy for deploying frontend to S3 and invalidating CloudFront
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: S3Upload
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:GetObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - !GetAtt WebsiteBucket.Arn
+              - !Sub '${WebsiteBucket.Arn}/*'
+          - Sid: CloudFrontInvalidation
+            Effect: Allow
+            Action:
+              - cloudfront:CreateInvalidation
+              - cloudfront:GetInvalidation
+              - cloudfront:ListInvalidations
+            Resource:
+              - !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+Outputs:
+  WebsiteBucketName:
+    Description: S3 bucket name for frontend
+    Value: !Ref WebsiteBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+
+  WebsiteBucketArn:
+    Description: S3 bucket ARN
+    Value: !GetAtt WebsiteBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketArn'
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-DistributionId'
+
+  CloudFrontDomainName:
+    Description: CloudFront distribution domain name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-DomainName'
+
+  WebsiteUrl:
+    Description: Website URL
+    Value: !If
+      - UseCustomDomain
+      - !Sub 'https://${CustomDomainName}'
+      - !Sub 'https://${CloudFrontDistribution.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-Url'
+
+  DeploymentPolicyArn:
+    Description: IAM policy ARN for deployments
+    Value: !Ref DeploymentPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-DeployPolicyArn'
+
+  # Deployment commands
+  DeployCommand:
+    Description: Command to deploy frontend (run from dist/ directory)
+    Value: !Sub |
+      aws s3 sync . s3://${WebsiteBucket} --delete --cache-control "max-age=31536000" --exclude "*.html" && \
+      aws s3 sync . s3://${WebsiteBucket} --delete --cache-control "max-age=0, no-cache, no-store, must-revalidate" --include "*.html" && \
+      aws cloudfront create-invalidation --distribution-id ${CloudFrontDistribution} --paths "/*"

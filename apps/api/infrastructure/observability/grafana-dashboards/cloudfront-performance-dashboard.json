@@ -1,0 +1,303 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "cloudfront-performance",
+    "title": "CloudFront Performance",
+    "tags": ["cloudfront", "performance", "frontend"],
+    "style": "dark",
+    "timezone": "UTC",
+    "refresh": "5m",
+    "folderId": null,
+    "folderUid": "frontend-folder",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "stage",
+          "type": "custom",
+          "options": [
+            { "text": "dev", "value": "dev", "selected": true },
+            { "text": "staging", "value": "staging", "selected": false },
+            { "text": "prod", "value": "prod", "selected": false }
+          ],
+          "current": { "text": "dev", "value": "dev" }
+        },
+        {
+          "name": "distribution",
+          "type": "query",
+          "datasource": "CloudWatch-UserMetrics",
+          "query": "dimension_values(us-east-1,AWS/CloudFront,Requests,DistributionId)",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "CloudFront Requests (Total)",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "Requests",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 10000 },
+                { "color": "red", "value": 100000 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Cache Hit Ratio (%)",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "expression": "(m1/(m1+m2))*100",
+            "hide": false,
+            "refId": "A"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "CacheHitRate",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Average"],
+            "period": "300",
+            "refId": "m1"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "CacheMissRate",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Average"],
+            "period": "300",
+            "refId": "m2"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "green", "value": 90 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Bytes Downloaded (Total)",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "BytesDownloaded",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "bytes"
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 }
+      },
+      {
+        "id": 4,
+        "title": "Error Rates (4xx and 5xx %)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "expression": "(m2/m1)*100",
+            "hide": false,
+            "refId": "4xx_rate",
+            "label": "4xx Error Rate"
+          },
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "expression": "(m4/m3)*100",
+            "hide": false,
+            "refId": "5xx_rate",
+            "label": "5xx Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "percent"
+          }
+        },
+        "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 }
+      },
+      {
+        "id": 5,
+        "title": "Edge Location Distribution (Requests by Location)",
+        "type": "piechart",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "Requests",
+            "dimensions": {
+              "DistributionId": "$distribution",
+              "Region": "*"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 6 }
+      },
+      {
+        "id": 6,
+        "title": "Origin Response Time (Latency)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "OriginLatency",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Average", "p95", "p99"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1000 },
+                { "color": "red", "value": 3000 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 6 }
+      },
+      {
+        "id": 7,
+        "title": "Bytes Downloaded by Content Type",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "BytesDownloaded",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "bytes"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 }
+      },
+      {
+        "id": 8,
+        "title": "CloudFront Requests Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "Requests",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Sum"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 }
+      },
+      {
+        "id": 9,
+        "title": "Cache Hit Ratio Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": "CloudWatch-UserMetrics",
+            "namespace": "AWS/CloudFront",
+            "metricName": "CacheHitRate",
+            "dimensions": {
+              "DistributionId": "$distribution"
+            },
+            "statistics": ["Average"],
+            "period": "300"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "percent"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 }
+      }
+    ]
+  },
+  "overwrite": true
+}

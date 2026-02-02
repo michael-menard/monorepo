@@ -1,9 +1,11 @@
 ---
 created: 2026-01-24
-updated: 2026-01-31
-version: 3.1.0
+updated: 2026-02-01
+version: 3.2.0
 type: worker
 permission_level: docs-only
+spawns:
+  - kb-writer.agent.md
 ---
 
 # Agent: dev-implement-learnings
@@ -12,6 +14,8 @@ permission_level: docs-only
 After a story completes, extract lessons learned and store them in the Knowledge Base.
 This is a lightweight retrospective that builds institutional knowledge in KB.
 
+**Delegates KB writes to `kb-writer.agent.md` for consistent tagging and deduplication.**
+
 ---
 
 ## Knowledge Base Integration (REQUIRED)
@@ -19,32 +23,43 @@ This is a lightweight retrospective that builds institutional knowledge in KB.
 **IMPORTANT**: Lessons are now stored in the Knowledge Base, NOT in LESSONS-LEARNED.md files.
 The markdown files are deprecated and maintained only for historical reference.
 
-### Writing Lessons to KB
+### Writing Lessons via kb-writer
 
-After analyzing the story artifacts, use `kb_add` to store each lesson:
+**Delegate all KB writes to `kb-writer.agent.md`** for consistent tagging and deduplication.
 
-```javascript
-kb_add({
-  content: `**[STORY-XXX] Reuse Discoveries**
+After analyzing the story artifacts, spawn kb-writer for each learning category:
 
-- **DI pattern for core functions**: The pattern was highly reusable for all functions.
-- **Discriminated union result types**: Works seamlessly for all operations.`,
-  role: "dev",
-  tags: ["lesson-learned", "story:story-xxx", "category:reuse-discoveries", "date:2026-01"]
-})
+```yaml
+# Example: Reuse Discoveries
+kb_write_request:
+  entry_type: lesson
+  source_stage: dev
+  story_id: "{STORY_ID}"
+  category: "reuse-discoveries"
+  content: |
+    - **DI pattern for core functions**: The pattern was highly reusable for all functions.
+    - **Discriminated union result types**: Works seamlessly for all operations.
+  additional_tags: []
 ```
 
-### Lesson Format Guidelines
+The kb-writer handles:
+- Duplicate detection (skips if >0.85 similarity exists)
+- Standardized tagging (`lesson-learned`, `story:xxx`, `category:xxx`, `date:YYYY-MM`)
+- Consistent content formatting
 
-Each lesson entry should include:
-1. **Story ID** in the header (e.g., `[STORY-007]`)
-2. **Category** (Reuse Discoveries, Blockers Hit, etc.)
-3. **Actionable content** - specific, concise recommendations
-4. **Tags** for searchability:
-   - `lesson-learned` (always)
-   - `story:{story-id}` (lowercase)
-   - `category:{category-name}` (lowercase, hyphenated)
-   - `date:YYYY-MM` (year-month)
+### Categories to Capture
+
+Spawn kb-writer for each category with learnings:
+
+| Category | `category` value | Description |
+|----------|------------------|-------------|
+| Reuse Discoveries | `reuse-discoveries` | New reusable patterns/utilities found |
+| Blockers Hit | `blockers-hit` | What blocked and how to avoid |
+| Time Sinks | `time-sinks` | What took longer than expected |
+| Plan vs Reality | `plan-vs-reality` | Planned vs actual files touched |
+| Verification Notes | `verification-notes` | What fast-fail/final verification caught |
+| Token Usage | `token-usage` | High-cost operations and optimizations |
+| Recommendations | `recommendations` | Actionable advice for future stories |
 
 ### Querying Existing Lessons
 
@@ -58,8 +73,9 @@ Before capturing learnings, query KB for context:
 
 ### Fallback Behavior
 
-- KB unavailable: Log warning in TOKEN-LOG.md, continue with story completion
+- KB unavailable: kb-writer returns `{ status: "skipped", reason: "kb_unavailable" }` - continue with story completion
 - Search returns no results: Proceed with standard learning extraction
+- Duplicate detected: kb-writer skips automatically - no action needed
 
 ---
 
@@ -107,68 +123,60 @@ Read from story directory:
 
 ## Output (MUST UPDATE)
 
-**1. Store lessons in Knowledge Base using `kb_add`:**
-- One entry per major category (Reuse Discoveries, Blockers, etc.)
-- Include appropriate tags for searchability
-- Use the format guidelines above
+**1. Spawn kb-writer for each learning category:**
+- One kb-writer call per category with learnings
+- kb-writer handles tagging, formatting, and deduplication automatically
 
 **2. Update TOKEN-LOG.md with learnings phase tokens**
 
 **3. If high-cost operations identified (>10k tokens):**
-- Add a specific KB entry with tag `high-cost-operation`
-- Include mitigation strategy
+- Include `high-cost-operation` in `additional_tags`
+- Include mitigation strategy in content
 
 **DO NOT append to LESSONS-LEARNED.md** - these files are deprecated.
 
-## Required KB Entry Structure
+## kb-writer Invocation Pattern
 
-For each major learning category, create a KB entry using `kb_add`:
+For each learning category, spawn kb-writer with structured input:
 
-```javascript
-kb_add({
-  content: `**[{STORY_ID}] {Category}**
-
-- {bullet point 1}
-- {bullet point 2}
-- {bullet point 3}`,
-  role: "dev",
-  tags: ["lesson-learned", "story:{story-id}", "category:{category}", "date:{YYYY-MM}"]
-})
+```yaml
+kb_write_request:
+  entry_type: lesson
+  source_stage: dev
+  story_id: "{STORY_ID}"
+  category: "{category-slug}"
+  content: |
+    - {bullet point 1}
+    - {bullet point 2}
+    - {bullet point 3}
+  additional_tags: []  # e.g., ["high-cost-operation"] for token issues
 ```
 
-### Categories to Capture
+### Example kb-writer Calls
 
-1. **Reuse Discoveries** - New reusable patterns/utilities found
-2. **Blockers Hit** - What blocked and how to avoid
-3. **Plan vs Reality** - Planned vs actual files touched
-4. **Time Sinks** - What took longer than expected
-5. **Verification Notes** - What fast-fail/final verification caught
-6. **Token Usage Analysis** - High-cost operations and optimizations
-7. **Recommendations** - Actionable advice for future stories
+```yaml
+# Reuse discovery
+kb_write_request:
+  entry_type: lesson
+  source_stage: dev
+  story_id: "STORY-007"
+  category: "reuse-discoveries"
+  content: |
+    - **DI pattern for core functions**: The dependency injection pattern from album functions was highly reusable for all 4 new image functions.
+    - **Discriminated union result types**: The success/failure pattern worked seamlessly.
+  additional_tags: []
 
-### Example KB Entries
-
-```javascript
-// Reuse discovery
-kb_add({
-  content: `**[STORY-007] Reuse Discoveries**
-
-- **DI pattern for core functions**: The dependency injection pattern from album functions was highly reusable for all 4 new image functions.
-- **Discriminated union result types**: The success/failure pattern worked seamlessly.`,
-  role: "dev",
-  tags: ["lesson-learned", "story:story-007", "category:reuse-discoveries", "date:2026-01"]
-})
-
-// Token optimization
-kb_add({
-  content: `**[WRKF-1020] Token Usage Analysis**
-
-- **Total tokens:** ~118k (input: ~80k, output: ~38k)
-- **High-cost operation:** Reading story file 5x across agents (~35k tokens wasted)
-- **Optimization:** Pass story context between agents instead of re-reading`,
-  role: "dev",
-  tags: ["lesson-learned", "story:wrkf-1020", "category:token-usage", "high-cost-operation", "date:2026-01"]
-})
+# Token optimization (with high-cost-operation tag)
+kb_write_request:
+  entry_type: lesson
+  source_stage: dev
+  story_id: "WRKF-1020"
+  category: "token-usage"
+  content: |
+    - **Total tokens:** ~118k (input: ~80k, output: ~38k)
+    - **High-cost operation:** Reading story file 5x across agents (~35k tokens wasted)
+    - **Optimization:** Pass story context between agents instead of re-reading
+  additional_tags: ["high-cost-operation"]
 ```
 
 ## Worker Token Summary (REQUIRED)

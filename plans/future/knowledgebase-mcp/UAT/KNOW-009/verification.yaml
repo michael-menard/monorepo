@@ -1,0 +1,111 @@
+schema: 1
+story_id: KNOW-009
+updated: 2026-01-31T12:35:00-07:00
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 4
+    note: ""
+tests:
+  unit:
+    pass: 307
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    note: Covered by unit tests - MCP is protocol-level
+  e2e:
+    pass: 0
+    fail: 0
+    note: N/A - backend only, no UI
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 70-178: All 44 matrix combinations tested
+      Performance: p95 0.0024ms (target <1ms)
+      Pure function, no shared state
+      Case-insensitive normalization verified (lines 180-221)
+  - id: AC2
+    verdict: pass
+    evidence: |
+      tool-handlers.ts lines 269-270, 352-353, 445-446, 542-543, 620-621,
+      700-701, 832-833, 960-961, 1055-1056, 1135-1136, 1347-1348
+      All 11 handlers call enforceAuthorization() as FIRST operation
+      Integration tests verify denial without database execution
+  - id: AC3
+    verdict: pass
+    evidence: |
+      server.ts lines 119-142: getAgentRole() function
+      Validates AGENT_ROLE env var with normalizeRole()
+      Defaults to 'all' if missing (line 125)
+      Defaults to 'all' if invalid (line 137)
+      Logs warnings/errors appropriately
+      Role passed via ToolCallContext (lines 104, 250)
+  - id: AC4
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 72-82: PM role can access all 11 tools
+      mcp-integration.test.ts: PM context used in integration tests
+      All 11 tools return allowed: true for PM role
+  - id: AC5
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 84-123: Dev/QA denied kb_delete, kb_bulk_import, kb_rebuild_embeddings
+      Error message format verified: "{tool_name} requires pm role"
+      No database execution on authorization failure
+  - id: AC6
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 91-94, 114-116, 132-134: Dev/QA allowed 8 non-admin tools
+      All non-admin tools return allowed: true for dev/qa/all roles
+  - id: AC7
+    verdict: pass
+    evidence: |
+      error-handling.ts lines 74-109: AuthorizationError class and sanitization
+      Error code 'FORBIDDEN' (line 32)
+      Message format: "{toolName} requires {requiredRole} role"
+      No stack traces, file paths, or line numbers leaked
+      Server-side logging includes full context (line 99-103)
+  - id: AC8
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 204-218: Invalid roles return null
+      server.ts lines 132-138: Invalid role logs error, defaults to 'all'
+      Server continues running, does not crash
+      Log message includes valid values
+  - id: AC9
+    verdict: pass
+    evidence: |
+      server.ts lines 122-126: Missing role defaults to 'all' with warning
+      Log message: "AGENT_ROLE not set, defaulting to 'all' role"
+      Admin tools blocked by default (fail-safe)
+  - id: AC10
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 223-253: Performance tests
+      100 calls in 0.11ms total
+      p50: 0.0010ms, p95: 0.0024ms, p99: 0.0049ms
+      Target <1ms met with significant margin
+  - id: AC11
+    verdict: pass
+    evidence: |
+      access-control.test.ts lines 255-286: Concurrent access tests
+      10 parallel calls with same role - all succeed
+      Mixed roles (pm/dev/qa) in parallel - correct decisions
+      No race conditions or cross-contamination
+  - id: AC12
+    verdict: pass
+    evidence: |
+      124 tests in access-control.test.ts
+      44/44 matrix combinations tested (line 175)
+      28 integration tests in mcp-integration.test.ts
+      Edge cases: invalid role, missing role, case-insensitive
+      Total: 307 tests pass across all MCP server tests
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.112Z
+  blocking_issues: []

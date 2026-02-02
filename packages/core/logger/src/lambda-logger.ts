@@ -22,7 +22,7 @@
  */
 
 import pino from 'pino'
-import { LogLevel } from './types'
+import { LogLevel } from './types.js'
 
 /**
  * Lambda log context - fields automatically added to every log entry

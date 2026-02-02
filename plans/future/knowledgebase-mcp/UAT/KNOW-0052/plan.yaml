@@ -1,0 +1,45 @@
+schema: 1
+story_id: KNOW-0052
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Add Environment Variables and Timeout Configuration
+    acs: []
+    files: []
+  - id: 2
+    name: Add Search Tool Schemas
+    acs: []
+    files: []
+  - id: 3
+    name: Add Search Tool Handlers
+    acs: []
+    files: []
+  - id: 4
+    name: Add Circular Dependency Detection and Tool Composition
+    acs: []
+    files: []
+  - id: 5
+    name: Create Search Tools Unit Tests
+    acs: []
+    files: []
+  - id: 6
+    name: Create Performance Benchmarking Tests
+    acs: []
+    files: []
+  - id: 7
+    name: Create MCP Protocol Error Tests
+    acs: []
+    files: []
+  - id: 8
+    name: Create Connection Pooling Tests
+    acs: []
+    files: []
+  - id: 9
+    name: Create Deployment Documentation
+    acs: []
+    files: []
+reuse: []

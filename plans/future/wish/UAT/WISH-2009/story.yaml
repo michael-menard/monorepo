@@ -1,0 +1,32 @@
+schema: 1
+id: WISH-2009
+feature: wish
+type: feature
+state: uat
+title: Feature flag infrastructure setup for gradual wishlist rollout
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2007
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Enable safe, gradual rollout of wishlist features to users through feature flag infrastructure supporting canary
+  deployments and percentage-based rollouts.
+non_goals:
+  - Third-party feature flag service integration (LaunchDarkly, Flagsmith) - use simple in-house solution
+  - Real-time flag updates via WebSocket - poll-based or on-request evaluation only
+  - Flag analytics/usage metrics - defer to future story
+  - User-level targeting (e.g., specific users) - percentage-based only in MVP
+  - Multi-environment flag sync - flags configured per environment
+  - Flag audit logging - defer to future story
+  - Flag scheduling (scheduled enable/disable) - manual only in MVP
+acs: []
+risks: []
+created_at: 2026-01-28T00:00:00-07:00
+updated_at: 2026-01-31T23:55:00Z

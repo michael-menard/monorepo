@@ -1,0 +1,39 @@
+schema: 1
+id: WISH-2018
+feature: wish
+type: feature
+state: uat
+title: CDN Integration for Image Performance Optimization
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2013
+follow_up_from: WISH-2013
+scope:
+  packages:
+    - apps/api/lego
+    - apps/api/lego
+    - apps/api/lego
+    - apps/web/app
+    - apps/web/app
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Integrate Amazon CloudFront as a CDN to serve wishlist images from edge locations, reducing latency for global
+  users and lowering bandwidth costs. Ensure seamless migration from S3 URLs to CloudFront URLs without breaking
+  existing images.
+non_goals:
+  - "**Image Transformations:** On-the-fly resizing, format conversion (WebP), or compression is out of scope for MVP.
+    Defer to WISH-2016 (Image Optimization) or future Lambda@Edge story."
+  - "**Video/PDF CDN:** This story focuses on image delivery only. Other file types (PDFs, videos) are out of scope."
+  - "**Custom Domain:** Using a custom domain (e.g., `cdn.lego-moc.com`) instead of CloudFront's default domain is
+    deferred to future branding story."
+  - "**Cache Invalidation UI:** Admin UI for manual cache invalidation is out of scope. Use AWS CLI or CloudFormation
+    for cache invalidation in MVP."
+  - "**Multi-CDN Strategy:** Using multiple CDN providers (Cloudflare, Fastly) for redundancy is out of scope."
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.276Z
+updated_at: 2026-01-31

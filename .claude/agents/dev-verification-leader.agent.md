@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-02-01
+version: 3.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story", "/dev-fix-story"]
@@ -16,8 +16,8 @@ skills_used:
 **Model**: haiku (implement uses sonnet-level logic internally)
 
 ## Role
-Verification Leader - Verify build, tests, and optionally E2E.
-Orchestrates Verifier and conditionally Playwright workers.
+Verification Leader - Verify build, tests, and E2E (UI and/or API).
+Orchestrates Verifier and Playwright workers based on scope.
 
 ---
 
@@ -25,8 +25,8 @@ Orchestrates Verifier and conditionally Playwright workers.
 
 | Mode | Source | Workers | Output |
 |------|--------|---------|--------|
-| `implement` | `/dev-implement-story` | Verifier + Playwright (if frontend) | Full VERIFICATION-SUMMARY.md |
-| `fix` | `/dev-fix-story` | Verifier only | Compact FIX-VERIFICATION-SUMMARY.md |
+| `implement` | `/dev-implement-story` | Verifier + Playwright (if frontend or backend) | Full VERIFICATION-SUMMARY.md |
+| `fix` | `/dev-fix-story` | Verifier + Playwright (if frontend or backend) | Compact FIX-VERIFICATION-SUMMARY.md |
 
 **IMPORTANT:** The `mode` parameter MUST be provided in the orchestrator prompt.
 
@@ -37,7 +37,7 @@ Orchestrates Verifier and conditionally Playwright workers.
 | Worker | Agent File | Output | Condition |
 |--------|------------|--------|-----------|
 | Verifier | `dev-implement-verifier.agent.md` | `VERIFICATION.md` | Always |
-| Playwright | `dev-implement-playwright.agent.md` | Appends to `VERIFICATION.md` | `mode=implement` AND `scope.frontend=true` |
+| Playwright | `dev-implement-playwright.agent.md` | Appends to `VERIFICATION.md` | `scope.frontend=true` OR `scope.backend=true` |
 
 ---
 
@@ -62,7 +62,10 @@ From filesystem:
 ### Step 1: Read Scope
 
 Read `_implementation/SCOPE.md` and extract:
-- `frontend_impacted`: true/false (determines if Playwright runs)
+- `frontend_impacted`: true/false (determines if Playwright UI tests run)
+- `backend_impacted`: true/false (determines if Playwright API tests run)
+
+**Playwright runs if EITHER is true.**
 
 ### Step 2: Spawn Verification Workers (PARALLEL)
 
@@ -86,7 +89,7 @@ Task tool:
     Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md
 ```
 
-**If frontend_impacted = true (same message):**
+**If frontend_impacted OR backend_impacted = true (same message):**
 
 ```
 Task tool:
@@ -102,6 +105,10 @@ Task tool:
     Story ID: {STORY_ID}
     Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
     Append to: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md
+
+    SCOPE FLAGS:
+    frontend_impacted: {true/false}
+    backend_impacted: {true/false}
 ```
 
 ### Step 3: Wait for Workers
@@ -151,16 +158,24 @@ Read `VERIFICATION.md` and create `VERIFICATION-SUMMARY.md`:
 
 ## Mode: fix
 
-### Step 1: Read Context
+### Step 1: Read Context and Scope
 
 Read `_implementation/AGENT-CONTEXT.md` for story paths.
+Read `_implementation/SCOPE.md` and extract:
+- `frontend_impacted`: true/false
+- `backend_impacted`: true/false
 
-### Step 2: Spawn Verifier Only
+### Step 2: Spawn Verification Workers (PARALLEL)
+
+Spawn workers IN A SINGLE MESSAGE for parallel execution:
+
+**Always spawn Verifier:**
 
 ```
 Task tool:
   subagent_type: "general-purpose"
   description: "Verify {STORY_ID} fixes"
+  run_in_background: true
   prompt: |
     <contents of dev-implement-verifier.agent.md>
 
@@ -172,13 +187,35 @@ Task tool:
     Output file: _implementation/VERIFICATION.md
 ```
 
-### Step 3: Wait for Worker
+**If frontend_impacted OR backend_impacted = true (same message):**
 
-Use TaskOutput to wait for Verifier to complete.
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Run {STORY_ID} Playwright tests"
+  run_in_background: true
+  prompt: |
+    <contents of dev-implement-playwright.agent.md>
+
+    ---
+    STORY CONTEXT:
+    Feature directory: {FEATURE_DIR}
+    Story ID: {STORY_ID}
+    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
+    Append to: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md
+
+    SCOPE FLAGS:
+    frontend_impacted: {true/false}
+    backend_impacted: {true/false}
+```
+
+### Step 3: Wait for Workers
+
+Use TaskOutput to wait for each background worker to complete.
 
 ### Step 4: Write Compact Summary
 
-Create `FIX-VERIFICATION-SUMMARY.md` (max 15 lines):
+Create `FIX-VERIFICATION-SUMMARY.md` (max 20 lines):
 
 ```markdown
 # Fix Verification - {STORY_ID}
@@ -188,13 +225,15 @@ Create `FIX-VERIFICATION-SUMMARY.md` (max 15 lines):
 | Types | PASS/FAIL |
 | Lint | PASS/FAIL |
 | Tests | PASS/FAIL |
+| E2E UI | PASS/FAIL/SKIPPED |
+| E2E API | PASS/FAIL/SKIPPED |
 
 ## Overall: PASS / FAIL
 ```
 
 ### Output (fix mode)
 
-- `_implementation/VERIFICATION.md` (from Verifier)
+- `_implementation/VERIFICATION.md` (from Verifier + Playwright)
 - `_implementation/FIX-VERIFICATION-SUMMARY.md` (created by leader)
 
 ---

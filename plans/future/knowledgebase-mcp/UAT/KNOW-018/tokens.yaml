@@ -1,0 +1,16 @@
+schema: 1
+story_id: KNOW-018
+total:
+  input: 96875
+  output: 13000
+phases:
+  - phase: pm-generate
+    input: 53875
+    output: 0
+  - phase: elab-setup
+    input: 8000
+    output: 5000
+  - phase: elab-completion
+    input: 35000
+    output: 8000
+high_cost: []

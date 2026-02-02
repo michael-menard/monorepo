@@ -1,14 +1,17 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 4.0.0
+updated: 2026-02-01
+version: 5.0.0
 type: orchestrator
-agents: ["code-review-lint.agent.md", "code-review-style-compliance.agent.md", "code-review-syntax.agent.md", "code-review-security.agent.md", "code-review-typecheck.agent.md", "code-review-build.agent.md"]
+agents: ["code-review-lint.agent.md", "code-review-style-compliance.agent.md", "code-review-syntax.agent.md", "code-review-security.agent.md", "code-review-typecheck.agent.md", "code-review-build.agent.md", "review-aggregate-leader.agent.md"]
+schema: packages/backend/orchestrator/src/artifacts/review.ts
 ---
 
 Usage: /dev-code-review {FEATURE_DIR} {STORY_ID}
 
 Code review orchestrator. Spawn workers - do NOT review code yourself.
+
+**Evidence-First**: Reads touched_files from EVIDENCE.yaml. Outputs REVIEW.yaml.
 
 **Selective Re-Review**: On iteration 2+, only re-runs failed workers + typecheck + build. Passed workers are carried forward.
 
@@ -23,26 +26,27 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 | # | Phase | Model | Workers | Signal |
 |---|-------|-------|---------|--------|
 | 0 | Setup | haiku | (self) | SETUP COMPLETE |
-| 1 | Review | sonnet | failed + typecheck + build (or all 6 on first run) | REVIEW COMPLETE |
-| 2 | Aggregate | haiku | (self) | AGGREGATE COMPLETE |
+| 1 | Review | haiku | failed + typecheck + build (or all 6 on first run) | REVIEW COMPLETE |
+| 2 | Aggregate | haiku | review-aggregate-leader | AGGREGATE COMPLETE |
 | 3 | Finalize | haiku | (self) | CODE-REVIEW COMPLETE |
 
 ## Phase 0 — Setup
 
 Validate (HARD STOP if fail):
 - Story has `status: ready-for-code-review`
-- `PROOF-{STORY_ID}.md` exists in `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+- `EVIDENCE.yaml` exists in `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
 
-Extract touched files from:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FRONTEND-LOG.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/PROOF-{STORY_ID}.md`
+Extract touched files from EVIDENCE.yaml:
+```yaml
+# Read {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml
+touched_files = evidence.touched_files.map(f => f.path)
+```
 
 ## Phase 1 — Parallel Reviews
 
 **SELECTIVE RE-REVIEW OPTIMIZATION**
 
-Check if `VERIFICATION.yaml` exists from a previous review cycle:
+Check if `REVIEW.yaml` exists from a previous review cycle:
 - If NO previous review: Run all 6 workers
 - If previous review exists with FAIL verdict: Only re-run failed workers + typecheck + build
 
@@ -52,25 +56,24 @@ Check if `VERIFICATION.yaml` exists from a previous review cycle:
 workers_to_run = []
 carried_forward = {}
 
-verification_path = f"{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.yaml"
+review_path = f"{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml"
 
-if file_exists(verification_path):
-    prev = read_yaml(verification_path)
+if file_exists(review_path):
+    prev = read_yaml(review_path)
 
     # Always re-run these (fixes could break compilation)
     always_run = ["typecheck", "build"]
 
     for worker in ["lint", "style", "syntax", "security", "typecheck", "build"]:
-        prev_verdict = prev.code_review[worker].verdict
+        prev_result = prev.findings.get(worker)
 
         if worker in always_run:
             workers_to_run.append(worker)
-        elif prev_verdict == "FAIL":
+        elif prev_result and prev_result.verdict == "FAIL":
             workers_to_run.append(worker)
-        else:
+        elif prev_result and prev_result.verdict == "PASS":
             # Carry forward PASS result
-            carried_forward[worker] = prev.code_review[worker]
-            carried_forward[worker]["skipped"] = True
+            carried_forward[worker] = prev_result
 else:
     # First review - run all
     workers_to_run = ["lint", "style", "syntax", "security", "typecheck", "build"]
@@ -83,7 +86,7 @@ Spawn workers_to_run in SINGLE message (parallel):
 ```
 Task tool:
   subagent_type: "general-purpose"
-  model: "sonnet"
+  model: "haiku"
   run_in_background: true
   description: "{worker} review {STORY_ID}"
   prompt: |
@@ -91,7 +94,7 @@ Task tool:
     CONTEXT:
     feature_dir: {FEATURE_DIR}
     story_id: {STORY_ID}
-    touched_files: <list>
+    touched_files: <list from EVIDENCE.yaml>
     Return YAML only.
 ```
 
@@ -108,57 +111,29 @@ Skipped (carried forward from previous PASS):
 
 ## Phase 2 — Aggregate
 
-Create/update `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.yaml`:
+Spawn review-aggregate-leader:
 
-```yaml
-schema: 4
-feature_dir: "{FEATURE_DIR}"
-story: {STORY_ID}
-updated: <timestamp>
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: "haiku"
+  description: "Aggregate review {STORY_ID}"
+  prompt: |
+    Read: .claude/agents/review-aggregate-leader.agent.md
+    CONTEXT:
+    feature_dir: {FEATURE_DIR}
+    story_id: {STORY_ID}
+    iteration: <current iteration>
+    worker_outputs: <collected YAML from workers>
+    carried_forward: <map of skipped workers>
 
-code_review:
-  verdict: PASS | FAIL
-  workers_run: [<workers that ran this iteration>]
-  workers_skipped: [<workers carried forward>]
-
-  lint:
-    verdict: PASS | FAIL
-    skipped: false | true  # true if carried forward
-    errors: <count>
-    findings: [...]
-  style:
-    verdict: PASS | FAIL
-    skipped: false | true
-    violations: <count>
-    findings: [...]
-  syntax:
-    verdict: PASS | FAIL
-    skipped: false | true
-    blocking: <count>
-    findings: [...]
-  security:
-    verdict: PASS | FAIL
-    skipped: false | true
-    critical: <count>
-    high: <count>
-    medium: <count>
-    findings: [...]
-  typecheck:
-    verdict: PASS | FAIL
-    skipped: false  # Always runs
-    errors: <count>
-    findings: [...]
-  build:
-    verdict: PASS | FAIL
-    skipped: false  # Always runs
-    errors: <count>
-    findings: [...]
+    Write REVIEW.yaml to {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml
 ```
 
-**Aggregation Rules:**
-- Include results from workers that ran this iteration
-- Merge in carried_forward results (with `skipped: true`)
-- Verdict: ANY worker FAIL → FAIL | All 6 PASS → PASS
+The aggregate leader will:
+- Merge all worker results
+- Generate ranked_patches for fix priority
+- Write REVIEW.yaml
 
 ## Phase 3 — Finalize
 
@@ -173,6 +148,28 @@ Token log: `/token-log {STORY_ID} code-review <in> <out>`
 
 Report: `CODE-REVIEW COMPLETE: <verdict>`
 State next command.
+
+## Schema Reference
+
+Output schema: `packages/backend/orchestrator/src/artifacts/review.ts`
+
+```typescript
+ReviewSchema = {
+  schema: 1,
+  story_id: string,
+  timestamp: datetime,
+  iteration: number,
+  verdict: 'PASS' | 'FAIL',
+  workers_run: string[],
+  workers_skipped: string[],
+  ranked_patches: RankedPatch[],
+  findings: { lint, style, syntax, security, typecheck, build },
+  total_errors: number,
+  total_warnings: number,
+  auto_fixable_count: number,
+  tokens: { in, out }
+}
+```
 
 ## Ref
 

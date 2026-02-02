@@ -1,0 +1,82 @@
+schema: 1
+story_id: WISH-2012
+updated: 2026-01-31T09:55:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 12
+    note: ""
+tests:
+  unit:
+    pass: 103
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: src/test/a11y/__tests__/axe.test.tsx:48-58,156-173 - 31 tests validate axe-core integration, violation
+      detection, and WCAG AA reporting
+  - id: AC2
+    verdict: pass
+    evidence: src/test/a11y/__tests__/keyboard.test.tsx:46-105,197-246 - 28 tests validate Tab navigation, focus tracking,
+      and keyboard helpers
+  - id: AC3
+    verdict: pass
+    evidence: src/test/a11y/__tests__/screen-reader.test.tsx:50-118,393-424 - 44 tests validate ARIA labels, live regions,
+      screen reader mock utilities
+  - id: AC4
+    verdict: pass
+    evidence: src/test/a11y/__tests__/keyboard.test.tsx:414-444,467-500 - Tests validate focus trap, modal focus management,
+      and focus assertions
+  - id: AC5
+    verdict: pass
+    evidence: src/test/a11y/__tests__/axe.test.tsx:200-222 - Color contrast checking integrated via axe-core with WCAG AA
+      4.5:1 ratio
+  - id: AC6
+    verdict: pass
+    evidence: src/test/a11y/__tests__/screen-reader.test.tsx:158-256 - Comprehensive ARIA validation for roles, attributes,
+      and required properties
+  - id: AC7
+    verdict: pass
+    evidence: src/test/a11y/__tests__/screen-reader.test.tsx:304-365 - Validates semantic elements, heading hierarchy, and
+      non-semantic patterns
+  - id: AC8
+    verdict: pass
+    evidence: src/test/fixtures/a11y-data.ts - Accessible wishlist items, priority options, modal dialogs, forms, and ARIA
+      fixtures
+  - id: AC9
+    verdict: pass
+    evidence: src/test/a11y/config.ts:122-152 - Default WCAG 2.1 AA config with rule exceptions and ignored selectors support
+  - id: AC10
+    verdict: pass
+    evidence: docs/a11y-testing-guide.md:274-369 - Examples for buttons, dropdowns, modals, forms with keyboard + axe +
+      screen reader patterns
+  - id: AC11
+    verdict: pass
+    evidence: Existing pre-push hooks run all tests including a11y tests; verified via git hooks configuration
+  - id: AC12
+    verdict: pass
+    evidence: Tests run in CI pipeline via standard pnpm test command; pipeline fails on test failures
+  - id: AC13
+    verdict: pass
+    evidence: docs/a11y-testing-guide.md - Complete guide with setup, examples, manual testing checklists, and resources
+  - id: AC14
+    verdict: pass
+    evidence: src/test/a11y/__tests__/axe.test.tsx:374-421 - Performance baseline tests confirm <500ms per component; config
+      defaults to 500ms max
+  - id: AC15
+    verdict: pass
+    evidence: src/test/a11y/config.ts:230-288 - WISHLIST_ARIA_ROLES and KEYBOARD_PATTERNS define wishlist-specific
+      accessibility patterns
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.264Z
+  blocking_issues: []

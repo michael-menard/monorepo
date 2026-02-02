@@ -6,3 +6,13 @@ export { ArtifactTypeSchema, type ArtifactType, ARTIFACT_TYPES } from './artifac
 export { RoutingFlagSchema, type RoutingFlag, ROUTING_FLAGS } from './routing-flag.js'
 export { GateTypeSchema, type GateType, GATE_TYPES } from './gate-type.js'
 export { GateDecisionSchema, type GateDecision, GATE_DECISIONS } from './gate-decision.js'
+export {
+  StoryStateSchema,
+  type StoryState,
+  STORY_STATES,
+  isTerminalState,
+  isActiveState,
+  isWorkableState,
+  getNextState,
+  isValidTransition,
+} from './story-state.js'

@@ -1,6 +1,6 @@
-import { Logger, PerformanceLogger, ApiLogger } from './logger'
-import { ConsoleTransport, StorageTransport, RemoteTransport, NullTransport } from './transports'
-import { LogLevel, LoggerConfig, EnvironmentConfig } from './types'
+import { Logger, PerformanceLogger, ApiLogger } from './logger.js'
+import { ConsoleTransport, StorageTransport, RemoteTransport, NullTransport } from './transports.js'
+import { LogLevel, LoggerConfig, EnvironmentConfig } from './types.js'
 
 /**
  * Logger factory for creating pre-configured loggers

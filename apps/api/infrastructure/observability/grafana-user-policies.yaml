@@ -1,0 +1,263 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IAM Policies and Roles for Amazon Managed Grafana User Access'
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: 'Deployment stage/environment'
+
+  WorkspaceId:
+    Type: String
+    Description: 'Grafana Workspace ID from the main workspace stack'
+
+  ProjectOwnerEmail:
+    Type: String
+    Default: 'engineering@example.com'
+    Description: 'Email address of the project owner for admin access'
+
+Resources:
+  # IAM Policy for Grafana Workspace Admin Users
+  GrafanaAdminPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub 'user-metrics-grafana-admin-policy-${Stage}'
+      Description: 'Allows admin access to Amazon Managed Grafana workspace'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - grafana:CreateWorkspace
+              - grafana:DescribeWorkspace
+              - grafana:DescribeWorkspaceAuthentication
+              - grafana:DescribeWorkspaceConfiguration
+              - grafana:UpdateWorkspace
+              - grafana:UpdateWorkspaceAuthentication
+              - grafana:UpdateWorkspaceConfiguration
+              - grafana:ListWorkspaces
+              - grafana:TagResource
+              - grafana:UntagResource
+              - grafana:ListTagsForResource
+            Resource:
+              - !Sub 'arn:aws:grafana:${AWS::Region}:${AWS::AccountId}:workspace/${WorkspaceId}'
+              - !Sub 'arn:aws:grafana:${AWS::Region}:${AWS::AccountId}:workspace/*'
+          - Effect: Allow
+            Action:
+              - grafana:ListWorkspaces
+            Resource: '*'
+
+  # IAM Policy for Grafana Workspace Viewer Users
+  GrafanaViewerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub 'user-metrics-grafana-viewer-policy-${Stage}'
+      Description: 'Allows viewer access to Amazon Managed Grafana workspace'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - grafana:DescribeWorkspace
+              - grafana:DescribeWorkspaceAuthentication
+              - grafana:DescribeWorkspaceConfiguration
+              - grafana:ListWorkspaces
+              - grafana:ListTagsForResource
+            Resource:
+              - !Sub 'arn:aws:grafana:${AWS::Region}:${AWS::AccountId}:workspace/${WorkspaceId}'
+              - !Sub 'arn:aws:grafana:${AWS::Region}:${AWS::AccountId}:workspace/*'
+          - Effect: Allow
+            Action:
+              - grafana:ListWorkspaces
+            Resource: '*'
+
+  # IAM Role for Grafana Admin Users
+  GrafanaAdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'user-metrics-grafana-admin-role-${Stage}'
+      Description: 'Admin role for Amazon Managed Grafana workspace access'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                'aws:PrincipalTag/GrafanaAccess': 'Admin'
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/ExampleProvider'
+            Action: sts:AssumeRoleWithSAML
+            Condition:
+              StringEquals:
+                'SAML:Role': !Sub 'arn:aws:iam::${AWS::AccountId}:role/user-metrics-grafana-admin-role-${Stage}'
+      ManagedPolicyArns:
+        - !Ref GrafanaAdminPolicy
+      Tags:
+        - Key: Project
+          Value: UserMetrics
+        - Key: Environment
+          Value: !Ref Stage
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: CostCenter
+          Value: Observability
+        - Key: Owner
+          Value: !Ref ProjectOwnerEmail
+        - Key: Component
+          Value: IAM
+        - Key: Function
+          Value: AccessControl
+        - Key: AccessLevel
+          Value: Admin
+        - Key: Purpose
+          Value: GrafanaUserAccess
+
+  # IAM Role for Grafana Viewer Users
+  GrafanaViewerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'user-metrics-grafana-viewer-role-${Stage}'
+      Description: 'Viewer role for Amazon Managed Grafana workspace access'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                'aws:PrincipalTag/GrafanaAccess': 'Viewer'
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/ExampleProvider'
+            Action: sts:AssumeRoleWithSAML
+            Condition:
+              StringEquals:
+                'SAML:Role': !Sub 'arn:aws:iam::${AWS::AccountId}:role/user-metrics-grafana-viewer-role-${Stage}'
+      ManagedPolicyArns:
+        - !Ref GrafanaViewerPolicy
+      Tags:
+        - Key: Project
+          Value: UserMetrics
+        - Key: Environment
+          Value: !Ref Stage
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: CostCenter
+          Value: Observability
+        - Key: Owner
+          Value: !Ref ProjectOwnerEmail
+        - Key: Component
+          Value: IAM
+        - Key: Function
+          Value: AccessControl
+        - Key: AccessLevel
+          Value: ReadOnly
+        - Key: Purpose
+          Value: GrafanaUserAccess
+
+  # IAM User for Project Owner (Admin Access)
+  ProjectOwnerUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub 'user-metrics-grafana-admin-${Stage}'
+      ManagedPolicyArns:
+        - !Ref GrafanaAdminPolicy
+      Tags:
+        - Key: Project
+          Value: UserMetrics
+        - Key: Environment
+          Value: !Ref Stage
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: CostCenter
+          Value: Observability
+        - Key: Owner
+          Value: !Ref ProjectOwnerEmail
+        - Key: Component
+          Value: IAM
+        - Key: Function
+          Value: AccessControl
+        - Key: AccessLevel
+          Value: Admin
+        - Key: GrafanaAccess
+          Value: Admin
+
+  # IAM Group for Engineering Team (Viewer Access)
+  EngineeringTeamGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub 'user-metrics-grafana-engineering-${Stage}'
+      ManagedPolicyArns:
+        - !Ref GrafanaViewerPolicy
+
+  # IAM Group for Product Team (Viewer Access)
+  ProductTeamGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub 'user-metrics-grafana-product-${Stage}'
+      ManagedPolicyArns:
+        - !Ref GrafanaViewerPolicy
+
+  # IAM Group for Customer Success Team (Viewer Access)
+  CustomerSuccessTeamGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub 'user-metrics-grafana-cs-${Stage}'
+      ManagedPolicyArns:
+        - !Ref GrafanaViewerPolicy
+
+Outputs:
+  AdminPolicyArn:
+    Description: 'ARN of the Grafana Admin Policy'
+    Value: !Ref GrafanaAdminPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminPolicyArn'
+
+  ViewerPolicyArn:
+    Description: 'ARN of the Grafana Viewer Policy'
+    Value: !Ref GrafanaViewerPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-ViewerPolicyArn'
+
+  AdminRoleArn:
+    Description: 'ARN of the Grafana Admin Role'
+    Value: !GetAtt GrafanaAdminRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminRoleArn'
+
+  ViewerRoleArn:
+    Description: 'ARN of the Grafana Viewer Role'
+    Value: !GetAtt GrafanaViewerRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ViewerRoleArn'
+
+  ProjectOwnerUserArn:
+    Description: 'ARN of the Project Owner User'
+    Value: !GetAtt ProjectOwnerUser.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ProjectOwnerUserArn'
+
+  EngineeringGroupArn:
+    Description: 'ARN of the Engineering Team Group'
+    Value: !GetAtt EngineeringTeamGroup.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EngineeringGroupArn'
+
+  ProductGroupArn:
+    Description: 'ARN of the Product Team Group'
+    Value: !GetAtt ProductTeamGroup.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ProductGroupArn'
+
+  CustomerSuccessGroupArn:
+    Description: 'ARN of the Customer Success Team Group'
+    Value: !GetAtt CustomerSuccessTeamGroup.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomerSuccessGroupArn'

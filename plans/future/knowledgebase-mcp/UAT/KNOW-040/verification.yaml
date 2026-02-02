@@ -1,0 +1,57 @@
+schema: 1
+story_id: KNOW-040
+updated: 2026-01-31T20:45:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit: N/A
+  integration: N/A
+  e2e: N/A
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: All 5 agent files contain KB Integration section with required subsections. Grep verification confirms headers
+      present.
+  - id: AC2
+    verdict: pass
+    evidence: Each agent has exactly 3 trigger patterns in 'When to Query' table with query pattern templates and concrete
+      examples.
+  - id: AC3
+    verdict: pass
+    evidence: Each agent has 2 concrete kb_search examples demonstrating different query strings and filter parameters.
+  - id: AC4
+    verdict: pass
+    evidence: All agents include fallback section addressing no-results, KB unavailable, and proceed guidance.
+  - id: AC5
+    verdict: n/a
+    evidence: Documentation-only story. Runtime execution testing deferred to future KB-integrated workflow runs.
+  - id: AC6
+    verdict: pass
+    evidence: "Citation format 'Per KB entry {ID}: {summary}' documented in all agents and integration guide with concrete
+      examples."
+  - id: AC7
+    verdict: pass
+    evidence: "File exists at .claude/KB-AGENT-INTEGRATION.md with all required sections: template, agent types, workflow
+      analysis, testing checklist, citation format, error handling, schema."
+  - id: AC8
+    verdict: pass
+    evidence: "All 5 agents have KB Integration section after Mission/Role and before Inputs/workflow sections. Consistent
+      header: '## Knowledge Base Integration'."
+  - id: AC9
+    verdict: pass
+    evidence: "Character counts: implementation-leader (1109), setup-leader (1045), qa-verify (1070), elab-analyst (1034),
+      learnings (1070). All ≤1500."
+  - id: AC10
+    verdict: pass
+    evidence: "All kb_search examples use valid parameters: query (required), role, tags, limit. No invalid parameter names
+      found."
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.131Z
+  blocking_issues: []

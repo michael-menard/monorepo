@@ -1,0 +1,31 @@
+schema: 1
+id: KNOW-0053
+feature: knowledgebase-mcp
+type: feature
+state: uat
+title: MCP Admin Tool Stubs
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - KNOW-0051
+follow_up_from: null
+scope:
+  packages:
+    - apps/api/knowledge
+    - apps/api/knowledge
+    - apps/api/knowledge
+    - apps/api/knowledge
+    - apps/api/knowledge
+    - apps/api/knowledge
+  surfaces:
+    - backend
+    - infra
+goal: Add 4 admin/operational tools to the MCP server (kb_bulk_import, kb_rebuild_embeddings, kb_stats, kb_health) with
+  deferred implementation for bulk import and rebuild embeddings, enabling follow-up stories to complete the
+  functionality.
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.101Z
+updated_at: 2026-02-01T20:52:37.101Z

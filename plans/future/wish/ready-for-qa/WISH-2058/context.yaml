@@ -1,0 +1,13 @@
+schema: 1
+story_id: WISH-2058
+feature: wish
+state: ready-for-qa
+paths:
+  story: plans/future/wish/in-progress/WISH-2058/
+  artifacts: plans/future/wish/in-progress/WISH-2058/_implementation/
+files:
+  story: story.yaml
+  plan: plan.yaml
+  verification: verification.yaml
+implementation: []
+notes: []

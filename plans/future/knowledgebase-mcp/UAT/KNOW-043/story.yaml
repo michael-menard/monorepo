@@ -1,0 +1,24 @@
+schema: 1
+id: KNOW-043
+feature: knowledgebase-mcp
+type: feature
+state: uat
+title: Lessons Learned Migration
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - KNOW-006
+follow_up_from: null
+scope:
+  packages:
+    - apps/api/knowledge
+  surfaces:
+    - backend
+    - infra
+goal: 1. **Migrate existing LESSONS-LEARNED.md content** to the Knowledge Base using `kb_bulk_import`
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.132Z
+updated_at: 2026-02-01T20:52:37.132Z

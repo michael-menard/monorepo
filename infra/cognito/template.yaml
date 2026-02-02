@@ -1,0 +1,327 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Cognito User Pool for LEGO MOC Instructions Platform
+  Creates User Pool, App Client, and Identity Pool for authentication
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - production
+    Description: Deployment environment
+
+  ProjectName:
+    Type: String
+    Default: lego-moc
+    Description: Project name for resource naming
+
+  CallbackUrls:
+    Type: CommaDelimitedList
+    Default: 'http://localhost:3002/auth/callback,http://localhost:5173/auth/callback'
+    Description: OAuth callback URLs (comma-separated)
+
+  LogoutUrls:
+    Type: CommaDelimitedList
+    Default: 'http://localhost:3002/auth/logout,http://localhost:5173/auth/logout'
+    Description: OAuth logout URLs (comma-separated)
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+
+Resources:
+  # ============================================
+  # Cognito User Pool
+  # ============================================
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${ProjectName}-users-${Environment}'
+
+      # Sign-in configuration
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+
+      # Password policy
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          TemporaryPasswordValidityDays: 7
+
+      # Account recovery
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+      # Email verification
+      EmailVerificationMessage: 'Your LEGO MOC verification code is {####}'
+      EmailVerificationSubject: 'LEGO MOC - Verify your email'
+
+      # Email configuration (using Cognito default, switch to SES for production)
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+
+      # User invitation
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+        InviteMessageTemplate:
+          EmailSubject: 'Welcome to LEGO MOC Instructions!'
+          EmailMessage: 'Hello {username}! Your temporary password is {####}'
+
+      # Schema (custom attributes)
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: given_name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: family_name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: avatar_url
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: preferences
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+
+      # MFA configuration
+      MfaConfiguration: 'OFF'
+
+      # Deletion protection for production
+      DeletionProtection: !If [IsProduction, ACTIVE, INACTIVE]
+
+      # User pool add-ons
+      UserPoolAddOns:
+        AdvancedSecurityMode: !If [IsProduction, ENFORCED, 'OFF']
+
+      UserPoolTags:
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
+        ManagedBy: CloudFormation
+
+  # ============================================
+  # User Pool Domain (for hosted UI)
+  # ============================================
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub '${ProjectName}-${Environment}-${AWS::AccountId}'
+      UserPoolId: !Ref UserPool
+
+  # ============================================
+  # User Pool Client (Web App)
+  # ============================================
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${ProjectName}-web-client-${Environment}'
+      UserPoolId: !Ref UserPool
+
+      # OAuth configuration
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+
+      # Callback URLs
+      CallbackURLs: !Ref CallbackUrls
+      LogoutURLs: !Ref LogoutUrls
+      SupportedIdentityProviders:
+        - COGNITO
+
+      # Token validity
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+
+      # Security settings
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+
+      # Auth flows
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+      # Attribute access
+      ReadAttributes:
+        - email
+        - email_verified
+        - given_name
+        - family_name
+        - custom:avatar_url
+        - custom:preferences
+      WriteAttributes:
+        - email
+        - given_name
+        - family_name
+        - custom:avatar_url
+        - custom:preferences
+
+  # ============================================
+  # Identity Pool (for AWS credentials)
+  # ============================================
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: !Sub '${ProjectName}_identity_${Environment}'
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref UserPoolClient
+          ProviderName: !GetAtt UserPool.ProviderName
+          ServerSideTokenCheck: true
+
+  # ============================================
+  # IAM Roles for Identity Pool
+  # ============================================
+  AuthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-cognito-authenticated-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref IdentityPool
+              ForAnyValue:StringLike:
+                'cognito-identity.amazonaws.com:amr': authenticated
+      Policies:
+        - PolicyName: CognitoAuthenticatedPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Allow users to sync their Cognito data
+              - Effect: Allow
+                Action:
+                  - cognito-sync:*
+                Resource:
+                  - !Sub 'arn:aws:cognito-sync:${AWS::Region}:${AWS::AccountId}:identitypool/${IdentityPool}/*'
+              # Allow users to get their own identity
+              - Effect: Allow
+                Action:
+                  - cognito-identity:GetId
+                  - cognito-identity:GetCredentialsForIdentity
+                Resource: '*'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  UnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-cognito-unauthenticated-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref IdentityPool
+              ForAnyValue:StringLike:
+                'cognito-identity.amazonaws.com:amr': unauthenticated
+      Policies:
+        - PolicyName: CognitoUnauthenticatedPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Deny all actions for unauthenticated users
+              - Effect: Deny
+                Action: '*'
+                Resource: '*'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ============================================
+  # Identity Pool Role Attachment
+  # ============================================
+  IdentityPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        authenticated: !GetAtt AuthenticatedRole.Arn
+        unauthenticated: !GetAtt UnauthenticatedRole.Arn
+
+Outputs:
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub '${AWS::StackName}-UserPoolId'
+
+  UserPoolArn:
+    Description: Cognito User Pool ARN
+    Value: !GetAtt UserPool.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-UserPoolArn'
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub '${AWS::StackName}-UserPoolClientId'
+
+  IdentityPoolId:
+    Description: Cognito Identity Pool ID
+    Value: !Ref IdentityPool
+    Export:
+      Name: !Sub '${AWS::StackName}-IdentityPoolId'
+
+  UserPoolDomain:
+    Description: Cognito User Pool Domain
+    Value: !Sub '${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-UserPoolDomain'
+
+  HostedUIUrl:
+    Description: Hosted UI URL for sign-in
+    Value: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/login?client_id=${UserPoolClient}&response_type=code&scope=openid+email+profile&redirect_uri=${!Select [0, !Ref CallbackUrls]}'
+
+  CognitoRegion:
+    Description: AWS Region for Cognito
+    Value: !Ref AWS::Region
+    Export:
+      Name: !Sub '${AWS::StackName}-Region'
+
+  AuthenticatedRoleArn:
+    Description: IAM Role ARN for authenticated users
+    Value: !GetAtt AuthenticatedRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AuthenticatedRoleArn'

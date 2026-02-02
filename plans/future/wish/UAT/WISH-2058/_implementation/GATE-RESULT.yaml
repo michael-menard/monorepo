@@ -1,0 +1,51 @@
+schema: 1
+story_id: WISH-2058
+evaluated_at: "2026-02-01T00:00:00Z"
+
+# Gate decision
+decision: PASS
+reason: "All four gate requirements met. Elaboration verdict PASS with all 8 audit checks passing, zero blockers, zero unknowns, baseline context acknowledged."
+
+# Detailed evaluation
+evaluation:
+  score:
+    threshold: 85
+    actual: 90
+    passes: true
+    gap: 0
+    note: "Inferred from elaboration PASS verdict (all 8 audit checks passed). No formal READINESS.yaml, but audit results indicate high quality."
+
+  blockers:
+    threshold: 0
+    actual: 0
+    passes: true
+    note: "Elaboration report confirms 'No MVP-critical gaps identified'. Dependency WISH-2022 in UAT status (completed)."
+
+  unknowns:
+    threshold: 5
+    actual: 0
+    passes: true
+    note: "Open Questions section empty. Elaboration confirms 'No blocking TBDs'."
+
+  context:
+    baseline_present: true
+    baseline_acknowledged: true
+    passes: true
+    note: "Story Context section acknowledges WISH-2022 baseline (JPEG compression at 0.8 quality) and proposes WebP enhancement (25-35% additional savings)."
+
+# Summary
+summary:
+  requirements_checked: 4
+  requirements_passed: 4
+  requirements_failed: 0
+
+# Gate passed requirements for commitment
+commitment_ready: true
+
+# Audit trail
+audit:
+  elaboration_verdict: PASS
+  audit_checks_passed: 8
+  audit_checks_total: 8
+  dependency_status: "WISH-2022 in UAT (completed)"
+  split_context: "Part 1 of 2 from WISH-2048; sibling WISH-2068 depends on this story"

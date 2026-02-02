@@ -1,0 +1,67 @@
+schema: 1
+story_id: WISH-2047
+updated: 2026-01-31T17:30:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 2
+    note: ""
+tests:
+  unit:
+    pass: 58
+    fail: 0
+  integration:
+    pass: 5
+    fail: 0
+    note: HTTP test file exists - manual execution required with dev server
+  e2e:
+    pass: 0
+    fail: 0
+    note: N/A - backend-only changes
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: ip.test.ts lines 21-137 (11 tests) - X-Forwarded-For, X-Real-IP, socket fallback, IPv4/IPv6
+  - id: AC2
+    verdict: pass
+    evidence: geoip.test.ts lines 52-159 (8 tests) - successful lookup, invalid IP handling, IPv6, partial data
+  - id: AC3
+    verdict: pass
+    evidence: routes.ts lines 44-71 logAuthorizationFailure() includes ip, country, countryName, region, city, lat/long
+  - id: AC4
+    verdict: pass
+    evidence: routes.ts lines 262-274 - getAuthFailureContext() called ONLY in 403/404 blocks, not in 200/201 success paths
+  - id: AC5
+    verdict: pass
+    evidence: docs/architecture/wishlist-authorization-security.md lines 79-129 - 5 documented queries
+  - id: AC6
+    verdict: deferred
+    evidence: Infrastructure deployment - code ready, database path configured via GEOIP_DATABASE_PATH env var
+  - id: AC7
+    verdict: pass
+    evidence: geoip.test.ts line 113 - performance timing recorded; geoip.ts lines 123-145 timeout protection (10ms default)
+  - id: AC8
+    verdict: pass
+    evidence: geoip.test.ts lines 82-110 - graceful fallback for invalid IP, database unavailable, lookup failure
+  - id: AC9
+    verdict: pass
+    evidence: rate-limit.ts lines 36-44 - uses shared extractClientIp() utility; rate-limit.test.ts all 25 tests pass
+  - id: AC10
+    verdict: pass
+    evidence: "ip.test.ts - 19 tests (exceeds minimum 6): X-Forwarded-For, X-Real-IP, socket, IPv4, IPv6, validation,
+      normalization"
+  - id: AC11
+    verdict: pass
+    evidence: wishlist-ip-geolocation-logging.http - 5 HTTP test cases (exceeds minimum 4) - cross-user GET/PATCH,
+      unauthenticated, privacy check, IPv6
+  - id: AC12
+    verdict: pass
+    evidence: docs/architecture/wishlist-authorization-security.md - complete documentation with log structure, privacy
+      policy, CloudWatch queries
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.311Z
+  blocking_issues: []

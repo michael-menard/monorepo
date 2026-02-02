@@ -1,0 +1,82 @@
+schema: 1
+story_id: WISH-2000
+date: 2026-01-25
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: Story scope matches stories.index.md. Drizzle schema and Zod schemas for wishlist_items table as specified.
+  internal_consistency:
+    status: pass
+    note: Goals, AC, and technical details are internally consistent. No contradictions between goals and non-goals.
+  reuse-first:
+    status: pass
+    note: Story explicitly references existing Drizzle patterns and Zod schema structures from Sets/Instructions. Reuse plan
+      documented.
+  ports_&_adapters:
+    status: pass
+    note: Schema definition is inherently transport-agnostic. Database schema and validation schemas are properly separated.
+  local_testability:
+    status: fail (addressed)
+    note: Story mentions "31+ unit tests" but implementation has 16. Gap coverage added to ACs.
+  decision_completeness:
+    status: pass
+    note: No TBDs or blocking decisions. Schema fields, types, indexes are fully specified.
+  risk_disclosure:
+    status: pass
+    note: 'Risk noted: "changes after migration are costly." Appropriate for schema work. No hidden dependencies.'
+  story_sizing:
+    status: pass
+    note: 4 original ACs + gaps added. Well-scoped foundation story.
+gaps:
+  - id: GAP-gap_1_schema_validation_tests
+    category: requirements
+    severity: important
+    finding: No schema validation tests (Drizzle schema compile/export tests)
+    recommendation: ""
+  - id: GAP-gap_2_schema_zod_alignment
+    category: requirements
+    severity: important
+    finding: No test for schema<>Zod alignment
+    recommendation: ""
+  - id: GAP-gap_3_large_decimal_values
+    category: requirements
+    severity: important
+    finding: "Missing edge case: very large decimal values"
+    recommendation: ""
+  - id: GAP-gap_4_tags_array_handling
+    category: requirements
+    severity: important
+    finding: No test for tags array handling in DB
+    recommendation: ""
+  - id: GAP-gap_5_sortorder_conflicts
+    category: requirements
+    severity: important
+    finding: "Missing test: sortOrder conflicts"
+    recommendation: ""
+  - id: GAP-gap_6_userid_source
+    category: requirements
+    severity: important
+    finding: No documentation for userId source
+    recommendation: ""
+  - id: GAP-gap_7_timezone_handling
+    category: requirements
+    severity: important
+    finding: Release date timezone handling
+    recommendation: ""
+  - id: GAP-gap_8_enum_validation_db
+    category: requirements
+    severity: important
+    finding: No test for enum validation at DB level
+    recommendation: ""
+split_required: false
+follow_ups:
+  - finding: Schema evolution and migration test suite (post-WISH-2007 deployment)
+    story_id: null
+  - finding: Audit logging infrastructure for wishlist changes (created_by/updated_by)
+    story_id: null
+  - finding: Soft delete implementation and "undo" recovery (WISH-2004 design)
+    story_id: null
+tokens:
+  input: 0
+  output: 0

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.0.0
+updated: 2026-02-01
+version: 3.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/qa-verify-story"]
@@ -10,6 +10,8 @@ skills_used:
   - /story-update
   - /index-update
   - /token-log
+spawns:
+  - kb-writer.agent.md
 ---
 
 # Agent: qa-verify-completion-leader
@@ -18,7 +20,7 @@ skills_used:
 
 ## Mission
 
-Update story status based on verdict, move story to appropriate directory, spawn index updater on PASS, and finalize the gate decision.
+Update story status based on verdict, move story to appropriate directory, spawn index updater on PASS, finalize the gate decision, and optionally capture significant QA findings to Knowledge Base.
 
 ## Inputs
 
@@ -61,10 +63,35 @@ Read from `VERIFICATION.yaml`:
    - Updates Progress Summary counts
    - Recalculates "Ready to Start" section
 
-5. **Log tokens**
+5. **Capture significant QA findings to KB** (optional)
+   If the verification revealed notable insights, spawn `kb-writer.agent.md`:
+
+   ```yaml
+   kb_write_request:
+     entry_type: finding
+     source_stage: qa
+     story_id: "{STORY_ID}"
+     category: "test-strategies"  # or "edge-cases"
+     content: |
+       - {notable testing insight}
+       - {edge case discovered}
+     additional_tags: []
+   ```
+
+   **Capture when:**
+   - New test patterns were effective
+   - Edge cases required special handling
+   - Coverage gaps were identified and resolved
+   - Test flakiness was diagnosed and fixed
+
+   **Skip when:**
+   - Standard verification with no surprises
+   - Findings are story-specific with no reuse value
+
+6. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-6. **Emit signal**: `QA PASS`
+7. **Emit signal**: `QA PASS`
 
 ### If verdict is FAIL:
 
@@ -110,6 +137,7 @@ verdict: PASS | FAIL
 status_updated: uat | needs-work
 moved_to: {FEATURE_DIR}/UAT/{STORY_ID} | {FEATURE_DIR}/in-progress/{STORY_ID}
 index_updated: true | false  # only true on PASS
+kb_findings_captured: true | false | skipped  # only on PASS, false if no notable findings
 tokens_logged: true
 ```
 

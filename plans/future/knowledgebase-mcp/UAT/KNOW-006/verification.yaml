@@ -1,0 +1,88 @@
+schema: 1
+story_id: KNOW-006
+updated: 2026-01-25T00:00:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 3
+    note: ""
+tests:
+  unit:
+    pass: 66
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    notes: No integration tests required - parsers are pure functions, bulk import tested with mocks
+  e2e:
+    pass: 0
+    fail: 0
+    notes: No E2E tests required - MCP tools not UI
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts lines 34-136 (happy path tests), implementation in parse-seed-yaml.ts
+  - id: AC2
+    verdict: pass
+    evidence: parse-lessons-learned.test.ts lines 31-103 (happy path tests), implementation in parse-lessons-learned.ts
+  - id: AC3
+    verdict: pass
+    evidence: kb-bulk-import.test.ts lines 61-105 (happy path tests), implementation in kb-bulk-import.ts
+  - id: AC4
+    verdict: pass
+    evidence: kb-bulk-import.test.ts lines 178-210 (error handling tests), partial success behavior in kb-bulk-import.ts
+  - id: AC5
+    verdict: pass
+    evidence: tool-handlers.ts lines 996-1156 (handleKbStats implementation with query optimization)
+  - id: AC6
+    verdict: pass
+    evidence: tool-schemas.ts lines 367-384 (kb_bulk_import definition), tool-handlers.ts line 1370 (handler registration)
+  - id: AC7
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts lines 206-226 (security tests), parse-seed-yaml.ts line 62 (JSON_SCHEMA usage)
+  - id: AC8
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts lines 173-189 (duplicate ID test), parse-seed-yaml.ts lines 90-100 (detection logic)
+  - id: AC9
+    verdict: deferred
+    evidence: Marked as optional in story, not implemented for MVP
+  - id: AC10
+    verdict: pass
+    evidence: "Coverage report: 96%+ across parsers (95.33%, 96.07%) and seed (95.22%), exceeds 85% threshold"
+  - id: AC11
+    verdict: pass
+    evidence: QA discovery item - no test blocking identified, imports use atomic kb_add operations
+  - id: AC12
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts line 191 (file size test), __types__/index.ts validateFileSize function
+  - id: AC13
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts lines 282-293 (tag validation tests), __types__/index.ts validateTag function
+  - id: AC14
+    verdict: pass
+    evidence: parse-lessons-learned.test.ts lines 106-147 (version detection tests)
+  - id: AC15
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts lines 217-225 (sanitization test), __types__/index.ts sanitizeContent function
+  - id: AC16
+    verdict: pass
+    evidence: kb-bulk-import.test.ts lines 107-142 (dry run tests), kb-bulk-import.ts dry_run flag handling
+  - id: AC17
+    verdict: pass
+    evidence: kb-bulk-import.ts uses @repo/logger throughout with structured JSON logging
+  - id: AC18
+    verdict: pass
+    evidence: parse-seed-yaml.test.ts lines 268-280 (max tag test), __types__/index.ts MAX_TAGS_PER_ENTRY constant
+  - id: AC19
+    verdict: pass
+    evidence: kb-bulk-import.test.ts lines 144-176 (validate_only tests)
+  - id: AC20
+    verdict: pass
+    evidence: kb-bulk-import.test.ts lines 95-104 (session ID test), kb-bulk-import.ts line 68 (uuid generation)
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.107Z
+  blocking_issues: []

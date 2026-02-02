@@ -19,6 +19,11 @@ import { config } from 'dotenv'
 import { logger } from '@repo/logger'
 import * as schema from './schema.js'
 
+/**
+ * Type for the Drizzle database client with knowledge base schema.
+ */
+export type KnowledgeBaseDb = ReturnType<typeof drizzle<typeof schema>>
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // Load .env from package root

@@ -6,9 +6,9 @@ import { ViewModeSchema } from '../types'
 
 export const GalleryViewTogglePropsSchema = z.object({
   currentView: ViewModeSchema,
-  onViewChange: z.function().args(ViewModeSchema).returns(z.void()),
+  onViewChange: z.function(z.tuple([ViewModeSchema]), z.void()),
   showFirstTimeHint: z.boolean().optional(),
-  onDismissHint: z.function().args().returns(z.void()).optional(),
+  onDismissHint: z.function(z.tuple([]), z.void()).optional(),
   className: z.string().optional(),
   'data-testid': z.string().optional(),
 })

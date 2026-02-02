@@ -9,7 +9,11 @@
     "composite": true,
     "incremental": true,
     "noEmit": false,
-    "allowImportingTsExtensions": false
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": false,
+    "types": ["node"],
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.spec.ts"]

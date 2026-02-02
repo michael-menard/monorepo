@@ -1,0 +1,441 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  S3 + CloudFront CDN for Image Storage
+  Serves wishlist and MOC images via CloudFront with OAC (Origin Access Control)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - production
+    Description: Deployment environment
+
+  ProjectName:
+    Type: String
+    Default: lego-moc
+    Description: Project name for resource naming
+
+  CognitoStackName:
+    Type: String
+    Default: ''
+    Description: Name of Cognito stack for cross-stack references (optional)
+
+  DefaultCacheTTL:
+    Type: Number
+    Default: 86400
+    Description: Default cache TTL in seconds (24 hours)
+
+  MaxCacheTTL:
+    Type: Number
+    Default: 31536000
+    Description: Maximum cache TTL in seconds (1 year)
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+  HasCognitoStack: !Not [!Equals [!Ref CognitoStackName, '']]
+
+Resources:
+  # ============================================
+  # S3 Bucket for Image Storage
+  # ============================================
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-images-${Environment}-${AWS::AccountId}'
+
+      # Block all public access (CloudFront only)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      # Versioning for production
+      VersioningConfiguration:
+        Status: !If [IsProduction, Enabled, Suspended]
+
+      # Server-side encryption
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+
+      # CORS for presigned URL uploads
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - !If
+                - IsProduction
+                - 'https://lego-moc-instructions.com'
+                - '*'
+            MaxAge: 3600
+            ExposedHeaders:
+              - ETag
+              - x-amz-meta-custom-header
+
+      # Lifecycle rules for cost optimization
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+          - Id: TransitionToIA
+            Status: !If [IsProduction, Enabled, Disabled]
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 90
+            NoncurrentVersionTransitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+
+      # Object ownership
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Purpose
+          Value: ImageStorage
+
+  # ============================================
+  # CloudFront Origin Access Control
+  # ============================================
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${ProjectName}-image-oac-${Environment}'
+        Description: OAC for image bucket access
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # ============================================
+  # S3 Bucket Policy (CloudFront access only)
+  # ============================================
+  ImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Allow CloudFront to read objects
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${ImageBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  # ============================================
+  # CloudFront Cache Policy
+  # ============================================
+  ImageCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${ProjectName}-image-cache-policy-${Environment}'
+        Comment: Cache policy for images with long TTL
+        DefaultTTL: !Ref DefaultCacheTTL
+        MaxTTL: !Ref MaxCacheTTL
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: whitelist
+            QueryStrings:
+              - v  # Version parameter for cache busting
+
+  # ============================================
+  # CloudFront Response Headers Policy
+  # ============================================
+  ResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${ProjectName}-image-headers-${Environment}'
+        Comment: Response headers for images
+        CorsConfig:
+          AccessControlAllowCredentials: false
+          AccessControlAllowHeaders:
+            Items:
+              - '*'
+          AccessControlAllowMethods:
+            Items:
+              - GET
+              - HEAD
+          AccessControlAllowOrigins:
+            Items:
+              - !If
+                - IsProduction
+                - 'https://lego-moc-instructions.com'
+                - '*'
+          AccessControlMaxAgeSec: 86400
+          OriginOverride: true
+        SecurityHeadersConfig:
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            Override: true
+            ReferrerPolicy: strict-origin-when-cross-origin
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+            Preload: true
+
+  # ============================================
+  # CloudFront Distribution
+  # ============================================
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub '${ProjectName} Image CDN (${Environment})'
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+
+        # Price class based on environment
+        PriceClass: !If
+          - IsProduction
+          - PriceClass_All
+          - PriceClass_100
+
+        # Origin configuration
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt ImageBucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOAC
+            S3OriginConfig:
+              OriginAccessIdentity: ''  # Empty for OAC
+
+        # Default cache behavior
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: !Ref ImageCachePolicy
+          ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+          Compress: true
+
+        # Cache behaviors for specific paths
+        CacheBehaviors:
+          # Thumbnails - shorter TTL
+          - PathPattern: '*/thumbnails/*'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref ImageCachePolicy
+            ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+            Compress: true
+
+        # Custom error responses (short cache for errors)
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ErrorCachingMinTTL: 60
+          - ErrorCode: 500
+            ErrorCachingMinTTL: 5
+          - ErrorCode: 502
+            ErrorCachingMinTTL: 5
+          - ErrorCode: 503
+            ErrorCachingMinTTL: 5
+
+        # Logging
+        Logging:
+          Bucket: !GetAtt LogBucket.DomainName
+          Prefix: !Sub 'cloudfront/${Environment}/'
+          IncludeCookies: false
+
+        # Default root object (not needed for image CDN, but helpful for debugging)
+        DefaultRootObject: ''
+
+        # Restrictions (none for now, add geo-restriction if needed)
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: none
+
+        # SSL certificate (default CloudFront certificate)
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2021
+
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Purpose
+          Value: ImageCDN
+
+  # ============================================
+  # CloudFront Access Logs Bucket
+  # ============================================
+  LogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-cloudfront-logs-${Environment}-${AWS::AccountId}'
+
+      # Block all public access
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      # Server-side encryption
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      # Lifecycle rules for log retention
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldLogs
+            Status: Enabled
+            ExpirationInDays: 90
+          - Id: TransitionToGlacier
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 30
+
+      # Object ownership for CloudFront logging
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Purpose
+          Value: CloudFrontLogs
+
+  # ============================================
+  # IAM Policy for Lambda/API to upload images
+  # ============================================
+  ImageUploadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${ProjectName}-image-upload-${Environment}'
+      Description: Policy for uploading images to S3
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3Upload
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource:
+              - !Sub '${ImageBucket.Arn}/uploads/*'
+              - !Sub '${ImageBucket.Arn}/wishlist/*'
+          - Sid: AllowS3List
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !GetAtt ImageBucket.Arn
+            Condition:
+              StringLike:
+                's3:prefix':
+                  - 'uploads/*'
+                  - 'wishlist/*'
+
+Outputs:
+  ImageBucketName:
+    Description: S3 bucket name for images
+    Value: !Ref ImageBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+
+  ImageBucketArn:
+    Description: S3 bucket ARN
+    Value: !GetAtt ImageBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketArn'
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-DistributionId'
+
+  CloudFrontDomainName:
+    Description: CloudFront distribution domain name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-DomainName'
+
+  CloudFrontUrl:
+    Description: CloudFront URL for images
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-Url'
+
+  ImageUploadPolicyArn:
+    Description: IAM policy ARN for image uploads
+    Value: !Ref ImageUploadPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-UploadPolicyArn'
+
+  LogBucketName:
+    Description: S3 bucket for CloudFront logs
+    Value: !Ref LogBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-LogBucketName'
+
+  # Environment variable values for application
+  EnvVarCloudFrontDomain:
+    Description: Value for CLOUDFRONT_DISTRIBUTION_DOMAIN env var
+    Value: !GetAtt CloudFrontDistribution.DomainName
+
+  EnvVarS3Bucket:
+    Description: Value for S3_BUCKET env var
+    Value: !Ref ImageBucket

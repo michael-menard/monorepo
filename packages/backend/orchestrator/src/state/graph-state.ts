@@ -3,6 +3,7 @@ import { ArtifactTypeSchema, type ArtifactType } from './enums/artifact-type.js'
 import { GateDecisionSchema, type GateDecision } from './enums/gate-decision.js'
 import { GateTypeSchema, type GateType } from './enums/gate-type.js'
 import { RoutingFlagSchema, type RoutingFlag } from './enums/routing-flag.js'
+import { StoryStateSchema, type StoryState } from './enums/story-state.js'
 import { EvidenceRefSchema, type EvidenceRef } from './refs/evidence-ref.js'
 import { NodeErrorSchema, type NodeError } from './refs/node-error.js'
 
@@ -24,6 +25,8 @@ export const StateSnapshotStateSchema = z.object({
   schemaVersion: z.string(),
   epicPrefix: z.string().min(1),
   storyId: z.string().regex(STORY_ID_PATTERN),
+  storyState: StoryStateSchema.optional(),
+  blockedBy: z.string().nullable().optional(),
   artifactPaths: z.record(ArtifactTypeSchema, z.string().min(1)),
   routingFlags: z.record(RoutingFlagSchema, z.boolean()),
   evidenceRefs: z.array(EvidenceRefSchema),
@@ -72,6 +75,20 @@ const GraphStateBaseSchema = z.object({
   storyId: z.string().regex(STORY_ID_PATTERN, {
     message: 'Story ID must match pattern: prefix-number (e.g., "wrkf-1010")',
   }),
+
+  /**
+   * Current story state in the workflow lifecycle.
+   * Aligns with Claude workflow's story state model.
+   * Optional, defaults to undefined (use checkpoint for phase tracking).
+   */
+  storyState: StoryStateSchema.optional(),
+
+  /**
+   * Story ID that is blocking this story.
+   * Replaces boolean blocked flag with actionable reference.
+   * Null means not blocked.
+   */
+  blockedBy: z.string().nullable().default(null),
 
   /**
    * Record of artifact paths, keyed by ArtifactType.
@@ -171,4 +188,12 @@ export type GraphState = z.infer<typeof GraphStateSchema>
 export type GraphStateInput = z.input<typeof GraphStateSchema>
 
 // Re-export types for convenience
-export type { ArtifactType, EvidenceRef, GateDecision, GateType, NodeError, RoutingFlag }
+export type {
+  ArtifactType,
+  EvidenceRef,
+  GateDecision,
+  GateType,
+  NodeError,
+  RoutingFlag,
+  StoryState,
+}

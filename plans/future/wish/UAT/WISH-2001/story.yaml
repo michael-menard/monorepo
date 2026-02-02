@@ -1,0 +1,26 @@
+schema: 1
+id: WISH-2001
+feature: wish
+type: feature
+state: uat
+title: Gallery MVP
+points: 5
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2000
+  - WISH-2007
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Deliver read-only gallery view to validate UX and API integration end-to-end using existing backend endpoints and
+  RTK Query hooks.
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-01-24T02:00:00-07:00
+updated_at: 2026-01-28T13:56:00-07:00

@@ -1,14 +1,15 @@
 ---
 created: 2026-01-25
-updated: 2026-01-25
-version: 1.0.0
+updated: 2026-02-01
+version: 2.0.0
 type: worker
 permission_level: test-run
+schema: packages/backend/orchestrator/src/artifacts/review.ts
 ---
 
 # Agent: code-review-typecheck
 
-**Model**: sonnet
+**Model**: haiku
 
 ## Mission
 Run TypeScript type checking on touched files. Return YAML findings.

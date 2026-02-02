@@ -6,21 +6,21 @@
  *
  * Prerequisites:
  * - Wishlist items seeded in database
- * - User authenticated (MSW mocked or AUTH_BYPASS=true)
+ * - Cognito test users available
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/browser-auth.fixture'
 
 test.describe('Purchase Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to wishlist gallery
+  test.beforeEach(async ({ authenticatedPage: page }) => {
+    // Navigate to wishlist gallery (already authenticated)
     await page.goto('/wishlist')
     // Wait for gallery to load - filter bar indicates the page has rendered
-    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 10000 })
+    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 15000 })
   })
 
   test.describe('AC10-15: Modal Opening and Defaults', () => {
-    test('AC10: GotItModal opens when user triggers "Got It" action', async ({ page }) => {
+    test('AC10: GotItModal opens when user triggers "Got It" action', async ({ authenticatedPage: page }) => {
       // Find a wishlist card and click its "Got It" button
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -34,7 +34,7 @@ test.describe('Purchase Flow', () => {
       await expect(page.getByText('Got It!')).toBeVisible()
     })
 
-    test('AC11: Modal displays item title in description', async ({ page }) => {
+    test('AC11: Modal displays item title in description', async ({ authenticatedPage: page }) => {
       // Get card title before opening modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       const cardTitle = await card.locator('[data-testid="gallery-card-title"]').textContent()
@@ -46,7 +46,7 @@ test.describe('Purchase Flow', () => {
       await expect(page.getByText(new RegExp(cardTitle!, 'i'))).toBeVisible()
     })
 
-    test('AC12: Price field pre-filled from wishlist item price', async ({ page }) => {
+    test('AC12: Price field pre-filled from wishlist item price', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -60,7 +60,7 @@ test.describe('Purchase Flow', () => {
       expect(value).toBeDefined()
     })
 
-    test('AC13: Quantity defaults to 1', async ({ page }) => {
+    test('AC13: Quantity defaults to 1', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -71,7 +71,7 @@ test.describe('Purchase Flow', () => {
       await expect(quantityInput).toHaveValue('1')
     })
 
-    test('AC14: Purchase date defaults to today', async ({ page }) => {
+    test('AC14: Purchase date defaults to today', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -83,7 +83,7 @@ test.describe('Purchase Flow', () => {
       await expect(dateInput).toHaveValue(today)
     })
 
-    test('AC15: "Keep on wishlist" checkbox defaults to unchecked', async ({ page }) => {
+    test('AC15: "Keep on wishlist" checkbox defaults to unchecked', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -96,7 +96,7 @@ test.describe('Purchase Flow', () => {
   })
 
   test.describe('AC16-17: Form Validation', () => {
-    test('AC16: Form validates price/tax/shipping format (decimal only)', async ({ page }) => {
+    test('AC16: Form validates price/tax/shipping format (decimal only)', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -113,7 +113,7 @@ test.describe('Purchase Flow', () => {
       await expect(page.getByText(/price must be a valid decimal/i)).toBeVisible()
     })
 
-    test('AC17: Form validates quantity >= 1', async ({ page }) => {
+    test('AC17: Form validates quantity >= 1', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -134,7 +134,7 @@ test.describe('Purchase Flow', () => {
   })
 
   test.describe('AC18-21: Form Submission', () => {
-    test('AC18: Submit triggers POST /api/wishlist/:id/purchased', async ({ page }) => {
+    test('AC18: Submit triggers POST /api/wishlist/:id/purchased', async ({ authenticatedPage: page }) => {
       // Set up request interception
       let purchaseRequestMade = false
       let requestBody: Record<string, unknown> | null = null
@@ -172,7 +172,7 @@ test.describe('Purchase Flow', () => {
       expect(requestBody).not.toBeNull()
     })
 
-    test('AC19: 201 response returns new SetItem', async ({ page }) => {
+    test('AC19: 201 response returns new SetItem', async ({ authenticatedPage: page }) => {
       const mockSetItem = {
         id: 'set-uuid-123',
         userId: 'user-uuid',
@@ -200,7 +200,7 @@ test.describe('Purchase Flow', () => {
       await expect(page.getByText(/added to your collection/i)).toBeVisible({ timeout: 5000 })
     })
 
-    test('AC21: Success toast shows with "View in Sets" button', async ({ page }) => {
+    test('AC21: Success toast shows with "View in Sets" button', async ({ authenticatedPage: page }) => {
       await page.route('**/api/wishlist/*/purchased', async route => {
         await route.fulfill({
           status: 201,
@@ -222,7 +222,7 @@ test.describe('Purchase Flow', () => {
   })
 
   test.describe('AC22-23: Wishlist Item Handling', () => {
-    test('AC22: Item removed from gallery when keepOnWishlist=false', async ({ page }) => {
+    test('AC22: Item removed from gallery when keepOnWishlist=false', async ({ authenticatedPage: page }) => {
       await page.route('**/api/wishlist/*/purchased', async route => {
         await route.fulfill({
           status: 201,
@@ -254,7 +254,7 @@ test.describe('Purchase Flow', () => {
       })
     })
 
-    test('AC23: Item remains in gallery when keepOnWishlist=true', async ({ page }) => {
+    test('AC23: Item remains in gallery when keepOnWishlist=true', async ({ authenticatedPage: page }) => {
       await page.route('**/api/wishlist/*/purchased', async route => {
         await route.fulfill({
           status: 201,
@@ -289,7 +289,7 @@ test.describe('Purchase Flow', () => {
   })
 
   test.describe('AC25: Loading States', () => {
-    test('AC25: Loading state shows progress messages', async ({ page }) => {
+    test('AC25: Loading state shows progress messages', async ({ authenticatedPage: page }) => {
       // Mock slow response
       await page.route('**/api/wishlist/*/purchased', async route => {
         await new Promise(resolve => setTimeout(resolve, 3000))

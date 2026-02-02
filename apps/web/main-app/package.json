@@ -79,5 +79,10 @@
     "vitest": "^4.0.13",
     "web-vitals": "^4.2.4",
     "webpack-bundle-analyzer": "5.0.1"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

@@ -1,0 +1,53 @@
+schema: 1
+id: WISH-2042
+feature: wish
+type: feature
+state: uat
+title: Purchase/Got It Flow
+points: 5
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2001
+  - WISH-2041
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Enable users to transition purchased wishlist items to their Sets collection with purchase details, with optional
+  wishlist retention and 5-second undo window.
+non_goals:
+  - Delete flow (handled in WISH-2041)
+  - Archive/restore functionality (deferred to WISH-201X)
+  - Email receipt generation (out of scope, requires email service)
+  - Analytics tracking of purchase actions (deferred to WISH-2009)
+  - Batch purchase of multiple items
+  - Purchase history or purchase tracking beyond Set creation
+  - Pre-filling all fields from wishlist (deferred to WISH-2005 for UX polish)
+  - Toast preview of new Set item (deferred to WISH-2005)
+acs:
+  - id: AC2
+    text: POST `/api/wishlist/:id/purchased` endpoint creates Set and optionally deletes Wishlist item
+    type: functional
+  - id: AC4
+    text: '"Got It" modal with form: price paid (pre-filled), tax, shipping, quantity, purchase date, "Keep on wishlist"
+      checkbox'
+    type: functional
+  - id: AC5
+    text: Purchase date defaults to today
+    type: functional
+  - id: AC6
+    text: '"Got It" transaction is atomic: create Set first, then delete Wishlist (if checkbox unchecked)'
+    type: functional
+  - id: AC10
+    text: Optional navigation to Sets Gallery (non-intrusive "View in Sets" link in toast)
+    type: functional
+  - id: AC16
+    text: Form validation with
+    type: functional
+risks: []
+created_at: 2026-01-27T00:00:00-07:00
+updated_at: 2026-01-28T14:45:00Z

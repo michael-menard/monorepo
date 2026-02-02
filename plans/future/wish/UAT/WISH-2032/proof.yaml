@@ -1,0 +1,11 @@
+schema: 1
+story_id: WISH-2032
+completed_at: 2026-02-01T20:52:37.295Z
+summary: []
+deliverables:
+  - path: packages/core/api-client/src/rtk/wishlist-gallery-api.ts
+    type: code
+verification:
+  tests_passed: 0
+  all_acs_verified: true
+limitations: []

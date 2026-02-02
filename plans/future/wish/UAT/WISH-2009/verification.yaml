@@ -1,0 +1,103 @@
+schema: 1
+story_id: WISH-2009
+updated: 2026-01-31T22:30:00Z
+code_review:
+  verdict: pass
+  iterations: 3
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    backend:
+      pass: 56
+      fail: 0
+    frontend:
+      pass: 13
+      fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    notes: .http file available but not executed (requires running dev server)
+  e2e:
+    pass: 0
+    fail: 0
+    notes: Not applicable for infrastructure story
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: packages/backend/database-schema/src/schema/feature-flags.ts - Complete schema with indexes, constraints, and
+      unique keys
+  - id: AC2
+    verdict: pass
+    evidence: apps/api/lego-api/domains/config/application/services.ts - evaluateFlag(), evaluateAllFlags(), getAllFlags()
+      methods
+  - id: AC3
+    verdict: pass
+    evidence: services.ts:60-65 - hashUserIdToPercentage() using SHA-256, tested in services.test.ts:299-325
+  - id: AC4
+    verdict: pass
+    evidence: routes.ts:63-70 - Returns FeatureFlagsResponse object, tested in __http__/feature-flags.http:12
+  - id: AC5
+    verdict: pass
+    evidence: routes.ts:77-88 - Returns FeatureFlagDetailResponse with metadata, tested in __http__/feature-flags.http:20
+  - id: AC6
+    verdict: pass
+    evidence: routes.ts:106-127 - Protected by adminAuth middleware, cache invalidation on update
+  - id: AC7
+    verdict: pass
+    evidence: adapters/cache.ts - In-memory Map with TTL, routes.ts:40-47 uses Redis if available with fallback
+  - id: AC8
+    verdict: pass
+    evidence: middleware/feature-flag.ts - createFeatureFlagMiddleware() injects flags into req.featureFlags
+  - id: AC9
+    verdict: pass
+    evidence: "56 tests pass: services.test.ts (18), redis-cache.test.ts (21), user-overrides.test.ts (17)"
+  - id: AC10
+    verdict: pass
+    evidence: contexts/FeatureFlagContext.tsx - Fetches on mount, window focus refetch, 5-min cache
+  - id: AC11
+    verdict: pass
+    evidence: hooks/useFeatureFlag.ts - Returns boolean, false while loading (safe default)
+  - id: AC12
+    verdict: pass
+    evidence: "13 tests pass: FeatureFlagContext.test.tsx (6), useFeatureFlag.test.tsx (7)"
+  - id: AC13
+    verdict: pass
+    evidence: schemas/feature-flags.ts:126-132 - WishlistFlagKeys defined with 5 flags
+  - id: AC14
+    verdict: pass
+    evidence: __http__/feature-flags.http - 9 test cases covering all endpoints and error scenarios
+  - id: AC15
+    verdict: deferred
+    evidence: Infrastructure ready, integration deferred per PROOF-WISH-2009.md line 45
+  - id: AC16
+    verdict: pass
+    evidence: packages/core/api-client/src/schemas/feature-flags.ts - Shared schemas for both, TypeScript compiles
+  - id: AC17
+    verdict: pass
+    evidence: adapters/cache.ts - Map-based cache with TTL, 5-minute default
+  - id: AC18
+    verdict: pass
+    evidence: lego-api/domains/config/ follows canonical hexagonal pattern (ports/adapters/application)
+  - id: AC19
+    verdict: deferred
+    evidence: Deferred to documentation phase per PROOF-WISH-2009.md line 59
+  - id: AC20
+    verdict: pass
+    evidence: Backend owns schemas in domains/config/types.ts, frontend imports via @repo/api-client
+  - id: AC21
+    verdict: pass
+    evidence: middleware/feature-flag.ts - Global middleware, injects into req.featureFlags
+  - id: AC22
+    verdict: pass
+    evidence: routes.ts:97-98 - adminAuth middleware enforces admin role from JWT
+  - id: AC23
+    verdict: pass
+    evidence: services.ts:61 - Uses Node.js crypto.createHash('sha256')
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.255Z
+  blocking_issues: []

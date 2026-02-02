@@ -6,21 +6,50 @@
  *
  * Prerequisites:
  * - Wishlist items seeded in database
- * - User authenticated (MSW mocked or AUTH_BYPASS=true)
+ * - Cognito test users available
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/browser-auth.fixture'
 
 test.describe('Delete Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to wishlist gallery
-    await page.goto('/wishlist')
-    // Wait for gallery to load - filter bar indicates the page has rendered
-    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 10000 })
+  test.beforeEach(async ({ authenticatedPage: page }) => {
+    // Navigate to wishlist by clicking the link in the sidebar (maintains auth state)
+    const wishlistLink = page.locator('a[href="/wishlist"]').first()
+    await wishlistLink.click()
+    // Wait for navigation
+    await page.waitForURL('**/wishlist', { timeout: 10000 })
+    console.log('Navigated to wishlist, URL:', page.url())
+
+    // Wait for loading to complete (either filter bar appears or empty state)
+    const filterBar = page.locator('[data-testid="wishlist-filter-bar"]')
+    const emptyState = page.locator('[data-testid="gallery-empty-state"]')
+    const errorState = page.getByText(/error|failed/i)
+
+    // Wait for one of these to appear
+    await Promise.race([
+      filterBar.waitFor({ timeout: 30000 }),
+      emptyState.waitFor({ timeout: 30000 }),
+      errorState.waitFor({ timeout: 30000 }),
+    ]).catch(() => {
+      console.log('None of filter bar, empty state, or error appeared')
+    })
+
+    // Check what state we're in
+    if (await filterBar.isVisible()) {
+      console.log('Gallery loaded with items')
+    } else if (await emptyState.isVisible()) {
+      console.log('Gallery loaded but empty')
+    } else {
+      // Take a screenshot for debugging
+      console.log('Page is in unknown state, checking for loading...')
+      const isLoading = await page.getByText('Loading').isVisible()
+      console.log('Is loading visible:', isLoading)
+      throw new Error('Gallery did not load - check API/MSW configuration')
+    }
   })
 
   test.describe('AC1-3: Modal Opening and Preview', () => {
-    test('AC1: DeleteConfirmModal opens when user triggers delete action', async ({ page }) => {
+    test('AC1: DeleteConfirmModal opens when user triggers delete action', async ({ authenticatedPage: page }) => {
       // Find a wishlist card and click its delete button
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -50,7 +79,7 @@ test.describe('Delete Flow', () => {
       await expect(page.locator('[data-testid="delete-confirm-title"]')).toBeVisible()
     })
 
-    test('AC3: Cancel button closes modal without deleting', async ({ page }) => {
+    test('AC3: Cancel button closes modal without deleting', async ({ authenticatedPage: page }) => {
       // Open delete modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       const cardTitle = await card.locator('[data-testid="gallery-card-title"]').textContent()
@@ -69,7 +98,7 @@ test.describe('Delete Flow', () => {
   })
 
   test.describe('AC4-6: Delete Confirmation', () => {
-    test('AC4: Confirm button triggers DELETE /api/wishlist/:id', async ({ page }) => {
+    test('AC4: Confirm button triggers DELETE /api/wishlist/:id', async ({ authenticatedPage: page }) => {
       // Set up request interception to verify API call
       let deleteRequestMade = false
       await page.route('**/api/wishlist/*', async route => {
@@ -124,7 +153,7 @@ test.describe('Delete Flow', () => {
       await expect(page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')).toHaveCount(initialCount - 1)
     })
 
-    test('AC6: Loading state disables buttons during deletion', async ({ page }) => {
+    test('AC6: Loading state disables buttons during deletion', async ({ authenticatedPage: page }) => {
       // Mock slow delete response
       await page.route('**/api/wishlist/*', async route => {
         if (route.request().method() === 'DELETE') {
@@ -153,7 +182,7 @@ test.describe('Delete Flow', () => {
   })
 
   test.describe('AC7-9: Error Handling', () => {
-    test('AC7: 403 response when user does not own item', async ({ page }) => {
+    test('AC7: 403 response when user does not own item', async ({ authenticatedPage: page }) => {
       // Mock 403 response
       await page.route('**/api/wishlist/*', async route => {
         if (route.request().method() === 'DELETE') {
@@ -180,7 +209,7 @@ test.describe('Delete Flow', () => {
       ).toBeVisible({ timeout: 5000 })
     })
 
-    test('AC8: 404 response when item does not exist', async ({ page }) => {
+    test('AC8: 404 response when item does not exist', async ({ authenticatedPage: page }) => {
       // Mock 404 response
       await page.route('**/api/wishlist/*', async route => {
         if (route.request().method() === 'DELETE') {
@@ -207,7 +236,7 @@ test.describe('Delete Flow', () => {
       })
     })
 
-    test('AC9: Toast notification appears on success', async ({ page }) => {
+    test('AC9: Toast notification appears on success', async ({ authenticatedPage: page }) => {
       // Mock successful delete
       await page.route('**/api/wishlist/*', async route => {
         if (route.request().method() === 'DELETE') {

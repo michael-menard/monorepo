@@ -1,0 +1,44 @@
+schema: 1
+story_id: KNOW-028
+updated: 2026-01-25T22:45:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 2
+    note: ""
+tests:
+  unit:
+    pass: 22
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    note: No integration tests - configuration only story
+  e2e:
+    pass: 0
+    fail: 0
+    note: No E2E tests - no UI changes
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: README.md lines 98-146 document all variables with required/optional status, descriptions, and formats
+  - id: AC2
+    verdict: pass
+    evidence: .env.example contains all 5 required variables with placeholders and instructions
+  - id: AC3
+    verdict: pass
+    evidence: src/config/env.ts implements Zod validation with fail-fast error messages. Tests verify error format (lines
+      199-240)
+  - id: AC4
+    verdict: pass
+    evidence: git check-ignore confirms .env and .env.local are protected. .env.example is tracked
+  - id: AC5
+    verdict: pass
+    evidence: src/test/setup.ts provides mock values. vitest.config.ts line 8 configures setupFiles. Tests run without real .env
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.125Z
+  blocking_issues: []

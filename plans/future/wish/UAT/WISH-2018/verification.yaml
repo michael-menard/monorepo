@@ -1,0 +1,44 @@
+schema: 1
+story_id: WISH-2018
+updated: 2026-01-31T22:21:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 2
+    note: ""
+tests:
+  unit:
+    pass: 470
+    fail: 0
+  integration:
+    passed: 0
+    failed: 0
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC4
+    verdict: pass
+    evidence: apps/api/lego-api/core/cdn/cloudfront.ts (s3KeyToCloudFrontUrl, buildImageUrlFromKey)
+  - id: AC5
+    verdict: pass
+    evidence: apps/api/lego-api/domains/wishlist/adapters/repositories.ts:7 (toCloudFrontUrl in mapper)
+  - id: AC6
+    verdict: pass
+    evidence: Same mapper used for single item fetch (mapRowToWishlistItem)
+  - id: AC8
+    verdict: pass
+    evidence: apps/api/lego-api/core/cdn/cloudfront.ts (s3UrlToCloudFrontUrl, extractS3KeyFromUrl)
+  - id: AC9
+    verdict: pass
+    evidence: No changes to upload flow - storage.ts generateUploadUrl unchanged
+  - id: AC13
+    verdict: pass
+    evidence: apps/api/lego-api/core/cdn/__tests__/cloudfront.test.ts (42 tests covering all utilities)
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.277Z
+  blocking_issues: []

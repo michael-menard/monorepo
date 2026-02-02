@@ -6,21 +6,21 @@
  *
  * Prerequisites:
  * - Wishlist items seeded in database
- * - User authenticated (MSW mocked or AUTH_BYPASS=true)
+ * - Cognito test users available
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/browser-auth.fixture'
 
 test.describe('Modal Accessibility', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to wishlist gallery
+  test.beforeEach(async ({ authenticatedPage: page }) => {
+    // Navigate to wishlist gallery (already authenticated)
     await page.goto('/wishlist')
     // Wait for gallery to load - filter bar indicates the page has rendered
-    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 10000 })
+    await page.waitForSelector('[data-testid="wishlist-filter-bar"]', { timeout: 15000 })
   })
 
   test.describe('AC26: ESC Key Closes Modals', () => {
-    test('ESC key closes DeleteConfirmModal (when not loading)', async ({ page }) => {
+    test('ESC key closes DeleteConfirmModal (when not loading)', async ({ authenticatedPage: page }) => {
       // Open delete modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -36,7 +36,7 @@ test.describe('Modal Accessibility', () => {
       await expect(page.locator('[role="alertdialog"]')).not.toBeVisible()
     })
 
-    test('ESC key closes GotItModal (when not loading)', async ({ page }) => {
+    test('ESC key closes GotItModal (when not loading)', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -52,7 +52,7 @@ test.describe('Modal Accessibility', () => {
       await expect(page.locator('[role="dialog"]')).not.toBeVisible()
     })
 
-    test('ESC key does NOT close modal when loading', async ({ page }) => {
+    test('ESC key does NOT close modal when loading', async ({ authenticatedPage: page }) => {
       // Mock slow delete response
       await page.route('**/api/wishlist/*', async route => {
         if (route.request().method() === 'DELETE') {
@@ -83,7 +83,7 @@ test.describe('Modal Accessibility', () => {
   })
 
   test.describe('AC27: Focus Trap', () => {
-    test('Focus trap active in DeleteConfirmModal', async ({ page }) => {
+    test('Focus trap active in DeleteConfirmModal', async ({ authenticatedPage: page }) => {
       // Open delete modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -116,7 +116,7 @@ test.describe('Modal Accessibility', () => {
       expect(isCancelFocused || isDeleteFocused).toBe(true)
     })
 
-    test('Focus trap active in GotItModal', async ({ page }) => {
+    test('Focus trap active in GotItModal', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -141,7 +141,7 @@ test.describe('Modal Accessibility', () => {
   })
 
   test.describe('AC28: Focus Returns to Trigger', () => {
-    test('Focus returns to delete button after DeleteConfirmModal closes', async ({ page }) => {
+    test('Focus returns to delete button after DeleteConfirmModal closes', async ({ authenticatedPage: page }) => {
       // Open delete modal via keyboard
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       const deleteButton = card.locator('[data-testid="wishlist-card-delete"]')
@@ -162,7 +162,7 @@ test.describe('Modal Accessibility', () => {
       await page.waitForTimeout(100)
     })
 
-    test('Focus returns to trigger after GotItModal closes', async ({ page }) => {
+    test('Focus returns to trigger after GotItModal closes', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       const gotItButton = card.locator('[data-testid="wishlist-card-got-it"]')
@@ -184,7 +184,7 @@ test.describe('Modal Accessibility', () => {
   })
 
   test.describe('AC29: Form Field Labels', () => {
-    test('All GotItModal form fields have associated labels', async ({ page }) => {
+    test('All GotItModal form fields have associated labels', async ({ authenticatedPage: page }) => {
       // Open Got It modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -203,7 +203,7 @@ test.describe('Modal Accessibility', () => {
   })
 
   test.describe('AC30: Loading Indicators', () => {
-    test('Loading indicator has role="status" in DeleteConfirmModal', async ({ page }) => {
+    test('Loading indicator has role="status" in DeleteConfirmModal', async ({ authenticatedPage: page }) => {
       // Mock slow delete response
       await page.route('**/api/wishlist/*', async route => {
         if (route.request().method() === 'DELETE') {
@@ -226,7 +226,7 @@ test.describe('Modal Accessibility', () => {
       await expect(page.locator('[role="status"]')).toBeVisible()
     })
 
-    test('Loading indicator has role="status" in GotItModal', async ({ page }) => {
+    test('Loading indicator has role="status" in GotItModal', async ({ authenticatedPage: page }) => {
       // Mock slow purchase response
       await page.route('**/api/wishlist/*/purchased', async route => {
         await new Promise(resolve => setTimeout(resolve, 3000))
@@ -250,7 +250,7 @@ test.describe('Modal Accessibility', () => {
   })
 
   test.describe('Keyboard Navigation', () => {
-    test('Can navigate DeleteConfirmModal with Tab key', async ({ page }) => {
+    test('Can navigate DeleteConfirmModal with Tab key', async ({ authenticatedPage: page }) => {
       // Open delete modal
       const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
       await card.hover()
@@ -268,7 +268,7 @@ test.describe('Modal Accessibility', () => {
       expect(['BUTTON', 'A', 'INPUT'].includes(tagName)).toBe(true)
     })
 
-    test('Can submit GotItModal form with Enter key', async ({ page }) => {
+    test('Can submit GotItModal form with Enter key', async ({ authenticatedPage: page }) => {
       let formSubmitted = false
 
       await page.route('**/api/wishlist/*/purchased', async route => {

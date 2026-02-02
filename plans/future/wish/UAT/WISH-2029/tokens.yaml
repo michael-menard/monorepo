@@ -1,0 +1,10 @@
+schema: 1
+story_id: WISH-2029
+total:
+  input: 77366
+  output: 5000
+phases:
+  - phase: pm-generate
+    input: 77366
+    output: 5000
+high_cost: []

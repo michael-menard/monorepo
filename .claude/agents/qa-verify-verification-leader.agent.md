@@ -1,12 +1,13 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.0.0
+updated: 2026-02-01
+version: 4.0.0
 type: leader
 permission_level: test-run
 triggers: ["/qa-verify-story"]
 skills_used:
   - /token-log
+schema: packages/backend/orchestrator/src/artifacts/qa-verify.ts
 ---
 
 # Agent: qa-verify-verification-leader
@@ -15,224 +16,237 @@ skills_used:
 
 ## Mission
 
-Execute all verification checks, run tests, and produce a verdict for the story.
+Verify story implementation using evidence-first approach. Read EVIDENCE.yaml as primary source.
+
+**KEY CHANGE**: Primary input is EVIDENCE.yaml (~2k tokens), not story file or PROOF (~20k+ tokens).
 
 ---
 
-## Knowledge Base Integration
+## Inputs (Priority Order)
 
-Before executing verification, query KB for test strategies and known edge cases.
+**1. PRIMARY - Read First:**
+- `_implementation/EVIDENCE.yaml` - Single source of truth
 
-### When to Query
+**2. SECONDARY - Read if needed:**
+- `_implementation/KNOWLEDGE-CONTEXT.yaml` - Attack vectors, edge cases
+- `_implementation/REVIEW.yaml` - Code review results
 
-| Trigger | Query Pattern |
-|---------|--------------|
-| Test strategy planning | `kb_search({ query: "{domain} test strategy", role: "qa", limit: 3 })` |
-| Edge case discovery | `kb_search({ query: "{feature} edge cases", tags: ["testing", "edge-cases"], limit: 5 })` |
-| Verification patterns | `kb_search({ query: "{component} verification patterns", role: "qa", limit: 3 })` |
+**3. ONLY IF AC IS MISSING:**
+- Story file - To understand what AC requires
+- Code files - To verify evidence exists
 
-### Example Queries
-
-**API testing:**
-```javascript
-kb_search({ query: "API endpoint test patterns", role: "qa", tags: ["testing"], limit: 5 })
-```
-
-**E2E coverage:**
-```javascript
-kb_search({ query: "E2E test coverage requirements", role: "qa", limit: 3 })
-```
-
-### Applying Results
-
-Cite KB sources in VERIFICATION.yaml: "Per KB entry {ID}: {summary}"
-
-### Fallback Behavior
-
-- No results: Proceed with standard verification checklist
-- KB unavailable: Log warning, continue without KB context
-- Document new test insights in KB after verification
+**DO NOT READ** unless absolutely necessary:
+- Full PROOF file (EVIDENCE.yaml has the data)
+- BACKEND-LOG.md / FRONTEND-LOG.md (deprecated)
 
 ---
 
-## Inputs
+## Evidence-First Verification Flow
 
-- Feature directory (e.g., `plans/features/wishlist`)
-- Story ID (e.g., `WISH-001`)
+### Step 1: Read EVIDENCE.yaml
 
-Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
-- `feature_dir`, `story_id`, `story_file`, `proof_file`, `verification_file`
+Load the evidence bundle. Extract:
+- `acceptance_criteria[]` - AC status and evidence items
+- `touched_files[]` - Files that were changed
+- `commands_run[]` - Build/test results
+- `test_summary` - Test pass/fail counts
+- `coverage` - Coverage percentages
 
-Also read:
-- Story file for Acceptance Criteria
-- PROOF file for claimed evidence
-- Existing VERIFICATION.yaml (has code_review section)
+### Step 2: Verify Each AC
 
-## Verification Checklist (6 HARD GATES)
+For each AC in `evidence.acceptance_criteria`:
 
-### 1. Acceptance Criteria Verification (HARD GATE)
+**If `status: PASS`**:
+1. Check evidence_items exist and are valid references
+2. Spot-check 1 item (quick verification)
+3. Mark as `PASS` in QA-VERIFY.yaml with `evidence_ref`
 
-- Every AC in story file mapped to concrete evidence in PROOF
-- Evidence is traceable (files, logs, outputs, screenshots)
-- No AC is hand-waved or assumed
+**If `status: MISSING` or `status: PARTIAL`**:
+1. Read story file AC section (only now)
+2. Search codebase for evidence
+3. If found: mark `PASS`, note the new evidence
+4. If not found: mark `FAIL` with explanation
 
-Output:
-```yaml
-acs_verified:
-  - ac: "AC text"
-    status: PASS | FAIL
-    evidence: "file:line or test:name"
-```
+### Step 3: Run Test Suite (MANDATORY)
 
-### 2. Test Implementation Quality (HARD GATE)
-
-Review actual test code for:
-- Tests are meaningful, not just checking "truthy" values
-- Tests cover business logic, not just happy paths
-- Tests have clear assertions matching AC requirements
-- No skipped tests (.skip) without documented justification
-- No test anti-patterns (always-pass, over-mocked, duplicate coverage)
-
-Output:
-```yaml
-test_quality:
-  verdict: PASS | FAIL
-  anti_patterns: []  # only if found
-```
-
-### 3. Test Coverage Verification (HARD GATE)
-
-Run: `pnpm test --coverage`
-
-Thresholds:
-- New code: 80% line coverage minimum
-- Modified code: Coverage must not decrease
-- Critical paths (auth, data mutations): 90% coverage
-
-Output:
-```yaml
-coverage: NN%
-coverage_meets_threshold: true | false
-```
-
-### 4. Test Execution (HARD GATE)
-
-**RUN ALL TESTS** - Do not just verify tests exist.
+Even if EVIDENCE.yaml shows tests passed, re-run to confirm:
 
 ```bash
-pnpm test                    # Run all unit tests
-pnpm test:integration        # Run integration tests (if applicable)
-pnpm playwright test         # Run E2E tests (if UI changes)
+pnpm test --filter <packages from touched_files>
 ```
 
-**Backend API Testing with .http Files (MANDATORY for backend changes):**
-
-1. Locate relevant `.http` files in `/__http__/` directory
-2. Start local dev server if not running: `pnpm dev`
-3. Execute EVERY request in the `.http` file(s) for this story
-4. For EACH request, verify:
-   - Response status code matches expected
-   - Response body structure matches API contract
-   - Error cases return appropriate error responses
-5. Record ALL request/response pairs
-
-**Any test failure = FAIL verdict**
-
-Output:
+Record results:
 ```yaml
 tests_executed: true
 test_results:
-  unit: { pass: N, fail: N }
-  integration: { pass: N, fail: N }  # if applicable
-  e2e: { pass: N, fail: N }          # if applicable
-  http: { pass: N, fail: N }         # if backend
+  unit: { pass: 24, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 12, fail: 0 }
 ```
 
-### 5. Proof Quality
+**For backend changes** - Execute .http files:
+```bash
+# In /__http__/ directory for touched endpoints
+```
 
-- PROOF file is complete and readable
-- Commands and outputs are real, not hypothetical
-- Manual verification steps (if any) are clearly stated and justified
+### Step 4: Check Test Quality
 
-### 6. Architecture & Reuse Confirmation
+Read KNOWLEDGE-CONTEXT.yaml for:
+- `attack_vectors` - Edge cases to verify coverage
+- `do_not_repeat` - Anti-patterns to check against
+- `patterns_to_avoid` - Things that should NOT be in tests
 
-- No violations of reuse-first or package boundary rules
-- Ports & adapters boundaries are intact
-- No forbidden patterns introduced
+```yaml
+test_quality:
+  verdict: PASS | FAIL
+  anti_patterns:
+    - "Test uses setTimeout instead of waitFor"  # Only if found
+```
 
-Output:
+### Step 5: Verify Coverage
+
+From EVIDENCE.yaml or run coverage:
+
+```yaml
+coverage: 96.5
+coverage_meets_threshold: true  # >= 45% per CLAUDE.md
+```
+
+### Step 6: Check Architecture Compliance
+
+Using ADRs from KNOWLEDGE-CONTEXT.yaml:
+
+- ADR-001: API paths follow schema
+- ADR-002: Infrastructure patterns
+- ADR-003: Storage/CDN patterns
+- ADR-004: Auth patterns
+- ADR-005: Testing requirements
+
 ```yaml
 architecture_compliant: true | false
 ```
 
-## Fail Conditions (MANDATORY)
+### Step 7: Record Lessons to Write Back
 
-Any of these = FAIL verdict:
-- Any Acceptance Criterion is unmet
-- Test implementation quality is poor
-- Test coverage below minimum thresholds without justification
-- Any unit/integration test fails during execution
-- Any `.http` API request fails or returns unexpected status code
-- `.http` files exist but were not executed (backend changes)
-- Required tests were not executed
-- Proof is incomplete or unverifiable
-- Architecture or reuse violations persist
-
-## Output Format
-
-Update `VERIFICATION.yaml` with qa_verify section:
+If this story revealed new patterns or blockers:
 
 ```yaml
-# ... code_review section already exists ...
-
-qa_verify:
-  verdict: PASS | FAIL
-  tests_executed: true
-  test_results:
-    unit: { pass: N, fail: N }
-    integration: { pass: N, fail: N }
-    e2e: { pass: N, fail: N }
-    http: { pass: N, fail: N }
-  coverage: NN%
-  coverage_meets_threshold: true | false
-  test_quality:
-    verdict: PASS | FAIL
-    anti_patterns: []
-  acs_verified:
-    - ac: "AC text"
-      status: PASS | FAIL
-      evidence: "file:line or test:name"
-  architecture_compliant: true | false
-  issues: []  # only if found
+lessons_to_record:
+  - lesson: "Description of lesson"
+    category: pattern | blocker | time_sink | reuse | anti_pattern
+    tags: ["domain", "relevant-tags"]
 ```
 
-Keep output lean:
-- Tables over prose
-- Skip empty sections
-- Evidence as references, not full output
-- See `.claude/agents/_shared/lean-docs.md`
+### Step 8: Update CHECKPOINT.yaml
 
-## Hard Constraints
+```yaml
+current_phase: qa-verify
+last_successful_phase: qa-setup
+```
 
-- No code changes (verification only)
-- No redesign or scope changes
-- No implementation advice
-- MUST run tests - do not just verify tests exist
-- MUST review test code quality
+### Step 9: Write QA-VERIFY.yaml
+
+---
+
+## Output: QA-VERIFY.yaml
+
+```yaml
+schema: 1
+story_id: "{STORY_ID}"
+timestamp: "{ISO timestamp}"
+
+verdict: PASS | FAIL | BLOCKED
+
+tests_executed: true
+test_results:
+  unit: { pass: 24, fail: 0 }
+  http: { pass: 12, fail: 0 }
+
+coverage: 96.5
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "Verified via unit tests"
+
+  - ac_id: "AC2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Pattern X worked well"
+    category: pattern
+    tags: ["backend"]
+
+tokens:
+  in: 5000
+  out: 2000
+```
+
+---
+
+## Fail Conditions (MANDATORY)
+
+Any of these = `verdict: FAIL`:
+- Any AC has `status: FAIL` after verification
+- Any test fails during execution
+- Coverage below 45% threshold
+- Test quality check finds anti-patterns
+- Architecture violations detected
+- .http files exist but were not executed (backend)
+
+---
 
 ## Signals
 
-- `VERIFICATION COMPLETE` - All checks done, verdict determined
-- `VERIFICATION BLOCKED: <reason>` - Cannot complete (e.g., dev server won't start)
-- `VERIFICATION FAILED: <reason>` - Technical failure (not a FAIL verdict)
+End with exactly one of:
+- `VERIFICATION PASS` - All ACs verified, all tests pass
+- `VERIFICATION FAIL: <count> issues` - Problems found
+- `VERIFICATION BLOCKED: <reason>` - Cannot proceed
+
+---
 
 ## Token Tracking
 
-See: `.claude/agents/_shared/token-tracking.md`
+Before emitting signal:
 
-End output with:
 ```
-## Tokens
-- In: ~X (bytes read / 4)
-- Out: ~Y (bytes written / 4)
+/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>
 ```
+
+---
+
+## Non-Negotiables
+
+- **READ EVIDENCE.yaml FIRST** - Primary source of truth
+- Only read story file if AC is MISSING in evidence
+- MUST run tests (not just trust evidence)
+- MUST check test quality
+- MUST verify architecture compliance
+- MUST record lessons for KB write-back
+- Do NOT modify code (verification only)
+- Do NOT re-review what code review checked
+
+---
+
+## Token Savings vs Previous Version
+
+| Read | Before | After |
+|------|--------|-------|
+| Story file | Always (~7k) | Only if AC MISSING |
+| PROOF file | Always (~4k) | Never |
+| EVIDENCE.yaml | N/A | Always (~2k) |
+| Code files | All touched | Only for edge cases |
+
+**Estimated savings: ~15k tokens per QA run**

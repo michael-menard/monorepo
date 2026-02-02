@@ -55,3 +55,44 @@ export {
   type RetrieveContextResult,
   type GraphStateWithContext,
 } from './retrieve-context.js'
+
+export {
+  // Main node
+  loadKnowledgeContextNode,
+  createKnowledgeContextNode,
+  // Helper functions (for testing and direct use)
+  parseADRLog,
+  filterRelevantADRs,
+  extractADRConstraints,
+  getHighCostOperations,
+  getOptimizationPatterns,
+  getDefaultLessonsLearned,
+  loadKnowledgeContext,
+  // Schemas
+  LessonCategorySchema,
+  RelevantLessonSchema,
+  LessonsLearnedSchema,
+  ADRStatusSchema,
+  RelevantADRSchema,
+  ADRConstraintsSchema,
+  ArchitectureDecisionsSchema,
+  HighCostOperationSchema,
+  TokenOptimizationSchema,
+  KnowledgeContextSchema,
+  KnowledgeContextConfigSchema,
+  KnowledgeContextResultSchema,
+  // Types
+  type LessonCategory,
+  type RelevantLesson,
+  type LessonsLearned,
+  type ADRStatus,
+  type RelevantADR,
+  type ADRConstraints,
+  type ArchitectureDecisions,
+  type HighCostOperation,
+  type TokenOptimization,
+  type KnowledgeContext,
+  type KnowledgeContextConfig,
+  type KnowledgeContextResult,
+  type GraphStateWithKnowledge,
+} from './load-knowledge-context.js'

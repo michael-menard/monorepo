@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-02-01
+version: 4.0.0
 type: leader
 permission_level: setup
 triggers: ["/dev-implement-story", "/dev-fix-story"]
@@ -11,8 +11,10 @@ skills_used:
   - /story-move
   - /story-update
   - /index-update
-  - /context-init
   - /token-log
+schema:
+  - packages/backend/orchestrator/src/artifacts/checkpoint.ts
+  - packages/backend/orchestrator/src/artifacts/scope.ts
 ---
 
 # Agent: dev-setup-leader
@@ -20,44 +22,11 @@ skills_used:
 **Model**: haiku
 
 ## Role
+
 Phase 0 Leader - Prepare story for implementation or fix workflow.
 This is a self-contained leader (no worker sub-agents).
 
----
-
-## Knowledge Base Integration
-
-Before preparing story setup, query KB for setup patterns and common blockers.
-
-### When to Query
-
-| Trigger | Query Pattern |
-|---------|--------------|
-| New story setup | `kb_search({ query: "{domain} setup patterns", role: "dev", limit: 3 })` |
-| Fix workflow | `kb_search({ query: "{error type} fix patterns", tags: ["fix", "debugging"], limit: 3 })` |
-| Dependency analysis | `kb_search({ query: "{dependency} integration issues", role: "dev", limit: 3 })` |
-
-### Example Queries
-
-**Setup blockers:**
-```javascript
-kb_search({ query: "common setup blockers", tags: ["setup", "blockers"], limit: 5 })
-```
-
-**Migration setup:**
-```javascript
-kb_search({ query: "database migration setup patterns", role: "dev", limit: 3 })
-```
-
-### Applying Results
-
-Cite KB sources in SCOPE.md: "Per KB entry {ID}: {summary}"
-
-### Fallback Behavior
-
-- No results: Proceed with standard setup analysis
-- KB unavailable: Log warning, continue without KB context
-- Consider logging new setup patterns to KB after completion
+**CRITICAL TOKEN OPTIMIZATION**: Read only story FRONTMATTER (first ~50 lines), not full story content.
 
 ---
 
@@ -81,6 +50,11 @@ Read from orchestrator context:
 - Story ID (e.g., WISH-001)
 - Mode: `implement` or `fix`
 
+**From story file** (READ FIRST 50 LINES ONLY):
+- Status from frontmatter
+- Title
+- Tags/domain
+
 ---
 
 ## Mode: implement
@@ -97,11 +71,10 @@ Read from orchestrator context:
 Additional checks (inline):
 | Check | How | Fail Action |
 |-------|-----|-------------|
-| QA-AUDIT passed | Story contains `## QA-AUDIT` with `PASS` | STOP: "QA-AUDIT not passed" |
 | No prior implementation | No `_implementation/` directory | STOP: "Already has implementation" |
-| No dependencies | Index shows `**Depends On:** none` | STOP: "Blocked by: [list]" |
+| No blocking dependencies | Index shows no blockers | STOP: "Blocked by: [list]" |
 
-### Actions (Sequential, using skills)
+### Actions (Sequential)
 
 1. **Move Story Directory** (use /story-move skill)
    ```
@@ -123,43 +96,61 @@ Additional checks (inline):
    mkdir -p {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation
    ```
 
-5. **Analyze Scope and Write SCOPE.md**
+5. **Write CHECKPOINT.yaml**
 
-   Read `{STORY_ID}.md` and determine:
+   ```yaml
+   schema: 1
+   story_id: "{STORY_ID}"
+   feature_dir: "{FEATURE_DIR}"
+   timestamp: "{ISO timestamp}"
 
-   | Surface | How to Detect |
-   |---------|---------------|
-   | backend | Mentions: API, endpoint, handler, database, Lambda, serverless |
-   | frontend | Mentions: React, component, UI, page, form, Tailwind |
-   | infra | Mentions: config, environment, deployment, AWS, Vercel |
-
-   Write to `_implementation/SCOPE.md`:
-   ```markdown
-   # Scope - {STORY_ID}
-
-   ## Surfaces Impacted
-
-   | Surface | Impacted | Notes |
-   |---------|----------|-------|
-   | backend | true/false | <brief reason> |
-   | frontend | true/false | <brief reason> |
-   | infra | true/false | <brief reason> |
-
-   ## Scope Summary
-
-   <1-2 sentences describing what this story changes>
+   current_phase: setup
+   last_successful_phase: null
+   iteration: 0
+   max_iterations: 3
+   blocked: false
+   forced: false
+   warnings: []
    ```
 
-6. **Write AGENT-CONTEXT.md** (use /context-init skill)
-   ```
-   /context-init {STORY_ID} dev-implement-story --path={FEATURE_DIR}
-   ```
+6. **Write SCOPE.yaml**
 
-   This creates standardized context file with all paths.
+   Analyze story frontmatter keywords to determine scope:
+
+   ```yaml
+   schema: 1
+   story_id: "{STORY_ID}"
+   timestamp: "{ISO timestamp}"
+
+   touches:
+     backend: true | false   # API, endpoint, handler, database, Lambda
+     frontend: true | false  # React, component, UI, page, form, Tailwind
+     packages: true | false  # package, library, shared, core
+     db: true | false        # database, migration, schema, postgres
+     contracts: true | false # contract, schema, zod
+     ui: true | false        # button, modal, dialog, input
+     infra: true | false     # config, environment, deployment, AWS
+
+   touched_paths_globs:
+     - "packages/backend/**"  # if backend
+     - "apps/api/**"          # if backend
+     - "apps/web/**"          # if frontend
+     - "packages/core/**"     # if packages
+
+   risk_flags:
+     auth: true | false       # auth, cognito, login, session
+     payments: true | false   # payment, stripe, billing
+     migrations: true | false # migration, alter table
+     external_apis: true | false # external API, third party
+     security: true | false   # security, xss, injection
+     performance: true | false # performance, optimize, cache
+
+   summary: "Brief 1-line description of what story changes"
+   ```
 
 ### Output (implement mode)
-- `_implementation/SCOPE.md`
-- `_implementation/AGENT-CONTEXT.md`
+- `_implementation/CHECKPOINT.yaml`
+- `_implementation/SCOPE.yaml`
 
 ---
 
@@ -171,43 +162,42 @@ Additional checks (inline):
 |-------|-----|-------------|
 | Story exists | File at story location | STOP: "Story not found" |
 | Status is failure state | `code-review-failed` or `needs-work` | STOP: "Invalid status: <status>" |
-| Failure report exists | CODE-REVIEW or QA-VERIFY file | STOP: "Failure report not found" |
+| REVIEW.yaml or QA-VERIFY.yaml exists | Failure report present | STOP: "Failure report not found" |
 
 ### Actions (Sequential)
 
-1. **Parse failure report**
-   - If `code-review-failed`: read `CODE-REVIEW-STORY-XXX.md`, extract Critical/High issues
-   - If `needs-work`: read `QA-VERIFY-STORY-XXX.md`, extract blocking issues
+1. **Read CHECKPOINT.yaml** to get current iteration
 
-2. **Determine scope from issue file paths**
-   - `backend_fix: true` if issues in `packages/backend/**`, `apps/api/**`
-   - `frontend_fix: true` if issues in `packages/core/**`, `apps/web/**`
+2. **Read failure report**
+   - If `code-review-failed`: read `REVIEW.yaml`, extract ranked_patches
+   - If `needs-work`: read `QA-VERIFY.yaml`, extract issues
 
-3. **Write AGENT-CONTEXT.md**
+3. **Update CHECKPOINT.yaml**
    ```yaml
-   story_id: {STORY_ID}
-   feature_dir: {FEATURE_DIR}
-   mode: fix
-   base_path: {FEATURE_DIR}/in-progress/{STORY_ID}/
-   artifacts_path: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
-   failure_source: code-review-failed | needs-work
-   backend_fix: true | false
-   frontend_fix: true | false
+   current_phase: fix
+   last_successful_phase: review | qa-verify
+   iteration: {previous + 1}
    ```
 
-4. **Write FIX-CONTEXT.md**
-   ```markdown
-   # Fix Context - {STORY_ID}
+4. **Write FIX-CONTEXT.yaml**
+   ```yaml
+   schema: 1
+   story_id: "{STORY_ID}"
+   timestamp: "{ISO timestamp}"
+   failure_source: code-review-failed | needs-work
+   iteration: {N}
 
-   ## Source: <report file>
+   issues_to_fix:
+     - id: 1
+       file: "path/to/file.ts"
+       line: 42
+       issue: "Description"
+       severity: critical | high | medium | low
+       auto_fixable: true | false
 
-   ## Issues
-   1. [file:line] <description>
-   2. ...
-
-   ## Checklist
-   - [ ] Issue 1
-   - [ ] Issue 2
+   focus_files:
+     - "path/to/file1.ts"
+     - "path/to/file2.ts"
    ```
 
 5. **Update story status** (use /story-update skill)
@@ -215,14 +205,9 @@ Additional checks (inline):
    /story-update {FEATURE_DIR} {STORY_ID} in-progress
    ```
 
-6. **Update Story Index** (use /index-update skill)
-   ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=in-progress
-   ```
-
 ### Output (fix mode)
-- `_implementation/AGENT-CONTEXT.md`
-- `_implementation/FIX-CONTEXT.md`
+- `_implementation/CHECKPOINT.yaml` (updated)
+- `_implementation/FIX-CONTEXT.yaml`
 
 ---
 
@@ -248,10 +233,12 @@ Estimate: `tokens ≈ bytes / 4`
 
 ## Non-Negotiables
 
+- **READ ONLY STORY FRONTMATTER** - Do not read full story file
 - MUST call `/token-log` before reporting completion signal
 - MUST validate `mode` parameter is provided
+- MUST output YAML artifacts (not markdown)
 - Do NOT spawn sub-agents (this is a self-contained leader)
 - Do NOT skip precondition checks
 - Do NOT proceed if any check fails
 - Do NOT modify story content (only frontmatter status)
-- Do NOT guess scope - analyze the actual story/issue content
+- Do NOT guess scope - analyze keywords in frontmatter/title

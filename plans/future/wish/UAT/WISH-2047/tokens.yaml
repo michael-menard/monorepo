@@ -1,0 +1,10 @@
+schema: 1
+story_id: WISH-2047
+total:
+  input: 5000
+  output: 3000
+phases:
+  - phase: qa-verify
+    input: 5000
+    output: 3000
+high_cost: []

@@ -4,6 +4,7 @@
  * Story WISH-2022: Client-side Image Compression
  * Story WISH-2046: Client-side Image Compression Quality Presets
  * Story WISH-2045: HEIC/HEIF Image Format Support
+ * Story WISH-2058: Core WebP Conversion
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -25,6 +26,8 @@ import {
   convertHEICToJPEG,
   HEIC_MIME_TYPES,
   HEIC_EXTENSIONS,
+  // WISH-2058: WebP exports
+  transformFilenameToWebP,
 } from '../imageCompression'
 
 // Mock browser-image-compression
@@ -221,15 +224,16 @@ describe('compressImage', () => {
     expect(result.error).toBeUndefined()
   })
 
-  it('preserves original filename', async () => {
+  // WISH-2058: Updated - filename now transforms to .webp when using WebP format
+  it('transforms filename to WebP extension', async () => {
     const originalFile = createMockFile(2 * 1024 * 1024, 'my-photo.jpg')
-    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/jpeg' })
+    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' })
 
     mockImageCompression.mockResolvedValue(compressedBlob as File)
 
     const result = await compressImage(originalFile, { skipCompressionCheck: true })
 
-    expect(result.file.name).toBe('my-photo.jpg')
+    expect(result.file.name).toBe('my-photo.webp')
   })
 
   it('returns original if compression makes file larger', async () => {
@@ -331,25 +335,27 @@ describe('compressImage', () => {
     )
   })
 
-  it('sets correct MIME type on compressed file', async () => {
+  // WISH-2058: Updated to expect WebP output
+  it('sets correct MIME type on compressed file (WebP)', async () => {
     const originalFile = createMockFile(2 * 1024 * 1024, 'test.png', 'image/png')
-    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/jpeg' })
+    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' })
 
     mockImageCompression.mockResolvedValue(compressedBlob as File)
 
     const result = await compressImage(originalFile, { skipCompressionCheck: true })
 
-    expect(result.file.type).toBe('image/jpeg') // Converted to JPEG
+    expect(result.file.type).toBe('image/webp') // Converted to WebP (WISH-2058)
   })
 })
 
 describe('DEFAULT_COMPRESSION_CONFIG', () => {
-  it('has correct default values', () => {
+  // WISH-2058: Updated to expect WebP format
+  it('has correct default values with WebP format', () => {
     expect(DEFAULT_COMPRESSION_CONFIG).toEqual({
       maxSizeMB: 1,
       maxWidthOrHeight: 1920,
       useWebWorker: true,
-      fileType: 'image/jpeg',
+      fileType: 'image/webp',
       initialQuality: 0.8,
     })
   })
@@ -362,10 +368,131 @@ describe('SKIP_COMPRESSION_SIZE_THRESHOLD', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WISH-2046: Compression Quality Presets Tests
+// WISH-2058: WebP Conversion Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('COMPRESSION_PRESETS (WISH-2046)', () => {
+describe('transformFilenameToWebP (WISH-2058)', () => {
+  it('transforms .jpg to .webp', () => {
+    expect(transformFilenameToWebP('photo.jpg')).toBe('photo.webp')
+  })
+
+  it('transforms .jpeg to .webp', () => {
+    expect(transformFilenameToWebP('image.jpeg')).toBe('image.webp')
+  })
+
+  it('transforms .png to .webp', () => {
+    expect(transformFilenameToWebP('screenshot.png')).toBe('screenshot.webp')
+  })
+
+  it('transforms .gif to .webp', () => {
+    expect(transformFilenameToWebP('animation.gif')).toBe('animation.webp')
+  })
+
+  it('transforms .bmp to .webp', () => {
+    expect(transformFilenameToWebP('bitmap.bmp')).toBe('bitmap.webp')
+  })
+
+  it('transforms .tiff to .webp', () => {
+    expect(transformFilenameToWebP('document.tiff')).toBe('document.webp')
+    expect(transformFilenameToWebP('document.tif')).toBe('document.webp')
+  })
+
+  it('handles uppercase extensions', () => {
+    expect(transformFilenameToWebP('PHOTO.JPG')).toBe('PHOTO.webp')
+    expect(transformFilenameToWebP('IMAGE.PNG')).toBe('IMAGE.webp')
+  })
+
+  it('handles mixed case extensions', () => {
+    expect(transformFilenameToWebP('photo.JpEg')).toBe('photo.webp')
+  })
+
+  it('preserves filename with multiple dots', () => {
+    expect(transformFilenameToWebP('my.vacation.photo.2024.jpg')).toBe('my.vacation.photo.2024.webp')
+  })
+
+  it('does not modify .webp files', () => {
+    expect(transformFilenameToWebP('already.webp')).toBe('already.webp')
+  })
+
+  it('does not modify files without common image extensions', () => {
+    expect(transformFilenameToWebP('document.pdf')).toBe('document.pdf')
+    expect(transformFilenameToWebP('video.mp4')).toBe('video.mp4')
+  })
+})
+
+describe('compressImage WebP output (WISH-2058)', () => {
+  it('outputs file with .webp extension when using default config', async () => {
+    const originalFile = createMockFile(2 * 1024 * 1024, 'photo.jpg')
+    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' })
+
+    mockImageCompression.mockResolvedValue(compressedBlob as File)
+
+    const result = await compressImage(originalFile, { skipCompressionCheck: true })
+
+    expect(result.compressed).toBe(true)
+    expect(result.file.name).toBe('photo.webp')
+    expect(result.file.type).toBe('image/webp')
+  })
+
+  it('outputs file with .webp extension for PNG input', async () => {
+    const originalFile = createMockFile(2 * 1024 * 1024, 'screenshot.png', 'image/png')
+    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' })
+
+    mockImageCompression.mockResolvedValue(compressedBlob as File)
+
+    const result = await compressImage(originalFile, { skipCompressionCheck: true })
+
+    expect(result.compressed).toBe(true)
+    expect(result.file.name).toBe('screenshot.webp')
+    expect(result.file.type).toBe('image/webp')
+  })
+
+  it('preserves original extension when using non-WebP config', async () => {
+    const originalFile = createMockFile(2 * 1024 * 1024, 'photo.jpg')
+    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/jpeg' })
+    const jpegConfig = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      fileType: 'image/jpeg',
+      initialQuality: 0.8,
+    }
+
+    mockImageCompression.mockResolvedValue(compressedBlob as File)
+
+    const result = await compressImage(originalFile, {
+      config: jpegConfig,
+      skipCompressionCheck: true,
+    })
+
+    expect(result.compressed).toBe(true)
+    expect(result.file.name).toBe('photo.jpg')
+    expect(result.file.type).toBe('image/jpeg')
+  })
+
+  it('calls browser-image-compression with WebP fileType', async () => {
+    const originalFile = createMockFile(2 * 1024 * 1024, 'photo.jpg')
+    const compressedBlob = new Blob([new Uint8Array(500 * 1024)], { type: 'image/webp' })
+
+    mockImageCompression.mockResolvedValue(compressedBlob as File)
+
+    await compressImage(originalFile, { skipCompressionCheck: true })
+
+    expect(mockImageCompression).toHaveBeenCalledWith(
+      originalFile,
+      expect.objectContaining({
+        fileType: 'image/webp',
+      }),
+    )
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WISH-2046: Compression Quality Presets Tests
+// WISH-2058: Updated to expect WebP format
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('COMPRESSION_PRESETS (WISH-2046, WISH-2058)', () => {
   it('has exactly 3 presets', () => {
     expect(COMPRESSION_PRESETS).toHaveLength(3)
   })
@@ -375,6 +502,13 @@ describe('COMPRESSION_PRESETS (WISH-2046)', () => {
     expect(presetNames).toContain('low-bandwidth')
     expect(presetNames).toContain('balanced')
     expect(presetNames).toContain('high-quality')
+  })
+
+  // WISH-2058: All presets should use WebP format
+  it('all presets use WebP format', () => {
+    for (const preset of COMPRESSION_PRESETS) {
+      expect(preset.settings.fileType).toBe('image/webp')
+    }
   })
 
   describe('low-bandwidth preset', () => {
@@ -389,10 +523,12 @@ describe('COMPRESSION_PRESETS (WISH-2046)', () => {
       expect(preset.settings.initialQuality).toBe(0.6)
       expect(preset.settings.maxWidthOrHeight).toBe(1200)
       expect(preset.settings.maxSizeMB).toBe(0.5)
+      expect(preset.settings.fileType).toBe('image/webp')
     })
 
-    it('has estimated size indicator', () => {
-      expect(preset.estimatedSize).toBe('~300KB')
+    // WISH-2058: Updated estimated size for WebP (25-35% smaller than JPEG)
+    it('has estimated size indicator for WebP', () => {
+      expect(preset.estimatedSize).toBe('~200KB')
     })
   })
 
@@ -404,14 +540,16 @@ describe('COMPRESSION_PRESETS (WISH-2046)', () => {
       expect(preset.label).toBe('Balanced')
     })
 
-    it('has correct settings matching WISH-2022 defaults', () => {
+    it('has correct settings with WebP format', () => {
       expect(preset.settings.initialQuality).toBe(0.8)
       expect(preset.settings.maxWidthOrHeight).toBe(1920)
       expect(preset.settings.maxSizeMB).toBe(1)
+      expect(preset.settings.fileType).toBe('image/webp')
     })
 
-    it('has estimated size indicator', () => {
-      expect(preset.estimatedSize).toBe('~800KB')
+    // WISH-2058: Updated estimated size for WebP (25-35% smaller than JPEG)
+    it('has estimated size indicator for WebP', () => {
+      expect(preset.estimatedSize).toBe('~550KB')
     })
 
     it('matches DEFAULT_COMPRESSION_CONFIG', () => {
@@ -431,10 +569,12 @@ describe('COMPRESSION_PRESETS (WISH-2046)', () => {
       expect(preset.settings.initialQuality).toBe(0.9)
       expect(preset.settings.maxWidthOrHeight).toBe(2400)
       expect(preset.settings.maxSizeMB).toBe(2)
+      expect(preset.settings.fileType).toBe('image/webp')
     })
 
-    it('has estimated size indicator', () => {
-      expect(preset.estimatedSize).toBe('~1.5MB')
+    // WISH-2058: Updated estimated size for WebP (25-35% smaller than JPEG)
+    it('has estimated size indicator for WebP', () => {
+      expect(preset.estimatedSize).toBe('~1.0MB')
     })
   })
 })

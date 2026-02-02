@@ -1,0 +1,83 @@
+schema: 1
+story_id: WISH-2045
+updated: 2026-01-31T23:20:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 116
+    fail: 0
+  integration:
+    pass: 12
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC?
+    verdict: pass
+    evidence: imageCompression.ts:312-318 (isHEIC function), tests at imageCompression.test.ts:542-588
+  - id: AC?
+    verdict: pass
+    evidence: imageCompression.ts:343-396 (convertHEICToJPEG function), useS3Upload.ts:235-258 (integration), tests at
+      imageCompression.test.ts:618-730, useS3Upload.test.ts:1207-1255
+  - id: AC?
+    verdict: pass
+    evidence: useS3Upload.ts:109-112 (conversionProgress state), onProgress callback at line 239, tests at
+      useS3Upload.test.ts:1340-1371
+  - id: AC?
+    verdict: pass
+    evidence: useS3Upload.ts:260-280 (fileToProcess passed to compressImage), tests at useS3Upload.test.ts:1207-1255
+  - id: AC?
+    verdict: pass
+    evidence: imageCompression.ts:325-327 (transformHEICFilename function), tests at imageCompression.test.ts:590-616
+  - id: AC?
+    verdict: pass
+    evidence: imageCompression.ts:386-394 (error handling), conversionResult.error available at useS3Upload.ts:117, consumer
+      responsibility for toast UI per PROOF-WISH-2045.md:86-87, tests at useS3Upload.test.ts:1307-1338
+  - id: AC?
+    verdict: pass
+    evidence: useS3Upload.ts:244-251 (fallback logic), tests at useS3Upload.test.ts:1307-1338
+  - id: AC?
+    verdict: pass
+    evidence: Error handling in convertHEICToJPEG catches WebAssembly issues (imageCompression.ts:385-395), tests at
+      imageCompression.test.ts:697-718
+  - id: AC?
+    verdict: pass
+    evidence: conversionResult includes originalSize and convertedSize (imageCompression.ts:379-384), available to consumer
+      via useS3Upload.ts:117, consumer UI responsibility per PROOF-WISH-2045.md:86-87
+  - id: AC?
+    verdict: pass
+    evidence: Consumer layer responsibility per PROOF-WISH-2045.md:86-87, hook provides converted file via
+      conversionResult.file (imageCompression.ts:381)
+  - id: AC?
+    verdict: pass
+    evidence: useS3Upload.ts:233-280 (HEIC conversion at lines 233-258, compression at lines 262-280), tests at
+      useS3Upload.test.ts:1207-1255
+  - id: AC?
+    verdict: pass
+    evidence: useS3Upload.ts:264 (skipCompression check after HEIC conversion), tests at useS3Upload.test.ts:1373-1409
+  - id: AC?
+    verdict: pass
+    evidence: "imageCompression.test.ts:528-730 (23 HEIC tests: 7 for isHEIC, 6 for transformHEICFilename, 8 for
+      convertHEICToJPEG, 2 for constants)"
+  - id: AC?
+    verdict: pass
+    evidence: useS3Upload.test.ts:1196-1528 (12 HEIC integration tests covering full workflow, state transitions, error
+      handling, fallback)
+  - id: AC?
+    verdict: deferred
+    evidence: Deferred to separate story WISH-2050 per PROOF-WISH-2045.md:88
+  - id: AC?
+    verdict: deferred
+    evidence: Post-implementation documentation per PROOF-WISH-2045.md:89
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.306Z
+  blocking_issues: []

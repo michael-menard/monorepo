@@ -1,0 +1,46 @@
+schema: 1
+story_id: WISH-20180
+version: 1
+approved: true
+estimates:
+  files: 6
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Validation Script Core (AC 6-9, 10-14, 15-18)
+    acs:
+      - AC 6
+    files:
+      - path: packages/backend/database-schema/scripts/validate-schema-changes.ts
+        action: create
+  - id: 2
+    name: Script Entry Point and CLI
+    acs: []
+    files:
+      - path: packages/backend/database-schema/scripts/validate-schema-changes.ts
+        action: create
+  - id: 3
+    name: GitHub Actions Workflow (AC 1-5)
+    acs: []
+    files:
+      - path: .github/workflows/schema-validation.yml
+        action: create
+  - id: 4
+    name: Package.json Script and Dependencies
+    acs: []
+    files:
+      - path: packages/backend/database-schema/package.json
+        action: create
+  - id: 5
+    name: Unit Tests
+    acs: []
+    files:
+      - path: packages/backend/database-schema/scripts/__tests__/validate-schema-changes.test.ts
+        action: create
+  - id: 6
+    name: Documentation (AC 19-20)
+    acs: []
+    files:
+      - path: packages/backend/database-schema/docs/CI-SCHEMA-VALIDATION.md
+        action: create
+reuse: []

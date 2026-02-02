@@ -1,0 +1,77 @@
+schema: 1
+story_id: WISH-2042
+updated: 2026-01-28T14:00:00Z
+code_review:
+  verdict: pass
+  iterations: 5
+  final_issues:
+    errors: 0
+    warnings: 1
+    note: ""
+tests:
+  unit:
+    pass: 157
+    fail: 0
+  integration:
+    passed: 0
+    failed: 0
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC2
+    verdict: pass
+    evidence: apps/api/lego-api/domains/wishlist/routes.ts:62-70, services.ts:234-332
+  - id: AC4
+    verdict: pass
+    evidence: apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx:106-295
+  - id: AC5
+    verdict: pass
+    evidence: GotItModal/index.tsx:83, services.ts:257, GotItModal.test.tsx:130-138
+  - id: AC6
+    verdict: pass
+    evidence: services.ts:276-331 (Set creation first, then optional deletion)
+  - id: AC7
+    verdict: pass
+    evidence: packages/core/api-client/src/rtk/wishlist-gallery-api.ts:67-77
+  - id: AC8
+    verdict: pass
+    evidence: GotItModal/index.tsx:181-222 (toast.custom with 5000ms duration)
+  - id: AC9
+    verdict: deferred
+    evidence: Intentionally deferred to WISH-2005. Placeholder toast shown. Documented in story frontmatter.
+  - id: AC10
+    verdict: pass
+    evidence: GotItModal/index.tsx:207-211 (Link to /sets)
+  - id: AC16
+    verdict: pass
+    evidence: packages/core/api-client/src/schemas/wishlist.ts:236-266, GotItModal/index.tsx:93-102
+  - id: AC17
+    verdict: pass
+    evidence: GotItModal/index.tsx:164-172 (isLoading state, disabled button)
+  - id: AC18
+    verdict: pass
+    evidence: Modal component from @repo/app-component-library with ESC and focus trap support
+  - id: AC19
+    verdict: pass
+    evidence: sonner toast library provides role=alert for screen readers
+  - id: AC20
+    verdict: pass
+    evidence: services.ts:278-281 (Set creation failure returns early, no deletion), purchase.test.ts:237-250
+  - id: AC21
+    verdict: pass
+    evidence: services.ts:286-305, storage.ts:95-122 (copyImage implementation)
+  - id: AC22
+    verdict: pass
+    evidence: services.ts:252-254, purchase.test.ts:288-299
+  - id: AC23
+    verdict: pass
+    evidence: services.ts:246-249, purchase.test.ts:301-314
+  - id: AC24
+    verdict: deferred
+    evidence: Power user feature deferred to future story. Not blocking for MVP.
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.303Z
+  blocking_issues: []

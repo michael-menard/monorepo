@@ -1,0 +1,9 @@
+schema: 1
+story_id: KNOW-001
+completed_at: 2026-02-01T20:52:37.084Z
+summary: []
+deliverables: []
+verification:
+  tests_passed: 0
+  all_acs_verified: true
+limitations: []

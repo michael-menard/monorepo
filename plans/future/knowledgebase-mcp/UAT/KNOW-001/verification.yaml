@@ -1,0 +1,82 @@
+schema: 1
+story_id: KNOW-001
+updated: 2026-01-25T14:30:00Z
+code_review:
+  verdict: pass
+  iterations: 4
+  final_issues:
+    errors: 0
+    warnings: 1
+    note: ""
+tests:
+  unit:
+    pass: 14
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: apps/api/knowledge-base/ exists with package.json (@repo/knowledge-base), tsconfig.json, vitest.config.ts,
+      README.md, .env.example
+  - id: AC2
+    verdict: pass
+    evidence: docker-compose.yml with pgvector:0.5.1-pg16, port 5433, named volume kb_postgres_data, healthcheck configured
+  - id: AC3
+    verdict: pass
+    evidence: Extension verified in smoke tests (smoke.test.ts lines 84-133), version check >= 0.5.0, vector operations tested
+  - id: AC4
+    verdict: pass
+    evidence: Drizzle schema.ts with knowledge_entries and embedding_cache tables, VECTOR(1536), IVFFlat index, connection
+      pooling configured in client.ts
+  - id: AC5
+    verdict: pass
+    evidence: vitest.config.ts with 45% coverage threshold, 14 smoke tests covering all infrastructure requirements
+      (connection, extension, tables, index)
+  - id: AC6
+    verdict: pass
+    evidence: README.md with 280+ lines covering quickstart, prerequisites, setup, verification, troubleshooting,
+      architecture, pgvector requirements
+  - id: AC7
+    verdict: pass
+    evidence: Package in pnpm-workspace.yaml (apps/api/*), build/lint/check-types pass, no breaking changes to existing packages
+  - id: AC8
+    verdict: pass
+    evidence: validate-env.ts checks environment variables, client.ts sanitizes error messages, docker-compose.yml requires
+      credentials, clear error messages reference README
+  - id: AC9
+    verdict: pass
+    evidence: pnpm db:init script in package.json line 31, db-init.ts combines docker-compose up, wait-for-healthy, migrations
+  - id: AC10
+    verdict: pass
+    evidence: README.md has prominent Quick Start section at top with 30-second setup, links to detailed sections
+  - id: AC11
+    verdict: pass
+    evidence: pnpm db:studio script in package.json line 37, drizzle.config.ts configured for web-based inspection
+  - id: AC12
+    verdict: pass
+    evidence: pnpm validate:env script in package.json line 38, validate-env.ts checks all KB_DB_* variables, clear error
+      messages for missing variables
+  - id: AC13
+    verdict: pass
+    evidence: pnpm db:seed script in package.json line 35, db-seed.ts creates 5 sample entries with embeddings, idempotent
+  - id: AC14
+    verdict: pass
+    evidence: docker-compose.yml line 16 uses pgvector:0.5.1-pg16 (exact version), README documents version requirements,
+      VECTOR(1536) dimension documented in schema.ts lines 76-87
+  - id: AC15
+    verdict: pass
+    evidence: smoke.test.ts lines 211-274 verify IVFFlat index exists and test EXPLAIN plans, README documents db:analyze
+      script, troubleshooting section for index usage
+  - id: AC16
+    verdict: pass
+    evidence: README includes rollback documentation with docker-compose down -v, volume management, reset procedures
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.083Z
+  blocking_issues: []

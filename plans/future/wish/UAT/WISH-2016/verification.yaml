@@ -1,0 +1,79 @@
+schema: 1
+story_id: WISH-2016
+updated: 2026-02-01T20:52:37.275Z
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 372
+    fail: 5
+    notes:
+      - 5 failures are pre-existing in core/cache/__tests__/redis-client.test.ts
+      - "All WISH-2016 unit tests passed: optimizer.test.ts (26 tests)"
+      - Failures not related to this story - Redis client mocking issues
+  integration:
+    pass: 28
+    fail: 0
+    notes:
+      - "All integration tests passed: functions/image-processor/__tests__/handler.test.ts"
+      - 28 tests cover S3 event handling, helper functions, and edge cases
+      - Exceeds required 15+ integration tests (AC13)
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: SIZE_CONFIGS in optimizer.ts lines 32-54, tests in optimizer.test.ts lines 170-199
+  - id: AC2
+    verdict: pass
+    evidence: "quality: 85 in SIZE_CONFIGS (optimizer.ts line 37, 44, 51)"
+  - id: AC3
+    verdict: pass
+    evidence: optimizer.ts line 218 (.webp()), ResponsiveImage component lines 154-167
+  - id: AC4
+    verdict: pass
+    evidence: "DEFAULT_WATERMARK_OPTIONS (optimizer.ts lines 168-173), applyWatermark: true only on large (line 52)"
+  - id: AC5
+    verdict: pass
+    evidence: 0008_add_image_variants.sql lines 15-30
+  - id: AC6
+    verdict: pass
+    evidence: handler.ts lines 42-88 processes S3 events, isImageKey checks path
+  - id: AC7
+    verdict: design
+    evidence: Sharp library is optimized for performance, Lambda memory configurable
+  - id: AC8
+    verdict: pass
+    evidence: WishlistCard uses getBestImageUrl('thumbnail') - line 17 import, implementation in ResponsiveImage
+  - id: AC9
+    verdict: pass
+    evidence: ResponsiveImage component with size prop (lines 71-168), picture element (lines 154-167)
+  - id: AC10
+    verdict: pass
+    evidence: ResponsiveImage lines 88-103, getBestImageUrl function lines 182-213
+  - id: AC11
+    verdict: pass
+    evidence: handler.ts lines 77-87 catch/log/throw for Lambda retry, ResponsiveImage lines 138-151 handle failed status
+  - id: AC12
+    verdict: pass
+    evidence: optimizer.test.ts has 26 tests (exceeds requirement)
+  - id: AC13
+    verdict: pass
+    evidence: handler.test.ts has 28 tests (exceeds requirement)
+  - id: AC14
+    verdict: pass
+    evidence: handler.ts line 149 emitProcessingMetrics function
+  - id: AC15
+    verdict: pass
+    evidence: Migration has inline comments, PROOF.md documents implementation, component JSDoc comments
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.275Z
+  blocking_issues: []

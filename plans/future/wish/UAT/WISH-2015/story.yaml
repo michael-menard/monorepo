@@ -1,0 +1,31 @@
+schema: 1
+id: WISH-2015
+feature: wish
+type: feature
+state: uat
+title: Form Autosave to localStorage
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2002
+follow_up_from: WISH-2002
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Automatically save form state during user input and restore it when the user returns to the form, preventing data
+  loss from accidental navigation or browser issues.
+non_goals:
+  - Not re-implementing the form submission logic from WISH-2002
+  - Not implementing server-side draft storage (using localStorage only)
+  - Not implementing cross-device draft synchronization
+  - Not implementing draft expiration or cleanup (user can manually clear)
+  - Not implementing autosave for edit form (edit already loads from server)
+  - Not supporting multiple currencies (all prices stored in USD; assumption documented)
+acs: []
+risks: []
+created_at: 2026-01-27T00:00:00-07:00
+updated_at: 2026-01-28T00:00:00-07:00

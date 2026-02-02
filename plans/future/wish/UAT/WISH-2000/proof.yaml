@@ -1,0 +1,13 @@
+schema: 1
+story_id: WISH-2000
+completed_at: 2026-02-01T20:52:37.235Z
+summary: []
+deliverables:
+  - path: packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts
+    type: tests
+  - path: packages/core/api-client/src/schemas/__tests__/wishlist-schema-alignment.test.ts
+    type: tests
+verification:
+  tests_passed: 104
+  all_acs_verified: true
+limitations: []

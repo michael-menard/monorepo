@@ -4,7 +4,7 @@ import { cn, Button } from '@repo/app-component-library'
 
 export const GalleryTableErrorPropsSchema = z.object({
   error: z.instanceof(Error),
-  onRetry: z.function().args().returns(z.void()).optional(),
+  onRetry: z.function(z.tuple([]), z.void()).optional(),
   isRetrying: z.boolean().optional().default(false),
   className: z.string().optional(),
 })

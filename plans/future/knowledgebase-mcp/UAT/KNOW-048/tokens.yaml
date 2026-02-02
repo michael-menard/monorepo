@@ -1,0 +1,31 @@
+schema: 1
+story_id: KNOW-048
+total:
+  input: 75200
+  output: 30000
+phases:
+  - phase: elab-setup
+    input: 4200
+    output: 1800
+  - phase: elab-completion
+    input: 8500
+    output: 3000
+  - phase: dev-setup
+    input: 3000
+    output: 1500
+  - phase: dev-planning
+    input: 12000
+    output: 3500
+  - phase: dev-implementation
+    input: 25000
+    output: 12000
+  - phase: dev-verification
+    input: 8000
+    output: 3000
+  - phase: dev-documentation
+    input: 10000
+    output: 4000
+  - phase: qa-verify
+    input: 4500
+    output: 1200
+high_cost: []

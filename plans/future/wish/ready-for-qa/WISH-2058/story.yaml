@@ -1,0 +1,67 @@
+schema: 1
+id: WISH-2058
+feature: wish
+type: feature
+state: ready-for-qa
+title: Core WebP Conversion
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2022
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Convert compressed images to WebP format instead of JPEG to achieve 25-35% additional size savings while
+  maintaining acceptable visual quality in modern browsers (Chrome, Firefox, Safari 14+, Edge).
+non_goals:
+  - Not implementing browser compatibility detection (handled by WISH-2068)
+  - Not implementing JPEG fallback for older browsers (handled by WISH-2068)
+  - Not implementing lossless WebP compression (lossy is sufficient for wishlist images)
+  - Not implementing WebP animation support (out of scope for wishlist images)
+  - Not re-implementing the compression pipeline from WISH-2022
+  - Not implementing server-side WebP conversion (client-side only)
+acs:
+  - id: AC1
+    text: "Images are compressed to WebP format instead of JPEG by changing `fileType: 'image/webp'` in compression settings"
+    type: functional
+  - id: AC2
+    text: WebP compression quality is set to 0.8 (matching WISH-2022 JPEG quality)
+    type: functional
+  - id: AC3
+    text: Compressed WebP images are 25-35% smaller than equivalent JPEG images at same visual quality
+    type: functional
+  - id: AC4
+    text: 'Toast notification shows updated format: "Image compressed to WebP: X MB → Y MB"'
+    type: functional
+  - id: AC5
+    text: Original filename is preserved with `.webp` extension (e.g., `photo.jpg` → `photo.webp`)
+    type: functional
+  - id: AC6
+    text: Image preview displays compressed WebP image correctly in all supported browsers
+    type: functional
+  - id: AC7
+    text: S3 upload accepts WebP images with correct MIME type (`image/webp`)
+    type: functional
+  - id: AC8
+    text: Backend API stores WebP image URL without modification (no format conversion)
+    type: functional
+  - id: AC11
+    text: Unit tests verify WebP format output from imageCompression utility
+    type: functional
+  - id: AC12
+    text: Integration tests verify useS3Upload hook uploads WebP images successfully
+    type: functional
+  - id: AC13
+    text: Playwright E2E tests verify end-to-end WebP compression and upload workflow
+    type: functional
+  - id: AC14
+    text: Documentation updated to reflect WebP as default output format
+    type: functional
+risks: []
+created_at: 2026-01-31T10:00:00-07:00
+updated_at: 2026-01-31T17:00:00-07:00

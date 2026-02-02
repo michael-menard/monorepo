@@ -1,0 +1,37 @@
+schema: 1
+id: WISH-2013
+feature: wish
+type: feature
+state: uat
+title: File Upload Security Hardening
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2011
+  - WISH-2002
+follow_up_from: WISH-2011
+scope:
+  packages:
+    - apps/api/lego
+    - apps/api/lego
+    - apps/api/lego
+    - apps/web/app
+    - apps/web/app
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Secure user file uploads to prevent malicious content, enforce size limits, and protect stored files from
+  unauthorized access. Ensure all security validations are testable using MSW infrastructure from WISH-2011.
+non_goals:
+  - "**Content Moderation:** Scanning for inappropriate/offensive images is out of scope (defer to future moderation
+    story)"
+  - "**Image Processing:** Automatic resizing, compression, or watermarking is out of scope"
+  - "**CDN Integration:** CloudFront or image CDN setup is out of scope"
+  - "**Advanced Threat Detection:** AI/ML-based threat analysis is out of scope"
+  - "**User Quota Management:** Per-user storage quotas or upload limits is out of scope"
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.265Z
+updated_at: 2026-01-31

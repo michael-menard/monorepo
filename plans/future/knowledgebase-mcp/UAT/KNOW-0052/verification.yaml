@@ -1,0 +1,99 @@
+schema: 1
+story_id: KNOW-0052
+updated: 2026-01-25T17:05:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 4
+    note: ""
+tests:
+  unit:
+    pass: 62
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: tool-handlers.ts:handleKbSearch (lines 200-268), search-tools.test.ts (6 tests), logs correlation_id and
+      fallback_mode at warn level
+  - id: AC2
+    verdict: pass
+    evidence: tool-handlers.ts:handleKbGetRelated (lines 270-330), search-tools.test.ts (4 tests), validates UUID entry_id
+  - id: AC3
+    verdict: pass
+    evidence: performance.test.ts (11 tests), DEPLOYMENT.md performance targets documented, query_time_ms logged in all
+      handlers, slow query logging implemented
+  - id: AC4
+    verdict: pass
+    evidence: DEPLOYMENT.md (150 lines), documents instance-per-session model, stdio transport, server lifecycle, crash
+      recovery, connection pooling
+  - id: AC5
+    verdict: pass
+    evidence: connection-pooling.test.ts (10 tests), EnvSchema DB_POOL_SIZE validation (1-20 range), DEPLOYMENT.md
+      connection pooling section
+  - id: AC6
+    verdict: pass
+    evidence: server.ts:DEFAULT_TIMEOUTS, EnvSchema timeout variables, withTimeout implementation in tool-handlers.ts,
+      performance.test.ts timeout tests
+  - id: AC7
+    verdict: pass
+    evidence: server.ts:generateCorrelationId (UUID v4), ToolCallContext interface, correlation_id in all log messages and
+      responses
+  - id: AC8
+    verdict: pass
+    evidence: server.ts:MAX_TOOL_CALL_DEPTH=5, checkCircularDependency function, search-tools.test.ts circular dependency tests
+  - id: AC9
+    verdict: pass
+    evidence: mcp-protocol-errors.test.ts (24 tests), tests malformed JSON, invalid tool names, missing params, concurrent
+      requests
+  - id: AC10
+    verdict: pass
+    evidence: 62 tests passing across 4 test files, 62.31% line coverage on tool-handlers.ts, all happy paths, error cases,
+      and edge cases tested
+  - id: AC11
+    verdict: pass
+    evidence: mcp-protocol-errors.test.ts Server Startup Validation section (8 tests), tests missing DATABASE_URL,
+      OPENAI_API_KEY, empty values
+  - id: AC12
+    verdict: pass
+    evidence: DEPLOYMENT.md Timeout Behavior section, connection-pooling.test.ts timeout tests verify no connection leak
+  - id: AC13
+    verdict: pass
+    evidence: ToolCallContext includes correlation_id, passed to all search handlers, included in all log messages
+  - id: AC14
+    verdict: pass
+    evidence: checkCircularDependency function in server.ts, MAX_TOOL_CALL_DEPTH=5, search-tools.test.ts circular dependency
+      tests, DEPLOYMENT.md documentation
+  - id: AC15
+    verdict: pass
+    evidence: DEPLOYMENT.md Performance Targets section, performance.test.ts validates timing measurements, query_time_ms in
+      all responses
+  - id: AC16
+    verdict: pass
+    evidence: DEPLOYMENT.md Pagination Limitations section, search responses include metadata.total, performance.test.ts
+      validates result count metadata
+  - id: AC17
+    verdict: pass
+    evidence: EnvSchema LOG_SLOW_QUERIES_MS (default 1000ms), getTimeoutConfig function, DEPLOYMENT.md documents threshold
+  - id: AC18
+    verdict: pass
+    evidence: DEPLOYMENT.md Future Enhancements > Caching Layer section documents Redis-based caching strategy, cache
+      invalidation, TTL
+  - id: AC19
+    verdict: pass
+    evidence: DEPLOYMENT.md Future Enhancements > Tool Composition section documents context passing, AsyncLocalStorage approach
+  - id: AC20
+    verdict: pass
+    evidence: DEPLOYMENT.md Future Enhancements > Prometheus Metrics section documents CloudWatch/Prometheus integration plans
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.100Z
+  blocking_issues: []

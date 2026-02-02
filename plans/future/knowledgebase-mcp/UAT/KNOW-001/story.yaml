@@ -1,0 +1,24 @@
+schema: 1
+id: KNOW-001
+feature: knowledgebase-mcp
+type: feature
+state: uat
+title: Package Infrastructure Setup
+points: null
+priority: null
+blocked_by: null
+depends_on: []
+follow_up_from: null
+scope:
+  packages:
+    - apps/api/knowledge
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: "Establish a production-ready package infrastructure for the Knowledge Base MCP server, including:"
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.081Z
+updated_at: 2026-02-01T20:52:37.081Z

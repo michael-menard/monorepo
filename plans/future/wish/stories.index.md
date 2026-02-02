@@ -15,7 +15,7 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 21 |
+| completed | 22 |
 | in-progress | 0 |
 | review | 0 |
 | ready-for-code-review | 1 |
@@ -1489,7 +1489,7 @@ Follow-up from QA Elaboration of WISH-2008 (Enhancement Opportunity #9)
 
 ## WISH-2022: Client-side Image Compression
 
-**Status:** completed
+**Status:** uat
 **Depends On:** WISH-2002
 **Follow-up From:** WISH-2002
 **Phase:** 4 - UX Polish
@@ -1520,7 +1520,7 @@ Automatically compress images on the client side before uploading to S3, reducin
 
 **Priority:** P2 (UX enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/ready-for-qa/WISH-2022/WISH-2022.md`
+**Story File:** `plans/future/wish/UAT/WISH-2022/WISH-2022.md`
 
 ### Source
 
@@ -1745,7 +1745,7 @@ Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunities - Finding 
 
 ## WISH-2057: Schema Evolution Policy and Versioning Strategy
 
-**Status:** ready-to-work
+**Status:** completed
 **Depends On:** WISH-2007
 **Follow-up From:** WISH-2007
 **Phase:** 1 - Foundation
@@ -1761,9 +1761,13 @@ Follow-up from QA Elaboration of WISH-2046 (Enhancement Opportunities - Finding 
 
 **Source:** QA Discovery Notes from WISH-2007 Elaboration (Enhancement Opportunity #6)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2057/WISH-2057.md`
+**Story File:** `plans/future/wish/UAT/WISH-2057/WISH-2057.md`
 
 **Elaboration Notes:** CONDITIONAL PASS (2026-01-29) - Story is well-structured with clear scope and 20 acceptance criteria. All audit checks pass. One minor issue identified: existing `packages/backend/database-schema/docs/WISHLIST-SCHEMA-EVOLUTION.md` (155 lines) already addresses some schema evolution concerns. Implementation should clarify relationship (replace, extend, or coexist).
+
+**Implementation Notes:** COMPLETE (2026-02-01) - All 4 documentation files created. Existing docs WISHLIST-SCHEMA-EVOLUTION.md and enum-evolution-guide.md marked SUPERSEDED. CI-SCHEMA-VALIDATION.md updated with cross-references. All 20 ACs verified. Code review PASS on iteration 1.
+
+**QA Verification:** PASS (2026-02-01) - All 20 acceptance criteria verified. Documentation quality complete. No blocking issues identified. Story moved to UAT completion status.
 
 **Sizing:** 20 Acceptance Criteria covering policy documentation, enum modification runbooks, versioning strategy, common scenarios, and governance
 
@@ -2463,8 +2467,8 @@ Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunities - Finding 
 
 ## WISH-2058: Core WebP Conversion
 
-**Status:** deferred
-**Depends On:** WISH-2022
+**Status:** completed
+**Depends On:** none
 **Split From:** WISH-2048
 **Phase:** 4 - UX Polish
 
@@ -2495,7 +2499,7 @@ Convert compressed images to WebP format instead of JPEG to achieve 25-35% addit
 
 **Priority:** P2 (Performance enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/ready-to-work/WISH-2058/WISH-2058.md`
+**Story File:** `plans/future/wish/UAT/WISH-2058/WISH-2058.md`
 
 ### Source
 
@@ -2512,7 +2516,7 @@ Split from WISH-2048 (WebP Format Conversion) during QA Elaboration. Original st
 ## WISH-2068: Browser Compatibility & Fallback for WebP
 
 **Status:** deferred
-**Depends On:** WISH-2058
+**Depends On:** none
 **Split From:** WISH-2048
 **Phase:** 4 - UX Polish
 

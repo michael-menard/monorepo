@@ -39,13 +39,13 @@ const InstructionsDetailModulePropsSchema = z.object({
   /** Error message if fetch failed */
   error: z.string().optional().nullable(),
   /** Handler for back navigation */
-  onBack: z.function().returns(z.void()).optional(),
+  onBack: z.function(z.tuple([]), z.void()).optional(),
   /** Handler for edit action */
-  onEdit: z.function().args(z.string()).returns(z.void()).optional(),
+  onEdit: z.function(z.tuple([z.string()]), z.void()).optional(),
   /** Handler for favorite toggle */
-  onFavorite: z.function().args(z.string()).returns(z.void()).optional(),
+  onFavorite: z.function(z.tuple([z.string()]), z.void()).optional(),
   /** Handler for delete action */
-  onDelete: z.function().args(z.string()).returns(z.void()).optional(),
+  onDelete: z.function(z.tuple([z.string()]), z.void()).optional(),
   /** Optional className for styling */
   className: z.string().optional(),
 })

@@ -6,7 +6,7 @@ import {
   LogLevel,
   LoggerConfig,
   LoggerConfigSchema,
-} from './types'
+} from './types.js'
 
 /**
  * Main logger implementation

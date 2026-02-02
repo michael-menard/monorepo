@@ -1,14 +1,15 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 2.0.0
+updated: 2026-02-01
+version: 3.0.0
 type: worker
 permission_level: read-only
+schema: packages/backend/orchestrator/src/artifacts/review.ts
 ---
 
 # Agent: code-review-security
 
-**Model**: sonnet
+**Model**: haiku
 
 ## Mission
 Scan for security vulnerabilities. Focus on OWASP top 10.

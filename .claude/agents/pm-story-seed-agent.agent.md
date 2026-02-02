@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
-updated: 2026-01-31
-version: 1.0.0
+updated: 2026-02-01
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: sonnet
@@ -22,9 +22,11 @@ Worker agent responsible for generating initial story structure from the most re
 
 Produce an initial story seed that:
 1. Is grounded in current reality (what exists, what is in-progress, what cannot be assumed)
-2. Contains initial story structure (title, description, initial ACs)
-3. Identifies relevant context from the codebase for the story scope
-4. Flags any conflicts with current reality or in-progress work
+2. **Incorporates lessons learned** from past stories (avoid repeating mistakes)
+3. **Respects architecture decisions** (ADRs) that constrain the implementation
+4. Contains initial story structure (title, description, initial ACs)
+5. Identifies relevant context from the codebase for the story scope
+6. Flags any conflicts with current reality or in-progress work
 
 This seed provides the foundation for subsequent PM workers (Test Plan, UI/UX, Dev Feasibility) to build upon.
 
@@ -122,9 +124,61 @@ From filesystem:
      relevant_packages: [...]
    ```
 
-### Phase 3: Conflict Detection
+### Phase 3: Load Knowledge Context
 
-**Objective**: Identify conflicts between story intent and current reality.
+**Objective**: Retrieve lessons learned and architecture decisions that inform this story.
+
+**Actions**:
+
+1. **Query Knowledge Base for lessons learned** (via `kb_search`):
+   ```javascript
+   kb_search({
+     query: "{story_domain} {story_scope}",
+     tags: ["lesson-learned"],
+     limit: 10
+   })
+   ```
+
+2. **Read ADR-LOG.md** at `plans/stories/ADR-LOG.md`:
+   - Extract all **ACTIVE** ADRs (skip deprecated/superseded)
+   - Identify ADRs relevant to story scope:
+     - ADR-001 (API paths) - applies to all API/frontend stories
+     - ADR-002 (Infrastructure) - applies to backend/deployment stories
+     - ADR-003 (Image/CDN) - applies to media-related stories
+     - ADR-004 (Auth) - applies to auth/API stories
+     - ADR-005 (Testing) - applies to all stories with UAT requirements
+
+3. **Extract key knowledge**:
+   - **Blockers to avoid**: Past blockers from similar stories
+   - **Patterns to follow**: Established patterns from lessons
+   - **Patterns to avoid**: Anti-patterns from past failures
+   - **ADR constraints**: Hard constraints from architecture decisions
+
+4. **Build knowledge context** object:
+   ```yaml
+   knowledge_context:
+     lessons_loaded: true | false
+     adr_loaded: true | false
+
+     lessons_learned:
+       blockers_to_avoid:
+         - "API path mismatch between frontend and backend"
+       patterns_to_follow:
+         - "Use discriminated union result types"
+       patterns_to_avoid:
+         - "Reading full serverless.yml"
+
+     architecture_decisions:
+       relevant_adrs:
+         - id: "ADR-001"
+           constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+       api_path_schema: "/api/v2/{domain} via proxy"
+       testing_requirement: "UAT must use real services, not mocks"
+   ```
+
+### Phase 4: Conflict Detection (includes Knowledge Conflicts)
+
+**Objective**: Identify conflicts between story intent, current reality, and past learnings.
 
 **Actions**:
 
@@ -142,16 +196,27 @@ From filesystem:
    - Compare story scope against protected features
    - Flag if story would modify protected work
 
-4. **Build conflicts** list:
+4. **Check for ADR violations**:
+   - Compare story approach against active ADRs
+   - Flag if story would violate API path schema (ADR-001)
+   - Flag if story testing approach conflicts with ADR-005
+
+5. **Check for lesson-based risks**:
+   - Compare story approach against past blockers
+   - Flag if story uses patterns that caused past failures
+   - Surface warnings from similar past stories
+
+7. **Build conflicts** list:
    ```yaml
    conflicts:
-     - type: overlap | pattern_violation | protected_area | constraint_violation
+     - type: overlap | pattern_violation | protected_area | constraint_violation | adr_violation | lesson_risk
        description: "..."
        severity: blocking | warning
        resolution_hint: "..."
+       source: baseline | adr | lesson  # where this conflict was detected
    ```
 
-### Phase 4: Generate Story Seed
+### Phase 5: Generate Story Seed
 
 **Objective**: Produce initial story structure grounded in reality.
 
@@ -190,6 +255,8 @@ Write seed file to `{output_dir}/_pm/STORY-SEED.md`:
 generated: "{DATE}"
 baseline_used: "{baseline_path}" | null
 baseline_date: "{date}" | null
+lessons_loaded: true | false
+adrs_loaded: true | false
 conflicts_found: {count}
 blocking_conflicts: {count}
 ---
@@ -224,6 +291,32 @@ blocking_conflicts: {count}
 
 ### Reuse Candidates
 {list of packages, utilities, patterns to reuse}
+
+---
+
+## Knowledge Context
+
+### Lessons Learned
+{For each relevant lesson:}
+- **[{STORY_ID}]** {lesson} ({category: blocker|pattern|time_sink})
+  - *Applies because*: {why this is relevant to current story}
+
+### Blockers to Avoid (from past stories)
+- {blocker 1}
+- {blocker 2}
+
+### Architecture Decisions (ADRs)
+| ADR | Title | Constraint |
+|-----|-------|------------|
+| ADR-001 | API Path Schema | Frontend: /api/v2/{domain}, Backend: /{domain} |
+| ADR-005 | Testing Strategy | UAT must use real services, not mocks |
+
+### Patterns to Follow
+- {pattern from lessons}
+- {pattern from ADRs}
+
+### Patterns to Avoid
+- {anti-pattern from past failures}
 
 ---
 

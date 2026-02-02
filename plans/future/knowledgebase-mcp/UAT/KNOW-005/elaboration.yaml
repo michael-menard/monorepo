@@ -1,0 +1,54 @@
+schema: 1
+story_id: KNOW-005
+date: 2026-01-31
+verdict: fail
+audit:
+  scope_alignment:
+    status: fail
+    note: Story was previously split into KNOW-0051, KNOW-0052, KNOW-0053 (all completed). Original KNOW-005 scope
+      duplicates completed work.
+  implementation_status:
+    status: complete
+    note: "All 10 MCP tools now implemented across three split stories: KNOW-0051 (5 CRUD tools), KNOW-0052 (2 search
+      tools), KNOW-0053 (3 admin tool stubs)."
+  reuse-first:
+    status: pass
+    note: Excellent reuse plan. Leverages existing CRUD operations (KNOW-003), search functions (KNOW-004), EmbeddingClient
+      (KNOW-002), @repo/logger. All properly reused.
+  ports_&_adapters:
+    status: pass
+    note: Excellent ports & adapters compliance. MCP server acts as thin adapter layer wrapping domain logic. Architecture
+      validated.
+  test_coverage:
+    status: pass
+    note: Split stories include comprehensive test coverage with 80%+ coverage targets and 25+ test scenarios across all
+      three stories.
+  documentation:
+    status: pass
+    note: Deployment topology, error handling, and lifecycle documentation completed in split stories.
+  risk_mitigation:
+    status: pass
+    note: All 6 major risks disclosed and mitigated across split story implementations.
+  story_completion:
+    status: fail
+    note: Story was already split and is now complete. Original KNOW-005 is obsolete and should not be re-implemented.
+gaps: []
+split_required: false
+follow_ups:
+  - finding: "KNOW-0051: MCP Server Foundation + CRUD Tools (completed)"
+    story_id: null
+  - finding: "KNOW-0052: MCP Search Tools + Deployment Topology (completed)"
+    story_id: null
+  - finding: "KNOW-0053: MCP Admin Tool Stubs (completed)"
+    story_id: null
+  - finding: "KNOW-006: Parsers and Bulk Import (depends on completed KNOW-0051-0053)"
+    story_id: null
+  - finding: "KNOW-007: Admin Tools and Polish (depends on completed KNOW-0051-0053)"
+    story_id: null
+  - finding: "KNOW-009: MCP Tool Authorization (deferred from original KNOW-005)"
+    story_id: null
+  - finding: "KNOW-010: API Rate Limiting (deferred from original KNOW-005)"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

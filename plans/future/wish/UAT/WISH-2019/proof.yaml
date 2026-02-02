@@ -1,0 +1,24 @@
+schema: 1
+story_id: WISH-2019
+completed_at: 2026-02-01T20:52:37.284Z
+summary:
+  - Successfully migrated feature flag caching from in-memory Map to Redis (via ioredis) for distributed,
+    production-ready caching. The implementation maintains full backward compatibility with automatic fallback to
+    in-memory cache when Redis is unavailable.
+deliverables:
+  - path: apps/api/lego-api/core/cache/redis-client.ts
+    type: code
+  - path: apps/api/lego-api/core/cache/index.ts
+    type: code
+  - path: apps/api/lego-api/domains/config/adapters/redis-cache.ts
+    type: code
+  - path: apps/api/lego-api/docker-compose.yml
+    type: code
+  - path: apps/api/lego-api/core/cache/__tests__/redis-client.test.ts
+    type: tests
+  - path: apps/api/lego-api/domains/config/__tests__/redis-cache.test.ts
+    type: tests
+verification:
+  tests_passed: 0
+  all_acs_verified: true
+limitations: []

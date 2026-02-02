@@ -1,14 +1,15 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 2.0.0
+updated: 2026-02-01
+version: 3.0.0
 type: worker
 permission_level: test-run
+schema: packages/backend/orchestrator/src/artifacts/review.ts
 ---
 
 # Agent: code-review-lint
 
-**Model**: sonnet
+**Model**: haiku
 
 ## Mission
 Run linter on touched files only. Return YAML findings.

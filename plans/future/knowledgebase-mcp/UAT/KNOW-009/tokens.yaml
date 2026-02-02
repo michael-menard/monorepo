@@ -1,0 +1,19 @@
+schema: 1
+story_id: KNOW-009
+total:
+  input: 147000
+  output: 90500
+phases:
+  - phase: pm-generate
+    input: 72000
+    output: 8000
+  - phase: elab-setup
+    input: 15000
+    output: 12000
+  - phase: elab-completion
+    input: 15000
+    output: 8500
+  - phase: qa-verify
+    input: 45000
+    output: 62000
+high_cost: []

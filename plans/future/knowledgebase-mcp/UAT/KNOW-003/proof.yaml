@@ -1,0 +1,13 @@
+schema: 1
+story_id: KNOW-003
+completed_at: 2026-02-01T20:52:37.089Z
+summary: []
+deliverables: []
+verification:
+  tests_passed: 65
+  all_acs_verified: true
+limitations:
+  - 1. No cursor-based pagination (deferred to KNOW-007)
+  - 2. No soft delete (deferred to KNOW-007)
+  - 3. No bulk operations (deferred to KNOW-006)
+  - 4. Tag filtering without GIN index (acceptable for MVP)

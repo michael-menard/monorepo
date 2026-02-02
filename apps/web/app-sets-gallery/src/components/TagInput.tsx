@@ -9,7 +9,7 @@ import { z } from 'zod'
 
 const TagInputPropsSchema = z.object({
   value: z.array(z.string()).default([]),
-  onChange: z.function().args(z.array(z.string())).returns(z.void()),
+  onChange: z.function(z.tuple([z.array(z.string())]), z.void()),
   placeholder: z.string().optional(),
   maxTags: z.number().optional(),
   maxTagLength: z.number().optional(),

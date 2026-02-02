@@ -46,11 +46,11 @@ export const InstructionCardPropsSchema = z.object({
   /** The instruction data to display */
   instruction: InstructionSchema,
   /** Handler for favorite action */
-  onFavorite: z.function().args(z.string()).returns(z.void()).optional(),
+  onFavorite: z.function(z.tuple([z.string()]), z.void()).optional(),
   /** Handler for edit action */
-  onEdit: z.function().args(z.string()).returns(z.void()).optional(),
+  onEdit: z.function(z.tuple([z.string()]), z.void()).optional(),
   /** Handler for click/navigation */
-  onClick: z.function().args(z.string()).returns(z.void()).optional(),
+  onClick: z.function(z.tuple([z.string()]), z.void()).optional(),
   /** Additional CSS classes */
   className: z.string().optional(),
 })

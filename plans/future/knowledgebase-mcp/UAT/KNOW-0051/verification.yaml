@@ -1,0 +1,70 @@
+schema: 1
+story_id: KNOW-0051
+updated: 2026-01-25T17:00:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 4
+    note: ""
+tests:
+  unit:
+    pass: 71
+    fail: 0
+  integration:
+    pass: 20
+    fail: 0
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: server.ts:102-112 (Server creation with name/version), tool-schemas.ts exports 5 tool definitions,
+      mcp-integration.test.ts:69-121 (Tool discovery tests verify all 5 tools returned with descriptions and schemas)
+  - id: AC2
+    verdict: pass
+    evidence: tool-schemas.ts:44-67 (zodToMcpSchema function using zod-to-json-schema), package.json:60 (zod-to-json-schema
+      dependency installed), mcp-integration.test.ts:100-120 (Schema validation tests)
+  - id: AC3
+    verdict: pass
+    evidence: tool-handlers.ts:52-96 (handleKbAdd calls kb_add from KNOW-003), tool-handlers.ts:53-61 (logging of
+      invocation), tool-handlers.ts:70-76 (query_time_ms measurement), tool-handlers.ts:86-95 (error sanitization),
+      tool-handlers.test.ts:77-135 (Handler tests verify CRUD function calls)
+  - id: AC4
+    verdict: pass
+    evidence: error-handling.ts:26-32 (ErrorCode definitions), error-handling.ts:116-231 (sanitizeError routing),
+      error-handling.test.ts:159-178 (Database error sanitization - passwords masked), error-handling.test.ts:199-206
+      (API keys redacted), error-handling.test.ts:105-157 (Zod validation errors include field names)
+  - id: AC5
+    verdict: pass
+    evidence: logger.ts:168-174 (write method using process.stderr.write), logger.ts:118-162 (sanitizeData function with
+      content truncation, API key redaction, embedding exclusion), tool-handlers.ts:55-61 (info level logging for
+      invocations), tool-handlers.ts:90-93 (error level logging), Grep search confirms no console.log usage in
+      mcp-server directory
+  - id: AC6
+    verdict: pass
+    evidence: server.ts:37-43 (EnvSchema with DATABASE_URL and OPENAI_API_KEY required), server.ts:53-76
+      (validateEnvironment function with fail-fast behavior), mcp-integration.test.ts:136-196 (Environment validation
+      tests verify required vars and defaults)
+  - id: AC7
+    verdict: pass
+    evidence: mcp-integration.test.ts:198-285 (Tool invocation tests simulating MCP protocol), test-helpers.ts (MCP client
+      mock utilities), mcp-integration.test.ts:56-122 (End-to-end MCP protocol tests for tool discovery and invocation),
+      tool-handlers.test.ts (22 tests calling handlers directly)
+  - id: AC8
+    verdict: pass
+    evidence: server.ts:233-276 (setupShutdownHandlers function), server.ts:40 (SHUTDOWN_TIMEOUT_MS configurable with 30s
+      default), server.ts:247-255 (SIGTERM/SIGINT handlers), server.ts:242-246 (cleanup and server stop logic)
+  - id: AC9
+    verdict: pass
+    evidence: "Test execution: 71 tests passed (3 test files), Coverage report: mcp-server directory at 69.1% overall
+      (error-handling 100%, tool-handlers 97.57%, tool-schemas 97.03%), All happy path scenarios tested (5 tools), All
+      error cases tested (validation, not found, API failure, database failure), Edge cases covered (concurrent
+      invocations validated in handlers)"
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.097Z
+  blocking_issues: []

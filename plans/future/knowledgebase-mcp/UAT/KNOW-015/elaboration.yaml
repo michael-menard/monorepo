@@ -1,0 +1,47 @@
+schema: 1
+story_id: KNOW-015
+date: 2026-01-25
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: Story scope now correctly matches MVP (local-only). Disaster recovery infrastructure, no endpoints, no feature
+      creep.
+  internal_consistency:
+    status: pass
+    note: All 12 ACs align with local-only MVP. Goals, non-goals, AC, and test plan all consistent.
+  reuse-first:
+    status: pass
+    note: Correctly identifies @repo/logger reuse (optional for Bash), Docker Compose from KNOW-001. Scripts in
+      knowledge-base package as operational tooling.
+  ports_&_adapters:
+    status: pass
+    note: Backup/restore scripts isolated as external operational tools, not application logic. Clean separation.
+  local_testability:
+    status: pass
+    note: 7 happy path tests + 5 error cases + 5 edge cases. All executable in Docker with clear evidence requirements.
+  decision_completeness:
+    status: pass
+    note: "All key decisions made: Bash scripts, local filesystem storage, multi-tier retention, non-dev runbook validation,
+      monthly DR drills. RTO/RPO targets documented (4h/24h)."
+  risk_disclosure:
+    status: pass
+    note: "8 risks identified and mitigated: local storage failure, concurrent restore prevention, stale locks, data loss on
+      cleanup failure, application downtime, etc."
+  story_sizing:
+    status: pass
+    note: 12 ACs, infrastructure/docs only, no endpoints. 5 story points appropriate for operational work.
+gaps: []
+split_required: true
+follow_ups:
+  - finding: "KNOW-016 (Post-MVP): Automated restore testing in CI to validate backups restorable"
+    story_id: null
+  - finding: "KNOW-017 (Post-MVP): Cross-region backup replication for true disaster recovery"
+    story_id: null
+  - finding: "KNOW-018 (Post-MVP): Backup cost optimization and compression algorithm benchmarking"
+    story_id: null
+  - finding: "KNOW-029 (Parallel): Secrets management integration (depends on KNOW-028 completion)"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

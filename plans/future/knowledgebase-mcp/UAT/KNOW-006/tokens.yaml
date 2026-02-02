@@ -1,0 +1,13 @@
+schema: 1
+story_id: KNOW-006
+total:
+  input: 13100
+  output: 8300
+phases:
+  - phase: elab-setup
+    input: 2500
+    output: 3200
+  - phase: elaboration
+    input: 10600
+    output: 5100
+high_cost: []

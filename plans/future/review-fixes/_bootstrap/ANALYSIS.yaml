@@ -1,0 +1,310 @@
+schema: 2
+feature_dir: plans/future/review-fixes
+prefix: REVI
+project_name: review-fixes
+analyzed: 2026-02-01T00:00:00Z
+
+overall_goal: |
+  Harden both the Claude workflow system and LangGraph orchestrator to address gaps identified in agent builder review, ensuring error handling, parallel worker synchronization, complete state machine, token budget enforcement, idempotency guarantees, centralized model assignments, observability, and testing are fully documented and implemented with synchronized schemas across both systems.
+
+phases:
+  - id: 1
+    name: "Foundation & Synchronization"
+    description: "Establish synchronization infrastructure to keep Claude and LangGraph in sync, and implement high-priority error handling and parallel worker features"
+  - id: 2
+    name: "Core Workflow Hardening"
+    description: "Complete state machine, token budgets, and idempotency guarantees for reliable workflow execution"
+  - id: 3
+    name: "Observability & Quality"
+    description: "Add observability, centralized model assignments, and testing guidance for maintainability"
+
+stories:
+  - id: "REVI-001"
+    title: "Synchronization Infrastructure"
+    feature: "Create pre-commit hook, CI check, and doc generation scripts to keep Claude workflow markdown and LangGraph TypeScript schemas synchronized"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "scripts/check-workflow-sync.ts"
+      - "scripts/generate-workflow-docs.ts"
+      - ".husky/pre-commit hook addition"
+      - "CI workflow for sync verification"
+    goal: "Ensure Claude and LangGraph never drift out of sync by automating validation and doc generation"
+    risk_notes: "Foundation for all other stories - must be solid. Requires parsing markdown tables and comparing with Zod schemas."
+    sizing_warning: false
+    priority: "HIGH"
+
+  - id: "REVI-002"
+    title: "Error Contracts - LangGraph Schema"
+    feature: "Create workflow-errors.ts with Zod schemas for all error types (AGENT_SPAWN_FAILED, AGENT_TIMEOUT, MALFORMED_OUTPUT, PRECONDITION_FAILED, EXTERNAL_SERVICE_DOWN)"
+    phase: 1
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - "packages/backend/orchestrator/src/errors/workflow-errors.ts"
+    goal: "Define TypeScript error contracts as the single source of truth for workflow error handling"
+    risk_notes: "Must define retry logic, max retries, and circuit breaker behavior in schema"
+    sizing_warning: false
+    priority: "HIGH"
+
+  - id: "REVI-003"
+    title: "Error Contracts - Claude Documentation"
+    feature: "Add Error Handling section to FULL_WORKFLOW.md and update all command .md files with error handling contracts referencing error types from generated docs"
+    phase: 1
+    depends_on: ["REVI-002"]
+    endpoints: []
+    infrastructure:
+      - "docs/FULL_WORKFLOW.md § Error Handling"
+      - ".claude/commands/*.md error sections"
+    goal: "Document error handling contracts in Claude workflow system with references to authoritative TypeScript schemas"
+    risk_notes: "Must update 10+ command files - could be tedious. Need to ensure circuit breaker behavior is consistent."
+    sizing_warning: false
+    priority: "HIGH"
+
+  - id: "REVI-004"
+    title: "Parallel Worker Synchronization - LangGraph Schema"
+    feature: "Create parallel-executor.ts with Zod schemas for ParallelConfig (timeout, threshold, fail_fast) and ParallelResult (worker status aggregation)"
+    phase: 1
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - "packages/backend/orchestrator/src/utils/parallel-executor.ts"
+    goal: "Define TypeScript schemas for parallel worker execution with timeout and partial failure handling"
+    risk_notes: "Partial pass threshold logic must be clear - what happens with 5/6 PASS vs 4/6 PASS?"
+    sizing_warning: false
+    priority: "HIGH"
+
+  - id: "REVI-005"
+    title: "Parallel Worker Synchronization - Claude Documentation"
+    feature: "Add Parallel Worker Configuration section to FULL_WORKFLOW.md and update dev-code-review.md with timeout and aggregation logic"
+    phase: 1
+    depends_on: ["REVI-004"]
+    endpoints: []
+    infrastructure:
+      - "docs/FULL_WORKFLOW.md § Parallel Worker Configuration"
+      - ".claude/commands/dev-code-review.md"
+    goal: "Document parallel worker semantics in Claude workflow including timeout handling and partial failure policy"
+    risk_notes: "Code review command is complex - need to ensure 6-agent aggregation logic is well documented"
+    sizing_warning: false
+    priority: "HIGH"
+
+  - id: "REVI-006"
+    title: "Complete State Machine - LangGraph Implementation"
+    feature: "Create story-state-machine.ts with all 17 statuses as Zod enum and validTransitions mapping showing all allowed transitions"
+    phase: 2
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - "packages/backend/orchestrator/src/state/story-state-machine.ts"
+      - "canTransition() validation function"
+    goal: "Implement complete state machine with all 17 statuses and valid transitions as TypeScript schema"
+    risk_notes: "Must include all edge cases: blocked, cancelled, needs-split, etc. Ensure no invalid transitions possible."
+    sizing_warning: false
+    priority: "MEDIUM"
+
+  - id: "REVI-007"
+    title: "Complete State Machine - Claude Documentation"
+    feature: "Add State Transition Matrix to FULL_WORKFLOW.md showing all 17 statuses and valid transitions with triggers and blocked/cancelled status handling"
+    phase: 2
+    depends_on: ["REVI-006"]
+    endpoints: []
+    infrastructure:
+      - "docs/FULL_WORKFLOW.md § State Transition Matrix"
+    goal: "Document complete state machine in Claude workflow with all transitions and recovery paths"
+    risk_notes: "Large table - need to ensure readability. Blocked/cancelled recovery must be clear."
+    sizing_warning: false
+    priority: "MEDIUM"
+
+  - id: "REVI-008"
+    title: "Token Budget Enforcement - LangGraph Schema"
+    feature: "Create token-budget.ts with budget config schema, phase limits, and enforcement levels (advisory, warning, soft_gate, hard_gate)"
+    phase: 2
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - "packages/backend/orchestrator/src/utils/token-budget.ts"
+      - "DEFAULT_LIMITS for all 5 phases"
+    goal: "Define TypeScript schemas for token budget enforcement with configurable thresholds and enforcement levels"
+    risk_notes: "Must support multiplier config for per-story overrides. Enforcement levels must be clear."
+    sizing_warning: false
+    priority: "MEDIUM"
+
+  - id: "REVI-009"
+    title: "Token Budget Enforcement - Claude Documentation & /token-log Update"
+    feature: "Add Token Management section to FULL_WORKFLOW.md and update /token-log skill to support enforcement levels and budget checks"
+    phase: 2
+    depends_on: ["REVI-008"]
+    endpoints: []
+    infrastructure:
+      - "docs/FULL_WORKFLOW.md § Token Management"
+      - ".claude/commands/token-log.md enforcement logic"
+    goal: "Document token budget system and update token-log skill to enforce budget thresholds"
+    risk_notes: "/token-log skill is used across many phases - need to ensure backward compatibility"
+    sizing_warning: false
+    priority: "MEDIUM"
+
+  - id: "REVI-010"
+    title: "Idempotency Guarantees - LangGraph Schema"
+    feature: "Create idempotency.ts with schemas for idempotency modes, phase locks, and checkIdempotency() function"
+    phase: 2
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - "packages/backend/orchestrator/src/utils/idempotency.ts"
+      - "PhaseLock schema and lock file handling"
+    goal: "Define TypeScript schemas for idempotency modes and phase locking to prevent concurrent execution"
+    risk_notes: "Lock timeout detection must be robust. Stale lock handling is critical."
+    sizing_warning: false
+    priority: "MEDIUM"
+
+  - id: "REVI-011"
+    title: "Idempotency Guarantees - Claude Documentation"
+    feature: "Add Idempotency section to FULL_WORKFLOW.md documenting command re-run behavior, force flags, and artifact locking"
+    phase: 2
+    depends_on: ["REVI-010"]
+    endpoints: []
+    infrastructure:
+      - "docs/FULL_WORKFLOW.md § Idempotency"
+      - "Command behavior table for 7+ commands"
+    goal: "Document idempotency behavior for all commands with clear re-run semantics and force flag usage"
+    risk_notes: "Each command has different idempotency behavior - must document all clearly"
+    sizing_warning: false
+    priority: "MEDIUM"
+
+  - id: "REVI-012"
+    title: "Centralized Model Assignments"
+    feature: "Create model-assignments.yaml as source of truth and model-assignments.ts consumer, then add Model Assignments section to FULL_WORKFLOW.md"
+    phase: 3
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - ".claude/config/model-assignments.yaml"
+      - "packages/backend/orchestrator/src/config/model-assignments.ts"
+      - "docs/FULL_WORKFLOW.md § Model Assignments"
+    goal: "Centralize all agent-to-model assignments in a single config file with TypeScript consumer and documentation"
+    risk_notes: "Need to audit all 20+ agent files to extract current model assignments. Migration path needed."
+    sizing_warning: false
+    priority: "LOW"
+
+  - id: "REVI-013"
+    title: "Observability - LangGraph Implementation"
+    feature: "Create tracer.ts and metrics.ts with Zod schemas for trace events (phase_start, agent_spawn, etc.) and phase metrics collection"
+    phase: 3
+    depends_on: ["REVI-001"]
+    endpoints: []
+    infrastructure:
+      - "packages/backend/orchestrator/src/observability/tracer.ts"
+      - "packages/backend/orchestrator/src/observability/metrics.ts"
+      - "WorkflowTracer and MetricsCollector classes"
+    goal: "Implement observability infrastructure for tracing workflow execution and collecting phase metrics"
+    risk_notes: "JSONL trace format must be parseable by standard tools. Metrics aggregation logic must be correct."
+    sizing_warning: false
+    priority: "LOW"
+
+  - id: "REVI-014"
+    title: "Observability - Claude Documentation"
+    feature: "Add Observability section to FULL_WORKFLOW.md documenting TRACE.jsonl format, METRICS.yaml structure, and log levels"
+    phase: 3
+    depends_on: ["REVI-013"]
+    endpoints: []
+    infrastructure:
+      - "docs/FULL_WORKFLOW.md § Observability"
+    goal: "Document observability system in Claude workflow with trace event types and metrics collection"
+    risk_notes: "Must show example trace events and metrics output. Log level guidance must be actionable."
+    sizing_warning: false
+    priority: "LOW"
+
+  - id: "REVI-015"
+    title: "Testing Section - Test Fixtures & Documentation"
+    feature: "Create test fixtures for agent testing, add agent testing CLI support, and document Testing Agents section in FULL_WORKFLOW.md"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "__tests__/fixtures/STORY-TEST/ example structure"
+      - "docs/FULL_WORKFLOW.md § Testing Agents"
+      - "Agent testing guide with unit, integration, and regression examples"
+    goal: "Provide testing guidance and fixtures for validating new agents before deployment"
+    risk_notes: "Need to define what 'dry-run' means for agents. Fixture structure must be realistic."
+    sizing_warning: false
+    priority: "LOW"
+
+dependencies:
+  graph:
+    "REVI-001": []
+    "REVI-002": ["REVI-001"]
+    "REVI-003": ["REVI-002"]
+    "REVI-004": ["REVI-001"]
+    "REVI-005": ["REVI-004"]
+    "REVI-006": ["REVI-001"]
+    "REVI-007": ["REVI-006"]
+    "REVI-008": ["REVI-001"]
+    "REVI-009": ["REVI-008"]
+    "REVI-010": ["REVI-001"]
+    "REVI-011": ["REVI-010"]
+    "REVI-012": ["REVI-001"]
+    "REVI-013": ["REVI-001"]
+    "REVI-014": ["REVI-013"]
+    "REVI-015": []
+
+  critical_path:
+    - "REVI-001"
+    - "REVI-002"
+    - "REVI-003"
+
+  critical_path_length: 3
+
+parallelization:
+  max_parallel: 6
+  groups:
+    - stories: ["REVI-001"]
+      after: null
+      note: "Foundation - must complete first"
+    - stories: ["REVI-002", "REVI-004", "REVI-006", "REVI-008", "REVI-010", "REVI-012", "REVI-013", "REVI-015"]
+      after: "group_1"
+      note: "All LangGraph schemas can run in parallel after sync infrastructure"
+    - stories: ["REVI-003", "REVI-005", "REVI-007", "REVI-009", "REVI-011", "REVI-014"]
+      after: "group_2"
+      note: "All Claude documentation stories run after their respective schemas"
+
+risks:
+  - id: "RISK-001"
+    description: "Synchronization drift between Claude markdown and LangGraph TypeScript if pre-commit hook or CI check is bypassed or broken"
+    affected_stories: ["REVI-001", "REVI-002", "REVI-003", "REVI-004", "REVI-005", "REVI-006", "REVI-007", "REVI-008", "REVI-009", "REVI-010", "REVI-011", "REVI-012", "REVI-013", "REVI-014"]
+    severity: high
+    mitigation: "Enforce both hook and CI check. Document sync requirement prominently in FULL_WORKFLOW.md"
+
+  - id: "RISK-002"
+    description: "Backward compatibility issues if existing stories rely on undocumented error handling or idempotency behavior"
+    affected_stories: ["REVI-002", "REVI-003", "REVI-010", "REVI-011"]
+    severity: medium
+    mitigation: "Test all changes on WRKF-000 harness story. Ensure new contracts are additive, not breaking"
+
+  - id: "RISK-003"
+    description: "Token budget enforcement may block legitimate workflows if thresholds are too aggressive"
+    affected_stories: ["REVI-008", "REVI-009"]
+    severity: medium
+    mitigation: "Start with 'warning' level enforcement. Allow per-story multiplier overrides"
+
+  - id: "RISK-004"
+    description: "Model assignment centralization may reveal inconsistencies in current agent assignments"
+    affected_stories: ["REVI-012"]
+    severity: low
+    mitigation: "Audit all agents first. Document migration plan for any needed changes"
+
+  - id: "RISK-005"
+    description: "Large documentation updates across 15+ markdown files risk introducing formatting errors or broken links"
+    affected_stories: ["REVI-003", "REVI-005", "REVI-007", "REVI-009", "REVI-011", "REVI-014"]
+    severity: low
+    mitigation: "Use linter and broken link checker. Review all changes carefully"
+
+metrics:
+  total_stories: 15
+  phases: 3
+  max_parallel: 6
+  critical_path_length: 3
+  stories_with_sizing_warnings: 0
+  high_priority_stories: 5
+  medium_priority_stories: 6
+  low_priority_stories: 4

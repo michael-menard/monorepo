@@ -142,6 +142,11 @@ The workflow is defined in:
 
 ## Related Documentation
 
-- WISH-2057: Schema Evolution Policies (when available)
-- `docs/WISHLIST-SCHEMA-EVOLUTION.md`: Wishlist-specific schema guidance
-- `docs/enum-evolution-guide.md`: Enum migration patterns
+- [SCHEMA-EVOLUTION-POLICY.md](./SCHEMA-EVOLUTION-POLICY.md): Comprehensive schema change governance
+- [SCHEMA-CHANGE-SCENARIOS.md](./SCHEMA-CHANGE-SCENARIOS.md): Common scenario guides
+- [SCHEMA-VERSIONING.md](./SCHEMA-VERSIONING.md): Version numbering and tracking
+- [ENUM-MODIFICATION-RUNBOOK.md](./ENUM-MODIFICATION-RUNBOOK.md): Enum modification procedures
+
+**Superseded Documents (archived):**
+- `docs/WISHLIST-SCHEMA-EVOLUTION.md`: Superseded by SCHEMA-EVOLUTION-POLICY.md
+- `docs/enum-evolution-guide.md`: Superseded by ENUM-MODIFICATION-RUNBOOK.md

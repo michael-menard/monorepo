@@ -1,0 +1,75 @@
+---
+schema: 2
+id: "FLOW-020"
+title: "Integration Tests - Story Creation"
+feature: "Create end-to-end integration test for complete story creation workflow with database persistence"
+status: "backlog"
+phase: 5
+phase_name: "Testing & Validation"
+created_at: "2026-02-01T14:30:00Z"
+updated_at: "2026-02-01T14:30:00Z"
+---
+
+## Story Overview
+
+Integration Tests - Story Creation
+
+## Feature
+
+Create end-to-end integration test for complete story creation workflow with database persistence
+
+## Acceptance Criteria
+
+- [ ] Implementation complete
+- [ ] Tests passing
+- [ ] Code review passed
+- [ ] Documentation complete
+
+## Dependencies
+
+- FLOW-014
+- FLOW-017
+- FLOW-018
+
+
+## Endpoints
+
+None
+
+## Infrastructure
+
+None
+
+## Goal
+
+See story details in stories.index.md
+
+## Risk Level
+
+low
+
+## Risk Notes
+
+See roadmap.md for risk indicators
+
+## Reuse Plan
+
+- Check existing shared packages before implementing
+- Update workspace exports if adding new shared code
+- Document reuse decisions in elaboration
+
+## Token Budget
+
+| Phase | Estimated | Actual | Notes |
+|-------|-----------|--------|-------|
+| Elaboration | ~10k | — | TBD during elaboration |
+| Implementation | ~20k | — | TBD during implementation |
+| Code Review | ~10k | — | TBD during review |
+| QA Verify | ~5k | — | TBD during verification |
+| **Total** | ~45k | — | TBD |
+
+## Agent Log
+
+| Timestamp | Agent | Phase | Status |
+|-----------|-------|-------|--------|
+| 2026-02-01T14:30:00Z | pm-bootstrap-generation-leader | generation | Story file created |

@@ -1,0 +1,26 @@
+schema: 1
+id: WISH-2006
+feature: wish
+type: feature
+state: uat
+title: Accessibility
+points: 5
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2005
+follow_up_from: null
+scope:
+  packages:
+    - apps/web/app
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Enable full keyboard-only navigation and screen reader support for the wishlist gallery, ensuring WCAG AA
+  compliance without requiring any mouse interaction.
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-01-30T15:00:00-07:00
+updated_at: 2026-01-31T22:45:00-07:00
