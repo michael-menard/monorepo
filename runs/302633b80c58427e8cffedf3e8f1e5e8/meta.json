@@ -1,0 +1,15 @@
+{
+  "run_id": "302633b80c58427e8cffedf3e8f1e5e8",
+  "job_name": "lint",
+  "repo_path": "/Users/michaelmenard/Development/Monorepo",
+  "ref": null,
+  "detected_pm": "pnpm",
+  "commands": [
+    "pnpm lint:all"
+  ],
+  "started_at": "2026-02-02T00:43:48.028154+00:00",
+  "finished_at": "2026-02-02T00:43:50.679379+00:00",
+  "duration_seconds": 2.651225,
+  "exit_code": 0,
+  "checkout": null
+}

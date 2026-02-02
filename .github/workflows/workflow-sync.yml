@@ -1,0 +1,90 @@
+name: Workflow Sync Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/FULL_WORKFLOW.md'
+      - '.claude/commands/**'
+      - '.claude/agents/**'
+      - '.claude/config/**'
+      - 'packages/backend/orchestrator/src/**'
+      - 'scripts/check-workflow-sync.ts'
+      - 'scripts/generate-workflow-docs.ts'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docs/FULL_WORKFLOW.md'
+      - '.claude/commands/**'
+      - '.claude/agents/**'
+      - '.claude/config/**'
+      - 'packages/backend/orchestrator/src/**'
+      - 'scripts/check-workflow-sync.ts'
+      - 'scripts/generate-workflow-docs.ts'
+
+concurrency:
+  group: workflow-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync-check:
+    name: Check Claude ↔ LangGraph Sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Check workflow sync
+        run: npx tsx scripts/check-workflow-sync.ts --verbose
+
+      - name: Generate workflow docs (dry-run)
+        run: npx tsx scripts/generate-workflow-docs.ts --dry-run
+
+  regenerate-docs:
+    name: Verify Generated Docs
+    runs-on: ubuntu-latest
+    needs: sync-check
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate workflow docs
+        run: npx tsx scripts/generate-workflow-docs.ts
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain docs/generated/)" ]; then
+            echo "❌ Generated docs are out of date!"
+            echo "Run 'npx tsx scripts/generate-workflow-docs.ts' and commit the changes."
+            git diff docs/generated/
+            exit 1
+          fi
+          echo "✅ Generated docs are up to date"

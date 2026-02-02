@@ -89,3 +89,4 @@ apps/api/lego-projects-api/uploads/**/*.jpg.envrc
 .serverless/
 .build/
 tree/
+.github/environments/*.env

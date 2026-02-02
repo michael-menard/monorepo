@@ -1,0 +1,102 @@
+# Model Assignments
+#
+# Single source of truth for agent-to-model assignments.
+# This file is consumed by:
+# - LangGraph orchestrator (via model-assignments.ts)
+# - Claude agents (reference directly)
+# - Generated documentation (via generate-workflow-docs.ts)
+#
+# Model selection criteria:
+# - haiku: Validation, status updates, template filling, single-focus checks
+# - sonnet: Analysis, code generation, multi-factor decisions, synthesis
+# - opus: Reserved for critical judgment calls (rarely used)
+
+# ==============================================================================
+# Setup Leaders
+# Simple validation, low complexity
+# ==============================================================================
+elab-setup-leader: haiku
+dev-setup-leader: haiku
+qa-verify-setup-leader: haiku
+pm-bootstrap-setup-leader: haiku
+pm-harness-setup-leader: haiku
+elab-epic-setup-leader: haiku
+
+# ==============================================================================
+# Work Leaders
+# Complex analysis and synthesis
+# ==============================================================================
+pm-story-generation-leader: sonnet
+pm-story-seed-agent: sonnet
+pm-story-fix-leader: sonnet
+pm-story-adhoc-leader: sonnet
+pm-story-bug-leader: sonnet
+pm-story-followup-leader: sonnet
+pm-story-split-leader: sonnet
+pm-triage-leader: sonnet
+pm-bootstrap-analysis-leader: sonnet
+elab-analyst: sonnet
+elab-epic-interactive-leader: sonnet
+dev-implement-planning-leader: sonnet
+dev-implement-implementation-leader: sonnet
+qa-verify-verification-leader: sonnet
+
+# ==============================================================================
+# Workers
+# Focused single-check validation
+# ==============================================================================
+
+# PM Workers
+pm-draft-test-plan: haiku
+pm-dev-feasibility-review: haiku
+pm-uiux-recommendations: haiku
+
+# Code Review Workers
+code-review-lint: haiku
+code-review-syntax: haiku
+code-review-style-compliance: haiku
+code-review-security: haiku
+code-review-typecheck: haiku
+code-review-build: haiku
+
+# Dev Implementation Workers
+dev-implement-planner: sonnet
+dev-implement-plan-validator: haiku
+dev-implement-backend-coder: sonnet
+dev-implement-frontend-coder: sonnet
+dev-implement-contracts: haiku
+dev-implement-verifier: haiku
+dev-implement-playwright: haiku
+dev-implement-proof-writer: haiku
+dev-implement-learnings: haiku
+
+# Epic Elaboration Workers
+elab-epic-engineering: haiku
+elab-epic-product: haiku
+elab-epic-qa: haiku
+elab-epic-ux: haiku
+elab-epic-platform: haiku
+elab-epic-security: haiku
+
+# ==============================================================================
+# Completion Leaders
+# Status updates, artifact writes
+# ==============================================================================
+elab-completion-leader: haiku
+dev-documentation-leader: haiku
+qa-verify-completion-leader: haiku
+pm-bootstrap-generation-leader: haiku
+pm-harness-generation-leader: haiku
+elab-epic-aggregation-leader: haiku
+elab-epic-updates-leader: haiku
+
+# ==============================================================================
+# Utility Agents
+# ==============================================================================
+knowledge-context-loader: haiku
+kb-writer: haiku
+
+# ==============================================================================
+# Fix Agents
+# ==============================================================================
+dev-fix-fix-leader: sonnet
