@@ -1,38 +1,31 @@
 /**
  * Common shared step definitions used across multiple feature files
+ *
+ * IMPORTANT: All authentication MUST use real Cognito JWTs.
+ * See utils/api-auth.ts for the authentication utilities.
+ * See fixtures/browser-auth.fixture.ts for UI tests with auth.
  */
 
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
-import { setupAuthMock } from '../utils/api-mocks'
+import { TEST_USERS, authState } from '../utils/api-auth'
 
 const { Given, Then } = createBdd()
 
-// Authentication steps
-Given('I am logged in as a test user', async ({ page }) => {
-  // Set up mock authentication state
-  await setupAuthMock(page, {
-    id: 'test-user-123',
-    email: 'test@example.com',
-    name: 'Test User',
-  })
+// Authentication steps - Use real Cognito JWT
+// NOTE: For UI tests, prefer using the browser-auth.fixture.ts with `authenticatedPage`
+// These steps are for API tests that need to authenticate programmatically
+Given('I am logged in as a test user', async () => {
+  // Authenticate with real Cognito - gets actual JWT token
+  await authState.setUser(TEST_USERS.primary)
+})
 
-  // Set auth cookies/localStorage as needed
-  await page.evaluate(() => {
-    // Mock auth state in localStorage (Amplify pattern)
-    const authKey = 'CognitoIdentityServiceProvider.testClientId.testUser'
-    localStorage.setItem(
-      `${authKey}.idToken`,
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwibmFtZSI6IlRlc3QgVXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxODAwMDAwMDAwfQ.mock-signature',
-    )
-    localStorage.setItem(`${authKey}.accessToken`, 'mock-access-token')
-    localStorage.setItem('auth:user', JSON.stringify({
-      userId: 'test-user-123',
-      email: 'test@example.com',
-      name: 'Test User',
-      isAuthenticated: true,
-    }))
-  })
+Given('I am logged in as the primary test user', async () => {
+  await authState.setUser(TEST_USERS.primary)
+})
+
+Given('I am logged in as the secondary test user', async () => {
+  await authState.setUser(TEST_USERS.secondary)
 })
 
 // Common UI Element visibility steps

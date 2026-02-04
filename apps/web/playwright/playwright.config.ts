@@ -33,7 +33,7 @@ export default defineConfig({
     cucumberReporter('json', { outputFile: 'cucumber-report/report.json' }),
   ],
   use: {
-    baseURL: 'http://localhost:3002',
+    baseURL: 'http://localhost:3000',
     headless: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -52,7 +52,7 @@ export default defineConfig({
       testMatch: /(?<!api\/).*\.feature/,
       webServer: {
         command: 'VITE_ENABLE_MSW=true pnpm dev --port 3002',
-        url: 'http://localhost:3002',
+        url: 'http://localhost:3000',
         reuseExistingServer: true,
         timeout: 120 * 1000,
         cwd: '../main-app',
@@ -64,7 +64,7 @@ export default defineConfig({
       testMatch: /(?<!api\/).*\.feature/,
       webServer: {
         command: 'pnpm dev --port 3002',
-        url: 'http://localhost:3002',
+        url: 'http://localhost:3000',
         reuseExistingServer: true,
         timeout: 120 * 1000,
         cwd: '../main-app',

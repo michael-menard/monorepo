@@ -9,6 +9,11 @@
  *   pnpm --filter playwright seed:users:delete
  */
 
+import { config } from 'dotenv'
+
+// Load environment variables from .env file
+config({ path: '.env' })
+
 import {
   CognitoIdentityProviderClient,
   SignUpCommand,
@@ -17,11 +22,19 @@ import {
   ListUsersCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
 
-// Cognito configuration
+// Cognito configuration - loaded from environment
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}. Check apps/web/playwright/.env`)
+  }
+  return value
+}
+
 const COGNITO_CONFIG = {
-  userPoolId: process.env.COGNITO_USER_POOL_ID || 'us-east-1_vtW1Slo3o',
-  clientId: process.env.COGNITO_CLIENT_ID || '4527ui02h63b7c0ra7vs00gua5',
-  region: process.env.AWS_REGION || 'us-east-1',
+  userPoolId: getRequiredEnv('VITE_AWS_USER_POOL_ID'),
+  clientId: getRequiredEnv('VITE_AWS_USER_POOL_WEB_CLIENT_ID'),
+  region: process.env.VITE_AWS_REGION || 'us-east-1',
 }
 
 // Shared password for all test users

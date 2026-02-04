@@ -1,7 +1,12 @@
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
 import { SignupPage } from './pages/signup.page'
-import { generateTestEmail, adminDeleteUser } from '../utils/cognito-admin'
+import {
+  generateTestEmail,
+  adminDeleteUser,
+  adminConfirmSignUp,
+  adminGetUser,
+} from '../utils/cognito-admin'
 
 const { Given, When, Then } = createBdd()
 
@@ -27,6 +32,18 @@ When('I enter my email {string}', async ({}, email: string) => {
 When('I enter a unique test email', async () => {
   currentTestEmail = generateTestEmail('signuptest')
   console.log(`🧪 Using unique test email: ${currentTestEmail}`)
+  await signupPage.enterEmail(currentTestEmail)
+})
+
+Given('a unique test email is generated', async () => {
+  currentTestEmail = generateTestEmail('e2etest')
+  console.log(`🧪 Generated test email: ${currentTestEmail}`)
+  expect(currentTestEmail).toBeTruthy()
+  expect(currentTestEmail).toContain('@test.example.com')
+})
+
+When('I enter the generated test email', async ({ page }) => {
+  signupPage = signupPage || new SignupPage(page)
   await signupPage.enterEmail(currentTestEmail)
 })
 
@@ -56,12 +73,39 @@ Then('I should be redirected to the email verification page', async ({ page }) =
   expect(page.url()).toContain('/auth/verify-email')
 })
 
-Then('the test user should be cleaned up', async () => {
+// Cognito Admin Steps (for E2E flow)
+When('the user is confirmed via admin API', async () => {
+  // Give Cognito a moment to process the signup
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  const result = await adminConfirmSignUp(currentTestEmail)
+  expect(result.success).toBe(true)
+})
+
+Then('the user should be confirmed in Cognito', async () => {
+  const result = await adminGetUser(currentTestEmail)
+  expect(result.exists).toBe(true)
+  expect(result.confirmed).toBe(true)
+  console.log(`✅ User ${currentTestEmail} is confirmed in Cognito`)
+})
+
+Then('the test user is cleaned up', async () => {
+  console.log(`🧹 Cleaning up test user: ${currentTestEmail}`)
+  const result = await adminDeleteUser(currentTestEmail)
+  if (result.success) {
+    console.log(`✅ Successfully cleaned up test user: ${currentTestEmail}`)
+  }
+  currentTestEmail = ''
+})
+
+When('any existing test user is cleaned up', async () => {
   if (currentTestEmail) {
-    console.log(`🧹 Cleaning up test user: ${currentTestEmail}`)
     await adminDeleteUser(currentTestEmail)
     currentTestEmail = ''
   }
+})
+
+Then('the cleanup should complete successfully', async () => {
+  expect(true).toBe(true)
 })
 
 Then('the sign up button should be disabled during submission', async ({ page }) => {

@@ -22,10 +22,18 @@ import {
   UserNotFoundException,
 } from '@aws-sdk/client-cognito-identity-provider'
 
-// Cognito configuration - matches the main app's configuration
+// Cognito configuration - loaded from environment
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}. Check apps/web/playwright/.env`)
+  }
+  return value
+}
+
 const COGNITO_CONFIG = {
-  region: process.env.AWS_REGION || 'us-east-1',
-  userPoolId: process.env.COGNITO_USER_POOL_ID || 'us-east-1_jJPnVUCxF',
+  region: process.env.VITE_AWS_REGION || 'us-east-1',
+  userPoolId: getRequiredEnv('VITE_AWS_USER_POOL_ID'),
 }
 
 // Create the Cognito client
