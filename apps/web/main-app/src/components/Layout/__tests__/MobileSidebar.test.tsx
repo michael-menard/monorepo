@@ -16,6 +16,8 @@ let mockPathname = '/initial'
 // Mock TanStack Router - useLocation returns current pathname
 vi.mock('@tanstack/react-router', () => ({
   useLocation: () => ({ pathname: mockPathname }),
+  Link: ({ children, to, ...props }: any) =>
+    React.createElement('a', { href: to, ...props }, children),
 }))
 
 // Mock the Sidebar component to avoid complex dependencies
@@ -261,7 +263,7 @@ describe('MobileSidebar', () => {
       renderWithStore(store, true)
 
       const dialog = screen.getByRole('dialog')
-      expect(dialog.className).toContain('w-64')
+      expect(dialog.className).toContain('w-72')
     })
 
     it('should have proper z-index', () => {
