@@ -40,6 +40,7 @@ export const KnowledgeEntryTypeSchema = z.enum([
   'runbook',
   'lesson',
   'feedback',
+  'calibration',
 ])
 export type KnowledgeEntryType = z.infer<typeof KnowledgeEntryTypeSchema>
 
@@ -116,6 +117,66 @@ export const FeedbackContentSchema = z
   )
 
 export type FeedbackContent = z.infer<typeof FeedbackContentSchema>
+
+// ============================================================================
+// Calibration Schemas (WKFL-002 - Confidence Calibration)
+// ============================================================================
+
+/**
+ * Valid confidence levels for agent findings.
+ *
+ * Part of the WKFL-002 workflow learning system:
+ * - 'high': Agent has high confidence in the finding
+ * - 'medium': Agent has moderate confidence in the finding
+ * - 'low': Agent has low confidence in the finding
+ *
+ * @see WKFL-002 for implementation details
+ */
+export const ConfidenceLevelSchema = z.enum(['high', 'medium', 'low'])
+export type ConfidenceLevel = z.infer<typeof ConfidenceLevelSchema>
+
+/**
+ * Valid actual outcomes for calibration tracking.
+ *
+ * Part of the WKFL-002 workflow learning system:
+ * - 'correct': Finding was validated as accurate
+ * - 'false_positive': Finding was marked as incorrect/not applicable
+ * - 'severity_wrong': Finding was correct but severity was inaccurate
+ *
+ * @see WKFL-002 for implementation details
+ */
+export const ActualOutcomeSchema = z.enum(['correct', 'false_positive', 'severity_wrong'])
+export type ActualOutcome = z.infer<typeof ActualOutcomeSchema>
+
+/**
+ * Calibration entry schema for tracking agent confidence vs actual outcomes.
+ *
+ * Part of WKFL-002 workflow learning system.
+ * Links stated confidence from VERIFICATION.yaml to actual outcomes from feedback.
+ *
+ * @see WKFL-002 for implementation details
+ */
+export const CalibrationEntrySchema = z.object({
+  /** Agent that generated the finding */
+  agent_id: z.string().min(1, 'Agent ID required'),
+
+  /** Finding identifier from VERIFICATION.yaml */
+  finding_id: z.string().regex(/^[A-Z]+-\d+$/, 'Finding ID must match format: ABC-123'),
+
+  /** Story context for the finding */
+  story_id: z.string().regex(/^[A-Z]+-\d+$/, 'Story ID must match format: ABC-123'),
+
+  /** Confidence level stated by agent in VERIFICATION.yaml */
+  stated_confidence: ConfidenceLevelSchema,
+
+  /** Actual outcome determined from feedback */
+  actual_outcome: ActualOutcomeSchema,
+
+  /** ISO 8601 timestamp when calibration entry was created */
+  timestamp: z.string().datetime(),
+})
+
+export type CalibrationEntry = z.infer<typeof CalibrationEntrySchema>
 
 /**
  * Vector embedding schema.

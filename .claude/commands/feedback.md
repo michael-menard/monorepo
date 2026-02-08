@@ -158,6 +158,82 @@ const kbEntry = await kb_add({
 })
 ```
 
+### Step 5.5: Create Calibration Entry (WKFL-002)
+
+After capturing feedback, also create a calibration entry to track confidence vs outcomes.
+
+```typescript
+import { CalibrationEntrySchema } from '@repo/knowledge-base/__types__'
+
+// Map feedback type to calibration outcome
+function mapFeedbackToOutcome(feedbackType: string): string | null {
+  const mapping = {
+    'helpful': 'correct',          // Finding was accurate
+    'false_positive': 'false_positive',  // Finding was incorrect
+    'severity_wrong': 'severity_wrong',  // Severity was wrong
+    'missing': null,               // Skip - doesn't validate confidence
+  }
+  return mapping[feedbackType] || null
+}
+
+const calibrationOutcome = mapFeedbackToOutcome(feedbackType)
+
+// Only create calibration entry for helpful, false_positive, severity_wrong
+// Skip for 'missing' - doesn't validate the finding's stated confidence
+if (calibrationOutcome) {
+  const calibrationEntry = {
+    agent_id: agentId,
+    finding_id: findingId,
+    story_id: storyId,
+    stated_confidence: finding.confidence || 'medium', // From VERIFICATION.yaml
+    actual_outcome: calibrationOutcome,
+    timestamp: new Date().toISOString(),
+  }
+
+  // Validate with Zod
+  const validatedCalibration = CalibrationEntrySchema.parse(calibrationEntry)
+
+  // Build tags for efficient querying
+  const calibrationTags = [
+    'calibration',
+    `agent:${agentId}`,
+    `confidence:${validatedCalibration.stated_confidence}`,
+    `outcome:${calibrationOutcome}`,
+    `date:${new Date().toISOString().slice(0, 7)}`, // YYYY-MM
+  ]
+
+  // Write calibration entry to KB
+  const calibrationKbEntry = await kb_add({
+    content: JSON.stringify(validatedCalibration, null, 2),
+    role: 'dev',
+    entry_type: 'calibration',
+    story_id: storyId,
+    tags: calibrationTags,
+  })
+
+  logger.info('Calibration entry created', {
+    finding_id: findingId,
+    agent_id: agentId,
+    stated_confidence: validatedCalibration.stated_confidence,
+    actual_outcome: calibrationOutcome,
+    calibration_kb_entry_id: calibrationKbEntry.id,
+  })
+}
+```
+
+**Outcome Mapping Logic:**
+
+| Feedback Type | Calibration Outcome | Rationale |
+|--------------|---------------------|-----------|
+| `helpful` | `correct` | Finding was accurate and valuable |
+| `false_positive` | `false_positive` | Finding was incorrect or not applicable |
+| `severity_wrong` | `severity_wrong` | Finding was correct but severity assessment was wrong |
+| `missing` | *(skip)* | Doesn't validate the finding's stated confidence |
+
+**Note:** The `missing` feedback type indicates the agent should have caught MORE issues, but doesn't provide calibration data on whether the stated confidence for existing findings was accurate. Therefore, no calibration entry is created for `missing` feedback.
+
+---
+
 ### Step 6: Confirm to User
 
 ```typescript

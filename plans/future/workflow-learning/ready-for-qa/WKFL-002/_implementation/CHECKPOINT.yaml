@@ -1,0 +1,97 @@
+schema: 1
+story_id: WKFL-002
+feature_dir: plans/future/workflow-learning
+timestamp: '2026-02-08T01:45:00Z'
+current_phase: done
+last_successful_phase: proof
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+e2e_gate: exempt
+completed_at: '2026-02-08T01:45:00Z'
+
+phases:
+  setup:
+    status: complete
+    started_at: '2026-02-07T18:22:00Z'
+    completed_at: '2026-02-07T18:25:00Z'
+
+  plan:
+    status: complete
+    started_at: '2026-02-07T18:25:00Z'
+    completed_at: '2026-02-07T18:30:00Z'
+
+  execute:
+    status: complete
+    started_at: '2026-02-07T18:30:00Z'
+    completed_at: '2026-02-07T18:35:00Z'
+
+  review:
+    status: complete
+    started_at: '2026-02-07T18:35:00Z'
+    completed_at: '2026-02-07T18:40:00Z'
+    note: "Infrastructure story - build and unit tests pass"
+
+  proof:
+    status: complete
+    started_at: '2026-02-07T18:40:00Z'
+    completed_at: '2026-02-07T18:45:00Z'
+
+deliverables:
+  - path: apps/api/knowledge-base/src/__types__/index.ts
+    status: complete
+    ac: AC-1
+    change_type: modified
+    description: "Added 'calibration' to KnowledgeEntryTypeSchema, CalibrationEntrySchema"
+
+  - path: apps/api/knowledge-base/src/__types__/__tests__/calibration-schema.test.ts
+    status: complete
+    ac: AC-1
+    change_type: created
+    description: "26 unit tests for CalibrationEntrySchema"
+
+  - path: .claude/agents/confidence-calibrator.agent.md
+    status: complete
+    ac: AC-2, AC-3, AC-4
+    change_type: created
+    description: "Haiku model agent for calibration analysis"
+
+  - path: .claude/commands/calibration-report.md
+    status: complete
+    ac: AC-5
+    change_type: created
+    description: "Command to spawn calibration agent"
+
+  - path: .claude/commands/feedback.md
+    status: complete
+    ac: AC-1
+    change_type: modified
+    description: "Added Step 5.5 for calibration entry creation"
+
+acceptance_criteria:
+  AC-1:
+    description: "Schema captures all required fields"
+    status: complete
+    evidence: "CalibrationEntrySchema with 6 fields + 26 unit tests"
+
+  AC-2:
+    description: "Compute accuracy per agent per confidence level"
+    status: complete
+    evidence: "Phase 3 in agent implements grouping and accuracy calculation"
+
+  AC-3:
+    description: "Alert when high accuracy drops below 90%"
+    status: complete
+    evidence: "Alert threshold 0.90 with 10-sample minimum"
+
+  AC-4:
+    description: "Generate threshold adjustment recommendations"
+    status: complete
+    evidence: "Recommendations logic with priority levels"
+
+  AC-5:
+    description: "Weekly report from /calibration-report"
+    status: complete
+    evidence: "Command produces CALIBRATION-{date}.yaml"

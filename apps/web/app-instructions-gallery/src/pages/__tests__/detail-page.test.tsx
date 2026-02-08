@@ -75,6 +75,30 @@ vi.mock('lucide-react', () => ({
   Pencil: vi.fn(() => <svg data-testid="pencil-icon" />),
   Download: vi.fn(() => <svg data-testid="download-icon" />),
   BookOpen: vi.fn(() => <svg data-testid="book-open-icon" />),
+  FileText: vi.fn(() => <svg data-testid="file-text-icon" />),
+}))
+
+// Mock ThumbnailUpload component (INST-1103)
+vi.mock('../../components/ThumbnailUpload', () => ({
+  ThumbnailUpload: vi.fn(({ mocId }) => (
+    <div data-testid="thumbnail-upload" data-moc-id={mocId}>
+      Mock ThumbnailUpload
+    </div>
+  )),
+}))
+
+// Mock FileDownloadButton component (INST-1107)
+vi.mock('../../components/FileDownloadButton', () => ({
+  FileDownloadButton: vi.fn(({ mocId, fileId, fileName }) => (
+    <button
+      data-testid="file-download-button"
+      data-moc-id={mocId}
+      data-file-id={fileId}
+      aria-label={`Download ${fileName}`}
+    >
+      Download
+    </button>
+  )),
 }))
 
 const mockInstruction: Instruction = {

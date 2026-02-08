@@ -24,12 +24,7 @@ export { featureFlags, featureFlagUserOverrides } from './feature-flags'
 export { adminAuditLog } from './admin-audit-log'
 
 // Re-export User Quotas tables (Authorization & Tier System)
-export {
-  userQuotas,
-  userAddons,
-  userQuotasRelations,
-  userAddonsRelations,
-} from './user-quotas'
+export { userQuotas, userAddons, userQuotasRelations, userAddonsRelations } from './user-quotas'
 
 // Re-export Inspiration Gallery tables (Epic 5)
 export {
@@ -330,6 +325,7 @@ export const mocFiles = pgTable(
     fileUrl: text('file_url').notNull(),
     originalFilename: text('original_filename'),
     mimeType: text('mime_type'), // Optional: for clarity on file format
+    s3Key: text('s3_key').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }), // Soft-delete support (nullable)

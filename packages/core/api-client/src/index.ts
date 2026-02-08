@@ -44,7 +44,7 @@ export { getServerlessApiConfig, type ServerlessApiConfig } from './config/envir
 export { SERVERLESS_ENDPOINTS, buildEndpoint } from './config/endpoints'
 
 
-// RTK Query Hooks - Instructions/MOC (INST-1103)
+// RTK Query Hooks - Instructions/MOC (INST-1103, INST-1107)
 export {
   useUploadThumbnailMutation,
   useGetMocDetailQuery,
@@ -54,4 +54,6 @@ export {
   useUploadInstructionFileMutation,
   useUploadPartsListFileMutation,
   useDeleteFileMutation,
+  // INST-1107: File download
+  useLazyGetFileDownloadUrlQuery,
 } from './rtk/instructions-api'

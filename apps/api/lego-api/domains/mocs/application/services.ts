@@ -2,6 +2,8 @@ import type { Result } from '@repo/api-core'
 import { ok, err } from '@repo/api-core'
 import { logger } from '@repo/logger'
 import { fileTypeFromBuffer } from 'file-type'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type {
   MocRepository,
   Moc,
@@ -25,6 +27,12 @@ export interface MocServiceDeps {
  */
 export function createMocService(deps: MocServiceDeps) {
   const { mocRepo, imageStorage } = deps
+
+  // Initialize S3 client for presigned URLs
+  const s3Client = new S3Client({
+    region: process.env.AWS_REGION || 'us-east-1',
+  })
+  const bucket = process.env.S3_BUCKET
 
   return {
     /**
@@ -246,6 +254,83 @@ export function createMocService(deps: MocServiceDeps) {
 
         logger.error('Failed to update thumbnail in database', error, { userId, mocId })
         return err('DB_ERROR')
+      }
+    },
+
+    /**
+     * Get file download URL
+     * (INST-1107: AC-2, AC-3, AC-4, AC-6, AC-7, AC-8, AC-9, AC-11, AC-12, AC-13, AC-73, AC-74, AC-76)
+     *
+     * Business logic:
+     * 1. Query file from repository
+     * 2. Verify file belongs to user's MOC (ownership check)
+     * 3. Generate presigned S3 URL with ResponseContentDisposition
+     * 4. Return downloadUrl and expiresAt
+     */
+    async getFileDownloadUrl(
+      userId: string,
+      mocId: string,
+      fileId: string,
+    ): Promise<
+      Result<
+        { downloadUrl: string; expiresAt: string },
+        'NOT_FOUND' | 'PRESIGN_FAILED' | 'DB_ERROR'
+      >
+    > {
+      try {
+        // AC-2: Query file by fileId and mocId
+        const file = await mocRepo.getFileByIdAndMocId(fileId, mocId)
+
+        if (!file) {
+          logger.debug('File not found', undefined, { userId, mocId, fileId })
+          return err('NOT_FOUND')
+        }
+
+        // AC-3: Verify file belongs to user's MOC (ownership check)
+        const mocResult = await mocRepo.getMocById(mocId, userId)
+        if (!mocResult) {
+          // AC-4, AC-74: Return NOT_FOUND for unauthorized (no info leakage)
+          logger.warn('Unauthorized file download attempt', undefined, { userId, mocId, fileId })
+          return err('NOT_FOUND')
+        }
+
+        // AC-6, AC-7, AC-8, AC-13: Generate presigned S3 URL
+        if (!file.s3Key) {
+          logger.error('File missing s3Key', undefined, { userId, mocId, fileId })
+          return err('DB_ERROR')
+        }
+
+        if (!bucket) {
+          logger.error('S3 bucket not configured', undefined, { userId, mocId, fileId })
+          return err('PRESIGN_FAILED')
+        }
+
+        const command = new GetObjectCommand({
+          Bucket: bucket,
+          Key: file.s3Key,
+          // AC-7, AC-13: ResponseContentDisposition with RFC 5987 encoding
+          ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(file.originalFilename || 'download')}`,
+        })
+
+        // AC-8: 900 seconds = 15 minutes
+        const expiresIn = 900
+        const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn })
+        const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
+
+        // AC-11: Log successful download URL generation
+        logger.info('Download URL generated', undefined, {
+          userId,
+          mocId,
+          fileId,
+          filename: file.originalFilename,
+        })
+
+        // AC-9: Return downloadUrl and expiresAt
+        return ok({ downloadUrl, expiresAt })
+      } catch (error: any) {
+        // AC-10, AC-12: Log failures
+        logger.error('Failed to generate presigned URL', error, { userId, mocId, fileId })
+        return err('PRESIGN_FAILED')
       }
     },
   }

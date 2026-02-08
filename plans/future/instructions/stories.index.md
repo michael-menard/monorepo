@@ -4,7 +4,7 @@ title: "INST - MOC Instructions Story Index"
 status: active
 story_prefix: "INST"
 created_at: "2026-01-24T15:00:00-07:00"
-updated_at: "2026-02-06T22:00:00-07:00"
+updated_at: "2026-02-08T04:10:00-07:00"
 total_stories: 39
 ---
 
@@ -15,15 +15,15 @@ total_stories: 39
 | Metric | Count |
 |--------|-------|
 | Total Stories | 39 |
-| Completed | 5 |
-| Ready to Work | 3 |
+| Completed | 6 |
+| Ready to Work | 2 |
 | In Elaboration | 0 |
 | Ready for QA | 0 |
 | In Progress | 0 |
 | In QA | 1 |
 | Approved | 0 |
-| Created | 0 |
-| Draft | 30 |
+| Created | 1 |
+| Draft | 29 |
 
 ### Story Distribution by Phase
 
@@ -128,11 +128,11 @@ Each story is a full-stack vertical slice delivering user value.
 | INST-1100 | View MOC Gallery | Completed (2026-02-07) | INST-1008 |
 | INST-1101 | View MOC Details | Ready to Work | (cleared by INST-1100) |
 | INST-1102 | Create Basic MOC | In QA (2026-02-07) | INST-1008 |
-| INST-1103 | Upload Thumbnail | Ready to Work | INST-1102 |
+| INST-1103 | Upload Thumbnail | Completed (2026-02-08) | none |
 | INST-1104 | Upload Instructions (Direct) | Completed (2026-02-07) | INST-1102 |
 | INST-1105 | Upload Instructions (Presigned) | Draft | INST-1003, INST-1004 |
-| INST-1106 | Upload Parts List | Draft | INST-1102 |
-| INST-1107 | Download Files | Draft | INST-1101 |
+| INST-1106 | Upload Parts List | Draft | none |
+| INST-1107 | Download Files | Ready to Work (2026-02-07) | INST-1101 |
 | INST-1108 | Edit MOC Metadata | Draft | INST-1101 |
 | INST-1109 | Delete MOC | Draft | INST-1101 |
 | INST-1110 | Remove Individual File | Draft | INST-1101 |
@@ -993,3 +993,4 @@ Polish and error handling after core functionality works.
 | 2026-02-07 05:00 | Claude Haiku 4.5 | **INST-1100 QA Verification Completed**: Phase 2 completion executed. QA verdict: PASS. All 21 automated ACs verified, 45/45 unit tests passing, 13/13 E2E tests passing, 96.5% coverage. Fixed 5 high-severity code review findings (PERF-001, A11Y-001, TEST-001/002, QUAL-001). Story status updated: in-qa → uat. Completion report generated. Story index updated. 4 lessons learned captured for Knowledge Base. INST-1100 now unblocks INST-1101. Status: Completed (ready for merge). |
 | 2026-02-06 23:00 | Claude Sonnet 4.5 | **INST-1104 Created**: Generated story for Upload Instructions (Direct ≤10MB). Executed PM story generation leader workflow: (1) Created STORY-SEED.md from codebase scanning - discovered backend route already implemented (routes.ts lines 198-237) and RTK mutation exists (instructions-api.ts lines 258-291), (2) Generated comprehensive TEST-PLAN.md with 18 happy path tests, 7 error cases, 7 edge cases, and coverage targets (80% frontend, 90% backend), (3) Generated UIUX-NOTES.md with file picker component specs, sequential upload UX, and MVP-critical accessibility requirements, (4) Generated DEV-FEASIBILITY.md confirming VERY HIGH feasibility with 3-day estimate - backend already functional, only frontend component needed, (5) Synthesized complete INST-1104.md story with 71 ACs covering frontend/backend/testing. PDF validation needs to be added to file-validation.ts (2 hours). Backend route verified functional. Blocked by INST-1102 (In QA - non-blocking for story creation). KB write deferred (MCP unavailable). Status: Created (ready for elaboration). |
 | 2026-02-06 23:15 | Claude Haiku 4.5 | **INST-1104 Elaboration Completed**: Phase 2 completion executed. Autonomous mode verdict: PASS. Elaboration analysis identified 3 MVP-critical gaps - all resolved by adding 3 acceptance criteria (AC72-74) for PDF validation consistency, 10MB file size enforcement, and structured error codes. Story upgraded from 71 to 74 ACs. Generated ELAB-INST-1104.md report. Appended QA Discovery Notes to story frontmatter. Updated story status: elaboration → ready-to-work. Moved directory from elaboration/ to ready-to-work/. Updated story index counts (Ready to Work: 3→4, In Elaboration: 1→0). Story ready for implementation phase. |
+| 2026-02-07 18:45 | Claude Sonnet 4.5 | **INST-1107 Created**: Generated story for Download Files. Executed PM story generation leader workflow: (1) Created STORY-SEED.md from codebase scanning (no baseline available) - discovered S3 presigned URL pattern in inspiration domain, MOC detail page with file list, RTK Query framework in place, (2) Generated comprehensive TEST-PLAN.md with 3 happy path tests, 6 error cases, 6 edge cases, coverage targets (90% backend, 80% frontend), (3) Generated UIUX-NOTES.md confirming MVP-feasible with FileDownloadButton component reusing Button primitive, loading states, accessibility requirements, (4) Generated DEV-FEASIBILITY.md confirming HIGH feasibility with 2-3 day estimate - 80% pattern reuse from existing presigned URL code, (5) Synthesized complete INST-1107.md story with 72 ACs covering backend endpoint, frontend component, RTK Query integration, security, error handling. Presigned S3 download URL pattern (GetObjectCommand) mirrors upload pattern (PutObjectCommand). Blocked by INST-1101 (View MOC Details - for E2E testing). Status: Created (ready for elaboration). |

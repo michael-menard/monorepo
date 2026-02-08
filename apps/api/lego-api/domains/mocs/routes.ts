@@ -13,6 +13,7 @@ import {
   ListMocsQuerySchema,
   MocListResponseSchema,
   UploadThumbnailResponseSchema,
+  GetFileDownloadUrlResponseSchema,
 } from './types.js'
 
 // Setup: Wire dependencies
@@ -104,8 +105,8 @@ mocs.get('/', async c => {
       difficulty: item.difficulty,
       buildTimeHours: item.buildTimeHours,
       ageRecommendation: item.ageRecommendation,
-      status: (item.status || 'draft') as 'draft' | 'published' | 'archived' | 'pending_review',
-      visibility: (item.visibility || 'private') as 'public' | 'private' | 'unlisted',
+      status: item.status,
+      visibility: item.visibility,
       isFeatured: item.isFeatured,
       isVerified: item.isVerified,
       tags: item.tags,
@@ -116,7 +117,7 @@ mocs.get('/', async c => {
       updatedAt: item.updatedAt.toISOString(),
     }))
 
-    const response = MocListResponseSchema.parse({
+    const response = {
       items: mappedItems,
       pagination: {
         page: validatedQuery.page,
@@ -124,9 +125,12 @@ mocs.get('/', async c => {
         total,
         totalPages,
       },
-    })
+    }
 
-    return c.json(response, 200)
+    // Validate response with Zod
+    const validatedResponse = MocListResponseSchema.parse(response)
+
+    return c.json(validatedResponse, 200)
   } catch (error) {
     logger.error('Unhandled error in GET /mocs', error, { userId })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
@@ -135,7 +139,8 @@ mocs.get('/', async c => {
 
 /**
  * POST /mocs
- * Create a new MOC
+ * Create a new MOC for the authenticated user
+ * (INST-1102: AC-1 to AC-23)
  */
 mocs.post('/', async c => {
   const userId = c.get('userId')
@@ -145,58 +150,59 @@ mocs.post('/', async c => {
   }
 
   try {
-    // Parse and validate request body
     const body = await c.req.json()
-    const input = CreateMocRequestSchema.safeParse(body)
 
-    if (!input.success) {
+    // Validate request with Zod
+    const validated = CreateMocRequestSchema.safeParse(body)
+    if (!validated.success) {
       logger.warn('Invalid MOC creation request', undefined, {
         userId,
-        errors: input.error.flatten(),
+        errors: validated.error.flatten(),
       })
       return c.json(
         {
           error: 'VALIDATION_ERROR',
-          details: input.error.flatten(),
+          details: validated.error.flatten(),
         },
         400,
       )
     }
 
-    // Call service
-    const result = await mocService.createMoc(userId, input.data)
+    const result = await mocService.createMoc(userId, validated.data)
 
     if (!result.ok) {
-      if (result.error === 'VALIDATION_ERROR') {
-        return c.json({ error: 'VALIDATION_ERROR' }, 400)
+      switch (result.error) {
+        case 'VALIDATION_ERROR':
+          return c.json({ error: result.error }, 400)
+        case 'DUPLICATE_TITLE':
+          return c.json({ error: result.error, message: 'MOC title already exists' }, 409)
+        case 'DB_ERROR':
+          return c.json({ error: result.error }, 500)
+        default:
+          return c.json({ error: 'INTERNAL_ERROR' }, 500)
       }
-      if (result.error === 'DUPLICATE_TITLE') {
-        return c.json(
-          {
-            error: 'DUPLICATE_TITLE',
-            message: 'A MOC with this title already exists. Please try another title.',
-          },
-          409,
-        )
-      }
-      return c.json({ error: 'DB_ERROR' }, 500)
     }
 
-    // Validate and return response
-    const response = CreateMocResponseSchema.parse({
-      id: result.data.id,
-      userId: result.data.userId,
-      title: result.data.title,
-      description: result.data.description,
-      theme: result.data.theme,
-      tags: result.data.tags,
-      slug: result.data.slug,
-      type: result.data.type,
-      createdAt: result.data.createdAt.toISOString(),
-      updatedAt: result.data.updatedAt.toISOString(),
-    })
+    const moc = result.data
 
-    return c.json(response, 201)
+    // Map to response format
+    const response = {
+      id: moc.id,
+      userId: moc.userId,
+      title: moc.title,
+      description: moc.description,
+      theme: moc.theme,
+      tags: moc.tags,
+      slug: moc.slug,
+      type: moc.type,
+      createdAt: moc.createdAt.toISOString(),
+      updatedAt: moc.updatedAt.toISOString(),
+    }
+
+    // Validate response with Zod
+    const validatedResponse = CreateMocResponseSchema.parse(response)
+
+    return c.json(validatedResponse, 201)
   } catch (error) {
     logger.error('Unhandled error in POST /mocs', error, { userId })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
@@ -205,8 +211,8 @@ mocs.post('/', async c => {
 
 /**
  * GET /mocs/:id
- * Get MOC details with files and stats
- * (INST-1101: AC-12)
+ * Get a specific MOC by ID with files
+ * (INST-1101: AC-11 to AC-21)
  */
 mocs.get('/:id', async c => {
   const userId = c.get('userId')
@@ -217,35 +223,38 @@ mocs.get('/:id', async c => {
   }
 
   try {
-    // Call service (authorization check inside)
     const result = await mocService.getMoc(userId, mocId)
 
     if (!result.ok) {
-      return c.json({ error: 'DB_ERROR' }, 500)
-    }
-
-    // Return 404 for non-existent or unauthorized MOC (INST-1101: AC-16, ARCH-003)
-    if (!result.data) {
-      return c.json({ error: 'NOT_FOUND' }, 404)
+      return c.json({ error: result.error }, 500)
     }
 
     const moc = result.data
 
+    if (!moc) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
     // Map files to response format
-    const files = moc.files.map(file => ({
+    const mappedFiles = moc.files.map(file => ({
       id: file.id,
       mocId: file.mocId,
       fileType: file.fileType,
       name: file.originalFilename || 'Unnamed file',
-      size: 0, // TODO: Add fileSize to database schema
+      size: 0, // Size not stored in current schema
       mimeType: file.mimeType,
-      s3Key: file.fileUrl, // Using fileUrl as s3Key for now
+      s3Key: file.s3Key || '',
       uploadedAt: file.createdAt.toISOString(),
       downloadUrl: file.fileUrl,
     }))
 
-    // Build response
-    const response = GetMocResponseSchema.parse({
+    // Map stats
+    const stats = {
+      pieceCount: moc.totalPieceCount,
+      fileCount: moc.files.length,
+    }
+
+    const response = {
       id: moc.id,
       userId: moc.userId,
       title: moc.title,
@@ -255,14 +264,14 @@ mocs.get('/:id', async c => {
       thumbnailUrl: moc.thumbnailUrl,
       createdAt: moc.createdAt.toISOString(),
       updatedAt: moc.updatedAt.toISOString(),
-      files,
-      stats: {
-        pieceCount: moc.totalPieceCount,
-        fileCount: files.length,
-      },
-    })
+      files: mappedFiles,
+      stats,
+    }
 
-    return c.json(response, 200)
+    // Validate response with Zod
+    const validatedResponse = GetMocResponseSchema.parse(response)
+
+    return c.json(validatedResponse, 200)
   } catch (error) {
     logger.error('Unhandled error in GET /mocs/:id', error, { userId, mocId })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
@@ -271,8 +280,8 @@ mocs.get('/:id', async c => {
 
 /**
  * POST /mocs/:id/thumbnail
- * Upload a thumbnail image for a MOC
- * (INST-1103: AC49-AC52)
+ * Upload a thumbnail for a MOC
+ * (INST-1103: AC1, AC21, AC34, AC49-AC52)
  */
 mocs.post('/:id/thumbnail', async c => {
   const userId = c.get('userId')
@@ -283,23 +292,22 @@ mocs.post('/:id/thumbnail', async c => {
   }
 
   try {
-    // Parse multipart/form-data
+    // Parse multipart form data
     const body = await c.req.parseBody()
-    const file = body.thumbnail
+    const file = body.file
 
-    // Validate that file exists and is a File object
     if (!file || typeof file === 'string') {
-      logger.warn('Missing or invalid thumbnail file', undefined, { userId, mocId })
-      return c.json({ error: 'MISSING_FILE', message: 'Thumbnail file is required' }, 400)
+      return c.json({ error: 'NO_FILE', message: 'No file provided' }, 400)
     }
 
-    // Convert File to Buffer and extract metadata
-    const buffer = Buffer.from(await file.arrayBuffer())
+    // Read file buffer
+    const buffer = await file.arrayBuffer()
+
     const fileData = {
-      buffer,
+      buffer: Buffer.from(buffer),
       filename: file.name,
       mimetype: file.type,
-      size: buffer.length,
+      size: buffer.byteLength,
     }
 
     // Call service
@@ -348,6 +356,60 @@ mocs.post('/:id/thumbnail', async c => {
     return c.json(response, 200)
   } catch (error) {
     logger.error('Unhandled error in POST /mocs/:id/thumbnail', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * GET /mocs/:id/files/:fileId/download
+ * Generate presigned download URL for a file
+ * (INST-1107: AC-1, AC-5, AC-14, AC-75)
+ */
+mocs.get('/:id/files/:fileId/download', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+  const fileId = c.req.param('fileId')
+
+  // AC-5: Authentication required
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    // AC-14: Validate mocId and fileId format (UUIDs)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(mocId) || !uuidRegex.test(fileId)) {
+      return c.json({ error: 'VALIDATION_ERROR', message: 'Invalid MOC ID or file ID format' }, 400)
+    }
+
+    // AC-1, AC-75: Delegate to service layer (thin adapter pattern)
+    const result = await mocService.getFileDownloadUrl(userId, mocId, fileId)
+
+    // Map service errors to HTTP status codes
+    if (!result.ok) {
+      switch (result.error) {
+        case 'NOT_FOUND':
+          // AC-4: Return 404 for both not found and unauthorized (no info leakage)
+          return c.json({ error: result.error }, 404)
+        case 'PRESIGN_FAILED':
+          // AC-10: S3 presigning failed
+          return c.json({ error: result.error }, 500)
+        case 'DB_ERROR':
+          return c.json({ error: result.error }, 500)
+        default:
+          return c.json({ error: 'INTERNAL_ERROR' }, 500)
+      }
+    }
+
+    // Validate and return response
+    const response = GetFileDownloadUrlResponseSchema.parse(result.data)
+    return c.json(response, 200)
+  } catch (error) {
+    logger.error('Unhandled error in GET /mocs/:id/files/:fileId/download', error, {
+      userId,
+      mocId,
+      fileId,
+    })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
   }
 })

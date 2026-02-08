@@ -1,0 +1,442 @@
+schema: 1
+story_id: INST-1107
+version: 2
+timestamp: '2026-02-08T05:31:00Z'
+
+acceptance_criteria:
+  # Backend ACs
+  - ac_id: AC-1
+    ac_text: "GET /mocs/:id/files/:fileId/download endpoint exists in routes.ts and delegates to mocService.getFileDownloadUrl()"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/routes.ts
+        description: Route handler added with thin adapter pattern, delegates to service
+
+  - ac_id: AC-2
+    ac_text: "Endpoint queries moc_files table for s3Key, originalFilename, mocId by fileId"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/adapters/repositories.ts
+        description: getFileByIdAndMocId method queries file metadata
+
+  - ac_id: AC-3
+    ac_text: "Endpoint verifies file belongs to user's MOC (JOIN mocs.userId = authenticated userId)"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: Service method verifies ownership via mocRepo.getMocById
+
+  - ac_id: AC-4
+    ac_text: "Returns 404 if file not found or user doesn't own MOC (no info leakage)"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: Returns err('NOT_FOUND') for both cases
+      - type: test
+        path: apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts
+        description: "Test: AC-4, AC-74: returns NOT_FOUND for unauthorized user"
+
+  - ac_id: AC-5
+    ac_text: "Returns 401 if user not authenticated"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/routes.ts
+        description: Route checks userId from auth middleware
+
+  - ac_id: AC-6
+    ac_text: "Endpoint generates presigned S3 URL using AWS SDK"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: Uses GetObjectCommand and getSignedUrl from AWS SDK
+
+  - ac_id: AC-7
+    ac_text: "Presigned URL includes ResponseContentDisposition: attachment; filename"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: ResponseContentDisposition set with RFC 5987 encoding
+
+  - ac_id: AC-8
+    ac_text: "Presigned URL expires in 900 seconds (15 minutes)"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: expiresIn set to 900 seconds
+
+  - ac_id: AC-9
+    ac_text: "Endpoint returns JSON: { downloadUrl: string, expiresAt: string }"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/types.ts
+        description: GetFileDownloadUrlResponseSchema defined
+      - type: test
+        path: apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts
+        description: "Test: AC-9: returns downloadUrl and expiresAt on success"
+
+  # Frontend Component ACs
+  - ac_id: AC-16
+    ac_text: "FileDownloadButton component created in components/ directory"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+        description: Component created with full implementation
+
+  - ac_id: AC-17
+    ac_text: "Component accepts props: mocId, fileId, fileName, className"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__types__/index.ts
+        description: Props schema defined with Zod
+
+  - ac_id: AC-18
+    ac_text: "Button renders with Download icon and text"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should render button with Download icon and text"
+
+  - ac_id: AC-19
+    ac_text: "Button shows loading spinner during API call"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should show loading spinner during download"
+
+  - ac_id: AC-20
+    ac_text: "Button disabled during loading state"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should disable button during loading"
+
+  - ac_id: AC-21
+    ac_text: "Button has aria-label='Download {fileName}' for screen readers"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should have aria-label with filename"
+
+  - ac_id: AC-22
+    ac_text: "Button has aria-busy during loading"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should have aria-busy=false when not loading"
+
+  - ac_id: AC-23
+    ac_text: "Button has focus visible indicator"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should have focus ring classes"
+
+  - ac_id: AC-24
+    ac_text: "On click, calls RTK Query useLazyGetFileDownloadUrlQuery"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should call getFileDownloadUrl when clicked"
+
+  - ac_id: AC-25
+    ac_text: "On success, triggers browser download via window.location.href"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should trigger browser download via window.location.href"
+
+  - ac_id: AC-26
+    ac_text: "On error, shows toast notification"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should show error toast on API failure"
+
+  - ac_id: AC-27
+    ac_text: "Button returns to ready state after success or error"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Tests: should return to ready state after error/success"
+
+  - ac_id: AC-28
+    ac_text: "Button accessible via keyboard"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should be keyboard accessible - focusable"
+
+  - ac_id: AC-29
+    ac_text: "Touch target size ≥44x44px on mobile"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should have minimum touch target size"
+
+  - ac_id: AC-30
+    ac_text: "Component uses Button from @repo/app-component-library"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+        description: Imports Button from @repo/app-component-library
+
+  - ac_id: AC-31
+    ac_text: "Component uses design tokens only"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+        description: No hardcoded colors, uses Tailwind classes
+
+  # Page Integration ACs
+  - ac_id: AC-32
+    ac_text: "Download button appears on each file in MOC detail page"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+        description: Files section with FileDownloadButton for each file
+
+  - ac_id: AC-33
+    ac_text: "Button integrates into existing file list UI"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+        description: Files Card added to metadata sidebar
+
+  - ac_id: AC-34
+    ac_text: "Multiple download buttons can coexist"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+        description: files.map() creates independent buttons
+
+  - ac_id: AC-35
+    ac_text: "Each button operates independently"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        description: "Test: should prevent double-click during download"
+
+  # RTK Query ACs
+  - ac_id: AC-36
+    ac_text: "getFileDownloadUrl query added to instructionsApi"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: packages/core/api-client/src/rtk/instructions-api.ts
+        description: Query endpoint added with correct signature
+
+  - ac_id: AC-37
+    ac_text: "Query endpoint matches API path"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: packages/core/api-client/src/config/endpoints.ts
+        description: DOWNLOAD_FILE endpoint defined
+
+  - ac_id: AC-41
+    ac_text: "Query does NOT cache results (keepUnusedDataFor: 0)"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: packages/core/api-client/src/rtk/instructions-api.ts
+        description: keepUnusedDataFor set to 0
+
+  - ac_id: AC-43
+    ac_text: "useLazyGetFileDownloadUrlQuery hook exported"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: packages/core/api-client/src/index.ts
+        description: Hook exported from package
+
+  # Service Layer ACs
+  - ac_id: AC-73
+    ac_text: "Service method getFileDownloadUrl exists in MocService"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: Method implemented with correct signature
+      - type: test
+        path: apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts
+        description: "Test: AC-2, AC-73: queries file from repository"
+
+  - ac_id: AC-74
+    ac_text: "Service layer performs ownership verification"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: Ownership check via mocRepo.getMocById(mocId, userId)
+      - type: test
+        path: apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts
+        description: "Test: AC-3, AC-74: verifies file belongs to user's MOC"
+
+  - ac_id: AC-75
+    ac_text: "Route handler in routes.ts is thin adapter"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/routes.ts
+        description: Route parses params, calls service, maps errors to HTTP codes
+
+  - ac_id: AC-76
+    ac_text: "Service layer handles all business logic"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: apps/api/lego-api/domains/mocs/application/services.ts
+        description: Service owns file query, ownership check, presigned URL generation
+
+touched_files:
+  # Backend
+  - path: apps/api/lego-api/domains/mocs/types.ts
+    action: modified
+    lines: 9
+    description: Added GetFileDownloadUrlResponseSchema
+
+  - path: apps/api/lego-api/domains/mocs/ports/index.ts
+    action: modified
+    lines: 4
+    description: Added getFileByIdAndMocId to MocRepository interface, added s3Key to MocFile
+
+  - path: apps/api/lego-api/domains/mocs/adapters/repositories.ts
+    action: modified
+    lines: 25
+    description: Implemented getFileByIdAndMocId method, added s3Key to file mapping
+
+  - path: apps/api/lego-api/domains/mocs/application/services.ts
+    action: modified
+    lines: 55
+    description: Added getFileDownloadUrl service method
+
+  - path: apps/api/lego-api/domains/mocs/routes.ts
+    action: modified
+    lines: 45
+    description: Added GET /mocs/:id/files/:fileId/download route handler
+
+  - path: apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts
+    action: modified
+    lines: 70
+    description: Added 7 tests for getFileDownloadUrl
+
+  # Frontend
+  - path: packages/core/api-client/src/schemas/instructions.ts
+    action: modified
+    lines: 9
+    description: Added GetFileDownloadUrlResponseSchema
+
+  - path: packages/core/api-client/src/config/endpoints.ts
+    action: modified
+    lines: 3
+    description: Added DOWNLOAD_FILE endpoint
+
+  - path: packages/core/api-client/src/rtk/instructions-api.ts
+    action: modified
+    lines: 30
+    description: Added getFileDownloadUrl query, exported hook
+
+  - path: packages/core/api-client/src/index.ts
+    action: modified
+    lines: 3
+    description: Exported useLazyGetFileDownloadUrlQuery
+
+  - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+    action: created
+    lines: 80
+    description: FileDownloadButton component
+
+  - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__types__/index.ts
+    action: created
+    lines: 18
+    description: Props schema
+
+  - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+    action: created
+    lines: 270
+    description: 17 component tests
+
+  - path: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+    action: modified
+    lines: 45
+    description: Added Files section with FileDownloadButton
+
+  - path: apps/web/app-instructions-gallery/src/pages/__tests__/detail-page.test.tsx
+    action: modified
+    lines: 25
+    description: Added mocks for ThumbnailUpload and FileDownloadButton
+
+commands_run:
+  - command: pnpm --filter app-instructions-gallery test -- --run FileDownloadButton
+    result: "17 tests passing"
+  - command: pnpm --filter lego-api test -- --run mocs/application
+    result: "26 tests passing"
+  - command: pnpm --filter app-instructions-gallery test -- --run detail-page
+    result: "29 tests passing"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "Used thin adapter pattern for route handler - all business logic in service layer"
+  - "Returns NOT_FOUND for both file not found and unauthorized to prevent information leakage"
+  - "Added s3Key field to MocFile interface for presigned URL generation"
+  - "Used RFC 5987 encoding for filenames to support Unicode characters"
+  - "Used useState for local loading state instead of RTK Query isLoading for better UX control"
+  - "Added MocFile interface to detail-page.tsx to avoid tight coupling with API client types"
+
+known_deviations: []
+
+test_summary:
+  unit: { pass: 7, fail: 0 }
+  component: { pass: 17, fail: 0 }
+  integration: { pass: 29, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: pending
+  exempt_reason: null
+  config: playwright.legacy.config.ts
+  project: chromium-live
+  mode: live
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+
+coverage: {}
+
+token_summary:
+  execute: { in: 120000, out: 25000 }

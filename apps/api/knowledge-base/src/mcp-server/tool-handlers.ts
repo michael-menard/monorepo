@@ -212,7 +212,8 @@ function getTimeoutConfig(): {
  * Combines all CRUD operation and search dependencies.
  */
 export interface ToolHandlerDeps
-  extends KbAddDeps,
+  extends
+    KbAddDeps,
     KbGetDeps,
     KbUpdateDeps,
     KbDeleteDeps,

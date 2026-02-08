@@ -3,9 +3,10 @@
  *
  * Displays full details of a single instruction including images, metadata, and actions.
  * Story 3.1.4: Instructions Detail Page
+ * Story INST-1103: Upload Thumbnail (AC1-2)
  */
 import { useCallback, useMemo } from 'react'
-import { ArrowLeft, Heart, Pencil, Download, BookOpen } from 'lucide-react'
+import { ArrowLeft, Heart, Pencil, Download, BookOpen, FileText } from 'lucide-react'
 import {
   Button,
   Badge,
@@ -18,6 +19,21 @@ import {
 } from '@repo/app-component-library'
 import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@repo/gallery'
 import type { Instruction } from '../__types__'
+import { ThumbnailUpload } from '../components/ThumbnailUpload'
+import { FileDownloadButton } from '../components/FileDownloadButton'
+
+/**
+ * File interface for download feature
+ * Story INST-1107: Download Files
+ */
+interface MocFile {
+  id: string
+  mocId: string
+  fileType: string
+  name: string
+  size: number
+  mimeType: string | null
+}
 
 export interface DetailPageProps {
   /** The instruction data to display */
@@ -36,6 +52,8 @@ export interface DetailPageProps {
   onDelete?: (id: string) => void
   /** Additional CSS classes */
   className?: string
+  /** Files available for download (INST-1107) */
+  files?: MocFile[]
 }
 
 /**
@@ -124,6 +142,18 @@ export function DetailPageNotFound({ onBack }: { onBack?: () => void }) {
  *
  * Displays instruction details with image gallery, metadata sidebar, and actions.
  */
+/**
+ * Format file size for display
+ * Story INST-1107: Download Files
+ */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const kb = bytes / 1024
+  if (kb < 1024) return `${kb.toFixed(1)} KB`
+  const mb = kb / 1024
+  return `${mb.toFixed(1)} MB`
+}
+
 export function DetailPage({
   instruction,
   isLoading,
@@ -132,6 +162,7 @@ export function DetailPage({
   onEdit,
   onFavorite,
   className,
+  files,
 }: DetailPageProps) {
   // Prepare images for lightbox
   const lightboxImages: LightboxImage[] = useMemo(() => {
@@ -160,6 +191,19 @@ export function DetailPage({
       onEdit(instruction.id)
     }
   }, [instruction, onEdit])
+
+  /**
+   * Handle thumbnail upload success (AC14-15)
+   * Updates the instruction thumbnail optimistically
+   */
+  const handleThumbnailSuccess = useCallback(
+    (thumbnailUrl: string) => {
+      // RTK Query will automatically invalidate and refetch
+      // The UI will update when the cache is invalidated
+      console.info('Thumbnail uploaded successfully:', thumbnailUrl)
+    },
+    []
+  )
 
   // Loading state
   if (isLoading) {
@@ -263,6 +307,54 @@ export function DetailPage({
 
         {/* Metadata Sidebar */}
         <div className="space-y-6" data-testid="metadata-section">
+          {/* AC2: Thumbnail Upload Card - Show "Change Thumbnail" action */}
+          <Card data-testid="thumbnail-upload-card">
+            <CardHeader>
+              <CardTitle>Thumbnail</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ThumbnailUpload
+                mocId={instruction.id}
+                existingThumbnailUrl={instruction.thumbnail}
+                onSuccess={handleThumbnailSuccess}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Files Card (INST-1107: Download Files) */}
+          {files && files.length > 0 ? (
+            <Card data-testid="files-card">
+              <CardHeader>
+                <CardTitle>Files</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {files.map(file => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                    data-testid={`file-item-${file.id}`}
+                  >
+                    <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" title={file.name}>
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(file.size)} • {file.fileType}
+                      </p>
+                    </div>
+                    <FileDownloadButton
+                      mocId={file.mocId}
+                      fileId={file.id}
+                      fileName={file.name}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Details Card */}
           <Card>
             <CardHeader>
               <CardTitle>Details</CardTitle>

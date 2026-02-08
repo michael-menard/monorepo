@@ -374,3 +374,14 @@ export const UploadThumbnailResponseSchema = z.object({
 })
 
 export type UploadThumbnailResponse = z.infer<typeof UploadThumbnailResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Download File URL Response Schema (INST-1107)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const GetFileDownloadUrlResponseSchema = z.object({
+  downloadUrl: z.string().url(),
+  expiresAt: z.string().datetime(),
+})
+
+export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>

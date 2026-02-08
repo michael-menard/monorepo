@@ -58,6 +58,7 @@ export interface MocFile {
   fileUrl: string
   originalFilename: string | null
   mimeType: string | null
+  s3Key: string
   createdAt: Date
   updatedAt: Date | null
 }
@@ -73,6 +74,7 @@ export interface MocRepository {
   getMocById(id: string, userId: string): Promise<MocWithFiles | null>
   list(userId: string, query: ListMocsQuery): Promise<MocListResult>
   updateThumbnail(mocId: string, userId: string, thumbnailUrl: string): Promise<void>
+  getFileByIdAndMocId(fileId: string, mocId: string): Promise<MocFile | null>
 }
 
 /**

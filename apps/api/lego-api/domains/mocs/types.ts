@@ -155,3 +155,12 @@ export const UploadThumbnailResponseSchema = z.object({
 
 // Type inference
 export type UploadThumbnailResponse = z.infer<typeof UploadThumbnailResponseSchema>
+
+// Download file response schema (INST-1107: AC-9, AC-15)
+export const GetFileDownloadUrlResponseSchema = z.object({
+  downloadUrl: z.string().url(),
+  expiresAt: z.string().datetime(),
+})
+
+// Type inference
+export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>

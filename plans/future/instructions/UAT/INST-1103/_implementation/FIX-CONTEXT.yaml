@@ -1,0 +1,50 @@
+schema: 1
+story_id: INST-1103
+timestamp: '2026-02-07T04:36:00.000Z'
+failure_source: code-review-failed
+iteration: 2
+
+issues_to_fix:
+  - id: 1
+    file: apps/api/lego-api/domains/mocs/application/services.ts
+    line: 6
+    issue: "Cannot find module '@aws-sdk/s3-request-presigner' or its corresponding type declarations"
+    severity: critical
+    auto_fixable: false
+    category: missing-dependency
+
+  - id: 2
+    file: apps/api/lego-api/domains/mocs/adapters/repositories.ts
+    line: 222
+    issue: "Property 's3Key' does not exist on type"
+    severity: high
+    auto_fixable: false
+    category: type-mismatch
+
+  - id: 3
+    file: apps/api/lego-api/domains/mocs/routes.ts
+    line: 380
+    issue: "Prettier formatting: Delete extra whitespace after assignment"
+    severity: medium
+    auto_fixable: true
+    category: formatting
+
+  - id: 4
+    file: apps/api/lego-api/domains/mocs/routes.ts
+    line: 383
+    issue: "Prettier formatting: c.json() arguments should be on single line"
+    severity: medium
+    auto_fixable: true
+    category: formatting
+
+focus_files:
+  - apps/api/lego-api/domains/mocs/application/services.ts
+  - apps/api/lego-api/domains/mocs/adapters/repositories.ts
+  - apps/api/lego-api/domains/mocs/routes.ts
+
+next_steps:
+  - "Fix missing @aws-sdk/s3-request-presigner dependency"
+  - "Resolve s3Key type mismatch in repositories.ts"
+  - "Apply Prettier formatting fixes to routes.ts"
+  - "Run full build and typecheck to verify fixes"
+  - "Re-run code-review verification"

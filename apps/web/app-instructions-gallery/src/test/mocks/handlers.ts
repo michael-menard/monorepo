@@ -29,6 +29,33 @@ export const handlers = [
     })
   }),
 
+  /**
+   * AC43: MSW handler for thumbnail upload endpoint
+   * Story INST-1103: Upload Thumbnail
+   */
+  http.post(`${API_BASE_URL}/api/v2/mocs/:id/thumbnail`, async ({ request, params }) => {
+    const formData = await request.formData()
+    const file = formData.get('file')
+
+    if (!file) {
+      return HttpResponse.json(
+        {
+          code: 'MISSING_FILE',
+          message: 'No file provided',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Simulate successful upload
+    const mocId = params.id
+    const thumbnailUrl = `https://cdn.example.com/mocs/user-123/moc-${mocId}/thumbnail/test-image.jpg`
+
+    return HttpResponse.json({
+      thumbnailUrl,
+    })
+  }),
+
   // Error simulation endpoints
   http.get(`${API_BASE_URL}/api/error/500`, () => {
     return HttpResponse.json(

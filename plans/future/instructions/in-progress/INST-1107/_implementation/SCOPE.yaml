@@ -1,0 +1,161 @@
+schema: 1
+story_id: INST-1107
+timestamp: 2026-02-08T04:13:26Z
+
+title: Download Files
+description: Implement secure download flow for instruction PDFs and parts list files with proper authentication and UX handling
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/lego-api/domains/mocs/**"
+  - "apps/web/app-instructions-gallery/src/**"
+  - "packages/core/api-client/src/**"
+  - "packages/core/app-component-library/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: true
+  security: true
+  performance: false
+
+summary: Create secure file download endpoint with presigned S3 URLs and UI component for users to download instruction PDFs and parts lists
+
+frontend_scope:
+  files_to_create:
+    - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+      description: New download button component with loading states and error handling
+      type: React component
+
+  files_to_modify:
+    - path: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+      description: Integrate FileDownloadButton into file list (around lines 318-325)
+      type: page integration
+    - path: packages/core/api-client/src/rtk/instructions-api.ts
+      description: Add getFileDownloadUrl query to instructionsApi
+      type: RTK Query endpoint
+    - path: packages/core/api-client/src/schemas/instructions.ts
+      description: Add GetFileDownloadUrlResponseSchema with downloadUrl and expiresAt fields
+      type: Zod schema
+    - path: packages/core/api-client/src/index.ts
+      description: Export useGetFileDownloadUrlQuery hook
+      type: exports
+
+  test_files:
+    - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+      description: Unit tests for FileDownloadButton component
+      test_type: component
+
+backend_scope:
+  files_to_modify:
+    - path: apps/api/lego-api/domains/mocs/routes.ts
+      description: Add GET /mocs/:id/files/:fileId/download route (thin adapter)
+      type: route handler
+    - path: apps/api/lego-api/domains/mocs/application/services.ts
+      description: Add getFileDownloadUrl method to MocService with auth and presign logic
+      type: service method
+    - path: apps/api/lego-api/domains/mocs/types.ts
+      description: Add GetFileDownloadUrlResponseSchema with downloadUrl and expiresAt
+      type: types/schemas
+
+  files_to_reference:
+    - path: apps/api/lego-api/domains/inspiration/adapters/storage.ts
+      description: Presigned URL generation pattern to reuse
+      pattern: presigned URL generation with S3 SDK
+
+  test_files:
+    - path: apps/api/lego-api/domains/mocs/__tests__/download.test.ts
+      description: Unit tests for MocService.getFileDownloadUrl method
+      test_type: unit
+
+database_scope:
+  schema_changes: false
+  migration_required: false
+  note: Uses existing moc_files table
+  query_example: |
+    SELECT s3Key, originalFilename, mocId
+    FROM moc_files
+    WHERE id = ? AND mocId IN (
+      SELECT id FROM mocs WHERE userId = ?
+    )
+
+e2e_scope:
+  feature_files:
+    - path: apps/web/playwright/features/instructions/inst-1107-download.feature
+      description: Cucumber feature for download flow E2E
+  step_definitions:
+    - path: apps/web/playwright/step-definitions/instructions/inst-1107-download.steps.ts
+      description: Step definitions for download feature
+
+key_acceptance_criteria:
+  backend:
+    - endpoint: GET /mocs/:id/files/:fileId/download
+      response: "{ downloadUrl: string, expiresAt: string }"
+      auth_required: true
+      presigned_url_expiry: 900 seconds (15 minutes)
+      content_disposition: 'attachment; filename="..."'
+      filename_encoding: RFC 5987
+  frontend:
+    - component: FileDownloadButton
+      props: mocId, fileId, fileName, className?
+      icon: Download (lucide-react)
+      loading_icon: Loader2 (lucide-react)
+      accessibility: aria-label, aria-busy, focus visible
+      touch_target: 44x44px minimum
+      trigger: onClick -> useGetFileDownloadUrlQuery -> window.location.href
+    - integration: detail-page.tsx file list
+      one_button_per_file: true
+      independent_loading_states: true
+
+patterns_to_reuse:
+  - name: S3 Presigned URL Generation
+    source: apps/api/lego-api/domains/inspiration/adapters/storage.ts
+    usage: Generate downloadable presigned URLs with ResponseContentDisposition
+  - name: MOC Authorization
+    source: apps/api/lego-api/domains/mocs/application/services.ts::getMoc
+    usage: Verify user owns the MOC before allowing file access
+  - name: RTK Query Framework
+    source: packages/core/api-client/src/rtk/instructions-api.ts
+    usage: Add new query endpoint with caching policy (keepUnusedDataFor: 0)
+  - name: Zod Schema Validation
+    source: packages/core/api-client/src/schemas/
+    usage: Validate API responses with schema inference
+
+constraints:
+  - Use Zod schemas for all type definitions (no TypeScript interfaces)
+  - No barrel files - import directly from source
+  - Use @repo/logger for logging, never console
+  - All new code must have minimum 45% test coverage
+  - Use named exports for components
+  - Use @repo/app-component-library/_primitives/button for UI button
+  - Presigned URLs must expire after 15 minutes for security
+  - All file downloads require authentication (401 if not authenticated)
+  - No information leakage on 404 (verify ownership before returning 404)
+  - RTK Query must not cache presigned URLs (keepUnusedDataFor: 0)
+
+deferred_scope:
+  - INST-3080: Multi-file zip downloads
+  - INST-3081: Download progress tracking
+  - INST-3082: Download history/analytics
+  - INST-1103: Thumbnail downloads (separate story)
+
+blockers:
+  - INST-1101: MOC detail page must exist and display file list
+
+implementation_notes: |
+  1. Backend implementation should follow the existing presigned URL pattern in inspiration/adapters/storage.ts
+  2. Frontend component should use RTK Query hooks for optimal data fetching
+  3. Each download button operates independently with its own loading state
+  4. Presigned URLs are time-limited (900s) so RTK Query caching should be disabled
+  5. Security: Always verify file ownership before generating presigned URL
+  6. UX: Show loading state during API call, handle errors gracefully with toast notifications
+  7. Accessibility: Ensure keyboard navigation and proper ARIA labels

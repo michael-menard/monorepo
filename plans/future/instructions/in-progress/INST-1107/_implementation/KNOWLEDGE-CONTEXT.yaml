@@ -1,0 +1,246 @@
+schema: 1
+story_id: INST-1107
+timestamp: '2026-02-08T04:30:00Z'
+
+# Knowledge context for file download implementation
+
+patterns:
+  presigned_urls:
+    - source: apps/api/lego-api/domains/inspiration/adapters/storage.ts
+      pattern: |
+        - Use @aws-sdk/client-s3 GetObjectCommand for downloads (PutObjectCommand for uploads)
+        - Use @aws-sdk/s3-request-presigner getSignedUrl(s3Client, command, { expiresIn })
+        - expiresIn in seconds (900 = 15 minutes)
+        - ResponseContentDisposition for filename: `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+        - Return ok({ presignedUrl, key, expiresIn }) or err('PRESIGN_FAILED')
+      notes: |
+        Lines 81-90 show presigned URL generation for uploads.
+        Adapt for downloads by changing PutObjectCommand to GetObjectCommand.
+        Add ResponseContentDisposition to force download with original filename.
+
+  service_layer_auth:
+    - source: apps/api/lego-api/domains/mocs/application/services.ts
+      pattern: |
+        - Service method signature: async methodName(userId, ...params): Promise<Result<Data, ErrorCode>>
+        - Query repository for resource
+        - Verify ownership: resource.userId === userId
+        - Return err('NOT_FOUND') for both not found and unauthorized (no info leakage)
+        - Use @repo/logger for info, warn, error logging
+        - Return ok(data) on success
+      notes: |
+        getMoc method (lines 67-89) shows authorization pattern.
+        Always verify ownership in service layer, not route handler.
+        Return same error code for not found and unauthorized to prevent enumeration.
+
+  rtk_query_patterns:
+    - source: packages/core/api-client/src/rtk/instructions-api.ts
+      pattern: |
+        - Add query to instructionsApi.injectEndpoints({ endpoints: (builder) => ... })
+        - builder.query<ResponseType, ParamsType>({ ... })
+        - query: ({ param1, param2 }) => buildEndpoint('/path/{param1}/resource/{param2}')
+        - transformResponse: (response) => SchemaName.parse(response)
+        - keepUnusedDataFor: number (in seconds, 0 = no cache)
+        - providesTags: ['Tag'] or [] for no cache tags
+      notes: |
+        For download URLs, set keepUnusedDataFor: 0 because presigned URLs expire.
+        Use buildEndpoint() for path construction with params.
+        Always validate response with Zod schema in transformResponse.
+
+  component_patterns:
+    - source: apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx
+      pattern: |
+        - Functional component with named export
+        - Props defined in __types__/index.ts with Zod schema
+        - Import Button from @repo/app-component-library/_primitives/button
+        - Import icons from lucide-react (Download, Loader2)
+        - Use RTK Query hooks (useQuery, useMutation, useLazyQuery)
+        - useState for local state (isLoading, error)
+        - Event handlers with async/await and try/catch
+        - Error handling with toast notifications
+        - aria-label, aria-busy for accessibility
+        - Conditional rendering for loading/error states
+      notes: |
+        ThumbnailUpload shows file handling pattern.
+        For download, use useLazyQuery or manual trigger pattern.
+        Show loading spinner during API call, restore button state after completion.
+
+lessons:
+  - id: presigned-url-security
+    category: security
+    lesson: |
+      Presigned URLs should have short expiry times (15 minutes max).
+      Never cache presigned URLs in frontend - generate fresh URL for each download.
+      Include ResponseContentDisposition to force download with correct filename.
+      Encode filenames using RFC 5987 (UTF-8) for special character support.
+
+  - id: info-leakage-prevention
+    category: security
+    lesson: |
+      Authorization failures should return same error as not found (404).
+      Never return 403 for unauthorized file access - reveals file existence.
+      Service layer should handle authorization, not route handler.
+      Log authorization failures for security monitoring.
+
+  - id: service-layer-business-logic
+    category: architecture
+    lesson: |
+      Route handlers are thin adapters - NO business logic.
+      Service layer owns: validation, authorization, business rules, error handling.
+      Route handler only: parse params, call service, map errors to HTTP codes.
+      This follows Ports & Adapters pattern from docs/architecture/api-layer.md.
+
+  - id: rtk-query-caching-strategy
+    category: frontend
+    lesson: |
+      Set keepUnusedDataFor: 0 for data that expires or changes frequently.
+      Presigned URLs expire after 900s, so caching them causes stale URL errors.
+      For static data, use getServerlessCacheConfig('medium') for 5-minute cache.
+      Cache tags enable selective invalidation - use providesTags/invalidatesTags.
+
+adrs:
+  - id: ADR-PRESIGNED-URL
+    title: Use Presigned URLs for File Downloads
+    decision: |
+      Generate time-limited presigned S3 URLs instead of proxying files through Lambda.
+      URLs expire in 900 seconds (15 minutes).
+    rationale: |
+      Lambda has size and timeout limits that don't work for large files.
+      Presigned URLs let S3 handle file streaming directly to browser.
+      Short expiry provides security without breaking UX.
+    applies_to: [INST-1107]
+
+  - id: ADR-NO-CACHING
+    title: No Caching for Download URLs
+    decision: |
+      RTK Query must not cache download URL responses (keepUnusedDataFor: 0).
+      Generate fresh URL for each download request.
+    rationale: |
+      Presigned URLs expire after 15 minutes. Cached URLs would fail after expiry.
+      Download action is infrequent enough that extra API calls are acceptable.
+    applies_to: [INST-1107]
+
+  - id: ADR-404-FOR-UNAUTHORIZED
+    title: Return 404 for Unauthorized File Access
+    decision: |
+      Service layer returns 'NOT_FOUND' error code for both file not found and unauthorized access.
+      Route handler maps both to 404 HTTP status.
+    rationale: |
+      Prevents information leakage about file existence.
+      Follows security best practice for authorization failures.
+    applies_to: [INST-1107, all file operations]
+
+import_patterns:
+  ui_components:
+    correct: |
+      import { Button } from '@repo/app-component-library/_primitives/button'
+    incorrect: |
+      import { Button } from '@repo/ui/button'
+    notes: Use primitives directory for base components, feature folders for composed components
+
+  logger:
+    correct: |
+      import { logger } from '@repo/logger'
+      logger.info('message', undefined, { context })
+    incorrect: |
+      console.log('message')
+    notes: Never use console.log - always use @repo/logger
+
+  rtk_query:
+    correct: |
+      import { useGetFileDownloadUrlQuery } from '@repo/api-client'
+    notes: Import hooks from package root, not internal rtk/ directory
+
+schemas:
+  moc_files:
+    location: database schema
+    key_fields:
+      - id: UUID primary key
+      - mocId: UUID foreign key to mocs table
+      - s3Key: string (S3 object key)
+      - originalFilename: string (user's original filename)
+      - fileType: string (instruction, parts_list, etc)
+      - uploadedAt: timestamp
+    notes: |
+      Query pattern: SELECT * FROM moc_files WHERE id = ? AND mocId = ?
+      Then verify mocId belongs to user via mocs.userId
+
+  download_response:
+    location: packages/core/api-client/src/schemas/instructions.ts
+    schema: |
+      export const GetFileDownloadUrlResponseSchema = z.object({
+        downloadUrl: z.string().url(),
+        expiresAt: z.string().datetime()
+      })
+      export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>
+    notes: Must match backend schema exactly
+
+test_patterns:
+  service_tests:
+    pattern: |
+      - Mock repository methods with vi.fn()
+      - Mock S3 client with vi.mock('@aws-sdk/client-s3')
+      - Test success path with valid data
+      - Test error paths: not found, unauthorized, S3 failure
+      - Verify mocks called with correct params
+      - Assert Result type (ok/err)
+    example_file: apps/api/lego-api/domains/mocs/__tests__/
+
+  component_tests:
+    pattern: |
+      - Mock RTK Query hooks with vi.mock('@repo/api-client')
+      - Render component with React Testing Library
+      - Use semantic queries: getByRole('button'), getByLabelText
+      - Simulate user events: await userEvent.click(button)
+      - Assert loading states, error states, success behavior
+      - Test accessibility: aria-label, aria-busy, focus
+    example_file: apps/web/app-instructions-gallery/src/components/__tests__/
+
+  e2e_tests:
+    pattern: |
+      - Use browser-auth.fixture for authenticated tests
+      - Navigate to page via router Link (not page.goto for auth)
+      - Wait for elements: await page.waitForSelector('[data-testid="..."]')
+      - Click download button: await page.click('button:has-text("Download")')
+      - Listen for download event: const download = await downloadPromise
+      - Verify file downloaded: await download.path()
+      - Run against LIVE backend (MSW disabled)
+    example_file: apps/web/playwright/tests/instructions/
+
+performance:
+  - Presigned URLs avoid Lambda size/timeout limits
+  - S3 streams file directly to browser
+  - No caching overhead (URLs generated on demand)
+  - Keep expiry short (900s) to minimize stale URL risks
+
+accessibility:
+  - Button: aria-label="Download {fileName}" for screen readers
+  - Button: aria-busy="true" during loading
+  - Button: focus:ring-2 focus:ring-primary for keyboard users
+  - Button: disabled during loading prevents double-clicks
+  - Touch target: min-h-[44px] min-w-[44px] for mobile
+  - Icon + text label for clarity
+
+security:
+  - Authentication required (401 if no token)
+  - Ownership verification (404 if user doesn't own MOC)
+  - Presigned URLs expire in 900 seconds
+  - RFC 5987 filename encoding prevents injection
+  - S3 bucket permissions limit access to Lambda role
+  - No path traversal (fileId from DB, not user input)
+
+reality_check:
+  existing_code:
+    - Presigned URL pattern exists (inspiration/adapters/storage.ts)
+    - MOC service authorization pattern exists (mocs/application/services.ts)
+    - RTK Query framework exists (api-client/rtk/instructions-api.ts)
+    - Detail page exists (app-instructions-gallery/pages/detail-page.tsx)
+    - File upload completed (INST-1104 provides files in moc_files table)
+
+  dependencies:
+    - INST-1101 (View MOC Details) - COMPLETED (detail page exists)
+    - INST-1104 (Upload Instructions) - COMPLETED (files exist in S3)
+
+  gaps:
+    - No download endpoint exists yet (need to create)
+    - No FileDownloadButton component exists yet (need to create)
+    - Repository may need getFileByIdAndMocId method (check and add if needed)

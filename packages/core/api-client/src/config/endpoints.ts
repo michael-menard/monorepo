@@ -43,9 +43,12 @@ export const SERVERLESS_ENDPOINTS = {
 
     // File upload endpoints (INST-1008)
     UPLOAD_INSTRUCTION: '/instructions/mocs/{id}/files/instruction',
-    UPLOAD_PARTS_LIST: '/instructions/mocs/{id}/files/parts-list',
+    UPLOAD_PARTS_LIST: '/instructions/mocs/{id}/files/{fileId}',
     UPLOAD_THUMBNAIL: '/instructions/mocs/{id}/thumbnail',
     DELETE_FILE: '/instructions/mocs/{id}/files/{fileId}',
+
+    // File download endpoint (INST-1107)
+    DOWNLOAD_FILE: '/instructions/mocs/{id}/files/{fileId}/download',
 
     // Legacy upload endpoint
     UPLOAD: '/instructions/mocs/upload',

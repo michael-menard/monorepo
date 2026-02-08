@@ -18,6 +18,7 @@ import {
   MocListResponseSchema,
   GetMocDetailResponseSchema,
   UploadThumbnailResponseSchema,
+  GetFileDownloadUrlResponseSchema,
   type MocInstructions,
   type MocFile,
   type CreateMocInput,
@@ -25,6 +26,7 @@ import {
   type ListMocsQuery,
   type MocListResponse,
   type GetMocDetailResponse,
+  type GetFileDownloadUrlResponse,
 } from '../schemas/instructions'
 import { getServerlessCacheConfig } from './base-query'
 
@@ -332,10 +334,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
        *
        * Story INST-1008: Upload thumbnail mutation
        */
-      uploadThumbnail: builder.mutation<
-        { thumbnailUrl: string },
-        { mocId: string; file: File }
-      >({
+      uploadThumbnail: builder.mutation<{ thumbnailUrl: string }, { mocId: string; file: File }>({
         query: ({ mocId, file }) => {
           logger.debug('Uploading thumbnail', undefined, {
             mocId,
@@ -382,6 +381,32 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
           { type: 'Moc', id: mocId },
           { type: 'MocFile', id: mocId },
         ],
+      }),
+
+      /**
+       * GET /instructions/mocs/:id/files/:fileId/download - Get presigned download URL
+       *
+       * Story INST-1107: Download Files
+       * Generates a presigned S3 URL for secure file download.
+       * URL expires in 15 minutes.
+       */
+      getFileDownloadUrl: builder.query<
+        GetFileDownloadUrlResponse,
+        { mocId: string; fileId: string }
+      >({
+        query: ({ mocId, fileId }) => {
+          logger.debug('Getting file download URL', undefined, { mocId, fileId })
+          return buildEndpoint(SERVERLESS_ENDPOINTS.MOC.DOWNLOAD_FILE, { id: mocId, fileId })
+        },
+        transformResponse: (response: unknown) => {
+          const validated = GetFileDownloadUrlResponseSchema.parse(response)
+          logger.info('Download URL generated', undefined, {
+            expiresAt: validated.expiresAt,
+          })
+          return validated
+        },
+        // INST-1107 AC-41: Do not cache presigned URLs (they expire)
+        keepUnusedDataFor: 0,
       }),
 
       /**
@@ -448,6 +473,8 @@ export const {
   useUploadPartsListFileMutation,
   useUploadThumbnailMutation,
   useDeleteFileMutation,
+  // Story INST-1107: File download
+  useLazyGetFileDownloadUrlQuery,
   // Legacy hooks
   useToggleInstructionFavoriteMutation,
 } = instructionsApi
